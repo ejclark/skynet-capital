@@ -1,6 +1,7 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import {
   chmodSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -52,15 +53,80 @@ describe("ship verifyrow — the failed step and first error line of a verify lo
     });
   });
 
-  it("falls back to the ✗ line, then to the exit line, and strips colour codes", () => {
-    expect(row('\u001b[31m✗ built from abc\u001b[0m\nERROR: "lint" exited with 1.')).toEqual({
-      step: "lint",
-      error: "✗ built from abc",
-    });
-    expect(row('ERROR: "test" exited with 2.')).toEqual({
+  // #6677: a passing spec printed this warning on purpose, and the first-`Error:` read named it as
+  // the failure of a run whose real failure was tests/arch/architecture-pages.spec.ts.
+  const passingWarning = [
+    "warn | tests/insights.spec.ts > listener > survives a full disk",
+    "Warning: [insights-listener] decisions write failed: Error: disk full",
+  ];
+
+  it("names the failing spec from rstest's summary, never a line a passing spec printed", () => {
+    expect(
+      row(
+        [
+          "  Rstest v0.12.5",
+          " \u001b[31m✗\u001b[0m tests/arch/architecture-pages.spec.ts (1)",
+          ...passingWarning,
+          " ✓ tests/insights.spec.ts (4)",
+          "Summary of all failing tests:",
+          // Byte for byte as rstest 0.12 colours it into a log.
+          "\u001b[41m\u001b[37m\u001b[1m FAIL \u001b[22m\u001b[39m\u001b[49m \u001b[90mtests/arch/\u001b[39m" +
+            "\u001b[36marchitecture-pages.spec.ts\u001b[39m \u001b[2m>\u001b[22m pages > are fresh",
+          "AssertionError: expected 'old' to be 'new' // Object.is equality",
+          'ERROR: "test" exited with 1.',
+        ].join("\n"),
+      ),
+    ).toEqual({
       step: "test",
-      error: 'ERROR: "test" exited with 2.'.replace(/"/g, ""),
+      error: "FAIL tests/arch/architecture-pages.spec.ts > pages > are fresh",
     });
+  });
+
+  it("reads the report rstest prints under an agent the same way", () => {
+    expect(
+      row(
+        [
+          "# Rstest Test Execution Report",
+          "## Failures",
+          "### [F01] tests/arch/architecture-pages.spec.ts :: pages > are fresh",
+          '      "message": "Error: stale",',
+          "### [F02] tests/broken.spec.ts",
+          'ERROR: "test:app" exited with 1.',
+        ].join("\n"),
+      ),
+    ).toEqual({
+      step: "test:app",
+      error: "FAIL tests/arch/architecture-pages.spec.ts > pages > are fresh",
+    });
+  });
+
+  it("names biome's first error diagnostic, skipping a warning, and prefers the failed step's tool", () => {
+    expect(
+      row(
+        [
+          "src/a.ts(1,1): error TS2304: Cannot find name 'x'.",
+          "src/b.ts:4:7 lint/style/useConst  FIXABLE  ━━━━━━━━━━",
+          "",
+          "  ! This let declares a variable that is only assigned once.",
+          "src/c.ts:2:20 lint/suspicious/noDoubleEquals  FIXABLE  ━━━━━━━━━━",
+          "",
+          "  × Using == may be unsafe if you are relying on type coercion.",
+          'ERROR: "lint" exited with 1.',
+        ].join("\n"),
+      ),
+    ).toEqual({ step: "lint", error: "src/c.ts:2:20 lint/suspicious/noDoubleEquals" });
+  });
+
+  it("leaves the error empty rather than guess from a warning, an advisory ✗ or the exit line", () => {
+    expect(
+      row(
+        [
+          ...passingWarning,
+          "\u001b[31m✗ built from abc\u001b[0m",
+          'ERROR: "test" exited with 2.',
+        ].join("\n"),
+      ),
+    ).toEqual({ step: "test", error: "" });
     expect(row("nothing useful")).toEqual({ step: "", error: "" });
   });
 });
@@ -147,4 +213,64 @@ describe("ship open — a failed local verify lands in the meter's log with its 
       error: "src/x.ts(3,5): error TS2322: boom",
     });
   });
+
+  it("does not call a queue timeout a failed verify: exit 75, no row, and it says what happened", async () => {
+    const logged = join(dir, "runs", "ship-verify.jsonl");
+    const rowsBefore = readFileSync(logged, "utf8");
+    const queued = { ...env(), SKYNET_VERIFY_LOCKED: "" };
+    const inside = join(dir, "holding");
+    const holder = spawn(
+      "bash",
+      ["scripts/verify-locked.sh", "--", "sh", "-c", `: > "${inside}"; sleep 60`],
+      { cwd: work, env: queued, detached: true, stdio: "ignore" },
+    );
+    const deadline = performance.now() + 30_000;
+    while (!existsSync(inside) && performance.now() < deadline) {
+      await new Promise((r) => setTimeout(r, 25));
+    }
+    const r = spawnSync(
+      "bash",
+      [resolve("scripts/ship.sh"), "open", "test: spec", "--body-file", join(dir, "body.md")],
+      { cwd: work, env: { ...queued, VERIFY_LOCK_WAIT: "0" }, encoding: "utf8" },
+    );
+    process.kill(-(holder.pid as number), "SIGKILL");
+    expect(r.status).toBe(75);
+    expect(r.stdout).toContain("no verify result");
+    expect(readFileSync(logged, "utf8")).toBe(rowsBefore);
+  }, 60_000);
+
+  // #6668: a closed lid slept the laptop 13 minutes into a verify, which then failed on 5 s timeouts
+  // its specs passed in seconds afterwards. That run says nothing about the branch, so it is no row.
+  it("does not count a verify the machine slept through: exit 75, no row", () => {
+    const logged = join(dir, "runs", "ship-verify.jsonl");
+    const rowsBefore = readFileSync(logged, "utf8");
+    const sleepy = join(dir, "sleepy-bin");
+    const wake = join(dir, "waketime");
+    mkdirSync(sleepy, { recursive: true });
+    writeFileSync(wake, "1793627758\n");
+    // macOS's sysctl, and a verify during which the machine slept and woke: the waketime moves.
+    writeFileSync(
+      join(sleepy, "sysctl"),
+      `#!/bin/sh\n[ "$1" = kern.waketime ] || exit 1\necho "kern.waketime: { sec = $(cat "${wake}"), usec = 179693 } Mon Nov  2 07:55:58 2026"\n`,
+    );
+    writeFileSync(
+      join(sleepy, "npm"),
+      `#!/bin/sh\n[ "$1 $2" = "run verify" ] && echo 1793628420 > "${wake}"\necho 'ERROR: "test" exited with 1.'\nexit 1\n`,
+    );
+    chmodSync(join(sleepy, "sysctl"), 0o755);
+    chmodSync(join(sleepy, "npm"), 0o755);
+    const r = spawnSync(
+      "bash",
+      [resolve("scripts/ship.sh"), "open", "test: spec", "--body-file", join(dir, "body.md")],
+      {
+        cwd: work,
+        env: { ...env(), PATH: `${sleepy}:${env().PATH}`, SKYNET_VERIFY_LOCKED: "" },
+        encoding: "utf8",
+      },
+    );
+    expect(r.status).toBe(75);
+    expect(r.stderr).toContain("slept");
+    expect(r.stdout).toContain("no verify result");
+    expect(readFileSync(logged, "utf8")).toBe(rowsBefore);
+  }, 60_000);
 });

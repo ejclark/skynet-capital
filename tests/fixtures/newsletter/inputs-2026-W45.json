@@ -1,0 +1,542 @@
+{
+  "week": "2026-W45",
+  "asOf": "2026-11-09T00:00:00.000Z",
+  "prs": [
+    {
+      "number": 7001,
+      "title": "feat(newsletter): the numbers",
+      "author": "ejclark",
+      "headRef": "claude/x",
+      "mergedAt": "2026-11-03T10:00:00Z"
+    },
+    {
+      "number": 7002,
+      "title": "fix(ship): retry the push",
+      "author": "skynet-envoy[bot]",
+      "headRef": "feedback/7000",
+      "mergedAt": "2026-11-04T10:00:00Z"
+    },
+    {
+      "number": 7003,
+      "title": "docs(research): cpi 11-10 d-5 pulse - stance holds",
+      "author": "skynet-envoy[bot]",
+      "headRef": "research/cpi-11-10",
+      "mergedAt": "2026-11-04T11:00:00Z"
+    },
+    {
+      "number": 7004,
+      "title": "docs(research): jobs 11-06 pulse",
+      "author": "skynet-envoy[bot]",
+      "headRef": "moneypenny/jobs",
+      "mergedAt": "2026-11-05T11:00:00Z"
+    },
+    {
+      "number": 7005,
+      "title": "docs(digest): 2026-11-04 secretary digest",
+      "author": "ejclark",
+      "headRef": "claude/digest",
+      "mergedAt": "2026-11-05T12:00:00Z"
+    },
+    {
+      "number": 7006,
+      "title": "chore(deps): bump vite",
+      "author": "dependabot[bot]",
+      "headRef": "dependabot/npm/vite",
+      "mergedAt": "2026-11-06T12:00:00Z"
+    },
+    {
+      "number": 7007,
+      "title": "Update README",
+      "author": "ejclark",
+      "headRef": "patch-1",
+      "mergedAt": "2026-11-07T12:00:00Z"
+    },
+    {
+      "number": 7008,
+      "title": "feat(x): merged the week before",
+      "author": "ejclark",
+      "headRef": "claude/y",
+      "mergedAt": "2026-11-01T23:59:59Z"
+    },
+    {
+      "number": 7009,
+      "title": "feat(x): closed unmerged",
+      "author": "ejclark",
+      "headRef": "claude/z",
+      "mergedAt": null
+    },
+    {
+      "number": 7010,
+      "title": "fix(x): merged the week after",
+      "author": "ejclark",
+      "headRef": "claude/w",
+      "mergedAt": "2026-11-09T00:00:00Z"
+    }
+  ],
+  "tracker": {
+    "title": "Work mode: NORMAL · pace: week 6% used, 26% gone, behind pace by 20, resets 11-10 05:00Z",
+    "body": "The dial.\n\n<!-- pace-reading {\"used\":6,\"readAt\":\"2026-11-05T01:02:09.511Z\",\"resetsAt\":\"2026-11-10T05:00:00.000Z\",\"source\":\"lane:build-events\"} -->",
+    "comments": [
+      {
+        "id": 1,
+        "createdAt": "2026-11-01T13:10:05Z",
+        "body": "**Post-merge audit, 2026-11-01: 3 of 10 reviewed PRs had a confirmed defect.**\n\n| | |\n|---|---|\n| PRs reviewed | #6307 #6323 #6324 |\n| Confirmed | #6326, #6327, #6335: 0.3 per PR |"
+      },
+      {
+        "id": 2,
+        "createdAt": "2026-11-02T14:49:28Z",
+        "body": "**Post-merge audit, 2026-11-02, batch B: 3 confirmed defects in 2 of 8 PRs, 1 refuted.**\n\n| | |\n|---|---|\n| PRs reviewed | #6509 #6512 #6569 #6595 #6596 #6610 #6611 #6612, all merged 2026-11-01 |\n| Confirmed | 3, all medium: 0.4 per PR |\n| Price | 26 agents, 1.73M tokens, 0.30M of them output, 31 min. |"
+      },
+      {
+        "id": 3,
+        "createdAt": "2026-11-02T14:51:14Z",
+        "body": "**Post-merge audit, 2026-11-02, batch A: 1 confirmed defect in 8 server and product PRs, none refuted.**\n\n| | |\n|---|---|\n| PRs reviewed | #6568 #6577 #6585 #6597 #6578 #6602 #6325 #6591 |\n| Confirmed | 1 (#6325), or 0.125 per PR |\n| Price | 29 agents, 1.98M tokens, 0.51M of them output. |\n\n<!-- audit-receipt {\"at\":\"2026-11-02T14:45:00Z\",\"prs\":[6568,6577,6585,6597,6578,6602,6325,6591],\"confirmed\":1} -->"
+      },
+      {
+        "id": 4,
+        "createdAt": "2026-11-02T15:35:23Z",
+        "body": "**Post-merge audit, 2026-11-02, batch E: 8 confirmed findings (7 defects) in 6 of 8 PRs, 1 refuted.**\n\n| | |\n|---|---|\n| PRs reviewed | #6472 #6508 #6523 #6533 #6536 #6552 #6555 #6600, review builds |\n| Confirmed | 8, all medium: 1.0 per PR |\n| Price | 36 agents, 1.88M tokens, 0.23M of them output, 25 min. |"
+      },
+      {
+        "id": 5,
+        "createdAt": "2026-11-02T16:40:21Z",
+        "body": "**Surge closed: the dial went back to `normal` at 15:55Z.**\n\n| **Audited** | 48 PRs, 25 confirmed findings: 0.52 per PR |"
+      },
+      {
+        "id": 6,
+        "createdAt": "2026-11-03T09:00:00Z",
+        "body": "**Post-merge audit, 2026-11-03, a pass cut short: no table was written.**"
+      }
+    ]
+  },
+  "localReceipts": [
+    {
+      "at": "2026-11-02T14:45:00Z",
+      "prs": [6568, 6577, 6585, 6597, 6578, 6602, 6325, 6591],
+      "confirmed": 1
+    },
+    {
+      "at": "2026-11-06T10:00:00Z",
+      "prs": [7001, 7002],
+      "confirmed": 0
+    }
+  ],
+  "defectIssues": [
+    {
+      "created_at": "2026-11-02T14:30:00Z",
+      "body": "| **Found by** | post-merge audit 2026-11-02 |\n| **Introduced in** | #6325 |"
+    },
+    {
+      "created_at": "2026-11-02T15:30:00Z",
+      "body": "| **Found by** | post-merge audit 2026-11-02 |\n| **Introduced in** | #6509 |"
+    },
+    {
+      "created_at": "2026-10-30T15:30:00Z",
+      "body": "| **Found by** | post-merge audit 2026-10-30 |\n| **Introduced in** | #6000 |"
+    }
+  ],
+  "failureToFix": {
+    "window": {},
+    "commits": "shallow checkout",
+    "sources": {
+      "mainCi": {
+        "episodes": [],
+        "stages": {
+          "detectionLag": {
+            "n": 0,
+            "unknown": 0,
+            "p50Min": null,
+            "p90Min": null
+          }
+        }
+      },
+      "contracts": {
+        "episodes": [
+          {
+            "id": "#6686"
+          }
+        ],
+        "stages": {
+          "toVerified": {
+            "n": 1,
+            "unknown": 0,
+            "p50Min": 9,
+            "p90Min": 9
+          }
+        },
+        "blind": 0
+      }
+    },
+    "rest": {
+      "calls": 5,
+      "cap": 250
+    }
+  },
+  "jobs": {
+    "window": {},
+    "rows": [
+      {
+        "job": "post-merge audit",
+        "runs": null,
+        "tokens": null,
+        "verified": null,
+        "perVerified": null,
+        "floor": false
+      },
+      {
+        "job": "full verify",
+        "runs": 4,
+        "tokens": null,
+        "verified": 3,
+        "perVerified": null,
+        "floor": false,
+        "spendsTokens": false
+      },
+      {
+        "job": "stages: reviewer",
+        "runs": 2,
+        "tokens": 200000,
+        "verified": null,
+        "perVerified": null,
+        "floor": false
+      },
+      {
+        "job": "stages: worker",
+        "runs": 5,
+        "tokens": 50000,
+        "verified": null,
+        "perVerified": null,
+        "floor": false
+      },
+      {
+        "job": "fix a failure",
+        "runs": 1,
+        "tokens": null,
+        "verified": 1,
+        "perVerified": null,
+        "floor": false
+      },
+      {
+        "job": "communication",
+        "runs": null,
+        "tokens": null,
+        "verified": null,
+        "perVerified": null,
+        "floor": false
+      }
+    ]
+  },
+  "ciRuns": [
+    {
+      "event": "pull_request",
+      "conclusion": "success"
+    },
+    {
+      "event": "pull_request",
+      "conclusion": "success"
+    },
+    {
+      "event": "pull_request",
+      "conclusion": "success"
+    },
+    {
+      "event": "pull_request",
+      "conclusion": "failure"
+    },
+    {
+      "event": "pull_request",
+      "conclusion": "cancelled"
+    },
+    {
+      "event": "push",
+      "conclusion": "failure"
+    }
+  ],
+  "needsEric": [
+    {
+      "number": 5453,
+      "labeledAt": "2026-10-16T05:29:38Z"
+    },
+    {
+      "number": 6618,
+      "labeledAt": "2026-11-02T00:00:00Z"
+    },
+    {
+      "number": 6862,
+      "labeledAt": null
+    }
+  ],
+  "fitness": {
+    "contracts": [
+      "bots-running",
+      "main-deploys",
+      "alerts-reach-owner",
+      "owner-assignment-path",
+      "decision-cycle"
+    ],
+    "issues": [
+      {
+        "number": 6570,
+        "title": "[fitness] owner-assignment-path",
+        "createdAt": "2026-11-01T15:11:54Z",
+        "closedAt": "2026-11-01T15:24:50Z"
+      },
+      {
+        "number": 6604,
+        "title": "[fitness] main-deploys",
+        "createdAt": "2026-11-01T19:39:47Z",
+        "closedAt": "2026-11-03T23:40:01Z"
+      },
+      {
+        "number": 6686,
+        "title": "[fitness] bots-running",
+        "createdAt": "2026-11-02T14:17:38Z",
+        "closedAt": "2026-11-02T14:26:38Z"
+      },
+      {
+        "number": 6501,
+        "title": "[fitness] alerts-reach-owner",
+        "createdAt": "2026-11-01T09:12:14Z",
+        "closedAt": null
+      },
+      {
+        "number": 6900,
+        "title": "[fitness] cannot read fly",
+        "createdAt": "2026-11-04T09:00:00Z",
+        "closedAt": "2026-11-04T10:00:00Z"
+      }
+    ]
+  },
+  "loopIterations": [
+    {
+      "date": "2026-11-01",
+      "loop": "instruction-drift",
+      "before": 0,
+      "after": 0,
+      "tokensM": null
+    },
+    {
+      "date": "2026-11-02",
+      "loop": "governor-bury",
+      "before": 282,
+      "after": 282,
+      "tokensM": null
+    },
+    {
+      "date": "2026-11-02",
+      "loop": "governor-bury",
+      "before": 282,
+      "after": 279,
+      "tokensM": 2.16
+    },
+    {
+      "date": "2026-11-03",
+      "loop": "governor-bury",
+      "before": 279,
+      "after": 275,
+      "tokensM": 2.16
+    },
+    {
+      "date": "2026-11-04",
+      "loop": "css-literal-swaps",
+      "before": 12,
+      "after": 12,
+      "tokensM": 0.5
+    },
+    {
+      "date": "2026-11-09",
+      "loop": "governor-dedupe",
+      "before": 290,
+      "after": 280,
+      "tokensM": 1
+    }
+  ],
+  "scorecard": {
+    "total": 1997,
+    "linked": 505,
+    "all": {
+      "pass": 482,
+      "kill": 147,
+      "void": 28,
+      "unscoreable": 18,
+      "open": 1317,
+      "unread": 5
+    },
+    "byGrade": {
+      "high": {
+        "pass": 47,
+        "kill": 15,
+        "void": 5,
+        "unscoreable": 1,
+        "open": 99,
+        "unread": 0
+      },
+      "medium": {
+        "pass": 62,
+        "kill": 22,
+        "void": 2,
+        "unscoreable": 2,
+        "open": 222,
+        "unread": 1
+      }
+    }
+  },
+  "subIssues": [
+    {
+      "number": 6598,
+      "title": "Test a fence",
+      "parent": 5482,
+      "closedAt": "2026-11-02T08:13:51Z"
+    },
+    {
+      "number": 6599,
+      "title": "Closed the week before",
+      "parent": 5482,
+      "closedAt": "2026-11-01T08:13:51Z"
+    },
+    {
+      "number": 6597,
+      "title": "No parent",
+      "parent": null,
+      "closedAt": "2026-11-03T08:13:51Z"
+    }
+  ],
+  "stateBlocks": [
+    {
+      "issue": 6872,
+      "title": "Send a weekly newsletter",
+      "body": "## State block — read this first, then pick up\n\n```mermaid\nstateDiagram-v2\n  [*] --> S1\n```\n\n**What changed:** slice 1 merged.\n\n**Log**\n- 2026-11-01 · filed, before the week\n- 2026-11-03 · slice 1 merged as #7001\n- 2026-11-05 · a long line a long line a long line a long line a long line a long line a long line a long line a long line a long line a long line a long line a long line a long line a long line a long line a long line a long line a long line a long line a long line a long line a long line a long line a long line a long line a long line a long line a long line a long line \n- 2026-11-09 · the next week, out\n\n### For the builder\n\n- 2026-11-04 · a dated bullet under the builder heading is not a Log line\n"
+    },
+    {
+      "issue": 6000,
+      "title": "Not a state block",
+      "body": "**Log**\n- 2026-11-03 · not under a State block heading"
+    }
+  ],
+  "registry": [
+    {
+      "loop": "Bot doctrine checks",
+      "issue": "#2287",
+      "state": "running",
+      "nextCheck": null,
+      "question": "q",
+      "nextCheckText": "each newsletter",
+      "humanStep": "—",
+      "cadence": "—"
+    },
+    {
+      "loop": "Plan check",
+      "issue": "#6872",
+      "state": "running",
+      "nextCheck": null,
+      "question": "q",
+      "nextCheckText": "each newsletter",
+      "humanStep": "Steer next week's commitments",
+      "cadence": "Weekly"
+    },
+    {
+      "loop": "Weekly token split",
+      "issue": "#6872",
+      "state": "running",
+      "nextCheck": null,
+      "question": "q",
+      "nextCheckText": "each newsletter",
+      "humanStep": "Choose how this week's tokens divide",
+      "cadence": "Weekly"
+    },
+    {
+      "loop": "Review rules",
+      "issue": "#6870",
+      "state": "planned",
+      "nextCheck": null,
+      "question": "q",
+      "nextCheckText": "each newsletter",
+      "humanStep": "Veto a suppressed or retired rule",
+      "cadence": "Weekly"
+    },
+    {
+      "loop": "Memory review (/dream)",
+      "issue": "#6470",
+      "state": "running",
+      "nextCheck": null,
+      "question": "q",
+      "nextCheckText": "each newsletter",
+      "humanStep": "Take or discard up to 5 proposals",
+      "cadence": "Weekly"
+    },
+    {
+      "loop": "Falsifiers due",
+      "issue": "#6872",
+      "state": "running",
+      "nextCheck": null,
+      "question": "q",
+      "nextCheckText": "each newsletter",
+      "humanStep": "Read calls whose dated falsifier came due",
+      "cadence": "Weekly"
+    },
+    {
+      "loop": "Alignment",
+      "issue": "docs/process/ALIGNMENT.md",
+      "state": "running",
+      "nextCheck": null,
+      "question": "q",
+      "nextCheckText": "each newsletter",
+      "humanStep": "One tap",
+      "cadence": "Every two weeks"
+    },
+    {
+      "loop": "Showcase",
+      "issue": "#5143",
+      "state": "running",
+      "nextCheck": null,
+      "question": "q",
+      "nextCheckText": "each newsletter",
+      "humanStep": "React to shipped member-facing changes",
+      "cadence": "Every two weeks"
+    },
+    {
+      "loop": "Playbook library",
+      "issue": "#6771",
+      "state": "running",
+      "nextCheck": null,
+      "question": "q",
+      "nextCheckText": "each newsletter",
+      "humanStep": "Pick playbooks to grade next",
+      "cadence": "Monthly"
+    },
+    {
+      "loop": "Brand ideas",
+      "issue": "#6616",
+      "state": "running",
+      "nextCheck": null,
+      "question": "q",
+      "nextCheckText": "each newsletter",
+      "humanStep": "Keep or drop candidate names",
+      "cadence": "Monthly"
+    },
+    {
+      "loop": "Odd cadence",
+      "issue": "#1",
+      "state": "running",
+      "nextCheck": null,
+      "question": "q",
+      "nextCheckText": "each newsletter",
+      "humanStep": "Something",
+      "cadence": "Quarterly"
+    },
+    {
+      "loop": "Ended loop",
+      "issue": "#1",
+      "state": "killed",
+      "nextCheck": null,
+      "question": "q",
+      "nextCheckText": "each newsletter",
+      "humanStep": "A step",
+      "cadence": "Weekly"
+    }
+  ],
+  "previous": {
+    "path": "docs/newsletters/2026-W44.md",
+    "md": "# Newsletter 2026-W44\n\nBody.\n\n<!-- newsletter-plan\n{\"week\":\"2026-W44\",\"commitments\":[\n {\"id\":\"W44-1\",\"text\":\"Land the reviewer replay\",\"done\":\"WHEN the replay reports, THEN its score is on #6870\",\"horizon\":\"Now\",\"issue\":6870},\n {\"id\":\"W44-2\",\"text\":\"Write the first newsletter\",\"done\":\"WHEN W45 closes, THEN it posts\",\"horizon\":\"Next\",\"issue\":null}\n],\n\"asks\":{\"carried\":[\"Plan check\"],\"rolledOver\":[{\"loop\":\"Brand ideas\",\"since\":\"2026-W44\"},{\"loop\":\"Ended loop\",\"since\":\"2026-W43\"}]}}\n-->\n"
+  }
+}

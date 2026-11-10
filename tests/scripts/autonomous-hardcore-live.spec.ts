@@ -1,4 +1,5 @@
 import type { ControlsState } from "../../src/autonomous/bot-controls.js";
+import type { PersonaGateVerdict } from "../../src/autonomous/controls-poll-wire.js";
 import type { Persona } from "../../src/personas/persona.js";
 import {
   buildTuning,
@@ -122,6 +123,19 @@ describe("gateBuild", () => {
     const mode = gateBuild(sauron, false, "observe", (v) => gates.push(v.id));
     expect(mode).toBe("observe");
     expect(gates).toEqual(["sauron"]);
+  });
+
+  it("reports the mode it wanted and the mode it got, so the card can name the gate (#6954)", () => {
+    for (const wanted of ["observe", "live"] as const) {
+      const verdicts: PersonaGateVerdict[] = [];
+      const mode = gateBuild(sauron, false, wanted, (v) => verdicts.push(v));
+      expect(verdicts).toHaveLength(1);
+      expect(verdicts[0]?.wanted).toBe(wanted);
+      expect(verdicts[0]?.mode).toBe(mode);
+      // the gate only ever narrows: a build that wanted observe never comes back live
+      if (wanted === "observe") expect(mode).toBe("observe");
+      if (mode === "live") expect(verdicts[0]?.ready).toBe(true);
+    }
   });
 });
 

@@ -19,7 +19,7 @@ Everything through 11.17 is available on GitHub, including:
 Treat v12-only shapes and v12 defaults as unavailable. The Mermaid Chart validator (11.13) draws collapsed subgraphs expanded and rejects the newer shapes, so a red there on these is a false red.
 
 ## When to reach for it
-- PR-body opening picture (the fridge rule) for any dataflow, pipeline or CI change: ship.sh open → auto-merge → deploy, pipeline.yml's verify-vs-deploy split, and the docs-only fast path. docs/PICTURES.md already prescribes `flowchart LR` for 'Dataflow / pipeline'.
+- PR-body opening picture (the fridge rule) for any dataflow, pipeline or CI change: ship.sh open → auto-merge → deploy, pipeline.yml's verify-vs-deploy split, and the docs-only fast path. docs/PICTURES.md already prescribes `flowchart` (`TD` past ~6 nodes) for 'A dataflow, pipeline or decision path'.
 - Bot decision paths: persona signal → gates (budget, hardcore, envelope, anti-double-trade) → ticket → fill → journal. Decision diamonds with worded yes/no edges make each gate auditable. Kill and rollback paths go on dotted edges.
 - Issue capsules for a zero-context build session: a 5-10 node 'touched path' map showing where the change enters, which gate it passes and what it emits. It gives the builder the topology without prose.
 - EARS acceptance criteria: 'When <trigger>, if <condition>, the system shall <response>' maps one-to-one onto trigger node → {condition} → response, with an 'else' edge. The diagram exposes missing else-branches.
@@ -36,7 +36,7 @@ Treat v12-only shapes and v12 defaults as unavailable. The Mermaid Chart validat
 - Research call sheets (call · confidence · why · falsifier): the five-column table is already the picture. Wrapping it in nodes adds nothing and costs width.
 - Schemas or data models: erDiagram or classDiagram.
 - UI changes: before/after screenshots. A box diagram of a screen is misleading.
-- Anything over about 15 nodes, or long LR chains: unreadable at 390px. Split it, or collapse the detail with `@{ view: collapsed }` (v11.17; GitHub's 11.17.2 has it).
+- Anything taller than one phone screen at 390px, or with text under 12px there (`npm run shoot:mermaid-pairs` prints both; a TD chain of 8 nodes measured 1.06 screens, 20 measured 1.60, #4550), or long LR chains. Split it, or collapse the detail with `@{ view: collapsed }` (v11.17; GitHub's 11.17.2 has it).
 - Any diagram where colour (classDef fill) is the only carrier of pass/fail or risk. It violates the colourblind rule, and PICTURES.md bans improvised styling.
 - Interactive affordances (click, tooltips): GitHub renders in strict mode, so links and callbacks will not work there. Edge animation does move on github.com (see Emphasis below).
 
@@ -254,7 +254,7 @@ Treat v12-only shapes and v12 defaults as unavailable. The Mermaid Chart validat
 - Too many `&` chains make the source unreadable ('lagom').
 - Size caps: maxTextSize 50000 characters and maxEdges 500 by default. Beyond those the diagram does not render.
 - Icons (fa:, icon shape) need host-registered packs or FontAwesome CSS. Without them, the text or placeholder shows.
-- Phone fit (from the validated rich example): 12 nodes in TD rendered 519px wide by 1737px tall, so on a 390px screen it scales to about 75%. Keep labels short, prefer TD over long LR chains, and cap nodes at about 12-15.
+- Phone fit (from the validated rich example): 12 nodes in TD rendered 519px wide by 1737px tall, so on a 390px screen it scales to about 75%. Keep labels short, prefer TD over long LR chains, and keep the drawing to one phone screen at ≥12px text (the legibility budget in `docs/PICTURES.md`).
 
 ## Starters (validated mcp__Mermaid_Chart__validate_and_render_mermaid_diagram. Its renderer reports Mermaid v11.13.0 (an `info` diagram returned 'v11.13.0') and uses dagre with the classic look and default theme.; minimal ✓, rich ✓ — None for minimal or rich. Rich renders 3 subgraphs and 12 nodes, with thick-solid, normal-solid and normal-dotted edge classes present; 519x1737px. Probes run to ground the gotchas: `a --> end` gives a parse error; @{ shape: person } gives 'No such shape: person' (hard fail); one@{ view: collapsed } is accepted but ignored (rendered expanded); edge id + e1@{ animate: true } is OK; quoted edge labels on dotted/thick edges are OK; "**x**" without backticks renders literal asterisks; a backtick markdown string renders <strong>/<em>.)
 

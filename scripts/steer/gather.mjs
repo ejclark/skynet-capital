@@ -42,6 +42,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { isMain } from "../is-main.mjs";
 import { plan, gather as readAssignments } from "../moneypenny/assignments.mjs";
 import { ensureGhToken, ghRest, ghRestAll } from "../moneypenny/gh.mjs";
 import { designFiles, designRound, loadDesigns } from "./design.mjs";
@@ -288,4 +289,4 @@ function main() {
   );
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+if (isMain(import.meta.url)) main();

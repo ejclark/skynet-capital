@@ -2,6 +2,13 @@ import { isCalendarDay } from "../subscriptions/subscription-state.js";
 import { claimLabel, outcomeOf } from "./claim-score.js";
 import ledger from "./conviction-adoptions.json";
 import type { Conviction } from "./conviction-record.js";
+import {
+  FENCE_CALLS,
+  type FenceCall,
+  fenceCall,
+  PAIR_RULE_KINDS,
+  type PairRule,
+} from "./fence-studies.js";
 
 /**
  * A SCORED CLAIM'S PROPOSAL, ADOPTED (#5482 criterion 6, its second half). The scoring pass writes
@@ -10,28 +17,43 @@ import type { Conviction } from "./conviction-record.js";
  * written by `npm run research:refine -- <key>` on its own branch and opened as a HELD pull request,
  * so the change reaches a pair only through Eric's merge. Deleting the line undoes it.
  *
- * WHAT ONE LINE CAN SAY. Only `stop-new-entries`, option 1 of a failed claim's proposal: the view
+ * A FAILED CLAIM'S LINE. `stop-new-entries`, option 1 of a failed claim's proposal: the view
  * keeps steering the pair, and the pair opens nothing new under it; every exit still runs. It is the
  * narrower of the two ways out a fail offers (retiring the pair from the view is the other), and on
  * a ◆ pair, the only kind a record steers, both leave the pair exits-only. The hold rides the one
  * refusal path a pointed pair already has (`steeredBy` → exits-only), so the bots, the roll call and
  * the owner's row all say why with the same sentence.
  *
- * WHAT IT NEVER SAYS. A pass's proposal, carrying a fence into the pair's own settings, is a
- * playbook change that needs its own study, so no line here can adopt one. Nothing here widens a
- * bound, sizes a trade or places an order. Paper only, SIM.
+ * A PASSED CLAIM'S LINE (#6598 slice 3). `pair-rule`: a fence a passed claim backed becomes the
+ * pair's own rule, for every subscription to the pair, pointed or not. Only a study whose call is
+ * *adopt* can write one (`fence-studies.ts`), and only as a date-free `PairRule`; `steeredBy` reads
+ * it through the same narrow-only resolver a view's narrowings pass, so a rule that would widen a
+ * bound refuses the pair whole and it runs exits-only. No study says adopt today, so no line can.
+ *
+ * WHAT IT NEVER SAYS. Nothing here widens a bound, sizes a trade or places an order. Paper only, SIM.
  */
 
-export const ADOPTED_CHANGES = ["stop-new-entries"] as const;
-export type AdoptedChange = (typeof ADOPTED_CHANGES)[number];
+const ADOPTED_CHANGES = ["stop-new-entries", "pair-rule"] as const;
+type AdoptedChange = (typeof ADOPTED_CHANGES)[number];
 
-export interface Adoption {
-  readonly change: AdoptedChange;
+interface AdoptionBase {
   /** The day the adoption was written (its PR's merge makes it live). */
   readonly adoptedOn: string;
   /** The score's basis, copied for the reader of the ledger and the PR. */
   readonly basis: string;
 }
+
+export type Adoption =
+  | (AdoptionBase & { readonly change: "stop-new-entries" })
+  | (AdoptionBase & {
+      readonly change: "pair-rule";
+      /** The rules the study's *adopt* call states, one per fence kind. */
+      readonly rules: readonly PairRule[];
+    });
+
+/** The outcome a claim must read for its line to stand: a hold rests on a fail, a rule on a pass. */
+const restsOn = (change: AdoptedChange): "fail" | "pass" =>
+  change === "pair-rule" ? "pass" : "fail";
 
 /** Adopted proposals by key: "ai-dip-2026-10/2a/CRWV-WHEEL". */
 export type AdoptionLedger = Readonly<Record<string, Adoption>>;
@@ -74,6 +96,25 @@ export function holdIn(ledger: AdoptionLedger): HoldLookup {
 /** The build's holds: the committed ledger. */
 export const adoptedHold: HoldLookup = holdIn(ADOPTIONS);
 
+export type RuleLookup = (pairId: string) => readonly PairRule[];
+
+/** The rules a ledger makes a pair's own, one per kind (several passed claims can back one fence,
+ *  and each writes the study's same rule; the first line, by key, stands). Read once into a map. */
+export function rulesIn(ledger: AdoptionLedger): RuleLookup {
+  const rules = new Map<string, Map<string, PairRule>>();
+  for (const [key, adoption] of Object.entries(ledger)) {
+    const parts = splitKey(key);
+    if (!parts || adoption.change !== "pair-rule" || !Array.isArray(adoption.rules)) continue;
+    const byKind = rules.get(parts.pair) ?? new Map<string, PairRule>();
+    for (const rule of adoption.rules) if (!byKind.has(rule.kind)) byKind.set(rule.kind, rule);
+    rules.set(parts.pair, byKind);
+  }
+  return (pairId) => [...(rules.get(pairId)?.values() ?? [])];
+}
+
+/** The build's pair rules: the committed ledger. */
+export const adoptedRules: RuleLookup = rulesIn(ADOPTIONS);
+
 /** How every adopted hold's reason begins, so the owner's row can say it as its own sentence. */
 export const ADOPTED_HOLD = "an adopted change holds it";
 
@@ -95,6 +136,7 @@ export const adoptedHoldReason = (record: Conviction, hold: AdoptedHold): string
 export function adoptionProblems(
   ledger: AdoptionLedger,
   convictions: readonly Conviction[],
+  calls: readonly FenceCall[] = FENCE_CALLS,
 ): string[] {
   const problems: string[] = [];
   for (const [key, adoption] of Object.entries(ledger)) {
@@ -114,9 +156,49 @@ export function adoptionProblems(
     if (!(ADOPTED_CHANGES as readonly string[]).includes(adoption.change)) {
       problems.push(`${key}: unknown change "${adoption.change}"`);
     }
+    if (adoption.change === "pair-rule") {
+      problems.push(...ruleProblems(key, parts, adoption, calls, record));
+    }
     if (!isCalendarDay(adoption.adoptedOn)) problems.push(`${key}: adoptedOn is not a day`);
   }
   return problems;
+}
+
+/** A rule line's rules must each be a date-free kind, and the very rule a study's *adopt* states. */
+function ruleProblems(
+  key: string,
+  { claim, pair }: { readonly claim: string; readonly pair: string },
+  adoption: Extract<Adoption, { change: "pair-rule" }>,
+  calls: readonly FenceCall[],
+  record: Conviction | undefined,
+): string[] {
+  if (!Array.isArray(adoption.rules) || adoption.rules.length === 0) {
+    return [`${key}: a pair rule states no rules`];
+  }
+  return adoption.rules.flatMap((rule) => {
+    if (!(PAIR_RULE_KINDS as readonly string[]).includes(rule.kind)) {
+      return [`${key}: "${rule.kind}" cannot be a pair's own rule`];
+    }
+    const call = fenceCall(pair, rule.kind, calls);
+    if (call?.call !== "adopt") return [`${key}: no study's call adopts ${rule.kind} on ${pair}`];
+    const backed = (record?.narrowings ?? []).some(
+      (n) =>
+        n.pair === pair &&
+        n.fromClaims.includes(claim) &&
+        n.narrow.some((f) => f.kind === rule.kind),
+    );
+    if (record && !backed) return [`${key}: claim ${claim} backs no ${rule.kind} fence on ${pair}`];
+    return sameRule(call.rule, rule)
+      ? []
+      : [`${key}: its ${rule.kind} rule is not the one \`${call.study}\` adopts`];
+  });
+}
+
+/** Two rules alike field by field, whatever order a hand edit wrote the keys in. */
+function sameRule(a: PairRule, b: PairRule): boolean {
+  const fields = (r: PairRule) =>
+    JSON.stringify(Object.entries(r).sort(([x], [y]) => x.localeCompare(y)));
+  return fields(a) === fields(b);
 }
 
 /** A record's claim by its label ("2a"), the way the record numbers it. */
@@ -124,19 +206,19 @@ export const claimOf = (record: Conviction, label: string) =>
   record.claims.find((c, i) => claimLabel(c.statement, i + 1) === label);
 
 /**
- * Adopted lines whose claim no longer reads failed (a full scoring pass re-ran its study), with the
- * outcome it reads now. The hold stays, the narrow side, until a person reads this and removes it;
- * `npm run research:refine` lists them.
+ * Adopted lines whose claim no longer reads the outcome the line rests on (`restsOn`: a full scoring
+ * pass re-ran its study), with the outcome it reads now. The line stays until a person reads this
+ * and removes it; `npm run research:refine` lists them.
  */
 export function staleAdoptions(
   ledger: AdoptionLedger,
   convictions: readonly Conviction[],
 ): readonly { readonly key: string; readonly outcome: string }[] {
-  return Object.keys(ledger).flatMap((key) => {
+  return Object.entries(ledger).flatMap(([key, adoption]) => {
     const parts = splitKey(key);
     const record = convictions.find((c) => c.id === parts?.conviction);
     const claim = record && parts ? claimOf(record, parts.claim) : undefined;
     const outcome = claim ? outcomeOf(claim) : "missing";
-    return outcome === "fail" ? [] : [{ key, outcome }];
+    return outcome === restsOn(adoption.change) ? [] : [{ key, outcome }];
   });
 }

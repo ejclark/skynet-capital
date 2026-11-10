@@ -12,6 +12,7 @@ import { assembleChain } from "../adapters/alpaca-recommend-chain.js";
 import type { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
 import { resolveCompanionChat } from "../companion/companion-chat.js";
 import type { CompanionDeskDeps } from "../companion/companion-tools.js";
+import { marketDayKey } from "../domain/market-day.js";
 import type { TradeActivityRecord } from "../observatory/activity-store.js";
 import { rankStructures } from "../options/recommend.js";
 import type { BotControlsStore } from "../server/bot-controls-store.js";
@@ -19,8 +20,8 @@ import { createCompanionMessageLogStore } from "../server/companion-message-log.
 import { opaqueMemberId } from "../server/feedback-issue.js";
 import type { FeedbackLogStore } from "../server/feedback-log.js";
 import { resolveSimilarFeedback } from "../server/feedback-similar.js";
+import type { LadderEvidenceReader } from "../server/ladder-evidence.js";
 import type { ObservatoryHub } from "../server/observatory-hub.js";
-import type { OrderAuditRecord } from "../server/order-audit-log.js";
 import { logKeyFor } from "../server/owner-link-store.js";
 import {
   createProgressionService,
@@ -28,12 +29,14 @@ import {
 } from "../server/progression-service.js";
 import { createProgressionStore } from "../server/progression-store.js";
 import { resolveRoadmap } from "../server/roadmap.js";
+import { upcomingEvents } from "../server/upcoming-events.js";
 import { resolveWorkStatus } from "../server/work-status.js";
 
 export interface CompanionSetupDeps {
   readonly hub: ObservatoryHub;
   readonly readFills: (id: string) => Promise<readonly TradeActivityRecord[]>;
-  readonly readTags: (id: string) => Promise<readonly OrderAuditRecord[]>;
+  /** What the ladder's two ledgers prove (`ladder-evidence.ts`) — held, advanced by appended lines. */
+  readonly readEvidence: LadderEvidenceReader;
   /** What a member has filed — #567's original engagement evidence, kept only to grandfather a
    *  member who filed before the message log existed (`progression-service.ts`'s `readFeedback`
    *  doc). */
@@ -66,8 +69,7 @@ export function setupCompanion(env: NodeJS.ProcessEnv, deps: CompanionSetupDeps)
   const companionMessageLog = createCompanionMessageLogStore(env);
   const keyFor = (id: string) => logKeyFor(deps.ownerEmailFor, opaqueMemberId, id);
   const progression = createProgressionService({
-    readFills: deps.readFills,
-    readTags: deps.readTags,
+    readEvidence: deps.readEvidence,
     readMessages: (id) => companionMessageLog.list(keyFor(id)),
     readFeedback: (id) => deps.feedbackLog.list(keyFor(id)),
     store: createProgressionStore(env, (m) => console.error(m)),
@@ -83,6 +85,14 @@ export function setupCompanion(env: NodeJS.ProcessEnv, deps: CompanionSetupDeps)
     ...(findSimilarFeedback ? { findSimilarFeedback } : {}),
     ...(readWorkStatus ? { readWorkStatus } : {}),
     ...(readRoadmap ? { readRoadmap } : {}),
+    // The calendar and the ledgers are baked into the image, so this is always wired; the market
+    // day is New York's, so an evening question doesn't read tomorrow's fortnight.
+    readUpcomingEvents: (held, underlying) =>
+      upcomingEvents({
+        asOf: marketDayKey(new Date().toISOString()),
+        held,
+        ...(underlying ? { underlying } : {}),
+      }),
     ...(optionsClientFor
       ? {
           rankFor: async (participantId, outlook) => {

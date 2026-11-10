@@ -26,6 +26,9 @@ import {
 
 const MAX_PAGE_CHARS = 400;
 
+/** The SPA's basepath, as a prefix of the path the browser reports. */
+const APP_BASEPATH = /^\/app(?=\/|$)/;
+
 const TRADE_SECTIONS: Readonly<Record<string, string>> = {
   chart: "the chart view",
   chain: "the options chain",
@@ -53,6 +56,7 @@ const PROFILE_TABS: Readonly<Record<string, string>> = {
 };
 
 const PLAIN_PAGES: Readonly<Record<string, string>> = {
+  "/": "the landing page (the day's market news and its calendar)",
   "/accounts": "their accounts page",
   "/leaderboard": "the leaderboard",
   "/saved-positions": "their saved positions",
@@ -101,7 +105,17 @@ function parsePage(page: unknown): { path: string; params: URLSearchParams } | u
   } catch {
     return undefined;
   }
-  return { path: url.pathname.replace(/\/+$/, "") || "/", params: url.searchParams };
+  // The client posts `location.pathname`, which carries the router's `/app` basepath
+  // (`app/src/main.tsx`): `/app/trade`, never `/trade`. Every page below is named without it, so
+  // strip it here — before #7167 the Page line matched nothing a real browser sent.
+  const path = url.pathname.replace(/\/+$/, "").replace(APP_BASEPATH, "");
+  return { path: path || "/", params: url.searchParams };
+}
+
+/** The page's route, normalised (no trailing slash, no query) — or undefined for anything that
+ *  isn't an in-app page. The landing page's context stamp (#7167) keys off `/`. */
+export function pagePath(page: unknown): string | undefined {
+  return parsePage(page)?.path;
 }
 
 /** The underlying the trade ticket is on — its `?symbol=`, else a managed contract's underlying —

@@ -34,6 +34,7 @@
 
 import { activeShare, triggerMoves } from "../../scripts/research/rebalance-band-math.mjs";
 import type { PlayTarget } from "../domain/types.js";
+import { usdWhole } from "../ui/usd-whole.js";
 
 /** What a playbook allows its plays' targets to be; a subscription's target may only sit inside. */
 export interface PlayTargetBounds {
@@ -165,9 +166,6 @@ export interface PlayReading {
   /** In words, what the cascading threshold would do. Observe-only: nothing does it. */
   readonly wouldDo: string;
 }
-
-/** Whole dollars with thousands separators ("$12,500") — the wording the play-band lines use. */
-export const usdWhole = (n: number): string => `$${Math.round(n).toLocaleString("en-US")}`;
 
 function wouldDo(level: BandLevel, direction: "over" | "under" | null, move: number): string {
   if (level === "inside" || direction === null) return "nothing: inside its band";

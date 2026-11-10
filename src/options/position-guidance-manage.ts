@@ -32,7 +32,7 @@ import type {
 /** A week: the window where an in-the-money short call is likely to be exercised (position-watch). */
 const ASSIGNMENT_WINDOW_DAYS = 7;
 /** Half the premium kept — the common point to buy back and stop carrying the risk. */
-const TAKE_PROFIT = 0.5;
+export const BUY_BACK_AT_KEPT = 0.5;
 
 const netText = (net: number): string =>
   net >= 0
@@ -238,7 +238,7 @@ function verdictFor(ctx: LeverContext, c: OpenCall, ask: number, dte: number): V
       ? nearAssignment(ctx, c, ask, dte)
       : inTheMoney(ctx, c, ask, kept);
   }
-  if (kept >= TAKE_PROFIT) {
+  if (kept >= BUY_BACK_AT_KEPT) {
     return {
       call: "BUY BACK",
       reasons: [

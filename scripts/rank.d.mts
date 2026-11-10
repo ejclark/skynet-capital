@@ -13,6 +13,13 @@ export interface RankRow {
   remainder: boolean;
 }
 export const QUEUE_LABELS: string[];
+/** The board's Kind options, in lane-sort order (#6871 slice 3). */
+export const KINDS: string[];
+export function kindOf(input: {
+  labels?: string[];
+  blocks?: number[];
+  horizon?: string | null;
+}): string;
 export function classOf(input: { labels?: string[]; blocks?: number[]; horizon?: string | null }): {
   cls: string;
   why: string;

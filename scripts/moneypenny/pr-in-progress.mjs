@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { isMain } from "../is-main.mjs";
 // THE ONE WRITER OF `in-progress` FOR PR-BACKED WORK — #4393 slice 1, criteria 1 and 2. When a PR
 // opens that names an open issue, the issue gets `in-progress`; when that PR closes or merges and
 // nothing else is still building it, the label comes off. Every build path opens a PR, so this one
@@ -40,7 +41,7 @@
 // WIRED by .github/workflows/board-sync.yml (#4393 slice 2): every same-repo PR open, reopen, edit
 // and close. A PR opened with the plain GITHUB_TOKEN emits no event, so it is not seen here.
 import { ghRest, ghRestAll, withRetry } from "./gh.mjs";
-import { isClaimed } from "./index.mjs";
+import { isClaimed, isSessionHeld } from "./index.mjs";
 import { LABELS, setInProgress } from "./labels.mjs";
 import { derivePrIssues, laneClassOf } from "./pr-issues.mjs";
 import { isRetryableRestError } from "./projects.mjs";
@@ -97,8 +98,13 @@ const readPrFromRest = (number) =>
 
 const listOpenPrsFromRest = () => ghRestAll("pulls?state=open");
 
+// A live session's hold on a plan counts whatever its stamp's age: this merge is activity on the
+// plan, so the hold is live right now (#6065, session-hold.mjs). Without it a session's first merge
+// took the label off mid-session, and the plan lane built the slice the session was still building.
 const leasedFromRefs = (number) =>
-  isClaimed(`feedback-${number}`).claimed || isClaimed(`plan-${number}`).claimed;
+  isClaimed(`feedback-${number}`).claimed ||
+  isClaimed(`plan-${number}`).claimed ||
+  isSessionHeld(`plan-${number}`);
 
 const prEvidence = (pr) => ({
   title: pr?.title ?? "",
@@ -176,4 +182,4 @@ function main() {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+if (isMain(import.meta.url)) main();

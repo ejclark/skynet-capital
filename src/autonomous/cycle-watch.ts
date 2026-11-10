@@ -66,7 +66,9 @@ export function createCycleWatch(deps: CycleWatchDeps): CycleWatch {
       const block = deps.blockedReason();
       if (block !== lastBlock) {
         deps.log(
-          block ? `[safety] BLOCKED — ${block}; no orders until cleared` : "[safety] block cleared",
+          block
+            ? `[safety] BLOCKED — ${block}; no new positions until cleared`
+            : "[safety] block cleared",
         );
         lastBlock = block;
       }

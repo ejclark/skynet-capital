@@ -2,15 +2,23 @@ import { readdirSync } from "node:fs";
 import { describe, expect, it } from "@rstest/core";
 import { type Reply, runWorkflow } from "../support/run-workflow";
 
-// Every scripted workflow asks the work-mode dial before it dispatches, the way grind.js already does
+// Every scripted workflow asks the work-mode dial before it dispatches, grind.js first among them
 // (#3960). Each one runs here under stubbed hooks against a dial fixture, so this pins the refusal, not
 // the mention of it. Which fan-outs a real `halt` stops is what the dial's label on #4153 decides; the
 // stub only stands in for reading it. A typed run has to get through, because a gate that only throws
 // would refuse Eric's own command, so the override is pinned here too, with its price.
+const GRIND_ARGS = {
+  items: ["a.ts", "b.ts", "c.ts"],
+  itemSource: "three hand-picked paths for this spec",
+  skipEnvelopeCheck: "the gate is under test here, not the envelope",
+  promptTemplate: "fix {item}",
+};
 const CONDUCTORS: Record<
   string,
   { args: Record<string, unknown>; width: number; firstWork: RegExp }
 > = {
+  // The original gate, and the one that writes: a run's width is its item count (#6470).
+  grind: { args: GRIND_ARGS, width: 3, firstWork: /^a\.ts/ },
   "post-merge-audit": { args: { prs: [1, 2, 3] }, width: 3, firstWork: /^triage/ },
   "clear-path-flip": { args: { issues: [1, 2, 3] }, width: 3, firstWork: /^judge/ },
   dream: {
@@ -19,6 +27,8 @@ const CONDUCTORS: Record<
     width: 2,
     firstWork: /^analyze/,
   },
+  // Two passes per arm plus the judge: its width is known from n alone, before any lookup.
+  "intent-replay": { args: { n: 2 }, width: 5, firstWork: /^cases/ },
   // Named ids, because a whole lens's width is only known after its `cases` lookup.
   "review-replay": {
     args: { lens: "performance", ids: ["P01", "P02", "P03"] },
@@ -67,12 +77,11 @@ const worked = (calls: { opts: { label?: string } }[]) =>
   calls.filter((c) => c.opts.label !== "work-mode");
 
 describe("the work-mode gate in the scripted workflows", () => {
-  // grind.js is the original and has its own specs. A new script joins this table or fails here.
+  // A new script joins this table or fails here.
   it("covers every scripted workflow", () => {
     const scripts = readdirSync(".claude/workflows")
       .filter((f) => f.endsWith(".js"))
-      .map((f) => f.replace(/\.js$/, ""))
-      .filter((name) => name !== "grind");
+      .map((f) => f.replace(/\.js$/, ""));
     expect(scripts.sort()).toEqual(Object.keys(CONDUCTORS).sort());
   });
 
@@ -193,4 +202,65 @@ describe("the work-mode gate in the scripted workflows", () => {
       }
     });
   }
+});
+
+// What only grind adds. Its runs can write and push, so a forced one leaves the override in the ledger
+// callers paste into the issue or PR, and its price counts the chain it will really run (#6470).
+describe("grind's forced run", () => {
+  const args = GRIND_ARGS;
+  // A run that crashed has no ledger: "" fails every toContain below rather than passing a not.
+  const ledgerOf = (result: unknown) => (result as { ledger?: string } | null)?.ledger ?? "";
+
+  it("writes the override into the ledger, with what it passed", async () => {
+    const { result, error } = await runWorkflow("grind", { ...args, force: true }, withDial(HALT));
+    expect(error).toBeNull();
+    expect(ledgerOf(result)).toContain("_force: true, past this: refused: work-mode is halt_");
+  });
+
+  it("names what a forced run would cost in the refusal, before anything runs", async () => {
+    const { error, calls } = await runWorkflow("grind", args, withDial(HALT));
+    expect(error?.message).toContain("forced, it would run up to 4 agents: 3 items through 1 step");
+    expect(worked(calls)).toEqual([]);
+  });
+
+  it("writes it even when the dial allowed the run", async () => {
+    const { result, error } = await runWorkflow(
+      "grind",
+      { ...args, force: true },
+      withDial(NORMAL),
+    );
+    expect(error).toBeNull();
+    expect(ledgerOf(result)).toContain("_force: true, though the dial allowed it_");
+  });
+
+  it("leaves an unforced run's ledger as it was", async () => {
+    const { result, error } = await runWorkflow("grind", args, withDial(NORMAL));
+    expect(error).toBeNull();
+    expect(ledgerOf(result)).toContain("_Items from: three hand-picked paths for this spec_");
+    expect(ledgerOf(result)).not.toContain("force: true");
+  });
+
+  it("prices every step of every item, one lookup per chore file, and the reader", async () => {
+    // 2 items × (envelope + the chore twice + a check + branch verify) = 10, plus 1 lookup for the
+    // one chore file the two chore steps share, plus 1 reader = 12.
+    const chain = {
+      items: ["a.ts", "b.ts"],
+      itemSource: "two hand-picked paths for this spec",
+      steps: [
+        { kind: "instructions", path: "docs/grind/spec-only.instructions.md" },
+        { kind: "instructions", path: "docs/grind/spec-only.instructions.md", label: "again" },
+        { kind: "script", command: "true {item}" },
+      ],
+      verifyBranch: true,
+      force: true,
+    };
+    const reply: Reply = (prompt, opts) =>
+      opts.label?.startsWith("manifest:")
+        ? { found: true, effort: "high", isolation: "none" }
+        : withDial(NORMAL)(prompt, opts);
+    const { logs } = await runWorkflow("grind", chain, reply);
+    expect(logs.join("\n")).toContain(
+      "Price: up to 12 agents: 2 items through 5 steps, 1 manifest lookup, and one reader",
+    );
+  });
 });

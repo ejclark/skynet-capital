@@ -12,6 +12,14 @@ export function collapseToFiscalPrints(hits: EarningsFilingHit[]): CollapsedFisc
 
 export function earningsDates(symbol: string): Promise<string[]>;
 
-export function bars(
-  symbol: string,
-): Promise<{ date: string; open: number; close: number; rawClose: number; volume: number }[]>;
+export function bars(symbol: string): Promise<
+  {
+    date: string;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    rawClose: number;
+    volume: number;
+  }[]
+>;

@@ -1,9 +1,11 @@
 import type { PlaybookStoreEntry } from "../discovery/playbook-store.js";
+import { TAKE_PROFIT, timeStopDay } from "../playbooks/long-call-rules.js";
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, paginateDescBy } from "../server/pagination.js";
 import {
   contractMultiplier,
   humanizeOptionSymbol,
   isOccSymbol,
+  parseOccSymbol,
 } from "../trading/option-symbols.js";
 import type { OpenLot, RoundTrip } from "../trading/round-trips.js";
 import { type ActivityNarrowOptions, narrowActivity } from "./activity-filter.js";
@@ -13,6 +15,7 @@ import {
   type ConsiderationChip,
   considerationsFor,
   type PositionForConsiderations,
+  windowClosedAt,
 } from "./considerations-view.js";
 import { type Decision, decisionsFor } from "./decisions-view.js";
 import { allocationOf, type DeskAllocation } from "./desk-allocation.js";
@@ -115,6 +118,32 @@ interface DeskPositionView extends PlainPosition {
    *  on a ledger the route tagged, which it does for the bot's owner alone (#885). */
   readonly playbookId?: OpenedBy["playbookId"];
   readonly playbookMode?: OpenedBy["playbookMode"];
+  /** The house's long-call exit plan, when the member carried it at purchase (#5709 slice 3): the
+   *  bid per share that takes the profit and the time stop's day, priced off this position's own
+   *  cost. Absent on anything else — the plan is never assumed for a call bought without it. */
+  readonly exitPlan?: CarriedExitPlan;
+}
+
+interface CarriedExitPlan {
+  readonly takeProfit: number;
+  /** YYYY-MM-DD. */
+  readonly timeStop: string;
+}
+
+/** A held call's carried plan, from the contract symbol and the cost the broker reports (the
+ *  average price is per contract, so a share's cost is a hundredth of it). */
+function carriedPlan(
+  position: { readonly symbol: string; readonly quantity: number; readonly avgPrice: number },
+  carried: ReadonlySet<string>,
+): { readonly exitPlan?: CarriedExitPlan } {
+  const parts = carried.has(position.symbol) ? parseOccSymbol(position.symbol) : undefined;
+  if (!(parts?.type === "call" && position.quantity > 0 && position.avgPrice > 0)) return {};
+  return {
+    exitPlan: {
+      takeProfit: (TAKE_PROFIT * position.avgPrice) / 100,
+      timeStop: timeStopDay(parts.expiration),
+    },
+  };
 }
 
 /** A position's return: "+3.63%" to the hundredth, but whole percent once it is past ±100%
@@ -254,6 +283,8 @@ export function deskView(
   clock: () => Date = () => new Date(),
   /** Playbooks this account already subscribes to, left out of its ideas (#4950). */
   subscribed: ReadonlySet<string> = new Set(),
+  /** Contracts whose exit plan the member carried when buying (#5709 slice 3). */
+  carried: ReadonlySet<string> = new Set(),
 ): DeskView {
   const now = clock();
   const invested = participantInvested(snapshot);
@@ -313,12 +344,15 @@ export function deskView(
         weightPct: held > 0 ? (Math.max(0, position.marketValue) / held) * 100 : 0,
         ...lots,
         ...opener,
+        ...carriedPlan(position, carried),
       };
     });
-  const considerations = considerationsFor(forConsiderations, playbooks, {
-    id: snapshot.id,
-    subscribed,
-  });
+  const considerations = considerationsFor(
+    forConsiderations,
+    playbooks,
+    { id: snapshot.id, subscribed },
+    windowClosedAt(now),
+  );
   return {
     id: snapshot.id,
     name: snapshot.displayName,
@@ -329,6 +363,7 @@ export function deskView(
       snapshot.id,
       snapshot.positions.map((p) => ({ ...p, plain: plainPosition(p, now) })),
       considerations,
+      carried,
     ),
     tiles: {
       openPositions: snapshot.positions.length,

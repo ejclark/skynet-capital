@@ -1,7 +1,10 @@
 // Type surface for scripts/moneypenny/projects-sync.mjs — the board context #4183 added, which a
 // spec exercises directly with injected readers (no network). The scripts/ tree is plain ESM with
 // `allowJs` off (see index.d.mts for the same reasoning).
-import type { BoardItem } from "./projects.d.mts";
+import type { AdmissionIssue } from "./admission.d.mts";
+import type { BoardItem, StatusColumn } from "./projects.d.mts";
+import type { CardFieldWrite, WantedCardFields } from "./projects-fields.d.mts";
+import type { PriorityIssue, PriorityPlan } from "./projects-priority.d.mts";
 
 export interface BoardItemPage {
   items?: BoardItem[];
@@ -17,10 +20,12 @@ export interface BoardContext {
   items(opts?: { refresh?: boolean }): BoardItemPage;
   /** One issue's candidate board items, from the cached list if there is one, else asked of GitHub about that issue alone (#4439). */
   itemsFor(issue: SyncIssueRef): BoardItem[];
+  /** Always the per-issue read, never a cached list — the re-check after `Content already exists` (#6775). */
+  issueItems(issue: SyncIssueRef): BoardItem[];
   fields(opts?: { refresh?: boolean }): {
     id: string;
     name: string;
-    options?: { id: string; name: string }[];
+    options?: { id: string; name: string; color?: string; description?: string }[];
   }[];
   project(): { id: string; number: number };
   noteAdded(item?: BoardItem): void;
@@ -28,17 +33,39 @@ export interface BoardContext {
 
 export function createBoardContext(readers?: {
   readItems?: () => BoardItemPage;
-  readFields?: () => { id: string; name: string; options?: { id: string; name: string }[] }[];
+  readFields?: () => {
+    id: string;
+    name: string;
+    options?: { id: string; name: string; color?: string; description?: string }[];
+  }[];
   readProject?: () => { id: string; number: number };
   readIssueItems?: (issue: SyncIssueRef) => BoardItem[];
   log?: (line: string) => void;
 }): BoardContext;
 
-/** Write the Status field's whole option list (`statusFieldUpdate`'s output) in place. */
+/** Write a single-select field's whole option list (Status's or Role's) in place. */
 export function writeStatusOptions(
   fieldId: string,
   options: { id?: string; name: string; color?: string; description?: string }[],
 ): unknown;
+
+/** Create a single-select field (#6886 slice 1b: the sweep makes Role itself). */
+export function createSingleSelectField(
+  input: {
+    projectId: string;
+    name: string;
+    options: { name: string; color: string; description: string }[];
+  },
+  deps?: { gh?: (argv: string[], input: string) => string },
+): { id: string; name: string; options?: { id: string; name: string }[] };
+
+/** `wantedCardFields` with Role checked against the live Role field's options (#6886 slice 1b). */
+export function wantedLiveFields(
+  issue: ColumnIssue,
+  card: Partial<WantedCard>,
+  roleField: { options?: { name: string }[] } | undefined,
+  opts?: { horizons?: Record<string, string> },
+): WantedCardFields;
 
 export function readIssueItemsFromGh(
   issue: SyncIssueRef,
@@ -76,9 +103,71 @@ export function readIssue(
   user?: { login?: string };
 };
 
+/** The open-PR reads one column needs: issue → platter that closes it, issue → open PR naming it. */
+export interface PrMaps {
+  boardedOn: ReadonlyMap<number, number>;
+  openPrOn: ReadonlyMap<number, number>;
+}
+
+/** An issue as a REST row: the admission shape, with GitHub's nullable body. */
+export type ColumnIssue = Omit<
+  AdmissionIssue,
+  "body" | "issue_dependencies_summary" | "parent_issue_url"
+> & {
+  body?: string | null;
+  issue_dependencies_summary?: { blocked_by?: number } | null;
+  parent_issue_url?: string | null;
+};
+
+/** The reads beyond an issue's own row that `wantedColumn` takes (#6871 slice 2). */
+export interface ColumnContext {
+  columns?: readonly string[];
+  openSubIssuesOf?: (issue: ColumnIssue) => AdmissionIssue["openSubIssues"] | undefined;
+  prMaps?: () => PrMaps;
+}
+
+/** The column an issue (a REST row) belongs in, or null for a card the board never carries. */
+export function wantedColumn(issue: ColumnIssue, context?: ColumnContext): StatusColumn | null;
+
+/** `wantedColumn` with the reads behind it, for the card's "Waiting on" text (#6871 slice 3). */
+export interface WantedCard {
+  status: StatusColumn;
+  decisionCalloutMissing: boolean;
+  boardedOn?: ReadonlyMap<number, number>;
+  namedByOpenPr?: boolean;
+}
+export function wantedCard(issue: ColumnIssue, context?: ColumnContext): WantedCard | null;
+
+/** One memoized, fail-open `pulls?state=open` read, as both PR maps. */
+export function openPrMaps(deps?: {
+  read?: () => unknown[];
+  log?: (line: string) => void;
+}): () => PrMaps;
+
+/** A started plan's open sub-issues (one REST read); undefined for anything else. */
+export function readOpenSubIssuesOf(
+  issue: ColumnIssue,
+  readAll?: (path: string) => unknown[],
+): AdmissionIssue["openSubIssues"] | undefined;
+
+/** The parent's number when it lives in this repo (`parent_issue_url`), else null. */
+export function localParentOf(
+  issue: { parent_issue_url?: string | null } | undefined,
+  repo?: string,
+): number | null;
+
+/** The reads a one-issue sync makes for itself. */
+export function oneIssueContext(): ColumnContext;
+
 export function syncIssue(
   issueNumber: string,
-  opts?: { horizon?: string; board?: BoardContext },
+  opts?: {
+    horizon?: string;
+    board?: BoardContext;
+    context?: ColumnContext;
+    /** The UTC day "In this column since" is written with; defaults to today. */
+    today?: string;
+  },
 ):
   | { skipped: true; reason: string }
   | {
@@ -86,4 +175,28 @@ export function syncIssue(
       horizon: string | null;
       added: boolean;
       decisionCalloutMissing?: boolean;
+      priority?: PriorityPlan | { action: "skipped"; reason: string };
+      /** The Kind / "Waiting on" / "In this column since" writes made (#6871 slice 3). */
+      fields: CardFieldWrite[];
+      /** The parent issue the events lane re-syncs after this one (#6871 slice 2). */
+      parent: number | null;
     };
+
+/** The hand Horizon triage file (issue number → Now/Next/Later), read once per process. */
+export function readHorizons(): Record<string, string>;
+
+/** One open issue's Priority card brought in line, or a drag carried back to its labels (#6871). */
+export function syncPriority(input: {
+  issue: PriorityIssue;
+  item?: BoardItem;
+  fresh?: boolean;
+  ready?: boolean;
+  horizons?: Record<string, string>;
+  io: {
+    readFresh: () => BoardItem | undefined;
+    setPriority: (name: string) => void;
+    setRecord: (text: string) => void;
+    addLabel: (name: string) => void;
+    removeLabel: (name: string) => void;
+  };
+}): PriorityPlan | { action: "skipped"; reason: string };

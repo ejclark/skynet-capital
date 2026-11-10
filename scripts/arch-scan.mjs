@@ -39,7 +39,7 @@
 // only the first, so the output shows both what is priced and what deliberately is not.
 //
 //   node scripts/arch-scan.mjs             # report + enforce (exit 1 on any new over-cap file)
-//   node scripts/arch-scan.mjs --candidate # emit the next decompose target as JSON
+//   node scripts/arch-scan.mjs --candidate # emit the next decompose target and the debt as JSON
 //   node scripts/arch-scan.mjs --update    # rewrite scripts-grouping-budget.json (ratchet: only lower)
 //
 // Exit codes: 0 within cap · 1 a finding (over-cap file, junk-drawer name, grouping smell grew) ·
@@ -103,7 +103,11 @@ if (process.argv.includes("--candidate")) {
     .filter((x) => x.lines > x.cap && !(x.file in grandfather))
     .map((x) => ({ ...x, over: x.lines - x.cap }));
   console.log(
-    JSON.stringify({ candidate: eligible[0] ?? null, runnerUp: eligible[1] ?? null }, null, 2),
+    JSON.stringify(
+      { candidate: eligible[0] ?? null, runnerUp: eligible[1] ?? null, debt: eligible.length },
+      null,
+      2,
+    ),
   );
   process.exit(0);
 }

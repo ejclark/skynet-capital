@@ -48,8 +48,9 @@ a review to Opus. Other docs stay out: taking them too would be about four times
    PR opens pre-empts that wait: native auto-merge honours only *required* checks, and only
    `verify` is required, so a hand-armed PR merges while integration tests are still running and
    can land red on `main` (`docs/LESSONS.md`, #4094). `ship open` also runs `npm run test:e2e`
-   locally when the pinned Chromium build is installed (cloud sessions ship a different build and
-   must not re-download it — there, it says so and CI is the gate). `scripts/ship.sh automerge <n>`
+   locally on Linux when the pinned Chromium build is installed and the diff is not docs-only
+   (screenshot baselines are Linux-only, and cloud sessions ship a different build and must not
+   re-download it — elsewhere, it says so and CI is the gate). `scripts/ship.sh automerge <n>`
    stays as the fallback for a PR the pipeline job can't reach (a re-push, where `opened` won't
    fire again) — and it refuses until integration tests passed or were skipped.
 4. **STOP. Do not poll.** No `list_pull_requests`, no `pull_request_read`, no status check-ins. The
@@ -89,9 +90,13 @@ scripts/ship.sh platter ledger [--body]      # the table (or the whole PR body),
 scripts/ship.sh platter sync                 # re-post the ledger; refuses if the range ≠ GitHub's count
 ```
 
-- **One commit per item, merged with "Create a merge commit"** — that is what keeps `git revert
-  <item sha>` able to drop a single item. Squashing the platter still lands the same tree but
-  collapses the items, and revert degrades to all-or-nothing. The PR body says so above the fold.
+- **One commit per item; either button lands it** (2026-11-01: 20 of 27 landings were squashes
+  despite a body that said never). A merge commit keeps the items in `main`'s history, so `git
+  revert <item sha>` drops one; a squash collapses them, and one item then reverts through
+  `scripts/ship.sh platter revert <pr> <sha>`, which fetches `refs/pull/<pr>/head` (GitHub keeps it
+  after deleting the branch) and reverts the one commit onto a fresh branch off `main`. The PR
+  body says so above the fold; `node scripts/platter-merge-scan.mjs` reports whether every landed
+  item's commit is still fetchable.
 - **Nothing red boards.** `board` runs `npm run verify` on the post-board tree and un-boards the
   item on red. This matters more than it looks: `pipeline.yml`'s `verify` triggers on `pull_request:
   branches: [main]`, so a PR based on a platter branch runs **no CI at all** — the platter PR is the
@@ -142,7 +147,8 @@ scripts/ship.sh platter sync                 # re-post the ledger; refuses if th
   `git merge origin/main --no-edit`, never a hand-written message.** commitlint requires
   Conventional-Commit format and only exempts git's own auto-generated `Merge branch 'X' into Y`
   text — a custom sentence fails the commit-msg hook (`docs/LESSONS.md`, 2026-09-04). `ship open`
-  refuses to verify a branch that's behind `origin/$base` at all (same date's lesson): local
+  never verifies a branch that's behind `origin/$base` (same date's lesson): it merges `origin/$base`
+  in with `--no-edit` first, and refuses when that merge conflicts or under `--no-merge`, because local
   `npm run verify` tests the checked-out tree, not the actual PR-merge state, so a stale base can
   pass locally and still fail CI on a check that only exists once `main`'s own newer commits are
   folded in.

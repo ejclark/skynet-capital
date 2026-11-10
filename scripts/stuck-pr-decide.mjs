@@ -18,14 +18,35 @@
 // Three kinds, each with the one-line move that clears it:
 //   blocked   required checks green · auto-merge armed · mergeable_state "blocked" · for > N hours
 //   unarmed   required checks green · auto-merge NOT armed · not held · for > N hours (#4449's class)
-//   headless  the head has a ghost suite and NO required check run at all (#4877: the head's only
-//             run was the ghost, so `verify` never reported — nothing red, nothing running)
+//   headless  NO required check run on the head at all, and either a ghost suite on it (#4877: the
+//             head's only run was the ghost, so `verify` never reported — nothing red, nothing
+//             running) or NO Actions suite whatsoever for 30+ minutes (#7112: a PR the Actions job
+//             token opens emits no event, so it gets no suite to be a ghost; #7089 sat 16h that way).
+//             Moneypenny's audit acts on both (moneypenny/headless-pr.mjs): one App-identity commit
+//             per head, which fires the `synchronize` event the job token never sent.
 
 /** Branch protection on `main` requires exactly these (app 15368). Mirrors the live rule. */
 export const REQUIRED_CHECKS = ["verify", "integration tests"];
 
+/**
+ * Not in branch protection, and pipeline.yml's arm job still waits on it, so red here holds a PR as
+ * surely as a red required check: the arm job is skipped, not failed, and nothing re-runs it. So
+ * whatever reads "red" or "green" reads these too. A head may carry none: a job added later has no
+ * run on an older head, and that reads as passing, which is what the arm job's `needs` did for it.
+ */
+export const ARM_GATE_CHECKS = ["stability budget"];
+
+/** What red means. A cancelled check says nothing about the code; #6325's sat beside a green one. */
+export const RED = new Set(["failure", "timed_out"]);
+
 /** A merge that is healthy takes minutes; 144 of 144 sampled fast PRs merged inside 3 hours. */
 export const DEFAULT_HOURS = 3;
+
+/**
+ * A head with no Actions suite at all is named after this long. A PR's checks start within a
+ * minute, so 30 minutes of nothing is not a slow runner (#7112; #7089 was detectable at ~02:49Z).
+ */
+export const HEADLESS_MINUTES = 30;
 
 const NOT_A_GHOST = new Set(["success", "neutral", "skipped"]);
 
@@ -43,7 +64,7 @@ const PASSING = new Set(["success", "neutral", "skipped"]);
  */
 export function isGhostSuite(suite) {
   return (
-    suite?.app?.slug === "github-actions" &&
+    isActionsSuite(suite) &&
     suite.latest_check_runs_count === 0 &&
     suite.status === "completed" &&
     !NOT_A_GHOST.has(suite.conclusion ?? "")
@@ -65,6 +86,14 @@ export function hasCancelledSuite(suites = []) {
   );
 }
 
+/**
+ * Would `judgePr` time this head from its commit? Only a head with no required run and no Actions
+ * suite is, so a reader spends the extra `commits/<sha>` call on that head and no other.
+ */
+export function needsHeadAt(checkRuns = [], suites = [], required = REQUIRED_CHECKS) {
+  return latestRequired(checkRuns, required).size === 0 && !suites.some(isActionsSuite);
+}
+
 /** The latest check run of each required name (a re-run supersedes the run it replaced). */
 export function latestRequired(checkRuns, required) {
   const byName = new Map();
@@ -81,6 +110,14 @@ const FIX_REAL_IDENTITY =
   "give the head a new commit from a real identity — `gh api -X PUT repos/{owner}/{repo}/pulls/<n>/update-branch` " +
   "(or `git merge origin/main` on the branch and a plain push; never a force push). That is what cleared #5221 in 10 minutes.";
 
+const FIX_HEADLESS =
+  "Moneypenny's audit gives the head one commit from the App identity on the next push to main, once per head " +
+  "(moneypenny/headless-pr.mjs). Still listed after that? The commit did not take: " +
+  FIX_REAL_IDENTITY;
+
+/** Is this suite the Actions app's? Only its suites carry `verify`; `claude` and `fly-io` never do. */
+const isActionsSuite = (suite) => suite?.app?.slug === "github-actions";
+
 /**
  * Judge one open PR. Returns `null` when it is fine (or not this class), else
  * `{ number, kind, hours, why, ghosts, fix }`.
@@ -96,7 +133,9 @@ const FIX_REAL_IDENTITY =
  *   now?: number,
  *   hours?: number,
  *   required?: string[],
- * }} input
+ *   headAt?: string|null,
+ * }} input `headAt` is when the head commit was committed: a head pushed onto an old PR is only as
+ *   old as the push, so a no-suite head is timed from the later of it and `pr.created_at`.
  */
 export function judgePr({
   pr,
@@ -105,31 +144,61 @@ export function judgePr({
   now = Date.now(),
   hours = DEFAULT_HOURS,
   required = REQUIRED_CHECKS,
+  headAt = null,
 }) {
   if (pr.draft) return null;
   if ((pr.labels ?? []).some((l) => l.name === "hold-merge")) return null; // held on purpose
   const ghosts = (suites ?? []).filter(isGhostSuite);
   const latest = latestRequired(checkRuns ?? [], required);
   const runs = [...latest.values()];
+  const gates = [...latestRequired(checkRuns ?? [], ARM_GATE_CHECKS).values()];
 
   // Red is somebody else's signal and a running check is in flight; only two heads are ours: every
-  // required check green, or none reported at all with a ghost sitting on the head.
+  // required check green, or none reported at all with a ghost sitting on the head. A cancelled
+  // gate stays ours: the arm job did not run and nothing has said the code is bad, so the report is
+  // the one place left to say so (stuck-branch-update reads armed PRs, stranded-pr a failed arm job).
   const allGreen =
     required.every((name) => latest.has(name)) &&
-    runs.every(({ run }) => run.status === "completed" && PASSING.has(run.conclusion ?? ""));
+    runs.every(({ run }) => run.status === "completed" && PASSING.has(run.conclusion ?? "")) &&
+    gates.every(({ run }) => run.status === "completed" && !RED.has(run.conclusion ?? ""));
   if (allGreen) {
-    const greenAt = Math.max(...runs.map((v) => v.at));
-    return judgeGreen({ pr, ghosts, age: (now - greenAt) / 3.6e6, hours });
+    const greenAt = Math.max(...[...runs, ...gates].map((v) => v.at));
+    const unfinished = gates
+      .filter(({ run }) => !PASSING.has(run.conclusion ?? ""))
+      .map(({ run }) => run.name);
+    return judgeGreen({ pr, ghosts, age: (now - greenAt) / 3.6e6, hours, unfinished });
   }
   if (ghosts.length && runs.length === 0) {
     const oldest = Math.min(...ghosts.map((g) => Date.parse(g.created_at ?? 0) || now));
     return judgeHeadless({ pr, ghosts, age: (now - oldest) / 3.6e6, hours });
   }
+  // A conflicted PR gets no `pull_request` run either, for its own reason, and the conflict flag
+  // (audit.mjs) already owns it, so "dirty" is not this class.
+  if (runs.length === 0 && !(suites ?? []).some(isActionsSuite) && pr.mergeable_state !== "dirty") {
+    const since = Math.max(Date.parse(pr.created_at ?? "") || 0, Date.parse(headAt ?? "") || 0);
+    return since ? judgeNoSuite({ pr, age: (now - since) / 3.6e6 }) : null;
+  }
   return null;
 }
 
-/** Every required check is green: stuck if armed-and-blocked, or never armed. */
-function judgeGreen({ pr, ghosts, age, hours }) {
+/** No Actions suite on the head at all: the event that starts one was never sent (#7112). */
+function judgeNoSuite({ pr, age }) {
+  if (age * 60 < HEADLESS_MINUTES) return null;
+  const h = Math.round(age);
+  const since = age < 1 ? `${Math.round(age * 60)} minutes` : `${h}h`;
+  return {
+    number: pr.number,
+    kind: "headless",
+    hours: h,
+    why: `no check suite and no required check run on the head for ${since}: the PR or its last push sent no event (likely the Actions job token, #5936)`,
+    ghosts: [],
+    fix: FIX_HEADLESS,
+  };
+}
+
+/** Every required check is green: stuck if armed-and-blocked, or never armed. `unfinished` names the
+ *  arm job's other checks that were cancelled, which is why it never ran. */
+function judgeGreen({ pr, ghosts, age, hours, unfinished = [] }) {
   if (age < hours) return null;
   const armed = pr.auto_merge != null;
   const state = pr.mergeable_state ?? "unknown";
@@ -144,6 +213,17 @@ function judgeGreen({ pr, ghosts, age, hours }) {
         : `green and armed for ${h}h but "blocked", and no ghost suite explains it — look for an unresolved conversation or a rule change`,
       ghosts,
       fix: ghosts.length ? FIX_REAL_IDENTITY : "read the PR's Merge box: the blocker is not a run",
+    };
+  }
+  if (!armed && state !== "dirty" && unfinished.length) {
+    const names = unfinished.map((name) => `\`${name}\``).join(", ");
+    return {
+      number: pr.number,
+      kind: "unarmed",
+      hours: h,
+      why: `green for ${h}h, but ${names} was cancelled, so the arm job never ran`,
+      ghosts,
+      fix: "re-run the cancelled job from the PR's Checks tab; the arm job follows it. Nothing re-runs it on its own, and an arm by hand refuses a cancelled run",
     };
   }
   if (!armed && state !== "dirty") {
@@ -170,7 +250,7 @@ function judgeHeadless({ pr, ghosts, age, hours }) {
     hours: h,
     why: `no required check has ever run on the head, only ${ghosts.length} ghost suite(s) (${kinds}) from ${h}h ago`,
     ghosts,
-    fix: FIX_REAL_IDENTITY,
+    fix: FIX_HEADLESS,
   };
 }
 

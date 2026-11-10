@@ -12,6 +12,7 @@
 
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { isMain } from "./compat.mjs";
 import { gradeAnswer, SEEN_MIN } from "./oracle.mjs";
 import { SESSIONS } from "./round-contract.mjs";
 
@@ -72,4 +73,4 @@ function main(argv) {
   console.log(`rescore: ${changed} of ${total} session(s) re-graded`);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main(process.argv.slice(2));
+if (isMain(import.meta.url)) main(process.argv.slice(2));

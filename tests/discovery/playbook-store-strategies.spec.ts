@@ -1,5 +1,5 @@
 import { strategyCatalog } from "../../src/discovery/playbook-store-strategies.js";
-import { EVIDENCE_STATUS, pairTable } from "../../src/playbooks/pair-table.js";
+import { EVIDENCE_STATUS, findPair, pairTable } from "../../src/playbooks/pair-table.js";
 
 /**
  * The Store by strategy (#4469 slice 3a): one card per strategy, a row per pair, every row keyed on
@@ -38,8 +38,11 @@ describe("strategyCatalog", () => {
   it("says every row's status as a glyph plus words", () => {
     for (const row of catalog.flatMap((c) => c.pairs)) {
       const { glyph, word } = EVIDENCE_STATUS[row.status];
-      // A ✓ below the house bar wears an open triangle instead (#5444), its word unchanged.
-      const lead = row.qualifier === "weakened" ? "△" : glyph;
+      // A ✓ below the house bar wears an open triangle instead (#5444), its word unchanged — and
+      // so does one that borrows a verdict below it (#6772).
+      const source = findPair(row.id)?.evidence.borrowedFrom;
+      const weakened = (id?: string) => id && findPair(id)?.evidence.qualifier === "weakened";
+      const lead = weakened(row.id) || weakened(source) ? "△" : glyph;
       expect(row.statusLabel.startsWith(`${lead} ${word}`), row.id).toBe(true);
     }
     expect(card("pre-print-run-up")?.pairs[0]?.statusLabel).toBe(

@@ -1,8 +1,9 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useState } from "react";
 import { useDeskEvents } from "../live/desk-events";
 import {
+  type CancelResult,
   cancelOrder,
   type DeskOrderRow,
   type DeskOrderState,
@@ -68,19 +69,23 @@ function qtyLabel(row: DeskOrderRow): string {
 }
 
 /** The row's actions: Cancel (two taps — the button becomes its own confirm), and Modify on a
- *  working limit or stop, which opens the change drawer under the row (P1 1b). */
-function RowActions({
+ *  working limit or stop, which opens the change drawer under the row (P1 1b). Shared with the
+ *  ticket's receipt (`order-receipt.tsx`), where a bare "Cancel" beside "New ticket" could read as
+ *  dismissing the card — so it says "Cancel order" there (`cancelLabel`). */
+export function RowActions({
   row,
   onCancel,
   pending,
   modifying,
   setModifying,
+  cancelLabel = "Cancel",
 }: {
   readonly row: DeskOrderRow;
   readonly onCancel: (id: string) => Promise<void>;
   readonly pending: boolean;
   readonly modifying: boolean;
   readonly setModifying: (open: boolean) => void;
+  readonly cancelLabel?: string;
 }): ReactElement {
   const [armed, setArmed] = useState(false);
   if (armed) {
@@ -118,7 +123,7 @@ function RowActions({
         </button>
       ) : null}
       <button type="button" className="btn wo-btn" onClick={() => setArmed(true)}>
-        Cancel
+        {cancelLabel}
       </button>
     </span>
   );
@@ -185,13 +190,9 @@ function OrderRow({
 /** The poll that stands in when the event stream is absent or between reconnects. */
 export const FALLBACK_POLL_MS = 60_000;
 
-/** @category trading */
-export function WorkingOrders({ deskId }: { readonly deskId: string }): ReactElement | null {
-  const queryClient = useQueryClient();
-  // The desk's own event stream re-reads this list the moment the bus sees a fill or a cancel
-  // (#3407 P4 slice 1); the poll below is the fallback for a deployment with no bus wired.
-  useDeskEvents(deskId);
-  const query = useQuery({
+/** The account's order list — one query, shared by this pane and the ticket's receipt. */
+export const deskOrdersQuery = (deskId: string) =>
+  queryOptions({
     queryKey: ["desk-orders", deskId],
     queryFn: () => fetchOrders(deskId),
     enabled: deskId !== "",
@@ -201,36 +202,28 @@ export function WorkingOrders({ deskId }: { readonly deskId: string }): ReactEle
     refetchInterval: (q) =>
       q.state.data?.available && q.state.data.working.length > 0 ? FALLBACK_POLL_MS : false,
   });
+
+/**
+ * Cancel and change for one account's orders — the one copy the Orders pane and the ticket's
+ * receipt share: which order is in flight, the notice line (the server's own sentence on a
+ * refusal), and a re-read of the list once the gate answers. Each returns the gate's answer, or
+ * undefined when the gate could not be reached.
+ */
+export function useOrderActions(deskId: string) {
+  const queryClient = useQueryClient();
   const [pendingId, setPendingId] = useState<string | undefined>();
   const [notice, setNotice] = useState<string | undefined>();
-
-  if (deskId === "" || !query.data) return null;
-
-  const onCancel = async (id: string) => {
+  const run = async <T,>(
+    id: string,
+    send: () => Promise<T>,
+    say: (answer: T) => string,
+  ): Promise<T | undefined> => {
     setPendingId(id);
     setNotice(undefined);
     try {
-      const result = await cancelOrder(deskId, id);
-      setNotice(result.ok ? "Cancel sent to the broker." : result.refusals.join(" "));
-    } catch (error) {
-      setNotice(`Couldn't reach the gate — ${String(error)}`);
-    } finally {
-      setPendingId(undefined);
-      await queryClient.invalidateQueries({ queryKey: ["desk-orders", deskId] });
-    }
-  };
-
-  const onReplace = async (id: string, change: OrderChange) => {
-    setPendingId(id);
-    setNotice(undefined);
-    try {
-      const result = await replaceOrder(deskId, id, change);
-      setNotice(
-        result.ok
-          ? `Change sent — the broker replaced ${result.replaces} with ${result.orderId} (${result.status.replace(/_/g, " ")}).`
-          : result.refusals.join(" "),
-      );
-      return result;
+      const answer = await send();
+      setNotice(say(answer));
+      return answer;
     } catch (error) {
       setNotice(`Couldn't reach the gate — ${String(error)}`);
       return undefined;
@@ -238,6 +231,37 @@ export function WorkingOrders({ deskId }: { readonly deskId: string }): ReactEle
       setPendingId(undefined);
       await queryClient.invalidateQueries({ queryKey: ["desk-orders", deskId] });
     }
+  };
+  const cancel = (id: string): Promise<CancelResult | undefined> =>
+    run(
+      id,
+      () => cancelOrder(deskId, id),
+      (r) => (r.ok ? "Cancel sent to the broker." : r.refusals.join(" ")),
+    );
+  const replace = (id: string, change: OrderChange): Promise<ReplaceResult | undefined> =>
+    run(
+      id,
+      () => replaceOrder(deskId, id, change),
+      (r) =>
+        r.ok
+          ? `Change sent — the broker replaced the order (${r.status.replace(/_/g, " ")}).`
+          : r.refusals.join(" "),
+    );
+  return { pendingId, notice, cancel, replace };
+}
+
+/** @category trading */
+export function WorkingOrders({ deskId }: { readonly deskId: string }): ReactElement | null {
+  // The desk's own event stream re-reads this list the moment the bus sees a fill or a cancel
+  // (#3407 P4 slice 1); the poll below is the fallback for a deployment with no bus wired.
+  useDeskEvents(deskId);
+  const query = useQuery(deskOrdersQuery(deskId));
+  const { pendingId, notice, cancel, replace: onReplace } = useOrderActions(deskId);
+
+  if (deskId === "" || !query.data) return null;
+
+  const onCancel = async (id: string) => {
+    await cancel(id);
   };
 
   const data = query.data;

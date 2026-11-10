@@ -20,14 +20,27 @@
 //   --env NAME=VALUE                set for the spec run (repeatable). FLY_BIN=/usr/bin/false is
 //                                   always set, so scripts/fitness.mjs never looks for a real fly
 //   --root <dir>                    read the files from another checkout (the spec uses this)
+//   --timeout <seconds>             how long the green baseline may take (default 600)
+//   --bug-timeout <seconds>         how long each bug may take (default: see below)
 //
-// Results: caught (the spec went red), survived (the spec stayed green: the gap is the finding),
-// NOT APPLIED (the find text is not in the file, or matches the replace text). A bug that did not
-// apply stays in the denominator and is printed on stderr, because once the fixes rewrite the lines
-// a list was written against, a silently shrinking list reads as a better spec.
+// Results: caught (a named test went red for a reason of its own), survived (the spec stayed green:
+// the gap is the finding), NO VERDICT (the run said nothing about the bug), NOT APPLIED (the find
+// text is not in the file, or matches the replace text). A bug that did not apply stays in the
+// denominator and is printed on stderr, because once the fixes rewrite the lines a list was written
+// against, a silently shrinking list reads as a better spec. A caught row names the test that went
+// red, so a catch by something unrelated can be seen and not just counted.
 //
-// Exit codes: 0 every bug applied, whatever survived · 1 a bug did not apply · 2 cannot audit: a
-// malformed bug list, a missing file, or a baseline spec that is already red.
+// NO VERDICT is every other way for a run to end red: out of time, a test past its own limit, a
+// worker the OS killed, a signal, or a bug that does not compile or throws before any test runs. It
+// stays in the denominator and is never caught, because a score that counts these rises with the
+// load on the machine. Re-run it on a quieter machine or with a larger limit, or rewrite the bug.
+//
+// A bug gets three times what the baseline took, with a two-minute floor. A fixed limit read a slow
+// machine as a catch: the decision-cycle spec took 150 seconds at a load average of about 25, past a
+// 120-second limit with no bug in it at all.
+//
+// Exit codes: 0 every bug graded, whatever survived · 1 a bug did not apply or got no verdict · 2
+// cannot audit: a malformed bug list, a missing file, or a baseline spec that is already red.
 //
 // THE BUG LIST FILE. A JSON array. Every bug is one object; every field is a string:
 //
@@ -37,7 +50,7 @@
 //       "contract": "bots-responsive",                 // optional: the contract id this bug attacks
 //       "file": "scripts/fitness.mjs",                 // relative to the repo root
 //       "find": "ageMs > STAMP_FRESH_MS",              // exact text, first occurrence is replaced
-//       "replace": "ageMs >= STAMP_FRESH_MS",          // what the bug looks like
+//       "replace": "ageMs >= STAMP_FRESH_MS",          // what the bug looks like; "" deletes it
 //       "why": "a poll exactly at the limit should still pass"   // the behaviour that must break
 //     }
 //   ]
@@ -45,8 +58,8 @@
 // Write `find` as the smallest exact text that pins one line; whitespace counts. Keep the list
 // short and curated: Google found most generated mutants unproductive, so each bug should name a
 // behaviour a person cares about in `why`. Without `contract`, a bug inside the CONTRACTS array is
-// attributed to the nearest contract above it, and anything else counts as "shared" (judges,
-// reporting, probes read by more than one contract).
+// attributed to the nearest contract above it, and anything else, above or below the array, counts
+// as "shared" (judges, reporting, probes read by more than one contract).
 //
 // --candidate names the contract with the most survivors; with no survivors, the contract with the
 // fewest bugs aimed at it, so an unattacked contract is named before a well-covered one.
@@ -64,13 +77,32 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { isMain } from "./is-main.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 // node_modules come from the checkout this script lives in, so a --root fixture needs none.
 const REPO = resolve(HERE, "..");
 const RSTEST = join(REPO, "node_modules", "@rstest", "core", "bin", "rstest.js");
 const FIELDS = ["id", "file", "find", "replace", "why"];
-const SPEC_TIMEOUT_MS = 120_000;
+// Text, but it may be empty: the commonest bug is a guard deleted outright.
+const MAY_BE_EMPTY = new Set(["replace"]);
+const BASELINE_TIMEOUT_S = 600;
+const BUG_TIMEOUT_FLOOR_MS = 120_000;
+// The machine talking, not the test: a test past its limit under load, a worker that died.
+const MACHINE_FAILURE =
+  /^(?:[\w ]* timed out in \d+ms|Worker (?:killed|exited|stopped|did not start))/;
+
+/** How long a bug's run may take, given how long the green baseline took. */
+export const bugDeadlineMs = (baselineMs) => Math.max(BUG_TIMEOUT_FLOOR_MS, 3 * baselineMs);
+
+function seconds(value, flag) {
+  const n = Number(value);
+  if (!(Number.isFinite(n) && n > 0)) throw new Error(`${flag} needs a positive number of seconds`);
+  return n;
+}
+
+/** Seconds as spawnSync takes them: a whole number of milliseconds, or it refuses to start. */
+const toMs = (s) => Math.ceil(s * 1000);
 
 function parseArgs(argv) {
   const opts = {
@@ -80,6 +112,8 @@ function parseArgs(argv) {
     root: process.cwd(),
     with: [],
     env: [],
+    timeout: BASELINE_TIMEOUT_S,
+    "bug-timeout": null,
     json: false,
     candidate: false,
   };
@@ -95,6 +129,10 @@ function parseArgs(argv) {
     } else throw new Error(`unknown argument ${arg}`);
   }
   if (!opts.bugs) throw new Error("--bugs <file> is required");
+  opts.timeout = seconds(opts.timeout, "--timeout");
+  if (opts["bug-timeout"] !== null) {
+    opts["bug-timeout"] = seconds(opts["bug-timeout"], "--bug-timeout");
+  }
   return opts;
 }
 
@@ -105,8 +143,11 @@ export function validateBugs(raw) {
   raw.forEach((bug, i) => {
     const name = typeof bug?.id === "string" ? bug.id : `#${i + 1}`;
     for (const field of FIELDS) {
-      if (typeof bug?.[field] !== "string" || !bug[field]) {
-        throw new Error(`bug ${name}: "${field}" must be a non-empty string`);
+      if (typeof bug?.[field] !== "string") {
+        throw new Error(`bug ${name}: "${field}" must be a string`);
+      }
+      if (!(bug[field] || MAY_BE_EMPTY.has(field))) {
+        throw new Error(`bug ${name}: "${field}" must not be empty`);
       }
     }
     if (bug.contract !== undefined && typeof bug.contract !== "string") {
@@ -131,12 +172,15 @@ function contractsBody(source) {
   return source.slice(start, end === -1 ? undefined : end);
 }
 
-/** Which contract a bug attacks: its own field, else the nearest contract above it in CONTRACTS. */
+/** Which contract a bug attacks: its own field, else the contract around it in CONTRACTS. */
 export function attribute(bug, source) {
   if (bug.contract) return bug.contract;
-  const start = source.indexOf("CONTRACTS = [");
   const at = source.indexOf(bug.find);
-  if (start === -1 || at < start) return "shared";
+  const body = contractsBody(source);
+  const start = source.indexOf("CONTRACTS = [");
+  // Past the array is the reporting and the entrypoint, which attack no one contract. Reading those
+  // as the last contract's made --candidate name a contract nobody had aimed at.
+  if (start === -1 || at < start || at >= start + body.length) return "shared";
   const above = contractIds(source.slice(0, at));
   return above.at(-1) ?? "shared";
 }
@@ -213,18 +257,69 @@ function specEnv(pairs) {
   return env;
 }
 
-/** Run the spec in the staged tree. Green is 0; a red, crashed or hung spec is non-zero. */
-function runSpec(dir, spec, env) {
-  const res = spawnSync(process.execPath, [RSTEST, "run", spec], {
-    cwd: dir,
-    encoding: "utf8",
-    timeout: SPEC_TIMEOUT_MS,
-    env,
-  });
-  if (res.error?.code === "ETIMEDOUT") return { status: 1, note: "the spec hung" };
+/**
+ * Run the spec in the staged tree, stopping at its first red test when `bail` says so: a caught bug
+ * has answered, and the rest of a slow spec tells nothing more. Green is 0; a red, crashed or hung
+ * spec is non-zero. The md reporter is named so the report has one shape in CI and on a laptop, and
+ * verdictOf reads it.
+ */
+function runSpec(dir, spec, env, timeoutMs, bail = false) {
+  const res = spawnSync(
+    process.execPath,
+    [RSTEST, "run", spec, "--reporter", "md", ...(bail ? ["--bail", "1"] : [])],
+    {
+      cwd: dir,
+      encoding: "utf8",
+      timeout: timeoutMs,
+      env,
+    },
+  );
+  if (res.error?.code === "ETIMEDOUT") return { status: 1, hung: true, timeoutMs };
   // Anything else is the runner failing, never the spec: rstest missing, a dead node_modules link.
   if (res.error) throw new Error(`cannot run rstest: ${res.error.message}`);
-  return { status: res.status ?? 1, out: `${res.stdout}\n${res.stderr}` };
+  return {
+    status: res.status ?? 1,
+    signal: res.signal,
+    report: res.stdout,
+    out: `${res.stdout}\n${res.stderr}`,
+  };
+}
+
+/** The failures in the md reporter's report, in order. Each is a JSON block under its heading. */
+function failuresIn(report) {
+  // On a line of its own: a message quoting a report is JSON here, so its newlines are escaped.
+  const at = (report ?? "").lastIndexOf("\n## Failures\n");
+  if (at === -1) return [];
+  return [...report.slice(at).matchAll(/^```json\n([\s\S]*?)\n```$/gm)].flatMap((block) => {
+    try {
+      return [JSON.parse(block[1])];
+    } catch {
+      return [];
+    }
+  });
+}
+
+/**
+ * What a finished run says about a bug. Green is survived, and red is caught only when a named test
+ * failed for a reason of its own, because everything else also happens with no bug in the file.
+ */
+export function verdictOf(run) {
+  if (run.hung) {
+    const note = `ran out of time after ${Math.round(run.timeoutMs / 1000)} s; slow or stuck, the run cannot say which`;
+    return { result: "no-verdict", note };
+  }
+  if (run.signal) return { result: "no-verdict", note: `killed by ${run.signal}` };
+  if (run.status === 0) return { result: "survived" };
+  const failures = failuresIn(run.report);
+  const judged = failures.find(
+    (f) => f.fullName && f.errors?.some((e) => !MACHINE_FAILURE.test(e.message ?? "")),
+  );
+  if (judged) return { result: "caught", caughtBy: judged.fullName };
+  const said = failures[0]?.errors?.[0]?.message?.trim().split("\n")[0];
+  return {
+    result: "no-verdict",
+    note: said ? `no test judged it: ${said}` : `exited ${run.status} with no test red`,
+  };
 }
 
 export function audit(opts) {
@@ -234,12 +329,22 @@ export function audit(opts) {
   const env = specEnv(opts.env ?? []);
   const dir = stage(root, files, opts.spec);
   try {
-    const baseline = runSpec(dir, opts.spec, env);
+    const startedAt = Date.now();
+    const limitS = opts.timeout ?? BASELINE_TIMEOUT_S;
+    const baseline = runSpec(dir, opts.spec, env, toMs(limitS));
+    if (baseline.hung) {
+      throw new Error(
+        `baseline ran out of time: ${opts.spec} did not finish in ${limitS} s with no bug applied, so nothing can be graded; try a larger --timeout`,
+      );
+    }
     if (baseline.status !== 0) {
       throw new Error(
         `baseline is red: ${opts.spec} fails before any bug is applied\n${baseline.out}`,
       );
     }
+    const deadlineMs = opts["bug-timeout"]
+      ? toMs(opts["bug-timeout"])
+      : bugDeadlineMs(Date.now() - startedAt);
     const script = readFileSync(join(dir, opts.script), "utf8");
     const rows = bugs.map((bug) => {
       const target = join(dir, bug.file);
@@ -251,15 +356,13 @@ export function audit(opts) {
         why: bug.why,
         note: applied.note,
       };
-      if (!applied.source) return { ...row, result: "not-applied" };
+      // Not a truthiness test: a bug may empty the whole file, which is still a bug applied.
+      if (applied.source === undefined) return { ...row, result: "not-applied" };
       writeFileSync(target, applied.source);
-      const run = runSpec(dir, opts.spec, env);
+      const run = runSpec(dir, opts.spec, env, deadlineMs, true);
       writeFileSync(target, original);
-      return {
-        ...row,
-        result: run.status === 0 ? "survived" : "caught",
-        note: run.note ?? row.note,
-      };
+      const verdict = verdictOf(run);
+      return { ...row, ...verdict, note: [row.note, verdict.note].filter(Boolean).join(", ") };
     });
     const count = (result) => rows.filter((r) => r.result === result).length;
     return {
@@ -268,6 +371,7 @@ export function audit(opts) {
       total: rows.length,
       caught: count("caught"),
       survived: count("survived"),
+      noVerdict: count("no-verdict"),
       notApplied: count("not-applied"),
       candidate: candidateOf(contractIds(script), rows),
       bugs: rows,
@@ -279,22 +383,28 @@ export function audit(opts) {
 
 function print(report) {
   console.log(`fitness-audit: ${report.script} against ${report.spec}, ${report.total} bugs`);
-  const label = { caught: "CAUGHT", survived: "SURVIVED", "not-applied": "NOT APPLIED" };
+  const label = {
+    caught: "CAUGHT",
+    survived: "SURVIVED",
+    "no-verdict": "NO VERDICT",
+    "not-applied": "NOT APPLIED",
+  };
   for (const b of report.bugs) {
-    const note = b.note ? ` (${b.note})` : "";
+    const said = [b.note, b.caughtBy && `by: ${b.caughtBy}`].filter(Boolean).join(", ");
+    const note = said ? ` (${said})` : "";
     console.log(
       `${label[b.result].padEnd(12)}${b.id.padEnd(28)}${b.contract.padEnd(20)}${b.why}${note}`,
     );
   }
   console.log(
-    `caught ${report.caught} · survived ${report.survived} · not applied ${report.notApplied} · of ${report.total}`,
+    `caught ${report.caught} · survived ${report.survived} · no verdict ${report.noVerdict} · not applied ${report.notApplied} · of ${report.total}`,
   );
   if (report.candidate) {
     console.log(`candidate: ${report.candidate.contract} (${report.candidate.why})`);
   }
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   let report;
   try {
     const opts = parseArgs(process.argv.slice(2));
@@ -306,11 +416,22 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     console.error(`fitness-audit: ${err.message}`);
     process.exit(2);
   }
-  const missing = report.bugs.filter((b) => b.result === "not-applied");
-  if (missing.length) {
+  const idsOf = (result) =>
+    report.bugs
+      .filter((b) => b.result === result)
+      .map((b) => b.id)
+      .join(", ");
+  const missing = idsOf("not-applied");
+  const ungraded = idsOf("no-verdict");
+  if (missing) {
     console.error(
-      `fitness-audit: NOT APPLIED ${missing.map((b) => b.id).join(", ")}: rewrite these bugs against the current file; they still count against the spec`,
+      `fitness-audit: NOT APPLIED ${missing}: rewrite these bugs against the current file; they still count against the spec`,
     );
-    process.exit(1);
   }
+  if (ungraded) {
+    console.error(
+      `fitness-audit: NO VERDICT ${ungraded}: these were not graded and do not count as caught; re-run on a quieter machine or with a larger --bug-timeout, or rewrite a bug that does not compile`,
+    );
+  }
+  if (missing || ungraded) process.exit(1);
 }

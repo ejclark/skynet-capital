@@ -73,6 +73,24 @@ export function commonGets(botId) {
   ];
 }
 
+/**
+ * R&D's GETs: the shell's own route, the Board section's calendar and shelf, Coverage, and the
+ * forward-test register. The research corpus is the other growing store — the research lane adds
+ * to it every day — and it OOM-killed the dashboard once already (#4519). The first hit after a
+ * boot builds the corpus memo, a cost paid once per process by design, so this phase is judged on
+ * breakage and the run's peak only, never on what one GET adds (#4612 slice 10). The register is
+ * the largest of them, about 5 MB of HTML from 674 fragments (#6957).
+ */
+export function researchGets() {
+  return [
+    "/app/research",
+    "/api/research/calendar",
+    "/api/research",
+    "/api/research/coverage",
+    "/research/forward-tests",
+  ];
+}
+
 /** How many times the runner fires each common GET: the time judged is the median of these, so
  *  one slow answer on a noisy host never fails the run, and the memory judged is the largest. */
 export const COMMON_REPEAT = 3;
@@ -114,9 +132,14 @@ export function procMemory(status) {
  * Accounts adds and how long its Pulse takes inside that load (#4613's Done-when: ≤ 30 MB,
  * ≤ 150 ms at 180 days × 12); the same two numbers for each Pulse fired alone; and the same two
  * for every other common GET (#4619's Done-when: a median ≤ 150 ms, ≤ 20 MB added).
+ *
+ * `budgets.advisoryLatency` moves every time budget out of `failures` into `advisories` (still
+ * printed, never red): a shared CI runner's clock is not the budget's clock, and #4612's constraint
+ * is "no blocking latency thresholds on shared runners" — memory and breakage stay blocking.
  */
 export function verdict({ phases, state, budgets, bootPeakMb = 0 }) {
   const failures = [];
+  const slow = new Set(); // the time-budget messages, kept in `failures`' order
   if (state.oomKilled) failures.push("the kernel OOM-killed the server (OOMKilled=true)");
   else if (!state.running) failures.push(`the server exited (exit ${state.exitCode})`);
   for (const phase of phases)
@@ -124,11 +147,12 @@ export function verdict({ phases, state, budgets, bootPeakMb = 0 }) {
       if (typeof row.status !== "number" || row.status >= 500)
         failures.push(`${phase.name}: ${row.path} answered ${row.status}`);
   const peak = Math.max(bootPeakMb, ...phases.map((p) => p.peakMb ?? 0));
-  if (peak > budgets.peakMb) failures.push(`peak RSS ${peak} MB > budget ${budgets.peakMb} MB`);
+  if (peak > budgets.peakMb) failures.push(`${PEAK_OVER}${peak} MB > budget ${budgets.peakMb} MB`);
   failures.push(
     ...pageFailures(
       phases.find((p) => p.name === "accounts-open"),
       budgets,
+      slow,
     ),
   );
   const pulses = phases.find((p) => p.name === "pulse-each")?.rows ?? [];
@@ -136,19 +160,68 @@ export function verdict({ phases, state, budgets, bootPeakMb = 0 }) {
     if (row.addMb > budgets.pulseMb)
       failures.push(`${row.path} added ${row.addMb} MB > budget ${budgets.pulseMb} MB`);
     if (row.ms > budgets.pulseMs)
-      failures.push(`${row.path} took ${row.ms} ms > budget ${budgets.pulseMs} ms`);
+      failures.push(timed(slow, `${row.path} took ${row.ms} ms > budget ${budgets.pulseMs} ms`));
   }
-  failures.push(...commonFailures(phases.find((p) => p.name === "common")?.rows ?? [], budgets));
-  return { ok: failures.length === 0, peakMb: peak, failures };
+  failures.push(
+    ...commonFailures(phases.find((p) => p.name === "common")?.rows ?? [], budgets, slow),
+  );
+  if (!budgets.advisoryLatency) return { ok: failures.length === 0, peakMb: peak, failures };
+  const blocking = failures.filter((f) => !slow.has(f));
+  const advisories = failures.filter((f) => slow.has(f));
+  return {
+    ok: blocking.length === 0,
+    peakMb: peak,
+    failures: blocking,
+    ...(advisories.length ? { advisories } : {}),
+  };
+}
+
+const PEAK_OVER = "peak RSS ";
+
+/** How many fresh containers a run that broke only the peak budget gets before the gate fails. */
+export const RECHECKS = 1;
+
+/**
+ * What the runner does after `verdicts` (every run so far, in order): measure "again" in a fresh
+ * container, or settle on "pass" / "fail" (#6737). Only a run whose sole failure is peak RSS over
+ * budget earns a second run — the one number a noisy CI machine moved on its own (2026-11-02: two
+ * PRs read 316 and 315 MB, then passed on a re-run of the same commit; the day's middle was 267).
+ * A real regression breaks the budget on every run, so it still fails; an OOM kill, an exit, a
+ * 5xx or a page over its own budget never gets a second run. The budget itself never moves.
+ */
+export function nextStep(verdicts) {
+  const last = verdicts.at(-1);
+  if (last.ok) return "pass";
+  const peakOnly = last.failures.length > 0 && last.failures.every((f) => f.startsWith(PEAK_OVER));
+  return peakOnly && verdicts.length <= RECHECKS ? "again" : "fail";
+}
+
+/** The closing lines when a run was measured more than once: every run's peak, and the call. */
+export function remeasured(verdicts, budgetMb) {
+  if (verdicts.length < 2) return "";
+  const runs = verdicts.map((v, i) => `run ${i + 1} peaked at ${v.peakMb} MB`).join(", ");
+  const [call, why] =
+    nextStep(verdicts) === "pass"
+      ? ["**PASS** on the re-run", "Only the first machine read over budget"]
+      : ["**FAIL** on every run", "The re-run failed too"];
+  return `### Re-measured (#6737) — ${call}\n\nBudget ${budgetMb} MB: ${runs}. ${why}; every run's tables are above.`;
+}
+
+/** Marks `message` as a time-budget one (so CI mode can set it aside) and hands it back. */
+function timed(slow, message) {
+  slow.add(message);
+  return message;
 }
 
 /** The other common GETs, each fired alone (#4619's Done-when): every one answers at a median of
  *  `getMs` or less, and none adds more than `getMb`. */
-function commonFailures(rows, budgets) {
+function commonFailures(rows, budgets, slow) {
   const out = [];
   for (const row of rows) {
     if (row.ms > budgets.getMs)
-      out.push(`common: ${row.path} took ${row.ms} ms (median) > budget ${budgets.getMs} ms`);
+      out.push(
+        timed(slow, `common: ${row.path} took ${row.ms} ms (median) > budget ${budgets.getMs} ms`),
+      );
     if (row.addMb > budgets.getMb)
       out.push(`common: ${row.path} added ${row.addMb} MB > budget ${budgets.getMb} MB`);
   }
@@ -156,7 +229,7 @@ function commonFailures(rows, budgets) {
 }
 
 /** The Accounts open as one page: what the whole load added, and its Pulse's time within it. */
-function pageFailures(open, budgets) {
+function pageFailures(open, budgets, slow) {
   if (open?.peakMb === undefined || open.beforeMb === undefined) return []; // died: no peak to read
   const out = [];
   const added = open.peakMb - open.beforeMb;
@@ -164,7 +237,9 @@ function pageFailures(open, budgets) {
     out.push(`${open.name}: the page added ${added} MB > budget ${budgets.pageMb} MB`);
   for (const row of open.rows)
     if (row.path.endsWith("/pulse") && row.ms > budgets.pulseMs)
-      out.push(`${open.name}: ${row.path} took ${row.ms} ms > budget ${budgets.pulseMs} ms`);
+      out.push(
+        timed(slow, `${open.name}: ${row.path} took ${row.ms} ms > budget ${budgets.pulseMs} ms`),
+      );
   return out;
 }
 
@@ -207,5 +282,11 @@ export function summary(report) {
     `Server: ${state.running ? "running" : down} · peak RSS ${peak} (budget ${report.budgets.peakMb} MB) · cgroup memory.peak ${report.cgroupPeakMb ?? "n/a"} MB`,
     "",
     v.ok ? "**PASS** — within budget." : `**FAIL**\n${v.failures.map((f) => `- ${f}`).join("\n")}`,
+    ...(v.advisories?.length
+      ? [
+          "",
+          `Slower than budget (advisory, not blocking):\n${v.advisories.map((f) => `- ${f}`).join("\n")}`,
+        ]
+      : []),
   ].join("\n");
 }

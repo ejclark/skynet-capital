@@ -100,8 +100,7 @@ export function parseIntent(slug, text) {
 
 // The hard line on a public repo: a study names symbols and events, never what he holds. These are
 // the shapes that line gets crossed in; the spec runs them over every record on disk.
-const PRIVATE_SHAPES = [
-  [/\bmy\b/i, "first-person words (his words are paraphrased)"],
+export const POSITION_SHAPES = [
   [/\bprimary position\b/i, "a position"],
   [/\bpositions?\s+in\b/i, "a position"],
   [/\b(?:holds?|holding|owns?|long|short)\s+\d/i, "a position"],
@@ -110,6 +109,10 @@ const PRIVATE_SHAPES = [
   [/\bstrikes?\b/i, "a strike"],
   [/\b\d+(?:\.\d+)?\s?[CP]\b/, "a strike"],
   [/\$\s?\d/, "a dollar amount"],
+];
+const PRIVATE_SHAPES = [
+  [/\bmy\b/i, "first-person words (his words are paraphrased)"],
+  ...POSITION_SHAPES,
   [/\baccounts?\b/i, "an account"],
 ];
 

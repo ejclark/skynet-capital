@@ -64,27 +64,27 @@ describe("issues cli: findDuplicates", () => {
 describe("issues cli: board status follows labels", () => {
   const CALLOUT = "> [!IMPORTANT]\n> **Needs from you**\n> 1. Pick A or B?";
 
-  it("reads needs-eric as Blocked, ready as Ready, closed as Done", () => {
+  it("reads needs-eric as Waiting on a person, ready as Ready, closed as Done", () => {
     expect(
       boardStatus({ title: "x", state: "open", labels: [{ name: "needs-eric" }], body: CALLOUT }),
-    ).toBe("Blocked");
+    ).toBe("Waiting on a person");
     expect(boardStatus({ title: "x", state: "open", labels: ["ready"] })).toBe("Ready");
     expect(boardStatus({ title: "x", state: "closed", labels: ["needs-eric"] })).toBe("Done");
     expect(boardStatus({ title: "x", state: "open", labels: [] })).toBe("Backlog");
   });
 
-  // #3913 slice 2: the board keeps an unstated ask out of Blocked until the callout is written.
-  it("keeps a needs-eric issue with no callout out of Blocked, unless Eric filed it", () => {
+  // #3913 slice 2: the board keeps an unstated ask out of Waiting on a person until it is written.
+  it("keeps a needs-eric issue with no callout out of Waiting on a person, whoever filed it", () => {
     const labels = [{ name: "needs-eric" }];
     expect(boardStatus({ title: "x", state: "open", labels, body: "no ask" })).toBe("Backlog");
     expect(
       boardStatus({ title: "x", state: "open", labels, body: "", user: { login: "ejclark" } }),
-    ).toBe("Blocked");
+    ).toBe("Backlog");
   });
 
   it("prints one scan-able row per issue", () => {
     expect(row({ number: 7, title: "T", state: "open", labels: [{ name: "needs-info" }] })).toBe(
-      "#7 [Blocked] T  (needs-info)",
+      "#7 [Waiting on a person] T  (needs-info)",
     );
   });
 });

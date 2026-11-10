@@ -100,15 +100,14 @@ export const UPCOMING_PRINTS: readonly EarningsPrint[] = [
       "IR: nvidianews.nvidia.com call notice — results ~1:20pm PT Aug 26 (after the 4pm ET close)",
   },
   {
-    // Q3 FY27. NVIDIA posts its call notice about three weeks out (2025: Oct 29 for Nov 19), and
-    // as of 2026-10-05 nothing is posted, so this stays an estimate and opens no S1 entry yet.
+    // Q3 FY27. Held as an 11-18 estimate (EDGAR Q3 cadence) until the call notice posted 10-28
+    // named Tue 11-17; the ledger id keeps the 11-18 slug the research opened it under (#6773).
     symbol: "NVDA",
-    date: "2026-11-18",
-    status: "estimate",
+    date: "2026-11-17",
+    status: "confirmed",
     source:
-      "EST: EDGAR Item 2.02 Q3 cadence (2023-11-21, 2024-11-20, 2025-11-19); aggregators split " +
-      "11-17/11-25; Cboe term structure steps up between the 11-13 and 11-20 expiries (2026-10-05)",
-    window: { start: "2026-11-17", end: "2026-11-25" },
+      'IR: nvidianews.nvidia.com "NVIDIA Sets Conference Call for Third-Quarter Financial Results" (2026-10-28) — call Tue Nov 17 2pm PT (5pm ET, after the close); read first-hand 2026-11-03',
+    ledgerId: "nvda-2026-11-18-print",
   },
   {
     symbol: "MRVL",
@@ -193,6 +192,25 @@ export const UPCOMING_PRINTS: readonly EarningsPrint[] = [
     status: "confirmed",
     source:
       'IR: investors.micron.com press release "Micron Technology to Report Fiscal Fourth Quarter Results on September 30, 2026", dateline Aug 26 2026, names Wed Sep 30 2:30pm MT = 16:30 ET AMC, fetched 2026-09-05',
+  },
+  {
+    // Q1 FY27. Micron's first quarter has filed on the third Wednesday of December three years
+    // running (EDGAR Item 2.02), which is 12-16 this year; its Q4 slipped a week (09-23 → 09-30),
+    // so the window runs to the Wednesday after. No IR notice yet as of 2026-11-03 (#6773).
+    symbol: "MU",
+    date: "2026-12-16",
+    status: "estimate",
+    source:
+      "EST: EDGAR Item 2.02 Q1 cadence (2023-12-20, 2024-12-18, 2025-12-17); Nasdaq shows the same day as Zacks' algorithmic guess, not a company date (checked 2026-11-03)",
+    window: { start: "2026-12-14", end: "2026-12-23" },
+  },
+  {
+    // Q3 2026. NBIS files results on a 6-K, not an 8-K (docs/research/intraday-dip-bounce-2026-10.md).
+    symbol: "NBIS",
+    date: "2026-11-12",
+    status: "confirmed",
+    source:
+      'IR: nebius.com/newsroom "Nebius Group announces date of third quarter 2026 results and conference call" (2026-10-30) — results Thu Nov 12 BEFORE market open, call 8:00am ET; read first-hand 2026-11-03',
   },
 ];
 

@@ -34,6 +34,8 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { ghRateLimit, ghRestAll } from "./gh.mjs";
 import { isBacklogCandidate, isRateLimitExhausted, planBoardSweep } from "./projects.mjs";
+import { describePriority } from "./projects-priority.mjs";
+import { sweepContext } from "./projects-reconcile.mjs";
 import { createBoardContext, syncIssue } from "./projects-sync.mjs";
 
 const HORIZONS_PATH = fileURLToPath(new URL("./projects-horizons.json", import.meta.url));
@@ -63,6 +65,9 @@ function main() {
   // answer out of a single page. Warming it here keeps (1) above a property of this file, not a
   // side effect of which call happens to touch the board first.
   board.items();
+  // #6871 slice 2: the column rule's extra reads (sub-issues, open PRs) once for the whole run,
+  // from the open-issue list already in hand — the reconcile sweep's own context.
+  const context = sweepContext(issues);
   let added = 0;
   const skipped = issues.length - candidates.length;
   const failures = [];
@@ -70,9 +75,13 @@ function main() {
   for (const issue of candidates) {
     const horizon = horizons[String(issue.number)];
     try {
-      const result = syncIssue(String(issue.number), { horizon, board });
+      const result = syncIssue(String(issue.number), { horizon, board, context });
+      const p = result.priority;
       console.log(
-        `#${issue.number}: Status="${result.status}"${result.horizon ? ` Horizon="${result.horizon}"` : " (no Horizon triaged yet)"}`,
+        `#${issue.number}: Status="${result.status}"${result.horizon ? ` Horizon="${result.horizon}"` : " (no Horizon triaged yet)"}` +
+          (p?.action === "skipped"
+            ? ` Priority skipped (${p.reason})`
+            : ` — ${describePriority(issue.number, p).replace(/^#\d+: /, "")}`),
       );
       added++;
     } catch (err) {

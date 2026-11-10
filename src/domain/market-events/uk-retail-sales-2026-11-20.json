@@ -1,0 +1,11 @@
+{
+  "id": "uk-retail-sales-2026-11-20",
+  "kind": "macro-print",
+  "title": "UK retail sales, Great Britain — October 2026 (ONS, 07:00 London / 02:00 ET) — the month-on-month base the 12-18 Black Friday print is measured against",
+  "date": "2026-11-20",
+  "status": "estimate",
+  "source": "EST: ons.gov.uk/releases/retailsalesgreatbritainoctober2026, re-fetched direct 2026-11-05 — the ONS release page reads verbatim 'Retail sales, Great Britain: October 2026', 'Release date: 20 November 2026 7:00am', 'This release is not yet published', and states 'These are accredited official statistics'. The September 2026 bulletin (published 2026-10-23) independently names 'The next release is 20 November 2026'. Filed estimate because market-events-data.ts's confirmed-prefix taxonomy has CENSUS: for the US retail print and no slot for the UK Office for National Statistics, not because the date is in doubt",
+  "impact": "low",
+  "symbols": [],
+  "notes": "Canonical file written 2026-11-05 by this event's own never-assessed research, from the proposal filed 2026-09-10 by the uk-retail-sales-2026-12-18 lane (read in full first). It is the month-on-month base of the 2026-12-18 November print and the first out-of-sample read of that lane's FT-uk-retail-sales-2026-12-18-3 (October m/m above -0.6% in a Black-Friday-inside year). Expected LOW: symbols [], no UK-listed name in this book, no sterling- or rates-keyed house playbook. Estimate widens caution only; nothing date-keyed may act on this."
+}

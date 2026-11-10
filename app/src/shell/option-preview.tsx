@@ -1,12 +1,10 @@
 import type { ReactElement } from "react";
-import type { DeskOrderEvent } from "../live/desk-events";
-import { fillHeadline } from "../live/fill-headline";
-import type { OptionPreview } from "../live/options";
+import type { OptionPreview, OptionTicketResult } from "../live/options";
+import type { SentOrder } from "../live/order-receipt";
 import { daysToExpiry, expiresIn } from "../live/straddle";
-import type { TicketResult } from "../live/ticket";
 import { money, orderTypeLabel, tifLabel } from "../live/ticket";
 import { signOf } from "../ui";
-import { DisarmNote, DoneNote, GateHead, keepFocus } from "./gate-frame";
+import { DisarmNote, GateHead, keepFocus } from "./gate-frame";
 import { PayoffChart } from "./payoff-chart";
 
 /**
@@ -22,7 +20,8 @@ export type OptionGateState =
   | { readonly step: "reviewing" }
   | { readonly step: "reviewed"; readonly preview: OptionPreview }
   | { readonly step: "submitting"; readonly preview: OptionPreview }
-  | { readonly step: "done"; readonly result: TicketResult }
+  /** `sent` rides with an accepted order — what the receipt states (`order-receipt.tsx`). */
+  | { readonly step: "done"; readonly result: OptionTicketResult; readonly sent?: SentOrder }
   | { readonly step: "error"; readonly message: string };
 
 function Est({ label, value }: { readonly label: string; readonly value: string }): ReactElement {
@@ -172,10 +171,12 @@ export function GateAction({
       </button>
     );
   }
+  // Only a refusal at submit is left here — an accepted order's ticket is its receipt, which has
+  // its own "New ticket". The form kept its entries for the fix, so the button says so.
   if (state.step === "done") {
     return (
       <button type="button" className="btn" onClick={onReset}>
-        Start another ticket
+        Edit and review again
       </button>
     );
   }
@@ -197,11 +198,8 @@ export function GateAction({
  */
 export function OptionGateStatus({
   state,
-  fill,
 }: {
   readonly state: OptionGateState;
-  /** The stream's frame for this ticket's order, once one arrived (#3407 P4 slice 2). */
-  readonly fill?: DeskOrderEvent;
 }): ReactElement | null {
   if (state.step === "draft") return null;
   if (state.step === "reviewing") return <GateHead tone="checks">Reviewing…</GateHead>;
@@ -218,15 +216,8 @@ export function OptionGateStatus({
     );
   if (state.step === "error")
     return <GateHead tone="refused">{`The gate is unreachable — ${state.message}`}</GateHead>;
-  if (state.result.ok)
-    return (
-      <>
-        <GateHead tone="filled">{fillHeadline(state.result, fill)}</GateHead>
-        <div className="gate-body">
-          <DoneNote fill={fill}>The blotter and timeline pick it up on the next read.</DoneNote>
-        </div>
-      </>
-    );
+  // An accepted order renders as the receipt in the form's place (`order-receipt.tsx`).
+  if (state.result.ok) return null;
   return (
     <>
       <GateHead tone="refused">The gate refused at submit</GateHead>

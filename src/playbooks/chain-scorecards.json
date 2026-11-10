@@ -1,0 +1,33 @@
+{
+  "cards": [
+    {
+      "shape": "CRWV-WHEEL>expired>CRWV-LONG-CALL",
+      "symbol": "CRWV",
+      "from": "2025-06-27",
+      "to": "2026-11-06",
+      "runs": 52,
+      "open": 21,
+      "links": [
+        {
+          "playbook": "CRWV-WHEEL",
+          "runs": 52,
+          "mean": -185
+        },
+        {
+          "playbook": "CRWV-LONG-CALL",
+          "runs": 39,
+          "mean": -1448
+        }
+      ],
+      "total": {
+        "mean": -1271,
+        "won": 13
+      },
+      "ownership": {
+        "sessions": 5277,
+        "twoDeciders": 0,
+        "unowned": 0
+      }
+    }
+  ]
+}

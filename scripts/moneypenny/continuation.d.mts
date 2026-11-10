@@ -62,6 +62,7 @@ export interface Decision {
   readonly runId?: string;
   readonly runUrl?: string;
   readonly mergedMs?: number;
+  readonly blockEditedMs?: number;
 }
 
 export interface StopIntent {
@@ -86,18 +87,19 @@ export interface ContinuationDeps {
 export const CONTINUED_MODEL: string;
 export const MERGE_WINDOW_HOURS: number;
 export const STALL_HOURS: number;
+export const BUILD_JOB: string;
+export interface RunOutcome {
+  status: string;
+  conclusion?: string | null;
+  url?: string;
+}
+export function buildJobOutcome(
+  run: RunOutcome,
+  jobs?: Array<{ name?: string; status?: string; conclusion?: string | null }>,
+): RunOutcome;
 export const MAX_CANDIDATES: number;
 export const STOP_CAP: number;
 
-/** Issue number → the first open PR that names it (`derivePrIssues`: closing/provenance refs, title, branch). */
-export function openPrsByIssue(
-  openPrs?: readonly {
-    number: number;
-    title?: string;
-    body?: string | null;
-    head?: { ref?: string };
-  }[],
-): Map<number, number>;
 /** The slice ordinal a pickup line or sub-issue title names, or null (#4530). */
 export function sliceOf(text: string | null | undefined): number | null;
 export function nextSubIssue(
@@ -118,6 +120,11 @@ export function executeStopContinuation(
     run?: (cmd: string, args: readonly string[]) => string;
     retry?: <T>(fn: () => T) => T;
     assign?: (intent: Record<string, unknown>, opts?: Record<string, unknown>) => string;
+    read?: (path: string) => unknown;
+    lease?: {
+      claim: (slug: string) => { claimed: boolean; reason?: string };
+      release: (slug: string) => unknown;
+    } | null;
   },
 ): string;
 export function postContinuationReceipt(

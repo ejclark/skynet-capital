@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { isMain } from "../is-main.mjs";
 // MONEYPENNY — CONTINUATION (#3818 slice 8, sub-issue #4295; criteria 9–10). The one job: **a ready
 // plan keeps going after its slice lands, without Eric re-queuing it.**
 //
@@ -42,18 +43,13 @@
 // than re-deriving the regexes. Every branch is specced from data in
 // tests/scripts/moneypenny/continuation.spec.ts.
 import { admitBuild, readInFlight } from "./admission.mjs";
-import { ASSIGN_MARKER, executeAssignments } from "./assignments.mjs";
-import { ERIC, NEEDS_ERIC } from "./decision-callout.mjs";
+import { ASSIGN_MARKER, executeAssignments, withAskLease } from "./assignments.mjs";
+import { ERIC, NEEDS_ERIC, withLaneAsk, writeIssueBody } from "./decision-callout.mjs";
 import { ghRest, ghRestAll, sh, withRetry } from "./gh.mjs";
 import { FOOTER, LABELS, labelNames, notPullableReason } from "./labels.mjs";
 import { DEFAULT_MODEL } from "./model-tier.mjs";
 import { BLOCKER_READS, nextSubIssue, withoutBoarded } from "./pickup-hold.mjs";
-import {
-  derivePrIssues,
-  keywordIssuesOf,
-  laneClassOf,
-  platterClosesByIssue,
-} from "./pr-issues.mjs";
+import { derivePrIssues, openPrsByIssue, platterClosesByIssue } from "./pr-issues.mjs";
 import {
   allReceiptsOf,
   blockFingerprint,
@@ -262,6 +258,8 @@ export function continuationDecision(candidate = {}, { caps = {}, now = Date.now
     // The merge that made this plan continuable — `continueNext`'s lease check compares against it
     // (a lease stamped AFTER the merge belongs to a claim that is still alive).
     mergedMs: candidate.mergedMs,
+    // The block's last edit — a live session's activity, which keeps its hold on the plan (#6065).
+    blockEditedMs: Date.parse(block.updatedAt ?? "") || undefined,
     target: sub?.number ?? plan.number,
     pickup: sub ? `#${sub.number} — ${sub.title ?? ""}`.trim() : pickup,
     fingerprint,
@@ -341,26 +339,49 @@ export function pickContinuation(deps = {}) {
   );
 }
 
-/** Carry out one criterion-10 stop: park the plan FIRST, then assign and say why.
+/** Carry out one criterion-10 stop: state the ask, park the plan, then assign and say why.
  *
- *  Order matters and is not symmetry. `needs-eric` is what makes the plan unpullable (labels.mjs's
- *  one pull rule), so landing it first means a scan racing this write cannot claim a plan this lane
- *  has already judged dead. The assignment and its comment reuse `executeAssignments` outright —
- *  assign-then-comment, each retried for a 5xx, for the reasons that function's own header records. */
-export function executeStopContinuation(intent, { run = sh, retry = withRetry, assign } = {}) {
-  retry(() => run("gh", ["issue", "edit", String(intent.issueNumber), "--add-label", NEEDS_ERIC]));
-  (assign ?? executeAssignments)(
-    {
-      kind: "assign-eric",
-      number: intent.issueNumber,
-      title: intent.title,
-      criterion: 10,
-      why: intent.reason,
-      body: intent.body,
-    },
-    { run, retry },
-  );
-  return `🛑 stopped continuing #${intent.issueNumber} — ${intent.reason} (assigned @${ERIC})`;
+ *  Order matters and is not symmetry. The ask goes first so the `labeled` event's payload already
+ *  carries it: rule 7's check reads that payload, and the board reads the body, so the plan lands in
+ *  Blocked with no gap comment. A failed write leaves the plan unlabelled, and the next tick judges
+ *  it again. `needs-eric` then makes the plan unpullable (labels.mjs's one pull rule), so a scan
+ *  racing the rest cannot claim a plan this lane has already judged dead. The assignment and its
+ *  comment reuse `executeAssignments` outright — assign-then-comment, each retried for a 5xx, for the
+ *  reasons that function's own header records.
+ *
+ *  The live read is the second half of holding one stop to one comment, beside the lease: a plan
+ *  already carrying the label was parked since this sweep's gather. The body comes from the same read,
+ *  because the gather's copy can be minutes old and this write replaces the whole body. */
+export function executeStopContinuation(
+  intent,
+  { run = sh, retry = withRetry, assign, read = ghRest, lease = null } = {},
+) {
+  const n = intent.issueNumber;
+  return withAskLease(n, lease, () => {
+    const live = retry(() => read(`issues/${n}`));
+    // Not `?? ""`: the write below replaces the whole body, so an empty read must not reach it.
+    if (!live) throw new Error(`#${n}: could not read the issue before stopping it`);
+    if (labelNames(live.labels).includes(NEEDS_ERIC)) {
+      return `· #${n} — another sweep already stopped this plan`;
+    }
+    const body = live.body ?? "";
+    const ask = `Resume this plan, or say what to fix first? — ${intent.reason}`;
+    const stated = withLaneAsk(body, ask);
+    if (stated !== body) writeIssueBody(n, stated, { run, retry });
+    retry(() => run("gh", ["issue", "edit", String(n), "--add-label", NEEDS_ERIC]));
+    (assign ?? executeAssignments)(
+      {
+        kind: "assign-eric",
+        number: n,
+        title: intent.title,
+        criterion: 10,
+        why: intent.reason,
+        body: intent.body,
+      },
+      { run, retry },
+    );
+    return `🛑 stopped continuing #${n} — ${intent.reason} (assigned @${ERIC})`;
+  });
 }
 
 /** Post the receipt for a dispatched continuation. Called after the claim wins, never before. */
@@ -391,36 +412,8 @@ const restOr = (path, fallback) => {
   }
 };
 
-/**
- * Which open PR, if any, is still building each issue — `derivePrIssues` (pr-issues.mjs, #4393's
- * "observe, don't remember"), not the branch name.
- *
- * The branch was the obvious oracle and it is the wrong one: a plan's slices are not all built on
- * `plan/<n>`. #4450's slice 1 shipped on `feat/playbook-roll-call` and its slice 2 on `plan/4450`,
- * so a branch-only check would have read "nothing in flight" while an interactive session was
- * mid-slice — two builds on one plan, both editing the same state block. The PR-names-the-issue
- * rules already cover every build path (`Closes #n`, `Part of #n`, a bare `#n` in the title, the
- * branch's own number), which is exactly the gap #4393 closed for the in-flight cap.
- *
- * A HELD PLATTER NAMES ONLY WHAT IT CLOSES (#6282). Since #6144 its body carries a `Part of #n`
- * bullet per boarded item with work left, and the item's own PR is closed on boarding (#6266), so
- * reading that bullet as "a build of #n" parked #n for the platter's whole hold — up to a digest
- * week. `platterClosesByIssue`'s rule (#6193) applies instead: a `Closes #n` issue waits on the
- * merge; a `Part of #n` issue still has work left, which a puller may take. The slices such a
- * plan's platter closes are screened separately, as `boardedOn` (#6530): the plan continues, but
- * never into a sub-issue whose build is already boarded.
- */
-export function openPrsByIssue(openPrs = []) {
-  const byIssue = new Map();
-  for (const pr of openPrs) {
-    const named =
-      laneClassOf(pr?.head?.ref) === "platter"
-        ? keywordIssuesOf(pr?.body ?? "").closes
-        : derivePrIssues({ title: pr?.title, body: pr?.body, headRef: pr?.head?.ref });
-    for (const n of named) if (!byIssue.has(n)) byIssue.set(n, pr.number);
-  }
-  return byIssue;
-}
+// `openPrsByIssue` (issue → the open PR naming it) lives in pr-issues.mjs since #6871 slice 2, so
+// the board sync reads the same map without importing this module.
 
 /**
  * Which plans could be continuing right now, and everything the decision needs about each.
@@ -468,6 +461,21 @@ export function gatherContinuationDeps({ now = Date.now(), mode = readWorkMode()
   return { candidates, caps: mode.caps ?? {} };
 }
 
+/** The job a continued slice runs in (`moneypenny-events.yml`, `build-plan`). */
+export const BUILD_JOB = "build plan issue";
+
+/**
+ * A continued slice's outcome is its build job's, not its run's. The same `moneypenny-events` run
+ * also carries that tick's research legs, and one cancelled research leg reads the whole run as
+ * `cancelled` while the build succeeded: on 2026-11-07 #6953's slice 3 merged as #6996, and this
+ * lane still stopped the plan and assigned Eric over run 42318429910. With no build job in the list,
+ * the run's own conclusion stands. Pure, so the spec pins it without a GitHub read.
+ */
+export function buildJobOutcome(run, jobs = []) {
+  const job = jobs.find((j) => j?.name === BUILD_JOB);
+  return job?.status === "completed" ? { ...run, conclusion: job.conclusion } : run;
+}
+
 /**
  * The last dispatched run's outcome, with a READ FAILURE told apart from a missing run.
  * `judgePriorRun`'s header says why the difference matters; `withRetry` is what makes `unreadable`
@@ -476,7 +484,12 @@ export function gatherContinuationDeps({ now = Date.now(), mode = readWorkMode()
 function readRunOutcome(runId) {
   try {
     const r = withRetry(() => ghRest(`actions/runs/${runId}`));
-    return r ? { status: r.status, conclusion: r.conclusion, url: r.html_url } : { status: "none" };
+    if (!r) return { status: "none" };
+    const run = { status: r.status, conclusion: r.conclusion, url: r.html_url };
+    // A green run needs no job read: every job in it, the build included, is green.
+    if (run.status !== "completed" || run.conclusion === "success") return run;
+    const jobs = withRetry(() => ghRest(`actions/runs/${runId}/jobs?per_page=100`))?.jobs ?? [];
+    return buildJobOutcome(run, jobs);
   } catch (err) {
     const text = `${err?.stderr ?? ""} ${err?.message ?? ""}`;
     return /\b404\b/.test(text) ? { status: "none" } : { status: "unreadable" };
@@ -535,4 +548,4 @@ function main(argv) {
   );
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main(process.argv.slice(2));
+if (isMain(import.meta.url)) main(process.argv.slice(2));

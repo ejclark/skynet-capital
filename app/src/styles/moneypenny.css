@@ -139,6 +139,19 @@
 .mp-msg {
   white-space: pre-line;
 }
+/* Her markdown, drawn (#7166): a list is a block among her lines; bold is a real weight step,
+   never a colour, so it reads in both palettes and to a red/green colorblind eye. */
+.mp-msg ul,
+.mp-msg ol {
+  margin: 4px 0;
+  padding-left: 1.6em;
+}
+.mp-msg li + li {
+  margin-top: 2px;
+}
+.mp-msg strong {
+  font-weight: 700;
+}
 .mp-entry .mp-user {
   align-self: flex-end;
   max-width: 85%;
@@ -229,4 +242,119 @@
     height: 100dvh;
     border-left: none;
   }
+}
+
+/* Side threads (#7167 criterion 11, `rail-threads.tsx`). On the main conversation, the member's
+   threads sit behind one closed line; opened, one line each with a hairline divider between them
+   (Eric, #7018 round 5: "dividers between threads"). Inside a thread, a bar names its row and the
+   way back. The divider and the bar's own rule are shapes, so nothing here rests on hue. */
+.mp-threads,
+.mp-thread-bar {
+  flex: 0 0 auto;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.mp-threads summary {
+  cursor: pointer;
+  color: var(--muted);
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.mp-thread-list {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  max-height: 30vh;
+  overflow: auto;
+}
+.mp-thread-list li + li {
+  border-top: 1px solid var(--border);
+}
+.mp-thread-open {
+  width: 100%;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  background: none;
+  border: 0;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.mp-thread-open[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.mp-thread-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mp-thread-count {
+  flex: none;
+  color: var(--muted);
+  font-size: 10.5px;
+}
+.mp-thread-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: color-mix(in oklab, var(--accent) 5%, var(--surface-2));
+}
+.mp-thread-back {
+  align-self: flex-start;
+  min-height: 32px;
+  padding: 0 8px 0 0;
+  background: none;
+  border: 0;
+  color: var(--accent);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.mp-thread-back[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.mp-thread-name {
+  margin: 0;
+  line-height: 1.5;
+}
+.mp-thread-word {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.mp-thread-name a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* The same thread on its row (`row-thread.tsx`): closed by default, the rail's own lines inside. */
+.row-thread-lines {
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.row-thread-go {
+  width: auto;
+  align-self: flex-start;
+  padding: 6px 12px;
+}
+.event-ask {
+  margin-top: 8px;
 }

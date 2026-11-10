@@ -24,12 +24,15 @@ export interface Budgets {
   pulseMs: number;
   getMb: number;
   getMs: number;
+  /** Time budgets print as advisories instead of failing the run (CI's shared runner). */
+  advisoryLatency?: boolean;
 }
 export function flyEnv(toml: string): Record<string, string>;
 export function flyCommand(toml: string): string;
 export function accountsOpen(ownerId: string): string[];
 export function accountsBurst(ownerId: string, participantIds: readonly string[]): string[];
 export function commonGets(botId: string): string[];
+export function researchGets(): string[];
 export const COMMON_REPEAT: number;
 export function repeatedRow(hits: readonly BudgetRow[]): BudgetRow;
 export function procMemory(status: string): { rss: number; hwm: number; anon: number };
@@ -38,7 +41,16 @@ export function verdict(input: {
   state: { running: boolean; oomKilled: boolean; exitCode: number };
   budgets: Budgets;
   bootPeakMb?: number;
-}): { ok: boolean; peakMb: number; failures: string[] };
+}): { ok: boolean; peakMb: number; failures: string[]; advisories?: string[] };
+export interface BudgetVerdict {
+  ok: boolean;
+  peakMb: number;
+  failures: string[];
+  advisories?: string[];
+}
+export const RECHECKS: number;
+export function nextStep(verdicts: readonly BudgetVerdict[]): "again" | "pass" | "fail";
+export function remeasured(verdicts: readonly BudgetVerdict[], budgetMb: number): string;
 export function phaseTable(phase: BudgetPhase): string;
 export function summary(report: {
   commit: string;
@@ -57,5 +69,5 @@ export function summary(report: {
   phases: readonly BudgetPhase[];
   state: { running: boolean; oomKilled: boolean; exitCode: number };
   cgroupPeakMb?: number;
-  verdict: { ok: boolean; peakMb: number; failures: string[] };
+  verdict: { ok: boolean; peakMb: number; failures: string[]; advisories?: string[] };
 }): string;

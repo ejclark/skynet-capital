@@ -53,6 +53,9 @@ export function parseLoopList(md) {
       // loop-check.mjs reads these two: the command a question names, and the falsifier text
       question: bare(at("the question")),
       nextCheckText: bare(at("next check")),
+      // the weekly newsletter reads these two (#6872): what a person decides, and how often
+      humanStep: bare(at("human step")),
+      cadence: bare(at("cadence")),
     };
   });
 }

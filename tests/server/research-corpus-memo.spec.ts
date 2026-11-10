@@ -102,10 +102,10 @@ describe("research corpus memo", () => {
     mkdirSync(join(root, "forward-tests"));
     doc("forward-tests.md", "# Forward-test register\nIndex.");
     doc("forward-tests/amd-print.md", "# AMD print\nfirst row");
-    expect(findResearchDoc("forward-tests", root)?.html).toContain("first row");
+    expect(findResearchDoc("forward-tests", root)?.html.toString()).toContain("first row");
     expect(findResearchDoc("forward-tests", root)).toBe(findResearchDoc("forward-tests", root));
     doc("forward-tests/amd-print.md", "# AMD print\nrevised row", Date.now() / 1000 + 5);
-    expect(findResearchDoc("forward-tests", root)?.html).toContain("revised row");
+    expect(findResearchDoc("forward-tests", root)?.html.toString()).toContain("revised row");
   });
 });
 

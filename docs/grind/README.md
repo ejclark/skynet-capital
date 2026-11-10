@@ -78,7 +78,13 @@ checks all four."
   `grind.js` has no filesystem or `gh` access of its own (same reason the chore manifests below do).
   An unreadable dial reads as `conserve` inside the gate rather than a halt, so a GitHub blip
   narrows a batch instead of stopping the repo; a *malformed* control config exits 1 there and
-  throws here, because a broken control must never read as a quiet "go".
+  is refused here, because a broken control must never read as a quiet "go".
+  **A run Eric asked for gets through** with `force: true` (#6470), the override every other
+  scripted workflow takes. Only his own message, in a session he opened by hand, licenses it; never
+  a spawned session, a lane, a subagent or another workflow. It passes every refusal the gate gives,
+  an unreadable dial included, and logs what it passed and the price; each refusal names that price
+  first, so the ask can carry it. The ledger records `force: true`, as a record for an honest
+  caller rather than a check. Only the value `true` counts, and `MAX_ITEMS` still holds.
 - **An envelope check runs as step 0, on by default.** Every item goes through `node
   scripts/envelope-scan.mjs --check <path>` before your own steps run. It is a `prompt` step, not
   `script` — `--check` always exits 0 and returns descriptive JSON, so the dispatched agent reads
@@ -322,7 +328,8 @@ delta from `budget.spent()`. Print it verbatim; paste it into the issue or PR th
 
 **What a dead agent left.** Every agent that does the work has its own folder,
 `runs/<run>/<agent>` in the session scratchpad, named in its prompt. The run folder comes from the
-batch, or from `args.run` when two batches need telling apart. A run where an agent died returns
+chain and the items, so only a re-run of the same batch finds earlier notes, or from `args.run` to
+name it yourself. A run where an agent died returns
 `deadAgents`: each one's folder and what its notes show. A clean run returns an empty list and pays
 for no reader. One-command steps, the envelope check and the run's own lookups get no folder.
 
@@ -345,7 +352,7 @@ a table of contents"), so every name is a terse line item that must not repeat t
 |---|---|
 | workflow description | a title, ≤ 60 chars — `grind — one chore, many items` |
 | phase | the chore name (`interrogate`, `fix-doc-rot`); `meta` declares no `phases`, so no dead `Grind` row |
-| agent label | the item plus an optional nickname from `args.labels` (`{"1351": "listener slice 2"}`); **no step suffix** on the run's one named step, a one-word suffix on the automatic ones (`· envelope`, `· verify`) |
+| agent label | the item plus an optional nickname from `args.labels` (`{"1351": "listener slice 2"}`); **no step suffix** on the run's one named step, a one-word suffix on the automatic ones (`· envelope`, `· verify`), and `· script` on a script step with no `label` |
 | narrator line | `interrogate · 1/2 done · 0 blocked`, updated as each item finishes |
 | agent summary | one line, ≤ 120 chars, plus a URL — the schema says so, and the ledger cell truncates past 140 |
 
@@ -399,6 +406,10 @@ appeared). Two consequences:
   path instead — `Workflow({scriptPath: "<repo root>/.claude/workflows/grind.js",
   args: {...}})` — which reads the file fresh and, if the script is malformed, reports the real
   error instead of "not found". The name works again in the next session.
+- The registry also holds each script's **text** as it stood when it was built, so a session that
+  edits a workflow and then runs it by name runs the old copy, with no error. On 2026-11-05 four
+  `review-replay` runs started by name ran the pre-edit script, until an agent label missing the
+  new tier gave it away (#6870). After editing a workflow, run it by `scriptPath` every time.
 
 ## Known limitations
 
@@ -414,8 +425,8 @@ appeared). Two consequences:
   its gate's own item list is not hand-picking: the gate's list *is* the gate picking. `.claude/` is a
   Claude Code protected directory: writes there are never auto-approved outside `bypassPermissions`,
   and `permissions.allow` does not override that. So an unattended lane cannot create or edit a
-  skill, an agent, or `grind.js` itself, even though `envelope-scan --check` (which lists only
-  `.claude/settings.json`) reports those paths open. A feedback-lane session can call grind but not
+  skill, an agent, or `grind.js` itself, even though `envelope-scan --check` (whose only `.claude/`
+  entries are `.claude/settings.json` and `.claude/hooks/**`) reports those paths open. A feedback-lane session can call grind but not
   change it; route such a change to an interactive session as its own issue.
   `scripts/grind-manifest.mjs`, and the dispatch-time resolution in `grind.js`, read
   `*.instructions.md` front matter only, never `SKILL.md`, so a `skill` step's tier stays

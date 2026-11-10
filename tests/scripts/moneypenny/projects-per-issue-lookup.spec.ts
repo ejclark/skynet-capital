@@ -187,3 +187,24 @@ describe("moneypenny projects: the GraphQL read, and the false miss it refuses t
     expect(() => readIssueItemsFromGh(ISSUE, { gh: () => "" })).toThrow("false miss");
   });
 });
+
+// #6775 — the re-check after `Content already exists` must reach GitHub even when the context holds
+// a list: that list is the very thing that came back without the item a sibling had just added.
+describe("moneypenny projects: issueItems never answers from a held list (#6775)", () => {
+  it("asks the issue's own projectItems even after the whole board has been read", () => {
+    const fresh: BoardItem[] = [{ id: "PVTI_just_added", content: { type: "Issue", url: URL } }];
+    let issueLookups = 0;
+    const board = createBoardContext({
+      readItems: () => ({ items: [], totalCount: 0 }),
+      readIssueItems: () => {
+        issueLookups += 1;
+        return fresh;
+      },
+    });
+
+    board.items();
+    expect(board.itemsFor(ISSUE)).toEqual([]); // the held list answers itemsFor — #4183 unchanged
+    expect(board.issueItems(ISSUE)).toEqual(fresh);
+    expect(issueLookups).toBe(1);
+  });
+});

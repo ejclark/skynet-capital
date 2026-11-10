@@ -66,6 +66,8 @@ interface CycleOutcomeView {
  *  Exported so `funnelView` (PR 7b) reuses the same labels rather than re-deriving them. */
 export const REFUSAL_LABEL: Record<GuardRefusalReason, string> = {
   "ladder-block": "blocked by the risk ladder",
+  "breaker-halt": "a tripped safety breaker is holding new positions (exits still run)",
+  "opens-held": "its owner is holding new positions on this bot (exits still run)",
   "s2-print": "blocked by S2 (flat through the print)",
   "e1-open": "deferred by E1 (waiting out the open)",
   "subscription-filter": "outside the subscription's aimed symbols",
@@ -87,6 +89,10 @@ export const REFUSAL_LABEL: Record<GuardRefusalReason, string> = {
   "collateral-reserved": "that cash is set aside to secure a sold put",
   unsubscribed:
     "not from a subscribed playbook — a bot opens a position only through a playbook it is subscribed to and has on",
+  "no-exit-plan":
+    "its playbook has no exit plan — a bot opens a position only through a playbook with a stop, a profit target or a time exit",
+  "below-bar-floor":
+    "below its bar — one unit costs more than the smaller size a playbook below its evidence bar may risk",
 };
 
 /** A result that is neither a fill nor a rejection, in words — a limit order's two other endings. */
@@ -155,7 +161,9 @@ export interface DecisionCycleView {
 }
 
 function cycleStatus(record: DecisionRecord): CycleStatus {
-  if (record.halted) return "halted";
+  // A breaker holds opens but the cycle runs (#6954 slice 3): when it still placed or tried an exit,
+  // that outcome is the status and the breaker rides beside it as `halted`.
+  if (record.halted && record.outcomes.length === 0) return "halted";
   if (record.outcomes.some((o) => o.action === "placed")) return "placed";
   if (record.outcomes.some((o) => o.action === "rejected")) return "rejected";
   if (record.outcomes.length > 0) return "observed";

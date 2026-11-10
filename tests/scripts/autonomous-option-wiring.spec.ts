@@ -247,6 +247,7 @@ describe("the trading roster and the live bot", () => {
         mode: "observe",
         trading: { persona, risk: { maxPositionPct: 0.03, optionsLevel: 1 } },
         blockedReason: () => null,
+        openBlockedReason: () => null,
         safety: new SafetyController(),
         onDecision: (r) => records.push(r),
         hardcore: new Set(),

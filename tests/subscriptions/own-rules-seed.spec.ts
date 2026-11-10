@@ -494,13 +494,14 @@ describe("seeding Sauron's own rules as his subscription", () => {
     });
 
     /** The guards his live roster trades under; `subscribedOnly: false` is how they sized his
-     *  unlabelled buys before only subscribed playbooks could open (#4642 slice 10). */
+     *  unlabelled buys before only subscribed playbooks could open (#4642 slice 10) — and before
+     *  only a playbook with an exit plan could (#6954 slice 4), a later rule, so it is off too. */
     const guarded = (subs: readonly PlaybookSubscription[], subscribedOnly = true) => {
       const { persona, risk } = tradingRoster(resolveBotRoster(bot, [], subs), {
         ...DEFAULT_RISK_CONFIG,
         maxPositionPct: 1,
       });
-      const { subscribedOnly: _rule, ...ruleOff } = risk;
+      const { subscribedOnly: _rule, exitPlanned: _plan, ...ruleOff } = risk;
       const portfolio = aPortfolio({ cash: 1_000_000 });
       return applyGuardsWithVerdicts(
         persona.decide(panic, portfolio),

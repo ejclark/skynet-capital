@@ -37,62 +37,56 @@ import { type AllocationsState, parseAllocations } from "../subscriptions/subscr
  * trades exactly as it would without it. The slice that lets a target change what a bot does adds a
  * new kind, as v2 and v3 did.
  *
- * `subscriptions.v2` (#4469 slice 3c part 2) is the one wire change that adds a behavioral field:
- * a subscription's `conviction` (its reason and check date), which a bot acts on (criteria 11 and
- * 12, `conviction-check.ts`). It fingerprints v1's fields plus that one and nothing else, so a spec
- * can show only the added field moved. EXPAND FIRST: the bots read both kinds from part 2 on, and
- * the app sent v1 until part 3 writes a conviction, so an app that deployed ahead of its bots never
- * sent a kind they could not read. The app sends v2 from part 3 (`dashboard-insights-bridge.ts`),
- * once the bots with part 2 were live; v1 stays readable for a rollback. A v1 snapshot's version does not describe a
- * conviction, so the bots drop the one it carries rather than act on a field the version never
- * vouched for.
- *
- * `subscriptions.v3` (#5482 slice 2) adds the second: a subscription's `convictionId`, the pointer
- * at a conviction record whose check date then gates the pair (`with-conviction-gate.ts`). The same
- * expand-first order: the bots read v3 from #5511 on, and the app sends v3 from the migrate step
- * (`dashboard-insights-bridge.ts`), once those bots were live; v2 stays readable for a rollback. A
- * v1 or v2 snapshot does not vouch for a pointer, so the bots drop it, and the pair is checked on
- * its own conviction as before. Since the contract step's piece 2 a pointed subscription carries
- * no inline conviction, so a bots build rolled back past v3 would run it with none on record.
- *
- * `subscriptions.v4` (#5482 contract piece 4) is a contract, not an addition: since this piece the
- * bots read pointers only (`statedCheck`), so an inline conviction's reason and day change nothing
- * a bot does, and v4 stops fingerprinting them. It keeps ONE bit of the inline field: whether a
- * subscription still carries one with no pointer, which is a copy the app's poll could not move
- * onto a view, and which runs its pair exits-only (`subscriptionRoster`). Dropping that bit would
- * let such a pair trade unchecked, the one state no owner chose. The same expand-first order: the
- * bots read v4 from #5989 on, and the app sends v4 from the piece's app half
- * (`dashboard-insights-bridge.ts`), once those bots were live; v3 stays readable for a rollback. A v2 snapshot never vouches for a pointer, so on a bots build with this
- * piece every pair it carries a conviction for runs exits-only: a rollback that far fails safe.
- * Since the inline carry's replacement (bots first) so does every ◆ pair a v1 or v2 snapshot
- * carries, copy or not: a ◆ pair with no pointer runs exits-only (`isConvictionOffView`). That is
- * what let the app stop writing the ◆ row's copy (the replacement's app half).
+ * The kind's history, each step expand first (the bots read a kind before the app sends it):
+ * v2 (#4469 slice 3c) added a subscription's inline conviction, v3 (#5482 slice 2) its
+ * `convictionId`, the pointer at a conviction record whose check gates the pair
+ * (`with-conviction-gate.ts`), and v4 (#5482 contract piece 4) dropped the inline conviction's
+ * words and day, keeping one bit: whether a subscription still carried a copy with no pointer.
  *
  * THE INLINE FIELD IS RETIRED (#5482, the contract step's last piece): no build reads a
  * subscription's inline conviction (`subscription-state.ts` drops it on read), so v4's one bit is
- * FROZEN at `false`, and v2's words-and-day term at `null`. Frozen, not removed: the live count read
- * no copy on 2026-10-26, so every real state already hashed to exactly these values, and a bots
- * build from before this piece computes the same v4 version this one does. That is why no v5 and no
- * bots-first step was needed: the wire's bytes and versions are unchanged. A snapshot from an older
- * app that still carried a copy no longer reproduces its own version here and is read as "not
- * reported" (the roster in force stays), never applied without the bit it vouched for.
+ * FROZEN at `false`. Frozen, not removed: every real state already hashed to that value, so the
+ * version is byte for byte what the builds before computed, and app and bots deploy in either order.
+ * A snapshot from an older app that still carried a copy no longer reproduces its own version here
+ * and is read as "not reported" (the roster in force stays), never applied without the bit.
+ *
+ * V4 IS THE ONLY KIND (#5482, the contract step's close). The app has sent v4 since #6000
+ * (2026-10-25), so v1 to v3 stayed readable only for a rollback past it. A deploy's automatic
+ * rollback goes back one release, and every release since sends v4. Any other kind now reads as
+ * "not reported": the bots keep the roster in force, or at boot the kept one (`subscriptions-cache.ts`),
+ * and never apply a pair under a version that did not vouch for its pointer. The next behavioral
+ * field adds a kind again, expand first: the bots read both before the app sends the new one.
+ *
+ * V5 (#6954 slice 5c): a subscription's `belowBarFloorPct`, the owner's own smaller below-bar
+ * floor, joins the version. Expand first (5c-i, #7016): the bots read v4 and v5. Then the switch
+ * (5c-ii): the app sends v5, and the Store writes the floor. A v5 version names the floor only where
+ * one is set, so a state with no floor hashes byte for byte as v4 does and the switch swaps no
+ * roster. A v4 snapshot never vouched for a floor, so one is stripped from it before it is applied:
+ * a floor reaches a bot only under a version that would move if it changed. The bots keep reading
+ * v4 for one release, so an app rolled back past the switch still steers them (without floors).
  */
 
-export const SUBSCRIPTIONS_SNAPSHOT_KIND = "subscriptions.v1";
-export const SUBSCRIPTIONS_SNAPSHOT_KIND_V2 = "subscriptions.v2";
-export const SUBSCRIPTIONS_SNAPSHOT_KIND_V3 = "subscriptions.v3";
+/** The kind an app before the switch sent, still read for a rollback past it. */
 export const SUBSCRIPTIONS_SNAPSHOT_KIND_V4 = "subscriptions.v4";
+
+/** The kind whose version names the owner's below-bar floor (#6954 slice 5c). */
+export const SUBSCRIPTIONS_SNAPSHOT_KIND_V5 = "subscriptions.v5";
+
+/** The kind the app sends (#6954 slice 5c-ii). */
+export const SUBSCRIPTIONS_SNAPSHOT_KIND = SUBSCRIPTIONS_SNAPSHOT_KIND_V5;
+
+/** Every kind the bots read. */
 export type SubscriptionsSnapshotKind =
-  | typeof SUBSCRIPTIONS_SNAPSHOT_KIND
-  | typeof SUBSCRIPTIONS_SNAPSHOT_KIND_V2
-  | typeof SUBSCRIPTIONS_SNAPSHOT_KIND_V3
-  | typeof SUBSCRIPTIONS_SNAPSHOT_KIND_V4;
-const SNAPSHOT_KINDS: readonly string[] = [
-  SUBSCRIPTIONS_SNAPSHOT_KIND,
-  SUBSCRIPTIONS_SNAPSHOT_KIND_V2,
-  SUBSCRIPTIONS_SNAPSHOT_KIND_V3,
+  | typeof SUBSCRIPTIONS_SNAPSHOT_KIND_V4
+  | typeof SUBSCRIPTIONS_SNAPSHOT_KIND_V5;
+
+const READ_KINDS: readonly SubscriptionsSnapshotKind[] = [
   SUBSCRIPTIONS_SNAPSHOT_KIND_V4,
+  SUBSCRIPTIONS_SNAPSHOT_KIND_V5,
 ];
+
+const isReadKind = (kind: unknown): kind is SubscriptionsSnapshotKind =>
+  READ_KINDS.some((read) => read === kind);
 
 /**
  * Defensive bounds on a snapshot. This app's roster is a handful of bots and its registry a
@@ -128,26 +122,37 @@ export interface SubscriptionsSnapshot {
  * the version answers "is the fleet trading something different now?", and a toggle flipped off and
  * back on is the same roster with newer timestamps. Bumping the version there would churn a swap
  * (and, from slice 2, every `DecisionRecord`'s `subscriptionsVersion`) for no behavioral change.
+ * The eighth term is the retired inline conviction's bit, frozen at what "none" always hashed to.
+ * Under v5 an owner's below-bar floor follows it, only where one is set (this file's header).
  */
 function behavioralFields(
   sub: PlaybookSubscription,
   kind: SubscriptionsSnapshotKind,
 ): readonly unknown[] {
-  const v1 = [
+  const v4 = [
     sub.playbookId,
     sub.mode,
     sub.capitalAllocated,
     sub.enabled,
     sub.symbols ? [...sub.symbols].sort() : null,
     sub.compoundAllocation === true,
+    sub.convictionId ?? null,
+    false,
   ];
-  if (kind === SUBSCRIPTIONS_SNAPSHOT_KIND) return v1;
-  // The retired inline conviction's terms, frozen at what "none" always hashed to (module doc):
-  // v4's "an unmoved copy is there" bit, and v2's words and day.
-  if (kind === SUBSCRIPTIONS_SNAPSHOT_KIND_V4) return [...v1, sub.convictionId ?? null, false];
-  const v2 = [...v1, null];
-  if (kind === SUBSCRIPTIONS_SNAPSHOT_KIND_V2) return v2;
-  return [...v2, sub.convictionId ?? null];
+  return kind === SUBSCRIPTIONS_SNAPSHOT_KIND_V5 && sub.belowBarFloorPct !== undefined
+    ? [...v4, sub.belowBarFloorPct]
+    : v4;
+}
+
+/** A state with every owner floor taken off — what a v4 snapshot is applied as, since its version
+ *  never named one. */
+function withoutOwnerFloors(state: SubscriptionsState): SubscriptionsState {
+  return Object.fromEntries(
+    Object.entries(state).map(([accountId, subs]) => [
+      accountId,
+      subs.map(({ belowBarFloorPct: _unvouched, ...sub }) => sub),
+    ]),
+  );
 }
 
 /**
@@ -176,32 +181,14 @@ export function buildSubscriptionsSnapshot(
   state: SubscriptionsState,
   at: number,
   allocations?: AllocationsState,
-  kind: SubscriptionsSnapshotKind = SUBSCRIPTIONS_SNAPSHOT_KIND,
 ): SubscriptionsSnapshot {
   return {
-    kind,
+    kind: SUBSCRIPTIONS_SNAPSHOT_KIND,
     at,
-    version: subscriptionsVersion(state, kind),
+    version: subscriptionsVersion(state, SUBSCRIPTIONS_SNAPSHOT_KIND),
     accounts: state,
     ...(allocations && Object.keys(allocations).length > 0 ? { allocations } : {}),
   };
-}
-
-/** The state with only the fields `kind`'s version vouches for: v1 and v2 leave off every pointer,
- *  v3 and v4 nothing. No kind carries an inline conviction any more: the parse drops it. */
-function vouchedFor(
-  state: SubscriptionsState,
-  kind: SubscriptionsSnapshotKind,
-): SubscriptionsState {
-  if (kind === SUBSCRIPTIONS_SNAPSHOT_KIND_V3 || kind === SUBSCRIPTIONS_SNAPSHOT_KIND_V4) {
-    return state;
-  }
-  return Object.fromEntries(
-    Object.entries(state).map(([accountId, subs]) => [
-      accountId,
-      subs.map(({ convictionId: _pointer, ...rest }) => rest),
-    ]),
-  );
 }
 
 /** Bounds check on the RAW payload, before any parsing — so an oversized body is refused by shape
@@ -233,20 +220,18 @@ function withinBounds(accounts: Record<string, unknown>): boolean {
 export function parseSubscriptionsSnapshot(value: unknown): SubscriptionsSnapshot | undefined {
   if (!isRecord(value)) return undefined;
   const { kind, at, version, accounts } = value;
-  if (typeof kind !== "string" || !SNAPSHOT_KINDS.includes(kind)) return undefined;
-  const known = kind as SubscriptionsSnapshotKind;
+  if (!isReadKind(kind)) return undefined;
   if (typeof at !== "number" || !Number.isFinite(at) || at <= 0) return undefined;
   if (typeof version !== "string" || !VERSION.test(version)) return undefined;
   if (!(isRecord(accounts) && withinBounds(accounts))) return undefined;
   const parsed = parseSubscriptionsState(accounts);
-  if (!parsed || subscriptionsVersion(parsed, known) !== version) return undefined;
+  if (!parsed || subscriptionsVersion(parsed, kind) !== version) return undefined;
   const allocations = parseAllocations(value.allocations);
   return {
-    kind: known,
+    kind,
     at,
     version,
-    // A version applies only what it describes: no pointer under v1 or v2.
-    accounts: vouchedFor(parsed, known),
+    accounts: kind === SUBSCRIPTIONS_SNAPSHOT_KIND_V5 ? parsed : withoutOwnerFloors(parsed),
     ...(Object.keys(allocations).length > 0 ? { allocations } : {}),
   };
 }

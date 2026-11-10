@@ -52,6 +52,7 @@
 // skips block scalars (`run: |`) wholesale, which is where arbitrary shell text lives.
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
+import { isMain } from "./is-main.mjs";
 import { LABEL_NAMES } from "./moneypenny/labels.mjs";
 import { needsInstalledDeps } from "./script-deps.mjs";
 import { unknownLabels } from "./workflow-labels.mjs";
@@ -530,4 +531,4 @@ function main(argv) {
   console.log(`workflow-lint: ✓ ${files.length} workflow(s) structurally sound.`);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main(process.argv.slice(2));
+if (isMain(import.meta.url)) main(process.argv.slice(2));

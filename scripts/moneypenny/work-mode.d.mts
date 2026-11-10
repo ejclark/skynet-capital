@@ -14,7 +14,7 @@ export interface Caps {
   readonly grindWidth: number;
   /** Slices one ready plan may continue into on its own within 24h (continuation.mjs). */
   readonly continuationsPerDay: number;
-  /** Started-but-idle plans (the Waiting column) before a fresh plan is refused (admission.mjs). */
+  /** Started plans in Next part queued before a fresh plan is refused (admission.mjs). */
   readonly startedPlanCap: number;
 }
 
@@ -40,6 +40,10 @@ export interface WorkMode {
   readonly unreadable?: true;
   /** The label still on the dial when its end date has passed and every lane reads normal. */
   readonly endedLabel?: string;
+  /** When that end date passed, in ms. Present exactly when `endedLabel` is. */
+  readonly endedAtMs?: number;
+  /** The labels read fine and still name no one position: none, two, or an unknown one. */
+  readonly ambiguous?: true;
   /** The weekly reading published on the tracking issue's body (pace-reading.mjs), or null. */
   readonly reading?: { used: number; at: number; resetsAt: number; source?: string } | null;
 }

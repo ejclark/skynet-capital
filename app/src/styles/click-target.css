@@ -1,0 +1,110 @@
+/* WHAT A CLICK WILL OPEN (#7212). Eric, on /app/ (2026-11-09): "given all content has nested
+ * clicable content, it's difficult to be confident on what I am clicking into. hover animations to
+ * outline active/selected clickable would be useful". A story opens into rows that open more rows,
+ * so the one element under the pointer, or holding keyboard focus, gets a ring and a faint fill;
+ * the row it sits inside never does (`:hover` marks ancestors, and none of these targets is an
+ * ancestor of another: an opened story's rows sit in its <article>, beside its <summary>).
+ *
+ * WHY THESE CHOICES
+ *  - The ring is `--text`, not `--accent`: it holds well over 3:1 on every ground these targets sit
+ *    on in both palettes (the page, a story card, R&D's accent-tinted week band, a pinned day's
+ *    accent circle), and it never reads as the accent ring a pressed control already wears, so
+ *    "selected" and "under the pointer" stay two different shapes. A shape, never a hue alone
+ *    (docs/BRAND.md → Accessibility).
+ *  - An outline plus a background-image tint: neither moves layout, and the tint layers over a
+ *    target's own background colour (a pressed segment, a pinned day) instead of replacing it.
+ *  - Hover only where a pointer can hover (`hover: hover`), so a tap on a phone leaves nothing
+ *    stuck outlined. Keyboard focus gets the same ring at every width.
+ *  - The ring eases in over 120ms; with reduced motion it appears at once.
+ *
+ * THE TWO SURFACES. The landing page's rows and buttons, and R&D's market calendar (the head's
+ * arrows, lenses, month fold and day grid), which #7077 slice 1d moves onto the landing page:
+ * keyed to the calendar's own classes, so the rule travels with it. This sheet loads after both
+ * surfaces' sheets so its ring wins over their older focus rules. */
+
+.ecal-line,
+.story-more > summary,
+.ask-chip,
+.sectors-seg button,
+.eh-day:not([disabled]),
+.eh-nav:not([disabled]),
+.eh-lens:not([disabled]),
+.eh-fold-toggle,
+.eh-clear,
+.cal-chip {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  transition: outline-color 120ms ease;
+}
+.ecal-line,
+.story-more > summary,
+.eh-fold-toggle,
+.eh-clear {
+  border-radius: 6px;
+}
+/* Its words start at the summary's own edge, so the ring stands a little further off. */
+.story-more > summary,
+.story-more > summary:focus-visible {
+  outline-offset: 4px;
+}
+/* Inside a clipped segmented control or a gapless grid, the ring draws inward. A pressed segment
+ * already wears a 2px accent ring at its edge, so the pointer's ring sits just inside it. */
+.sectors-seg button,
+.sectors-seg button:focus-visible {
+  outline-offset: -4px;
+}
+.eh-day:not([disabled]),
+.eh-lens:not([disabled]) {
+  outline-offset: -2px;
+}
+
+.ecal-line:focus-visible,
+.story-more > summary:focus-visible,
+.ask-chip:focus-visible,
+.sectors-seg button:focus-visible,
+.eh-day:not([disabled]):focus-visible,
+.eh-nav:not([disabled]):focus-visible,
+.eh-lens:not([disabled]):focus-visible,
+.eh-fold-toggle:focus-visible,
+.eh-clear:focus-visible,
+.cal-chip:focus-visible {
+  outline-color: var(--text);
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--text) 8%, transparent),
+    color-mix(in srgb, var(--text) 8%, transparent)
+  );
+}
+
+@media (hover: hover) {
+  .ecal-line:hover,
+  .story-more > summary:hover,
+  .ask-chip:hover,
+  .sectors-seg button:hover,
+  .eh-day:not([disabled]):hover,
+  .eh-nav:not([disabled]):hover,
+  .eh-lens:not([disabled]):hover,
+  .eh-fold-toggle:hover,
+  .eh-clear:hover,
+  .cal-chip:hover {
+    outline-color: var(--text);
+    background-image: linear-gradient(
+      color-mix(in srgb, var(--text) 8%, transparent),
+      color-mix(in srgb, var(--text) 8%, transparent)
+    );
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ecal-line,
+  .story-more > summary,
+  .ask-chip,
+  .sectors-seg button,
+  .eh-day:not([disabled]),
+  .eh-nav:not([disabled]),
+  .eh-lens:not([disabled]),
+  .eh-fold-toggle,
+  .eh-clear,
+  .cal-chip {
+    transition: none;
+  }
+}

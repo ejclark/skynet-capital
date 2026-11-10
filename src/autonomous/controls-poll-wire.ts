@@ -22,6 +22,12 @@
  * because a `reason` string is free text (readiness/safety-battery messages) and headers are far
  * pickier about bytes than a body would be. Same expand/contract posture: unparseable, oversized,
  * or malformed-shape payloads read as "not reported", never as a wrong verdict.
+ *
+ * The mode header (#6954 slice 1) answers "do the bots place paper orders, or only watch — and if a
+ * bot watches, which gate holds it": the process's own house mode (`SKYNET_AUTONOMOUS_MODE`, a Fly
+ * secret no page could read), plus each gate verdict's `wanted` and `mode`. The app derives the
+ * gate (`modeGate`) from those facts rather than trusting a label, and a bots build that predates
+ * either field reads as "not reported" — never as watching or placing.
  */
 
 import { type HouseRosterReport, parseControlsPollRoster } from "./house-roster-wire.js";
@@ -32,13 +38,29 @@ export const CONTROLS_BOT_SHA_HEADER = "x-skynet-bots-sha";
 /** Base64'd JSON array of `PersonaGateVerdict` — this boot's readiness-gate outcome per live bot. */
 export const CONTROLS_BOT_GATE_HEADER = "x-skynet-bots-gate";
 
+/** The house mode the bots process runs under: `live` places paper orders, `observe` only watches. */
+export const CONTROLS_BOT_MODE_HEADER = "x-skynet-bots-mode";
+
+/** Whether a bot places paper orders (`live`) or only records what it would do (`observe`). */
+export type BotMode = "observe" | "live";
+
 /** One persona's boot-time readiness-gate outcome — mirrors the `[gate]` log line in
- *  `autonomous-live-wiring.ts`'s `buildLiveBot`, the single place this is decided. */
+ *  `autonomous-hardcore-live.ts`'s `gateBuild`, the single place this is decided. */
 export interface PersonaGateVerdict {
   readonly id: string;
   readonly ready: boolean;
   readonly reason: string;
+  /** The mode this bot asked for before the readiness gate: the house mode, narrowed by its owner's
+   *  stored setting. Absent from a bots build that predates #6954. */
+  readonly wanted?: BotMode;
+  /** The mode it actually runs in, after the readiness gate. Absent from an older build. */
+  readonly mode?: BotMode;
 }
+
+/** The first gate on the path to a paper order that holds this bot to watching, or null when none
+ *  does. The order is the path's own: the house mode, then the owner's per-bot setting, then the
+ *  readiness gate — so a bot held by two reads as the outer one. */
+export type ModeGate = "house" | "owner" | "readiness";
 
 /** Defensive bounds on the decoded payload — this repo's persona roster is a handful of bots, so
  *  these are generous headroom against a malformed/hostile payload, not a real limit anyone should
@@ -52,6 +74,8 @@ export interface ControlsPollReport {
   readonly gitSha?: string;
   /** Absent when the bots build predates this header, or the payload didn't parse cleanly. */
   readonly gate?: readonly PersonaGateVerdict[];
+  /** The house mode the process runs under; absent from a build that predates the header. */
+  readonly processMode?: BotMode;
   /** The bots app's `SKYNET_PLAYBOOKS` house roster and the accounts it runs on (#4535 slice
    *  1b, `house-roster-wire.ts`) — absent when not reported or not cleanly parsed. */
   readonly houseRoster?: HouseRosterReport;
@@ -79,6 +103,41 @@ export function controlsPollGateHeaders(
   return { [CONTROLS_BOT_GATE_HEADER]: encoded };
 }
 
+/** Bots side: the header carrying the house mode. Sent on every poll, idle or not. */
+export function controlsPollModeHeaders(mode: BotMode | undefined): Record<string, string> {
+  return mode ? { [CONTROLS_BOT_MODE_HEADER]: mode } : {};
+}
+
+/**
+ * Bots side: a boot-time verdict as it stands now, with the owner's "watch only" folded in (#6954
+ * slice 5b). The readiness gate runs once per build, against the house mode; the owner's setting is
+ * read at every cycle, so the report folds it in at every poll — `wanted` and `mode` both become
+ * `observe`, which `modeGate` reads as the owner's hold. Never widens: a verdict that already
+ * watches is left as it is, and a verdict from a build with no `wanted` is not touched.
+ */
+export function ownerNarrowed(
+  verdict: PersonaGateVerdict,
+  ownerWatches: boolean,
+): PersonaGateVerdict {
+  if (!ownerWatches || verdict.wanted !== "live") return verdict;
+  return { ...verdict, wanted: "observe", mode: "observe" };
+}
+
+const isBotMode = (value: unknown): value is BotMode => value === "observe" || value === "live";
+
+/** Which gate holds a bot to watching under this house mode, or null when it places paper orders.
+ *  Undefined when the verdict carries no `mode` (an older bots build): not reported, never a guess. */
+export function modeGate(
+  processMode: BotMode,
+  verdict: PersonaGateVerdict,
+): ModeGate | null | undefined {
+  if (!verdict.mode) return undefined;
+  if (processMode === "observe") return "house";
+  if (verdict.mode === "live") return null;
+  if (verdict.wanted === "observe") return "owner";
+  return "readiness";
+}
+
 function isPersonaGateVerdict(value: unknown): value is PersonaGateVerdict {
   if (typeof value !== "object" || value === null) return false;
   const candidate = value as Record<string, unknown>;
@@ -87,7 +146,9 @@ function isPersonaGateVerdict(value: unknown): value is PersonaGateVerdict {
     candidate.id.length > 0 &&
     typeof candidate.ready === "boolean" &&
     typeof candidate.reason === "string" &&
-    candidate.reason.length <= MAX_REASON_LENGTH
+    candidate.reason.length <= MAX_REASON_LENGTH &&
+    (candidate.wanted === undefined || isBotMode(candidate.wanted)) &&
+    (candidate.mode === undefined || isBotMode(candidate.mode))
   );
 }
 
@@ -110,7 +171,13 @@ function parseControlsPollGate(
     return undefined;
   }
   return decoded.every(isPersonaGateVerdict)
-    ? decoded.map((v) => ({ id: v.id, ready: v.ready, reason: v.reason }))
+    ? decoded.map((v) => ({
+        id: v.id,
+        ready: v.ready,
+        reason: v.reason,
+        ...(v.wanted ? { wanted: v.wanted } : {}),
+        ...(v.mode ? { mode: v.mode } : {}),
+      }))
     : undefined;
 }
 
@@ -120,9 +187,11 @@ export function controlsPollReport(headers: NodeJS.Dict<string | string[]>): Con
   const sha = typeof raw === "string" ? raw.trim().toLowerCase() : "";
   const gate = parseControlsPollGate(headers);
   const houseRoster = parseControlsPollRoster(headers);
+  const processMode = headers[CONTROLS_BOT_MODE_HEADER];
   return {
     ...(SHA.test(sha) ? { gitSha: sha } : {}),
     ...(gate ? { gate } : {}),
+    ...(isBotMode(processMode) ? { processMode } : {}),
     ...(houseRoster ? { houseRoster } : {}),
   };
 }

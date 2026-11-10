@@ -10,6 +10,7 @@ import { applyGuardsWithVerdicts, DEFAULT_RISK_CONFIG } from "../../src/engine/g
 import { REFUSAL_LABEL } from "../../src/observatory/decision-json-view.js";
 import { SauronPersona } from "../../src/personas/sauron.js";
 import { betaScoutIntents } from "../../src/playbooks/beta-scout.js";
+import { CRWV_WHEEL_SETTING } from "../../src/playbooks/registry.js";
 import { resolveBotRoster, tradingRoster } from "../../src/scripts/autonomous-live-wiring.js";
 import { scoutSkipSymbols } from "../../src/scripts/autonomous-scout-staging.js";
 import { aContext, aPortfolio, aPosition, aSubscription } from "../support/builders.js";
@@ -125,16 +126,29 @@ describe("playbookStoreCatalog", () => {
   it("says plainly the wheel runs against our own study, and when it retires", () => {
     const wheel = byId("CRWV-WHEEL");
     expect(wheel?.description).toContain("AGAINST our own study");
-    expect(wheel?.description).toContain("about 70%");
-    expect(wheel?.description).toContain("about 89%");
-    expect(wheel?.description).toContain("below $0 on 2027-01-29");
-    expect(wheel?.description).toContain("more than 1 in 3 of its sold puts");
+    // The study run its setting and pair row quote (#6774), not the older 10-02 run.
+    expect(wheel?.description).toContain(CRWV_WHEEL_SETTING.dataShows);
+    expect(wheel?.description).toContain("re-run 2026-10-16");
+    expect(wheel?.description).not.toContain("about 70%");
+    expect(wheel?.description).toContain("below $0 net together on 2027-01-29");
+    // The seeded view accepts assignment, so the 1-in-3 test is said to apply only off it.
+    expect(wheel?.description).toContain("puts finishing in the money never stop it");
+    expect(wheel?.description).toContain("under a view of your own, more than 1 in 3");
     // From #4469 slice 3c part 3 the check is the bots' own (`with-conviction-gate.ts`), on every
     // subscription to the pair: the ◆ row's conviction rides on each one (`row-conviction.ts`).
     expect(wheel?.description).toContain("stops selling new puts on its own");
     expect(wheel?.description).not.toContain("by hand");
     expect(wheel?.exitCutLosses).toContain("The real loss is owning a falling stock");
     expect(wheel?.exitCutLosses).toContain("ride through an earnings print");
+  });
+
+  it("names the long call's wait after a report when its owner's view steers it (#6774)", () => {
+    const call = byId("CRWV-LONG-CALL");
+    // conviction-seeds.ts: the AI-dip view's quiet narrowing is 6 sessions after the print.
+    expect(call?.enter).toContain("Never buys during an earnings blackout");
+    expect(call?.enter).toContain("6 trading sessions after CRWV's report");
+    expect(call?.enter).toContain("no expiry before 2027-03-18");
+    expect(call?.hold).toContain("6-session wait after a report");
   });
 
   it("says the NVDA spread is S1-NVDA's run-up with the loss capped, confirmed dates only, out by D-5", () => {

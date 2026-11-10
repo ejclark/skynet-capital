@@ -15,7 +15,7 @@ validated), not in any session's memory. Load this page when drawing; open one c
 
 ## The contract in one line
 
-**Pick the type by the story, draw ≤15 nodes in plain words, mark the delta without hue, animate
+**Pick the type by the story, fit one phone screen at ≥12px text, in plain words, mark the delta without hue, animate
 the flow, run the lint, caption it.** Every step has an owner below.
 
 ## 1. Pick by the story — `docs/PICTURES.md` → decision table

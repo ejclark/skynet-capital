@@ -1,9 +1,26 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { hermeticGitEnv } from "../support/hermetic-git.js";
 import { run } from "../support/ship-run.js";
+
+// The real temp folder. On macOS tmpdir() is /var/folders/…, a symlink into /private/var, and a
+// script's direct-run check (import.meta.url === `file://${process.argv[1]}`) compares the real
+// path with the symlinked one, so envelope-scan.mjs never ran and ship.sh read empty JSON. Every
+// local verify on a Mac went red here while CI on Linux stayed green (2026-11-07).
+const TMP = realpathSync(tmpdir());
 
 /**
  * The platter (#1343) — one held PR per cadence instead of one per protected change.
@@ -40,7 +57,7 @@ describe("ship platter — the ledger is a pure function of the boarded commits"
   };
 
   beforeAll(() => {
-    dir = mkdtempSync(join(tmpdir(), "ship-platter-"));
+    dir = mkdtempSync(join(TMP, "ship-platter-"));
     git(["init", "-q", "-b", "main", "."]);
     git(["config", "user.email", "spec@example.com"]);
     git(["config", "user.name", "spec"]);
@@ -105,28 +122,34 @@ describe("ship platter — the ledger is a pure function of the boarded commits"
     expect(stdout).toContain("passes the picture/format contract");
   });
 
-  it("tells Eric to merge with a merge commit — squashing is what loses per-item revert", () => {
-    expect(ledger(["--base", base, "--body"])).toContain("never squash");
+  // 2026-11-01: 20 of 27 landed platters were squashes despite "never squash" in this spot, so the
+  // body stopped asking. Either button lands it; what differs is the revert command, and both exist.
+  it("tells Eric either button lands it, and which revert each button leaves", () => {
+    const body = ledger(["--base", base, "--body"]);
+    expect(body).toContain("Either button lands");
+    expect(body).not.toContain("never squash");
+    expect(body).toContain("scripts/ship.sh platter revert <pr> <sha>");
   });
 
-  // #3754: the merge-method instruction was a Summary bullet and a paragraph below the fold, and it
-  // failed on five of eleven landings. A `> [!WARNING]` is the one thing docs/PICTURES.md reserves
-  // for an irreversible touch, and it sits above `## Summary` where the merge dialog is read.
-  it("carries the merge method as a top-level WARNING, not only as a bullet", () => {
+  // #3754: the merge-method note was a Summary bullet and a paragraph below the fold. A
+  // `> [!WARNING]` is the one thing docs/PICTURES.md reserves for an irreversible touch, and it
+  // sits above `## Summary` where the merge dialog is read — now naming both buttons' reverts.
+  it("carries both buttons' revert paths as a top-level WARNING, not only as a bullet", () => {
     const body = ledger(["--base", base, "--body"]);
     const warning = body.indexOf("> [!WARNING]");
     expect(warning).toBeGreaterThan(-1);
     expect(warning).toBeLessThan(body.indexOf("## Summary"));
     expect(body.slice(warning, warning + 400)).toMatch(/Create a merge commit/);
+    expect(body.slice(warning, warning + 400)).toMatch(/platter revert/);
     expect(body.slice(warning, warning + 400)).not.toContain("<details>");
   });
 
   it("states the revert path that actually exists, for both ways this can land", () => {
     // An honest ledger names what the revert column is worth BEFORE the merge (branch-only),
-    // after a merge commit (per item), and after a squash (the platter, whole or nothing).
+    // after a merge commit (git revert), and after a squash (platter revert, from the PR head ref).
     const body = ledger(["--base", base, "--body"]);
     expect(body).toContain("The revert path that actually exists");
-    expect(body).toMatch(/whole platter or nothing/);
+    expect(body).toMatch(/refs\/pull\/<pr>\/head/);
     expect(body).toContain("scripts/platter-merge-scan.mjs");
   });
 
@@ -222,7 +245,7 @@ describe("ship platter — only boarded items become rows, whatever else the ran
   };
 
   beforeAll(() => {
-    dir = mkdtempSync(join(tmpdir(), "ship-platter-range-"));
+    dir = mkdtempSync(join(TMP, "ship-platter-range-"));
     git(["init", "-q", "-b", "main", "."]);
     git(["config", "user.email", "spec@example.com"]);
     git(["config", "user.name", "spec"]);
@@ -289,7 +312,7 @@ describe("ship platter — refusals that keep the platter an assembly point, not
   // open` runs `npm run verify` on the staged union while HEAD *is* a platter branch, so the
   // refusal this test expects is exactly the one that cannot fire there.
   it("refuses to board while HEAD is not a platter branch", () => {
-    const dir = mkdtempSync(join(tmpdir(), "ship-board-refusal-"));
+    const dir = mkdtempSync(join(TMP, "ship-board-refusal-"));
     const env = hermeticGitEnv({ GH_TOKEN: "test-token-never-used" });
     const git = (args: string[]) =>
       execFileSync("git", args, { cwd: dir, encoding: "utf8", env, stdio: "pipe" });
@@ -321,8 +344,9 @@ describe("ship platter — refusals that keep the platter an assembly point, not
   // 2026-10-26, #5852: an item branch cut from today's main, boarded onto a platter cut a week
   // earlier, squashed the whole week of main into one "item" — 504 files under a two-file subject,
   // with a revert sha that would have reverted all of them.
-  it("refuses an item based on a newer main than the platter, before squashing anything", () => {
-    const root = mkdtempSync(join(tmpdir(), "ship-board-stale-"));
+  // Since #5390 `board` merges main in first; --no-merge keeps this refusal for whoever wants it.
+  it("refuses an item based on a newer main than the platter under --no-merge, before squashing anything", () => {
+    const root = mkdtempSync(join(TMP, "ship-board-stale-"));
     const env = hermeticGitEnv({ GH_TOKEN: "test-token-never-used" });
     const git = (cwd: string, args: string[]) =>
       execFileSync("git", args, { cwd, encoding: "utf8", env, stdio: "pipe" });
@@ -348,11 +372,11 @@ describe("ship platter — refusals that keep the platter an assembly point, not
       let code = 0;
       let stderr = "";
       try {
-        execFileSync("bash", [resolve("scripts/ship.sh"), "platter", "board", "fix/item"], {
-          cwd: work,
-          env,
-          stdio: "pipe",
-        });
+        execFileSync(
+          "bash",
+          [resolve("scripts/ship.sh"), "platter", "board", "fix/item", "--no-merge"],
+          { cwd: work, env, stdio: "pipe" },
+        );
       } catch (error) {
         const e = error as { status?: number; stderr?: Buffer };
         code = e.status ?? 1;
@@ -370,7 +394,7 @@ describe("ship platter — refusals that keep the platter an assembly point, not
   // 2026-10-26, #5852 again: the refusal above merged at 10:57 and an item boarded past it at
   // 11:52, because `board` ran the platter's own checkout of this script, cut before the guard.
   it("refuses to board while the running ship.sh is not origin/main's copy", () => {
-    const root = mkdtempSync(join(tmpdir(), "ship-board-stale-script-"));
+    const root = mkdtempSync(join(TMP, "ship-board-stale-script-"));
     const env = hermeticGitEnv({ GH_TOKEN: "test-token-never-used" });
     const git = (cwd: string, args: string[]) =>
       execFileSync("git", args, { cwd, encoding: "utf8", env, stdio: "pipe" });
@@ -455,7 +479,7 @@ printf '%s\\n__SHIP_HTTP__%s' "$out" "$code"
 `;
 
   const boardWith = (itemPrs: string) => {
-    const root = mkdtempSync(join(tmpdir(), "ship-board-close-"));
+    const root = mkdtempSync(join(TMP, "ship-board-close-"));
     const bin = join(root, "bin");
     const log = join(root, "curl.log");
     mkdirSync(bin);
@@ -532,6 +556,257 @@ printf '%s\\n__SHIP_HTTP__%s' "$out" "$code"
   });
 });
 
+// Boarding verifies through the queue (#6470). A copy of ship.sh runs from a scratch repo whose
+// scripts/verify-locked.sh is a stub that exits as told, so the three outcomes are proven end to end.
+describe("ship platter board — verifies through verify-locked.sh", () => {
+  const STUB_CURL = `#!/usr/bin/env bash
+method=GET; url=""
+while [ $# -gt 0 ]; do case "$1" in
+  -X) method="$2"; shift 2 ;;
+  --data-binary) cat >/dev/null; shift 2 ;;
+  -H|-w) shift 2 ;;
+  http*) url="$1"; shift ;;
+  *) shift ;;
+esac; done
+case "$method $url" in
+  "GET "*"platter/"*) out='[{"number":7}]' ;;
+  "GET "*"/pulls/7") out='{"commits":1,"head":{"sha":"'"$(git rev-parse HEAD)"'"}}' ;;
+  "GET "*) out='[]' ;;
+  *) out='{}' ;;
+esac
+printf '%s\\n__SHIP_HTTP__200' "$out"
+`;
+
+  const boardWithVerify = (rc: number) => {
+    const root = mkdtempSync(join(TMP, "ship-board-verify-"));
+    const bin = join(root, "bin");
+    mkdirSync(bin);
+    writeFileSync(join(bin, "curl"), STUB_CURL, { mode: 0o755 });
+    writeFileSync(join(bin, "npx"), "#!/usr/bin/env bash\nexit 0\n", { mode: 0o755 });
+    const env = hermeticGitEnv({
+      GH_TOKEN: "test-token-never-used",
+      PATH: `${bin}:${process.env.PATH ?? ""}`,
+    });
+    const git = (cwd: string, args: string[]) =>
+      execFileSync("git", args, { cwd, encoding: "utf8", env, stdio: "pipe" });
+    const work = join(root, "work");
+    git(root, ["init", "-q", "--bare", "-b", "main", "origin.git"]);
+    git(root, ["clone", "-q", join(root, "origin.git"), "work"]);
+    git(work, ["config", "user.email", "spec@example.com"]);
+    git(work, ["config", "user.name", "spec"]);
+    mkdirSync(join(work, "scripts"));
+    writeFileSync(join(work, "scripts", "ship.sh"), readFileSync("scripts/ship.sh"));
+    writeFileSync(join(work, "envelope.json"), readFileSync("envelope.json"));
+    git(work, ["add", "."]);
+    git(work, ["commit", "-q", "-m", "chore: seed"]);
+    git(work, ["push", "-q", "origin", "main"]);
+    git(work, ["checkout", "-q", "-b", "fix/item"]);
+    writeFileSync(join(work, "item.txt"), "item\n");
+    git(work, ["add", "."]);
+    git(work, ["commit", "-q", "-m", "fix: the item"]);
+    git(work, ["push", "-q", "origin", "fix/item"]);
+    git(work, ["checkout", "-q", "-b", "platter/2026-11-02", "main"]);
+    git(work, ["push", "-q", "origin", "platter/2026-11-02"]);
+    // ship.sh calls its siblings by its own path, so they sit beside the copy, untracked like the stub
+    // so the board's clean-tree check still passes. The ones it runs are copied, because a script
+    // run through a link fails its own is-main check; what they import is linked.
+    const RUN_BY_SHIP = ["envelope-scan.mjs", "platter-refs.mjs", "platter-picture.mjs"];
+    for (const name of readdirSync("scripts")) {
+      if (name === "ship.sh" || name === "verify-locked.sh") continue;
+      if (RUN_BY_SHIP.includes(name))
+        copyFileSync(resolve("scripts", name), join(work, "scripts", name));
+      else symlinkSync(resolve("scripts", name), join(work, "scripts", name));
+    }
+    // The stub records that it was the one called, and with what.
+    writeFileSync(
+      join(work, "scripts", "verify-locked.sh"),
+      `#!/usr/bin/env bash\necho "$*" > "${join(root, "called")}"\nexit ${rc}\n`,
+      { mode: 0o755 },
+    );
+    const before = git(work, ["rev-parse", "HEAD"]).trim();
+    let code = 0;
+    let stderr = "";
+    try {
+      execFileSync("bash", [join(work, "scripts", "ship.sh"), "platter", "board", "fix/item"], {
+        cwd: work,
+        env,
+        stdio: "pipe",
+      });
+    } catch (error) {
+      const e = error as { status?: number; stderr?: Buffer };
+      code = e.status ?? 1;
+      stderr = e.stderr?.toString() ?? "";
+    }
+    try {
+      return {
+        code,
+        stderr,
+        called: existsSync(join(root, "called")) ? readFileSync(join(root, "called"), "utf8") : "",
+        moved: git(work, ["rev-parse", "HEAD"]).trim() !== before,
+        staged: git(work, ["diff", "--cached", "--name-only"]).trim(),
+        subject: git(work, ["log", "-1", "--format=%B"]),
+      };
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  };
+
+  it("boards a green item and records the verify", () => {
+    const { code, called, moved, subject, stderr } = boardWithVerify(0);
+    expect(stderr).toBe("");
+    expect(code).toBe(0);
+    expect(called).toContain("--log");
+    expect(moved).toBe(true);
+    expect(subject).toMatch(/Platter-Verify: verify green /);
+  });
+
+  it("un-boards a red item and exits 1", () => {
+    const { code, stderr, moved, staged } = boardWithVerify(1);
+    expect(code).toBe(1);
+    expect(stderr).toContain("VERIFY FAILED with fix/item boarded");
+    expect(moved).toBe(false);
+    expect(staged).toBe("");
+  });
+
+  // 75 is no result: the queue wait ran out, the lid was closed, or the machine slept mid-run (#6668).
+  it("un-boards on no verify result (exit 75), and does not call it red", () => {
+    const { code, stderr, moved, staged } = boardWithVerify(75);
+    expect(code).toBe(75);
+    expect(stderr).toContain("no verify result — the queue wait ran out, the lid was closed");
+    expect(stderr).not.toContain("VERIFY FAILED");
+    expect(moved).toBe(false);
+    expect(staged).toBe("");
+  });
+});
+
+// #5390: an item cut from today's main, squashed onto a platter cut a week earlier, carried the whole
+// week of main (#5382 staged 681 files for a one-line change). The two refusals that replaced that
+// each printed `git merge origin/main --no-edit` for a hand to run; board now runs it. The platter
+// here also carries an OLDER ship.sh than main, so the same merge proves the board re-runs as
+// main's copy instead of tripping the stale-script refusal (#6067).
+describe("ship platter board — catches a stale platter up to main first (#5390)", () => {
+  const STUB_CURL = `#!/usr/bin/env bash
+method=GET; url=""
+while [ $# -gt 0 ]; do case "$1" in
+  -X) method="$2"; shift 2 ;;
+  --data-binary) cat >/dev/null; shift 2 ;;
+  -H|-w) shift 2 ;;
+  http*) url="$1"; shift ;;
+  *) shift ;;
+esac; done
+case "$method $url" in
+  "GET "*"platter/"*) out='[{"number":7}]' ;;
+  "GET "*"/pulls/7") out='{"commits":'"$(git rev-list --count origin/main..HEAD)"',"head":{"sha":"'"$(git rev-parse HEAD)"'"}}' ;;
+  "GET "*) out='[]' ;;
+  *) out='{}' ;;
+esac
+printf '%s\\n__SHIP_HTTP__200' "$out"
+`;
+
+  // mainEdit: what main writes to shared.txt after the platter was cut (the platter's earlier item
+  // wrote "platter\n" there); the same text merges cleanly, a different one conflicts.
+  const boardStale = (mainEdit: string) => {
+    const root = mkdtempSync(join(TMP, "ship-board-catchup-"));
+    const bin = join(root, "bin");
+    mkdirSync(bin);
+    writeFileSync(join(bin, "curl"), STUB_CURL, { mode: 0o755 });
+    writeFileSync(join(bin, "npx"), "#!/usr/bin/env bash\nexit 0\n", { mode: 0o755 });
+    const env = hermeticGitEnv({
+      GH_TOKEN: "test-token-never-used",
+      PATH: `${bin}:${process.env.PATH ?? ""}`,
+    });
+    const git = (cwd: string, args: string[]) =>
+      execFileSync("git", args, { cwd, encoding: "utf8", env, stdio: "pipe" });
+    const commit = (cwd: string, file: string, text: string, subject: string) => {
+      writeFileSync(join(cwd, file), text);
+      git(cwd, ["add", "."]);
+      git(cwd, ["commit", "-q", "-m", subject]);
+    };
+    const work = join(root, "work");
+    const ship = readFileSync("scripts/ship.sh", "utf8");
+    git(root, ["init", "-q", "--bare", "-b", "main", "origin.git"]);
+    git(root, ["clone", "-q", join(root, "origin.git"), "work"]);
+    git(work, ["config", "user.email", "spec@example.com"]);
+    git(work, ["config", "user.name", "spec"]);
+    mkdirSync(join(work, "scripts"));
+    writeFileSync(join(work, "envelope.json"), readFileSync("envelope.json"));
+    writeFileSync(join(work, "shared.txt"), "seed\n");
+    commit(work, "scripts/ship.sh", `${ship}\n# the platter's older copy\n`, "chore: seed");
+    git(work, ["push", "-q", "origin", "main"]);
+    git(work, ["checkout", "-q", "-b", "platter/2026-10-19"]);
+    commit(work, "shared.txt", "platter\n", "fix(ci): an earlier item");
+    git(work, ["push", "-q", "origin", "platter/2026-10-19"]);
+    git(work, ["checkout", "-q", "main"]);
+    commit(work, "week.txt", "a week of main\n", "feat: a week of main");
+    commit(work, "shared.txt", mainEdit, "fix: main touches the shared file");
+    commit(work, "scripts/ship.sh", ship, "fix(ship): a newer board guard");
+    git(work, ["push", "-q", "origin", "main"]);
+    git(work, ["checkout", "-q", "-b", "fix/item"]);
+    commit(work, "item.txt", "item\n", "fix: the item");
+    git(work, ["push", "-q", "origin", "fix/item"]);
+    git(work, ["checkout", "-q", "platter/2026-10-19"]);
+    // ship.sh calls its siblings by its own path; untracked, so the clean-tree checks still pass.
+    for (const name of ["envelope-scan.mjs", "platter-refs.mjs", "platter-picture.mjs"])
+      copyFileSync(resolve("scripts", name), join(work, "scripts", name));
+    for (const name of readdirSync("scripts"))
+      if (!existsSync(join(work, "scripts", name)))
+        symlinkSync(resolve("scripts", name), join(work, "scripts", name));
+    const before = git(work, ["rev-parse", "HEAD"]).trim();
+    let code = 0;
+    let stdout = "";
+    let stderr = "";
+    try {
+      stdout = execFileSync(
+        "bash",
+        [join(work, "scripts", "ship.sh"), "platter", "board", "fix/item", "--no-verify"],
+        { cwd: work, encoding: "utf8", env, stdio: "pipe" },
+      );
+    } catch (error) {
+      const e = error as { status?: number; stdout?: Buffer; stderr?: Buffer };
+      code = e.status ?? 1;
+      stdout = e.stdout?.toString() ?? "";
+      stderr = e.stderr?.toString() ?? "";
+    }
+    try {
+      return {
+        code,
+        stdout,
+        stderr,
+        before,
+        head: git(work, ["rev-parse", "HEAD"]).trim(),
+        itemFiles: git(work, ["show", "--name-only", "--format=", "HEAD"]).trim().split("\n"),
+        parents: git(work, ["log", "-1", "--format=%P", "HEAD~1"]).trim().split(" "),
+        mainSha: git(work, ["rev-parse", "origin/main"]).trim(),
+        merging: existsSync(join(work, ".git", "MERGE_HEAD")),
+        status: git(work, ["status", "--porcelain", "--untracked-files=no"]).trim(),
+      };
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  };
+
+  it("merges main in, re-runs as main's ship.sh, and boards only the item's own files", () => {
+    const r = boardStale("platter\n");
+    expect(r.stderr).toBe("");
+    expect(r.code).toBe(0);
+    expect(r.stdout).toContain("merged origin/main into the platter (3 commit(s))");
+    expect(r.stdout).toContain("boarding with that copy");
+    expect(r.itemFiles).toEqual(["item.txt"]); // not week.txt, shared.txt or scripts/ship.sh
+    expect(r.parents).toEqual([r.before, r.mainSha]); // the catch-up is a merge commit under the item
+  });
+
+  it("aborts on a conflict with an item already boarded, leaving the platter exactly as it was", () => {
+    const r = boardStale("main\n");
+    expect(r.code).toBe(1);
+    expect(r.stderr).toContain("did not complete cleanly — aborted, the platter is unchanged");
+    expect(r.stderr).toContain("shared.txt");
+    expect(r.stderr).toContain("re-open it from main");
+    expect(r.head).toBe(r.before);
+    expect(r.merging).toBe(false);
+    expect(r.status).toBe("");
+  });
+});
+
 describe("ship platter — the source contract", () => {
   const source = readFileSync("scripts/ship.sh", "utf8");
 
@@ -543,7 +818,11 @@ describe("ship platter — the source contract", () => {
   });
 
   it("verifies the union as each item boards, and un-boards the item on red", () => {
-    expect(source).toMatch(/npm run verify >\/tmp\/ship-platter-verify\.log/);
+    // Through the queue (#6470): a plain `npm run verify` here skipped it while other verifies ran.
+    expect(source).toMatch(/verify-locked\.sh" --log "\$verify_log"/);
+    expect(source).not.toMatch(/npm run verify >\/tmp\/ship-platter-verify/);
+    // No verify result (exit 75) is not a red verify.
+    expect(source).toMatch(/ship platter: no verify result — the queue wait ran out/);
     expect(source).toMatch(/un-boarded it; the platter is unchanged/);
   });
 

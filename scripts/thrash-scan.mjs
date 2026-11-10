@@ -34,6 +34,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { digestFiles } from "./digest-scan.mjs";
+import { isMain } from "./is-main.mjs";
 import { lintIssue } from "./issue-lint.mjs";
 import { ghRest, ghRestAll, sh } from "./moneypenny/gh.mjs";
 import {
@@ -261,4 +262,4 @@ function main() {
   console.log(renderReport(hits, win));
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+if (isMain(import.meta.url)) main();

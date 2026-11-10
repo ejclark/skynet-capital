@@ -81,13 +81,18 @@ const MODE_RANK: Readonly<Record<PlaybookMode, number>> = {
 
 /**
  * Whether an edit hands the bot MORE than its subscription already has: a bigger mode, more or
- * uncapped capital, a wider symbol filter, or compounding switched on. The fog gates delegation,
- * and only this direction delegates; an edit that only lowers exposure goes through behind it,
- * because restricting how someone reduces risk is the same safety bug as gating Pause.
+ * uncapped capital, a wider symbol filter, compounding switched on, or a larger (or cleared) owner's
+ * below-bar floor (#6954 slice 5c-ii). The fog gates delegation, and only this direction delegates;
+ * an edit that only lowers exposure goes through behind it, because restricting how someone reduces
+ * risk is the same safety bug as gating Pause. Setting a floor where there was none only lowers it:
+ * the house floor is the most an owner's may be (the Store refuses a larger one).
  */
 export function raisesDelegation(
   prior: PlaybookSubscription,
-  next: Pick<PlaybookSubscription, "mode" | "capitalAllocated" | "symbols" | "compoundAllocation">,
+  next: Pick<
+    PlaybookSubscription,
+    "mode" | "capitalAllocated" | "symbols" | "compoundAllocation" | "belowBarFloorPct"
+  >,
 ): boolean {
   if (MODE_RANK[next.mode] > MODE_RANK[prior.mode]) return true;
   if (
@@ -99,6 +104,12 @@ export function raisesDelegation(
   const before = prior.symbols ?? [];
   const after = next.symbols ?? [];
   if (before.length > 0 && (after.length === 0 || after.some((s) => !before.includes(s)))) {
+    return true;
+  }
+  if (
+    prior.belowBarFloorPct !== undefined &&
+    (next.belowBarFloorPct === undefined || next.belowBarFloorPct > prior.belowBarFloorPct)
+  ) {
     return true;
   }
   return next.compoundAllocation === true && prior.compoundAllocation !== true;

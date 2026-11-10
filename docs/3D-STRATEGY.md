@@ -44,7 +44,7 @@ map cleanly because the repo already committed to their preconditions:
    more moments.
 5. **Fanfare economy.** Ceremony cameras reserved for the behavior we want repeated (Peggle's
    "Extreme Fever" lesson); ceremony inflation destroys the instrument. Wins get ~3× the motion
-   budget (already a settled, checkable constant); losses get quiet honest ink, never spectacle —
+   budget (settled in `GAMEBOARD-PLAN.md`, item 5); losses get quiet honest ink, never spectacle —
    EVE's structure-loss churn and Habitica's backfiring punishments are the documented cautionary
    tales.
 

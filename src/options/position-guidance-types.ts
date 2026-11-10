@@ -105,6 +105,9 @@ export interface HeldLongOption {
   /** The live quote for selling it (bid) or buying more (ask), per share, when there was one. */
   readonly bid?: number;
   readonly ask?: number;
+  /** The member carried the house's exit plan when buying it (#5709 slice 3), so the verdict names
+   *  it as theirs. The same two rules either way — only whose words they are changes. */
+  readonly planCarried?: true;
 }
 
 /** One listed contract as the feed quoted it. Bid is what a SELLER receives — every yield uses it. */

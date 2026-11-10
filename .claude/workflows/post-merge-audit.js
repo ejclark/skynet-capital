@@ -81,7 +81,7 @@ const GATE_SCHEMA = {
   },
 }
 const WIDTH = prs.length
-const PRICE = `${prs.length * 2} agents to start: per PR a triage on sonnet and a review on the session's model, or fable on the deep tier; then 2 refuters per high or medium finding. The 2026-11-01 run over 10 PRs used 26 agents and 3.9M tokens on the default agent.`
+const PRICE = `At least ${prs.length * 2} agents to start: per PR a triage on sonnet and a review on the session's model, or fable on the deep tier; one more review on opus for each lens whose paths a PR touches; then 2 refuters per high or medium finding. The 2026-11-01 run over 10 PRs used 26 agents and 3.9M tokens on the default agent.`
 const gate = await agent(
   'Run exactly: node scripts/moneypenny/work-gate.mjs\n\nIt prints one JSON object on stdout and status lines on stderr. Its exit code is part of the answer, not a failure: 0 means cleared to dispatch, 3 means refused (work-mode is halt, or the spend breaker is tripped) — BOTH are a real verdict and both print the JSON. Report "found": true plus that JSON object: the "dispatch", "position" and "reason" fields and caps.grindWidth, all verbatim, plus "until" only when it is not null.\n\nIf the command exits 1, prints no parseable JSON, or the object carries no caps.grindWidth, report "found": false and nothing else — never guess a position or a width. Do nothing else: no exploration, no fixing, no editing any file.',
   { schema: GATE_SCHEMA, agentType: 'worker', model: 'sonnet', effort: 'low', label: 'work-mode', phase: 'Triage' },
@@ -185,19 +185,58 @@ ${FIND(n)}
 
 ${SHARED_TREE}
 
-Judge every finding against the code as it is on origin/main NOW (read the current files, not just the diff): a later merge may already have fixed it, or the PR may have broken a caller it never touched. Report a finding only when you can name a concrete failure scenario. Severity: high = wrong money/P&L/state, data loss, crash on a common path, a broken gate or lane; medium = wrong on a real but narrower path; low = edge cases you are unsure anyone hits. Zero findings is a normal answer.`
+Judge every finding against the code as it is on origin/main NOW (read the current files, not just the diff): a later merge may already have fixed it, or the PR may have broken a caller it never touched.
+
+For every check the PR adds or changes, name the signal it reads against the real effect it claims, and report it when the signal can be true while the effect is not. For every read that feeds a verdict, say what it returns when it fails or its window holds no sample, and report it if that equals the all-clear answer. When the PR adds a new way to close, park, label or exempt something, grep every reader of that state and say what each now sees.
+
+Report a finding only when you can name a concrete failure scenario. Severity: high = wrong money/P&L/state, data loss, crash on a common path, a broken gate or lane; medium = wrong on a real but narrower path; low = edge cases you are unsure anyone hits. Zero findings is a normal answer.`
+
+// A lens file holds what to read for and what a finding needs. This holds what every reviewer shares,
+// so a lens row is its file's name, the paths it fires on, and nothing else.
+const lensPrompt = (lens) => (n) => `Review merged PR #${n} in ejclark/skynet-capital through one lens. Read it first with \`git show origin/main:docs/review/lenses/${lens}.md\`, and report only what it asks for: another reviewer owns plain correctness.
+
+${FIND(n)}
+
+${SHARED_TREE}
+
+Judge every finding against the code as it is on origin/main NOW (read the current files, not just the diff): a later merge may already have fixed it.
+
+Report a finding only when you can name its concrete cost, as the lens defines it. Severity: high = moves a number the lens names on a common path; medium = on a real but narrower path; low = you are unsure anyone hits it. Zero findings is a normal answer.`
 
 // THE LENS TABLE — one row per way of reading a merged PR, chosen by the paths it touched. `roots` is
-// the same prefix list DEEP_ROOTS uses, and null means every path. Correctness is the only row today,
-// so a later lens (a security read of the trust-boundary paths, say) is one row and one prompt: the
-// refuters, the tier and the result shape below already apply to whatever a row finds. Nothing merges
-// two lenses' reports of one defect yet: that is the second row's to settle, once there are two.
+// the same prefix list DEEP_ROOTS uses, and null means every path. A lens joins after its replay
+// (docs/review/README.md) and runs at the dial it was scored at, not at the PR's tier: a score taken
+// on opus says nothing about fable, and the deep tier exists for correctness on money paths. The
+// refuters and the result shape below apply to whatever a row finds.
+const LENS_DIAL = { model: 'opus', effort: 'high' }
 const LENSES = [
   { name: 'correctness', roots: null, prompt: reviewPrompt },
+  {
+    name: 'performance',
+    roots: ['src/server/', 'src/observatory/', 'src/autonomous/decision-db', 'src/storage/', 'src/scripts/serve-dashboard.ts', 'src/scripts/dashboard-insights-bridge.ts'],
+    prompt: lensPrompt('performance'),
+    dial: LENS_DIAL,
+  },
 ]
+// Two lenses can report one defect, and it should pay its two refuters once. Same file, lines within 3,
+// from a different lens: the earlier row's report stands. Reports from one lens stay apart, because
+// that reviewer meant two things, and a report with no line cannot be said to be the same defect. Only
+// serious reports are compared, so a low never hides a high. A report folded here stays in the low
+// list with `sameAs`, so a wrong merge can be seen and counted rather than lost.
+const sameDefect = (f, g) => g.lens !== f.lens && g.file === f.file && Number.isInteger(f.line) && Number.isInteger(g.line) && Math.abs(g.line - f.line) <= 3
+const oncePerDefect = (serious) => {
+  const kept = serious.filter((f, i) => !serious.slice(0, i).some((g) => sameDefect(f, g)))
+  const folded = serious.filter((f) => !kept.includes(f)).map((f) => ({ ...f, sameAs: kept.find((g) => sameDefect(f, g))?.lens }))
+  return { kept, folded }
+}
+const dialOfLens = (name) => LENSES.find((lens) => lens.name === name)?.dial
+// A correctness claim is wrong or right; a lens's cost can be real and still not matter, and a refuter
+// asked only whether a path reaches it would pass every small cost, so the lens's keep or kill rate
+// would measure nothing. Only a lens's refuters get this.
+const costLine = (f) => (dialOfLens(f.lens) ? `\n\nThis came from the ${f.lens} lens: also refute if the cost it names is negligible at the scale \`git show origin/main:docs/review/lenses/${f.lens}.md\` names, or if that number would not move.` : '')
 const lensesFor = (files) => LENSES.filter((lens) => !lens.roots || files.some((f) => lens.roots.some((r) => f.startsWith(r))))
 
-const tracePrompt = (n, f) => `A reviewer claims merged PR #${n} in ejclark/skynet-capital introduced this ${f.severity} defect. Try to REFUTE it. Read-only.
+const tracePrompt = (n, f) => `A reviewer claims merged PR #${n} in ejclark/skynet-capital introduced this ${f.severity} defect. Try to REFUTE it. Read-only.${costLine(f)}
 
 ${f.file}${f.line ? `:${f.line}` : ''} — ${f.summary}
 Failure scenario: ${f.failure_scenario}
@@ -291,7 +330,7 @@ const results = await pipeline(
     const lenses = t?.files?.length ? lensesFor(t.files) : LENSES
     const reviews = await parallel(
       lenses.map((lens) => async () => {
-        const review = await tracked(`review-${lens.name}-${n}`, lens.prompt(n), { label: `review #${n} ${lens.name} (${tier})`, phase: 'Review', schema: FINDINGS_SCHEMA, agentType: 'worker', ...dial.review })
+        const review = await tracked(`review-${lens.name}-${n}`, lens.prompt(n), { label: `review #${n} ${lens.name} (${tier})`, phase: 'Review', schema: FINDINGS_SCHEMA, agentType: 'worker', ...(lens.dial ?? dial.review) })
         return review && { ...review, lens: lens.name }
       }),
     )
@@ -301,13 +340,13 @@ const results = await pipeline(
     const findings = returned.filter((r) => r.merged).flatMap((r) => r.findings.map((f) => ({ lens: r.lens, ...f })))
     // A lens that did not come back is a read this PR still needs, even when another lens returned.
     const missed = reviews.flatMap((r, i) => (r ? [] : [lenses[i].name]))
-    const serious = findings.filter((f) => f.severity !== 'low')
-    const low = findings.filter((f) => f.severity === 'low').map((f) => ({ pr: n, tier, ...f }))
+    const { kept: serious, folded } = oncePerDefect(findings.filter((f) => f.severity !== 'low'))
+    const low = [...findings.filter((f) => f.severity === 'low'), ...folded].map((f) => ({ pr: n, tier, ...f }))
     const judged = await parallel(
       serious.map((f, i) => async () => {
         const [trace, repro] = await parallel([
-          () => tracked(`trace-${n}-${i + 1}`, tracePrompt(n, f), { label: `trace #${n}.${i + 1}`, phase: 'Refute', schema: VERDICT_SCHEMA, agentType: 'worker', ...dial.refute }),
-          () => tracked(`repro-${n}-${i + 1}`, reproPrompt(n, f), { label: `repro #${n}.${i + 1}`, phase: 'Refute', schema: VERDICT_SCHEMA, isolation: 'worktree', agentType: 'worker', ...dial.refute }),
+          () => tracked(`trace-${n}-${i + 1}`, tracePrompt(n, f), { label: `trace #${n}.${i + 1}`, phase: 'Refute', schema: VERDICT_SCHEMA, agentType: 'worker', ...(dialOfLens(f.lens) ?? dial.refute) }),
+          () => tracked(`repro-${n}-${i + 1}`, reproPrompt(n, f), { label: `repro #${n}.${i + 1}`, phase: 'Refute', schema: VERDICT_SCHEMA, isolation: 'worktree', agentType: 'worker', ...(dialOfLens(f.lens) ?? dial.refute) }),
         ])
         const votes = [
           trace ?? { refuted: true, evidence: 'trace refuter did not return' },

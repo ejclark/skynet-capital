@@ -16,7 +16,9 @@
     "The lenses were written from this set: most smells' real examples are cases here. The prompt strips each lens's Real: clauses, but the smell itself is still shaped by the answer, so recall on these cases is an upper bound on recall on new PRs. Only a run on PRs the lens was not grown from can say otherwise.",
     "The structure facet has five borrowed correctness cases (D08, D13, D14, D19, D20), labelled by one reader, and its clean labels on controls are an assumption: a small fix PR with no structural finding on record, which nobody read for structure. Treat a structure finding on a control as a candidate to read, and structure recall as thin.",
     "This replay runs reviewers only, not the two refuters. Findings on controls are counted before any refuter, so they overstate manufacture compared with the audit; the one-in-three survival number in each lens's kill rule cannot come from here.",
-    "A hit is matched by file. A reviewer that flags the right file for the wrong reason counts until someone reads it and sets mechanism: false on that finding."
+    "A hit is matched by file. A reviewer that flags the right file for the wrong reason counts until someone reads it and sets mechanism: false on that finding.",
+    "docs/review/REVIEW.md, which the pre-merge lens reads, was written by a session that had read this set. A spec bars it from naming a case's PR or file, and its per-path notes state each path's contract, not a case's mechanism, but a note can still point at a case's class. Only a replay with the notes removed (the workflow's args.rulesFile) can say what they add.",
+    "A file match can count a finding the pre-merge job could never post: 5 of the 21 correctness defects (D01, D03, D14, D19, D20) sit in a file their PR never changed. The pre-merge score counts hits in the diff apart and passes only on those; a defect named at its caller counts only on reading."
   ],
   "facets": {
     "correctness": "wrong result, crash, broken contract, a requirement the code does not meet (post-merge-audit.js's lens today)",

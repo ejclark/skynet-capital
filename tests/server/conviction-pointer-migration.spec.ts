@@ -18,7 +18,7 @@ import { subscriptionRoster } from "../../src/subscriptions/subscription-roster.
 /**
  * #5482 slice 2, the MIGRATE step, against a real store on a temp file: the app writes a pointer
  * when a conviction matches a record, the poll migrates the two live CRWV subscriptions once, the
- * bots receive it on the wire (`subscriptions.v4` since contract piece 4). Since the contract
+ * bots receive it on the wire (`subscriptions.v4` since contract piece 4, v5 since #6954 slice 5c-ii). Since the contract
  * step's piece 2 a pointed subscription carries no inline copy beside its pointer, so the bots
  * check it on the record's day alone. Since the last piece a subscription carries no inline
  * conviction at all: an owner's own day is their view on the pair, in the views file beside it.
@@ -252,9 +252,9 @@ describe("the app points a subscription at its conviction record (#5482 slice 2,
       });
     });
 
-    it("the app sends subscriptions.v4, and the bots read the pointer off it", () => {
+    it("the app sends subscriptions.v5, and the bots read the pointer off it", () => {
       const sent = JSON.parse(JSON.stringify(subscriptionsOnTheWire(store, AT.getTime())));
-      expect(sent.kind).toBe("subscriptions.v4");
+      expect(sent.kind).toBe("subscriptions.v5");
       const read = parseSubscriptionsSnapshot(sent);
       expect(read?.accounts.sauron?.[0]).toMatchObject({ convictionId: VIEW });
     });
@@ -292,7 +292,7 @@ describe("the app points a subscription at its conviction record (#5482 slice 2,
       it("never reaches the bots, and its ◆ pair runs exits-only until it is pointed", async () => {
         await unmoved("my call", "2027-04-30");
         const read = parseSubscriptionsSnapshot(sent());
-        expect(read?.kind).toBe("subscriptions.v4");
+        expect(read?.kind).toBe("subscriptions.v5");
         expect(read?.accounts.sauron?.[0]).not.toHaveProperty("conviction");
         const roster = subscriptionRoster(read?.accounts.sauron ?? []);
         expect(roster.enabled.map((e) => [e.playbook.id, e.exitsOnly])).toEqual([

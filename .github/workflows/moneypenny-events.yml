@@ -146,6 +146,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      # The session runs `npm run verify`, which carries Node-24-only checks; the runner's default
+      # node is 22, so without this a green change reads red (#6618). Same pin as `route`.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .nvmrc
+
       - id: app-token
         uses: ./.github/actions/app-token
         with:
@@ -159,7 +165,7 @@ jobs:
           blocked-message: "CLAUDE_CODE_OAUTH_TOKEN missing — dependabot PR #${{ github.event.pull_request.number }} is open but nothing will review it."
 
       - if: steps.gate.outputs.armed == 'true'
-        uses: anthropics/claude-code-action@1d6de8cb0c237e7c15e9e1bdf973826ebae490cc  # v1 tag, installs Claude Code 2.1.286 (first CLI to know both Opus 5.5 and Sonnet 5.5 is 2.1.284; floating v1 once broke native-binary install, see docs/LESSONS.md)
+        uses: anthropics/claude-code-action@d535f5172dec02b204866b393d6b20b9b2aaf98d  # v1 tag, installs Claude Code 2.1.286 (first CLI to know both Opus 5.5 and Sonnet 5.5 is 2.1.284; floating v1 once broke native-binary install, see docs/LESSONS.md)
         with:
           # Dependabot itself is the only bot that can ever legitimately land here (the `if:` above
           # already restricts the trigger to its own PRs) — named explicitly rather than `*`.
@@ -278,7 +284,7 @@ jobs:
           echo "::notice::circuit breaker: $BREAKER"
           if ! echo "$BREAKER" | jq -e '.dispatch' > /dev/null; then
             REASON=$(echo "$BREAKER" | jq -r '.reason')
-            echo "::warning::research circuit breaker is OPEN — dispatching nothing this tick ($REASON)."
+            echo "::warning::research circuit breaker refused this tick — dispatching nothing ($REASON)."
             echo "due=[]" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -450,7 +456,8 @@ jobs:
       #
       # GITHUB_TOKEN, deliberately, where every step around it uses the App token: those steps WRITE
       # LABELS and need the resulting event to start another run, which GITHUB_TOKEN suppresses. This
-      # one only comments, and a comment that woke another lane would be a loop, not a feature. Never
+      # one only comments or lifts a lane's ask into the body, and an event from either that woke
+      # another lane would be a loop, not a feature. Never
       # `sync-project`'s PAT either — that is Eric's, so the comment would read as him talking to
       # himself about his own missing ask.
       - name: Check the decision callout when needs-eric lands
@@ -605,6 +612,12 @@ jobs:
           # claude-code-action puts the App token in the remote URL (`github_token` below).
           persist-credentials: false
 
+      # The session runs `npm run verify`, which carries Node-24-only checks; the runner's default
+      # node is 22, so without this a green change reads red (#6618). Same pin as `route`.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .nvmrc
+
       # Minted per-job (per matrix leg, here), same as `build` — the action revokes its token at
       # job end.
       - id: app-token
@@ -621,7 +634,7 @@ jobs:
 
       - if: steps.gate.outputs.armed == 'true'
         id: build
-        uses: anthropics/claude-code-action@1d6de8cb0c237e7c15e9e1bdf973826ebae490cc  # v1 tag, installs Claude Code 2.1.286 (first CLI to know both Opus 5.5 and Sonnet 5.5 is 2.1.284; floating v1 once broke native-binary install, see docs/LESSONS.md)
+        uses: anthropics/claude-code-action@d535f5172dec02b204866b393d6b20b9b2aaf98d  # v1 tag, installs Claude Code 2.1.286 (first CLI to know both Opus 5.5 and Sonnet 5.5 is 2.1.284; floating v1 once broke native-binary install, see docs/LESSONS.md)
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # The App token, no fallback tier — see the header. So each PR this session opens
@@ -676,14 +689,26 @@ jobs:
       # instead of a one-line read. The CLI always writes its structured result to this fixed temp
       # path regardless of outcome; on failure, print it. This is NOT `show_full_output: true` (which
       # would dump the whole conversation transcript, the thing the security note is about) — just the
-      # terminal result envelope (is_error, duration_ms, num_turns, total_cost_usd, modelUsage, and any
-      # error text it carries), which is diagnostic, not transcript.
+      # terminal result envelope's own numbers and status fields (is_error, duration_ms, num_turns,
+      # total_cost_usd, modelUsage, api_error_status, …), which are diagnostic, not transcript.
       - if: always() && steps.build.outcome == 'failure'
         name: Surface the swallowed Claude result on failure
+        # FILTERED, NEVER `cat` (2026-11-01, #6470's study): the file is the SDK's whole streamed
+        # message array, so a bare `cat` printed every assistant turn of a failed leg into a public
+        # run log — the transcript the comment above promised not to dump. Only the terminal
+        # envelope and the rate-limit events are diagnostic; everything else is dropped here. And
+        # the program LISTS their fields: the envelope's `result` is the session's last words, so
+        # passing the object through would print them, and a field added later stays out until
+        # someone lists it. The three lanes run the same program; repair.mjs reads this print.
         run: |
           echo "::group::Claude execution result (the action hides this by default)"
-          cat /home/runner/work/_temp/claude-execution-output.json 2>/dev/null || \
+          F=/home/runner/work/_temp/claude-execution-output.json
+          if [ -f "$F" ]; then
+            jq -c 'if type=="array" then .[] else . end | select(.type == "result" or .type == "rate_limit_event") | {type, subtype, is_error, terminal_reason, api_error_status, duration_ms, num_turns, total_cost_usd, modelUsage, rate_limit_info} | with_entries(select(.value != null))' "$F" \
+              || echo "(execution-output.json is not JSON the result filter can read — nothing printed, by design: this log is public)"
+          else
             echo "(no execution-output.json — failure happened before Claude Code produced one, e.g. an install/spawn crash rather than an API-level rejection)"
+          fi
           echo "::endgroup::"
 
       # THE COST METER (#2946). The step above prints the result envelope ONLY on failure, so the
@@ -722,9 +747,29 @@ jobs:
           COST=$(jq -r "$RESULT_FILTER | .total_cost_usd // \"?\"" "$F" 2>/dev/null || echo "?")
           TURNS=$(jq -r "$RESULT_FILTER | .num_turns // \"?\"" "$F" 2>/dev/null || echo "?")
           MS=$(jq -r "$RESULT_FILTER | .duration_ms // \"?\"" "$F" 2>/dev/null || echo "?")
-          ERR=$(jq -r "$RESULT_FILTER | .is_error // \"?\"" "$F" 2>/dev/null || echo "?")
+          # `if . == null`, not `//`: jq's `//` treats `false` as missing, so every clean session
+          # printed `is_error=?` and the one value this line exists to show was never shown (#6020).
+          ERR=$(jq -r "$RESULT_FILTER | .is_error | if . == null then \"?\" else . end" "$F" 2>/dev/null || echo "?")
           echo "::notice::cost — event=$ID usd=$COST turns=$TURNS duration_ms=$MS is_error=$ERR"
           echo "- \`$ID\` — **\$$COST** (imputed, Max 20 flat-fee — not a literal charge) · $TURNS turns · ${MS}ms · is_error=$ERR" >> "$GITHUB_STEP_SUMMARY"
+
+      # THE LANE PUBLISHES ITS USAGE READING (2026-11-01, #6470's study). Every session streams a
+      # `rate_limit_event` whose `unifiedWindows.seven_day.utilization` is the weekly percent, into
+      # the same file the cost step reads, at zero tokens; nothing read it. This writes it into
+      # #4153's body under the marker scripts/moneypenny/pace-reading.mjs reads (#6544), so the
+      # pace line is current between touch points. GITHUB_TOKEN on purpose: the App token minted
+      # above may have expired after a long build (#5936), and a body edit fires no workflow
+      # (this file's `issues:` types are label and state changes). Report only, never the dial;
+      # `continue-on-error` because a report must not fail a lane; a file with no reading writes
+      # nothing. Unverified until the first run: every real sample came from a leg near a limit,
+      # so whether a lane at plain `allowed` status carries the event on CLI 2.1.286 is settled by
+      # the first run after this lands, not by this comment.
+      - if: always()
+        name: Publish the session's usage reading (report only)
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/moneypenny/quota.mjs --publish-from /home/runner/work/_temp/claude-execution-output.json --source "lane:build-events"
 
   # ═══ THE FEEDBACK LANE (2026-08-19) ═══
   # A member filed feedback through the app (docs/FEEDBACK.md) and the app labelled the issue
@@ -759,6 +804,12 @@ jobs:
           # claude-code-action puts the App token in the remote URL (`github_token` below).
           persist-credentials: false
 
+      # The session runs `npm run verify`, which carries Node-24-only checks; the runner's default
+      # node is 22, so without this a green change reads red (#6618). Same pin as `route`.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .nvmrc
+
       - id: app-token
         uses: ./.github/actions/app-token
         with:
@@ -772,7 +823,8 @@ jobs:
           blocked-message: "CLAUDE_CODE_OAUTH_TOKEN missing — feedback issue #${{ needs.route.outputs.feedback_issue }} is claimed but nothing will build it. Add the secret, then run release-claim for feedback-${{ needs.route.outputs.feedback_issue }} and re-apply the label."
 
       - if: steps.gate.outputs.armed == 'true'
-        uses: anthropics/claude-code-action@1d6de8cb0c237e7c15e9e1bdf973826ebae490cc  # v1 tag, installs Claude Code 2.1.286 (first CLI to know both Opus 5.5 and Sonnet 5.5 is 2.1.284; floating v1 once broke native-binary install, see docs/LESSONS.md)
+        id: build
+        uses: anthropics/claude-code-action@d535f5172dec02b204866b393d6b20b9b2aaf98d  # v1 tag, installs Claude Code 2.1.286 (first CLI to know both Opus 5.5 and Sonnet 5.5 is 2.1.284; floating v1 once broke native-binary install, see docs/LESSONS.md)
         with:
           # WHO MAY START A BUILD (Eric's call, 2026-08-22). The action discards a bot-initiated run
           # unless the bot is named, and that refusal is load-bearing on a public repo: the LABEL is
@@ -807,6 +859,40 @@ jobs:
             The feedback issue is #${{ needs.route.outputs.feedback_issue }} in this repo.
 
             Resume reply comment id: ${{ needs.route.outputs.feedback_reply || 'none' }}
+
+      # The same print as build-events' (THE SWALLOWED-ERROR FIX above): the terminal envelope and the
+      # rate-limit events, never the transcript. scripts/moneypenny/repair.mjs needs them to tell a
+      # usage limit from a dead token, and this lane used to file either one as a plain failure (#6579).
+      - if: always() && steps.build.outcome == 'failure'
+        name: Surface the swallowed Claude result on failure
+        run: |
+          echo "::group::Claude execution result (the action hides this by default)"
+          F=/home/runner/work/_temp/claude-execution-output.json
+          if [ -f "$F" ]; then
+            jq -c 'if type=="array" then .[] else . end | select(.type == "result" or .type == "rate_limit_event") | {type, subtype, is_error, terminal_reason, api_error_status, duration_ms, num_turns, total_cost_usd, modelUsage, rate_limit_info} | with_entries(select(.value != null))' "$F" \
+              || echo "(execution-output.json is not JSON the result filter can read — nothing printed, by design: this log is public)"
+          else
+            echo "(no execution-output.json — failure happened before Claude Code produced one, e.g. an install/spawn crash rather than an API failure)"
+          fi
+          echo "::endgroup::"
+
+      # THE LANE PUBLISHES ITS USAGE READING (2026-11-01, #6470's study). Every session streams a
+      # `rate_limit_event` whose `unifiedWindows.seven_day.utilization` is the weekly percent, into
+      # the same file the cost step reads, at zero tokens; nothing read it. This writes it into
+      # #4153's body under the marker scripts/moneypenny/pace-reading.mjs reads (#6544), so the
+      # pace line is current between touch points. GITHUB_TOKEN on purpose: the App token minted
+      # above may have expired after a long build (#5936), and a body edit fires no workflow
+      # (this file's `issues:` types are label and state changes). Report only, never the dial;
+      # `continue-on-error` because a report must not fail a lane; a file with no reading writes
+      # nothing. Unverified until the first run: every real sample came from a leg near a limit,
+      # so whether a lane at plain `allowed` status carries the event on CLI 2.1.286 is settled by
+      # the first run after this lands, not by this comment.
+      - if: always()
+        name: Publish the session's usage reading (report only)
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/moneypenny/quota.mjs --publish-from /home/runner/work/_temp/claude-execution-output.json --source "lane:build-feedback"
 
       # THE MECHANICAL "DID ANYTHING VISIBLE HAPPEN?" GUARD (#1028). The session's own contract
       # (feedback-build.md: "exactly one of four visible endings, always, never silence") is a
@@ -891,6 +977,12 @@ jobs:
           # claude-code-action puts the App token in the remote URL (`github_token` below).
           persist-credentials: false
 
+      # The session runs `npm run verify`, which carries Node-24-only checks; the runner's default
+      # node is 22, so without this a green change reads red (#6618). Same pin as `route`.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .nvmrc
+
       - id: app-token
         uses: ./.github/actions/app-token
         with:
@@ -904,7 +996,8 @@ jobs:
           blocked-message: "CLAUDE_CODE_OAUTH_TOKEN missing — plan issue #${{ needs.route.outputs.plan_issue }} is claimed but nothing will build it. Add the secret, then run release-claim for plan-${{ needs.route.outputs.plan_issue }} and comment ready again."
 
       - if: steps.gate.outputs.armed == 'true'
-        uses: anthropics/claude-code-action@1d6de8cb0c237e7c15e9e1bdf973826ebae490cc  # v1 tag, installs Claude Code 2.1.286 (first CLI to know both Opus 5.5 and Sonnet 5.5 is 2.1.284; floating v1 once broke native-binary install, see docs/LESSONS.md)
+        id: build
+        uses: anthropics/claude-code-action@d535f5172dec02b204866b393d6b20b9b2aaf98d  # v1 tag, installs Claude Code 2.1.286 (first CLI to know both Opus 5.5 and Sonnet 5.5 is 2.1.284; floating v1 once broke native-binary install, see docs/LESSONS.md)
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # The App token, no fallback tier — see the header. So this build's own PR triggers `verify`.
@@ -922,6 +1015,40 @@ jobs:
             complete instruction set for this run.
 
             The plan issue is #${{ needs.route.outputs.plan_issue }} in this repo.
+
+      # The same print as build-events' (THE SWALLOWED-ERROR FIX above): the terminal envelope and the
+      # rate-limit events, never the transcript. scripts/moneypenny/repair.mjs needs them to tell a
+      # usage limit from a dead token, and this lane used to file either one as a plain failure (#6579).
+      - if: always() && steps.build.outcome == 'failure'
+        name: Surface the swallowed Claude result on failure
+        run: |
+          echo "::group::Claude execution result (the action hides this by default)"
+          F=/home/runner/work/_temp/claude-execution-output.json
+          if [ -f "$F" ]; then
+            jq -c 'if type=="array" then .[] else . end | select(.type == "result" or .type == "rate_limit_event") | {type, subtype, is_error, terminal_reason, api_error_status, duration_ms, num_turns, total_cost_usd, modelUsage, rate_limit_info} | with_entries(select(.value != null))' "$F" \
+              || echo "(execution-output.json is not JSON the result filter can read — nothing printed, by design: this log is public)"
+          else
+            echo "(no execution-output.json — failure happened before Claude Code produced one, e.g. an install/spawn crash rather than an API failure)"
+          fi
+          echo "::endgroup::"
+
+      # THE LANE PUBLISHES ITS USAGE READING (2026-11-01, #6470's study). Every session streams a
+      # `rate_limit_event` whose `unifiedWindows.seven_day.utilization` is the weekly percent, into
+      # the same file the cost step reads, at zero tokens; nothing read it. This writes it into
+      # #4153's body under the marker scripts/moneypenny/pace-reading.mjs reads (#6544), so the
+      # pace line is current between touch points. GITHUB_TOKEN on purpose: the App token minted
+      # above may have expired after a long build (#5936), and a body edit fires no workflow
+      # (this file's `issues:` types are label and state changes). Report only, never the dial;
+      # `continue-on-error` because a report must not fail a lane; a file with no reading writes
+      # nothing. Unverified until the first run: every real sample came from a leg near a limit,
+      # so whether a lane at plain `allowed` status carries the event on CLI 2.1.286 is settled by
+      # the first run after this lands, not by this comment.
+      - if: always()
+        name: Publish the session's usage reading (report only)
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/moneypenny/quota.mjs --publish-from /home/runner/work/_temp/claude-execution-output.json --source "lane:build-plan"
       # A SECOND MINT FOR THE POST-BUILD STEPS (#5936). An App installation token lives one hour,
       # and the one minted at the top of this job is the session's: a build past 60 minutes (92 min
       # on 2026-10-20, run 39441909089) left `--end-build` logging `HTTP 401: Bad credentials` as a

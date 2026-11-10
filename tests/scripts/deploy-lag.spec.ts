@@ -3,7 +3,7 @@ import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync 
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 // @ts-expect-error plain .mjs script, no declarations
-import { oldestRelevantIndex } from "../../scripts/deploy-lag.mjs";
+import { landingLine, oldestRelevantIndex } from "../../scripts/deploy-lag.mjs";
 
 // "Is `main` actually deployed?" — driven through the real entrypoint, the way every other script
 // spec here works, so the argument plumbing is covered too and no `.d.ts` is invented for an
@@ -181,9 +181,31 @@ describe("deploy lag", () => {
       expect(r.verdict.bots).toMatchObject({ known: true, baseline: false, lagging: true });
     });
 
+    it("calls a window of failed deploys STALE, and counts them beside the rolled-back ones", () => {
+      const failed = explain({
+        ...current,
+        botsReleased: "",
+        botsChanged: [],
+        botsFailed: 3,
+        botsRolledBack: 2,
+        botsSince: "2026-10-22T16:44:52Z",
+      });
+      expect(failed.text).toContain(
+        "bots app is STALE — the last 5 bots release(s) all failed: 3 before smoke, 2 at smoke",
+      );
+      expect(failed.verdict.bots).toMatchObject({
+        known: true,
+        baseline: false,
+        lagging: true,
+        since: "2026-10-22T16:44:52Z",
+      });
+    });
+
     it("reports no-baseline and unknown as themselves, never as an alarm", () => {
       const none = explain({ ...current, botsReleased: "", botsChanged: [] });
-      expect(none.text).toContain("no deploy baseline");
+      expect(none.text).toContain("no deploy baseline in the runs read");
+      expect(none.text).toContain("state unknown");
+      expect(none.text).not.toContain("bots app is current");
       const unknown = explain({ ...current, botsReleased: undefined, botsChanged: undefined });
       // JSON.stringify drops undefined keys, so this exercises the true absent-field path.
       expect(unknown.text).not.toContain("bots app");
@@ -233,8 +255,8 @@ describe("deploy lag — missing inputs", () => {
         "#!/bin/sh",
         'case "$*" in',
         `  *commits/main*) echo '{"sha":"${HEAD}"}' ;;`,
-        '  *per_page=20*) echo "HTTP 502" >&2; exit 1 ;;',
         `  *status=success*) echo '{"workflow_runs":[{"head_sha":"${HEAD}"}]}' ;;`,
+        '  *pipeline.yml/runs*) echo "HTTP 502" >&2; exit 1 ;;',
         "  *) exit 1 ;;",
         "esac",
         "",
@@ -261,7 +283,7 @@ describe("deploy lag — missing inputs", () => {
         "#!/bin/sh",
         'case "$*" in',
         `  *commits/main*) echo '{"sha":"${HEAD}"}' ;;`,
-        `  *per_page=20*) echo '{"workflow_runs":[{"id":3,"head_sha":"${HEAD}"},{"id":2,"head_sha":"${HEAD}"},{"id":1,"head_sha":"${RELEASED}"}]}' ;;`,
+        `  *pipeline.yml/runs*) echo '{"workflow_runs":[{"id":3,"head_sha":"${HEAD}"},{"id":2,"head_sha":"${HEAD}"},{"id":1,"head_sha":"${RELEASED}"}]}' ;;`,
         `  *runs/3/jobs*) echo '{"jobs":[${bots("null").replace('"null"', "null")}]}' ;;`,
         `  *runs/2/jobs*) echo '{"jobs":[${bots("failure")}]}' ;;`,
         `  *runs/1/jobs*) echo '{"jobs":[${bots("success")}]}' ;;`,
@@ -360,7 +382,7 @@ describe("deploy lag — when it began", () => {
         `echo "$*" >> "${bin}/calls"`,
         'case "$*" in',
         `  *commits/main*) echo '{"sha":"c3"}' ;;`,
-        `  *per_page=20*) echo '{"workflow_runs":[{"id":1,"head_sha":"${RELEASED}","created_at":"2026-10-22T16:00:00Z"}]}' ;;`,
+        `  *pipeline.yml/runs*) echo '{"workflow_runs":[{"id":1,"head_sha":"${RELEASED}","created_at":"2026-10-22T16:00:00Z"}]}' ;;`,
         `  *runs/1/jobs*) echo '${landed}' ;;`,
         `  *compare/*...c1) echo '{"commits":${commits},"files":[{"filename":"docs/IDEAS.md"}]}' ;;`,
         `  *compare/*) echo '{"commits":${commits},"files":[{"filename":"docs/IDEAS.md"},{"filename":"src/domain/types.ts"}]}' ;;`,
@@ -380,5 +402,249 @@ describe("deploy lag — when it began", () => {
       .filter((l) => l.includes("compare/"));
     // One for the range, one for the dashboard's stranded list, and at most two prefix reads.
     expect(compares.length).toBeLessThanOrEqual(4);
+  });
+});
+
+// A platter lands as a merge commit: the range holds every item, each dated when it was boarded,
+// hours or days before the merge. Read as they stood, main-deploys filed a false "undeployed N min".
+describe("deploy lag — a merge commit lands the range when it merges", () => {
+  const dir = mkdtempSync(join(tmpdir(), "deploy-lag-merge-"));
+  afterAll(() => rmSync(dir, { recursive: true, force: true }));
+  const c = (sha: string, parents: string[]) => ({
+    sha,
+    parents: parents.map((p) => ({ sha: p })),
+  });
+
+  it("walks first parents back from the head, oldest first", () => {
+    const commits = [c("i1", ["r"]), c("i2", ["i1"]), c("m", ["s", "i2"]), c("s", ["r"])];
+    expect(landingLine(commits, "m").map((x: { sha: string }) => x.sha)).toEqual(["s", "m"]);
+  });
+
+  it("reads a squash-merged range as every commit", () => {
+    const commits = [c("a", ["r"]), c("b", ["a"]), c("c", ["b"])];
+    expect(landingLine(commits, "c").map((x: { sha: string }) => x.sha)).toEqual(["a", "b", "c"]);
+  });
+
+  it("falls back to every commit when the line cannot be walked", () => {
+    const commits = [c("a", ["r"]), c("b", ["a"])];
+    expect(landingLine(commits, "not-in-the-range")).toEqual(commits);
+    const noParents = [{ sha: "a" }, { sha: "b" }];
+    expect(landingLine(noParents, "b")).toEqual(noParents);
+  });
+
+  // Two items boarded hours before their merge; the bots baseline is the same release.
+  it("dates both halves from the merge, not from when the items were boarded", () => {
+    const bin = join(dir, "bin");
+    mkdirSync(bin);
+    const commit = (sha: string, date: string, parents: string[]) =>
+      JSON.stringify({
+        sha,
+        parents: parents.map((p) => ({ sha: p })),
+        commit: { message: sha, committer: { date } },
+        author: { login: "ejclark" },
+      });
+    const commits = [
+      commit("item1", "2026-11-01T15:41:00Z", [RELEASED]),
+      commit("item2", "2026-11-01T17:00:00Z", ["item1"]),
+      commit("merge", "2026-11-01T21:00:00Z", [RELEASED, "item2"]),
+    ].join(",");
+    const landed = `{"jobs":[{"name":"release · deploy","conclusion":"success"},{"name":"release · deploy bots","steps":[{"name":"Deploy bots","conclusion":"success"},{"name":"Smoke test the bots release","conclusion":"success"}]}]}`;
+    writeFileSync(
+      join(bin, "gh"),
+      [
+        "#!/bin/sh",
+        'case "$*" in',
+        `  *commits/main*) echo '{"sha":"merge"}' ;;`,
+        `  *pipeline.yml/runs*) echo '{"workflow_runs":[{"id":1,"head_sha":"${RELEASED}","created_at":"2026-11-01T14:00:00Z"}]}' ;;`,
+        `  *runs/1/jobs*) echo '${landed}' ;;`,
+        `  *compare/*) echo '{"commits":[${commits}],"files":[{"filename":"src/domain/types.ts"}]}' ;;`,
+        "  *) exit 1 ;;",
+        "esac",
+        "",
+      ].join("\n"),
+    );
+    chmodSync(join(bin, "gh"), 0o755);
+    const r = spawnSync(process.execPath, ["scripts/deploy-lag.mjs", "--json"], {
+      encoding: "utf8",
+      env: { ...process.env, PATH: `${bin}:${process.env.PATH}` },
+    });
+    expect(r.status).toBe(0);
+    const verdict = JSON.parse(r.stdout);
+    expect(verdict.since).toBe("2026-11-01T21:00:00Z");
+    expect(verdict.bots).toMatchObject({ lagging: true, since: "2026-11-01T21:00:00Z" });
+    expect(verdict.behind).toBe(3);
+  });
+});
+
+// Post-merge audit, 2026-11-01: which runs the bots baseline is read from. Replies come from files,
+// so a run list can be as long as the real one, whose 40 runs are about 700KB.
+describe("deploy lag — which runs it reads", () => {
+  const dir = mkdtempSync(join(tmpdir(), "deploy-lag-runs-"));
+  afterAll(() => rmSync(dir, { recursive: true, force: true }));
+  const bots = (deploy: string, smoke?: string) =>
+    JSON.stringify({
+      jobs: [
+        { name: "release · deploy", conclusion: "success" },
+        {
+          name: "release · deploy bots",
+          conclusion: [deploy, smoke].includes("failure") ? "failure" : deploy,
+          steps: [
+            { name: "Deploy bots", conclusion: deploy },
+            ...(smoke ? [{ name: "Smoke test the bots release", conclusion: smoke }] : []),
+          ],
+        },
+      ],
+    });
+  type Run = { event?: string; sha?: string; jobs: string; at?: string };
+
+  /** A gh stub over these runs, newest first. Only a request for the window's width is answered. */
+  function read(name: string, runs: Run[], { pad = 0 } = {}) {
+    const bin = join(dir, name);
+    mkdirSync(bin);
+    const rows = runs.map((run, i) => ({
+      id: i + 1,
+      event: run.event ?? "push",
+      head_sha: run.sha ?? (i === 0 ? HEAD : `old${i}`),
+      created_at: run.at ?? "2026-11-01T06:00:00Z",
+      padding: "x".repeat(pad),
+    }));
+    writeFileSync(join(bin, "runs-all"), JSON.stringify({ workflow_runs: rows }));
+    writeFileSync(
+      join(bin, "runs-push"),
+      JSON.stringify({ workflow_runs: rows.filter((r) => r.event === "push") }),
+    );
+    runs.forEach((run, i) => {
+      writeFileSync(join(bin, `jobs-${i + 1}`), run.jobs);
+    });
+    writeFileSync(
+      join(bin, "gh"),
+      [
+        "#!/usr/bin/env bash",
+        'case "$*" in',
+        `  *commits/main*) echo '{"sha":"${HEAD}"}' ;;`,
+        `  *pipeline.yml/runs*per_page=40*) if [[ "$*" == *event=push* ]]; then cat "${bin}/runs-push"; else cat "${bin}/runs-all"; fi ;;`,
+        '  *pipeline.yml/runs*) echo "HTTP 400: wrong width" >&2; exit 1 ;;',
+        `  *compare/*) echo '{"commits":[{"sha":"${HEAD}","commit":{"message":"x","committer":{"date":"2026-11-01T06:37:38Z"}},"author":{"login":"ejclark"}}],"files":[{"filename":"scripts/fitness.mjs"}]}' ;;`,
+        `  *) [[ "$*" =~ runs/([0-9]+)/jobs ]] && cat "${bin}/jobs-\${BASH_REMATCH[1]}" ;;`,
+        "esac",
+        "",
+      ].join("\n"),
+    );
+    chmodSync(join(bin, "gh"), 0o755);
+    const res = spawnSync(process.execPath, ["scripts/deploy-lag.mjs", "--json"], {
+      encoding: "utf8",
+      env: { ...process.env, PATH: `${bin}:${process.env.PATH}` },
+    });
+    return { ...res, verdict: JSON.parse(res.stdout) };
+  }
+
+  it("takes a landing by catch-up's dispatch as the bots baseline, not only a push's", () => {
+    const { verdict } = read("dispatch", [
+      { event: "workflow_dispatch", jobs: bots("success", "success") },
+      { jobs: bots("skipped") },
+      { sha: RELEASED, jobs: bots("success", "success") },
+    ]);
+    expect(verdict.bots).toEqual({ known: true, baseline: true, lagging: false });
+  });
+
+  it("does not take a dispatch that failed, or rolled back, as a landing", () => {
+    for (const [name, dispatched] of [
+      ["dispatch-failed", bots("failure")],
+      ["dispatch-rolled", bots("success", "failure")],
+    ] as const) {
+      const { verdict } = read(name, [
+        { event: "workflow_dispatch", jobs: dispatched },
+        { sha: RELEASED, jobs: bots("success", "success") },
+      ]);
+      expect(verdict.bots).toMatchObject({ baseline: true, lagging: true });
+    }
+  });
+
+  // The longest stretch of pushes touching no bots path from 2026-08-27 to 11-01 was 30, and the job
+  // reads stop at the first landing, so a healthy tick spends nothing on the wider window.
+  it("finds a landing further back than a burst of pushes that never touch the bots", () => {
+    const quiet = Array.from({ length: 35 }, () => ({ jobs: bots("skipped") }));
+    const { verdict } = read("deep", [
+      ...quiet,
+      { sha: RELEASED, jobs: bots("success", "success") },
+    ]);
+    expect(verdict.bots).toMatchObject({ known: true, baseline: true });
+  });
+
+  it("reads a reply past node's default output limit rather than going blind on it", () => {
+    const quiet = Array.from({ length: 40 }, () => ({ jobs: bots("skipped") }));
+    const { verdict, stderr } = read("large", quiet, { pad: 40_000 });
+    expect(stderr).not.toContain("job scan failed");
+    expect(verdict.bots.known).toBe(true);
+  });
+
+  it("calls a window of failed deploys lagging, dated from the oldest failure it read", () => {
+    const failed = (at: string) => ({ jobs: bots("failure"), at });
+    const { verdict } = read("outage", [
+      { jobs: bots("skipped"), at: "2026-11-01T09:00:00Z" },
+      failed("2026-11-01T08:00:00Z"),
+      failed("2026-11-01T07:00:00Z"),
+    ]);
+    expect(verdict.bots).toEqual({
+      known: true,
+      baseline: false,
+      lagging: true,
+      reason: "the last 2 bots release(s) all failed: 2 before smoke, 0 at smoke",
+      since: "2026-11-01T07:00:00Z",
+    });
+  });
+
+  // The Resolve image step fails hard on purpose, and every step after a failure is skipped, so the
+  // Deploy bots step reads the same as a preflight skip. Only the job says which it was.
+  it("counts a job that failed before its deploy step, which leaves that step skipped", () => {
+    const early = JSON.stringify({
+      jobs: [
+        { name: "release · deploy", conclusion: "success" },
+        {
+          name: "release · deploy bots",
+          conclusion: "failure",
+          steps: [
+            { name: "Resolve image", conclusion: "failure" },
+            { name: "Deploy bots", conclusion: "skipped" },
+            { name: "Smoke test the bots release", conclusion: "skipped" },
+          ],
+        },
+      ],
+    });
+    const { verdict } = read("early", [{ jobs: early, at: "2026-11-01T07:00:00Z" }]);
+    expect(verdict.bots).toMatchObject({
+      baseline: false,
+      lagging: true,
+      since: "2026-11-01T07:00:00Z",
+    });
+  });
+
+  it("counts a deploy that succeeded and then failed before smoke, which proved nothing", () => {
+    const stopped = JSON.stringify({
+      jobs: [
+        { name: "release · deploy", conclusion: "success" },
+        {
+          name: "release · deploy bots",
+          conclusion: "failure",
+          steps: [
+            { name: "Deploy bots", conclusion: "success" },
+            { name: "Start the bots machine if it landed stopped", conclusion: "failure" },
+            { name: "Smoke test the bots release", conclusion: "skipped" },
+          ],
+        },
+      ],
+    });
+    const { verdict } = read("stopped", [{ jobs: stopped, at: "2026-11-01T07:00:00Z" }]);
+    expect(verdict.bots).toMatchObject({ baseline: false, lagging: true });
+  });
+
+  it("does not count a cancelled deploy as a failed one", () => {
+    const { verdict } = read("cancelled", [{ jobs: bots("cancelled") }]);
+    expect(verdict.bots).toEqual({ known: true, baseline: false, lagging: false });
+  });
+
+  it("says no baseline when every run read skipped the bots deploy", () => {
+    const { verdict } = read("skips", [{ jobs: bots("skipped") }, { jobs: bots("skipped") }]);
+    expect(verdict.bots).toEqual({ known: true, baseline: false, lagging: false });
   });
 });

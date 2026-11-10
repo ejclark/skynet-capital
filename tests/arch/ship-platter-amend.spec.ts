@@ -1,5 +1,5 @@
-import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync, spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { hermeticGitEnv } from "../support/hermetic-git.js";
@@ -133,6 +133,48 @@ describe("ship platter amend — refusals", () => {
 
       git(work, ["checkout", "-q", "main"]);
       expect(amend(work, ["fix/one", "--closes", "5"]).stderr).toContain("not a platter branch");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("ship platter amend — a boarded item", () => {
+  // grep -q exits on its first match while git is still writing, git takes SIGPIPE, and under pipefail
+  // the pipeline reports 141 on a match. A log far past the pipe buffer makes that certain rather than
+  // a race: the newest item matches at once, with a megabyte of older commits still to write.
+  it("boards the amendment for the newest item of a long log, where a match kills the writer", () => {
+    const root = mkdtempSync(join(tmpdir(), "ship-platter-amend-long-"));
+    const git = (cwd: string, args: string[]) =>
+      execFileSync("git", args, { cwd, encoding: "utf8", env, stdio: "pipe" });
+    const work = join(root, "work");
+    // No network: whatever the body sync asks GitHub, it gets nothing back, and that is reported after
+    // the amendment is pushed, so the guard under test has already answered by then.
+    const bin = join(root, "bin");
+    mkdirSync(bin);
+    writeFileSync(join(bin, "curl"), "#!/bin/sh\nexit 1\n", { mode: 0o755 });
+    const stubbed = { ...env, PATH: `${bin}:${env.PATH}` };
+    try {
+      git(root, ["init", "-q", "--bare", "-b", "main", "origin.git"]);
+      git(root, ["clone", "-q", join(root, "origin.git"), "work"]);
+      git(work, ["config", "user.email", "spec@example.com"]);
+      git(work, ["config", "user.name", "spec"]);
+      git(work, ["commit", "-q", "--allow-empty", "-m", "chore: seed"]);
+      git(work, ["push", "-q", "origin", "main"]);
+      git(work, ["checkout", "-q", "-b", "platter/2026-11-01"]);
+      const older = `${"An older item's long body line.\n".repeat(40_000)}\nPlatter-Item: fix/old`;
+      const body = join(root, "older.txt");
+      writeFileSync(body, `fix: old\n\n${older}\n`);
+      git(work, ["commit", "-q", "--allow-empty", "-F", body]);
+      git(work, ["commit", "-q", "--allow-empty", "-m", "fix: new", "-m", "Platter-Item: fix/new"]);
+
+      const result = spawnSync("bash", [SHIP, "platter", "amend", "fix/new", "--closes", "4616"], {
+        cwd: work,
+        encoding: "utf8",
+        env: stubbed,
+      });
+      expect(result.stderr).not.toContain("is boarded");
+      expect(git(work, ["log", "-1", "--format=%B"])).toContain("Platter-Amends: fix/new");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

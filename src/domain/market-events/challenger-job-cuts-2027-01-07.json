@@ -1,0 +1,11 @@
+{
+  "id": "challenger-job-cuts-2027-01-07",
+  "kind": "macro-print",
+  "title": "Challenger Job-Cut Report (Dec 2026)",
+  "date": "2027-01-07",
+  "status": "estimate",
+  "source": "EST: cadence — Challenger publishes the month's report on the Thursday before BLS payrolls (Sep 3, Oct 1 and Nov 5, 2026 per the publisher's own job-cuts feed at challengergray.com, read 2026-11-07); BLS payrolls for December are 2027-01-08 (jobs-2027-01-08), so the Thursday before is 2027-01-07. No 2027 schedule was fetched",
+  "impact": "low",
+  "symbols": [],
+  "notes": "Seeded for docs/research/convictions/ai-labor-2026-11.md (#7033) with its November sibling (challenger-job-cuts-2026-12-03; the reasoning is there). The December edition also carries the full-year 2026 totals, so it closes the year's AI-cited count (121,401 through October). Its AI-cited share is the second read on claim 1's falsifier (15% or more proves the house call wrong). Impact `low`, as for every edition the tape has read."
+}

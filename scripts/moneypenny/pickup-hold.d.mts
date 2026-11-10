@@ -30,18 +30,24 @@ export function pickupHoldReason(input?: {
   subIssues?: readonly HoldSubIssue[];
   blockedBy?: Record<number, readonly { state?: string }[]>;
   boardedOn?: ReadonlyMap<number, number>;
+  /** Decides a dated wait (`none until <day>`) only; defaults to the clock. */
+  now?: number;
 }): string | null;
+/** The UTC day a `none until <YYYY-MM-DD>` pickup line's wait ends, or null. */
+export function waitEndsOn(blockBody?: string): string | null;
 export function readPickupHold(
   issue: HoldIssue,
   deps?: {
     readAll?: (path: string) => unknown[];
     read?: (path: string) => unknown;
     log?: (line: string) => void;
+    now?: number;
   },
 ): string | null;
 export function nextUnheld<T extends { number?: number }>(
   pool: T[],
   pickOf: (rest: T[]) => T | null | undefined,
-  holdOf: (pick: T) => string | null,
+  /** `rest` is the pool still in play, this pick included. */
+  holdOf: (pick: T, rest: T[]) => string | null,
   opts?: { who?: string; log?: (line: string) => void },
 ): { pick: T | null; pool: T[] };

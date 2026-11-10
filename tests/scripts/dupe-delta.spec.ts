@@ -92,6 +92,64 @@ describe("the bodies a delta compares", () => {
     expect(bodyOf(text, "page")).toContain("return");
     expect(bodyOf(text, "page")).not.toContain("after");
   });
+
+  // #6720: Biome breaks a long signature so it closes on a column-0 `): T {` line. That line opens
+  // the body, so stopping before it hashed only the parameter list, and same-signature functions
+  // with different bodies read as copies. Both pairs below are real: long-call vs long-leap, and the
+  // `Card({ … }: Props)` shape every component file repeats.
+  const expiry = (min: string, max: string) =>
+    [
+      "function entryExpiry(",
+      "  listed: readonly string[],",
+      "  asOfIso: string,",
+      "  steering?: Steering,",
+      "): string | undefined {",
+      "  const today = marketDayKey(asOfIso);",
+      "  return eligibleExpirations(listed, today, {",
+      `    minDte: Math.max(${min}, steering?.dte?.min ?? 0),`,
+      `    maxDte: Math.min(${max}, steering?.dte?.max ?? ${max}),`,
+      "  }).at(-1);",
+      "}",
+      "",
+      "export const after = 1;",
+      "",
+    ].join("\n");
+  const card = (tag: string) =>
+    [
+      "export function Card({",
+      "  title,",
+      "}: Props) {",
+      `  return <${tag}>{title}</${tag}>;`,
+      "}",
+      "",
+    ].join("\n");
+
+  it("reads past a signature that closes on its own column-0 line", () => {
+    const body = bodyOf(expiry("MIN_DTE", "MAX_DTE"), "entryExpiry");
+    expect(body).toContain("MIN_DTE");
+    expect(body).not.toContain("after");
+  });
+
+  it("tells apart same-signature functions whose bodies differ", () => {
+    const call = bodyOf(expiry("MIN_DTE", "MAX_DTE"), "entryExpiry");
+    const leap = bodyOf(expiry("LEAP_MIN_DTE", "LEAP_MAX_DTE"), "entryExpiry");
+    expect(call).not.toBe(leap);
+    expect(bodyOf(card("h2"), "Card")).not.toBe(bodyOf(card("p"), "Card"));
+  });
+
+  it("reads past an arrow signature that closes on `): T =>`", () => {
+    const text = [
+      "export const save = async (",
+      "  id: string,",
+      "): Promise<boolean> =>",
+      "  post(id);",
+      "",
+      "export const after = 1;",
+      "",
+    ].join("\n");
+    expect(bodyOf(text, "save")).toContain("post(id)");
+    expect(bodyOf(text, "save")).not.toContain("after");
+  });
 });
 
 describe("reuse delta", () => {
@@ -121,6 +179,16 @@ describe("reuse delta", () => {
     const { pastes, sameName } = delta({ dir, base, head });
     expect(pastes).toEqual([]);
     expect(sameName.map((row: { name: string }) => row.name)).toEqual(["rankOf"]);
+  });
+
+  it("does not call a same-signature function with a different body a copy (#6720)", () => {
+    const leap = (min: string) =>
+      `function entryExpiry(\n  listed: readonly string[],\n): string | undefined {\n  return pick(listed, ${min});\n}\n`;
+    const { dir, base, change } = repo({ "src/long-call.ts": leap("MIN_DTE") });
+    const head = change({ "src/long-leap.ts": leap("LEAP_MIN_DTE") });
+    const { pastes, sameName } = delta({ dir, base, head });
+    expect(pastes).toEqual([]);
+    expect(sameName.map((row: { name: string }) => row.name)).toEqual(["entryExpiry"]);
   });
 
   it("does not call a moved helper a copy", () => {

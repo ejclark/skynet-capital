@@ -23,10 +23,11 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { readBaseline } from "./bottleneck-baseline.mjs";
+import { isMain } from "./is-main.mjs";
 import { AUDIT_LIST_LIMIT, audit, auditReport } from "./issue-lint-audit.mjs";
 import { readinessNotes } from "./issue-readiness.mjs";
 import { LABEL_NAMES } from "./moneypenny/labels.mjs";
-import { BUILDING, STATUS_OPTIONS } from "./moneypenny/projects.mjs";
+import { BUILDING, STATUS_OPTIONS, WAITING_ON_PERSON } from "./moneypenny/projects.mjs";
 import { fleschKincaidGrade, stripMarkdown } from "./readability.mjs";
 
 /** Above this, an advisory note fires — chosen generous (college-graduate level) so the necessarily
@@ -245,6 +246,7 @@ function checkNeedsFromYou(text, labels, problems, notes) {
     );
   }
   if (!hasCallout) return;
+  noteCardGaps(text, top, labels, notes);
 
   for (const line of top.split("\n")) {
     const item = /^>\s*\d+\.\s+(.+)$/.exec(line);
@@ -253,6 +255,23 @@ function checkNeedsFromYou(text, labels, problems, notes) {
         `"Needs from you" item over ${MAX_BULLET} chars — one line, why trailing after an em dash: "${item[1].slice(0, 60)}…"`,
       );
     }
+  }
+}
+
+/** The assignment card carries a callout's whole ask (scripts/moneypenny/ask-card.mjs, #6953 slice 3);
+ *  a labelled callout with no prediction or no silence line still assigns, so this only points at the
+ *  gap — advisory, never a refusal, so no lane's ask is dropped for being thin (docs/ISSUES.md rule 8). */
+function noteCardGaps(text, top, labels, notes) {
+  if (!(Array.isArray(labels) && labels.includes("needs-eric"))) return;
+  const callout = top.split("\n").filter((l) => l.startsWith(">"));
+  const missing = [];
+  if (!(callout.some((l) => /\bpredicted\b/i.test(l)) || /^###\s+Predicted answers/im.test(text)))
+    missing.push("a prediction");
+  if (!callout.some((l) => /\bon silence\b/i.test(l))) missing.push("an `On silence:` line");
+  if (missing.length) {
+    notes.push(
+      `\`Needs from you\` callout has no ${missing.join(" and no ")} — the assignment card shows both, and the digest lists the ask as incomplete (docs/ISSUES.md rule 8)`,
+    );
   }
 }
 
@@ -319,29 +338,42 @@ function checkStateBlockTop(text, notes) {
 }
 
 /** The words a Status row may lead with, mapped to the board column they claim. The board's own
- *  columns (projects.mjs STATUS_OPTIONS — the skeleton's vocabulary, docs/ISSUES.md) plus the label
- *  spellings older rows used in their place (#3407's row said "needs-eric"). "In Progress" was the
- *  building column's name until #4393 slice 4, so rows typed before the rename still claim it. */
+ *  columns (projects.mjs STATUS_OPTIONS — the skeleton's vocabulary, docs/ISSUES.md) by their first
+ *  word, plus the spellings older rows used (#3407's row said "needs-eric"). "In Progress" was the
+ *  building column's name until #4393 slice 4, and "Blocked" the person-waiting one's until #6871,
+ *  so rows typed before either rename still claim them. "Next part …" and "Waiting" (on its own)
+ *  are left alone: telling queued from needs-approval needs the plan's sub-issues, which a body
+ *  lint never has. */
 const STATUS_WORDS = new Map([
-  ...STATUS_OPTIONS.map((s) => [s.toLowerCase(), s]),
+  ...STATUS_OPTIONS.filter((s) => !/\s/.test(s)).map((s) => [s.toLowerCase(), s]),
   ["building", BUILDING],
   ["in-progress", BUILDING],
-  ["needs-eric", "Blocked"],
-  ["needs-info", "Blocked"],
+  ["blocked", WAITING_ON_PERSON],
+  ["needs-eric", WAITING_ON_PERSON],
+  ["needs-info", WAITING_ON_PERSON],
 ]);
 
 /** What the labels must show for a row's claim to hold. Not the board's full precedence
  *  (projects.mjs statusForIssue): a row that says Ready while its issue is being built is not
  *  stale, only behind, and a note on every in-flight issue would be noise, not signal. The note is
- *  for the row that is WRONG — Ready with no `ready`, Blocked with nothing blocking, Backlog after
- *  the flip. Done is left alone: an open-state check needs the issue's state, which a body lint
- *  never has — and Waiting likewise, which needs the plan's sub-issue counts. */
+ *  for the row that is WRONG — Ready with no `ready`, Waiting on a person with nobody to wait on,
+ *  Backlog after the flip. Done is left alone: an open-state check needs the issue's state, which a
+ *  body lint never has — and the next-part columns likewise, which need the plan's sub-issues. */
 const STATUS_HOLDS = {
-  Backlog: (has) => !(has("ready") || has("needs-eric") || has("needs-info")),
+  // A `ready` card the board still shows in Backlog: parked by an unwritten ask or a merge hold.
+  Backlog: (has, text) =>
+    !(waitsOnPerson(has, text) || (has("ready") && !has("needs-eric") && !has("hold-merge"))),
   Ready: (has) => has("ready"),
   [BUILDING]: (has) => has("in-progress"),
-  Blocked: (has) => has("needs-eric") || has("needs-info"),
+  [WAITING_ON_PERSON]: (has, text) => waitsOnPerson(has, text),
 };
+
+/** The board's person-waiting rule (projects.mjs `statusForIssue`, #6871): a `needs-eric` counts
+ *  only once its `Needs from you` callout is written (#3913) — until then it reads Backlog. */
+function waitsOnPerson(has, text) {
+  if (["needs-info", "needs-design", "needs-session"].some((l) => has(l))) return true;
+  return has("needs-eric") && hasDecisionCallout(text);
+}
 
 /** The board column a body's Status row claims, from its first word — or null when the row is
  *  absent or leads with free text ("proposed", "awaiting…"), which this check leaves alone. */
@@ -350,6 +382,7 @@ export function statusRowClaim(body = "") {
   if (!row) return null;
   const lead = row[1].replace(/[*_`]/g, "").trim().toLowerCase();
   if (/^(?:in[ -]progress|building now)\b/.test(lead)) return BUILDING;
+  if (/^waiting on a person\b/.test(lead)) return WAITING_ON_PERSON;
   const word = /^[a-z-]+/.exec(lead)?.[0] ?? "";
   return STATUS_WORDS.get(word) ?? null;
 }
@@ -362,7 +395,7 @@ function checkStatusRow(text, labels, notes) {
   if (!Array.isArray(labels)) return;
   const claim = statusRowClaim(text);
   const holds = claim && STATUS_HOLDS[claim];
-  if (!holds || holds((name) => labels.includes(name))) return;
+  if (!holds || holds((name) => labels.includes(name), text)) return;
   const shown = labels.length ? labels.map((l) => `\`${l}\``).join(", ") : "none";
   notes.push(
     `Status row says ${claim} but the labels (${shown}) say otherwise — the row is what a phone ` +
@@ -502,4 +535,4 @@ async function main() {
   console.log("issue-lint: ✓ body satisfies the capsule contract.");
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) await main();
+if (isMain(import.meta.url)) await main();

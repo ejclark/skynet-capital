@@ -23,7 +23,8 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
+import { isMain } from "../is-main.mjs";
 import { SCENE_CACHE, sceneBuildArgs, sceneBundle } from "../study/scene-bundle.mjs";
 
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
@@ -171,7 +172,7 @@ function main() {
   }
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+if (isMain(import.meta.url)) {
   try {
     main();
   } catch (e) {

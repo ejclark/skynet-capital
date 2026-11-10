@@ -94,4 +94,15 @@ describe("CalendarHead", () => {
     expect(day).not.toHaveAttribute("aria-describedby");
     expect(document.querySelector(".eh-fog")).toBeNull();
   });
+
+  // The landing page (#7077 AT10): the same head, its own heading in the label's place, Day · Week ·
+  // Month offered and nothing fogged.
+  it("offers only the lenses a page asks for, under that page's own heading, nothing fogged", () => {
+    mount({ lenses: ["day", "week", "month"], heading: <h2>The calendar</h2> });
+    expect(screen.getByRole("heading", { name: "The calendar" })).toBeInTheDocument();
+    expect(screen.queryByText("Market calendar")).toBeNull();
+    const lenses = screen.getAllByRole("button", { name: /^(Day|Week|Month|Quarter)$/ });
+    expect(lenses.map((b) => b.textContent)).toEqual(["Day", "Week", "Month"]);
+    expect(screen.getByRole("button", { name: "Day" })).toBeEnabled();
+  });
 });

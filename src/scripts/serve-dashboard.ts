@@ -54,8 +54,11 @@ import { toClaimAccounts } from "../server/claim-form.js";
 import { createDashboardServer } from "../server/dashboard-server.js";
 import type { DashboardServerConfig } from "../server/dashboard-server-config.js";
 import { resolveDevelopmentActivity } from "../server/development-activity.js";
+import { discoveryPerPass } from "../server/discovery-queue-store.js";
 import { bootGithubToken } from "../server/github-token.js";
 import { installGracefulShutdown } from "../server/graceful-shutdown.js";
+import { heldActivity, heldOrderOrigins } from "../server/held-activity.js";
+import { ladderEvidenceReader } from "../server/ladder-evidence.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
 import { ParticipantService } from "../server/participant-service.js";
 import { recordPasses } from "../server/play-milestone-sync.js";
@@ -272,7 +275,13 @@ async function main(): Promise<void> {
     filingComments,
     subscriptions,
     savedPositions,
+    exitPlans,
+    takenQuests,
     authoredPlays,
+    memberCampaigns,
+    memberChains,
+    discoveryQueue,
+    campaignQuestions,
     memberConvictions,
     playMilestones,
     knownPersonaIds,
@@ -326,6 +335,9 @@ async function main(): Promise<void> {
   const developmentSink = mergedPullRequests
     ? publishingMergedPullRequests(mergedPullRequests, activityEventBus)
     : undefined;
+  // The trade ladder's evidence, held per participant and advanced by appended lines: one fold read
+  // by both the Learn page (the progression service) and the Wire's milestone kind (#4619).
+  const readLadderEvidence = ladderEvidenceReader({ activity, orderAudit });
   // Shares the coach's ANTHROPIC_API_KEY/cost dials; also builds the ProgressionService instance
   // and the ladder gate's message log (dashboard-companion.ts owns crossing the id seam).
   const {
@@ -335,7 +347,7 @@ async function main(): Promise<void> {
   } = setupCompanion(process.env, {
     hub,
     readFills: (id) => activity.list(id),
-    readTags: (id) => orderAudit.list(id),
+    readEvidence: readLadderEvidence,
     feedbackLog,
     ownerEmailFor,
     botControls,
@@ -356,6 +368,8 @@ async function main(): Promise<void> {
   const readDecisions: DashboardServerConfig["readDecisions"] =
     insightsBridge.readDecisions ??
     (auditDir ? (id: string) => new JsonlAuditStore(auditDir).list(id) : undefined);
+  // One store, read by the watchlist route and by the window alerts the delivery sweep derives.
+  const watchlist = createWatchlist(process.env);
   const alertDelivery = wireAlertDelivery({
     env: process.env,
     activityEvents: activityEventBus,
@@ -365,6 +379,7 @@ async function main(): Promise<void> {
       optionsClientFor: (id) => clientFor(id, dataSource.optionsClientFactory),
       activityLog: activityEventBus,
       alertDismissals,
+      watchlist,
       ...(readDecisions ? { readDecisions } : {}),
     }),
   });
@@ -392,7 +407,14 @@ async function main(): Promise<void> {
     accountAdmin: buildAccountAdmin(accounts, store),
     subscriptions,
     savedPositions,
+    exitPlans,
+    takenQuests,
     authoredPlays,
+    memberCampaigns,
+    memberChains,
+    discoveryQueue,
+    campaignQuestions,
+    discoveryPerPass: discoveryPerPass(),
     memberConvictions,
     playMilestones,
     // The feed reads the ledger after posting any pass the bots have reported (#5457 slice 5).
@@ -454,34 +476,17 @@ async function main(): Promise<void> {
     refreshParticipant: (id) => brokerSync.syncParticipant(id),
     readPulseHistory,
     readHeldLedger,
-    readTradeActivity: (id) => activity.list(id),
-    readOrderAudit: (id) => orderAudit.list(id),
+    readTradeActivity: heldActivity(activity),
+    readOrderOrigins: heldOrderOrigins(orderAudit),
     recordOrderAudit: (entry) => orderAudit.record(entry),
-    // `/wire`'s cross-participant feed: the same stores, called with no id. Activity's trade rows
-    // are built from the bus's `ActivityEvent` envelope (#784 slice 1); the ledger rides alongside
-    // it because the event log only starts at #1211's deploy and older fills live only on the
-    // ledger (`mergeLedgerIntoEvents` dedupes the overlap on the deterministic event id).
-    readAllActivityEvents: () => activityEventBus.list(),
-    readAllTradeActivity: () => activity.list(),
-    readAllFeedback: () => feedbackLog.list(),
-    // …and the same three, off the fold above; the reads above stay as the route's fallback.
+    // `/wire`'s cross-participant feed: the bus, the trade ledger and the feedback log, off the fold
+    // above. The ledger rides alongside the bus because the event log only starts at #1211's deploy
+    // and older fills live only on the ledger (`mergeLedgerIntoEvents` dedupes the overlap).
     readWireFeed,
-    // Milestones, the fourth kind (#784 slice 5): logged earns from the ladder log, and the audit
-    // trail the fill-derived ladder is classified from — the same two inputs the Learn page reads.
+    // Milestones, the fourth kind (#784 slice 5): logged earns from the ladder log, and each
+    // member's earned rungs off the Learn page's own held ladder (#4619).
     readAllLadderProgress,
-    // Handed ids, only those participants' files are read: the Wire asks for its members alone, so
-    // the bots' audit trails (most of the bytes) stay unread (#4619). Each read keeps its own id's
-    // lines, so two ids that share a file name never return its lines twice.
-    readAllOrderAudit: async (participantIds) =>
-      participantIds
-        ? (
-            await Promise.all(
-              participantIds.map(async (id) =>
-                (await orderAudit.list(id)).filter((r) => r.participantId === id),
-              ),
-            )
-          ).flat()
-        : orderAudit.list(),
+    readLadderEvidence,
     // Absent without a GitHub token: the feed then renders no development kind and says so, rather
     // than letting an empty list imply the league has never merged anything.
     ...(developmentSink ? { readMergedPullRequests: developmentSink } : {}),
@@ -574,7 +579,7 @@ async function main(): Promise<void> {
     ...(alertDelivery.transport ? { alertDelivery: alertDelivery.transport } : {}),
     // The names a member chose to watch — member-authored truth nothing re-derives, so it is
     // durable on the same volume (#4332).
-    watchlist: createWatchlist(process.env),
+    watchlist,
     optionsClientFor: (id) => clientFor(id, dataSource.optionsClientFactory),
     quoteStream,
     tradingClientFor: (id) => clientFor(id, dataSource.clientFactory),
@@ -606,12 +611,13 @@ async function main(): Promise<void> {
     telemetry.listening();
     // Pulse's history folds, then its trade half for each participant (the held answer's first
     // build is the whole-ledger read: ~90 ms for Sauron at 180 days, #4619),
-    // then `/wire`'s fold, once, so the first Activity open after a deploy is not the cold read,
-    // then each bot's decision funnel and who trades on its account, so the first Decisions open
+    // then `/wire`'s fold, once, and each member's held ladder (the Wire's milestones and the Learn
+    // page), so the first Activity open after a deploy is not the cold read, then each bot's decision funnel and who trades on its account, so the first Decisions open
     // is not either (#4619).
     // Best effort: a failed warm leaves the fold to the first request, which reads it the same way.
     const { funnelFor } = insightsBridge;
     const bots = roster.filter((p) => p.kind === "bot").map((p) => p.id);
+    const members = roster.filter((p) => p.kind === "human").map((p) => p.id);
     void warmFolds(
       roster.map((p) => p.id),
       readPulseHistory,
@@ -626,6 +632,7 @@ async function main(): Promise<void> {
         ),
       )
       .then(() => readWireFeed().catch(() => undefined))
+      .then(() => warmFolds(members, readLadderEvidence))
       .then(() => warmFolds(bots, async (id) => funnelFor?.(id)))
       .then(() => warmFolds(bots, async (id) => readAccountPersonas?.(id)));
   });

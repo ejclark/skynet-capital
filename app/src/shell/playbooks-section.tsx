@@ -7,6 +7,7 @@ import {
   type StrategyCardView,
 } from "../live/playbook-store";
 import { fetchSettings, type OwnedAccount } from "../live/settings";
+import { YourChains } from "./playbook-chains";
 import { YourPlaybooks } from "./playbook-drafts";
 import { isReady, PlaybookList } from "./playbook-list";
 import type { MetricsScope } from "./playbook-metrics";
@@ -31,7 +32,9 @@ import { YourConvictions } from "./your-convictions";
  *
  * "Your playbooks" sits between the mission line and the catalog (#5457 slice 1): the member's own
  * drafts and the form to write one (`playbook-drafts.tsx`). It is one more kind of entry in the
- * catalog, not a screen — a draft is saved and does not trade. "Your convictions" follows it
+ * catalog, not a screen — a draft is saved and does not trade. "Your chains" follows it (#6959
+ * slice 3b, `playbook-chains.tsx`): playbooks joined, one handing its position to the next, saved
+ * shadow only. "Your convictions" follows that
  * (#5482 slice 6b, `your-convictions.tsx`): the member's stated views of the market, beside the
  * pairs they steer, each a draft until its owner hands it to their bots (slice 6c).
  *
@@ -177,6 +180,7 @@ export function PlaybooksSection({
     <div className="pb-section">
       {head}
       <YourPlaybooks accounts={accounts} ready={accountsReady} />
+      <YourChains />
       <YourConvictions />
       {manages && human ? (
         // The rule once, at the top, before the cards each draw their disabled control (#4610).

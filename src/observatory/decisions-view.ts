@@ -213,13 +213,14 @@ function copyFor(
   ret: number,
   pl: number,
   basis: number,
+  carried: boolean,
 ): { title: string; caption: string; why: string; learn?: DecisionLearn } {
   const display = humanizeOptionSymbol(p.symbol);
   const sold = p.plain.expiresInDays !== undefined && p.quantity < 0;
   if (kind === "lock-in" && sold) return soldWinnerCopy(p, display, pl, basis);
-  if (kind === "time-stop") return timeStopCopy(p, display, ret);
+  if (kind === "time-stop") return timeStopCopy(p, display, ret, carried);
   if (kind === "lock-in" && atTakeProfit(p, basis))
-    return takeProfitCopy(p, display, ret, pl, basis);
+    return takeProfitCopy(p, display, ret, pl, basis, carried);
   if (kind === "lock-in") {
     return {
       title: `Up ${ret.toFixed(0)}%: consider locking some of it in`,
@@ -254,15 +255,24 @@ function copyFor(
   };
 }
 
+/** Whose rule the card names: the plan the member carried when buying (#5709 slice 3), else the
+ *  house's long-call bot's. The same two rules either way — `long-call-rules.ts`. */
+const ruleOwner = (carried: boolean): string =>
+  carried
+    ? "The plan you carried when you bought it sells"
+    : "The house's long-call bot sells its calls";
+
 /**
  * A long call between the bands with the bot's time stop reached (#5709): Eric's NVDA calls, held
  * through a run-up and its pullback, bled time value with no card at all until ±10–50%. The house's
- * long-call bot sells at `EXIT_DTE` days left whatever the return; the member hears the same rule.
+ * long-call bot sells at `EXIT_DTE` days left whatever the return; the member hears the same rule —
+ * as their own plan's, when they carried it at purchase.
  */
 function timeStopCopy(
   p: Held,
   display: string,
   ret: number,
+  carried: boolean,
 ): { title: string; caption: string; why: string; learn: DecisionLearn } {
   const left = timeLeft(p);
   const stock = parseOccSymbol(p.symbol)?.underlying ?? p.symbol;
@@ -270,10 +280,13 @@ function timeStopCopy(
     Math.round(ret) === 0
       ? "is about even with what it cost"
       : `is ${ret > 0 ? "up" : "down"} ${Math.abs(ret).toFixed(0)}% from what it cost`;
+  const Left = `${left.charAt(0).toUpperCase()}${left.slice(1)}`;
   return {
-    title: `${left.charAt(0).toUpperCase()}${left.slice(1)} left: the house sells its own calls at ${EXIT_DTE} days`,
-    caption: `${display} ${move}, with ${left} left. The house's long-call bot sells its calls once ${EXIT_DTE} days are left, before time decay speeds up.`,
-    why: `✦ from here each day costs this call a little more, even if ${stock} doesn't move. the house's rule says sell now; you can sell, roll it to a later date, or say why you're holding.`,
+    title: carried
+      ? `${Left} left: your plan's time stop is here`
+      : `${Left} left: the house sells its own calls at ${EXIT_DTE} days`,
+    caption: `${display} ${move}, with ${left} left. ${ruleOwner(carried)} once ${EXIT_DTE} days are left, before time decay speeds up.`,
+    why: `✦ from here each day costs this call a little more, even if ${stock} doesn't move. ${carried ? "your plan" : "the house's rule"} says sell now; you can sell, roll it to a later date, or say why you're holding.`,
     learn: { term: "timeDecay", label: "What is time decay?" },
   };
 }
@@ -289,12 +302,13 @@ function takeProfitCopy(
   ret: number,
   pl: number,
   basis: number,
+  carried: boolean,
 ): { title: string; caption: string; why: string; learn: DecisionLearn } {
   const multiple = Math.abs(p.marketValue) / basis;
   return {
     title: `Up ${ret.toFixed(0)}%: worth ${multiple.toFixed(1)}× what you paid`,
-    caption: `${display} has made ${formatCurrency(pl)} on ${formatCurrency(basis)}. The house's long-call bot sells its calls once they're worth ${TAKE_PROFIT}× what they cost, and this one is there.`,
-    why: `✦ this is the win the rule waits for. a run-up can pull back while time keeps costing the call, so selling at ${TAKE_PROFIT}× banks it and frees the cash for the next trade.`,
+    caption: `${display} has made ${formatCurrency(pl)} on ${formatCurrency(basis)}. ${ruleOwner(carried)} once ${carried ? "the call is" : "they're"} worth ${TAKE_PROFIT}× what ${carried ? "it" : "they"} cost, and this one is there.`,
+    why: `✦ this is the win ${carried ? "your plan" : "the rule"} waits for. a run-up can pull back while time keeps costing the call, so selling at ${TAKE_PROFIT}× banks it and frees the cash for the next trade.`,
     learn: { term: "lockedIn", label: "What does “locked in” mean?" },
   };
 }
@@ -302,9 +316,16 @@ function takeProfitCopy(
 /** An AT RISK or plain LOCK IN card on a long call inside the time stop still names it, in the
  *  caption: the title already says the loss or the gain, and the clock says the expiry. A
  *  take-profit card has already named the bot's sale. */
-function withTimeStop(p: Held, kind: DecisionKind, basis: number, caption: string): string {
+function withTimeStop(
+  p: Held,
+  kind: DecisionKind,
+  basis: number,
+  caption: string,
+  carried: boolean,
+): string {
   if (kind === "time-stop" || !inTimeStop(p) || atTakeProfit(p, basis)) return caption;
-  return `${caption} It has ${timeLeft(p)} left, and the house's long-call bot sells its calls once ${EXIT_DTE} days are left.`;
+  const owner = carried ? "your plan sells" : "the house's long-call bot sells its calls";
+  return `${caption} It has ${timeLeft(p)} left, and ${owner} once ${EXIT_DTE} days are left.`;
 }
 
 /**
@@ -386,7 +407,7 @@ function tradeHref(deskId: string, symbol: string): string {
     : `/app/trade?desk=${desk}&symbol=${encodeURIComponent(symbol)}`;
 }
 
-function holdingDecision(deskId: string, p: Held): Decision | undefined {
+function holdingDecision(deskId: string, p: Held, carried: boolean): Decision | undefined {
   const basis = Math.abs(costBasis(p));
   if (basis === 0 || p.quantity === 0) return undefined;
   const pl = unrealizedPl(p);
@@ -397,7 +418,7 @@ function holdingDecision(deskId: string, p: Held): Decision | undefined {
   const { captionShort, range } = facts(p);
   const due = dueFor(p);
   const copy = {
-    ...copyFor(kind, p, ret, pl, basis),
+    ...copyFor(kind, p, ret, pl, basis, carried),
     ...(kind === "at-risk" ? earningsCopy(p) : undefined),
   };
   return {
@@ -410,7 +431,7 @@ function holdingDecision(deskId: string, p: Held): Decision | undefined {
     plTone: plClass(pl),
     captionShort,
     ...copy,
-    caption: withTimeStop(p, kind, basis, copy.caption),
+    caption: withTimeStop(p, kind, basis, copy.caption, carried),
     clocks: clocksFor(p, option),
     primary: { label: "Review on Trade ↗", href: tradeHref(deskId, p.symbol) },
     secondary: {
@@ -446,9 +467,11 @@ export function decisionsFor(
   deskId: string,
   positions: readonly Held[],
   ideas: readonly ConsiderationChip[],
+  /** Contracts whose exit plan the member carried when buying (#5709 slice 3). */
+  carried: ReadonlySet<string> = new Set(),
 ): Decision[] {
   const held = positions
-    .map((p) => holdingDecision(deskId, p))
+    .map((p) => holdingDecision(deskId, p, carried.has(p.symbol) && isLongCall(p)))
     .filter((d): d is Decision => d !== undefined);
   const suggested = ideas.filter((c) => c.kind === "opportunity").map(ideaDecision);
   return [...held, ...suggested].sort((a, b) => b.stakeRaw - a.stakeRaw);

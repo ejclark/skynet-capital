@@ -17,9 +17,9 @@ coach). Nothing named who owns the whole board. This does.
 Members meet her directly: the ✦ button in the shell's top bar opens a right
 rail (`app/src/shell/moneypenny-rail.tsx`) where she answers questions live and files feedback.
 Her voice there is the companion chat (`src/companion/*`, `/api/companion/chat`) — Claude on the
-same key the feedback coach uses, with seven read-only tools (the member's own desk and progress,
+same key the feedback coach uses, with nine read-only lookups and two hand-offs (the member's own desk, progress and market views,
 the play catalog, a chain read through their own linked account, and the public work record,
-#3952 — `COMPANION_TOOL_NAMES` in `companion-tools.ts`), their live
+#3952, and the next fortnight's event calendar, #7034 — `COMPANION_TOOL_NAMES` in `companion-tools.ts`), their live
 onboarding/filing state injected every turn (`companion-context.ts`) along with the page they
 asked from, reduced to fixed words (`companion-page.ts`, #2224), with their own holding on that
 page's symbol (`companion-holding.ts`), and a cached help desk
@@ -62,7 +62,7 @@ flowchart TD
         REP[["moneypenny-repair<br>CI self-healing"]]
         SEC[["/secretary digests"]]
     end
-    BOARD[("Orchestration board<br>Status / Horizon")]
+    BOARD[("Orchestration board<br>Status / Priority / Horizon")]
     TRIAGE{"curated filing?"}
     READY(["ready label"])
     BUILD["Claude build session"]
@@ -88,27 +88,55 @@ flowchart TD
 ```
 
 _Caption — every trigger funnels through one of Moneypenny's four lanes; the Orchestration board
-(Status × Horizon, #3818 slice B) is the shared state all four read and write. The dotted paths are
+(Status × Horizon from #3818 slice B, Priority from #6871) is the shared state all four read and write. The dotted paths are
 the exception routes: a freeform (non-`curated`) filing waits in Backlog for `ready`, a red CI run
 escalates to repair, a repair capsule with no PR 24 hours after filing gets `stall-flagged` and
 a comment asking for a fix PR or `needs-eric`, and a capsule whose failing job has passed three
 runs on `main` since its last recurrence (push or dispatch) is closed with the run links
 (`scripts/moneypenny/capsule-stall.mjs`)._
 
-### Where an open ask lives — the board's Blocked column
+### Priority on the board — labels lead, a drag writes back
 
-The one place to look for "what is waiting on a person" is the Orchestration board's **Blocked**
-column (Eric, 2026-09-28, #3959: the live board, not a digest, is the default surface). It lists
-every open `needs-eric` and `needs-info` issue, and nothing else does that job — a digest's "Needs
+The board's Priority field is a copy of the issue's priority, never a second opinion (#4064): a
+hand-set `P0`–`P3` label wins, otherwise the class `npm run rank` derives. The event job and the
+reconcile sweep write it; the **Flow by priority** view lays it out as swimlanes under the Status
+columns. Dragging a card into another lane (Eric, 2026-11-04: "Drag sets priority") becomes that
+lane's P label within one sweep, other P labels removed. A hidden "Synced priority" field records
+each value the sync wrote, which is how a drag is told from a sync, and why a half-finished sync
+is never mistaken for one. Rule and failure cases: `scripts/moneypenny/projects-priority.mjs`; plan #6871.
+
+Three more fields ride on each card, all written by the sync and none read by a build lane
+(#6871 slice 3, `scripts/moneypenny/projects-fields.mjs`): **Kind** (what sort of work it is, from
+its labels; the order inside a lane), **Waiting on** (who acts next on a card that cannot be pulled,
+for example "Eric to decide"; blank when nothing stops a build), and **In this column since** (the
+day the sync last changed Status, written only on a real change, so a card the sync has not moved
+since the field was made reads blank). A field the board does not carry yet is skipped with one log line; the
+`projects-setup.yml` dispatch creates it.
+
+**Role** (#6886 slice 1b, `scripts/moneypenny/projects-role.mjs`) is the seat whose queue the card
+sits in: "Plan builds", "Feedback builds", "Live sessions" and so on, from the seat registry's
+`role` / `pulls` / `roleOrder` (`docs/agents/seats.json`) and the issue's labels. It is one-way, a
+copy like Kind; a card no seat pulls has no Role. The reconcile sweep creates the field itself and
+keeps its options equal to the registry's, so hiring a seat that pulls cards needs no dispatch. The
+lanes are listed on the org chart (`docs/architecture/org-chart.md` → *The board's Role lanes*).
+
+### Where an open ask lives — the board's Waiting on a person column
+
+The one place to look for "what is waiting on a person" is the Orchestration board's **Waiting on
+a person** column (Blocked until #6871; Eric, 2026-09-28, #3959: the live board, not a digest, is
+the default surface). It lists every open `needs-eric`, `needs-info`, `needs-design` and
+`needs-session` issue not being built right now (a card being built shows in Building now, where
+the cap counts it, its labels still naming the person), and nothing else does that job — a digest's "Needs
 you" tier is a dated snapshot of the same query, never a second list to reconcile against it.
 
 - **How it stays complete:** the event job moves a card on every label change, and the reconcile
   sweep (`board-sync.yml` → `scripts/moneypenny/projects-reconcile.mjs`) re-columns drifted cards
   *and* adds any open blocked issue that never got a card because its one event run died (#4303).
-- **The one deliberate gap:** a `needs-eric` issue with no `Needs from you` callout stays out of
-  Blocked until the ask is written (#3913) — an unwritten ask is not an open ask yet.
+- **The one deliberate gap:** a `needs-eric` issue with no `Needs from you` callout reads Backlog
+  until the ask is written (#3913) — an unwritten ask is not an open ask yet; writing it is a
+  session's job.
 - **From a session, without GraphQL:** `node scripts/issues.mjs show <n>` prints the column the
-  rule yields. Answering is a comment on the Blocked issue itself: an authorized reply on a
+  rule yields. Answering is a comment on the waiting issue itself: an authorized reply on a
   `needs-info` / `needs-eric` feedback or plan issue restarts the waiting lane without a session
   noticing it (#3959 slices 1–2, `docs/FEEDBACK.md`).
 
@@ -124,9 +152,9 @@ enter her domain answer to her."* Concretely, for anything that is GitHub issue/
   cadence** all operate *under her mandate*, not as four peer systems Eric has to address by
   separate name. He talks to Moneypenny; she directs the mechanism. The repair lane is GitHub
   issue/PR orchestration by the same definition as the other three: one dispatch job with three entry
-  points over two triggers (`workflow_run` for a red `main`; `workflow_dispatch` for a conflict or a
-  stall), kept in its own workflow because its trigger shape differs from the events workflow, and
-  answering to Moneypenny alone.
+  points over two triggers (`workflow_run` for a red `main` or a session's red PR, #6605;
+  `workflow_dispatch` for a conflict or a stall), kept in its own workflow because its trigger shape
+  differs from the events workflow, and answering to Moneypenny alone.
 - This is a **frame and an authority relationship, not a rewrite** of what those mechanisms do —
   `docs/COACHES.md` and `docs/DELEGATION.md` keep their existing content and carry a pointer to this
   file. A full restructuring of their text around her is real work and is explicitly **not** part
@@ -165,7 +193,7 @@ ran." Concretely:
 Everything above changes what gets *written*. It does not change the account the App posts *as* —
 today that's `skynet-envoy[bot]`, minted per job via `./.github/actions/app-token` (which wraps
 `actions/create-github-app-token`) in
-`moneypenny-events.yml`/`claude.yml`/`pipeline.yml`/`moneypenny-repair.yml`/`board-sync.yml`. Renaming that account-level identity
+`moneypenny-events.yml`/`claude.yml`/`pipeline.yml`/`moneypenny-repair.yml`/`board-sync.yml`/`bots-catchup.yml`. Renaming that account-level identity
 lives in GitHub App settings (the App's registered display name under Eric's GitHub org), which no
 amount of repo code can reach — governance of credentials and App identity is his call, per
 CLAUDE.md's hard boundaries.

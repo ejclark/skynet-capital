@@ -17,7 +17,9 @@
 
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { wireFeedReader } from "../../../src/observatory/wire-feed-cache.ts";
 import { lastBotActivityAt } from "../../../src/scripts/dashboard-ops-status.ts";
+import { ladderEvidenceFrom } from "../../../src/server/ladder-evidence.ts";
 import {
   appDeploySignal,
   botsDeployLag,
@@ -77,7 +79,10 @@ function opsStatus(book) {
         now: () => AT,
         bridgeLastPollAt: () => LAST_POLL,
         botsRunningSha: () => head,
-        personaGateVerdicts: () => bots.map((id) => ({ id, ready: true, reason: "ready" })),
+        personaGateVerdicts: () =>
+          bots.map((id) => ({ id, ready: true, reason: "ready", wanted: "live", mode: "live" })),
+        botsProcessMode: () => "live",
+        suspendedReason: () => null,
         lastBotActivityAt: () => lastBotActivityAt(hub, activityStore(book)),
         fetchDeploySignals: async (_now, running) => ({
           app: appDeploySignal(deployLag(head, head, []), head, head, link),
@@ -102,6 +107,11 @@ const optionFillWithoutAudit = (book, ids) => {
   );
 };
 
+/** One participant's ladder from the book's fills — the one reader the Learn page and the Wire's
+ *  milestones share, as production's do (`serve-dashboard.ts`). */
+const ladderOf = (book) => async (id) =>
+  ladderEvidenceFrom(book.activity[id] ?? [], await optionFillWithoutAudit(book, [id]));
+
 /**
  * The journey (#5208): production builds it on every boot (`dashboard-companion.ts`), so
  * `/api/learn` answers a linked member's own milestones from their fills. Without it the world
@@ -113,8 +123,7 @@ const optionFillWithoutAudit = (book, ids) => {
  */
 function progression(book) {
   return createProgressionService({
-    readFills: async (id) => book.activity[id] ?? [],
-    readTags: (id) => optionFillWithoutAudit(book, [id]),
+    readEvidence: ladderOf(book),
     readMessages: async () => [],
     readFeedback: async () => [],
     now: () => new Date(AT),
@@ -124,25 +133,24 @@ function progression(book) {
 /** The seams to spread into a world's server config. */
 export function leagueServices(book) {
   const allActivity = () => Object.values(book.activity).flat();
-  const humans = book.participants.filter((p) => p.kind === "human").map((p) => p.id);
   return {
-    // The Activity feed: every account's fills (the bus is not wired, so the ledger is the feed).
-    // Its other kinds are on, as production's are. Milestones derive from the same fills and are
+    // The Activity feed: every account's fills, through the fold production wires (the bus is not
+    // wired, so the ledger is the feed, and this world's members have filed nothing). Its other
+    // kinds are on, as production's are. Milestones derive from the same fills and are
     // a member's only: a share fill earns its rung untagged, but a member's option fill needs its
     // order-audit tag, which no book carries yet — so a book with one refuses rather than render a
     // record quietly missing that earn (wire-routes.ts: the falsifier the kind exists not to
     // trip). A bot's option fill earns nothing on the feed either way. The builds
     // kind is on with no merge: the page prints no "nothing merged" claim for an empty list, where
     // leaving it off would print "isn't switched on in this deployment" (shell-artifacts.mjs).
-    readAllTradeActivity: async () => allActivity(),
+    readWireFeed: wireFeedReader({ activity: { list: async () => allActivity() } }).read,
     readAllLadderProgress: async () => [],
-    readAllOrderAudit: () => optionFillWithoutAudit(book, humans),
+    readLadderEvidence: ladderOf(book),
     readMergedPullRequests: async () => [],
     // Feedback is switched on (production has its token); this world's members have filed nothing.
     submitFeedback: refuse("submitting feedback"),
     submitFollowup: refuse("a feedback follow-up"),
     readFeedback: async () => [],
-    readAllFeedback: async () => [],
     // The Council is on; nobody has spoken this week.
     council: {
       load: () => ({ weeks: {} }),

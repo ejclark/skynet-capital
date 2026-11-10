@@ -1,9 +1,16 @@
+import { execFileSync } from "node:child_process";
+import { cpSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import {
   biomeErrors,
   CAP,
   formatReport,
+  PAGES_SCRIPT,
+  pagesRegenerated,
   rstestFailures,
   summaryLine,
+  touchesPages,
   tscErrors,
 } from "../../scripts/check.mjs";
 
@@ -109,5 +116,35 @@ describe("npm run check — reading each tool's output", () => {
 
   it("returns null when rstest printed no report, so the caller falls back to the raw tail", () => {
     expect(rstestFailures("Error: config failed to load")).toBeNull();
+  });
+});
+
+describe("npm run check — the architecture pages gate (#6684)", () => {
+  it("runs when a changed path sits under the storybook or is its generator, and only then", () => {
+    expect(touchesPages(["docs/architecture/source/maps.json"])).toBe(true);
+    expect(touchesPages(["docs/architecture/README.md"])).toBe(true);
+    expect(touchesPages([PAGES_SCRIPT])).toBe(true);
+    expect(touchesPages(["docs/ARCHITECTURE-NOTES.md", "scripts/check.mjs", "src/a.ts"])).toBe(
+      false,
+    );
+  });
+
+  it("names the pages the generator regenerated, and none when it changed nothing", () => {
+    const dir = mkdtempSync(join(tmpdir(), "check-pages-"));
+    try {
+      cpSync(join("docs", "architecture", "source"), join(dir, "docs", "architecture", "source"), {
+        recursive: true,
+      });
+      const generate = (...args: string[]) =>
+        execFileSync(process.execPath, [resolve(PAGES_SCRIPT), ...args], {
+          cwd: dir,
+          encoding: "utf8",
+        });
+      expect(pagesRegenerated(generate())).toContain("README.md");
+      expect(pagesRegenerated(generate())).toEqual([]);
+      expect(generate("--check")).toContain("match source/");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

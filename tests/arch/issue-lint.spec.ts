@@ -430,9 +430,35 @@ describe("issue lint — the Status row against the labels", () => {
     expect(code).toBe(0);
   });
 
-  it("reads the label spellings older rows used — `needs-eric` claims Blocked", () => {
+  it("reads the label spellings older rows used — `needs-eric` claims Waiting on a person", () => {
     const { notes } = run(withStatus("needs-eric — waiting on the fork"), "plan");
-    expect(drift(notes)[0]).toContain("Status row says Blocked");
+    expect(drift(notes)[0]).toContain("Status row says Waiting on a person");
+  });
+
+  // #6871: Blocked was renamed; a row typed before it still claims the person-waiting column.
+  it("reads a Blocked row, and the new name, as Waiting on a person", () => {
+    expect(drift(run(withStatus("Blocked · a decision"), "plan").notes)[0]).toContain(
+      "Status row says Waiting on a person",
+    );
+    expect(drift(run(withStatus("Waiting on a person · Eric"), "plan").notes)[0]).toContain(
+      "Status row says Waiting on a person",
+    );
+    expect(drift(run(withStatus("Waiting on a person · design"), "needs-design").notes)).toEqual(
+      [],
+    );
+  });
+
+  // #3913 + #6871: a `needs-eric` with no written ask reads Backlog on the board, so the row should.
+  it("holds a needs-eric row to the board: Backlog until the ask is written", () => {
+    expect(drift(run(withStatus("Backlog · ask not written"), "needs-eric,ready").notes)).toEqual(
+      [],
+    );
+    expect(drift(run(withStatus("Waiting on a person · Eric"), "needs-eric").notes)[0]).toContain(
+      "Status row says Waiting on a person",
+    );
+    expect(drift(run(withStatus("Backlog · proposed"), "needs-session").notes)[0]).toContain(
+      "Status row says Backlog",
+    );
   });
 
   it("notes a Backlog row after the ready flip", () => {

@@ -1,12 +1,19 @@
 import { describe, expect, it } from "@rstest/core";
+import { needsSessionLine } from "../../../scripts/digest-scan.mjs";
+import { parseAsk } from "../../../scripts/moneypenny/ask-card.mjs";
 import {
   ASSIGN_CAP,
   ASSIGN_MARKER,
+  artifactGap,
+  askOnce,
   assignmentComment,
+  batchStart,
   decisionLine,
   executeAssignments,
   gather,
+  lastAskedAt,
   markedByComments,
+  OPEN_CAP,
   plan,
   report,
   routeAssignments,
@@ -21,6 +28,13 @@ import { routeSweep } from "../../../scripts/moneypenny/events.mjs";
 const NOW = Date.parse("2026-09-30T12:00:00Z");
 const CALLOUT =
   "**Ask.**\n\n> [!IMPORTANT]\n> **Needs from you**\n> 1. Pick A or B? — why\n> 2. second";
+const CALLOUT_WITH_OPTIONS = [
+  "> [!IMPORTANT]",
+  "> **Needs from you**",
+  "> 1. Re-arm the breaker? — a bot safety rule",
+  ">    - A (predicted, medium): yes",
+  ">    - B: no",
+].join("\n");
 const issue = (over: Record<string, unknown> = {}) => ({
   number: 1,
   title: "t",
@@ -197,7 +211,8 @@ describe("routeAssignments: the sweep's intents", () => {
     expect(rest).toEqual([]);
     if (!intent) throw new Error("one intent expected");
     expect(intent).toMatchObject({ kind: "assign-eric", number: 1, criterion: 1 });
-    expect(intent.body).toContain("> Pick A or B? — why");
+    expect(intent.body).toContain("> 1. Pick A or B? — why");
+    expect(intent.body).toContain("> 2. second");
   });
 
   it("caps new asks at ASSIGN_CAP and takes the oldest numbers first", () => {
@@ -374,6 +389,7 @@ describe("markedByComments: asked, and not since cleared by this lane", () => {
     const rest = (path: string) => {
       if (path.startsWith("issues?state=open&labels=needs-eric")) return [returned];
       if (path.startsWith("issues?state=all&assignee=")) return [];
+      if (path.includes("labels=needs-session")) return [];
       if (path === "pulls?state=open") return [];
       if (path === "issues/5955/comments") return thread;
       throw new Error(`unexpected read ${path}`);
@@ -408,6 +424,7 @@ describe("markedByComments: asked, and not since cleared by this lane", () => {
       if (path === "pulls?state=open") return [held];
       if (path === "issues/10/comments")
         return [bot(`ask\n${ASSIGN_MARKER}`), bot(`off\n${UNASSIGN_MARKER}`)];
+      if (path === "pulls/10/files") return [{ filename: ".github/workflows/x.yml" }];
       throw new Error(`unexpected read ${path}`);
     };
     const deps = gather({ rest, now: NOW });
@@ -443,5 +460,352 @@ describe("routeSweep: a close beats an ask on the same issue", () => {
       now: NOW,
     }) as { kind: string }[];
     expect(intents.map((i) => i.kind)).toEqual(["assign-eric"]);
+  });
+});
+
+// #6953 slice 2, call 1: half the asks in the 2026-11-06 digest could not be completed by his
+// answer, because the thing his "yes" would act on did not exist yet — #6942 asked him to merge a
+// branch with no PR, #6620 was a held PR carrying only a patch, #6618 asked him to merge #6620.
+// The missing actor is a session, so none of them is assigned to him; all are listed for one.
+describe("no ask before its artifact exists (#6953)", () => {
+  const ask = (line: string) => `**Ask.**\n\n> [!IMPORTANT]\n> **Needs from you**\n> 1. ${line}`;
+  const branchAsk = issue({
+    number: 6942,
+    body: ask("Merge the tested fix on branch `fix/breaker-stepless-cancelled-leg`? — protected."),
+  });
+  const heldPatch = {
+    number: 6620,
+    title: "held patch",
+    state: "open",
+    created_at: "2026-09-28T00:00:00Z",
+    labels: [{ name: "hold-merge" }],
+    head: { ref: "fix/node-24" },
+    assignees: [],
+  };
+
+  it("does not assign a merge of a branch no open PR is built from, and lists it for a session", () => {
+    const planned = plan({ issues: [branchAsk], now: NOW });
+    expect(planned.actions).toEqual([]);
+    expect(planned.needsYou).toEqual([]);
+    expect(planned.needsSession).toEqual([
+      expect.objectContaining({
+        number: 6942,
+        why: expect.stringContaining("`fix/breaker-stepless-cancelled-leg`"),
+      }),
+    ]);
+  });
+
+  it("asks as usual once a PR is open from that branch", () => {
+    const pr = { ...heldPatch, number: 7001, head: { ref: "fix/breaker-stepless-cancelled-leg" } };
+    const planned = plan({ issues: [branchAsk], prs: [pr], now: NOW });
+    expect(planned.actions.map((a) => a.number)).toContain(6942);
+    expect(planned.needsSession).toEqual([]);
+  });
+
+  it("only a merge ask is held to it: a branch named in any other ask is still his", () => {
+    const other = issue({ body: ask("Delete the stale branch `platter/old`? — tidy.") });
+    expect(plan({ issues: [other], now: NOW }).actions).toHaveLength(1);
+  });
+
+  it("never assigns a held PR whose only files are patches, nor a merge ask that names one", () => {
+    const merge6620 = issue({ number: 6618, body: ask("Merge #6620 once it boards the platter?") });
+    const planned = plan({
+      issues: [merge6620],
+      prs: [heldPatch],
+      patchOnly: new Set([6620]),
+      now: NOW,
+    });
+    expect(planned.actions).toEqual([]);
+    expect(planned.needsYou).toEqual([]);
+    expect(planned.needsSession.map((n) => n.number)).toEqual([6618, 6620]);
+    // The same PR with a real file is criterion 4 as before.
+    expect(plan({ prs: [heldPatch], now: NOW }).actions).toEqual([
+      expect.objectContaining({ kind: "assign", criterion: 4, number: 6620 }),
+    ]);
+  });
+
+  it("one he already holds stays in Needs you — he holds it — and is listed for a session too", () => {
+    const his = { ...branchAsk, assignees: [{ login: "ejclark" }] };
+    const planned = plan({ issues: [his], now: NOW });
+    expect(planned.needsYou.map((n) => n.number)).toEqual([6942]);
+    expect(planned.needsSession.map((n) => n.number)).toEqual([6942]);
+  });
+
+  it("lists every needs-session issue that still waits: open, or closed by a proof close", () => {
+    const capsule = {
+      state: "closed",
+      state_reason: "not_planned",
+      closed_at: new Date(NOW - 2 * 864e5).toISOString(),
+      labels: [{ name: "ci-failure" }, { name: "needs-session" }],
+    };
+    const row = (number: number, over: Record<string, unknown>) => ({
+      number,
+      title: `s${number}`,
+      body: "",
+      ...over,
+    });
+    const planned = plan({
+      sessionIssues: [
+        row(1, { state: "open" }),
+        row(2, { ...capsule, body: ask("Merge it?") }),
+        row(3, { ...capsule, state_reason: "completed" }),
+        row(4, { ...capsule, state_reason: null, pull_request: {} }),
+        // Past the reopen window a fault has been quiet 14 days: nothing is left waiting.
+        row(5, { ...capsule, closed_at: new Date(NOW - 15 * 864e5).toISOString() }),
+        // A not-planned close that is no CI capsule: another lane's, and not this list's.
+        row(6, { ...capsule, labels: [{ name: "needs-session" }] }),
+      ],
+      now: NOW,
+    });
+    expect(planned.needsSession).toEqual([
+      expect.objectContaining({ number: 1, why: "labelled needs-session" }),
+      expect.objectContaining({ number: 2, decision: "Merge it?" }),
+    ]);
+  });
+
+  it("the base branch a PR merges into is never read as a head with no PR", () => {
+    const into = issue({ body: ask("Merge #6900 into the `main` branch? — it is green.") });
+    expect(plan({ issues: [into], now: NOW }).needsSession).toEqual([]);
+  });
+
+  it("lists a carried ask exactly as long as repair.mjs would reopen its capsule", async () => {
+    const { REOPEN_SINCE_MS } = await import("../../../scripts/moneypenny/assignments.mjs");
+    const { REOPEN_DAYS } = await import("../../../scripts/moneypenny/repair.mjs");
+    expect(REOPEN_SINCE_MS).toBe(REOPEN_DAYS * 864e5);
+  });
+
+  it("artifactGap reads the whole callout, not only its first item", () => {
+    const two = ask("Pick a name? — taste\n> 2. Merge branch `x/y` after?");
+    expect(artifactGap({ number: 1, body: two })).toContain("`x/y`");
+    expect(artifactGap({ number: 1, body: two }, { openHeads: new Set(["x/y"]) })).toBeNull();
+  });
+
+  it("gather reads the file lists of held and named PRs, and the needs-session issues", () => {
+    const asked: string[] = [];
+    const held = { ...heldPatch, created_at: new Date(NOW - 13 * 36e5).toISOString() };
+    const rest = (path: string): unknown[] => {
+      asked.push(path);
+      if (path.startsWith("issues?state=open&labels=needs-eric")) {
+        return [issue({ number: 6618, body: ask("Merge #6620? — and #6794 is an issue") })];
+      }
+      if (path === "pulls?state=open") return [held];
+      if (path === "pulls/6620/files") return [{ filename: "MONEYPENNY-EVENTS-6618.patch" }];
+      if (path === "issues?state=open&labels=needs-session") return [{ number: 9 }];
+      if (path.startsWith("issues?state=closed&labels=needs-session,ci-failure&since=")) {
+        return [{ number: 10 }];
+      }
+      return [];
+    };
+    const deps = gather({ rest, now: NOW });
+    expect([...deps.patchOnly]).toEqual([6620]);
+    expect(deps.sessionIssues).toEqual([{ number: 9 }, { number: 10 }]);
+    // #6794 is not an open PR, so its files are never read.
+    expect(asked).not.toContain("pulls/6794/files");
+  });
+
+  it("the digest's needs-a-session line counts and names them", () => {
+    expect(needsSessionLine({ needsSession: [] })).toBe(
+      "- Needs a session: nothing is waiting on a session.",
+    );
+    expect(
+      needsSessionLine({ needsSession: [{ number: 6942, why: "asks for a merge of branch `x`" }] }),
+    ).toBe(
+      "- Needs a session: 1 waiting on a session, not on you — #6942 asks for a merge of branch `x`.",
+    );
+  });
+});
+
+// #6953 slice 3: two batches a day, at most OPEN_CAP open, ranked, and his reply read back.
+describe("the batch rhythm", () => {
+  const AFTER_8 = Date.parse("2026-11-07T14:05:00Z");
+  const many = [9, 7, 1, 5, 3].map((number) => issue({ number }));
+  const route = (assignments: Record<string, unknown>, now = AFTER_8) =>
+    routeAssignments({
+      assignments: { issues: many, prs: [], markers: new Set(), ...assignments },
+      now,
+    });
+
+  it("starts a batch at 14:00Z and 21:30Z", () => {
+    expect(new Date(batchStart(Date.parse("2026-11-07T14:05:00Z"))).toISOString()).toBe(
+      "2026-11-07T14:00:00.000Z",
+    );
+    expect(new Date(batchStart(Date.parse("2026-11-07T21:31:00Z"))).toISOString()).toBe(
+      "2026-11-07T21:30:00.000Z",
+    );
+    expect(new Date(batchStart(Date.parse("2026-11-07T03:00:00Z"))).toISOString()).toBe(
+      "2026-11-06T21:30:00.000Z",
+    );
+  });
+
+  it("sends nothing new once this window's batch has gone out", () => {
+    expect(route({ lastAskAt: Date.parse("2026-11-07T14:01:00Z") })).toEqual([]);
+    expect(route({ lastAskAt: Date.parse("2026-11-07T13:59:00Z") })).toHaveLength(ASSIGN_CAP);
+  });
+
+  it("still clears removals between batches", () => {
+    const stale = issue({ number: 20, labels: [], assignees: [{ login: "ejclark" }] });
+    const intents = route({ issues: [stale], markers: new Set([20]), lastAskAt: AFTER_8 });
+    expect(intents.map((i) => i.kind)).toEqual(["unassign-eric"]);
+  });
+
+  it("never lets more than OPEN_CAP be open at once", () => {
+    const held = [101, 102, 103, 104].map((number) =>
+      issue({ number, assignees: [{ login: "ejclark" }] }),
+    );
+    const intents = route({ issues: [...held, ...many], markers: new Set([101, 102, 103, 104]) });
+    expect(OPEN_CAP).toBe(5);
+    expect(intents).toHaveLength(1);
+  });
+
+  it("ranks bot rules ahead of internal asks, then oldest first", () => {
+    const internal = issue({ number: 1, title: "Raise the debt gates?" });
+    const bots = issue({ number: 8, title: "Let the breaker re-arm?" });
+    const intents = route({ issues: [internal, bots] });
+    expect(intents.map((i) => i.number)).toEqual([8, 1]);
+  });
+
+  it("lets a stop go between batches and past the open cap", () => {
+    const stop = issue({ number: 50, labels: [{ name: "needs-eric" }, { name: "fast-track" }] });
+    const held = [101, 102, 103, 104, 105].map((number) =>
+      issue({ number, assignees: [{ login: "ejclark" }] }),
+    );
+    const intents = route({
+      issues: [stop, ...held, ...many],
+      markers: new Set([101, 102, 103, 104, 105]),
+      lastAskAt: AFTER_8,
+    });
+    expect(intents.map((i) => i.number)).toEqual([50]);
+  });
+
+  it("tells each card how many asks wait", () => {
+    const [first] = route({});
+    expect(first?.body).toContain("2 more asks next batch.");
+  });
+});
+
+describe("lastAskedAt", () => {
+  it("is the newest ask marker from a trusted comment", () => {
+    const at = (iso: string, body: string, type = "Bot") => ({
+      body,
+      created_at: iso,
+      user: { type },
+      author_association: "NONE",
+    });
+    expect(
+      lastAskedAt([
+        at("2026-11-07T14:00:00Z", ASSIGN_MARKER),
+        at("2026-11-07T21:30:00Z", "hello"),
+        at("2026-11-08T01:00:00Z", ASSIGN_MARKER, "User"),
+      ]),
+    ).toBe(Date.parse("2026-11-07T14:00:00Z"));
+  });
+});
+
+describe("his reply is read back in the same tick", () => {
+  const thread = [
+    {
+      body: assignmentComment({ items: parseAsk(CALLOUT_WITH_OPTIONS) }),
+      user: { type: "Bot", login: "skynet-envoy[bot]" },
+      author_association: "NONE",
+      created_at: "2026-11-07T00:00:00Z",
+    },
+    {
+      id: 9,
+      body: "A",
+      user: { type: "User", login: "ejclark" },
+      author_association: "OWNER",
+      created_at: "2026-11-07T01:00:00Z",
+    },
+  ];
+  const asked = issue({ number: 4, body: CALLOUT_WITH_OPTIONS, assignees: [{ login: "ejclark" }] });
+  const open = (comments: unknown[]) =>
+    gather({
+      now: NOW,
+      rest: (path: string) => {
+        if (path.startsWith("issues?state=open&labels=needs-eric")) return [asked];
+        if (path.includes("/comments")) return comments;
+        return [];
+      },
+    });
+
+  it("gathers the reply, routes a read-back ahead of any new ask, and scores it", () => {
+    const deps = open(thread);
+    expect(deps.replies).toHaveLength(1);
+    const [intent] = routeAssignments({ assignments: deps, now: NOW });
+    expect(intent).toMatchObject({ kind: "readback-eric", number: 4 });
+    expect(intent?.body).toContain("Read as: A.");
+    expect(intent?.body).toContain("match");
+  });
+
+  it("reads nothing when the reply is not an answer", () => {
+    const chatty = [thread[0], { ...thread[1], body: "why is this asked?" }];
+    expect(open(chatty).replies).toEqual([]);
+  });
+});
+
+describe("askOnce carries a read-back out under the lease, once", () => {
+  const intent = {
+    kind: "readback-eric",
+    number: 4,
+    body: "Read as: A.",
+    criterion: 1,
+    why: "x",
+  } as const;
+  const run = (calls: string[]) => (_cmd: string, args: readonly string[]) => {
+    calls.push(args.join(" "));
+    return "";
+  };
+  const ask = {
+    body: ASSIGN_MARKER,
+    user: { type: "Bot" },
+    author_association: "NONE",
+    created_at: "2026-11-07T00:00:00Z",
+  };
+
+  it("clears the label, the assignment and answers", () => {
+    const calls: string[] = [];
+    const line = askOnce(intent, {
+      run: run(calls),
+      retry: <T>(fn: () => T) => fn(),
+      rest: () => [ask],
+      read: () => ({ body: "x" }),
+    } as never);
+    expect(line).toContain("read #4");
+    expect(calls).toHaveLength(3);
+  });
+
+  it("does nothing when another sweep already cleared it", () => {
+    const calls: string[] = [];
+    const line = askOnce(intent, {
+      run: run(calls),
+      retry: <T>(fn: () => T) => fn(),
+      rest: () => [],
+      read: () => ({ body: "x" }),
+    } as never);
+    expect(line).toContain("already cleared");
+    expect(calls).toEqual([]);
+  });
+});
+
+describe("a read-back and a stale unassign never double up", () => {
+  it("plans the read-back only, for an issue whose label a failed read-back already took off", () => {
+    const reply = {
+      number: 4,
+      title: "t",
+      ask: {},
+      card: null,
+      reply: {},
+      answer: { kind: "yes" },
+    };
+    const stale = issue({ number: 4, labels: [], assignees: [{ login: "ejclark" }] });
+    const { actions, holding } = plan({
+      issues: [stale],
+      prs: [],
+      markers: new Set([4]),
+      replies: [reply as never],
+      now: NOW,
+    });
+    expect(actions.map((a) => a.kind)).toEqual(["readback"]);
+    expect(holding).toBe(0);
   });
 });

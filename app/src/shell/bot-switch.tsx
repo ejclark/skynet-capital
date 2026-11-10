@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import { useState } from "react";
-import { botControlRequest, type OwnedAccount } from "../live/settings";
+import { botControlRequest, breakerResetRequest, type OwnedAccount } from "../live/settings";
 import { InlineResult } from "../ui";
 
 /**
@@ -24,6 +24,20 @@ export function BotSwitch({
   const [error, setError] = useState<string | undefined>();
   if (account.suspended === undefined) return null;
   const halted = fleetSuspended || account.suspended;
+
+  const reset = async () => {
+    setBusy(true);
+    setError(undefined);
+    try {
+      const answer = await breakerResetRequest({ id: account.id });
+      if (answer.ok) onChanged();
+      else setError(answer.error);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const flip = async () => {
     setBusy(true);
@@ -62,6 +76,26 @@ export function BotSwitch({
         <InlineResult as="span" tone="err">
           {error}
         </InlineResult>
+      ) : null}
+      {account.breaker ? (
+        <span className="bot-switch-line">
+          <b>Holding new positions:</b> {account.breaker} tripped. Exits keep running. All bots
+          share this breaker, so resetting re-arms it for every bot. It never re-arms on its own.
+          Resetting measures the day's loss from the day-open equity again, so a loss that still
+          stands trips it at once.{" "}
+          {account.rearming ? (
+            <b>Reset sent — the bots re-arm within about 30 seconds and the next pass confirms.</b>
+          ) : (
+            <button
+              type="button"
+              className="btn mc-btn"
+              disabled={busy}
+              onClick={() => void reset()}
+            >
+              {busy ? "Saving…" : "Reset breaker"}
+            </button>
+          )}
+        </span>
       ) : null}
       <span className="mc-note">Takes effect within ~30 seconds — no restart, no env push.</span>
     </div>

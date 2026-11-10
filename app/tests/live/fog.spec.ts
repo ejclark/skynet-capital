@@ -1,15 +1,16 @@
 import { dayLensFog } from "../../src/live/fog";
 import type { PlaysIndex } from "../../src/live/options";
 
-// The day lens is fogged behind rung 501 (docs/FOG-OF-WAR.md) — honestly, since the rung is not built.
+// The day lens is fogged behind rung 501 (docs/FOG-OF-WAR.md) — honestly, when the catalog lacks it.
 const base: PlaysIndex = { linked: true, wheels: true, plays: [] };
 
 describe("dayLensFog", () => {
-  it("fogs a wheels-on member and says the rung is not built yet", () => {
+  it("fogs a wheels-on member and says the rung is not in the catalog, citing no issue (#5961)", () => {
     const fog = dayLensFog(base);
     expect(fog.fogged).toBe(true);
     expect(fog.reason).toContain("501");
-    expect(fog.reason).toContain("not built yet");
+    expect(fog.reason).toContain("not in this catalog yet");
+    expect(fog.reason).not.toMatch(/#\d/);
     // the visible line opens with the same words as the title's reason (dead end 8)
     expect(fog.door).toBe("Held until rung 501 (zero-DTE)");
     expect(fog.reason.startsWith(fog.door)).toBe(true);

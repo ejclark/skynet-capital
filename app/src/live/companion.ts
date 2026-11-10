@@ -1,4 +1,5 @@
 import type { ChatConvictionDraft } from "../../../src/companion/companion-convictions";
+import { pageKeys } from "./page-keys";
 
 export type { ChatConvictionDraft };
 
@@ -55,6 +56,17 @@ function currentPage(): string | undefined {
   return typeof location === "undefined" ? undefined : `${location.pathname}${location.search}`;
 }
 
+/** An `error` frame's failure. `refused` (#6214): she declined, so any partial line before it is
+ *  not an answer — the rail drops it rather than keeping it marked cut off. */
+export class CompanionStreamError extends Error {
+  constructor(
+    message: string,
+    readonly refused = false,
+  ) {
+    super(message);
+  }
+}
+
 /** One parsed SSE frame — the event name and its `data:` payload. */
 function parseFrame(frame: string): { readonly event: string; readonly data: string } {
   let event = "message";
@@ -69,7 +81,7 @@ function parseFrame(frame: string): { readonly event: string; readonly data: str
 /**
  * Stream one turn: `onText` fires per delta, `onHandoff` once if she drafted a filing,
  * `onConviction` once if she drafted a view (#5482 criterion 9 — its card, for the member's tap); resolves on
- * `done`, rejects on an `error` frame, a non-stream answer (the "not switched on" / throttled
+ * `done`, rejects on an `error` frame (a `CompanionStreamError`), a non-stream answer (the "not switched on" / throttled
  * JSON), or a transport failure.
  */
 export async function streamCompanionTurn(
@@ -82,7 +94,8 @@ export async function streamCompanionTurn(
     method: "POST",
     credentials: "same-origin",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ messages, page: currentPage() }),
+    // The page's keys ride beside it (#7167 slice 1): what's on screen, for her links to land on.
+    body: JSON.stringify({ messages, page: currentPage(), keys: pageKeys() }),
   });
   if (!(res.headers.get("content-type") ?? "").includes("text/event-stream")) {
     const body = (await res.json().catch(() => ({}))) as { error?: string };
@@ -102,7 +115,8 @@ export async function streamCompanionTurn(
     } else if (event === "conviction") {
       onConviction?.(JSON.parse(data) as ChatConvictionDraft);
     } else if (event === "error") {
-      throw new Error((JSON.parse(data) as { error?: string }).error ?? "companion error");
+      const frame = JSON.parse(data) as { error?: string; refused?: boolean };
+      throw new CompanionStreamError(frame.error ?? "companion error", frame.refused === true);
     } else if (event === "done") return true;
     return false;
   };

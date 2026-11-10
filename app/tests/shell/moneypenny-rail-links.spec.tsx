@@ -7,7 +7,7 @@ import {
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useMoneypenny } from "../../src/live/moneypenny";
 import { MoneypennyRail } from "../../src/shell/moneypenny-rail";
 
@@ -40,7 +40,11 @@ async function mountAt(path: string) {
   const page = (p: string, text: string) =>
     createRoute({ getParentRoute: () => root, path: p, component: () => <p>{text}</p> });
   const router = createRouter({
-    routeTree: root.addChildren([page("/", "home"), page("/trade", "the ticket")]),
+    routeTree: root.addChildren([
+      page("/", "home"),
+      page("/trade", "the ticket"),
+      page("/accounts", "the profile"),
+    ]),
     basepath: "/app",
     history: createMemoryHistory({ initialEntries: [path] }),
   });
@@ -49,7 +53,7 @@ async function mountAt(path: string) {
       <RouterProvider router={router} />
     </QueryClientProvider>,
   );
-  await screen.findByText("home");
+  await screen.findByText(path.startsWith("/app/accounts") ? "the profile" : "home");
   return router;
 }
 
@@ -92,6 +96,25 @@ describe("MoneypennyRail · places she names", () => {
     fireEvent.click(screen.getByRole("link", { name: "open Trade" }));
     expect(await screen.findByText("the ticket")).toBeInTheDocument();
     expect(screen.queryByRole("complementary", { name: "Moneypenny" })).not.toBeInTheDocument();
+  });
+
+  // #7167: a row she points at on the page already open. The router's pushState fires no
+  // `hashchange`, and the page's landing listens for exactly that, so the rail announces it.
+  it("re-lands a row on the page already open by announcing the hash change", async () => {
+    const router = await mountAt("/app/accounts");
+    const heard = rstest.fn();
+    window.addEventListener("hashchange", heard);
+    try {
+      await say("Moneypenny · look at [your NVDA shares](/accounts#pos-NVDA)");
+      const link = screen.getByRole("link", { name: "your NVDA shares" });
+      expect(link).toHaveAttribute("href", "/app/accounts#pos-NVDA");
+      fireEvent.click(link);
+      await waitFor(() => expect(heard).toHaveBeenCalledTimes(1));
+      expect(router.state.location.hash).toBe("pos-NVDA");
+      expect(screen.getByText("the profile")).toBeInTheDocument();
+    } finally {
+      window.removeEventListener("hashchange", heard);
+    }
   });
 
   it("leaves a place off the allow-list as plain words", async () => {

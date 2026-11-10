@@ -35,8 +35,8 @@ and never reached `src/server/ops-status-deploy-lag.ts`, behind the group's flee
 #6034 settled `DAY_MS` in `src/domain/time.ts`.
 
 **Dependency pointing up.** Spot it: a new import from a lower layer in ENGINEERING's folder map to a
-higher one; the graph gate catches only a cycle. Fix: move the function down, or pass the value in.
-Not when: it is type-only and the type belongs to the lower layer's contract. Real:
+higher one; the graph gate guards only domain and ports. Fix: move the function down, or pass the
+value in. Not when: it is type-only and the type belongs to the lower layer's contract. Real:
 `src/personas/registry.ts:6` reaches `src/autonomous/bot-controls.ts`, though personas are meant to
 be pure strategies.
 

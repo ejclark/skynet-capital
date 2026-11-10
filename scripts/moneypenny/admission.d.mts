@@ -55,16 +55,21 @@ export function admitBuild(opts: {
   issue: AdmissionIssue;
   inFlight?: readonly AdmissionIssue[];
   mode: AdmissionMode;
-  /** The board's Waiting column (`waitingPlans`); the started-plan cap is skipped without it. */
+  /** The board's Next part queued column (`waitingPlans`); the plan cap is skipped without it. */
   waiting?: readonly AdmissionIssue[];
   interactive?: boolean;
 }): AdmissionVerdict;
 /** A `plan` issue with no closed sub-issue and no `next-slice` — the only kind the plan cap refuses. */
 export function isFreshPlan(issue: AdmissionIssue | undefined): boolean;
-/** The open plans the board shows in Waiting (same `statusForIssue` as the column). */
+/** The open plans the board shows in Next part queued (same `statusForIssue` as the column). */
 export function waitingPlans<T extends AdmissionIssue>(openPlans?: readonly T[]): T[];
 /** A started plan holds a cap seat only while a lane could pull its next work (2026-10-18). */
 export function holdsCapSeat(plan: AdmissionIssue | undefined): boolean;
+/** A started plan with its open sub-issues attached (one REST read); unchanged on a failed read. */
+export function withOpenSubIssues<T extends AdmissionIssue>(
+  plan: T,
+  readAll?: (path: string) => unknown[],
+): T & { openSubIssues?: AdmissionIssue["openSubIssues"] };
 /** The parent issue's number from `parent_issue_url`, or null. */
 export function parentNumberOf(issue: AdmissionIssue | undefined): number | null;
 /** Every open `plan` issue over REST, paginated. */
@@ -77,7 +82,7 @@ export function startedPlanInputs(
 /** The pullable issues (`pullable`, labels.mjs) in pick order: fast-track, rank class, oldest. */
 export function pullQueue<T extends AdmissionIssue>(
   readyIssues: readonly T[],
-  opts?: { interactive?: boolean },
+  opts?: { interactive?: boolean; boardedOn?: ReadonlyMap<number, number> },
 ): T[];
 /** The first `pullQueue` issue the gate admits now, or null (#4393: pullable issues only). */
 export function nextAdmissible<T extends AdmissionIssue>(
@@ -100,14 +105,17 @@ export function retryHold(opts?: {
   log?: (line: string) => void;
   readAll?: (path: string) => unknown[];
   read?: (path: string) => unknown;
-}): (issue: { number?: number }) => string | null;
+  /** Writes the note on a barred issue. Only the claim passes it; absent writes nothing. */
+  run?: (cmd: string, args: string[]) => string;
+}): (issue: { number?: number }, pool?: readonly AdmissionIssue[]) => string | null;
 /** Everything the unattended sweep steps past at the pick. */
 export function sweepHold(opts?: {
   now?: number;
   log?: (line: string) => void;
   readAll?: (path: string) => unknown[];
   read?: (path: string) => unknown;
-}): (issue: AdmissionIssue & { number: number }) => string | null;
+  run?: (cmd: string, args: string[]) => string;
+}): (issue: AdmissionIssue & { number: number }, pool?: readonly AdmissionIssue[]) => string | null;
 /** The comment a refused issue gets. */
 export function queueNote(reason: string): string;
 /** Did this lane's newest queue note already carry this reason? */

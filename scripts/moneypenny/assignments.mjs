@@ -28,7 +28,12 @@
 //      and leave an unassign marker, so a label that returns later asks again (#5955).
 //   3. never a second assignment comment on one issue — the marker is the memory — unless this
 //      lane's own unassign came after it; his unassign leaves no marker and stays his answer.
+//      `askOnce` is what holds this when two sweeps overlap.
 //   4. a held or platter PR unmerged ≥12h → assign ejclark.
+//   And never an ask his answer cannot complete yet (#6953 slice 2, `artifactGap`): a merge of a
+//   branch with no PR, or of a PR that carries only a patch. Those go to `needsSession` — the
+//   digest's "needs a session" line, with every `needs-session` issue — because the missing actor is
+//   a session that can open the PR or apply the patch, not Eric.
 // And the HONEST QUEUE half: every open `needs-eric` with the one decision it waits on, flagging the
 // ones that state none — `needs-eric` means exactly one thing, a decision only Eric can make
 // (CLAUDE.md), so a label with no stated decision is a candidate to clear, never an assignment.
@@ -36,64 +41,77 @@
 // #4293 (digest criterion 12): `plan()` also returns `needsYou` — the set Eric holds once this run's
 // writes land — and `digest-scan.mjs --needs-you` prints exactly that list. One selector, two
 // readers; tests/scripts/moneypenny/needs-you.spec.ts fails if they ever disagree.
-import { aboveFold } from "../issue-lint.mjs";
-import { ERIC, NEEDS_ERIC } from "./decision-callout.mjs";
-import { ghRestAll, sh, trustedComment, withRetry } from "./gh.mjs";
-import { FOOTER } from "./labels.mjs";
 
-export const ASSIGN_MARKER = "<!-- moneypenny:assigned -->";
-/**
- * Left by THIS lane's own unassign (criterion 2), so a later read can tell its removal from his.
- * #5955: the label came off, the lane unassigned him, the label came back a day later — and for six
- * days the capsule carried the ask marker with nobody assigned, so criterion 3 refused a second ask
- * and `needsYou` dropped it from every digest. The marker is still the memory; it just has to say
- * which of the two happened last (`markedByComments`).
- */
-export const UNASSIGN_MARKER = "<!-- moneypenny:unassigned -->";
+import { isMain } from "../is-main.mjs";
+import { executeReadback, ledgerRows, readbackComment, readbackFor } from "./answer-readback.mjs";
+import {
+  ASSIGN_MARKER,
+  askRank,
+  assignmentComment,
+  calloutLines,
+  decisionLine,
+  missingParts,
+  parseAsk,
+  UNASSIGN_MARKER,
+} from "./ask-card.mjs";
+import { ERIC, NEEDS_ERIC, withoutLaneAsk, writeIssueBody } from "./decision-callout.mjs";
+import { ghRest, ghRestAll, sh, trustedComment, withRetry } from "./gh.mjs";
+import { FOOTER, LABELS } from "./labels.mjs";
+
+// The card and its markers moved to ask-card.mjs (#6953 slice 3); callers keep importing them here.
+export { ASSIGN_MARKER, assignmentComment, decisionLine, UNASSIGN_MARKER };
 export const HOLD_MERGE = "hold-merge";
 export const HELD_PR_HOURS = 12;
 /** New assignments one sweep tick may make. See the header: the bound on a wrong read. */
 export const ASSIGN_CAP = 3;
+/** Asks he may hold at once (#6953 section 3); the rest wait in rank order and the card says how many. */
+export const OPEN_CAP = 5;
+/** His two touch points, UTC: 08:00 and 15:30 central. */
+export const BATCH_STARTS_UTC = [
+  [14, 0],
+  [21, 30],
+];
+/** How long a dead sweep's lease on one ask can block the next: its writes take seconds. */
+export const ASK_LEASE_MS = 10 * 60 * 1000;
+/** How long a closed capsule's carried ask stays listed: repair.mjs's `REOPEN_DAYS`, in ms. Not
+ *  imported — repair.mjs's own imports would ride into the digest's lazy import; a spec pins them. */
+export const REOPEN_SINCE_MS = 14 * 864e5;
 
 const names = (labels = []) => labels.map((l) => (typeof l === "string" ? l : l?.name));
 const logins = (users = []) => users.map((u) => (typeof u === "string" ? u : u?.login));
 const isEric = (login) => String(login ?? "").toLowerCase() === ERIC;
 
-/**
- * The one decision an issue waits on: the first numbered item of its `> [!IMPORTANT]` / `Needs
- * from you` callout above the fold, else the first plain callout line after the heading. `null`
- * when there is no callout — the "no stated decision" case. Pure.
- */
-export function decisionLine(body = "") {
-  const lines = aboveFold(body ?? "").split("\n");
-  const start = lines.findIndex((l) => /^>\s*\[!IMPORTANT\]/.test(l));
-  if (start === -1) return null;
-  const callout = [];
-  for (const l of lines.slice(start + 1)) {
-    if (!/^>/.test(l)) break;
-    callout.push(l.replace(/^>\s?/, "").trim());
-  }
-  const head = callout.findIndex((l) => /needs from you/i.test(l));
-  if (head === -1) return null;
-  const rest = callout.slice(head + 1).filter(Boolean);
-  const numbered = rest.find((l) => /^\d+\.\s+/.test(l));
-  const pick = numbered ?? rest[0];
-  return pick ? pick.replace(/^(\d+\.|[-*])\s+/, "") : null;
-}
+/** A branch the callout names: `` branch `x/y` `` or `` `x/y` branch ``. */
+const DEFAULT_BRANCH = "main";
+const NAMED_BRANCH = /\bbranch\s+`([^`\s]+)`|`([^`\s]+)`\s+branch\b/gi;
 
-/** The comment criterion 1 posts: the decision quoted, the marker that makes criteria 2–3 work. */
-export function assignmentComment({ decision }) {
-  return [
-    `@${ERIC} — assigned to you for one decision:`,
-    "",
-    `> ${decision}`,
-    "",
-    "Reply here in a word; this lane removes the assignment when the label comes off or the issue closes.",
-    "",
-    ASSIGN_MARKER,
-    "",
-    FOOTER,
-  ].join("\n");
+/**
+ * Why this ask cannot be completed by his answer yet, or `null` (#6953 slice 2, call 1). Two
+ * shapes, both measured on 2026-11-06's queue, where 5 of the digest's 10 lines were like this:
+ *   - a merge ask naming a branch no open PR is built from (#6942: the fix sat on
+ *     `fix/breaker-stepless-cancelled-leg` with no PR, because the lane could not open one);
+ *   - a held PR whose files are all `*.patch` (#6620), or a merge ask naming one (#6618). The App
+ *     cannot push workflow files, so the edit rides as a patch, and merging it changes nothing.
+ * The actor missing in both is a session, so the ask goes to "needs a session", never to him.
+ * `openHeads` is every open PR's head branch; `patchOnly` the PR numbers read as patch-only. Pure.
+ */
+export function artifactGap(item, { openHeads = new Set(), patchOnly = new Set() } = {}) {
+  if (patchOnly.has(item.number)) return "a held PR whose only files are patches";
+  const text = (calloutLines(item.body) ?? []).join("\n");
+  if (!/\bmerge/i.test(text)) return null;
+  for (const m of text.matchAll(NAMED_BRANCH)) {
+    const branch = m[1] ?? m[2];
+    // The base a PR merges INTO is named the same way ("into the `main` branch"); it is never a head.
+    if (branch === DEFAULT_BRANCH) continue;
+    if (!openHeads.has(branch))
+      return `asks for a merge of branch \`${branch}\`, which no open PR is built from`;
+  }
+  for (const m of text.matchAll(/#(\d+)\b/g)) {
+    const n = Number(m[1]);
+    if (patchOnly.has(n))
+      return `asks for a merge of #${n}, a held PR whose only files are patches`;
+  }
+  return null;
 }
 
 /** The comment criterion 2 leaves: why the assignment came off, and the marker that lets a
@@ -129,6 +147,17 @@ export function markedByComments(comments = []) {
   return marked;
 }
 
+/** When the lane last posted an ask (an ask marker from a trusted comment), in ms, else 0. Pure. */
+export function lastAskedAt(comments = []) {
+  let at = 0;
+  for (const c of comments) {
+    if (trustedComment(c) && (c.body ?? "").includes(ASSIGN_MARKER)) {
+      at = Math.max(at, Date.parse(c.created_at ?? "") || 0);
+    }
+  }
+  return at;
+}
+
 /**
  * Plan every action, write nothing. Inputs are REST shapes (labels/assignees as objects or
  * strings); `markers` is the set of issue/PR numbers already carrying this lane's marker comment.
@@ -136,11 +165,26 @@ export function markedByComments(comments = []) {
  * would-be writes, each with the criterion and a one-line why, and `needsYou` the set Eric holds
  * once those writes land (criterion 12 — the digest's Needs-you list). Pure.
  */
-export function plan({ issues = [], prs = [], markers = new Set(), now = Date.now() } = {}) {
+export function plan({
+  issues = [],
+  prs = [],
+  markers = new Set(),
+  patchOnly = new Set(),
+  sessionIssues = [],
+  replies = [],
+  now = Date.now(),
+} = {}) {
   const queue = [];
   const actions = [];
   const needsYou = [];
+  const needsSession = [];
+  // Asks he already holds (counted against OPEN_CAP) and the asks whose callout lacks part of the card.
+  const holding = new Set();
+  const incomplete = [];
   const ask = (row) => needsYou.some((n) => n.number === row.number) || needsYou.push(row);
+  const session = (row) =>
+    needsSession.some((n) => n.number === row.number) || needsSession.push(row);
+  const gaps = { openHeads: new Set(prs.map((pr) => pr.head?.ref).filter(Boolean)), patchOnly };
   // CRITERION 4 OUTRANKS CRITERION 2 ON THE SAME NUMBER, and this set is what makes that true.
   // GitHub lists a PR among `issues`, so a PR assigned under criterion 4 reaches `planIssue` as an
   // issue that is marked, assigned and has no `needs-eric` — which reads as "the label came off,
@@ -150,40 +194,133 @@ export function plan({ issues = [], prs = [], markers = new Set(), now = Date.no
   const stillHeld = new Set(
     prs.filter((pr) => heldPrHours(pr, now) !== null).map((pr) => pr.number),
   );
-  for (const issue of issues) planIssue(issue, { markers, now, queue, actions, ask, stillHeld });
-  for (const pr of prs) {
-    const hours = heldPrHours(pr, now);
-    if (hours === null) continue;
-    const why = `held PR unmerged ${Math.floor(hours)}h (≥${HELD_PR_HOURS}h)`;
-    ask({ number: pr.number, title: pr.title, criterion: 4, why });
-    if (actions.some((a) => a.kind === "assign" && a.number === pr.number)) continue; // one ask each
-    // `!markers.has` is criterion 3 applied to criterion 4, and it is load-bearing, not symmetry.
-    // Without it: Eric unassigns himself from a still-held PR, which drops it out of `gather()`'s
-    // issue reads (no `needs-eric`, no longer assigned to him) so nothing else can see it — and
-    // every later push re-assigns him and posts another marker comment, forever, with `stillHeld`
-    // blocking criterion 2 from ever clearing it. Marked means asked; an unassign after that is his
-    // answer.
-    if (!(markers.has(pr.number) || logins(pr.assignees).some(isEric))) {
-      actions.push({
-        kind: "assign",
-        criterion: 4,
-        number: pr.number,
-        title: pr.title,
-        why,
-        // A held PR carries no callout, so name the one thing that IS known: it is held, and a held
-        // PR only moves on his click. Deliberately does NOT claim green or protected — `heldPrHours`
-        // reads state, draft, label and age and nothing else, and `hold-merge` also goes on a PR
-        // held for a taste fork, so either word would be the app telling him something it never
-        // checked.
-        decision: `Merge this held PR, or say what it's waiting on — it has been open and held ${Math.floor(hours)}h, and a held PR moves only on your click.`,
-      });
-    }
+  const reading = new Set(replies.filter((r) => markers.has(r.number)).map((r) => r.number));
+  for (const issue of issues) {
+    planIssue(issue, {
+      reading,
+      markers,
+      now,
+      queue,
+      actions,
+      ask,
+      session,
+      gaps,
+      stillHeld,
+      holding,
+      incomplete,
+    });
   }
-  return { queue, actions, needsYou };
+  // His reply under an ask the lane stands behind: read it back, clear the ask (answer-readback.mjs).
+  for (const r of replies) {
+    if (!markers.has(r.number)) continue;
+    reading.add(r.number);
+    holding.delete(r.number);
+    actions.push({
+      kind: "readback",
+      criterion: 1,
+      number: r.number,
+      title: r.title,
+      why: "his reply under the ask",
+      readback: r,
+    });
+  }
+  for (const pr of prs) planHeldPr(pr, { markers, now, actions, ask, session, gaps, holding });
+  for (const i of sessionIssues) sessionRow(i, now, session);
+  return { queue, actions, needsYou, needsSession, incomplete, holding: holding.size };
+}
+
+/** Criterion 4 for one PR: a held PR unmerged past the window is his click, or a session's. */
+function planHeldPr(pr, { markers, now, actions, ask, session, gaps, holding }) {
+  const hours = heldPrHours(pr, now);
+  if (hours === null) return;
+  if (logins(pr.assignees).some(isEric)) holding.add(pr.number);
+  const why = `held PR unmerged ${Math.floor(hours)}h (≥${HELD_PR_HOURS}h)`;
+  const gap = artifactGap(pr, gaps);
+  if (gap) {
+    session({ number: pr.number, title: pr.title, why: gap });
+    // Already his (by hand, or asked before this rule): he holds it, so the digest says so.
+    if (logins(pr.assignees).some(isEric))
+      ask({ number: pr.number, title: pr.title, criterion: 4, why });
+    return;
+  }
+  ask({ number: pr.number, title: pr.title, criterion: 4, why });
+  if (actions.some((a) => a.kind === "assign" && a.number === pr.number)) return; // one ask each
+  // `!markers.has` is criterion 3 applied to criterion 4, and it is load-bearing, not symmetry.
+  // Without it: Eric unassigns himself from a still-held PR, which drops it out of `gather()`'s
+  // issue reads (no `needs-eric`, no longer assigned to him) so nothing else can see it — and
+  // every later push re-assigns him and posts another marker comment, forever, with `stillHeld`
+  // blocking criterion 2 from ever clearing it. Marked means asked; an unassign after that is his
+  // answer.
+  if (!(markers.has(pr.number) || logins(pr.assignees).some(isEric))) {
+    actions.push({
+      kind: "assign",
+      criterion: 4,
+      number: pr.number,
+      title: pr.title,
+      why,
+      // A held PR carries no callout, so name the one thing that IS known: it is held, and a held
+      // PR only moves on his click. Deliberately does NOT claim green or protected — `heldPrHours`
+      // reads state, draft, label and age and nothing else, and `hold-merge` also goes on a PR
+      // held for a taste fork, so either word would be the app telling him something it never
+      // checked.
+      decision: `Merge this held PR, or say what it's waiting on — it has been open and held ${Math.floor(hours)}h, and a held PR moves only on your click.`,
+      heldPr: true,
+      rank: askRank({ labels: pr.labels, title: pr.title }),
+    });
+  }
+}
+
+// What a session already holds: `needs-session`, open — or a CI capsule closed by capsule-stall's
+// proof ("not planned") with its ask carried, which is the one way a closed issue still waits on
+// work. Only while repair.mjs would reopen it (`REOPEN_SINCE_MS`): a fault quiet that long has
+// nothing left waiting, and the label stays on closed issues, so without a bound the line grows.
+function sessionRow(i, now, session) {
+  const open = (i.state ?? "open") === "open";
+  if (!open) {
+    if (i.pull_request || i.state_reason !== "not_planned") return;
+    if (!names(i.labels).includes(LABELS.ciFailure.name)) return;
+    if (!(now - Date.parse(i.closed_at ?? "") <= REOPEN_SINCE_MS)) return;
+  }
+  session({
+    number: i.number,
+    title: i.title,
+    why: open ? "labelled needs-session" : "closed with its ask handed to a session",
+    decision: decisionLine(i.body) ?? undefined,
+  });
+}
+
+/** Criterion 1's assign action for an issue whose callout states a decision, ranked and carded. */
+function queueAsk(issue, { decision, why, actions }) {
+  const items = parseAsk(issue.body);
+  actions.push({
+    kind: "assign",
+    criterion: 1,
+    number: issue.number,
+    title: issue.title,
+    why,
+    decision,
+    items,
+    rank: askRank({ labels: issue.labels, title: issue.title, decision }),
+  });
 }
 
 /** Criteria 1–3 and the honest queue, for one issue (or a PR GitHub lists as one). */
-function planIssue(issue, { markers, now, queue, actions, ask, stillHeld = new Set() }) {
+function planIssue(
+  issue,
+  {
+    markers,
+    now,
+    queue,
+    actions,
+    ask,
+    session,
+    gaps,
+    stillHeld = new Set(),
+    holding = new Set(),
+    incomplete = [],
+    reading = new Set(),
+  },
+) {
   const assigned = logins(issue.assignees).some(isEric);
   const marked = markers.has(issue.number);
   const open = (issue.state ?? "open") === "open";
@@ -191,7 +328,7 @@ function planIssue(issue, { markers, now, queue, actions, ask, stillHeld = new S
     actions.push({ kind, criterion, number: issue.number, title: issue.title, why });
 
   if (!(open && names(issue.labels).includes(NEEDS_ERIC))) {
-    if (marked && assigned && !stillHeld.has(issue.number)) {
+    if (marked && assigned && !stillHeld.has(issue.number) && !reading.has(issue.number)) {
       act("unassign", 2, open ? "needs-eric removed" : "issue closed");
     }
     return;
@@ -209,21 +346,22 @@ function planIssue(issue, { markers, now, queue, actions, ask, stillHeld = new S
   // already and not since cleared by this lane (`markedByComments`: a label that comes back after
   // the lane's own unassign is unmarked, and asks again). Assigned → his by hand; nothing to add.
   const why = `needs-eric with a stated decision: "${decision}"`;
-  if (decision && !marked && !assigned) {
-    actions.push({
-      kind: "assign",
-      criterion: 1,
-      number: issue.number,
-      title: issue.title,
-      why,
-      decision,
-    });
+  // Nothing his answer could act on exists yet: a session's, not his — unless he already holds it.
+  const gap = decision ? artifactGap(issue, gaps) : null;
+  if (gap) {
+    session({ number: issue.number, title: issue.title, why: gap, decision });
+    if (assigned) ask({ number: issue.number, title: issue.title, criterion: 1, why, decision });
+    return;
   }
+  if (decision && assigned) holding.add(issue.number);
+  if (decision && !marked && !assigned) queueAsk(issue, { decision, why, actions });
   // Needs-you = what he holds after this run: stated, and either his already or about to be. A
   // marked issue he unassigned himself stays off — criterion 3 means the lane won't re-ask. (One
   // the LANE unassigned is not marked any more, so it is back on the list the moment it asks.)
   if (decision && (assigned || !marked)) {
     ask({ number: issue.number, title: issue.title, criterion: 1, why, decision });
+    const missing = missingParts(parseAsk(issue.body));
+    if (missing.length) incomplete.push({ number: issue.number, title: issue.title, missing });
   }
 }
 
@@ -237,7 +375,7 @@ function heldPrHours(pr, now) {
 }
 
 /** The dry run's report, as markdown — what Eric reads before anything is switched on. Pure. */
-export function report({ queue, actions }) {
+export function report({ queue, actions, needsSession = [] }) {
   const out = ["## Honest queue — open `needs-eric`", ""];
   if (!queue.length) out.push("_none_");
   else {
@@ -252,6 +390,9 @@ export function report({ queue, actions }) {
   }
   const clear = queue.filter((q) => !q.decision).length;
   out.push("", `${queue.length} open · ${clear} with no stated decision (listed, not cleared).`);
+  out.push("", "## Needs a session, not Eric", "");
+  if (!needsSession.length) out.push("_none_");
+  for (const s of needsSession) out.push(`- #${s.number} — ${s.why}`);
   out.push("", "## Would do (dry run — nothing written)", "");
   if (!actions.length) out.push("_nothing_");
   for (const a of actions)
@@ -260,41 +401,92 @@ export function report({ queue, actions }) {
 }
 
 /**
- * The sweep's view of `plan()`: `plan`'s actions as intents `index.mjs` can execute, capped.
+ * The latest batch start at or before `now`: 14:00Z and 21:30Z, his two touch points (08:00 and
+ * 15:30 central). One batch is the first tick after a start; `routeAssignments` sends nothing more
+ * until the next. Pure.
+ */
+export function batchStart(now = Date.now()) {
+  const d = new Date(now);
+  const at = (days, h, m) =>
+    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + days, h, m);
+  return Math.max(
+    ...BATCH_STARTS_UTC.flatMap(([h, m]) => [at(0, h, m), at(-1, h, m)]).filter((t) => t <= now),
+  );
+}
+
+/**
+ * The sweep's view of `plan()`: `plan`'s actions as intents `index.mjs` can execute, batched.
  *
  * Pure, and a no-op without `deps.assignments` — every non-push event and every `routeSweep`
  * fixture that predates this lane therefore routes exactly as it did before.
  *
- * Removals go first and are never capped (criterion 2: a stale assignment is still pushing at him),
- * then at most `ASSIGN_CAP` new asks by ascending number — oldest first, because REST hands back
+ * Removals and read-backs go first and are never capped or batched (criterion 2: a stale assignment
+ * is still pushing at him; a reply he has given should clear at once). New asks follow
+ * #6953's rhythm: one batch per window (`batchStart`), at most `ASSIGN_CAP` per tick, never past
+ * `OPEN_CAP` open at once, ranked by `askRank` and then oldest number first — REST hands back
  * `labels=` newest-first and a cap applied to that order would starve the items that have waited
- * longest, which is exactly the 15.5-day median this plan set out to fix.
+ * longest, which is exactly the 15.5-day median this plan set out to fix. Only an ask that stops
+ * bots or production (rank 1) goes between batches and past the open cap. `lastAskAt` is the newest
+ * ask the lane posted; without it nothing is known to have gone out this window.
  *
- * @param deps { assignments: { issues, prs, markers }, now }
+ * @param deps { assignments: { issues, prs, markers, replies, lastAskAt }, now }
  * @returns Intent[] — `[]` on most pushes, which is the correct answer.
  */
 export function routeAssignments(deps = {}) {
   const { assignments, now = Date.now() } = deps;
   if (!assignments) return [];
-  const { actions } = plan({ ...assignments, now });
+  const { actions, holding } = plan({ ...assignments, now });
   const removals = actions.filter((a) => a.kind === "unassign");
-  const asks = actions.filter((a) => a.kind === "assign").sort((a, b) => a.number - b.number);
-  const batch = asks.slice(0, ASSIGN_CAP);
-  if (asks.length > batch.length) {
+  const readbacks = actions.filter((a) => a.kind === "readback");
+  const asks = actions
+    .filter((a) => a.kind === "assign")
+    .sort((a, b) => (a.rank ?? 4) - (b.rank ?? 4) || a.number - b.number);
+  const windowOpen = !((assignments.lastAskAt ?? 0) >= batchStart(now));
+  const room = Math.max(0, OPEN_CAP - holding);
+  const urgent = asks.filter((a) => a.rank === 1).slice(0, ASSIGN_CAP);
+  const regular = windowOpen
+    ? asks.filter((a) => a.rank !== 1).slice(0, Math.min(ASSIGN_CAP - urgent.length, room))
+    : [];
+  const batch = [...urgent, ...regular];
+  const more = asks.length - batch.length;
+  if (more > 0) {
     // stderr only — stdout carries machine-read output on some call paths of this router.
     console.error(
       `::notice::assignments — asking Eric about ${batch.length} of ${asks.length} item(s) this ` +
-        `tick (cap ${ASSIGN_CAP}); the rest follow on later pushes.`,
+        `tick (cap ${ASSIGN_CAP}, ${holding} open of ${OPEN_CAP}, ${windowOpen ? "batch window open" : "next batch later"}).`,
     );
   }
-  return [...removals, ...batch].map((a) => ({
-    kind: a.kind === "assign" ? "assign-eric" : "unassign-eric",
+  const intents = [...removals, ...readbacks, ...batch].map((a) => {
+    if (a.kind === "readback") return readbackIntent(a);
+    return {
+      kind: a.kind === "assign" ? "assign-eric" : "unassign-eric",
+      number: a.number,
+      title: a.title,
+      criterion: a.criterion,
+      why: a.why,
+      body:
+        a.kind === "assign"
+          ? assignmentComment({ decision: a.decision, items: a.items, more, heldPr: a.heldPr })
+          : undefined,
+    };
+  });
+  return intents;
+}
+
+/** A planned read-back as the intent index.mjs executes (`askOnce`, under the issue's lease). */
+function readbackIntent(a) {
+  const { answer, card, reply } = a.readback;
+  const rows = ledgerRows({ number: a.number, title: a.title, card, answer, reply });
+  const body = readbackComment({ answer, rows });
+  return {
+    kind: "readback-eric",
     number: a.number,
     title: a.title,
-    criterion: a.criterion,
+    criterion: 1,
     why: a.why,
-    body: a.kind === "assign" ? assignmentComment({ decision: a.decision }) : undefined,
-  }));
+    said: body.split("\n")[0],
+    body,
+  };
 }
 
 /**
@@ -352,6 +544,63 @@ export function executeAssignments(intent, { run = sh, retry = withRetry } = {})
   return `📬 assigned #${n} to @${ERIC} (criterion ${intent.criterion}) — ${intent.why}`;
 }
 
+/**
+ * Run `work` while holding the one lease this issue's asks share, or return the line saying why not.
+ *
+ * WHY A LEASE. A push sweep and a `scan` dispatch run in separate concurrency groups (#5130), so both
+ * can gather no marker and both can write one: #4621 and #5709 got the same ask twice, 6 seconds
+ * apart, on 2026-11-01. A read just before the write closes most of that window but not a read
+ * landing between another sweep's two writes. Creating a ref is a real compare-and-set
+ * (claim-lease.mjs), and the read under it is what stops the sweep that takes the lease just after
+ * the first one lets go.
+ *
+ * A LEASE GITHUB REFUSES NEVER COSTS HIM THE ASK. A duplicate comment is the smaller failure, so any
+ * refusal other than another holder writes anyway. `lease` is left out by the by-hand CLI, which is
+ * one person at a keyboard, and `index.mjs` supplies it because `claimHandoff` lives there.
+ */
+export function withAskLease(number, lease, work) {
+  const slug = `ask-${number}`;
+  const taken = lease ? lease.claim(slug) : null;
+  if (taken && !taken.claimed) {
+    if (!/^could not create the lease/.test(taken.reason ?? "")) {
+      return `· #${number} — another sweep holds this ask (${taken.reason})`;
+    }
+    console.error(`::warning::#${number} — ${taken.reason}; writing without the lease`);
+  }
+  try {
+    return work();
+  } finally {
+    if (taken?.claimed) lease.release(slug);
+  }
+}
+
+/**
+ * `executeAssignments`, once: the marker comments are re-read under the lease, because the plan was
+ * made from a read that can be minutes old by now. Clearing the label also takes back any ask this
+ * lane wrote into the body, so an answered question stops reading as open. That comes first: the
+ * unassign marker ends this lane's interest in the issue, so a failure after it would never retry.
+ */
+export function askOnce(
+  intent,
+  { run = sh, retry = withRetry, rest = ghRestAll, read = ghRest, lease = null } = {},
+) {
+  const n = intent.number;
+  return withAskLease(n, lease, () => {
+    const asking = intent.kind === "assign-eric";
+    if (markedByComments(rest(`issues/${n}/comments`)) === asking) {
+      return `· #${n} — another sweep already ${asking ? "asked" : "cleared this"}`;
+    }
+    // A read-back clears the body's ask itself, after it has checked the issue still wants it.
+    if (intent.kind === "readback-eric") return executeReadback(intent, { run, retry, read });
+    if (!asking) {
+      const body = retry(() => read(`issues/${n}`))?.body ?? "";
+      const cleared = withoutLaneAsk(body);
+      if (cleared !== body) writeIssueBody(n, cleared, { run, retry });
+    }
+    return executeAssignments(intent, { run, retry });
+  });
+}
+
 /** The live REST read both the dry run and the digest plan from — one gather, one `plan()`.
  *  `rest` and `now` are injectable so a spec can drive the marker read without GitHub or a clock. */
 export function gather({ rest = ghRestAll, now = Date.now() } = {}) {
@@ -371,10 +620,38 @@ export function gather({ rest = ghRestAll, now = Date.now() } = {}) {
   const candidates = new Set(issues.map((i) => i.number));
   for (const pr of prs) if (heldPrHours(pr, now) !== null) candidates.add(pr.number);
   const markers = new Set();
+  const replies = [];
+  let lastAskAt = 0;
+  const byNumber = new Map(issues.map((i) => [i.number, i]));
   for (const n of candidates) {
-    if (markedByComments(rest(`issues/${n}/comments`))) markers.add(n);
+    const comments = rest(`issues/${n}/comments`);
+    if (markedByComments(comments)) markers.add(n);
+    lastAskAt = Math.max(lastAskAt, lastAskedAt(comments));
+    const found = byNumber.has(n) ? readbackFor(byNumber.get(n), comments) : null;
+    if (found) replies.push(found);
   }
-  return { issues, prs, markers };
+  // Patch-only reads (`artifactGap`): the held PRs above, any PR that is itself an ask, and any
+  // open PR an ask names — a handful of file lists, never one per open PR.
+  const open = new Set(prs.map((pr) => pr.number));
+  const named = issues.flatMap((i) =>
+    [...(calloutLines(i.body) ?? []).join("\n").matchAll(/#(\d+)\b/g)].map((m) => Number(m[1])),
+  );
+  const patchOnly = new Set();
+  for (const n of new Set([...candidates, ...named])) {
+    if (!open.has(n)) continue;
+    const files = rest(`pulls/${n}/files`);
+    if (files.length && files.every((f) => String(f?.filename ?? "").endsWith(".patch"))) {
+      patchOnly.add(n);
+    }
+  }
+  // Open ones, and closed CI capsules updated inside the window — both bounded reads.
+  const label = LABELS.needsSession.name;
+  const closedSince = new Date(now - REOPEN_SINCE_MS).toISOString();
+  const sessionIssues = [
+    ...rest(`issues?state=open&labels=${label}`),
+    ...rest(`issues?state=closed&labels=${label},${LABELS.ciFailure.name}&since=${closedSince}`),
+  ];
+  return { issues, prs, markers, patchOnly, sessionIssues, replies, lastAskAt };
 }
 
 function main(argv) {
@@ -392,7 +669,7 @@ function main(argv) {
     console.log("· nothing to assign or clear");
     return;
   }
-  for (const i of intents) console.log(executeAssignments(i));
+  for (const i of intents) console.log(askOnce(i));
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main(process.argv.slice(2));
+if (isMain(import.meta.url)) main(process.argv.slice(2));

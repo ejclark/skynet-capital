@@ -16,7 +16,6 @@ import {
 } from "../observatory/decision-json-view.js";
 import { deskLedger, realizedByOrder, roundTripLinks } from "../observatory/desk-data.js";
 import { deskActivityView, deskView } from "../observatory/desk-json-view.js";
-import { orderOriginIndex } from "../observatory/order-origin.js";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
 import { PulseHistoryFold } from "../observatory/pulse-history-fold.js";
 import { deskPulseViewOf, pulseTradesOf } from "../observatory/pulse-json-view.js";
@@ -135,12 +134,11 @@ async function activityPayload(
   params: URLSearchParams,
   owner: boolean,
 ): Promise<unknown> {
-  const [records, audit] = await Promise.all([
+  const [records, origins] = await Promise.all([
     config.readTradeActivity?.(found.id),
-    config.readOrderAudit?.(found.id),
+    config.readOrderOrigins?.(found.id, found.kind === "bot" ? "bot" : "human"),
   ]);
   if (!records) return { available: false, activity: [] };
-  const origins = orderOriginIndex(audit, found.kind === "bot" ? "bot" : "human");
   // Realized P/L per closing order — from the round-trip matcher over the full merged ledger,
   // so a paginated activity page still carries P/L computed from the complete fill history. The
   // same pass pairs each close with the orders it closed (#5317).
@@ -454,6 +452,8 @@ export async function serveDeskJson(
         playbookStoreCatalog(),
         config.now,
         subscribedForIdeas(found, config, owner),
+        // "Your plan" is the owner's copy alone; anyone else reads the house's rules (#5709 slice 3).
+        owner ? config.exitPlans?.carried(found.id) : undefined,
       ),
       ...(empire.landmark
         ? { landmark: { power: empire.landmark.prominence, health: empireHealth(found) } }

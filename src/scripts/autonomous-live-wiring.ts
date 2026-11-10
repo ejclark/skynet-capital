@@ -19,6 +19,7 @@ import { type BotControlsClient, resolveBotControls } from "../autonomous/bot-co
 import { type BotsHealthFile, resolveBotsHealthFile } from "../autonomous/bots-health-file.js";
 import type { BotsStateDb } from "../autonomous/bots-state-db.js";
 import { openBotsStateDb } from "../autonomous/bots-state-db.js";
+import { breakerResetListener } from "../autonomous/breaker-reset.js";
 import type { ConvictionsWire } from "../autonomous/convictions-wire.js";
 import { fleetDayOpenEquity, parseDayOpenEquity } from "../autonomous/day-open-equity.js";
 import { type DecisionDb, decisionDbPathFrom, openDecisionDb } from "../autonomous/decision-db.js";
@@ -42,6 +43,8 @@ import type { AuthoredRoster } from "../playbooks/authored-play.js";
 import { BETA_SCOUT_ID } from "../playbooks/beta-scout.js";
 import { CONVICTION_NOT_STATED, isConvictionNotStated } from "../playbooks/conviction-check.js";
 import type { ConvictionLookup } from "../playbooks/conviction-store.js";
+import { exitPlannedFor } from "../playbooks/exit-plan.js";
+import { openCeilingFor, ownerFloorsOf, withBelowBarLabel } from "../playbooks/fit-floor.js";
 import type { EnabledPlaybook, PlaybookReads } from "../playbooks/playbook.js";
 import { registeredPlaybooks } from "../playbooks/registry.js";
 import { type ConvictionGateDeps, withConvictionGate } from "../playbooks/with-conviction-gate.js";
@@ -60,7 +63,12 @@ import {
   subscriptionRoster,
 } from "../subscriptions/subscription-roster.js";
 import { buildTuning, gateBuild, HARDCORE_COOLDOWN_MS } from "./autonomous-hardcore-live.js";
-import { optionReadWarn, optionTraderConfig, ownedRoster } from "./autonomous-option-wiring.js";
+import {
+  optionReadWarn,
+  optionTraderConfig,
+  ownedRoster,
+  readBootAccounts,
+} from "./autonomous-option-wiring.js";
 import { botOrderPublisher, logResult } from "./autonomous-sinks.js";
 
 /** Mission Control boot (Eric, 2026-08-21): one bounded fetch for the boot-applied overrides
@@ -164,6 +172,40 @@ export function seedDailyLossBaseline(
 }
 
 /**
+ * The owner's "reset breaker" (#6954 slice 3b), wired to this process: on a poll carrying a newer
+ * reset stamp, read the bots' accounts, then re-arm the breakers and seed the day-open baseline in
+ * one step (`breaker-reset.ts`). With no day-open equity to seed — a bot's read failed — it refuses
+ * and tries again on the next poll, because re-arming without the seed would anchor the daily-loss
+ * baseline to today's lower mark and quietly forgive the loss. Never touches the kill switch.
+ */
+export function wireBreakerReset(
+  bots: readonly Bot[],
+  safety: SafetyController,
+  options: {
+    readonly bootedAt?: Date;
+    readonly log?: (line: string) => void;
+    readonly read?: () => Promise<ReadonlyMap<string, AlpacaAccount | undefined>>;
+  } = {},
+): (state: ControlsState) => void {
+  return breakerResetListener({
+    read: options.read ?? (() => readBootAccounts(bots)),
+    rearm: (accounts) => {
+      const seed = fleetDayOpenEquity(
+        [...(accounts?.values() ?? [])].map((a) => (a ? parseDayOpenEquity(a) : null)),
+      );
+      if (seed === null) throw new Error("day-open equity unreadable, so the loss cannot be kept");
+      safety.reset();
+      safety.seedBaseline(seed);
+      console.log(
+        `[safety] daily-loss baseline re-seeded from day-open equity: $${seed.toFixed(2)}`,
+      );
+    },
+    bootedAt: options.bootedAt ?? new Date(),
+    log: options.log ?? ((line) => console.log(line)),
+  });
+}
+
+/**
  * Opens the bots-state DB (momentum/sentiment/cooldown durability, `docs/plans/trade-insights-loop.md`
  * slice 4) when `SKYNET_BOTS_DB_PATH` is set — dark by default, exactly like `SKYNET_AUDIT_DIR`.
  * Best-effort, same posture as `seedDailyLossBaseline`: a missing/corrupt DB file must never fail
@@ -249,6 +291,7 @@ export function buildScoutDeps(
     managedSymbols: ReadonlySet<string>;
     risk: RiskConfig;
     mode: TraderMode;
+    watchOnly?: () => boolean;
     subscriptions: () => readonly PlaybookSubscription[];
     realizedPlForPlaybook?: (playbookId: string) => number;
     hostId?: string;
@@ -439,6 +482,9 @@ export function tradingRoster(
   const roster = runsScout
     ? full
     : { ...full, enabled: full.enabled.filter((e) => e.playbook.id !== BETA_SCOUT_ID) };
+  // One ceiling for the guards and the label (#6954 slice 5): the house floor, or the owner's
+  // smaller one off this bot's subscription (slice 5c), so the words name the size applied.
+  const ceiling = openCeilingFor(undefined, ownerFloorsOf(roster.subscriptions));
   return {
     // Readiness is assessed on the BASE persona (its certified judgment); playbooks compose on
     // top as date-keyed plays with their own evidence trail, dark until SKYNET_PLAYBOOKS or a
@@ -449,48 +495,53 @@ export function tradingRoster(
     // looked after even with no option playbook subscribed (`with-option-safety.ts`). The base persona
     // sees only the ten names, whatever else the stream carries for a playbook (#4777) — on every
     // bot, a bot with no playbook included.
-    persona: withUnsubscribedExits(
-      (enabled) =>
-        withOptionSafety(
-          // A failed conviction check (#4469 criterion 12) stops new entries but never the expiry
-          // hygiene around it, so the gate sits between the two.
-          withTargetObservation(
-            withConvictionGate(
-              withPlaybooks(
-                withQuoteUniverse(roster.bot.persona, BOTS_UNIVERSE),
-                enabled,
-                UPCOMING_PRINTS,
-                [],
-                console,
-                (line) => console.warn(`[playbooks] ${roster.bot.persona.id}: ${line}`),
-                intradayBars,
-                reads,
+    // The below-bar label sits outermost, switched on here beside the guards' `openCeiling` below,
+    // so a labelled order always had the floor behind it (#6954 slice 5).
+    persona: withBelowBarLabel(
+      withUnsubscribedExits(
+        (enabled) =>
+          withOptionSafety(
+            // A failed conviction check (#4469 criterion 12) stops new entries but never the expiry
+            // hygiene around it, so the gate sits between the two.
+            withTargetObservation(
+              withConvictionGate(
+                withPlaybooks(
+                  withQuoteUniverse(roster.bot.persona, BOTS_UNIVERSE),
+                  enabled,
+                  UPCOMING_PRINTS,
+                  [],
+                  console,
+                  (line) => console.warn(`[playbooks] ${roster.bot.persona.id}: ${line}`),
+                  intradayBars,
+                  reads,
+                ),
+                {
+                  subscriptions: roster.subscriptions,
+                  ...(ledgerOf ? { ledgerOf } : {}),
+                  ...(roster.convictionOf ? { convictionOf: roster.convictionOf } : {}),
+                  log: (line) => console.warn(`[playbooks] ${roster.bot.persona.id}: ${line}`),
+                },
               ),
+              // OBSERVE-ONLY (#5483 slice 3): reads each play's book against its target and logs; the
+              // intents come back untouched. Hygiene still wraps it all.
               {
+                accountId: roster.bot.persona.id,
                 subscriptions: roster.subscriptions,
-                ...(ledgerOf ? { ledgerOf } : {}),
-                ...(roster.convictionOf ? { convictionOf: roster.convictionOf } : {}),
-                log: (line) => console.warn(`[playbooks] ${roster.bot.persona.id}: ${line}`),
+                enabled: enabled,
+                log: console,
               },
             ),
-            // OBSERVE-ONLY (#5483 slice 3): reads each play's book against its target and logs; the
-            // intents come back untouched. Hygiene still wraps it all.
-            {
-              accountId: roster.bot.persona.id,
-              subscriptions: roster.subscriptions,
-              enabled: enabled,
-              log: console,
-            },
+            enabled,
+            UPCOMING_PRINTS,
           ),
-          enabled,
-          UPCOMING_PRINTS,
-        ),
-      {
-        candidates: registeredPlaybooks(),
-        enabled: roster.enabled,
-        ...(placedBy ? { placedBy } : {}),
-        log: (line) => console.warn(`[playbooks] ${roster.bot.persona.id}: ${line}`),
-      },
+        {
+          candidates: registeredPlaybooks(),
+          enabled: roster.enabled,
+          ...(placedBy ? { placedBy } : {}),
+          log: (line) => console.warn(`[playbooks] ${roster.bot.persona.id}: ${line}`),
+        },
+      ),
+      ceiling,
     ),
     risk: {
       ...baseRisk,
@@ -505,8 +556,32 @@ export function tradingRoster(
       playbookSymbols: new Map(roster.enabled.map((e) => [e.playbook.id, e.playbook.symbols])),
       ...(realizedPlForPlaybook ? { realizedPlForPlaybook } : {}),
       subscribedOnly: true,
+      // No open without an exit plan (#6954 slice 4): the roster's own entries first, as this bot
+      // runs them, then the house roster for a wind-down subscription's exits-only playbook.
+      exitPlanned: exitPlannedFor([
+        ...roster.enabled.map((e) => e.playbook),
+        ...registeredPlaybooks(),
+      ]),
+      // A pair below its playbook's evidence bar opens at the smaller floor size (#6954 slice 5).
+      openCeiling: ceiling,
     },
   };
+}
+
+/** A flatten that could not close a position says which, once per distinct set per bot — it re-runs
+ *  every cycle, and a line every 15s would bury the one that matters. */
+const flattenGapsSaid = new Map<string, string>();
+function flattenGapWarn(personaId: string, unflattened: readonly string[]): void {
+  const key = [...unflattened].sort().join(",");
+  if (key === "") {
+    flattenGapsSaid.delete(personaId); // the gap closed: a return of the same set is news again
+    return;
+  }
+  if (flattenGapsSaid.get(personaId) === key) return;
+  flattenGapsSaid.set(personaId, key);
+  console.warn(
+    `[risk-ladder] ${personaId}: flatten cannot close ${key} (an option or a short) — it needs a person`,
+  );
 }
 
 /** READINESS GATE + wiring for one live bot: a not-ready persona is pinned to `observe` (watched,
@@ -520,12 +595,17 @@ export function buildLiveBot(
     /** What this bot trades under at boot — `tradingRoster` above. The live subscription swap
      *  (issue #3595) replaces exactly this pair via `AutonomousTrader.swapRoster`. */
     trading: TradingRoster;
+    /** STOP EVERYTHING: the kill switch and the owner's all-bots suspend (this bot's own suspend
+     *  composes below). Places nothing, exits included. */
     blockedReason: () => string | null;
+    /** STOP OPENING: the breakers (#6954 slice 3) — opens refused, exits kept. */
+    openBlockedReason: () => string | null;
     safety: SafetyController;
     onDecision: (r: DecisionRecord) => void;
     /** Ids running their hardcore research-mode build — own readiness pack, faster cooldown. */
     hardcore: ReadonlySet<string>;
-    /** Mission Control: dynamic suspend checks (polled) + the boot snapshot for mode overrides. */
+    /** Mission Control: the polled suspend, stop-opening and watch-only checks, plus the boot
+     *  snapshot (read only to say a watch-only bot at boot). */
     controls: BotControlsClient;
     bootControls: ControlsState;
     /** Durable cooldown storage (slice 4) — omit to run cold-start, exactly as before this existed. */
@@ -539,16 +619,17 @@ export function buildLiveBot(
   },
 ): LiveBot {
   const hardcore = opts.hardcore.has(bot.persona.id);
-  // The owner's per-bot mode override (Mission Control, boot-applied) narrows the env default;
-  // the readiness gate still has the final say, and re-runs when the hardcore build flips live.
-  const wantedMode = controlsMode(opts.bootControls, bot.persona.id, opts.mode);
-  if (wantedMode !== opts.mode) {
-    console.log(`[controls] ${bot.persona.name}: mode ${wantedMode} (owner override)`);
+  // The readiness gate runs against the house mode; the owner's "watch only" narrows it at every
+  // cycle (#6954 slice 5b), so clearing it hands the bot back without a restart.
+  if (controlsMode(opts.bootControls, bot.persona.id, opts.mode) !== opts.mode) {
+    console.log(
+      `[controls] ${bot.persona.name}: watch only at boot (owner setting, read every cycle)`,
+    );
   }
   // The verdict also rides the `/controls` poll this bot's process is already making — the
   // ops-status panel's credential-free "which personas are gated, and why" (#666 slice 3).
   const tuning = buildTuning(
-    gateBuild(bot.persona, hardcore, wantedMode, opts.controls.reportPersonaGate),
+    gateBuild(bot.persona, hardcore, opts.mode, opts.controls.reportPersonaGate),
     hardcore,
   );
   // Swappable, not the plain factory: lets a future credential rotation swap the Alpaca
@@ -584,12 +665,25 @@ export function buildLiveBot(
       // Per-bot suspend (Mission Control, polled) composes with the kill switch/breakers: either
       // blocks the cycle, and the decision record carries the owner's reason verbatim.
       blockedReason: () => opts.controls.suspendedReason(bot.persona.id) ?? opts.blockedReason(),
+      openBlockedReason: opts.openBlockedReason,
+      // The owner's "stop opening, keep exits" and "watch only" (Settings card, polled — #6954
+      // slice 5b): each read every cycle, each only ever narrows what the bot does.
+      ownerHoldsOpens: () => opts.controls.opensHeldReason(bot.persona.id),
+      watchOnly: () => opts.controls.watchOnly(bot.persona.id),
+      // The ladder's rung rides every cycle's guards; its bottom rung closes this bot's shares book
+      // (`safety` was built `actor: "bot"`; a member's never is). No reading yet leaves both off.
+      riskTier: () => opts.safety.riskReading()?.tier,
+      forceFlatten: () =>
+        opts.safety.flattenRequired()
+          ? `risk ladder: drawdown ${((opts.safety.riskReading()?.drawdownPct ?? 0) * 100).toFixed(1)}% — closing the book`
+          : null,
+      onFlattenGap: flattenGapWarn,
       onResult: (r) => {
         opts.safety.recordOrder();
         logResult(r);
       },
       onDecision: (r) => {
-        if (r.halted) console.warn(`[HALTED] ${r.personaId}: ${r.halted} — not trading`);
+        if (r.halted) console.warn(`[HALTED] ${r.personaId}: ${r.halted} — no new positions`);
         opts.onDecision(r);
       },
       onObservationError: (personaId, error) =>

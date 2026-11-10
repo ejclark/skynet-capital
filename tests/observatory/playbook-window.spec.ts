@@ -2,6 +2,7 @@ import type { EarningsPrint } from "../../src/domain/earnings-calendar.js";
 import {
   NEXT_ENTRY_HORIZON_DAYS,
   readPlaybookWindow,
+  windowOpenAt,
 } from "../../src/observatory/playbook-window.js";
 import type { Playbook } from "../../src/playbooks/playbook.js";
 
@@ -223,5 +224,28 @@ describe("the live house roster declares what opens each window", () => {
     const { S1_NVDA, G1_GOOG, TACO_DJT } = await import("../../src/playbooks/registry.js");
     expect([S1_NVDA.keyedOn, G1_GOOG.keyedOn]).toEqual(["earnings", "earnings"]);
     expect(TACO_DJT.keyedOn).toBe("event");
+  });
+});
+
+/** #5719: the one "is it open now?" read the window alert and the Overview's idea cards share. */
+describe("windowOpenAt — is a playbook's window open right now", () => {
+  it("reads open when the playbook's own rule says long on the calendar as it stands", () => {
+    expect(windowOpenAt(dated(), NOW, confirmed("2026-10-17"))).toBe("open");
+  });
+
+  it("says apart a window open only once its estimated print date is confirmed", () => {
+    expect(windowOpenAt(dated(), NOW, estimated("2026-10-17"))).toBe("open-on-estimate");
+  });
+
+  it("reads closed outside the window, confirmed or estimated", () => {
+    expect(windowOpenAt(dated(), NOW, confirmed("2026-11-20"))).toBe("closed");
+    expect(windowOpenAt(dated(), NOW, estimated("2026-11-20"))).toBe("closed");
+    expect(windowOpenAt(dated(), NOW, [])).toBe("closed");
+  });
+
+  it("claims nothing of a playbook whose window no date can answer", () => {
+    expect(windowOpenAt(dated({ keyedOn: "event" }), NOW, confirmed("2026-10-17"))).toBe(
+      "undatable",
+    );
   });
 });

@@ -1,3 +1,4 @@
+import { mkdtempSync } from "node:fs";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -65,5 +66,22 @@ describe("BotControlsStore", () => {
     const raw = JSON.parse(await readFile(path, "utf8"));
     expect(raw.bots.sauron.hardcore).toBe(true);
     expect(new BotControlsStore(path).load().bots.sauron?.hardcore).toBe(true);
+  });
+});
+
+describe("BotControlsStore breaker reset stamp (#6954 slice 3b)", () => {
+  it("stamps the press, hands back the state before it, and restores it on undo", () => {
+    const stampDir = mkdtempSync(join(tmpdir(), "controls-breaker-"));
+    const store = new BotControlsStore(join(stampDir, "bot-controls.json"));
+    const before = store.stampBreakerReset("a@x.test", new Date("2026-11-09T15:00:00.000Z"));
+    expect(before.breakerResetAt).toBeUndefined();
+    expect(store.load().breakerResetAt).toBe("2026-11-09T15:00:00.000Z");
+
+    const second = store.stampBreakerReset("a@x.test", new Date("2026-11-09T16:00:00.000Z"));
+    expect(second.breakerResetAt).toBe("2026-11-09T15:00:00.000Z");
+    store.restoreBreakerReset(second, "a@x.test", new Date("2026-11-09T16:00:01.000Z"));
+    expect(store.load().breakerResetAt).toBe("2026-11-09T15:00:00.000Z");
+    store.restoreBreakerReset(before, "a@x.test");
+    expect(store.load().breakerResetAt).toBeUndefined();
   });
 });

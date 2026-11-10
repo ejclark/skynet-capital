@@ -1,5 +1,6 @@
 import type { TradeActivityRecord } from "../observatory/activity-store.js";
 import type { ObservatoryEvent } from "../observatory/events.js";
+import { assertPaperTradingHost } from "./paper-host.js";
 import {
   activitiesFromMessage,
   fillEventFromMessage,
@@ -35,7 +36,9 @@ export class AlpacaTradeUpdatesStream {
   private listening = false;
   private readonly config: TradeUpdatesStreamConfig;
 
+  /** Throws (paper-only, `paper-host.ts`) for any host but paper trading. */
   constructor(config: TradeUpdatesStreamConfig) {
+    assertPaperTradingHost(config.baseUrl);
     this.config = config;
   }
 

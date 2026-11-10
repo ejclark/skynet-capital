@@ -23,6 +23,8 @@ export function stateBlockOf(
   comments?: readonly RestComment[],
 ): { id?: number; body: string; updatedAt?: string } | null;
 export function nextPickupOf(blockBody?: string): string | null;
+/** The next-pickup line as written, `none …` included; `null` when the block has none. */
+export function pickupLineOf(blockBody?: string): string | null;
 export function blockFingerprint(blockBody?: string): string;
 export function receiptData(data: {
   runId?: string | number;

@@ -5,8 +5,10 @@
  * arrives computed, and the server re-refuses a locked play regardless of what the UI shows.
  */
 
+import type { LongCallPlan } from "../../../src/playbooks/long-call-rules";
 import type { PayoffCurve } from "./draft-order";
 import { postJson } from "./post";
+import { questOfPage } from "./quest-link";
 import type { Quote } from "./quote";
 import type { TicketResult } from "./ticket";
 
@@ -133,6 +135,8 @@ export interface OptionPreview {
   readonly payoff?: PayoffCurve;
   readonly refusals: readonly string[];
   readonly warnings: readonly string[];
+  /** Buying a call only (#5709 slice 3): the house's long-call exit plan, priced off this order. */
+  readonly exitPlan?: LongCallPlan;
 }
 
 export type OptionDraft =
@@ -147,6 +151,8 @@ export type OptionDraft =
       readonly orderType: "limit" | "market";
       readonly limitPrice?: number;
       readonly timeInForce?: "day" | "gtc";
+      /** The member tapped Carry on the review's exit plan (#5709 slice 3). */
+      readonly exitPlan?: "carry";
     }
   | {
       readonly kind: "close";
@@ -249,5 +255,9 @@ export const fetchOptionPositions = (participantId: string): Promise<OptionPosit
 export const reviewOption = (draft: OptionDraft): Promise<{ preview: OptionPreview }> =>
   postJson("/api/trade/option/review", draft);
 
-export const submitOption = (draft: OptionDraft): Promise<TicketResult> =>
-  postJson("/api/trade/option/submit", draft);
+/** The receipt, plus what became of a carried exit plan: recorded, or the write was refused. */
+export type OptionTicketResult = TicketResult & { readonly exitPlan?: "carried" | "not-saved" };
+
+/** Sends the order with the quest the ticket was opened from, if any (#7028 slice 6). */
+export const submitOption = (draft: OptionDraft): Promise<OptionTicketResult> =>
+  postJson("/api/trade/option/submit", { ...draft, ...questOfPage() });

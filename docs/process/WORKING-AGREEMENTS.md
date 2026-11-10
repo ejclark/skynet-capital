@@ -1,6 +1,6 @@
 # Working agreements — the full text of rules CLAUDE.md states in one line
 
-These apply to specific task classes, so they load when that task comes up instead of in every session (#6470). Moved verbatim on 2026-11-01. A rule moved here that gets broken in the task class it governs goes back into `CLAUDE.md`: read this file before doing one of these tasks.
+These apply to specific task classes, so they load when that task comes up instead of in every session (#6470). A rule moved here that gets broken in the task class it governs goes back into `CLAUDE.md`: read this file before doing one of these tasks.
 
 ## A brain-dump is a planning session
 
@@ -12,7 +12,7 @@ grok", "not sure how to improve", "there's likely many talking points I have yet
 read it as a design conversation: each item is a *signal about an outcome*, the mechanism named
 beside it is a first guess, and the hedged items are the ones he most wants Claude to fill in. The
 deliverable is an assessment plus the IA decision written down (a `plan` issue, per the IA rule
-above) — never a build of the list verbatim, and never a paragraph per item echoing it back. Hunt
+in `CLAUDE.md`) — never a build of the list verbatim, and never a paragraph per item echoing it back. Hunt
 in proximity (the "talking points I have yet to see" are an explicit invitation for side quests),
 quantify the hunches against the corpus/code, and hand back the smallest vocabulary that turns his
 "feels out of place" into a precise request. Store the reasoning where it survives the session
@@ -38,6 +38,19 @@ interrogation pass is the adversarial half, this is the generative half. Evidenc
 place: the fog-of-war audit and the propose-then-place rule both came out of the banter *after* the
 research brief, not from the research itself.
 
+## Fog of war
+
+**Fog of war is a first-class reveal pattern, with written criteria** (Eric, 2026-09-06, on the
+research day lens: "a spot on / perfect scenario"). Withhold a *capability* behind an earnable
+rung, never *information* a member needs to stay safe; draw the door visible · named · disabled ·
+counted. The decision tree and the instance ledger live in
+[`docs/FOG-OF-WAR.md`](docs/FOG-OF-WAR.md) — run a candidate through it before fogging anything. **The general rule this instance taught:** Claude *proposes* patterns it
+knows how to deliver, rendered on a candidate surface; Eric *places* them. A rejected placement
+banks the pattern (`docs/IDEAS.md` inbox), never the idea — fog of war was declined for the
+ticket on 2026-09-05 and landed on the research day lens a day later. Once a textbook case is
+found, run its criteria across the app: the same tree finds the other candidates *and* strips the
+gates that were never the pattern, which is how the emerging design gets its noise removed.
+
 ## Plans live in GitHub issues
 
 **Plans live in GitHub issues, never in the repo** (Eric, 2026-08-21: _"plans belong in github
@@ -51,8 +64,8 @@ issue comments instead of guessing — the richer the issue, the fewer intervent
 cadence is standing, not per-instance** (Eric, 2026-09-06: "my answer for 'whenever i want to bless
 work to proceed' remains consistent; now, always now"). Once a plan is `ready`, a slice closes, or a
 PR merges, the next slice starts without a fresh nod — re-asking "should I continue?" on work already
-inside the envelope is the same scaling failure as a recurring blessing-ask elsewhere in this file.
-This answers *when*, not *what*: the hard boundaries below (irreversible/governance/spend, a genuine
+inside the envelope is the same scaling failure as a recurring blessing-ask (`CLAUDE.md` → *Hard boundaries*).
+This answers *when*, not *what*: the hard boundaries in `CLAUDE.md` (irreversible/governance/spend, a genuine
 taste fork, a load-bearing decision only he can settle) still always stop for him — "always now" means
 never idle on ready, in-envelope work, not never ask at all. Label semantics
 (2026-08-22): **`needs-eric` means exactly one thing — a decision only he can make.** Everything else

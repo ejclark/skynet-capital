@@ -25,8 +25,12 @@
 //   - Human-paced logs (feedback filings, companion messages, ladder milestones, play milestones).
 //     They grow at the rate a member types, not the rate a sampler ticks or a bot trades.
 //   - `readDecisions`: the decision store pages in SQL (DEFAULT_PAGE/MAX_PAGE in decision-db.ts).
-//   - A fold's fallback for a store with no append-aware read (`if (!since)` / `if (since) … else`):
-//     that is the in-memory store tests use; the JSONL stores production runs always have `since`.
+//   - `readTradeActivity` and `readOrderOrigins`: the composition root binds a held fold of the
+//     ledger and of the audit (`src/server/held-activity.ts`, #4619), not a `list()`. A root
+//     binding that goes back to `activity.list(id)` under either key is a site at the root.
+//   - A fold's fallback for a store with no append-aware read (`if (!since)`, `if (!(since && …))`,
+//     `if (since) … else`): that is the in-memory store tests use; the JSONL stores production runs
+//     always have `since`.
 //
 // Known blind spot: a store reached through a name none of the three rules know — a parameter
 // typed inline, a destructured field — is not seen. The budget run (`npm run stability:budget`)
@@ -42,8 +46,8 @@
 // Exit codes: 0 every site grandfathered · 1 a new site, or a stale grandfather entry · 2 could not
 // do its job (the grandfather file is missing or unreadable, or a scoped tree is absent).
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join, relative, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { join, relative } from "node:path";
+import { isMain } from "./is-main.mjs";
 
 const ROOT = process.cwd();
 const GRANDFATHER_FILE = "whole-read-grandfather.json";
@@ -51,9 +55,7 @@ const GRANDFATHER_FILE = "whole-read-grandfather.json";
 /** The read seams, each bound in `src/scripts/serve-dashboard.ts` to a whole `list()`. */
 const SEAMS = new Map([
   ["readHistory", "one participant's every equity sample (HistoryStore.list)"],
-  ["readTradeActivity", "one participant's whole trade ledger (ActivityStore.list)"],
   ["readFills", "one participant's whole trade ledger (ActivityStore.list)"],
-  ["readOrderAudit", "one participant's whole order audit (OrderAuditLog.list)"],
   ["readTags", "one participant's whole order audit (OrderAuditLog.list)"],
   ["readAllActivityEvents", "every participant's event log (ActivityEventBus.list)"],
   ["readAllTradeActivity", "every participant's trade ledger (ActivityStore.list)"],
@@ -122,7 +124,7 @@ function enclosingKey(lines, at, column) {
 /** True when the line sits in a fold's fallback for a store without an append-aware read. */
 function inNoSinceFallback(lines, at) {
   for (let i = at; i >= Math.max(0, at - 12); i--) {
-    if (/\bif\s*\(\s*!\s*since\b/.test(lines[i])) return true;
+    if (/\bif\s*\(\s*!\s*\(?\s*since\b/.test(lines[i])) return true;
     if (/\bif\s*\(\s*since\s*\)/.test(lines[i])) {
       return lines.slice(i, at + 1).some((l) => /\belse\b/.test(l));
     }
@@ -255,4 +257,4 @@ function main() {
   console.log(`✓ every site is grandfathered in ${GRANDFATHER_FILE} (#4619's bar: ≤ 3)`);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) main();
+if (isMain(import.meta.url)) main();

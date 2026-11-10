@@ -63,6 +63,8 @@ export const BETA_SCOUT: Playbook = {
     aggressive: BETA_SCOUT_SIZE_PCT,
   },
   keyedOn: "event",
+  // Its exit plan (#6954 slice 4): the live cycle sells each pick on the next session's first check.
+  exits: { time: "sells each pick at the next session's first check" },
   desiredState: () => "no-window",
   decide: () => [],
 };

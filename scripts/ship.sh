@@ -19,7 +19,7 @@ set -euo pipefail
 #       job arms it once verify AND integration tests pass (#4094). `ship automerge` is only the
 #       fallback for a PR that job can't reach, and it refuses until integration tests passed.
 #
-#   scripts/ship.sh platter {open|board|ledger|landed} …
+#   scripts/ship.sh platter {open|board|ledger|landed|revert} …
 #       batch every change that needs Eric's merge onto ONE held PR per cadence, one commit per
 #       item (#1343). Full doctrine at the section header near the bottom of this file.
 #
@@ -102,12 +102,20 @@ promote_ready() {
 # second, manual push to read (#4495, ~5 min per failure). Now the last attempt's stderr is
 # printed with any `x-access-token:<token>@` masked (a lane's origin URL carries the App token,
 # and git echoes it on some errors). A rejection the remote actually answered (`[rejected]` /
-# `[remote rejected]`) is final: retrying cannot change the answer, so it stops at once.
+# `[remote rejected]`) is final: retrying cannot change the answer, so it stops at once. So is a
+# `pre-push:` line, our own hook saying no (a red or unfinished verify, a merged branch): to git it is
+# a failure like a dropped connection, and each retry ran the hook again, a whole verify each time
+# on a red tree (#6668). Its exit 75 (no verify result) passes through for the caller.
 cmd_push() {
-  local branch="${1:?usage: scripts/ship.sh push <branch>}" n=0 err
+  local branch="${1:?usage: scripts/ship.sh push <branch>}" n=0 err refusal
   # stderr is captured for the diagnosis; stdout (fd 3) still reaches the terminal as before.
   until { err="$(git push -u origin "$branch" 2>&1 >&3)"; } 3>&1; do
     n=$((n+1))
+    if refusal="$(grep -m1 '^pre-push: ' <<<"$err")"; then
+      echo "ship: push stopped — the pre-push hook refused, and pushing again would only run it again:" >&2
+      tail -25 <<<"$err" | sed 's#^#  #' >&2
+      case "$refusal" in *"exit 75"*) exit 75 ;; *) exit 1 ;; esac
+    fi
     if grep -q '\[\(remote \)\{0,1\}rejected\]' <<<"$err" || [ "$n" -gt 4 ]; then
       echo "ship: push failed — the remote said:" >&2
       sed -E 's#x-access-token:[^@[:space:]]*@#x-access-token:***@#g; s#^#  #' <<<"$err" >&2
@@ -126,17 +134,43 @@ cmd_push() {
 # Prints one word: real (success/failure/…), pending (queued/in progress), stale (latest is
 # skipped or cancelled), none (no verify check yet). "Latest" is the highest id — the order GitHub
 # created them in, which is the order branch protection reads.
-# The failed step and the first error line of a verify log, as two JSON string fields for the row
-# scripts/agent-meter.mjs reads (#6470). The step is run-p's `ERROR: "<name>" exited with` line; the
-# error line prefers a compiler or test failure over an advisory ✗, which green runs print too.
-# Quotes, backslashes and control characters are dropped so the row stays one JSON line.
+# The failed step and the failing check of a verify log, as two JSON string fields for the row
+# scripts/agent-meter.mjs reads (#6470). The step is run-p's `ERROR: "<name>" exited with` line.
+# The error is read only from a tool's own failure report, never from the first `Error:` anywhere:
+# a passing spec prints `Warning: … Error: disk full` on purpose, and that line once stood in for
+# a stale-pages failure (#6677). Three readers, the failed step's own first:
+#   rstest — ` FAIL  <spec> > <test>` (its failing-tests summary) or `### [F01] <spec> :: <test>`
+#            (the report it prints under an agent), both as `FAIL <spec> > <test>`;
+#   tsc    — `<file>(l,c): error TS<n>: …`, which it prints only when it fails;
+#   biome  — a diagnostic header whose next mark is `×` (an error), not `!` (a warning).
+# No reader matching leaves the field empty — an honest blank, not a guess. Quotes, backslashes and
+# control characters are dropped so the row stays one JSON line.
+verify_fail_rstest() {
+  sed 's/\x1b\[[0-9;]*m//g' "$1" 2>/dev/null | awk '
+    /^ FAIL  [^ ]/ { sub(/^ FAIL +/, ""); sub(/ +$/, ""); print "FAIL " $0; exit }
+    /^### \[F[0-9]+\] [^ ]/ { sub(/^### \[F[0-9]+\] /, ""); sub(/ :: /, " > "); print "FAIL " $0; exit }'
+}
+verify_fail_tsc() {
+  grep -m1 -E '^([^ ]+\([0-9]+,[0-9]+\): |[^ ]+:[0-9]+:[0-9]+ - )?error TS[0-9]+:' "$1" 2>/dev/null || true
+}
+verify_fail_biome() {
+  sed 's/\x1b\[[0-9;]*m//g' "$1" 2>/dev/null | awk '
+    /^[^ ]+ [a-z][^ ]*.*━/ { head = $0; sub(/ +(FIXABLE +)?━.*$/, "", head); next }
+    /^  × / && head != "" { print head; exit }
+    /^  ! / { head = "" }'
+}
 verify_row_fields() {
-  local log="$1" step err
+  local log="$1" step err="" kind
   # Under set -e, a grep with no match would abort the ship; an empty field is the honest answer.
   step=$(grep -m1 -o 'ERROR: "[^"]*" exited with' "$log" 2>/dev/null | sed 's/ERROR: "\([^"]*\)".*/\1/' || true)
-  err=$(grep -m1 -E 'error TS[0-9]+|AssertionError|FAIL |✖|Error:' "$log" 2>/dev/null || true)
-  [ -n "$err" ] || err=$(grep -m1 '✗' "$log" 2>/dev/null || true)
-  [ -n "$err" ] || err=$(grep -m1 'exited with' "$log" 2>/dev/null || true)
+  case "$step" in
+    typecheck*) set -- tsc rstest biome ;;
+    lint*) set -- biome tsc rstest ;;
+    *) set -- rstest tsc biome ;;
+  esac
+  for kind in "$@"; do
+    [ -n "$err" ] || err=$("verify_fail_$kind" "$log")
+  done
   err=$(printf '%s' "$err" | sed 's/\x1b\[[0-9;]*m//g' | tr -d '"\\' | tr -d '\000-\037' | cut -c1-160)
   printf '"step":"%s","error":"%s"' "$step" "$err"
 }
@@ -431,14 +465,21 @@ EOF_SHOTS
     local verify_log="/tmp/ship-verify.$$.log"
     # Every outcome goes to scripts/agent-meter.mjs's log: a mistake caught here never reaches CI, so
     # without this line the first-pass rate only sees what got past local verify (#6470).
-    local verify_ok=true
-    bash scripts/verify-locked.sh --log "$verify_log" || verify_ok=false
+    local verify_ok=true verify_rc=0
+    bash scripts/verify-locked.sh --log "$verify_log" || { verify_rc=$?; verify_ok=false; }
+    # 75 is no result: the queue's wait ran out, the lid was closed, or the machine slept through a
+    # run that then failed (#6668). There is no mistake for the meter to count, and telling it from
+    # a red verify stops an agent hunting for a failure that is not there.
+    if [ "$verify_rc" = 75 ]; then
+      echo "ship: no verify result — the queue wait ran out, the lid was closed, or the machine slept mid-run (the verify: line above says which). Nothing was pushed or counted. Run this again."
+      exit 75
+    fi
     # A failed row also says which step failed and the first error line: a row that only said
     # ok=false left the meter unable to name what agents get wrong first (#6470).
     local verify_why=""
     "$verify_ok" || verify_why=",$(verify_row_fields "$verify_log")"
     # Only for this repo: ship's own specs run it in throwaway repos, and those must not count.
-    git remote get-url origin 2>/dev/null | grep -q 'skynet-capital' \
+    grep -q 'skynet-capital' <<<"$(git remote get-url origin 2>/dev/null)" \
       && mkdir -p "${AGENT_RUNS_DIR:-$HOME/.claude/runs}" 2>/dev/null \
       && printf '{"at":"%s","ok":%s,"branch":"%s"%s}\n' "$(date -u +%FT%TZ)" "$verify_ok" "$(git branch --show-current)" "$verify_why" \
         >> "${AGENT_RUNS_DIR:-$HOME/.claude/runs}/ship-verify.jsonl" 2>/dev/null || true
@@ -455,7 +496,11 @@ EOF_SHOTS
     # Same reasoning for the PLATFORM (2026-10-02, PR #4519): screenshot baselines are
     # `*-chromium-linux.png` only, so on macOS Playwright writes fresh `-darwin` files and fails
     # every `matches the known-good page screenshot` spec — false-red. Local e2e runs on Linux only.
-    if git diff --name-only "origin/$base...HEAD" | grep -qvE '(\.md$|^docs/)'; then
+    # Not piped: a kill by SIGPIPE on a match would read as a docs-only diff and skip these tests. An
+    # empty diff must stay false, and a here-string would hand `grep -v` one blank line to match. A
+    # diff that fails says nothing about what changed, so it runs the tests rather than skipping them.
+    local changed; changed="$(git diff --name-only "origin/$base...HEAD")" || changed="the diff failed"
+    if [ -n "$changed" ] && grep -qvE '(\.md$|^docs/)' <<<"$changed"; then
       if [ "$(uname -s)" != "Linux" ]; then
         echo "ship: ⚠ local integration tests NOT run — screenshot baselines are Linux-only and this is $(uname -s). CI's \`integration tests\` is the gate: the pipeline arms only after it passes. Do not arm by hand."
       elif node -e 'const {chromium}=require("playwright-core");process.exit(require("fs").existsSync(chromium.executablePath())?0:1)' 2>/dev/null; then
@@ -581,7 +626,7 @@ EOF_SHOTS
     # The arming usually happens through the MCP tool, which never runs this script — so the
     # instruction printed here is the last place the envelope answer can reach the session that
     # arms. Print the REFUSAL as the next step when the diff is in the irreversible class.
-    elif ! opened_hits="$(git diff --name-only "origin/$base...HEAD" | xargs -r node "$(dirname "$0")/envelope-scan.mjs" --check --base "origin/$base" | python3 -c '
+    elif ! opened_hits="$(git diff -z --name-only --no-renames "origin/$base...HEAD" | xargs -0 -r node "$(dirname "$0")/envelope-scan.mjs" --check -- | python3 -c '
 import sys, json
 rows = json.load(sys.stdin)
 hits = [r for r in rows if r.get("blocking")]
@@ -613,13 +658,10 @@ sys.exit(1 if hits else 0)
 # Prints one indented line per protected path; returns 1 when any was found. Never exits, so a
 # caller can ASK the question without being killed by the answer.
 #
-# Filters on `blocking`, not `protected`: a diffAware rule (envelope.json $diffAwareComment) whose
-# real diff is a provably safe pure insertion comes back protected=true but blocking=false, and
-# should arm. Pass --base <ref> (paths before it) to get that real-diff answer; without --base,
-# `blocking` just mirrors `protected` (today's behavior — used by the bare `checkarm <paths>` CLI
-# form, which has no base to diff against).
+# Filters on `blocking`, not `protected`, the field the arm job reads. The paths go after `--`
+# because `ship automerge` passes the PR's own file names, and a name must never read as a flag.
 envelope_hits() {
-  node "$(dirname "$0")/envelope-scan.mjs" --check "$@" | python3 -c '
+  node "$(dirname "$0")/envelope-scan.mjs" --check -- "$@" | python3 -c '
 import sys, json
 rows = json.load(sys.stdin)
 hits = [r for r in rows if r.get("blocking")]
@@ -641,6 +683,19 @@ cmd_checkarm() {
     exit 5
   fi
   echo "ship checkarm: ✓ nothing in the irreversible class — auto-merge may arm."
+}
+
+# The state of the newest run in a check-runs response on stdin: its conclusion, its status while it
+# runs, or "not reported yet" when there is none.
+latest_check_state() {
+  python3 -c '
+import sys, json
+runs = json.load(sys.stdin).get("check_runs", [])
+if not runs: print("not reported yet")
+else:
+    r = max(runs, key=lambda r: r.get("started_at") or "")
+    print(r.get("conclusion") or r.get("status"))
+'
 }
 
 cmd_automerge() {
@@ -674,7 +729,7 @@ cmd_automerge() {
     echo "Split the PR, or arm it by hand after checking envelope-scan yourself." >&2
     exit 5
   fi
-  cmd_checkarm "${paths[@]}" --base "origin/$base_ref"
+  cmd_checkarm "${paths[@]}"
 
   # NEVER ARM PAST INTEGRATION TESTS (2026-09-30, #4094). Native auto-merge waits only on REQUIRED
   # checks, and only `verify` was required then — so arming here the moment a PR opened let #4151, #4155
@@ -687,17 +742,24 @@ cmd_automerge() {
   cresp="$(api GET "/commits/$head_sha/check-runs?check_name=integration%20tests&per_page=10")"
   chttp="$(http_of "$cresp")"; cbody="$(body_of "$cresp")"
   [ "$chttp" = 200 ] || { echo "ship automerge: GET check-runs returned HTTP $chttp — refusing to arm unproven." >&2; exit 6; }
-  e2e_state="$(printf '%s' "$cbody" | python3 -c '
-import sys, json
-runs = json.load(sys.stdin).get("check_runs", [])
-if not runs: print("not reported yet")
-else:
-    r = max(runs, key=lambda r: r.get("started_at") or "")
-    print(r.get("conclusion") or r.get("status"))
-')"
+  e2e_state="$(printf '%s' "$cbody" | latest_check_state)"
   case "$e2e_state" in
     success|skipped) ;;
     *) echo "ship automerge: integration tests on #$num are '$e2e_state' — refusing to arm. Only a passed (or skipped) run may merge (#4094)." >&2; exit 6 ;;
+  esac
+
+  # THE SAME LINE FOR THE STABILITY BUDGET. The arm job waits on it, and it is not a required check,
+  # so native auto-merge would not. Unlike integration tests a head may never have run it: a job added
+  # later has no run on an older head, and that reads as passing, as it does in stuck-pr-decide.mjs.
+  # A cancelled one is refused here and is not red there: this is an arm, and only a pass may arm.
+  local stability_state
+  cresp="$(api GET "/commits/$head_sha/check-runs?check_name=stability%20budget&per_page=10")"
+  chttp="$(http_of "$cresp")"; cbody="$(body_of "$cresp")"
+  [ "$chttp" = 200 ] || { echo "ship automerge: GET check-runs returned HTTP $chttp — refusing to arm unproven." >&2; exit 6; }
+  stability_state="$(printf '%s' "$cbody" | latest_check_state)"
+  case "$stability_state" in
+    success|skipped|"not reported yet") ;;
+    *) echo "ship automerge: stability budget on #$num is '$stability_state' — refusing to arm. Read that job, then re-run it or fix what it found." >&2; exit 6 ;;
   esac
 
   local q payload gql
@@ -797,9 +859,11 @@ cmd_merge() {
 #   scripts/ship.sh platter open <item-branch> [--name platter/<date>] [--subject S] [--no-verify]
 #                                [--closes N[,M]] [--part-of N[,M]]
 #   scripts/ship.sh platter board <item-branch> [--subject S] [--no-verify] [--closes …] [--part-of …]
+#                                 [--no-merge]
 #   scripts/ship.sh platter amend <item-branch> [--closes N[,M]] [--part-of N[,M]]
 #   scripts/ship.sh platter ledger [--base <ref>] [--body]
 #   scripts/ship.sh platter sync
+#   scripts/ship.sh platter revert <pr> <sha>   # one item out of a landed platter, squashed or not
 #
 # `--closes` / `--part-of` name the issues the item finishes or advances; with neither, the item's
 # own PR's keywords are read, and a branch number alone is only ever `Part of` (#4562). They ride as
@@ -807,13 +871,15 @@ cmd_merge() {
 # platter's one merge closes the issues behind its items — under either button.
 #
 # Four rules that are load-bearing, not preferences:
-#   - NOTHING RED BOARDS. `board` runs `npm run verify` on the POST-board tree — the union so far,
-#     which is strictly stronger than "green alone on its own branch", and is the only proof that
-#     can exist here: pipeline.yml's `verify` triggers on `pull_request: branches: [main]`, so a PR
-#     based on a platter branch runs no CI at all. The platter PR (base `main`) is the union's
+#   - NOTHING RED BOARDS. `board` runs `npm run verify`, through the verify queue, on the POST-board
+#     tree — the union so far, which is strictly stronger than "green alone on its own branch", and
+#     is the only proof that can exist here: pipeline.yml's `verify` triggers on `pull_request:
+#     branches: [main]`, so a PR based on a platter branch runs no CI at all. The platter PR (base `main`) is the union's
 #     first CI run. A failed verify un-boards the item and leaves the platter exactly as it was.
 #   - THE PLATTER IS NEVER A PLACE TO DEVELOP. A conflicting item catches up to `main` on its OWN
 #     branch and re-boards; nothing is ever fixed here (Rust's rollup procedure, same reasoning).
+#     `board` does merge `main` into a platter that is behind before it squashes (#5390) — a
+#     catch-up that changes no item, never a fix; if it conflicts, the platter is re-opened.
 #   - IT IS NEVER ARMED. `--hold` applies `hold-merge` (which pipeline.yml's arm job skips) and the
 #     diff is protected by construction (which `checkarm` refuses) — unarmed by two mechanisms.
 #   - NO SAME-FILE FENCE. Feast mode's "two items must not touch the same file" comes from PARALLEL
@@ -821,9 +887,12 @@ cmd_merge() {
 #     fine in order — a conflict is just an item that needs to catch up first.
 #
 # The one rule this script CANNOT enforce is the merge method: a PR does not choose how it is merged,
-# and by 2026-09-25 five of eleven landed platters had arrived as squashes, voiding their ledger's
-# revert column. The body now carries a top-level WARNING, and `node scripts/platter-merge-scan.mjs`
-# reads `main` afterwards and names any platter that landed flat (#3754).
+# and by 2026-11-01 twenty of twenty-seven landed platters had arrived as squashes despite a
+# top-level WARNING in the body (#3754) — a sentence cannot force a button. What holds either way:
+# GitHub keeps `refs/pull/<n>/head` after the branch is deleted, so every item commit stays
+# fetchable, and `git revert <sha>` needs a commit's parent and tree, never its ancestry in `main`.
+# `platter revert <pr> <sha>` (below) is that path, and `node scripts/platter-merge-scan.mjs` reads
+# `main` afterwards and reports only whether each landed item's commit is still fetchable.
 
 # Protected paths among the file names on stdin, space-separated (empty when none). The path-level
 # answer on purpose: envelope-scan's --base mode diffs the CHECKED-OUT HEAD, and the ledger column
@@ -831,7 +900,7 @@ cmd_merge() {
 platter_protected() {
   local names; names="$(cat)"
   [ -n "$names" ] || return 0
-  printf '%s\n' "$names" | xargs -r node "$(dirname "$0")/envelope-scan.mjs" --check | python3 -c '
+  printf '%s\n' "$names" | xargs -r node "$(dirname "$0")/envelope-scan.mjs" --check -- | python3 -c '
 import sys, json
 print(" ".join(r["path"] for r in json.load(sys.stdin) if r.get("protected")))
 '
@@ -953,35 +1022,39 @@ $(platter_ledger_table)
 _Caption — the platter ledger, read from the boarded commits: each item, the evidence it was green, and the sha that reverts it alone._
 
 > [!WARNING]
-> **Land this with "Create a merge commit" — the squash button voids every revert sha above.**
-> A squashed platter arrives on \`main\` as one commit: the per-item shas live only on
-> \`$(git rev-parse --abbrev-ref HEAD)\`, which GitHub deletes at merge, so the only revert left is the whole platter at once.
-> This has already happened: as of 2026-09-25, five of the eleven landed platters were squashed. \`node scripts/platter-merge-scan.mjs\` reports the current count.
+> **Either button lands this.** "Create a merge commit" keeps every item in \`main\`'s history, so \`git revert <sha>\` from the table works at once;
+> "Squash and merge" collapses them into one commit, and one item then reverts through \`scripts/ship.sh platter revert <pr> <sha>\`.
+> The shas above stay fetchable either way: GitHub keeps \`refs/pull/<pr>/head\` after it deletes \`$(git rev-parse --abbrev-ref HEAD)\`.
+> By 2026-11-01, 20 of 27 landed platters were squashes; \`node scripts/platter-merge-scan.mjs\` reports whether each landed item's commit is still fetchable.
 
 ## Summary
 
 - One merge clears every protected-path change below; the boundary does not move, only its cost.
-- **Merge with "Create a merge commit", never squash** — one commit per item is what keeps revert granular.
+- **Either button lands it** — a merge commit keeps items in \`main\`; a squash reverts one through \`platter revert\`.
 - Each item was verified green on the union as it boarded; this PR is that union's first CI run.
 $(platter_summary_refs)
 
 <details>
 <summary><strong>How to land this, and how to drop one bad item</strong></summary>
 
-**Landing.** Use GitHub's **Create a merge commit** button. Squashing still lands the same tree, but
-it collapses the items into one commit and the per-item revert below is lost — the platter would
-then only revert as a whole. The repo's settings already put this PR's title and body (this ledger)
-on the merge commit, so \`main\`'s first-parent history reads as PRs and \`git log main\` reads as items.
+**Landing.** Either button. **Create a merge commit** keeps one commit per item in \`main\`'s
+history, so \`git log main\` reads as items and a plain \`git revert\` drops one. **Squash and merge**
+lands the same tree as one commit; the items then live on \`refs/pull/<pr>/head\`, which GitHub keeps
+after it deletes the branch. The repo's settings put this PR's title and body (this ledger) on the
+merge commit either way, so \`main\`'s first-parent history reads as PRs.
 
 **The revert path that actually exists, by how this lands.** Before the merge, every revert sha in
-the table is reachable on \`$(git rev-parse --abbrev-ref HEAD)\` — and only there. Merged as a merge
-commit, they become part of \`main\` and \`git revert <revert sha>\` drops one item. Squashed, the
-branch is deleted and those shas go with it: \`main\` holds one commit, so \`git revert\` takes the
-whole platter or nothing. The ledger's revert column is a promise the merge button keeps or breaks.
+the table is reachable on \`$(git rev-parse --abbrev-ref HEAD)\`. Merged as a merge commit, they are
+in \`main\` and \`git revert <revert sha>\` drops one item. Squashed, they are not in \`main\`'s history,
+but \`scripts/ship.sh platter revert <pr> <sha>\` fetches \`refs/pull/<pr>/head\` and reverts the one
+commit onto a fresh branch off \`main\` — a revert needs the commit's parent and tree, never its
+ancestry. The ledger's revert column holds under both buttons; only the command differs.
 
-**Dropping one item after the merge.** \`git revert <revert sha>\` from the table — no \`-m\`, because
-each item is an ordinary single-parent commit. An item a later item builds on may conflict; that is
-the honest limit of any ordered batch, not a defect of this one.
+**Dropping one item after the merge.** After a merge commit, \`git revert <revert sha>\` from the
+table — no \`-m\`, because each item is an ordinary single-parent commit. After a squash,
+\`scripts/ship.sh platter revert <pr> <revert sha>\`, then ship the branch it leaves you on. An item
+a later item builds on may conflict; that is the honest limit of any ordered batch, not a defect
+of this one.
 
 **Dropping one item before the merge.** Re-open the platter without it (\`ship platter open\` on a new
 name, then \`board\` the survivors in order). Nothing is ever fixed on the platter itself.
@@ -1004,7 +1077,9 @@ platter_board_item() {
     echo "ship platter: uncommitted changes — commit or drop them before boarding" >&2; exit 1; }
   # An item cut from a NEWER main than the platter's would squash every main commit in between into
   # this one item — and its revert sha would then revert all of them (2026-10-26, #5852: a two-file
-  # item boarded as 504 files). Main is fetched first because the item fetch below owns FETCH_HEAD.
+  # item boarded as 504 files). `board` catches the platter up first (platter_catch_up), so this
+  # fires only under --no-merge or when main moves mid-board. Main is fetched first because the
+  # item fetch below owns FETCH_HEAD.
   git fetch --quiet origin main || {
     echo "ship platter: cannot fetch origin/main to check the item's base" >&2; exit 1; }
   git fetch --quiet origin "$item" || {
@@ -1039,10 +1114,21 @@ platter_board_item() {
   local evidence
   if [ "$verify" = 1 ]; then
     echo "ship platter: verifying the union with $item boarded…"
-    npm run verify >/tmp/ship-platter-verify.log 2>&1 || {
+    # Through verify-locked.sh (#5548), as `ship open` does: queued behind any other verify in this
+    # checkout, so boarding no longer skips the queue (#6470). The log is per-process for the same
+    # reason as open's. 75 is no result (the queue's wait ran out, the lid was closed, or the machine
+    # slept mid-run, #6668), so the item is un-boarded without calling it red.
+    local verify_log="/tmp/ship-platter-verify.$$.log" verify_rc=0
+    bash "$(dirname "$0")/verify-locked.sh" --log "$verify_log" || verify_rc=$?
+    if [ "$verify_rc" = 75 ]; then
+      git reset --hard --quiet "$before"
+      echo "ship platter: no verify result — the queue wait ran out, the lid was closed, or the machine slept mid-run (the verify: line above says which). $item is not boarded; the platter is unchanged. Run this again." >&2
+      exit 75
+    fi
+    [ "$verify_rc" = 0 ] || {
       git reset --hard --quiet "$before"
       echo "ship platter: VERIFY FAILED with $item boarded — un-boarded it; the platter is unchanged." >&2
-      tail -20 /tmp/ship-platter-verify.log >&2
+      tail -20 "$verify_log" >&2
       exit 1; }
     evidence="verify green $(date -u +%Y-%m-%dT%H:%MZ)"
   else
@@ -1246,15 +1332,67 @@ platter_require_current_script() {
   fi
 }
 
+# A platter behind main catches up before anything boards (#5390). The squash below stages
+# everything since the platter last shared a commit with the item, so an item cut from today's main
+# onto a week-old platter carried the whole week (#5382 staged 681 files for a one-line change), and
+# the two refusals that replaced that each printed `git merge origin/main --no-edit` for a hand to
+# run — twelve times on three platters by 2026-11-02. The remedy is a command, so the script runs it,
+# as `ship open` does (#5195). This is a catch-up, not development: a conflict means main and an item
+# already boarded disagree, which no merge here may settle, so it aborts and the platter is
+# re-opened. Returns 0 when it merged, 1 when the platter was already current.
+platter_catch_up() {
+  git diff --quiet && git diff --cached --quiet || {
+    echo "ship platter: uncommitted changes — commit or drop them before boarding" >&2; exit 1; }
+  git fetch --quiet origin main || {
+    echo "ship platter: cannot fetch origin/main to catch the platter up" >&2; exit 1; }
+  git merge-base --is-ancestor origin/main HEAD && return 1
+  local before behind conflicts
+  before="$(git rev-parse HEAD)"; behind="$(git rev-list --count HEAD..origin/main)"
+  if git merge origin/main --no-edit >"/tmp/ship-platter-merge.$$.log" 2>&1; then
+    echo "ship platter: merged origin/main into the platter ($behind commit(s)) — a catch-up, not an item."
+    return 0
+  fi
+  conflicts="$(git diff --name-only --diff-filter=U)"
+  git rev-parse -q --verify MERGE_HEAD >/dev/null && git merge --abort
+  git reset --hard --quiet "$before"
+  echo "ship platter: merging origin/main into the platter did not complete cleanly — aborted, the platter is unchanged." >&2
+  if [ -n "$conflicts" ]; then
+    echo "  conflicting paths (main disagrees with an item already boarded):" >&2
+    sed 's/^/    /' <<<"$conflicts" >&2
+  else
+    tail -5 "/tmp/ship-platter-merge.$$.log" >&2
+  fi
+  echo "  Nothing is fixed on a platter: re-open it from main (ship platter open <item> --name platter/<date>)" >&2
+  echo "  and re-board the survivors, each caught up to main on its own branch first." >&2
+  exit 1
+}
+
+# The catch-up rewrote this file on disk, but bash is still running the copy it read before. When
+# main's copy differs, hand the board to it — once — so main's guards are the ones that run (the gap
+# #6067 closed by refusing, which left the hand step in place every time main's ship.sh moved).
+platter_rerun_current() {
+  local running="$1"; shift
+  local main_ship top
+  main_ship="$(git rev-parse --verify --quiet origin/main:scripts/ship.sh || true)"
+  [ -n "$main_ship" ] && [ "$main_ship" != "$running" ] && [ -z "${SHIP_PLATTER_RERUN:-}" ] || return 0
+  top="$(git rev-parse --show-toplevel)/scripts/ship.sh"
+  # A platter whose own items changed ship.sh holds a third copy; platter_require_current_script refuses it.
+  [ -f "$top" ] && [ "$(git hash-object "$top")" = "$main_ship" ] || return 0
+  echo "ship platter: the catch-up brought main's ship.sh — boarding with that copy."
+  SHIP_PLATTER_RERUN=1 exec bash "$top" "$@"
+}
+
 cmd_platter_board() {
   local item="${1:-}"; shift || true
   [ -n "$item" ] || { echo "ship platter board: an item branch is required" >&2; exit 1; }
-  local subject="" verify=1 closes="" partof="" closes_set=0 partof_set=0
+  local argv=("$@") subject="" verify=1 closes="" partof="" closes_set=0 partof_set=0 catchup=1
   while [ $# -gt 0 ]; do case "$1" in
     --subject) subject="$2"; shift 2 ;;
     --no-verify) verify=0; shift ;;
     --closes) closes="$2"; closes_set=1; shift 2 ;;
     --part-of) partof="$2"; partof_set=1; shift 2 ;;
+    # refuse a stale platter instead of merging main in — the pre-#5390 behaviour, kept on request.
+    --no-merge) catchup=0; shift ;;
     *) echo "ship platter board: unknown arg $1" >&2; exit 1 ;;
   esac; done
 
@@ -1263,6 +1401,14 @@ cmd_platter_board() {
     echo "ship platter board: HEAD is '$branch', not a platter branch — check out the open platter first." >&2
     exit 1 ;;
   esac
+  # The catch-up runs before the stale-script check, which it also satisfies: the same merge brings
+  # main's ship.sh, and the board then re-runs as that copy.
+  if [ "$catchup" = 1 ]; then
+    local running; running="$(git hash-object "$0")"
+    if platter_catch_up; then
+      platter_rerun_current "$running" platter board "$item" "${argv[@]}"
+    fi
+  fi
   platter_require_current_script
   platter_board_item "$item" "$subject" "$verify" "$closes" "$partof" "$closes_set" "$partof_set"
   local sha; sha="$(git rev-parse --short HEAD)"
@@ -1304,7 +1450,10 @@ cmd_platter_amend() {
   git diff --quiet && git diff --cached --quiet || {
     echo "ship platter: uncommitted changes — commit or drop them before amending" >&2; exit 1; }
   platter_require_current_script
-  git log --no-merges --format=%b "$PLATTER_BASE..HEAD" | grep -qxF "Platter-Item: $item" || {
+  # A here-string, for the reason at checkbody: a piped `grep -q` kills git on a match, and pipefail
+  # then reports the match as a miss, most often for the items boarded most recently.
+  local boarded; boarded="$(git log --no-merges --format=%b "$PLATTER_BASE..HEAD")"
+  grep -qxF "Platter-Item: $item" <<<"$boarded" || {
     echo "ship platter amend: no item '$item' is boarded in $PLATTER_BASE..HEAD — \`ship platter ledger\` lists the items." >&2
     exit 1; }
 
@@ -1336,6 +1485,37 @@ cmd_platter_sync() {
   platter_sync_body "$branch" || exit 1
 }
 
+# One item out of a LANDED platter, squashed or not (2026-11-01). GitHub keeps `refs/pull/<n>/head`
+# after it deletes the merged branch, so the item commits a squash left out of `main`'s history are
+# still fetchable, and `git revert <sha>` needs only the commit's parent and tree. This fetches that
+# ref, checks the sha really is one of the PR's commits (the ledger's revert column), cuts
+# `revert/platter-<pr>-<sha7>` off a fresh origin/main, and reverts the one commit onto it. Git's
+# own revert message (`Revert "<subject>"`) passes commitlint. Pure git, no token: ship the branch
+# it leaves you on with `scripts/ship.sh open`. Proven on #5852's item 21 (squashed 2026-11-01):
+# one revert onto a scratch branch, committed nowhere, then the branch deleted.
+cmd_platter_revert() {
+  local pr="${1:-}" sha="${2:-}"
+  case "$pr" in ''|*[!0-9]*)
+    echo "usage: scripts/ship.sh platter revert <pr> <sha> — the PR number and a revert sha from its ledger" >&2; exit 1 ;;
+  esac
+  [ -n "$sha" ] || { echo "usage: scripts/ship.sh platter revert <pr> <sha> — the sha is the ledger's revert column" >&2; exit 1; }
+  git diff --quiet && git diff --cached --quiet || {
+    echo "ship platter revert: uncommitted changes — commit or drop them first" >&2; exit 1; }
+  git fetch --quiet origin main || { echo "ship platter revert: cannot fetch origin/main" >&2; exit 1; }
+  git fetch --quiet origin "refs/pull/$pr/head" || {
+    echo "ship platter revert: refs/pull/$pr/head could not be fetched — is #$pr a pull request of this repo?" >&2; exit 1; }
+  local head full; head="$(git rev-parse FETCH_HEAD)"
+  full="$(git rev-parse --verify --quiet "${sha}^{commit}")" || {
+    echo "ship platter revert: $sha is not a commit here, even after fetching refs/pull/$pr/head" >&2; exit 1; }
+  git merge-base --is-ancestor "$full" "$head" || {
+    echo "ship platter revert: $sha is not on #$pr's head ($head) — the ledger's revert column names the platter's own item commits" >&2; exit 1; }
+  local branch="revert/platter-$pr-${full:0:7}"
+  git checkout -q -B "$branch" origin/main
+  git revert --no-edit "$full" || {
+    echo "ship platter revert: git revert $full conflicts with today's main — resolve it on $branch, commit, then ship" >&2; exit 1; }
+  echo "ship platter revert: reverted ${full:0:7} (#$pr) onto $branch, cut from origin/main — ship it with: scripts/ship.sh open '$(git log -1 --format=%s)'"
+}
+
 cmd_platter() {
   local sub="${1:-}"; shift || true
   case "$sub" in
@@ -1348,7 +1528,9 @@ cmd_platter() {
     # the record after landing, from the first-parent log, in whichever ending is true (merge commit
     # or squash) — posted as a comment on the landed PR by whoever reports it (the digest, a session).
     landed) node "$(dirname "$0")/platter-picture.mjs" landed "$@" ;;
-    *) echo "usage: scripts/ship.sh platter {open <item-branch> [--name platter/<date>] [--subject S] [--no-verify] [--closes N,M] [--part-of N] | board <item-branch> [--subject S] [--no-verify] [--closes N,M] [--part-of N] | amend <item-branch> [--closes N,M] [--part-of N] | ledger [--base <ref>] [--body] | sync | landed <pr> [--ref <ref>]}" >&2; exit 1 ;;
+    # one item out of a landed platter, whichever button landed it — pure git, no token.
+    revert) cmd_platter_revert "$@" ;;
+    *) echo "usage: scripts/ship.sh platter {open <item-branch> [--name platter/<date>] [--subject S] [--no-verify] [--closes N,M] [--part-of N] | board <item-branch> [--subject S] [--no-verify] [--closes N,M] [--part-of N] [--no-merge] | amend <item-branch> [--closes N,M] [--part-of N] | ledger [--base <ref>] [--body] | sync | landed <pr> [--ref <ref>] | revert <pr> <sha>}" >&2; exit 1 ;;
   esac
 }
 
@@ -1366,5 +1548,5 @@ case "${1:-}" in
   verifyrow) shift; verify_row_fields "$1"; echo ;;
   push) shift; cmd_push "$@" ;;
   platter) shift; cmd_platter "$@" ;;
-  *) echo "usage: scripts/ship.sh {open \"<title>\" [--body-file F] [--base B] [--no-verify] | merge <n> [--method squash] | automerge <n> | checkbody <body-file> | pinshots <body-file> <sha> | checkarm <path...> | checkverify < check-runs.json | verifyrow <verify-log> | push <branch> | platter {open|board|ledger|landed} ...}" >&2; exit 1 ;;
+  *) echo "usage: scripts/ship.sh {open \"<title>\" [--body-file F] [--base B] [--no-verify] | merge <n> [--method squash] | automerge <n> | checkbody <body-file> | pinshots <body-file> <sha> | checkarm <path...> | checkverify < check-runs.json | verifyrow <verify-log> | push <branch> | platter {open|board|ledger|landed|revert} ...}" >&2; exit 1 ;;
 esac

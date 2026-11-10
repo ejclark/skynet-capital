@@ -24,8 +24,10 @@
 // Records provenance only, never content beyond the diff git keeps. Bad input exits 0, since a hook
 // must never break the session that fired it. A version that cannot land is the one failure worth
 // saying out loud: it exits 2 with a one-line reason, and prints the same line as a systemMessage.
-// The JSON is there because settings.json runs this as `async` behind `2>/dev/null || true`, which
-// drops stderr and the exit code but not stdout (docs/vendor/claude-code/hooks.md → async hooks).
+// settings.json runs this with `asyncRewake` (docs/vendor/claude-code/hooks.md → command hook
+// fields): a plain `async` hook delivers only the JSON fields of its stdout, and the `2>/dev/null
+// || true` it used to run behind dropped stderr and the exit code — so exit 2 reached nobody. Under
+// `asyncRewake` an exit 2 wakes the session with this hook's stderr; the JSON stays as the belt.
 //
 // Seam: AGENT_MEMORY_ROOT overrides the path test, for specs.
 import { spawnSync } from "node:child_process";

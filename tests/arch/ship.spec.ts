@@ -1,8 +1,77 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { run } from "../support/ship-run.js";
+
+// A pipe into a quiet grep under pipefail: grep exits on its match, the writer takes SIGPIPE, and the
+// pipeline reports 141, so the match reads as a miss. It races on output size and load, so a passing
+// run proves little, and this reads the source instead. Here-strings have no pipeline to signal.
+const PIPED_QUIET_GREP =
+  /(?<!\|)\|&?\s*(?:\w+=\S*\s+)*[ef]?grep\s+(?:-\S+\s+)*(?:-[a-zA-Z]*q[a-zA-Z]*|--quiet)\b/;
+const ALLOW_MARKER = "pipefail-grep-ok:";
+
+function pipedQuietGreps(source: string) {
+  if (!/^\s*set\s.*-[a-zA-Z]*o\s+pipefail/m.test(source)) return [];
+  return source
+    .replace(/(?<!\|)(\|&?)[ \t]*\\?\n\s*/g, "$1 ") // a pipe that ends a line continues on the next
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => !line.startsWith("#"))
+    .filter((line) => !line.includes(ALLOW_MARKER))
+    .filter((line) => PIPED_QUIET_GREP.test(line));
+}
+
+describe("no pipe into a quiet grep under pipefail", () => {
+  const under = (line: string) => `#!/usr/bin/env bash\nset -euo pipefail\n${line}\n`;
+
+  it.each([
+    'git log --format=%b | grep -qxF "x" || exit 1',
+    "git diff --name-only | grep -qvE '^docs/'",
+    "a | grep -E -q x",
+    "a | grep --quiet x",
+    "a |& grep -q x",
+    "a | egrep -q x",
+    "a | LC_ALL=C grep -q x",
+  ])("flags %s", (line) => {
+    expect(pipedQuietGreps(under(line))).toEqual([line]);
+  });
+
+  it("flags a pipe that ends the line before the grep", () => {
+    expect(pipedQuietGreps(under("a |\n  grep -q x"))).toHaveLength(1);
+    expect(pipedQuietGreps(under("a | \\\n  grep -q x"))).toHaveLength(1);
+  });
+
+  it("reads a script that sets pipefail apart from its other flags", () => {
+    const body = "a | grep -q x\n";
+    expect(pipedQuietGreps(`set -eu -o pipefail\n${body}`)).toHaveLength(1);
+    expect(pipedQuietGreps(`set -o errexit -o pipefail\n${body}`)).toHaveLength(1);
+  });
+
+  it.each([
+    'grep -q "x" <<<"$y"',
+    'a || grep -q "x" <<<"$y"',
+    "a | grep x > /dev/null",
+    "# never `printf | grep -q` here",
+    "a | grep -q x # pipefail-grep-ok: the writer has finished by the time grep can match",
+  ])("leaves %s alone", (line) => {
+    expect(pipedQuietGreps(under(line))).toEqual([]);
+  });
+
+  it("leaves a script without pipefail alone", () => {
+    expect(pipedQuietGreps("#!/usr/bin/env bash\na | grep -q x\n")).toEqual([]);
+  });
+
+  it("holds for every script", () => {
+    const scripts = readdirSync("scripts", { recursive: true, encoding: "utf8" })
+      .filter((path) => path.endsWith(".sh"))
+      .map((path) => `scripts/${path}`);
+    const flagged = scripts.filter(
+      (path) => pipedQuietGreps(readFileSync(path, "utf8")).length > 0,
+    );
+    expect(flagged).toEqual([]);
+  });
+});
 
 describe("ship open — the PR-title contract", () => {
   it("refuses a title commitlint would reject in CI, before anything is pushed", () => {
@@ -328,6 +397,14 @@ describe("ship checkarm — the irreversible class never auto-merges", () => {
 
     expect(code).toBe(0);
     expect(stdout).toContain("auto-merge may arm");
+  });
+
+  it("still refuses when a file named --base sits right before the protected path", () => {
+    // `ship automerge` passes the PR's own file names here, so a name must never read as a flag.
+    const { code, stderr } = run(["checkarm", "--base", "src/server/account-identity-gate.ts"]);
+
+    expect(code).toBe(5);
+    expect(stderr).toContain("src/server/account-identity-gate.ts");
   });
 
   it("refuses to answer at all with no paths, rather than clearing an empty question", () => {

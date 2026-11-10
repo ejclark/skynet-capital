@@ -1,13 +1,13 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "@tanstack/react-router";
-import type { KeyboardEvent, MouseEvent, ReactElement, ReactNode } from "react";
+import type { KeyboardEvent, ReactElement } from "react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { myConvictionsKey } from "../live/member-convictions";
-import { formatTranscript, type MpMessage, useMoneypenny } from "../live/moneypenny";
+import { formatTranscript, useMoneypenny } from "../live/moneypenny";
 import { CONVICTION_CHIPS } from "../live/moneypenny-conviction";
-import { linkPieces } from "../live/moneypenny-links";
 import { chipsFor } from "../live/moneypenny-script";
-import { usePhoneWidth } from "./use-media";
+import { linesOf } from "../live/moneypenny-threads";
+import { Message } from "./mp-message";
+import { ThreadBar, ThreadIndex } from "./rail-threads";
 
 /**
  * THE MONEYPENNY RAIL (design handoff 2026-09-03, §6; P1/P2 of `docs/research/moneypenny-chat-ux.md`)
@@ -28,69 +28,31 @@ import { usePhoneWidth } from "./use-media";
  * view is saved from her card it invalidates the member's convictions list (#5482 criterion 9),
  * and the copy control writes the formatted thread to the clipboard. A parked view swaps the
  * chips for its card's three exits (`moneypenny-conviction.ts`).
+ *
+ * Side threads (#7167 criterion 11, `rail-threads.tsx`): the rail shows one conversation at a time.
+ * On the main one, the threads a member started on the page's rows sit above it behind one
+ * collapsed line; inside a thread, a bar names its row, links back to it, and returns to the main
+ * conversation. The chips are the main conversation's, so a thread shows none.
  * @category feedback
  */
-
-/** A place she names, as a link (#5238): an in-app navigation, so the thread survives the move.
- *  At ≤860 the rail covers the page, so the tap closes it and the place shows; wider, the rail
- *  stays open beside it. A modified click (new tab, new window) keeps the browser's own handling
- *  — the `href` is the real URL — and with no router mounted the plain href is the whole link. */
-function PlaceLink({ path, text }: { readonly path: string; readonly text: string }): ReactElement {
-  const router = useRouter({ warn: false });
-  const closeRail = useMoneypenny((s) => s.closeRail);
-  const phone = usePhoneWidth();
-  const onClick = (e: MouseEvent<HTMLAnchorElement>) => {
-    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-    if (phone) closeRail();
-    if (!router) return;
-    e.preventDefault();
-    // "Open-position return" while the board is already showing re-ranks it in place — the member keeps
-    // their spot; any other page opens at its top, as a new view should.
-    const samePage = router.state.location.pathname === path.split(/[?#]/)[0];
-    void (samePage
-      ? router.navigate({ href: path, resetScroll: false })
-      : router.navigate({ href: path }));
-  };
-  return (
-    <a className="mp-place" href={`/app${path}`} onClick={onClick}>
-      {text}
-    </a>
-  );
-}
-
-/** Her lines can carry links — a place in the app she names, the issue she just filed — and
- *  `linkPieces` decides which words are which; everything else stays text. */
-function linkify(text: string): readonly ReactNode[] {
-  let offset = 0;
-  return linkPieces(text).map((p) => {
-    // keyed by where the piece starts in the line — stable, and unique within one message
-    const key = offset;
-    offset += p.text.length;
-    if (p.kind === "place") return <PlaceLink key={key} path={p.path} text={p.text} />;
-    if (p.kind === "url")
-      return (
-        <a key={key} href={p.href} target="_blank" rel="noopener noreferrer">
-          {p.text}
-        </a>
-      );
-    return p.text;
-  });
-}
-
-function Message({ m }: { readonly m: MpMessage }): ReactElement {
-  return <div className={`mp-msg mp-${m.role}`}>{linkify(m.text)}</div>;
-}
 
 const dayOf = (at: number | undefined) => (at ? new Date(at).toDateString() : undefined);
 
 export function MoneypennyRail(): ReactElement | null {
   const open = useMoneypenny((s) => s.open);
-  const messages = useMoneypenny((s) => s.messages);
+  const all = useMoneypenny((s) => s.messages);
+  const thread = useMoneypenny((s) => s.thread);
+  // The conversation on screen: the side thread's lines, or the main one's.
+  const messages = linesOf(all, thread?.key);
   const typing = useMoneypenny((s) => s.typing);
   const streaming = useMoneypenny((s) => s.streaming);
+  // A question from the landing page's ask box, drawn at once while the thread binds (#7165).
+  const pending = useMoneypenny((s) => s.pending);
   const flow = useMoneypenny((s) => s.flow);
-  const draft = useMoneypenny((s) => s.draft);
-  const conviction = useMoneypenny((s) => s.conviction);
+  // A parked card answers only in the conversation it was drafted in (#7167 criterion 11).
+  const parkedHere = useMoneypenny((s) => s.parkedIn === s.thread?.key);
+  const draft = useMoneypenny((s) => (parkedHere ? s.draft : undefined));
+  const conviction = useMoneypenny((s) => (parkedHere ? s.conviction : undefined));
   const convictionSeq = useMoneypenny((s) => s.convictionSeq);
   const connected = useMoneypenny((s) => s.connected);
   const firstTradeDone = useMoneypenny((s) => s.firstTradeDone);
@@ -104,15 +66,18 @@ export function MoneypennyRail(): ReactElement | null {
   const list = useRef<HTMLDivElement>(null);
   const atEnd = useRef(true);
   const queryClient = useQueryClient();
-  const busy = typing || streaming;
-  const chipsShown = !busy && (flow === "idle" || draft !== undefined || conviction !== undefined);
+  const waiting = typing || pending !== undefined;
+  const busy = waiting || streaming;
+  // A thread shows a parked card's exits, never the main conversation's own chips.
+  const chipsShown =
+    !busy && (draft !== undefined || conviction !== undefined || (!thread && flow === "idle"));
 
   // Follow the thread: every append scrolls the list to its end.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: messages/typing ARE the trigger
+  // biome-ignore lint/correctness/useExhaustiveDependencies: messages/waiting/thread ARE the trigger
   useEffect(() => {
     const el = list.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [messages, typing]);
+  }, [all, waiting, thread]);
 
   // The chips come back when `streaming` ends — a render where neither trigger above changes —
   // and shorten the list from below, hiding her last line (#5182). Re-pin before paint, but only
@@ -211,7 +176,8 @@ export function MoneypennyRail(): ReactElement | null {
           className="mp-new"
           aria-label="New conversation"
           title="New conversation"
-          disabled={busy}
+          // It forgets every conversation, threads included, so it is offered on the main one only.
+          disabled={busy || thread !== undefined}
           onClick={() => void newConversation()}
         >
           +
@@ -226,6 +192,7 @@ export function MoneypennyRail(): ReactElement | null {
           ×
         </button>
       </div>
+      {thread ? <ThreadBar thread={thread} disabled={busy} /> : <ThreadIndex disabled={busy} />}
       <div className="mp-list" ref={list} aria-live="polite" onScroll={onScroll}>
         {messages.map((m, i) => {
           const day = dayOf(m.at);
@@ -238,7 +205,12 @@ export function MoneypennyRail(): ReactElement | null {
             </div>
           );
         })}
-        {typing ? <div className="mp-typing num">Moneypenny · typing ···</div> : null}
+        {pending !== undefined ? (
+          <div className="mp-entry">
+            <Message m={{ role: "user", text: pending }} />
+          </div>
+        ) : null}
+        {waiting ? <div className="mp-typing num">Moneypenny · typing ···</div> : null}
       </div>
       {chips.length ? (
         <div className="mp-chips">
@@ -253,7 +225,7 @@ export function MoneypennyRail(): ReactElement | null {
         <textarea
           rows={2}
           value={text}
-          placeholder="Message Moneypenny…"
+          placeholder={thread ? "Reply in this thread…" : "Message Moneypenny…"}
           aria-label="Message Moneypenny"
           onChange={(e) => setText(e.target.value)}
           onKeyDown={onKey}

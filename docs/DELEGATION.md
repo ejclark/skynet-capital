@@ -16,6 +16,7 @@ worktree**, to build a scoped item to completion — build → verify → screen
 They run concurrently with the dialog; a completion notification brings the result back. Eric keeps
 feeding thoughts; work moves underneath. **Between two edits, verify with one call:** `npm run check`
 fixes lint, typechecks and runs the related tests for everything changed since `origin/main`,
+regenerates the architecture pages when anything under `docs/architecture/` changed (#6684),
 printing only the failures (`--no-fix` writes nothing, `--full` runs everything) — never split it
 into separate lint, typecheck and per-suite calls (#5191).
 
@@ -40,13 +41,19 @@ into separate lint, typecheck and per-suite calls (#5191).
    <branch> [--issue N]`** — fetch, checkout (resuming the branch if it exists, never discarding
    work), worktree setup and one status line, in one call. A dispatch that must start on today's
    main — a governor athlete, whose slug repeats across cycles — adds `--fresh`, which refuses a
-   taken name and prints the next free `-N` one instead of resuming a stale branch (#6272). Chained `git fetch && git checkout`
-   is refused by the worktree guard and plain `git` is rewritten by the rtk hook; a plain
-   `bash scripts/…` call passes both (#5192). **After it: one plain command per call; no loops,
-   variables or chains around git.** The guard refuses the compound form too — the 2026-10-11
-   token audit counted 285 such refusals in 79 agents, about 15.4M tokens a week. Where plain
-   `git` is refused (the rtk rewrite, #5055), call `/usr/bin/git`. Put both rules in every
-   worktree agent's prompt. **An isolated agent never waits on a PR merge** — its dispatcher
+   taken name and prints the next free `-N` one instead of resuming a stale branch (#6272).
+   **The harness's worktree check reads every command an isolated agent runs, after hooks rewrite
+   it.** It is Claude Code's, not this repo's, and it is the real protection: `git -C` or `cd` aimed
+   at the shared checkout or another worktree is refused, and stays refused. The user-level rtk hook
+   trips it by putting `rtk` in front of `git` (#5055), so `scripts/hooks/guard-bash.mjs` hands
+   those commands back as written, and `git status` and `git a && git b` work as typed (#6470).
+   If a refusal still names rtk (a glob, variable or quoted pipe handed to `rtk grep` or `rtk ls`),
+   the absolute path passes: `/usr/bin/grep`, `/bin/ls`, `/usr/bin/git`. **What it still refuses on its own:** a loop
+   or `$(…)` around git, `bash file; echo $?`, `bash -c` whose text names git, a variable as an
+   argument to sed or node, `find` with `( … )`. The 2026-10-11 token audit counted 285 such refusals in 79 agents, about 15.4M
+   tokens a week. A non-zero exit is reported by the tool, so `echo $?` adds nothing. Anything longer
+   goes in a script file in your scratchpad, run as `bash <file>`, still aimed at your own worktree
+   (#5192). **An isolated agent never waits on a PR merge** — its dispatcher
    does: a session through `subscribe_pr_activity` (the merge arrives as `pull_request.closed`),
    a Workflow step through one backgrounded REST loop (`CONTRIBUTING.md`, #5193). **Temp files are yours alone:** write them inside your own worktree
    (`scratchpad/` there is gitignored) or in a session-scratchpad subfolder named after your
@@ -54,21 +61,30 @@ into separate lint, typecheck and per-suite calls (#5191).
    scratchpad; on 2026-10-11 one agent overwrote another's PR body and commit message mid-ship
    (#5240, #5245). **A long or retried task keeps run memory:** `scripts/run-memory.mjs` gives a run
    a contract, an attempt log that refuses a retry changing nothing, and one scratch pad per agent,
-   outside any worktree so a resumed session or sibling agent can pick it up (#6470). A workflow agent's
+   outside any worktree so a resumed session or sibling agent can pick it up (#6470). **A running
+   workflow agent has no inbox:** a message sent to one resumes a second copy from its transcript, in
+   the same worktree (2026-10-11). To change what a running agent does, put the change where it reads
+   between steps (its run-memory pad), or stop it and relaunch. A workflow agent's
    own folder is `runs/<run>/<agent>` in the session scratchpad, carried in its prompt (grind,
    post-merge-audit, symbol-sweep), because `.claude` is a protected path whose writes are never
    auto-approved. Reach shared files through `promote`, which refuses when the target changed since it
    was read. **Stop only your own processes:** `pkill -P $$ -f rstest`, never a bare
    `pkill -f rstest` — that kills every sibling worktree's test run too. You never need it to clear
    load: full verifies queue one at a time per checkout (`scripts/verify-locked.sh`, #5548), and the
-   pre-push hook skips a tree `ship.sh open` already verified green.
+   pre-push hook skips a tree `ship.sh open` already verified green. **A queued ship can outlast the
+   ten-minute tool ceiling, so start it with `run_in_background` and wait in foreground `until` loops.
+   Never end your turn while it runs:** a workflow agent's turn is its whole life, so a background job
+   or a Monitor cannot wake it once it has answered (2026-11-01: 3 of 5 builders in one batch came
+   back with no PR that way).
    **Finished worktrees are swept, not left** (#5548: ten at once filled a cloud session's disk,
    and they were only ever removed by hand). **After an agent's PR merges, the session that
    dispatched it runs `npm run worktree:sweep`** (dry run: each `.claude/worktrees/*` entry,
    keep or remove, and why) **then `npm run worktree:sweep -- --apply`.** It removes a worktree
    only when its HEAD is in `origin/main` or a remote branch, it has no uncommitted or untracked
    files, it has sat untouched for an hour, and its lock names no live process; it never removes
-   the primary or the worktree it runs in, and removing one deletes the directory only — the
+   the primary, the worktree it runs in, or a desktop-app session's folder (branch
+   `claude/<word>-<word>-<6 hex>`: an idle open session holds no lock, #7102; `--include-sessions`
+   judges those by the same rules), and removing one deletes the directory only — the
    branch and its commits stay. A squash merge leaves no ancestor of `main` and usually deletes
    the remote branch, so pass `--gh` to also accept "a PR merged at exactly this head". Every
    agent worktree is locked to the harness process that spawned it, which outlives the agent, so

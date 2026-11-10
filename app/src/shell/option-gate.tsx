@@ -3,7 +3,6 @@ import type { ReactElement } from "react";
 import { useEffect, useId, useRef, useState } from "react";
 import { parseOccSymbol } from "../../../src/trading/option-symbols";
 import { fetchDesk } from "../live/desk";
-import { useOrderFill } from "../live/desk-events";
 import {
   fetchChain,
   type OptionDraft,
@@ -12,14 +11,16 @@ import {
   reviewOption,
   submitOption,
 } from "../live/options";
+import type { SentOrder } from "../live/order-receipt";
 import { type PlayCode, rungForChainTap } from "../live/plays";
 import { formatExpiration } from "../live/straddle";
 import { type ChainPreset, lockedTapNote } from "./chain-section";
 import { ChainStraddle } from "./chain-straddle";
-import { useFillFlare } from "./fill-flare";
+import { ExitPlanReceipt, ExitPlanReview } from "./exit-plan-review";
 import { LockedPanel } from "./locked-panel";
 import { ExpirationField, StrikeField } from "./option-fields";
 import { GateAction, type OptionGateState, OptionGateStatus } from "./option-preview";
+import { OrderReceipt } from "./order-receipt";
 import { QuoteHeader } from "./quote-header";
 import { RecentOrdersStrip } from "./recent-orders-strip";
 import type { PickedCell } from "./straddle-view";
@@ -216,6 +217,9 @@ export function OptionGate({
   /** Day unless picked (#3407 P1 slice 4) — the server previews the default it will send. */
   const [timeInForce, setTimeInForce] = useState<"day" | "gtc" | undefined>();
   const [state, setState] = useState<OptionGateState>({ step: "draft" });
+  /** Carry or Skip on the review's exit plan (#5709 slice 3) — unpicked on every new review, since
+   *  a choice was made against that review's numbers. */
+  const [carryPlan, setCarryPlan] = useState<boolean | undefined>();
   /** A locked-target chain-cell click fills strike but can't switch rungs (safety-critical, see the
    *  header comment) — this is the visible explanation the house rule requires ("Locked = visible,
    *  disabled, explained… never hidden, never silently dead", `ticket-nav.tsx`). Cleared on every
@@ -410,6 +414,12 @@ export function OptionGate({
   const resolvedOccSymbol =
     chainData?.rows.find((r) => String(r.strike) === strike)?.occSymbol ?? "";
 
+  /** The house's exit plan on the standing review — buying a call only, priced by the server. */
+  const reviewedPlan =
+    (state.step === "reviewed" || state.step === "submitting") && state.preview.ok
+      ? state.preview.exitPlan
+      : undefined;
+
   const draft = (): OptionDraft => ({
     kind: "open",
     participantId: deskId,
@@ -421,6 +431,7 @@ export function OptionGate({
     orderType,
     ...(orderType === "limit" && limitPrice !== "" ? { limitPrice: Number(limitPrice) } : {}),
     ...(timeInForce ? { timeInForce } : {}),
+    ...(carryPlan && reviewedPlan ? { exitPlan: "carry" as const } : {}),
   });
 
   const review = async () => {
@@ -428,6 +439,7 @@ export function OptionGate({
     // hand-typed strike's blur commit never fires from that click — commit it here instead, the
     // same `?strike=` write the blur would have made.
     if (strike !== "" && strike !== initialStrike) onStrikeCommit?.(strike);
+    setCarryPlan(undefined);
     setState({ step: "reviewing" });
     try {
       const { preview } = await reviewOption(draft());
@@ -437,26 +449,57 @@ export function OptionGate({
     }
   };
 
-  const fill = useOrderFill(
-    deskId,
-    state.step === "done" && state.result.ok ? state.result.orderId : undefined,
-  );
-  useFillFlare(fill);
-
   const submit = async () => {
     if (state.step !== "reviewed") return;
-    setState({ step: "submitting", preview: state.preview });
+    const { preview } = state;
+    setState({ step: "submitting", preview });
     try {
       const result = await submitOption(draft());
-      setState({ step: "done", result });
+      if (!result.ok) {
+        setState({ step: "done", result });
+        return;
+      }
+      // The receipt states the order as the server reviewed it — its contract, size and price.
+      const sent: SentOrder = {
+        orderId: result.orderId,
+        status: result.status,
+        symbol: result.symbol,
+        side: preview.side,
+        quantity: preview.contracts,
+        unit: "contracts",
+        intent: preview.positionIntent,
+        orderType: preview.orderType,
+        ...(preview.limitPrice === undefined ? {} : { limitPrice: preview.limitPrice }),
+        timeInForce: result.timeInForce ?? preview.timeInForce,
+      };
+      setState({ step: "done", result, sent });
+      // The sent strike leaves the URL too, so leaving for another pane and coming back finds a
+      // clean ticket rather than the old order's strike re-seeded (Eric, 2026-11-06).
+      if (initialStrike) onStrikeCommit?.("");
       // A filled open changes the desk's holdings — refetch so a just-filled strike picks up its
       // held badge without a reload (the same refresh pattern `OptionPositionsCard`'s own close
-      // flow already uses).
-      if (result.ok) void queryClient.invalidateQueries({ queryKey: ["desk", deskId] });
+      // flow already uses) — and the order list, so the receipt finds the order at once.
+      void queryClient.invalidateQueries({ queryKey: ["desk", deskId] });
+      void queryClient.invalidateQueries({ queryKey: ["desk-orders", deskId] });
     } catch (error) {
       setState({ step: "error", message: String(error) });
     }
   };
+
+  /** "New ticket" on the receipt: the order's own entries clear; the symbol and the expiration
+   *  are the page's context (they live in the URL), so they stay, and the chain reopens to pick. */
+  const newTicket = () => {
+    setStrike("");
+    setContracts("1");
+    setOrderType("limit");
+    setLimitPrice("");
+    setTimeInForce(undefined);
+    setCarryPlan(undefined);
+    setLockedPickNote(undefined);
+    setChainOpen(true);
+    setState({ step: "draft" });
+  };
+  const sent = state.step === "done" && state.result.ok ? state.sent : undefined;
 
   if (play.locked) return <LockedPanel header={header} play={play} />;
 
@@ -577,9 +620,17 @@ export function OptionGate({
       <RecentOrdersStrip symbol={resolvedOccSymbol} deskId={deskId} />
 
       <div className="gate" aria-live="polite">
-        <OptionGateStatus state={state} fill={fill} />
+        <OptionGateStatus state={state} />
       </div>
-
+      {reviewedPlan && (state.step === "reviewed" || state.step === "submitting") ? (
+        <ExitPlanReview
+          plan={reviewedPlan}
+          expiration={state.preview.expiration ?? expiration}
+          carry={carryPlan}
+          onCarry={setCarryPlan}
+          disabled={state.step === "submitting"}
+        />
+      ) : null}
       <GateAction
         state={state}
         drafted={drafted}
@@ -620,7 +671,15 @@ export function OptionGate({
   // in `trade.tsx`'s `Bench` doc comment ("ONE TREE for both layouts").
   const orderDetail = (
     <div className={chartSlot ? "tkt-review-split" : undefined}>
-      <div className={chartSlot ? "tkt-review-fields" : undefined}>{orderFields}</div>
+      <div className={chartSlot ? "tkt-review-fields" : undefined}>
+        {sent && state.step === "done" ? (
+          <OrderReceipt deskId={deskId} order={sent} onNewTicket={newTicket}>
+            <ExitPlanReceipt result={state.result} />
+          </OrderReceipt>
+        ) : (
+          orderFields
+        )}
+      </div>
       {chartSlot ? <div className="tkt-review-chart">{chartSlot}</div> : null}
     </div>
   );
@@ -646,28 +705,32 @@ export function OptionGate({
             : (chainData?.quote ?? "pending")
         }
       />
-      <div className="gate-fields tkt-fields">
-        <SymbolField
-          id={symId}
-          label="Symbol"
-          value={symbol}
-          placeholder="NVDA"
-          maxLength={12}
-          onChange={edit(setSymbol)}
-          onCommit={(s) => {
-            edit(setSymbol)(s);
-            setChainSym(s);
-            setChainOpen(true);
-            onSymbolCommit?.(s);
-          }}
-        />
-        {showFields && !chainData ? expirationField : null}
-      </div>
+      {/* Sent, the form's entry half steps aside for the receipt below (`order-receipt.tsx`) —
+          an order that went out never sits under fields that still hold it. */}
+      {sent ? null : (
+        <div className="gate-fields tkt-fields">
+          <SymbolField
+            id={symId}
+            label="Symbol"
+            value={symbol}
+            placeholder="NVDA"
+            maxLength={12}
+            onChange={edit(setSymbol)}
+            onCommit={(s) => {
+              edit(setSymbol)(s);
+              setChainSym(s);
+              setChainOpen(true);
+              onSymbolCommit?.(s);
+            }}
+          />
+          {showFields && !chainData ? expirationField : null}
+        </div>
+      )}
       {/* An ordinary block sibling, NOT a grid item (review fix — see the header comment): a
           full-row grid span inherited the grid's own overflow from `.exp-tabs`'s non-wrapping tab
           strip and clipped off the phone frame. `ChainStraddle`'s own `.straddle-scroll` already
           handles sitting here — it did before this slice moved the chain table up the page too. */}
-      {chainData && chainOpen ? (
+      {chainData && chainOpen && !sent ? (
         <ChainStraddle
           chainSym={chainSym}
           optionType={optionType}
@@ -680,7 +743,7 @@ export function OptionGate({
           onPickSide={onChainCellPick}
         />
       ) : null}
-      {chainData && !chainOpen ? (
+      {chainData && !chainOpen && !sent ? (
         <p className="tkt-chain-summary" aria-live="polite">
           Strike <b>{strike}</b> · {formatExpiration(chainData.expiration)}
           {limitPrice !== "" ? <> · ${limitPrice}</> : null}
@@ -690,7 +753,7 @@ export function OptionGate({
           </button>
         </p>
       ) : null}
-      {lockedPickNote ? <p className="tkt-note">{lockedPickNote}</p> : null}
+      {lockedPickNote && !sent ? <p className="tkt-note">{lockedPickNote}</p> : null}
       {orderDetail}
     </section>
   );

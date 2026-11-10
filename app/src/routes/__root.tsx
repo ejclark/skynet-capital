@@ -9,6 +9,7 @@ import { type ReactElement, useRef } from "react";
 import { horizonSearch } from "../live/horizon-params";
 import { useMoneypenny } from "../live/moneypenny";
 import { BrandEye } from "../shell/brand-eye";
+import { EyeLight } from "../shell/eye-light-layer";
 import { KeyboardChords } from "../shell/keyboard";
 import { MemberMenu } from "../shell/member-menu";
 import { MoneypennyRail } from "../shell/moneypenny-rail";
@@ -52,8 +53,8 @@ import { Vantage } from "../shell/vantage";
  * replace the shell, since there is no shell left to keep (`shell/route-error.tsx`).
  */
 
-/** Every page of the Profile family lights the Profile tab. `/` is a thin redirect to
- *  `/leaderboard` now (#2321), so it no longer belongs to this family; `/learn`, its chapters,
+/** Every page of the Profile family lights the Profile tab. `/` is the landing page, the day's
+ *  market news (#7077), with a tab of its own; `/learn`, its chapters,
  *  `/feedback` and `/join` are redirects into `/accounts` since #3807 slice 2b, so a member is
  *  never ON them to light anything. */
 export const PROFILE_PATHS = ["/accounts", "/settings"] as const;
@@ -64,8 +65,10 @@ export function isProfilePath(pathname: string): boolean {
 }
 
 /**
- * THE PROFILE TAB (#1119, the canvas's top bar: Leaderboard · Profile · Trade · Activity ·
- * Research). Profile is a family of routes, not one, so its active state is computed from the
+ * THE PROFILE TAB (#1119, the canvas's top bar: Chronicles · Profile · Trade · Activity · Research —
+ * Chronicles, the day's market news, took the Leaderboard's place in #7077 (docs/IA.md §5.9: Eric's
+ * name for the page, fork d on #7018), and the Leaderboard is reached from Profile's league
+ * card). Profile is a family of routes, not one, so its active state is computed from the
  * location rather than a single route match. It ALWAYS lands on the Profile page (#3807 slice 2b):
  * the page itself opens on Milestones while onboarding is open — the natural next step for a new
  * member — and on the Overview once onboarding is complete (Eric, 2026-09-22: a member who's done
@@ -131,13 +134,12 @@ function RootShell(): ReactElement {
           </span>
           <nav className="topnav" aria-label="Views">
             <Link
-              to="/leaderboard"
-              search={{ by: "equity" }}
+              to="/"
               className="topnav-link"
               activeProps={{ "aria-current": "page" }}
-              activeOptions={{ includeSearch: false }}
+              activeOptions={{ exact: true, includeSearch: false }}
             >
-              Leaderboard
+              Chronicles
             </Link>
             <ProfileTab />
             <Link
@@ -168,6 +170,7 @@ function RootShell(): ReactElement {
         </header>
         <Outlet />
         <Vantage root={app} />
+        <EyeLight root={app} />
         <KeyboardChords />
       </div>
       <MoneypennyRail />

@@ -11,9 +11,9 @@ description: >-
 
 # Fitness — is this check any good?
 
-A check that passes while the outcome fails is worse than no check: it buys silence. 13 of the
-126 lessons in `docs/LESSONS.md` are a check that passed, stayed silent, or told no one while the
-outcome failed. This is the procedure for one check, from intent to proof. The rubric it scores
+A check that passes while the outcome fails is worse than no check: it buys silence. On 2026-11-01,
+13 of the 126 lessons in `docs/LESSONS.md` were a check that passed, stayed silent, or told no one
+while the outcome failed. This is the procedure for one check, from intent to proof. The rubric it scores
 against lives in [`rubric.md`](rubric.md) beside this file: open it at step 9, not before.
 
 The script half is free and runs first: `node scripts/fitness-audit.mjs --bugs <file>` breaks the
@@ -48,7 +48,8 @@ header. Check `npm run work-gate` before any step that spends a model.
    call to the `evals-expert` agent in blind grader mode, given only the script and the outcome
    line): a spec graded on its author's list scored 39 of 40 on that list and 7 of 28 on fresh bugs. Run
    `node scripts/fitness-audit.mjs --bugs <file>`. A survivor gets a seed or a written reason; a
-   NOT APPLIED gets rewritten, never dropped. Stop at judges and probe arguments.
+   NOT APPLIED gets rewritten, never dropped. A NO VERDICT was not graded and is never a catch: re-run
+   it on a quieter machine or rewrite a bug that does not compile. Stop at judges and probe arguments.
 8. **Replay on real history, on the real tick times** where history exists. Count fires, false
    closes and notifications. State detection and reset times.
 9. **Wire the ending in code:** who hears, the corrector, its budget, the age at which an
@@ -67,7 +68,7 @@ only for labels or taste. Fresh bugs are the done line, never the list the spec 
 | Rep | Target | Done means |
 |---|---|---|
 | 1 | Re-audit the six contracts in `scripts/fitness.mjs` and fix them in one pass | 35 or more of 40 held-out bugs caught; one comment per failure state on the real-tick replay (70 today). Done 2026-11-01: 29 of 30 blind, the survivor seeded; the replay opens one issue per failure state with 0 comments. The list is `tests/scripts/fixtures/fitness-heldout-bugs.json`, a regression list now: the next score needs a fresh blind pass |
-| 2 | Decision cycles in market hours: the judge reads the per-bot decision journal and fires only on the stalled alert, held against the real session clock under node 24 (no second calendar). Seeds: the 10-08 shape, every bot's evaluation failing, a breaker-halted fleet, a stuck clock, a holiday, an early close, no stamp (unknown), a future timestamp | Red within 10 minutes plus the clock gap on the 10-08 replay; unknown, not silence, on a missing stamp |
+| 2 | Decision cycles in market hours: the judge reads the per-bot decision journal and fires only on the stalled alert, held against the real session clock under node 24 (no second calendar). Seeds: the 10-08 shape, every bot's evaluation failing, a breaker-halted fleet, a stuck clock, a holiday, an early close, no stamp (unknown), a future timestamp | Red within 10 minutes plus the clock gap on the 10-08 replay; unknown, not silence, on a missing stamp. Done 2026-11-01: 28 of 30 blind across this contract's spec and `fitness.spec.ts` (15 of 30 on its own spec, all 14 aimed at the contract); the two survivors seeded. The list is `tests/scripts/fixtures/fitness-heldout-bugs-2.json`, a regression list now |
 | 3 | Diagram legibility with the pinned Mermaid: an advisory ratchet at `ship.sh`, oracle is the owner's eyes on six borderline pictures | Waits: it costs his eyes |
 
 The `evals-expert` agent runs this procedure on request, and nothing starts it on its own. An

@@ -7,7 +7,7 @@ import type { SubscriptionsState } from "./subscription-state.js";
  * A SUBSCRIPTION'S CONVICTION, POINTING AT ITS RECORD (#5482 slice 2, the MIGRATE step of
  * expand / migrate / contract — the order #4469 slice 3c used for the v1 -> v2 wire). Slice 2's
  * expand (#5511) gave a subscription an optional `convictionId` and taught the bots to read it
- * from `subscriptions.v3`. This file writes it, two ways:
+ * from `subscriptions.v3` (v4 only, since the contract step closed). This file writes it, two ways:
  *
  *  - ON A WRITE. A subscribe or a conviction edit that states a conviction points the subscription
  *    at the record that view is (`restated`); an edit of anything else adds a missing pointer but

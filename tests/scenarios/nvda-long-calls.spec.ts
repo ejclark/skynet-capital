@@ -74,4 +74,38 @@ describe("scenario 2 — NVDA long calls, run-up then pullback, no exit plan", (
     expect(d).toBeDefined();
     expect(`${d?.title} ${d?.why}`).toMatch(/time|days left/i);
   });
+
+  // #5709 slice 3: the plan is offered in the ticket's review step, and a call bought with it hears
+  // the same two rules as the member's own plan — on the card and in position guidance.
+  it("s6 — WHEN a member bought the call carrying the exit plan, the card and position guidance SHALL name it as their plan", () => {
+    const occ = "NVDA261127C00190000";
+    const [mine] = decisionsFor("eric", [held(occ, 4, 1200, 4 * 1140)], [], new Set([occ]));
+    expect(mine?.title).toMatch(/your plan's time stop/);
+    expect(mine?.caption).toMatch(/The plan you carried when you bought it sells/);
+    const [house] = decisionsFor("eric", [held(occ, 4, 1200, 4 * 1140)], []);
+    expect(house?.caption).toMatch(/The house's long-call bot sells/);
+
+    const g = positionGuidance(
+      inputs({
+        stake: {
+          cash: 5_000,
+          heldCalls: [
+            {
+              type: "call",
+              strike: 90,
+              expiration: "2027-01-15",
+              contracts: 5,
+              costPerContract: 12,
+              bid: 30,
+              ask: 30.4,
+              planCarried: true,
+            },
+          ],
+        },
+      }),
+    );
+    const own = g.longCalls.find((m) => m.strike === 90);
+    expect(own?.call).toBe("TAKE PROFIT");
+    expect(own?.reasons.map((r) => r.text).join(" ")).toMatch(/your plan/);
+  });
 });

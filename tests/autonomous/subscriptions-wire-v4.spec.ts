@@ -2,10 +2,7 @@ import { createHash } from "node:crypto";
 import {
   buildSubscriptionsSnapshot,
   parseSubscriptionsSnapshot,
-  SUBSCRIPTIONS_SNAPSHOT_KIND,
-  SUBSCRIPTIONS_SNAPSHOT_KIND_V3,
   SUBSCRIPTIONS_SNAPSHOT_KIND_V4,
-  type SubscriptionsSnapshotKind,
   subscriptionsVersion,
 } from "../../src/autonomous/subscriptions-wire.js";
 import type { PlaybookSubscription } from "../../src/domain/types.js";
@@ -16,7 +13,8 @@ import type { SubscriptionsState } from "../../src/subscriptions/subscription-st
  * `subscriptions.v4` (#5482 contract piece 4): the bots read pointers only, so an inline
  * conviction's words and day leave the fingerprint. One bit stays: an inline copy with no pointer
  * is one the app's poll could not move onto a view, and its pair runs exits-only. Expand first: the
- * bots read v4 from this build, and the app keeps sending v3 until they are live.
+ * bots read v4 before the app sent it. Since the contract step's close it is the only kind they read
+ * (the older kinds' refusals: `subscriptions-wire.spec.ts`).
  *
  * Since the contract step's last piece the inline field is retired, and that bit is frozen at
  * `false`: the version is byte-for-byte what a build from before the piece computed for a state
@@ -38,8 +36,17 @@ const AT = Date.parse("2026-10-23T12:00:00.000Z");
 const V4 = SUBSCRIPTIONS_SNAPSHOT_KIND_V4;
 const pointed = { convictionId: "ai-dip-2026-10" };
 const v4 = (state: SubscriptionsState) => subscriptionsVersion(state, V4);
-const wire = (state: SubscriptionsState, kind: SubscriptionsSnapshotKind = V4) =>
-  JSON.parse(JSON.stringify(buildSubscriptionsSnapshot(state, AT, undefined, kind)));
+/** What an app from before the v5 switch sent (#6954 slice 5c-ii): the same snapshot, kinded v4. */
+const wire = (state: SubscriptionsState) =>
+  JSON.parse(
+    JSON.stringify({ ...buildSubscriptionsSnapshot(state, AT), kind: V4, version: v4(state) }),
+  );
+/** A fingerprint over sauron's subscriptions, each as `fields` lists it: an older build's shape. */
+const fingerprint = (subs: readonly unknown[][]) =>
+  createHash("sha256")
+    .update(JSON.stringify([["sauron", subs]]))
+    .digest("hex")
+    .slice(0, 16);
 
 describe("subscriptions.v4 — pointers only on the wire", () => {
   it("moves for a pointer, and for a different one", () => {
@@ -89,14 +96,12 @@ describe("subscriptions.v4 — pointers only on the wire", () => {
 
   it("refuses a v4 snapshot whose version does not reproduce from its contents", () => {
     const sent = wire({ sauron: [sub(pointed)] });
-    const forged = {
-      ...sent,
-      version: subscriptionsVersion(sent.accounts, SUBSCRIPTIONS_SNAPSHOT_KIND),
-    };
-    expect(parseSubscriptionsSnapshot(forged)).toBeUndefined();
-    // A v3 fingerprint is not a v4 one, so a kind relabelled in flight is refused too.
-    const relabelled = wire({ sauron: [sub(pointed)] }, SUBSCRIPTIONS_SNAPSHOT_KIND_V3);
-    expect(parseSubscriptionsSnapshot({ ...relabelled, kind: V4 })).toBeUndefined();
+    const v1 = ["CRWV-WHEEL", "standard", 5_000, true, null, false];
+    // v1's fingerprint, which never named the pointer, under a v4 label.
+    expect(parseSubscriptionsSnapshot({ ...sent, version: fingerprint([v1]) })).toBeUndefined();
+    // v3's, which hashed the pointer after v2's term: not a v4 one, so a relabel is refused too.
+    const v3 = [...v1, null, "ai-dip-2026-10"];
+    expect(parseSubscriptionsSnapshot({ ...sent, version: fingerprint([v3]) })).toBeUndefined();
   });
 
   it("reads a snapshot from an older app that still carried an inline copy as not reported", () => {
@@ -105,14 +110,7 @@ describe("subscriptions.v4 — pointers only on the wire", () => {
     const sent = wire({ sauron: [sub()] });
     const conviction = { reason: "Eric's call", checkOn: "2027-01-29" };
     const older = { ...sent, accounts: { sauron: [{ ...sent.accounts.sauron[0], conviction }] } };
-    older.version = createHash("sha256")
-      .update(
-        JSON.stringify([
-          ["sauron", [["CRWV-WHEEL", "standard", 5_000, true, null, false, null, true]]],
-        ]),
-      )
-      .digest("hex")
-      .slice(0, 16);
+    older.version = fingerprint([["CRWV-WHEEL", "standard", 5_000, true, null, false, null, true]]);
     expect(parseSubscriptionsSnapshot(older)).toBeUndefined();
   });
 

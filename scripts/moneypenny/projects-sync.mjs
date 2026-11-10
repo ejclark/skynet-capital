@@ -40,22 +40,39 @@
 // meant a dozen `issues` events spent the PAT's hour, with `main` red behind them. `itemsFor` asks
 // GitHub about the issue instead of about the board, and only a caller already holding a board list
 // (a sweep) uses one.
+import { readFileSync } from "node:fs";
+import { isMain } from "../is-main.mjs";
+import { withOpenSubIssues } from "./admission.mjs";
 import { missingDecisionCallout } from "./decision-callout.mjs";
-import { ghRateLimit, ghRest, sh, withRetry } from "./gh.mjs";
+import { ghRateLimit, ghRest, ghRestAll, isTransientGhError, sh, withRetry } from "./gh.mjs";
+import { labelNames } from "./labels.mjs";
+import { openPrsByIssue, platterClosesByIssue } from "./pr-issues.mjs";
 import {
   boardItemsFromProjectItems,
   boardSyncSkip,
+  cardFieldValues,
   explainMaskedOwnerFailure,
+  findBoardItem,
+  IN_COLUMN_SINCE,
   isBacklogCandidate,
   isMaskedOwnerFailure,
   isRateLimitExhausted,
   isRetryableProjectsGhError,
   isRetryableRestError,
+  isStartedPlan,
+  KIND,
+  priorityValues,
+  ROLE,
   resolveBoardItem,
   runThroughRateLimit,
+  SYNCED_PRIORITY,
   statusForIssue,
   subIssueCounts,
+  WAITING_ON,
 } from "./projects.mjs";
+import { describeCardFields, planCardFields, wantedCardFields } from "./projects-fields.mjs";
+import { describePriority, planPriority, wantedPriorityOf } from "./projects-priority.mjs";
+import { liveRole, readSeatRegistry } from "./projects-role.mjs";
 
 const OWNER = "ejclark";
 const PROJECT_NUMBER = 2; // created by projects-setup.mjs's first live run (2026-09-27)
@@ -141,12 +158,27 @@ function optionByName(field, name) {
 // message stays reachable. They leave `totalCount` too — otherwise `boardItemsOrThrow` would read
 // every archived card as truncation. A page cap stops a runaway cursor; a capped read still counts
 // more than it returns, so the truncation guards refuse it instead of reporting a half board.
+// #6871: Priority and its hidden record ride along as two more single objects, not connections —
+// the same price rule as Status above. A field the board does not carry yet answers null.
+const PRIORITY_VALUES = `priority: fieldValueByName(name:"Priority"){ ... on ProjectV2ItemFieldSingleSelectValue{ name } }
+        synced: fieldValueByName(name:"${SYNCED_PRIORITY}"){ ... on ProjectV2ItemFieldTextValue{ text } }`;
+
+// #6871 slice 3: Kind and "Waiting on" ride along the same way. A field the board does not carry yet
+// answers null, so a sweep before the setup dispatch reads them as unset. "In this column since" is
+// write-only: the sync stamps it when Status changes and never needs to read it back. Role (#6886
+// slice 1b) rides the same way, one more single object.
+const CARD_VALUES = `kind: fieldValueByName(name:"${KIND}"){ ... on ProjectV2ItemFieldSingleSelectValue{ name } }
+        waiting: fieldValueByName(name:"${WAITING_ON}"){ ... on ProjectV2ItemFieldTextValue{ text } }
+        role: fieldValueByName(name:"${ROLE}"){ ... on ProjectV2ItemFieldSingleSelectValue{ name } }`;
+
 const BOARD_ITEMS_QUERY = `query($owner:String!,$project:Int!,$after:String){
   user(login:$owner){ projectV2(number:$project){
     items(first:100, after:$after){ totalCount pageInfo{ hasNextPage endCursor }
       nodes{ id isArchived
         content{ __typename ... on Issue{ url } ... on PullRequest{ url } }
         status: fieldValueByName(name:"Status"){ ... on ProjectV2ItemFieldSingleSelectValue{ name } }
+        ${PRIORITY_VALUES}
+        ${CARD_VALUES}
       } }
   } }
   rateLimit{ cost remaining resetAt }
@@ -198,6 +230,8 @@ export function readBoardItemsFromGh({
       items.push({
         id: node.id,
         ...(node.status?.name ? { status: node.status.name } : {}),
+        ...priorityValues(node),
+        ...cardFieldValues(node),
         content: __typename ? { type: __typename, ...(url ? { url } : {}) } : null,
       });
     }
@@ -223,13 +257,15 @@ export function readBoardItemsFromGh({
 // A token blind to the board gets `projectV2: null` + NOT_FOUND and gh exits non-zero — still loud.
 // `item-add` left it in #5792 (see `addIssueToBoardFromGh`) — every brand-new issue's first sync
 // runs it, so "rarely runs" was never true of the add — and `item-list` in #4760
-// (`readBoardItemsFromGh`), for its price rather than its owner lookup.
+// (`readBoardItemsFromGh`), for its price rather than its owner lookup. An option's `color` and
+// `description` ride along (#6871 slice 2): `statusFieldUpdate` rewrites a column whose dial
+// sentence went stale, which a names-only read could never see.
 const PROJECT_SHAPE_QUERY = `query($owner:String!,$project:Int!){
   user(login:$owner){ projectV2(number:$project){ id number
     fields(first:100){ nodes{
       __typename
       ... on ProjectV2FieldCommon{ id name }
-      ... on ProjectV2SingleSelectField{ options{ id name } }
+      ... on ProjectV2SingleSelectField{ options{ id name color description } }
     } }
   } }
 }`;
@@ -287,7 +323,10 @@ const ISSUE_PROJECT_ITEMS_QUERY = `query($owner:String!,$repo:String!,$number:In
   projectOwner: user(login:$projectOwner){ projectV2(number:$project){ id } }
   repository(owner:$owner,name:$repo){
     issue(number:$number){
-      projectItems(first:20,includeArchived:false){ nodes{ id project{ number } } }
+      projectItems(first:20,includeArchived:false){ nodes{ id project{ number }
+        status: fieldValueByName(name:"Status"){ ... on ProjectV2ItemFieldSingleSelectValue{ name } }
+        ${PRIORITY_VALUES}
+        ${CARD_VALUES} } }
     }
   }
 }`;
@@ -435,6 +474,13 @@ export function createBoardContext({
         return readAllItems().items ?? [];
       }
     },
+    /**
+     * Always asks GitHub about this issue alone, never a held list (#6775): the re-check after a
+     * sibling's add, which a cached or lagging whole-board list is exactly what failed to show.
+     */
+    issueItems(issue) {
+      return readIssueItems(issue);
+    },
     fields({ refresh = false } = {}) {
       if (refresh || !fields) fields = readFields();
       return fields;
@@ -475,7 +521,10 @@ const UPDATE_STATUS_OPTIONS_MUTATION = `
   }
 `;
 
-/** Send `options` (from `statusFieldUpdate`) as the Status field's whole option list. */
+/**
+ * Send `options` as a single-select field's whole option list — Status's (`statusFieldUpdate`) or,
+ * since #6886 slice 1b, Role's (`roleFieldUpdate`). The mutation is the same for any field.
+ */
 export function writeStatusOptions(fieldId, options) {
   const body = JSON.stringify({
     query: UPDATE_STATUS_OPTIONS_MUTATION,
@@ -485,6 +534,36 @@ export function writeStatusOptions(fieldId, options) {
     input: body,
   });
   return JSON.parse(out || "null")?.data?.updateProjectV2Field?.projectV2Field ?? null;
+}
+
+// #6886 slice 1b — THE SWEEP MAKES THE ROLE FIELD ITSELF, so no setup dispatch has to be
+// remembered: the merge that adds a seat's `role` to the registry also puts it on the board, on the
+// same push, the way `ensureStatusColumns` does for a new column. The input shape is GitHub's
+// `CreateProjectV2FieldInput` (projectId, dataType, name, singleSelectOptions); the first sweep after
+// this merges is its live test, and a failure there is logged, never fatal (projects-reconcile.mjs).
+const CREATE_SINGLE_SELECT_MUTATION = `
+  mutation($projectId: ID!, $name: String!, $options: [ProjectV2SingleSelectFieldOptionInput!]) {
+    createProjectV2Field(input: {
+      projectId: $projectId, dataType: SINGLE_SELECT, name: $name, singleSelectOptions: $options
+    }) {
+      projectV2Field { ... on ProjectV2SingleSelectField { id name options { id name } } }
+    }
+  }
+`;
+
+/** Create a single-select field named `name` carrying `options` (`{name, color, description}`). */
+export function createSingleSelectField(
+  { projectId, name, options },
+  { gh = (argv, input) => runGh("`gh api graphql` (createProjectV2Field)", argv, { input }) } = {},
+) {
+  const body = JSON.stringify({
+    query: CREATE_SINGLE_SELECT_MUTATION,
+    variables: { projectId, name, options },
+  });
+  const out = gh(["api", "graphql", "--input", "-"], body);
+  const field = JSON.parse(out || "null")?.data?.createProjectV2Field?.projectV2Field;
+  if (!field?.id) throw new Error(`creating the "${name}" field returned no field`);
+  return field;
 }
 
 /**
@@ -501,20 +580,187 @@ export function readIssue(issueNumber, { read = ghRest, sleep } = {}) {
   });
 }
 
+// ── which column (#6871 slice 2) ─────────────────────────────────────────────────────────────────
+
 /**
- * Adds the issue to the board if it isn't there yet, sets Status always, and sets Horizon only
- * when the caller supplies one — Horizon is a sequencing judgment (same footing as Priority,
- * which nothing here ever sets automatically either), so a plain per-issue sync call with no
+ * The column one open or closed issue (a REST row) belongs in — `statusForIssue` fed with
+ * everything the rule reads, or null for a card the board never carries (`isBacklogCandidate`).
+ * Shared by the one-issue sync and the reconcile sweep so the two can never disagree.
+ *
+ * `context` carries the reads beyond the issue's own row, each optional:
+ *   columns          — the live board's option names (the rename window, `statusForIssue`)
+ *   openSubIssuesOf  — issue → its open sub-issues `[{number, labels}]`, undefined when unread
+ *   prMaps           — () => {boardedOn, openPrOn}: the open-PR reads (`platterClosesByIssue`,
+ *                      `openPrsByIssue`). Asked only for a card that would otherwise read Ready —
+ *                      the only column those two checks can move — so a sync that lands anywhere
+ *                      else costs no PR list.
+ */
+export function wantedColumn(issue, context = {}) {
+  return wantedCard(issue, context)?.status ?? null;
+}
+
+/**
+ * `wantedColumn` with the reads behind it (#6871 slice 3): `{status, decisionCalloutMissing,
+ * boardedOn, namedByOpenPr}`, or null for a card the board never carries. The extras are what the
+ * "Waiting on" field needs to name who acts next, so it and the column come from ONE evaluation of
+ * the rule and cannot disagree. `boardedOn` / `namedByOpenPr` are undefined unless the card read
+ * Ready first (the only column those two checks can move).
+ */
+export function wantedCard(issue, { columns, openSubIssuesOf, prMaps } = {}) {
+  const labels = labelNames(issue?.labels);
+  if (!isBacklogCandidate({ labels })) return null;
+  const decisionCalloutMissing = missingDecisionCallout({ labels, body: issue?.body });
+  const base = {
+    number: issue?.number,
+    state: issue?.state ?? "open",
+    labels,
+    decisionCalloutMissing,
+    subIssues: subIssueCounts(issue),
+    openSubIssues: openSubIssuesOf?.(issue),
+    blockedBy: Number(issue?.issue_dependencies_summary?.blocked_by) || 0,
+    ...(columns?.length ? { columns } : {}),
+  };
+  const status = statusForIssue(base);
+  if (status !== "Ready" || !prMaps) return { status, decisionCalloutMissing };
+  const { boardedOn, openPrOn } = prMaps();
+  const namedByOpenPr = Boolean(openPrOn?.has(Number(issue?.number)));
+  return {
+    status: statusForIssue({ ...base, boardedOn, namedByOpenPr }),
+    decisionCalloutMissing,
+    boardedOn,
+    namedByOpenPr,
+  };
+}
+
+/**
+ * The open-PR reads as `{boardedOn, openPrOn}` from ONE `pulls?state=open` list, memoized —
+ * FAIL-OPEN to empty maps, as `readBoarded` and the sweep's own open-PR read already are: the
+ * board is a display, and a card left in Ready for one sweep costs less than a red sync.
+ */
+export function openPrMaps({ read = () => ghRestAll("pulls?state=open"), log = console.log } = {}) {
+  let maps;
+  return () => {
+    if (maps) return maps;
+    try {
+      const rows = read() ?? [];
+      maps = { boardedOn: platterClosesByIssue(rows), openPrOn: openPrsByIssue(rows) };
+    } catch (err) {
+      log(
+        `::warning::the open PRs could not be read — Ready is not screened for open or boarded PRs this run: ${String(err?.message).slice(0, 200)}`,
+      );
+      maps = { boardedOn: new Map(), openPrOn: new Map() };
+    }
+    return maps;
+  };
+}
+
+/**
+ * One issue's open sub-issues, read only for a started plan (one REST call; `withOpenSubIssues`,
+ * admission.mjs, the read the started-plan cap makes) — undefined for anything else, and on a
+ * failed read, which keeps the plan's seat exactly as the cap does.
+ */
+export function readOpenSubIssuesOf(issue, readAll = ghRestAll) {
+  const labels = labelNames(issue?.labels);
+  if (!isStartedPlan({ labels, subIssues: subIssueCounts(issue) })) return undefined;
+  return withOpenSubIssues({ ...issue, labels }, readAll).openSubIssues;
+}
+
+// ── Priority (#6871 slice B1) ────────────────────────────────────────────────────────────────────
+// The decision is projects-priority.mjs's `planPriority`; this is its IO. rank.mjs reads the same
+// Horizon triage file, so `Later` means P3 on the board exactly as it does in `npm run rank`.
+const HORIZONS_PATH = new URL("./projects-horizons.json", import.meta.url);
+let horizonTriage;
+/** The hand Horizon triage (issue number → Now/Next/Later), read once per process. */
+export function readHorizons() {
+  if (horizonTriage) return horizonTriage;
+  try {
+    horizonTriage = JSON.parse(readFileSync(HORIZONS_PATH, "utf8"));
+  } catch {
+    horizonTriage = {};
+  }
+  return horizonTriage;
+}
+
+const REPO = process.env.GITHUB_REPOSITORY ?? "ejclark/skynet-capital";
+
+/** A label write over REST (the core bucket), retried on GitHub's 5xx like every call here. */
+function ghLabel(argv) {
+  return withRetry(() => sh("gh", argv), { isTransient: isTransientGhError });
+}
+
+/**
+ * Bring one open issue's Priority card in line with its labels — or, when a human dragged the card,
+ * carry the drag back to the labels FIRST (Eric, 2026-11-04: "Drag sets priority"). Every write
+ * arrives through `io`, so each route is provable without a network call:
+ *   io.readFresh()        → this card as GitHub sees it now, or undefined
+ *   io.setPriority(name)  · io.setRecord(text) · io.addLabel(name) · io.removeLabel(name)
+ *
+ * `fresh` says whether `item`'s values were read moments ago. A sweep's are from its start, and a
+ * drag made since would be overwritten by a stale "write" — so before acting on held values, the
+ * card is re-read (one point) and re-planned. Order is load-bearing (projects-priority.mjs header):
+ * Priority before its record; labels (old off, new on) before the record on a drag.
+ *
+ * Returns the plan it applied, or `{action: "skipped", reason}`.
+ */
+export function syncPriority({ issue, item, fresh = false, ready = true, horizons = {}, io }) {
+  if (issue?.state === "closed") return { action: "skipped", reason: "closed" };
+  if (!ready) {
+    return {
+      action: "skipped",
+      reason: `no "${SYNCED_PRIORITY}" field on the board yet — projects-setup.yml creates it`,
+    };
+  }
+  const wanted = wantedPriorityOf(issue, { horizons });
+  const planFor = (card) =>
+    planPriority({
+      current: card?.priority ?? null,
+      synced: card?.syncedPriority ?? null,
+      wanted,
+      labels: issue?.labels,
+    });
+  let plan = planFor(item);
+  if (!fresh && plan.action !== "none" && plan.action !== "foreign") {
+    const now = io.readFresh();
+    if (now) plan = planFor(now);
+  }
+  if (plan.action === "write") {
+    io.setPriority(plan.value);
+    io.setRecord(plan.value);
+  } else if (plan.action === "record") {
+    io.setRecord(plan.value);
+  } else if (plan.action === "drag") {
+    // Remove before add: with no P label for a moment, a sync reading in between still sees the
+    // card off its record and re-plans the same drag. Two P labels at once would let `classOf`
+    // pick the old lane and overwrite the drag.
+    for (const name of plan.remove) io.removeLabel(name);
+    for (const name of plan.add) io.addLabel(name);
+    io.setRecord(plan.lane);
+  }
+  return plan;
+}
+
+/**
+ * Adds the issue to the board if it isn't there yet, sets Status when it differs, sets Priority
+ * from the labels (or carries a drag back to them, `syncPriority`), and sets Horizon only when the
+ * caller supplies one — Horizon is a sequencing judgment, so a plain per-issue sync call with no
  * `horizon` leaves it untouched rather than guessing.
  *
- * Returns `{skipped}` for a non-candidate (e.g. a `ci-failure` tracker), `{status, horizon, added}`
- * otherwise (`added` false = it was already an item). Throws loudly on any GitHub-side surprise —
- * never a silent partial write.
+ * Returns `{skipped}` for a non-candidate (e.g. a `ci-failure` tracker), `{status, horizon, added,
+ * priority}` otherwise (`added` false = it was already an item). Throws loudly on any GitHub-side
+ * surprise — never a silent partial write.
  *
  * `board` is a `createBoardContext()` the caller may share across many issues (#4183); left out, it
  * makes its own, which is the one-issue `sync project status` job's behaviour unchanged.
  */
-export function syncIssue(issueNumber, { horizon, board = createBoardContext() } = {}) {
+export function syncIssue(
+  issueNumber,
+  {
+    horizon,
+    board = createBoardContext(),
+    context = oneIssueContext(),
+    today = new Date().toISOString().slice(0, 10),
+  } = {},
+) {
   const issue = readIssue(issueNumber);
   const labels = (issue.labels ?? []).map((l) => l.name);
 
@@ -522,11 +768,7 @@ export function syncIssue(issueNumber, { horizon, board = createBoardContext() }
     return { skipped: true, reason: "not a backlog candidate" };
   }
 
-  const decisionCalloutMissing = missingDecisionCallout({
-    labels,
-    body: issue.body,
-    author: issue.user?.login,
-  });
+  const decisionCalloutMissing = missingDecisionCallout({ labels, body: issue.body });
 
   // Add-or-find, never add-and-hope: `item-add` errors on an issue that is already an item, and
   // every sync after an issue's first one hits exactly that (#3954). The board list we already hold
@@ -535,6 +777,7 @@ export function syncIssue(issueNumber, { horizon, board = createBoardContext() }
     issueUrl: issue.html_url,
     cachedItems: board.itemsFor(issue),
     addItem: () => addIssueToBoardFromGh({ projectId: board.project().id, issue }),
+    lookupItems: () => board.issueItems(issue),
     listItems: () => board.items({ refresh: true }),
   });
   if (added) board.noteAdded(item);
@@ -544,13 +787,8 @@ export function syncIssue(issueNumber, { horizon, board = createBoardContext() }
   // The live board's own column names (#4393 slice 4): a rule that names a column the field does
   // not carry yet falls back rather than failing the sync — see `statusForIssue`'s `columns`.
   const columns = (findField(fieldList, "Status")?.options ?? []).map((o) => o.name);
-  const status = statusForIssue({
-    state: issue.state,
-    labels,
-    decisionCalloutMissing,
-    subIssues: subIssueCounts(issue),
-    ...(columns.length ? { columns } : {}),
-  });
+  const card = wantedCard(issue, { ...context, columns });
+  const status = card.status;
 
   const setSingleSelect = (fieldName, optionName) => {
     const field = findField(fieldList, fieldName);
@@ -576,24 +814,137 @@ export function syncIssue(issueNumber, { horizon, board = createBoardContext() }
     ]);
   };
 
-  setSingleSelect("Status", status);
-  if (horizon) setSingleSelect("Horizon", horizon);
+  const setValue = (fieldName, flag, value) => {
+    const { id } = findField(fieldList, fieldName);
+    ghProject([
+      "item-edit",
+      "--id",
+      item.id,
+      "--field-id",
+      id,
+      "--project-id",
+      project.id,
+      ...(flag ? [flag, value] : ["--clear"]),
+    ]);
+  };
+  const setText = (fieldName, text) => setValue(fieldName, "--text", text);
 
-  return { status, horizon: horizon ?? null, added, decisionCalloutMissing };
+  // Kind, "Waiting on" and "In this column since" (#6871 slice 3). A closed card keeps its Kind,
+  // gets the day (Done is a column too) and has its "Waiting on" cleared; a field setup has not
+  // made yet is skipped, not an error. The day is
+  // written BEFORE Status (projects-fields.mjs header): a failed Status write then re-writes both.
+  const closed = status === "Done";
+  const roleField = findField(fieldList, ROLE);
+  const present = {
+    [IN_COLUMN_SINCE]: Boolean(findField(fieldList, IN_COLUMN_SINCE)),
+    [KIND]: !closed && Boolean(findField(fieldList, KIND)),
+    [WAITING_ON]: Boolean(findField(fieldList, WAITING_ON)),
+    [ROLE]: !closed && Boolean(roleField),
+  };
+  const fieldWrites = planCardFields({
+    have: item,
+    // A closed card keeps its Kind and Role, but nothing waits on anyone: "Waiting on" is cleared.
+    wanted: closed ? { waitingOn: "" } : wantedLiveFields(issue, card, roleField),
+    status,
+    today,
+    present,
+  });
+  const writeCardField = (w) => {
+    if (w.kind === "select") setSingleSelect(w.field, w.value);
+    else if (w.kind === "date") setValue(w.field, "--date", w.value);
+    else if (w.kind === "text") setText(w.field, w.value);
+    else setValue(w.field, null);
+  };
+  for (const w of fieldWrites.filter((x) => x.kind === "date")) writeCardField(w);
+
+  // The card's own Status rides on both reads (the board list, and since #6871 slice 2 the
+  // per-issue lookup too), so an unchanged Status is not rewritten — a sweep filling Priority
+  // would otherwise pay a third mutation per card, and every label event a needless write.
+  if (item.status !== status) setSingleSelect("Status", status);
+  if (horizon) setSingleSelect("Horizon", horizon);
+  for (const w of fieldWrites.filter((x) => x.kind !== "date")) writeCardField(w);
+  const labelsPath = `repos/${REPO}/issues/${issue.number}/labels`;
+  const priority = syncPriority({
+    issue,
+    item,
+    fresh: added,
+    ready: Boolean(findField(fieldList, SYNCED_PRIORITY)),
+    horizons: readHorizons(),
+    io: {
+      readFresh: () => {
+        try {
+          return findBoardItem(board.issueItems(issue), issue.html_url);
+        } catch (err) {
+          if (isRateLimitExhausted(`${err?.stderr ?? ""} ${err?.message ?? ""}`)) throw err;
+          return undefined;
+        }
+      },
+      setPriority: (name) => setSingleSelect("Priority", name),
+      setRecord: (text) => setText(SYNCED_PRIORITY, text),
+      addLabel: (name) => ghLabel(["api", "-X", "POST", labelsPath, "-f", `labels[]=${name}`]),
+      removeLabel: (name) =>
+        ghLabel(["api", "-X", "DELETE", `${labelsPath}/${encodeURIComponent(name)}`]),
+    },
+  });
+
+  return {
+    status,
+    horizon: horizon ?? null,
+    added,
+    decisionCalloutMissing,
+    priority,
+    fields: fieldWrites,
+    parent: localParentOf(issue),
+  };
 }
 
-function main() {
-  const issueNumber = process.argv[2];
-  if (!issueNumber) {
-    console.error("usage: projects-sync.mjs <issue-number>");
-    process.exit(1);
-  }
+/**
+ * `wantedCardFields` with Role checked against the live field's options (`liveRole`): a seat whose
+ * option the sweep has not added yet leaves the card's Role alone instead of failing the sync.
+ * Shared by the one-issue sync and the sweep.
+ */
+export function wantedLiveFields(issue, card, roleField, { horizons = readHorizons() } = {}) {
+  const wanted = wantedCardFields(issue, card, {
+    horizons,
+    ...(roleField ? { seats: readSeatRegistry() } : {}),
+  });
+  if (!roleField) return wanted;
+  const { role, ...rest } = wanted;
+  const live = liveRole(
+    role,
+    (roleField.options ?? []).map((o) => o.name),
+  );
+  return live === undefined ? rest : { ...rest, role: live };
+}
 
-  let result;
+/**
+ * The parent issue's number when the parent lives in THIS repo, else null. `parent_issue_url` is an
+ * API url and GitHub allows a parent in another repo; reading only its number would re-sync, or
+ * group sub-issues under, an unrelated local issue with the same number.
+ */
+export function localParentOf(issue, repo = REPO) {
+  const m = /^https:\/\/api\.github\.com\/repos\/([^/]+\/[^/]+)\/issues\/(\d+)$/.exec(
+    String(issue?.parent_issue_url ?? ""),
+  );
+  return m && m[1].toLowerCase() === repo.toLowerCase() ? Number(m[2]) : null;
+}
+
+/**
+ * The reads a one-issue sync makes for itself: its sub-issues when it is a started plan, and the
+ * open-PR list only when it would land in Ready. A sweep passes its own, read once for every card.
+ */
+export function oneIssueContext() {
+  return { openSubIssuesOf: (issue) => readOpenSubIssuesOf(issue), prMaps: openPrMaps() };
+}
+
+/**
+ * Sync one issue, skipping with a warning on a rate limit or a GitHub-side fault (#4438, #6746);
+ * anything else stays red. Returns the result, or null when it skipped.
+ */
+function syncOrSkip(issueNumber, opts) {
   try {
-    result = syncIssue(issueNumber);
+    return syncIssue(issueNumber, opts);
   } catch (error) {
-    // #4438: a rate limit skips with a warning (the board is a display); anything else stays red.
     let budget = {};
     try {
       budget = ghRateLimit().graphql ?? {};
@@ -603,8 +954,11 @@ function main() {
     const warning = boardSyncSkip({ issueNumber, error, budget });
     if (!warning) throw error;
     console.log(warning);
-    return;
+    return null;
   }
+}
+
+function report(issueNumber, result) {
   if (result.skipped) {
     console.log(`issue #${issueNumber}: ${result.reason}, skipping`);
     return;
@@ -613,11 +967,48 @@ function main() {
     `issue #${issueNumber}: ${result.added ? "added to board" : "already on board"}, ` +
       `Status="${result.status}"${result.horizon ? ` Horizon="${result.horizon}"` : ""}`,
   );
+  const p = result.priority;
+  console.log(
+    p?.action === "skipped"
+      ? `issue #${issueNumber}: Priority not synced — ${p.reason}`
+      : describePriority(issueNumber, p),
+  );
+  if (result.fields?.length) console.log(describeCardFields(issueNumber, result.fields));
   if (result.decisionCalloutMissing) {
     console.log(
-      `issue #${issueNumber}: labelled needs-eric with no "Needs from you" callout — kept out of Blocked (#3913)`,
+      `issue #${issueNumber}: labelled needs-eric with no "Needs from you" callout — kept in Backlog until the ask is written (#3913)`,
     );
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+function main() {
+  const issueNumber = process.argv[2];
+  if (!issueNumber) {
+    console.error("usage: projects-sync.mjs <issue-number>");
+    process.exit(1);
+  }
+  const board = createBoardContext();
+  const context = oneIssueContext();
+  const result = syncOrSkip(issueNumber, { board, context });
+  if (!result) return;
+  report(issueNumber, result);
+  // #6871 slice 2: a sub-issue's labels decide whether its parent plan holds a cap seat (Next part
+  // queued) or waits on an approval (Next part needs approval), and the parent gets no event of
+  // its own when a child's labels change. One level up, sharing this run's board and PR reads.
+  // The child's own sync has landed, so a parent failure warns rather than reddening this job;
+  // the reconcile sweep on the next push heals the parent's card.
+  if (!result.parent) return;
+  try {
+    const parent = syncOrSkip(String(result.parent), { board, context });
+    if (parent) report(String(result.parent), parent);
+  } catch (err) {
+    const text = String(err?.message ?? err)
+      .replace(/\s+/g, " ")
+      .slice(0, 300);
+    console.log(
+      `::warning title=Parent not synced::#${issueNumber}'s parent #${result.parent} was not synced — the next sweep re-syncs it. Cause: ${text}`,
+    );
+  }
+}
+
+if (isMain(import.meta.url)) main();

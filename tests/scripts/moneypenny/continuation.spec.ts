@@ -1,11 +1,12 @@
 import {
+  BUILD_JOB,
+  buildJobOutcome,
   type Candidate,
   CONTINUED_MODEL,
   continuationDecision,
   type Decision,
   executeStopContinuation,
   nextSubIssue,
-  openPrsByIssue,
   pickContinuation,
   postContinuationReceipt,
   routeContinuation,
@@ -13,7 +14,11 @@ import {
   STOP_CAP,
   stopComment,
 } from "../../../scripts/moneypenny/continuation.mjs";
-import { derivePrIssues, platterClosesByIssue } from "../../../scripts/moneypenny/pr-issues.mjs";
+import {
+  derivePrIssues,
+  openPrsByIssue,
+  platterClosesByIssue,
+} from "../../../scripts/moneypenny/pr-issues.mjs";
 import {
   blockFingerprint,
   nextPickupOf,
@@ -487,6 +492,34 @@ describe("criterion 10 — when a continued slice stops the plan", () => {
   });
 });
 
+describe("the continued slice is judged by its build job, not its run", () => {
+  const run = { status: "completed", conclusion: "cancelled", url: "u" };
+  const job = (conclusion: string, name = BUILD_JOB) => ({ name, status: "completed", conclusion });
+
+  it("reads a run cancelled by another job's leg as the build's success (#6953, 2026-11-07)", () => {
+    const jobs = [job("cancelled", "research due events (treasury-3y-note)"), job("success")];
+
+    expect(buildJobOutcome(run, jobs).conclusion).toBe("success");
+  });
+
+  it("still stops on a build job that failed or was cancelled itself", () => {
+    expect(buildJobOutcome(run, [job("failure")]).conclusion).toBe("failure");
+    expect(buildJobOutcome(run, [job("cancelled")]).conclusion).toBe("cancelled");
+  });
+
+  it("keeps the run's own conclusion when the run has no build job", () => {
+    expect(buildJobOutcome(run, [job("success", "route")])).toEqual(run);
+  });
+
+  it("so a cancelled run whose build succeeded falls through to the state-block check", () => {
+    const resolved = buildJobOutcome(run, [job("success")]);
+    const d = decide({ comments: [block(), receipt()], runs: { "900": resolved } });
+
+    expect(d.action).toBe("stop");
+    expect(d.reason).toContain("unchanged");
+  });
+});
+
 describe("the receipt is the lane's whole memory", () => {
   it("round-trips the run, the fingerprint and the target", () => {
     const parsed = parseReceipt(
@@ -591,6 +624,7 @@ describe("the writes", () => {
           return "";
         },
         retry: (fn) => fn(),
+        read: () => ({ body: "", labels: [{ name: "plan" }] }),
         assign: (intent) => {
           assigned.push(intent);
           return "assigned";
@@ -598,7 +632,7 @@ describe("the writes", () => {
       },
     );
 
-    expect(calls[0]).toEqual(["gh", "issue", "edit", "3818", "--add-label", "needs-eric"]);
+    expect(calls.at(-1)).toEqual(["gh", "issue", "edit", "3818", "--add-label", "needs-eric"]);
     expect(assigned).toHaveLength(1);
   });
 

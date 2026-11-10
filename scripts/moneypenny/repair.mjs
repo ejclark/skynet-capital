@@ -23,14 +23,17 @@
 //
 // THE LOOP GUARDS, ALL FOUR (a self-healing lane that can trigger itself is a bill, not a net):
 //   1. It ignores its own workflow's failures.
-//   2. It only acts on runs against the default branch — a red PR belongs to that PR's author and
-//      its watching session, and repair PRs opened here would otherwise feed themselves.
+//   2. `routeFailure` only acts on runs against the default branch, and repair PRs opened here would
+//      otherwise feed themselves. A red PR a session opened goes to red-session-pr.mjs instead
+//      (#6605), which leaves this lane's own PRs alone and spends one session per PR at most.
 //   3. One open issue per failure signature: a recurrence comments, it never files again — and a
 //      matrix job's legs fold onto one signature (`normalizeJobName`), so one fault is one issue.
+//      A capsule closed within `REOPEN_DAYS` still owns its signature: the fault reopens it.
 //   4. Once a signature carries `needs-eric`, this lane goes quiet on it entirely.
-//   And one thing that is not a fault at all: a leg a usage limit refused before it worked
+//   And one thing that is not a fault at all: a leg whose log shows a usage limit ended it
 //   (`limitRejected`) neither files, comments nor dispatches — a repair session cannot fix a
-//   refusal, and a recurrence comment per refused run is how #6098 took 16 in 15 hours.
+//   refusal, and a recurrence comment per refused run is how #6098 took 16 in 15 hours. The log has
+//   to SHOW it: a session that died with no reason printed stays a fault (#6579).
 //
 // THE STALENESS GUARD, separate from the four above and deliberately not one of them (#4374): the
 // loop guards stop this lane feeding itself, this one stops it reporting a fault that is already
@@ -41,11 +44,24 @@
 // fault and spent a full Opus repair session on a bug that no longer existed. The test is purely
 // temporal — a run that STARTED before the fix merged cannot have carried it — which is why it can
 // never silence the net: a fault that genuinely survives the fix fails a run that starts *after*
-// the close, and files normally. See `fixedWhileInFlight`.
+// the close, and files normally. It reads only closes a fix made: the audit tick also closes a
+// capsule once its job has gone green, with no fix anywhere, and a run overlapping THAT close is
+// not stale (#6579). See `fixedWhileInFlight`.
+//
+// ONE FAULT, ONE NUMBER, ACROSS CLOSES (#6953 slice 2). Guard 3 reads only OPEN capsules, so a fault
+// that stops for a while — long enough for the audit tick to prove it green and close it — and
+// then comes back was filed as a brand-new issue. Measured: the breaker's `route` failure was filed
+// 9 times in 5 days (#6640 → #6942), its question to Eric worded 4 ways under 9 numbers, and each
+// filing dispatched a repair session to re-derive the same answer. A signature whose capsule closed
+// within `REOPEN_DAYS` now REOPENS that capsule with a recurrence count instead (`reopenable`). One
+// whose ask was handed to a session on close (`needs-session`, capsule-stall.mjs) reopens without a
+// fresh repair session: the fix is known and waits on a session that can land it.
 import { execFileSync } from "node:child_process";
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
+import { isMain } from "../is-main.mjs";
 import { raiseAlarmIfBurst } from "./burst-alarm.mjs";
 import { LABELS } from "./labels.mjs";
+import { CAPSULE_SLOT, gatherRedSessionPr, routeRedSessionPr, sayOnPr } from "./red-session-pr.mjs";
 import { jobLog } from "./repair-logs.mjs";
 
 /** This workflow's own `name:`. Guard 1 — never treat this lane's own failure as work for itself. */
@@ -180,6 +196,11 @@ export function issueBody(run, failure) {
       : []),
     "",
     `- Triggered by \`${run.event}\` on \`${run.head_branch}\`; the run's own conclusion is failure.`,
+    ...(diedWithoutReason(failure)
+      ? [
+          "- The session errored with no API status in this log. A limit or a dead token reads this way: check those first.",
+        ]
+      : []),
     "- A repair session is dispatched from this issue — it opens a PR or explains why it cannot.",
     "- Workflow-file fixes never auto-merge: those stop with `needs-eric` for Eric's call.",
     "",
@@ -196,16 +217,24 @@ export function issueBody(run, failure) {
 }
 
 /**
- * THE STALENESS GUARD (see the header). Was this signature's capsule closed AFTER this run started?
- * If so the fix merged while the run was still in flight, so the run tested a commit that predates
- * it — a stale report, not a new fault.
+ * How `gh issue list` spells a close that claims the work was done. The audit tick's proof close is
+ * `NOT_PLANNED`, deliberately: "no fix merged here" (`closeProvenCapsule`, capsule-stall.mjs).
+ */
+const CLOSED_AS_DONE = "COMPLETED";
+
+/**
+ * THE STALENESS GUARD (see the header). Was this signature's capsule closed as done AFTER this run
+ * started? If so the fix merged while the run was still in flight, so the run tested a commit that
+ * predates it — a stale report, not a new fault. A capsule closed any other way had no fix for the
+ * run to predate: the audit tick rides every push, so its proof close overlaps that push's own runs,
+ * and one of them failing is the fault coming back, which reopens that capsule (`reopenable`).
  *
- * Fail-safe direction is deliberate: a missing or unparseable `run_started_at`/`closedAt` returns
- * `null`, which falls through to filing. This guard may only ever suppress a report it can PROVE is
- * stale; where it cannot prove that, the net stays loud.
+ * Fail-safe direction is deliberate: a missing or unparseable `run_started_at`/`closedAt`, or a
+ * close that does not say it was done, returns `null`, which falls through to filing. This guard may
+ * only ever suppress a report it can PROVE is stale; where it cannot prove that, the net stays loud.
  *
  * @param run {{ run_started_at?: string }}
- * @param closedIssues {{ number: number, title: string, closedAt?: string }[]}
+ * @param closedIssues {{ number: number, title: string, closedAt?: string, stateReason?: string }[]}
  * @param title the failure signature
  * @returns the closed capsule this run is a stale echo of, or `null`
  */
@@ -213,7 +242,7 @@ export function fixedWhileInFlight(run, closedIssues, title) {
   const started = Date.parse(run?.run_started_at ?? "");
   if (!Number.isFinite(started)) return null;
   for (const issue of closedIssues ?? []) {
-    if (issue.title !== title) continue;
+    if (issue.title !== title || issue.stateReason !== CLOSED_AS_DONE) continue;
     const closed = Date.parse(issue.closedAt ?? "");
     if (Number.isFinite(closed) && closed > started) return issue;
   }
@@ -231,34 +260,124 @@ function staleEchoBody(run, failure, issue) {
   ].join("\n");
 }
 
+/** How far back a closed capsule still owns its signature: a fault back within this reopens it. */
+export const REOPEN_DAYS = 14;
+/** Left on every reopen, so capsule-stall.mjs reads only what was said since (its `sinceReopen`). */
+export const REOPEN_MARKER = "<!-- moneypenny:capsule-reopened -->";
+/** The body row that counts the closes a fault has come back from. */
+const CAME_BACK = /^\| \*\*Came back after a close\*\* \| (\d+) times? \|$/m;
+/** Labels that describe the capsule's last life, and would mislead on its next one. */
+const STALE_ON_REOPEN = [LABELS.inProgress.name, LABELS.stall.name];
+
+/** How many times this capsule has been reopened by a returning fault, read from its body. Pure. */
+export function recurrenceCount(body) {
+  return Number(CAME_BACK.exec(String(body ?? ""))?.[1] ?? 0);
+}
+
 /**
- * Did a usage limit refuse this leg's session before it did any work? Three shapes, each measured
- * on a real log (study 2026-11-01; #6098 took 16 recurrence comments in 15 hours from one session
- * limit, #6336 was filed for a leg that ran 394 ms at zero cost):
- *   - the output file's `rate_limit_event` with `status` rejected — the window closed, whether on
- *     the first call or on turn 25 (#6098's longest legs ran 25 turns at $0.93 and then died on it);
- *   - the result envelope's `api_error_status` 429, the same death as GitHub prints it;
- *   - the action's own result print: `is_error` true, every `num_turns` at most 1, every
- *     `total_cost_usd` zero — the session was refused on its first call, whatever printed it.
- * A session that failed for any other reason, however many turns it ran, is a fault, and so is
- * anything this cannot read: unknown stays loud. A bare assistant-message `"error": "rate_limit"`
- * is NOT a signal on its own — a transient 429 the CLI retried leaves the same line, and in every
- * saved log it rides beside one of the two above. The lane's own script text names these fields
- * in prose; only the quoted JSON keys count.
+ * `body` with its recurrence row set to `n`: replaced where it exists, else added below the `Run`
+ * row (or `Legs failed`, which follows it) so it reads with the rest of the metadata table. A body
+ * with no table is returned unchanged — the reopen comment carries the count anyway. Pure.
+ */
+export function withRecurrence(body, n) {
+  const text = String(body ?? "");
+  const row = `| **Came back after a close** | ${n} ${n === 1 ? "time" : "times"} |`;
+  if (CAME_BACK.test(text)) return text.replace(CAME_BACK, row);
+  const lines = text.split("\n");
+  const run = lines.findIndex((l) => l.startsWith("| **Run** |"));
+  if (run === -1) return text;
+  const at = lines[run + 1]?.startsWith("| **Legs failed** |") ? run + 2 : run + 1;
+  lines.splice(at, 0, row);
+  return lines.join("\n");
+}
+
+/**
+ * The capsule a returning fault reopens: the newest one with this signature closed within
+ * `REOPEN_DAYS` of the run's start — or after it, which is the audit tick's proof close overlapping
+ * the run (#6579) — and not closed as a duplicate. Runs after the staleness guard, so a fix's close the run predates never gets
+ * here. A run with no readable start, or a capsule with no readable close, files fresh: that is the
+ * status quo, and loud either way. Pure.
+ *
+ * @returns the closed capsule to reopen, or `null`
+ */
+export function reopenable(run, closedIssues, title, days = REOPEN_DAYS) {
+  const started = Date.parse(run?.run_started_at ?? "");
+  if (!Number.isFinite(started)) return null;
+  const from = started - days * 864e5;
+  let best = null;
+  for (const issue of closedIssues ?? []) {
+    // A duplicate's number was retired in favour of another; the fault never lives there again.
+    if (issue.title !== title || issue.stateReason === "DUPLICATE") continue;
+    const closed = Date.parse(issue.closedAt ?? "");
+    if (!Number.isFinite(closed) || closed < from) continue;
+    if (!best || closed > Date.parse(best.closedAt)) best = issue;
+  }
+  return best;
+}
+
+/** The reopen comment. Starts with the recurrence line capsule-stall.mjs keys its proof cut on. */
+function reopenBody(run, failure, issue, count, waiting) {
+  return [
+    `Failed again — run [${run.id}](${run.html_url}), job \`${failure.job}\`, step \`${failure.step ?? "unknown"}\`. Same signature as this capsule, closed \`${issue.closedAt}\`, so it is reopened rather than filed under a new number. It has now come back after a close ${count} ${count === 1 ? "time" : "times"}.`,
+    "",
+    waiting
+      ? `This capsule carries \`${waiting}\`: its next step was already handed off when it closed, so no new repair session is dispatched to work it out again.`
+      : "A repair session is dispatched from this issue, as for a new fault.",
+    "",
+    REOPEN_MARKER,
+  ].join("\n");
+}
+
+/** The HTTP status each API error in this log ended on, in order. Only the quoted JSON key counts. */
+const apiStatuses = (log) =>
+  [...log.matchAll(/"api_error_status":\s*(\d+)/g)].map((m) => Number(m[1]));
+
+/**
+ * Does this leg's log SHOW that a usage limit ended its session? Two shapes, each measured on a real
+ * log (study 2026-11-01; #6098 took 16 recurrence comments in 15 hours from one session limit):
+ *   - the result envelope's `api_error_status` 429, whether on the first call or on turn 25;
+ *   - the output file's `rate_limit_event` with `status` rejected — the window closed (a research
+ *     leg beside #6098 ran 25 turns at $0.93 and then died on it).
+ * The session's last API status outranks an event: one that names something else (a 401, a 500) is
+ * what ended it, whatever the window did earlier.
+ *
+ * A first-call death at zero cost is NOT a limit on its own (#6579): `is_error` true, one turn and
+ * $0 is also what an expired or revoked token prints (`oauth-token-gate` only checks the secret is
+ * set), and reading that as a limit left every lane red with no capsule, no comment and no repair.
+ * Anything this cannot read is a fault: unknown stays loud.
+ *
+ * WHICH LANES CAN SHOW IT: both shapes live in `claude-execution-output.json`, which reaches the log
+ * only if a workflow step prints it. `build-events` does. `build-feedback` and `build-plan` print the
+ * action's short result, so a limit death there files or comments like any failure until their step
+ * lands (#6579; repair.spec.ts pins that no new lane joins them). A bare assistant-message
+ * `"error": "rate_limit"` is not a signal either — a transient 429 the CLI retried leaves the same
+ * line. The lane's own script text names these fields in prose; only the quoted JSON keys count.
  */
 export function limitRejected(logTail) {
   const log = String(logTail ?? "");
-  if (/"type":\s*"rate_limit_event"[\s\S]{0,200}?"status":\s*"rejected"/.test(log)) return true;
-  if (/"api_error_status":\s*429\b/.test(log)) return true;
-  if (!/"is_error":\s*true/.test(log)) return false;
-  const turns = [...log.matchAll(/"num_turns":\s*(\d+)/g)].map((m) => Number(m[1]));
-  const costs = [...log.matchAll(/"total_cost_usd":\s*([\d.]+)/g)].map((m) => Number(m[1]));
-  return (
-    turns.length > 0 &&
-    costs.length > 0 &&
-    turns.every((t) => t <= 1) &&
-    costs.every((c) => c === 0)
-  );
+  const last = apiStatuses(log).at(-1);
+  if (last !== undefined) return last === 429;
+  return /"type":\s*"rate_limit_event"[\s\S]{0,200}?"status":\s*"rejected"/.test(log);
+}
+
+/**
+ * Did this failure die in a step that runs a Claude session? GitHub names the unnamed `uses:` step
+ * `Run anthropics/claude-code-action@<pin>`. Only there can a log's limit or result fields be about
+ * a session: any other job's log can quote them, and a failing repair.spec.ts prints them in its
+ * code frame. An unknown step is not one, so it stays a fault.
+ */
+function ranClaude(failure) {
+  return /claude-code-action/.test(failure.step ?? "");
+}
+
+/**
+ * The action's short result with nothing behind it: the session errored and no API status says why.
+ * Not a limit and not proof of one, so it stays a fault; this only tells the capsule's reader what
+ * this print cannot rule out, since a dead token is the one thing a repair session cannot fix.
+ */
+function diedWithoutReason(failure) {
+  const log = failure.logTail ?? "";
+  return ranClaude(failure) && /"is_error":\s*true/.test(log) && !apiStatuses(log).length;
 }
 
 /**
@@ -273,8 +392,9 @@ export function splitRefused(run, failures = [], open = []) {
   const refused = new Set();
   const real = [];
   for (const failure of failures) {
-    if (limitRejected(failure.logTail)) refused.add(signature(run, failure.job));
-    else real.push(failure);
+    if (ranClaude(failure) && limitRejected(failure.logTail)) {
+      refused.add(signature(run, failure.job));
+    } else real.push(failure);
   }
   const skips = [];
   for (const title of refused) {
@@ -283,7 +403,7 @@ export function splitRefused(run, failures = [], open = []) {
       type: "skip",
       issue: open.find((i) => i.title === title)?.number,
       title,
-      reason: "a usage limit refused the session before it worked — not a fault a repair can fix",
+      reason: "the log shows a usage limit ended the session — not a fault a repair can fix",
     });
   }
   return { skips, real };
@@ -318,6 +438,27 @@ export function routeFailure(ctx, deps = {}) {
           type: "comment",
           issue: echoed.number,
           body: staleEchoBody(run, failure, echoed),
+        });
+        continue;
+      }
+      const back = reopenable(run, deps.closedIssues, title);
+      if (back) {
+        const labels = (back.labels ?? []).map((l) => (typeof l === "string" ? l : l?.name));
+        // Guard 4 carried across the close: a capsule whose next step is a session's, or Eric's,
+        // reopens quiet — a repair session would only re-derive the hand-off it already made.
+        const waiting = [LABELS.needsSession.name, LABELS.needsEric.name].find((l) =>
+          labels.includes(l),
+        );
+        const count = recurrenceCount(back.body) + 1;
+        const counted = back.body == null ? undefined : withRecurrence(back.body, count);
+        intents.push({
+          type: "reopen-issue",
+          issue: back.number,
+          title,
+          body: reopenBody(run, failure, back, count, waiting),
+          issueBody: counted === back.body ? undefined : counted,
+          removeLabels: STALE_ON_REOPEN.filter((l) => labels.includes(l)),
+          dispatch: !waiting,
         });
         continue;
       }
@@ -613,6 +754,46 @@ function execute(intents) {
       console.log(`::notice::commented recurrence on #${intent.issue}`);
       continue;
     }
+    if (intent.type === "reopen-issue") {
+      // The reopen and its comment are the act: one number, and the recurrence line the proof cut
+      // reads. The count row and the label cleanup are soft — the comment already carries the count.
+      sh("gh", ["issue", "reopen", String(intent.issue), "--comment", intent.body]);
+      console.log(`::notice::reopened #${intent.issue} — ${intent.title} came back`);
+      const soft = (what, args) => {
+        try {
+          sh("gh", args);
+        } catch (err) {
+          console.log(`::warning::#${intent.issue} ${what} — ${String(err.message).slice(0, 200)}`);
+        }
+      };
+      if (intent.issueBody) {
+        soft("kept its old count row", [
+          "issue",
+          "edit",
+          String(intent.issue),
+          "--body",
+          intent.issueBody,
+        ]);
+      }
+      for (const label of intent.removeLabels ?? []) {
+        const path = `repos/{owner}/{repo}/issues/${intent.issue}/labels/${encodeURIComponent(label)}`;
+        soft(`kept \`${label}\``, ["api", "-X", "DELETE", path]);
+      }
+      if (intent.dispatch) {
+        dispatch.push(String(intent.issue));
+        filed.push({
+          number: intent.issue,
+          title: intent.title,
+          createdAt: new Date().toISOString(),
+        });
+      }
+      continue;
+    }
+    if (intent.type === "say-on-pr") {
+      sayOnPr(intent.number, intent.body);
+      console.log(`::notice::said why not on #${intent.number}`);
+      continue;
+    }
     if (intent.type === "open-issue") {
       ensureLabel();
       const url = sh("gh", [
@@ -633,6 +814,18 @@ function execute(intents) {
         createdAt: new Date().toISOString(),
       });
       if (intent.dispatch) dispatch.push(number);
+      // Soft: the line must not cost the session the capsule just asked for. An open capsule is its
+      // own memory (`routeRedSessionPr`), so a lost line cannot buy this PR a second session.
+      if (intent.sayOnPr) {
+        const { number: pr, body } = intent.sayOnPr;
+        try {
+          sayOnPr(pr, body.replaceAll(CAPSULE_SLOT, `#${number}`));
+        } catch (err) {
+          console.log(
+            `::warning::#${pr} did not get its line — ${String(err.message).slice(0, 200)}`,
+          );
+        }
+      }
     }
   }
   const out = process.env.GITHUB_OUTPUT;
@@ -661,7 +854,14 @@ function main(argv) {
         : failuresFrom(run, raw.jobs ?? [], dry ? undefined : jobLog)),
   };
   const deps = fixture ?? (dry ? {} : { openIssues: openIssues(), closedIssues: closedIssues() });
-  const intents = routeFailure(ctx, deps);
+  // A pull_request run never reaches `routeFailure`'s body, and a fixture brings its own PR.
+  const intents =
+    run.event === "pull_request"
+      ? routeRedSessionPr(ctx, {
+          ...deps,
+          ...(fixture || dry ? {} : gatherRedSessionPr(run, ctx.failures)),
+        })
+      : routeFailure(ctx, deps);
 
   if (dry) {
     console.log(JSON.stringify(intents, null, 2));
@@ -693,14 +893,15 @@ function openIssues() {
 }
 
 /**
- * This lane's CLOSED capsules, for the staleness guard. Same label-only scope as `openIssues` — it
- * never reads the wider backlog.
+ * This lane's CLOSED capsules, for the staleness guard and the reopen. Same label-only scope as
+ * `openIssues` — it never reads the wider backlog. `stateReason` is what tells a fix's close from a
+ * proof close; `labels` and `body` are what a reopen carries over (its hand-off, its count).
  *
  * Over-fetching is harmless and under-fetching only costs loudness: the guard's own `closedAt >
  * run_started_at` test is exact, so every row that cannot satisfy it is discarded anyway, and a
- * capsule missed by the window simply gets reported as a fresh fault — the status quo. Only an
- * issue closed in the last few minutes can ever match, and `ci-failure` runs at tens of issues
- * total, so 50 is comfortably past the horizon that matters.
+ * capsule missed by the window simply gets reported as a fresh fault — the status quo. The staleness
+ * guard only matches a close from the last few minutes; the reopen looks back `REOPEN_DAYS`, and the
+ * 2026-11-06 read found 12 `ci-failure` capsules closed in the 5 days before it, so 50 covers it.
  */
 function closedIssues() {
   return json("gh issue list", [
@@ -713,8 +914,8 @@ function closedIssues() {
     "--limit",
     "50",
     "--json",
-    "number,title,closedAt",
-  ]);
+    "number,title,closedAt,stateReason,labels,body",
+  ]).map((i) => ({ ...i, labels: (i.labels ?? []).map((l) => l.name) }));
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main(process.argv.slice(2));
+if (isMain(import.meta.url)) main(process.argv.slice(2));

@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { audit } from "../../../scripts/moneypenny/audit.mjs";
+import { pickupHoldReason } from "../../../scripts/moneypenny/pickup-hold.mjs";
 import {
   closeRedLanePr,
   gatherRedLanePrs,
@@ -9,6 +10,7 @@ import {
   redLaneIntents,
   redLaneOrNone,
 } from "../../../scripts/moneypenny/red-lane-pr.mjs";
+import { nextPickupOf } from "../../../scripts/moneypenny/state-block.mjs";
 
 // #6440 sat red from 10-30, its session over, while `withoutOpenPr` kept #5482 off the queue with no
 // age limit. This is the owner it did not have.
@@ -92,6 +94,25 @@ describe("gatherRedLanePrs — which PR has nobody left to own it", () => {
       failed: "verify",
       failedUrl: "https://github.com/x/actions/runs/1/job/verify",
     });
+  });
+
+  // The arm job waits on it, so a lane PR red on it alone never merges, and nothing else re-runs it.
+  it("names a lane PR whose only red check is the stability budget", () => {
+    const checks = [
+      run("verify", "success"),
+      run("integration tests", "success"),
+      run("stability budget", "failure"),
+    ];
+    expect(gather(listed(), { checks })[0]).toMatchObject({
+      number: 6440,
+      failed: "stability budget",
+      failedUrl: "https://github.com/x/actions/runs/1/job/stability budget",
+    });
+  });
+
+  it("leaves a cancelled stability budget alone, which says nothing about the code", () => {
+    const checks = [run("verify", "success"), run("stability budget", "cancelled")];
+    expect(gather(listed(), { checks })).toEqual([]);
   });
 
   it("feedback lane branches count too", () => {
@@ -247,6 +268,115 @@ describe("closeRedLanePr — the act", () => {
   it("adds needs-session only past the cap", () => {
     const { calls } = act({ priorCloses: 2 });
     expect(calls[2]).toEqual(["issue", "edit", "5482", "--add-label", "needs-session"]);
+  });
+});
+
+// The next build follows the state block and treats the thread as context, so a closed PR the block
+// still counts as delivered is lost work (case A), and a block saying `none` holds the plan forever
+// while the comment says it is back in the queue (case B). Driven through the real gather, intents
+// and act, against the real parser and the real pick-time hold.
+describe("the state block after a red plan PR closes", () => {
+  const blockComment = (pickup: string) => ({
+    id: 777,
+    body: `## State block\n\n**Log:** slice 2 -> #6440\n\n${pickup}\n\n**Blocked on:** nothing`,
+  });
+  const close = (comments: unknown[], { refuseEdit = false } = {}) => {
+    const candidates = gatherRedLanePrs(NOW, { rest: fakeRest(listed(), { comments }).rest });
+    const [i] = redLaneIntents(candidates);
+    if (!i) throw new Error("expected an intent");
+    const calls: string[][] = [];
+    const warned: string[] = [];
+    closeRedLanePr(i, {
+      run: (_cmd: string, args: string[]) => {
+        calls.push(args);
+        if (refuseEdit && args.includes("PATCH")) throw new Error("HTTP 403: refused");
+        return "";
+      },
+      log: (m: string) => warned.push(m),
+    });
+    const edit = calls.find((a) => a.includes("PATCH"));
+    const newBody = edit?.find((a) => a.startsWith("body="))?.slice("body=".length);
+    const said = calls.find((a) => a[0] === "issue" && a[1] === "comment")?.at(-1);
+    return { calls, edit, newBody, said, warned };
+  };
+  const planIssue = { number: 5482, labels: [{ name: "plan" }, { name: "ready" }] };
+
+  it("case A: a block naming slice 3 now names the closed PR's work first, then slice 3", () => {
+    const { edit, newBody } = close([blockComment("**Next pickup:** slice 3, the ladder")]);
+    expect(edit?.slice(0, 4)).toEqual([
+      "api",
+      "-X",
+      "PATCH",
+      "repos/{owner}/{repo}/issues/comments/777",
+    ]);
+    const pickup = nextPickupOf(newBody);
+    expect(pickup).toContain("#6440");
+    expect(pickup).toContain("git fetch origin pull/6440/head");
+    expect(pickup).toContain("slice 3, the ladder");
+    expect(pickup?.indexOf("#6440")).toBeLessThan(pickup?.indexOf("slice 3") ?? -1);
+  });
+
+  it("case B: a block saying none is no longer held, so `back in the queue` is true", () => {
+    const comments = [blockComment("**Next pickup:** none — #6440 closes this issue")];
+    expect(
+      pickupHoldReason({ issue: planIssue, comments, subIssues: [], blockedBy: {} }),
+    ).toContain("names no next pickup");
+    const { newBody, said } = close(comments);
+    expect(said).toContain("back in the queue");
+    expect(
+      pickupHoldReason({
+        issue: planIssue,
+        comments: [{ id: 777, body: newBody }],
+        subIssues: [],
+        blockedBy: {},
+      }),
+    ).toBeNull();
+  });
+
+  it("keeps the rest of the block, and the bold-whole-line shape parses too", () => {
+    const { newBody } = close([blockComment("**Next pickup: slice 3, the ladder. One PR.**")]);
+    expect(newBody).toContain("**Log:** slice 2 -> #6440");
+    expect(newBody).toContain("**Blocked on:** nothing");
+    expect(nextPickupOf(newBody)).toContain("slice 3, the ladder. One PR.");
+    expect(nextPickupOf(newBody)).toContain("#6440");
+  });
+
+  it("a block with no pickup line gains one naming the work", () => {
+    const { newBody } = close([{ id: 777, body: "## State block\n\nsome state" }]);
+    expect(nextPickupOf(newBody)).toContain("#6440");
+  });
+
+  it("edits only the newest block, and only after the PR has closed", () => {
+    const comments = [
+      { id: 111, body: "## State block\n\n**Next pickup:** old" },
+      blockComment("**Next pickup:** slice 3"),
+    ];
+    const { calls, edit } = close(comments);
+    expect(edit).toContain("repos/{owner}/{repo}/issues/comments/777");
+    expect(calls[0]?.slice(0, 2)).toEqual(["pr", "close"]);
+    expect(calls[1]).toBe(edit);
+  });
+
+  it("no block, no edit: a feedback issue or #5482's plan has nothing to correct", () => {
+    const { edit, said } = close([{ id: 9, body: "chatter" }]);
+    expect(edit).toBeUndefined();
+    expect(said).not.toContain("state block");
+  });
+
+  it("an edit that fails costs neither the handoff nor the branch, and the comment says so", () => {
+    const { calls, said, warned } = close([blockComment("**Next pickup:** slice 3")], {
+      refuseEdit: true,
+    });
+    expect(warned.join("\n")).toContain("state block");
+    expect(said).toContain("could not be corrected");
+    expect(said).toContain("still says");
+    expect(calls.at(-1)?.slice(0, 3)).toEqual(["api", "-X", "DELETE"]);
+  });
+
+  it("when the edit lands, the comment tells the next build the block already says it", () => {
+    expect(close([blockComment("**Next pickup:** slice 3")]).said).toContain(
+      "state block's next pickup now names this work",
+    );
   });
 });
 

@@ -99,6 +99,8 @@ export function CalendarHead({
   dayFog,
   onLens,
   onStep,
+  lenses = LENSES,
+  heading,
   children,
 }: {
   readonly lens: Lens;
@@ -112,6 +114,11 @@ export function CalendarHead({
   readonly dayFog?: DayFog;
   readonly onLens: (lens: Lens) => void;
   readonly onStep: (direction: 1 | -1) => void;
+  /** The lenses offered, in order; the all lens never has a button. The landing page offers Day ·
+   *  Week · Month (#7077 AT10). */
+  readonly lenses?: readonly Lens[];
+  /** Stands in for the "Market calendar" label — the landing page's own section heading. */
+  readonly heading?: ReactNode;
   /** Seated between the head row and the lens row — R&D's month grid. */
   readonly children?: ReactNode;
 }): ReactElement {
@@ -119,7 +126,7 @@ export function CalendarHead({
   const line = headLine({ lens, range, closures, all, ...(fiscal ? { fiscal } : {}) });
   return (
     <>
-      <p className="rail-label">Market calendar</p>
+      {heading ?? <p className="rail-label">Market calendar</p>}
       <div className="eh-head">
         <button
           type="button"
@@ -146,28 +153,30 @@ export function CalendarHead({
       <fieldset className="eh-lens-row">
         <legend className="visually-hidden">Lens</legend>
         <div className="eh-lenses">
-          {LENSES.filter((option) => option !== "all").map((option) => {
-            const fog = option === "day" ? dayFog : undefined;
-            return (
-              <button
-                key={option}
-                type="button"
-                className="eh-lens"
-                aria-pressed={option === lens}
-                disabled={fog !== undefined}
-                title={fog?.reason}
-                aria-describedby={fog ? fogId : undefined}
-                onClick={() => onLens(option === lens ? "all" : option)}
-              >
-                {LENS_NAME[option]}
-                {fog ? (
-                  <span className="eh-lens-lock" aria-hidden="true">
-                    ◷
-                  </span>
-                ) : null}
-              </button>
-            );
-          })}
+          {lenses
+            .filter((option) => option !== "all")
+            .map((option) => {
+              const fog = option === "day" ? dayFog : undefined;
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  className="eh-lens"
+                  aria-pressed={option === lens}
+                  disabled={fog !== undefined}
+                  title={fog?.reason}
+                  aria-describedby={fog ? fogId : undefined}
+                  onClick={() => onLens(option === lens ? "all" : option)}
+                >
+                  {LENS_NAME[option]}
+                  {fog ? (
+                    <span className="eh-lens-lock" aria-hidden="true">
+                      ◷
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
         </div>
         {dayFog ? (
           <p className="eh-fog" id={fogId}>

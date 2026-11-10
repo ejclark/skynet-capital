@@ -35,6 +35,152 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### A PR with no checks at all sat 16 hours: the watcher looked only for a ghost suite
+- **SHA:** n/a   **DATE:** 2026-11-08   **STATUS:** closed
+- **RECURS:** The same severance, one hop over — a PR opened by `GITHUB_TOKEN` gets no checks at all
+- **SIGNAL:** #7089 (`feedback/7077`) opened 02:19Z with no check runs and no check suite. Nothing named it, and #7077's next two parts waited behind it. Eric asked "what is the current WIP?" at ~18:20Z, and only then did a session look. Detection lag about 16h. Close and reopen from a real account ran `verify` green in minutes.
+- **ROOT CAUSE:** the 08-17 entry's side quest ("PR open N minutes with zero check runs") was built as `stuck-pr-decide.mjs`'s `headless` kind, keyed on a ghost suite. A PR opened by the Actions job token emits no event, so it has no suite, and `judgePr` returned null. `headless` also had no act: its fix was advice text in a digest. Upstream, #5936: a build that outlives its 1-hour App token falls back to the job token (#5935, #7084, #7089).
+- **PREVENTION:** rank 1. `judgePr` names a head with zero required runs and zero Actions suites `headless` after 30 minutes, and the audit's act stage gives it one commit from the App identity (`update-branch`, else an empty commit), once per head SHA. Detection lag goes from "until someone asks" to the next push to main after 30 minutes.
+- **SIDE QUESTS:** main was red 08:46Z–13:22Z; a PR whose `verify` ran in that window stays red after main recovers, because red is "somebody else's signal" here (#7108 is the lead).
+
+### A drift round stopped after its first step on a Mac, and a session counted 36 unrefuted proposals as fixes
+- **SHA:** n/a   **DATE:** 2026-11-08   **STATUS:** closed
+- **SIGNAL:** Eric, 2026-11-08 00:41Z: "any reason the task stalled/stopped? why not finish?" The run started about 21:30Z on 2026-11-07. Its first `blocked` check, a red pre-push verify on `tests/arch/ship-platter.spec.ts`, was in the journal within half an hour. At 23:54Z the session read 35 such results as finished fixes, put them on a wave branch and reported "36 fixes". Detection took about 3 hours, and his question, not a check.
+- **ROOT CAUSE:** Three mechanisms.
+  (1) The chore verified per push. Check and apply each pushed through the full pre-push verify, which `scripts/verify-locked.sh` runs one at a time per machine, so the run moved one item per verify. On macOS that verify always failed on one spec: `tmpdir()` is a symlink into `/private`, so `envelope-scan.mjs`'s raw direct-run check never matched (#7045, #7068). A `blocked` check ends grind's chain, so no refute or apply ran.
+  (2) "Land every `done` branch" was a sentence, and nothing tested that a branch had been refuted, so commits existing were counted as work done. That is the census entry's shape (2026-10-09): it measured "did a step leave something", not "did the item reach the state it was meant to".
+  (3) grind suffixed the chain's trailing outcome script `· check`, the check role's own label, so a journal tally read script results as checks.
+  What else crosses this system: every push an agent makes (check, apply, `ship open`, a platter board) runs the same pre-push verify, so one platform-only red stopped them all at once. A DNS outage then killed 44 agents mid-step; each item was re-run from the step it had reached.
+- **PREVENTION:** script + spec. `scripts/drift-wave.mjs` builds the wave from git alone and lands a branch only when the refuter's verdicts are on it and every killed finding is reverted (`tests/scripts/drift-wave.spec.ts`; four planted bugs each turn it red). The chore (`docs/grind/instruction-drift.instructions.md`) pushes every role with `--no-verify` and verifies once, on the wave PR's union, with a dated falsifier, and its after-run steps call the script. `.claude/workflows/grind.js` now suffixes an unlabelled script step `· script`. The macOS red itself: #7045, #7068, and the protected half on #7080.
+- **SIDE QUESTS:** a grind breaker for many items blocked by one cause, and one end-of-run retry for agents an outage killed (→ docs/IDEAS.md).
+
+---
+
+### A lo-fi round format became a standing rule before Eric had judged it, and failed the same day
+- **SHA:** n/a   **DATE:** 2026-11-07   **STATUS:** closed
+- **SIGNAL:** Eric on the redrawn #6948 round page, 2026-11-07: "The format is still difficult for me to understand". The format had reached `main` as a rule within the hour (#7007 → PR #7011), so detection took hours, and only because he opened the page.
+- **ROOT CAUSE:** #7007 was filed `ready` to codify the side-by-side compare view while its first instance was still waiting on his read. The feedback lane builds a `ready` issue at once, so the rule landed in `docs/PATTERNS.md` → *Lo-fi shapes* and `docs/process/REDESIGN.md` → *Process changes*. That broke the page's own "Only a settled change gets a line" rule (Eric, 2026-10-14) one step upstream: the change hadn't settled yet. Both #6948 formats were also hand-built outside the redesign kit, with no real Today frame, no pins and no Done (three-reader study, summarized on #6948).
+- **PREVENTION:** doctrine — `docs/process/REDESIGN.md` → *Process changes*: an issue that would write a round format into that page or `docs/PATTERNS.md` is filed without `ready` until his read-back settles it. `docs/PATTERNS.md` → *Lo-fi shapes* now points rounds at the kit instead of a hand-built format (#7017). Not a gate: `ready` is applied by hand on filing, and no script can tell whether a format has been judged.
+- **SIDE QUESTS:** none.
+
+---
+
+### `route` red on main: the audit step skips a spent api budget and stops re-reading the router's deps
+- **SHA:** bbe6f53   **DATE:** 2026-11-07   **STATUS:** closed
+- **COVERS:** 2302e46 9c9abd5 6be9692
+- **SIGNAL:** 8 failed run(s) of `Moneypenny Events (event-research automation)` → `route` on `main`, the first [42185658675](https://github.com/ejclark/skynet-capital/actions/runs/42185658675) at 2026-11-06T08:09:22Z. Repair capsule #6942 filed 2026-11-06T08:13:44Z, closed 17h later by #6998.
+- **ROOT CAUSE:** Run [42321492817](https://github.com/ejclark/skynet-capital/actions/runs/42321492817) failed at `Audit for stalls & conflicts`. Its log: `issues/5365/timeline … returned error: 403 … GitHub said: API rate limit exceeded for installation ID 157155153`. The repair lane matched the job name and reopened #6942. But the breaker bug #6942 tracked (a cancelled, stepless research leg) was fixed in platter #6967 at 00:23Z, and the breaker's own step, `List due events`, is not the step that failed here. Two things in `scripts/moneypenny/index.mjs` `main()` let a spent budget turn `route` red: 1. `gatherDeps(ctx)` ran before the audit-mode branch, so `--audit` paid the router's full read and threw it…
+- **PREVENTION:** spec — `tests/scripts/moneypenny/budget.spec.ts` (#6998).
+- **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
+
+---
+
+### `route` red on main: protected-path changes — 2026-11-06
+- **SHA:** 13d5950   **DATE:** 2026-11-07   **STATUS:** closed
+- **COVERS:** a39f49c 6ff1d62 555261f
+- **SIGNAL:** 5 failed run(s) of `Moneypenny Events (event-research automation)` → `route` on `main`, the first [42185658675](https://github.com/ejclark/skynet-capital/actions/runs/42185658675) at 2026-11-06T08:09:22Z. Repair capsule #6942 filed 2026-11-06T08:13:44Z, closed 16h later by #6967.
+- **ROOT CAUSE:** One merge clears every protected-path change below; the boundary does not move, only its cost. **Either button lands it** — a merge commit keeps items in `main`; a squash reverts one through `platter revert`. Each item was verified green on the union as it boarded; this PR is that union's first CI run.
+- **PREVENTION:** spec — `tests/arch/research-circuit-breaker.spec.ts` (#6967).
+- **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
+
+---
+
+### A publishing wrapper dropped `since`, so two held folds re-read whole audits in production while every spec stayed green
+- **SHA:** c2e4ebe   **DATE:** 2026-11-01   **STATUS:** closed
+- **SIGNAL:** `npm run stability:budget` on `main` (`a839e593`) FAILed `/api/wire` at 160 ms. A CPU profile of 15 warm Wire requests inside the budget container showed `ladderEvidenceFrom`, the whole-read fallback, running on every request. The cost landed earlier the same day with #6577 (the ladder's held fold) and #6585 (Activity's held order origins), so detection took hours. It came from the budget run's timing, which CI only prints.
+- **ROOT CAUSE:** `publishingOrderAuditLog` (`src/observatory/activity-publishing.ts`) rebuilt the audit log as an object literal holding only `record` and `list`. It never forwarded the optional `since` that `JsonlOrderAuditLog` gained later. A held fold reads a missing `since` as "an in-memory store, read it whole", which is the right fallback for offline mode and specs and is silent in production. Three nets missed it, each for its own reason. Every fold spec was built on the bare log. The whole-read scan exempts fallbacks by design. The budget run's latency is advisory. The retro's question, "what else wraps a store this way?", found only the four publishing decorators in that file. `src/research/spot-checks.ts` builds a port with no `since`; it does not wrap one.
+- **PREVENTION:** spec — `tests/observatory/activity-publishing-forwarding.spec.ts` (#4612 slice 10) builds each publishing decorator over the store production builds and fails when the wrapper offers fewer methods than the store. It went red with #6597's forwarding line removed. A `since` added to the ladder-progress log tomorrow fails there until its wrapper forwards it. #6597's own spec still guards the audit's `since` behaviour.
+- **SIDE QUESTS:** a held fold could warn once when it falls back in live mode, which would turn the next silent fallback into a log line → docs/IDEAS.md.
+
+---
+
+### The server crashed on clicks: 16 runtime defects merged with empty or fixture-sized data as their only runtime evidence
+- **SHA:** n/a   **DATE:** 2026-10-04   **STATUS:** closed
+- **SIGNAL:** Eric, 2026-10-04: "the web application continues to crash after clicking on links in the application. This is after several sessions fixed memory intense issues." #4612's 43-agent audit reproduced two crashes. Opening Accounts OOM-killed a 512 MB container, because Pulse built an `Intl.DateTimeFormat` per stored sample, about 27 MB per day of history. A tab older than a deploy blanked the whole app on a changed route, which 45 of 49 frontend deploys did. Members or the audit found every one of the 16 defects; no gate found any. The Pulse formatter dated from #599 (2026-08-26) and reached the Accounts page with #3995 (2026-09-29).
+- **ROOT CAUSE:** five process causes.
+  - **Runtime evidence came only from data that cannot grow.** Offline mode swaps three ledgers for empty in-memory stores, and fixtures are 12 KB. 0 of the 16 entry PRs measured memory, latency or production-sized data.
+  - **Every gate measured code shape or pipeline spend, never the server at runtime.** Two shape gates pushed toward the costly code. dupe-scan's frozen budget made `marketDayKey` the one shared helper that built a formatter per call (#599). A clone-budget cycle shared the spread read that 12 stores use (#236).
+  - **Production incidents never reached this ledger.** Two OOMs left 0 entries, and `docs/ENGINEERING.md` called data volume "a red herring".
+  - **Nothing tested across a deploy,** at about 52 restarts a day.
+  - **Throughput outran the design horizon.** 8 of the 16 entry PRs merged on 2026-08-28 from one session. Lanes moved 3 heavy reads onto hotter paths (#790, #1377, #3995) without re-pricing them.
+- **PREVENTION:** gate, plus a doctrine fix.
+  - The CI `stability budget` job (#4617, item 14 of platter #6576) runs the built server in a 512 MB container on 180 days × 12 participants and clicks every common GET. Memory, OOM, exit and 5xx block; time prints (#6586).
+  - `scripts/whole-read-scan.mjs` (#6510; 18 sites grandfathered, now 1) and `scripts/intl-scan.mjs` (#6571) fail a new instance of the two code patterns.
+  - Route error boundaries and a one-time reload for a stale chunk (#4635). Live channels reopen after a restart (#4984).
+  - Production telemetry: a 60 s memory gauge, `/healthz`, an `incident` issue on an unclean restart, and a client error beacon (#4983). Deploys that change no runtime code skip the restart (#4839, platter #5852).
+  - `docs/ENGINEERING.md`'s cap paragraph no longer calls volume a red herring. A new paragraph names the three checks (#4612 slice 10).
+  - Since #4983 (2026-10-09): 0 OOM kills. One unclean restart (#5525, 2026-10-16) was a Fly host outage at 104 MB.
+- **SIDE QUESTS:** dupe and clone budgets count definitions, not calls, so consolidating a costly helper hands its cost to every caller. Whether those scans should flag a consolidated helper that allocates per call → docs/IDEAS.md.
+
+---
+
+### Research pages OOM-killed the dashboard: every request re-parsed the whole research corpus four times
+- **SHA:** 3be1f71   **DATE:** 2026-10-03   **STATUS:** closed
+- **SIGNAL:** on 2026-10-03, members moving around the app OOM-killed the 512 MB dashboard. One `/api/research` visit took RSS from 118 to 796 MB. The release smoke failures that day are banked under "Four web release failures on 2026-10-03: a boot that never bound, an OOM, and a closed Fly socket". The pattern dated from #387 (2026-08-17), so it ran 47 days. No gate saw it; members did.
+- **ROOT CAUSE:** `shelfJson()` called `listResearch()` once and again inside `eventCalls`, `ledgerDigests` and `shelfSymbols`. That re-read and parsed every doc four times per request, about 350 MB of garbage. #387 wrote the read when the corpus was 29 docs (0.3 MB). By October it was 1,337 docs (33.5 MB), 46× the docs, mostly from the research lane. A store that grows every day by design was read whole on a request path. The e2e corpus frozen at 20 docs (2% of production's bytes) hid the cost. The fix's first memo still held about 170 MB, because a regex match is a V8 sliced string that pins its whole source file. `structuredClone` on insert detached it. The fix was proven under `--max-old-space-size=200`, a heap cap, which cannot see native memory.
+- **PREVENTION:** script. #4519 parses the corpus once per corpus fingerprint and stores detached copies. #4636 (`2315196`) detached the remaining 3 sites: cold `/api/research/calendar` went from +104 to +37 MB. The budget run copied the real research shelf into its container but never requested it. #4612 slice 10 adds a `research` phase (`researchGets` in `scripts/stability/budget-lib.mjs`): R&D's calendar, shelf and coverage, cold then warm. It is judged on breakage and the run's peak, because the cold build is paid once per process by design. Measured 2026-11-06: those three add 0–2 MB, run PASS at a 268 MB peak.
+- **SIDE QUESTS:** the same phase with the forward-test register in it failed twice. The register's cold render added 66–91 MB and peaked at 347–351 MB. It stays out of the phase until #6957 (`bug`, `fast-track`) brings it under budget; production has had no OOM since 2026-10-09, so the cost is headroom, not a crash.
+
+---
+
+### The dashboard ran under tsx for 69 days on a 512 MB machine until it OOM-killed in production
+- **SHA:** 499c9ce   **DATE:** 2026-10-01   **STATUS:** closed
+- **SIGNAL:** Fly logs, 2026-10-01 02:26: `Out of memory: Killed process … anon-rss:364460kB` on the 512 MB machine, 96 s after boot, then eight proxy `connection reset` errors, which members saw as 502s. The runtime came from #2 (2026-07-24), so it ran 69 days. Members found it, not a gate, because production logged no memory.
+- **ROOT CAUSE:** #2 chose a "host-agnostic image (Node 24, `tsx` runtime, no build step)". Production started as npm → the tsx launcher → node with the tsx loader, compiling TypeScript in memory. That was 3 processes and about 295 MB RSS at boot, leaving about 200 MB for requests. #2's evidence was "80 specs pass". 512 MB was never discussed, and nothing in the pipeline could measure RSS: every gate was static.
+- **PREVENTION:** script. #4425 runs one plain-node process on an esbuild bundle (`node dist/serve.mjs`), about 86 MB at boot. The class is now gated. The CI `stability budget` job boots `fly.toml`'s own start command (`flyCommand` in `scripts/stability/budget-lib.mjs`) in a 512 MB container and fails on boot or run peak over 300 MB. Production's run marker (`src/server/run-marker.ts`, #4983) opens an `incident` issue after an unclean restart, so the next OOM is filed within a minute of the reboot instead of after members report 502s.
+- **SIDE QUESTS:** the bots app still runs under tsx on 512 MB (`fly.bots.toml`: `npm run run:autonomous`), the half #4425 left as a follow-up, and no budget measures it → docs/IDEAS.md.
+
+---
+
+### `sync project status` red on main: re-check the issue's own board lookup after a lost add race
+- **SHA:** 820913d   **DATE:** 2026-11-03   **STATUS:** closed
+- **COVERS:** a073793
+- **SIGNAL:** 1 failed run(s) of `Moneypenny Events (event-research automation)` → `sync project status` on `main`, the first [41595337432](https://github.com/ejclark/skynet-capital/actions/runs/41595337432) at 2026-11-03T07:17:29Z. Repair capsule #6775 filed 2026-11-03T07:18:31Z, closed 22m later by #6779.
+- **ROOT CAUSE:** Filing #6774 applied several labels at once, so three `sync project status` runs raced. Two added the item; the third got `Content already exists`, then re-read the whole board three times (07:17:49Z–07:18:11Z) and never saw the item, so it threw the fail-closed "archived" error and turned `main` red. A sibling run 23s later found the same item immediately through the per-issue `projectItems` lookup (#4439). The whole-board list lags far longer than #3979's 6s backoff assumed; the per-issue index did not.
+- **PREVENTION:** spec — `tests/scripts/moneypenny/projects-per-issue-lookup.spec.ts`, `tests/scripts/moneypenny/projects.spec.ts` (#6779).
+- **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
+
+---
+
+### `sync project status` red on main: skip with a warning when github faults a card write on every retry
+- **SHA:** 388fa0f   **DATE:** 2026-11-02   **STATUS:** closed
+- **COVERS:** e313ff7
+- **SIGNAL:** 1 failed run(s) of `Moneypenny Events (event-research automation)` → `sync project status` on `main`, the first [41478541177](https://github.com/ejclark/skynet-capital/actions/runs/41478541177) at 2026-11-02T16:08:29Z. Repair capsule #6746 filed 2026-11-02T16:09:50Z, closed 17m later by #6748.
+- **ROOT CAUSE:** Run [41478541177](https://github.com/ejclark/skynet-capital/actions/runs/41478541177) went red on `sync project status` for #5719: `gh project item-edit` got GraphQL's internal error on all three of #4675's retries. Nothing in our code was wrong, and the reconcile job in `board-sync.yml` (run 41478634800, 16:09:49Z) logged `#5719: "Building now" → "Ready"` and `1 drifted, 1 fixed, 0 failed` 48 seconds later. The red run produced only a repair session. #4438 already set the rule that a display which can't be written warns and stays green; this applies it to the other GitHub-side cause.
+- **PREVENTION:** spec — `tests/scripts/moneypenny/projects-sync-rate-limit-skip.spec.ts` (#6748).
+- **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
+
+---
+
+### The queue ran one verify at a time, and the third in a row still froze the laptop
+- **SHA:** n/a   **DATE:** 2026-11-02   **STATUS:** closed
+- **RECURS:** The verify queue was off on the one machine that runs the fan-outs, and its spec was skipped for saying so
+- **SIGNAL:** Eric, 2026-11-02: "the laptop froze and i had to perform a hard reboot". In the 2026-11-01 load test five builders shipped within 6 s, and the queue ran their verifies one after another: about 100 s, then 402 s, then over 15 minutes with no result, on battery with a game in front, then the freeze. The same night a verify started with the lid closed; a thermal-emergency sleep took 13 minutes out of it, it failed on 5 s timeouts after 798 s, and its nine failed spec files passed within seconds afterwards. That red read as a mistake.
+- **ROOT CAUSE:** the queue bounds how many verifies run, not how hard one runs. One verify starts every check at once at the priority of whatever launched it, and each test runner starts one worker per core but one: 18 test workers on the 10-core laptop, about 11 GiB scaled from a measured 4.8 GiB peak on a 4-core cloud session, all competing with the app in front. Nothing told a failure the machine slept through from a real one. And `ship.sh push` retried a refused pre-push hook as a network blip, running a red tree's verify five times in a row. CPU against memory as the cause of the freeze is still not proved: the sampler wrote to `/private/tmp`, which the reboot wiped.
+- **PREVENTION:** script, unproved on a Mac. `scripts/verify-locked.sh` runs a verify under `taskpolicy -c utility` (not `-b`, which keeps it to the efficiency cores), caps both test runners through `SKYNET_TEST_WORKERS` with the measurement beside the number, refuses when a closed lid would sleep the machine (no display attached) before it queues and again when its turn comes, and calls a failure the machine slept through no result (exit 75, no meter row). `ship.sh push` stops at the hook's `pre-push:` line. `tests/scripts/verify-locked-laptop.spec.ts` stubs taskpolicy, ioreg and sysctl through PATH, and each of eleven planted bugs turned it red. It is unproved until one timed verify runs on the laptop with something in front. Falsifier, 2026-11-30: a verify freezes the laptop again, or low priority pushes one past 5 minutes with nothing else running.
+- **SIDE QUESTS:** `withFileLock` waited forever on a lock path it could not read (#6706, fixed in #6710). Most of a verify's peak memory is its first half-minute → docs/IDEAS.md. The memory-history spec was red for every root runner since #6612, which ruled out a green local verify in any cloud session; #6707 fixed it on main while this was in review.
+
+### A cleanup loop with an empty filter removed 115 worktrees, at least 51 of them other sessions'
+- **SHA:** n/a   **DATE:** 2026-11-01   **STATUS:** closed
+- **SIGNAL:** the script's own last line said "removed 115 worktrees". Its subagents' transcripts name 64 worktrees for that session, so at least 51 belonged to others. Noticed on reading that line, about seven minutes after it ran. Nothing failed: the run exited 0.
+- **ROOT CAUSE:** a session hand-rolled a loop over `.claude/worktrees/*` instead of using `npm run worktree:sweep`, which already exists and prints keep or remove and why. Its keep-list was built with an unquoted pipe (`ours=$(...)a|b|c`), so the assignment ran in a pipeline and the list stayed empty, and `grep -E "^()"` matches everything. Then it did not look at the target first: no dry run printed what would go. `git worktree remove` saved most of the work by refusing dirty folders, and branches survive it. What was lost: gitignored files in those folders (installed packages, logs, local data, any `.env` copies), and no local snapshot exists to restore them. One open session's worktree was among them, and it was put back on its branch at the same commit. Nothing running was hit. The 156 commits no ref pointed at are pinned under `refs/recovered/2026-11-01/`.
+- **PREVENTION:** gate. `scripts/hooks/guard-bash.mjs` refuses `git worktree remove` on a computed path or through `xargs`, and points at the sweep. It reads the command text, so a loop inside a script file still escapes it, and that is said here rather than implied away. The general rule stays a doctrine in the harness: before deleting, look at the target.
+- **SIDE QUESTS:** none.
+
+### The verify queue was off on the one machine that runs the fan-outs, and its spec was skipped for saying so
+- **SHA:** b4ad1ba   **DATE:** 2026-11-01   **STATUS:** closed
+- **SIGNAL:** Eric asked whether a game in another window had stalled the agents. It had not: 2.5% of one core, 143 CPU minutes in 23 hours, no sleep, no thermal warning, no swap. The load was ours, 85 on 10 cores with 0% idle, and all 8 verifies `ship.sh open` logged from 10:00 to 12:00 local failed, against 35 green and 9 red in the three hours before. One verify alone takes 78 seconds and passes 15,885 tests; run together they took over ten minutes and failed. Agents sat in ten-minute tool calls, and 3 of 5 builders in one batch came back with no PR. First detectable 2026-10-26 13:13Z, when the first Mac run printed `running unlocked`; sharper at 10-27 03:29Z, when the specs failed on a Mac and were skipped. Detected 2026-11-01 18:12Z: a lag of 5.6 days. The warning line sits in 25 of that day's agent transcripts, and this session had written "laptop load 58-77" down as a follow-up hours earlier instead of chasing it.
+- **ROOT CAUSE:** `verify-locked.sh` (#5548) was measured on a 4-core cloud session, took flock(1), and treated "no flock" as a rare box to run unlocked on. flock(1) is util-linux, so that box is every Mac, and the Mac is where local fan-outs run. Three things then hid it. A warning went to a log nobody reads for its own sake. A spec that failed on a Mac was read as the spec's fault and skipped (#6324). `docs/DELEGATION.md` told agents "you never need it to clear load", so the 25 who saw the line had no reason to doubt the queue. What else crosses this system: workflow agents. A verify past the ten-minute tool ceiling has to run in the background, and a workflow agent ends with its turn, so overload turned into lost work rather than slow work. Bare `npm test` runs also bypass the queue: 4 against 28 full verifies in those batches, left as they are.
+- **PREVENTION:** gate. perl takes the same kernel lock where flock is missing; `tests/scripts/verify-locked.spec.ts` runs for each tool a machine has, and one unskipped spec fails if this machine runs unlocked, so a Mac and CI both prove the queue. A bug list written without sight of the spec caught 24 of 31 on its first run; four survivors became specs, and the other three are in the flock path, which CI's Linux run has and a Mac cannot run. Doctrine in `docs/ENGINEERING.md`: a spec red on one machine is a finding about that machine. A gate on `skipIf` itself would be ceremony: the repo has two. `docs/DELEGATION.md` and the worker agent now say how to wait for a queued ship without ending the turn.
+- **SIDE QUESTS:** queue wait and run time per verify, the specs that a load of 30 turns red, and a fan-out's verify budget → docs/IDEAS.md.
+
+### Every worktree agent's first git command was refused for weeks, and the blame sat on the wrong guard
+- **SHA:** n/a   **DATE:** 2026-11-01   **STATUS:** closed
+- **SIGNAL:** nearly every builder in one day's #6470 batch reported that plain `git` is refused and `npx biome` fails with "could not determine executable". A count over 148 agent transcripts: 114 refusals with `rtk` named in them, across 24 agents, and 14 failed biome or lint runs across 5. `docs/DELEGATION.md` had carried the workaround since #5055.
+- **ROOT CAUSE:** neither failure was in this repo. The user-level rtk hook rewrites a command before the harness's worktree check reads it. `git status` became `rtk git status`, which the check refuses because it cannot tell where rtk would run it; a glob, variable or pipe in rtk's operands is refused the same way. `npx biome check x` and `npm run lint` became `rtk lint …`, which looks for ESLint or a package called `check`, in every session and not just worktrees. Reports called it "the guard", so the fix was first looked for in `scripts/hooks/guard-bash.mjs`, whose text never matched the refusal. Grepping for the refusal's own words is what showed it was not ours.
+- **PREVENTION:** script. `scripts/hooks/guard-bash.mjs` hands back as written any isolated agent's command that names git (96 of the 114 refusals) and, in every session, biome and the lint script; `tests/scripts/guard-bash.spec.ts` pins it. Globs and variables handed to `rtk grep` stay with rtk on purpose, since taking them too would give up its savings on 85% of agent commands, and the absolute path passes there. The harness's check still reads the result, so aiming git at the shared checkout stays refused. A hook racing another hook is not a guarantee, so the lasting fix for biome and lint is user-level and Eric's: an rtk exclusion for `npx biome` and `npm run lint`.
+- **SIDE QUESTS:** agents still lose calls to the check's own shape rules (a loop or `$(…)` around git, `bash f; echo $?`, a variable passed to sed or node), and the rule never reached an agent's prompt: it lived only in `docs/DELEGATION.md`.
+
 ### A merged crash fix stayed dark for days because its last step was a paste nobody ran
 - **SHA:** n/a   **DATE:** 2026-11-01   **STATUS:** closed
 - **SIGNAL:** an unrelated audit of agent memory (#6470) found no green push of `pipeline.yml` in 200 runs and `fly status` showing the bots machine `stopped`. The second stop dates from about 10-25, so the fleet was down for most of a week, while #5955 sat on `needs-eric` asking for a terminal paste.

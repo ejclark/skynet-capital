@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import type { TradeTypeCode } from "../domain/trade-types.js";
-import { JsonlKeyedStore } from "../storage/jsonl-store.js";
+import { JsonlKeyedStore, type JsonlTail } from "../storage/jsonl-store.js";
 
 /**
  * THE PER-ORDER AUDIT TRAIL — one append-only line every time a member-initiated order actually
@@ -39,6 +39,10 @@ export interface OrderAuditLog {
   record(entry: OrderAuditRecord): Promise<void>;
   /** All recorded lines (order not guaranteed); one participant's when given. */
   list(participantId?: string): Promise<OrderAuditRecord[]>;
+  /** One participant's lines appended since byte `offset`, in file order — how `ladder-evidence.ts`
+   *  learns the trail has not moved without reading it (#4619). Optional: without it a reader
+   *  re-lists. */
+  since?(participantId: string, offset: number): Promise<JsonlTail<OrderAuditRecord>>;
 }
 
 /** The in-memory reference implementation (`InMemoryOrderAuditLog`) lives in its own file,
@@ -60,6 +64,10 @@ export class JsonlOrderAuditLog implements OrderAuditLog {
 
   list(participantId?: string): Promise<OrderAuditRecord[]> {
     return this.store.list(participantId);
+  }
+
+  since(participantId: string, offset: number): Promise<JsonlTail<OrderAuditRecord>> {
+    return this.store.since(participantId, offset);
   }
 }
 

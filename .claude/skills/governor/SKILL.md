@@ -20,12 +20,19 @@ earned after the policy proves out over reps.
 2. **SPIGOT.** `npm run work-gate` — the work spigot's dial and the #2946 spend breaker in one answer
    (`scripts/moneypenny/work-gate.mjs`, #3960). JSON on stdout, exit **0** cleared / **3** refused.
    - **Exit 3 → dispatch nothing this cycle.** Say which control refused, quoting its `reason`: the
-     dial reads `halt`, or the spend breaker is tripped and only a human clears that one. A refused
-     cycle is still a cycle — report it and stop, never work around it.
+     dial reads `halt`; the spend breaker is tripped, and only a human clears that one, or its
+     state is unreadable; or GitHub's REST allowance is used up (`restEmptyUntil`), which refills
+     by itself. A refused cycle is still a cycle — report it and stop, never work around it.
    - **`caps.governorDispatches` is this cycle's athlete allowance.** `normal` 4 is one per coach.
-     `conserve` 1 — walk the roster as usual, dispatch only the single
-     highest-leverage candidate, and name the ones deferred. `surge` 8 — a coach may be dispatched
-     again on its next candidate once its first athlete reports, until the allowance is spent.
+     `conserve` 1 — walk the roster as usual, dispatch only the first in the order step 3 reads, and
+     name the ones deferred. `surge` 8 — a coach may be dispatched
+     again on its next candidate once its first athlete reports green, until the allowance is
+     spent. A coach whose first rep failed gets no second one: that would be an in-cycle retry.
+     **The next candidate comes from the cycle branch, never `main`.** Merge the first wave into
+     `refactor/governed-cycle-<n>`, verify it, and push it. Then run the next wave with each item's
+     `"base"` set to that branch (the chore's steps 2 and 5), so each eye names what is left and
+     the rep stacks on the first. The cycle PR opens after the last wave, never between: an open
+     cycle PR is open work, so the next wave's collision check would skip every file it touches.
    - **The allowance is the only thing the dial changes.** WIP 1, the collision check, the
      merge-policy table and the one-cycle-one-PR rule all hold at every position.
 3. **ROSTER.** The full athlete roster — every coach in `docs/COACHES.md` that has one. Walk **all** of
@@ -43,18 +50,37 @@ earned after the policy proves out over reps.
    owns unlearned incidents). Their eyes still report where they exist; only the governed correction
    is missing.
 
-   For each drill in the table:
+   **The order is `node scripts/cleanup-next.mjs --json`:** take the four scans above in the order
+   their first rows appear in `rows`, and pass the items to step 4 that way. It orders the scans and
+   names no target, so TARGET below still comes from the eye. A scan in its `unreadable` list goes
+   last and gets named. Its other scans have no drill here, so name the top one in the cycle's report
+   and leave it. The list and the gate answer different questions: it ranks by estimated price, and
+   the walk below still covers all four.
+
+   For each drill in the table, in that order:
    - **WIP limit 1:** if its branch glob already has an open PR, skip it this cycle. Inventory is waste.
    - **TARGET:** `node <its eye> --candidate`. The gate picks; never hand-pick. No candidate (budget
      already met) → skip; that dimension is clean, which is the goal, not a failure.
    - **COLLISION:** if the target file is modified by ANY open PR (`gh`/MCP: list open PR files), skip
      this coach this cycle — structural work never races feature work on the same file.
 4. **DISPATCH.** Run `docs/grind/governor.instructions.md` through `/grind`, one item per coach: cheap
-   model tier (sonnet), isolated worktree, the chore's contract (branch off origin/main, gate-confirm
-   target, drill, verify by exit status, ratchet, push, report; a rep opens no PR).
+   model tier (sonnet), isolated worktree, the chore's contract (branch off origin/main or the
+   item's `base`, gate-confirm
+   target, drill, verify by exit status, ratchet, ledger row, push, report; a rep opens no PR).
 5. **LAND — one cycle, one PR.** Collect all green athlete reports and land them as a SINGLE cycle PR:
    merge each athlete's branch into one `refactor/governed-cycle-<n>` branch (their commits stay
-   distinct for bisectability), verify green once, and open one PR titled
+   distinct for bisectability). **Put the cost on the rows:** a rep cannot read its own tokens, so its
+   row in `loop-iterations/governor-<drill>.jsonl` says `tokensM: null`. Read this run's total from
+   `npm run meter -- --hours <since the run began> --json --max-rest 0`, at
+   `agents.tokensByWorkflow.grind.total`, divide it by the green reps, and write that in millions over
+   each new row's null in one commit. That key sums every `grind` run in the window, so if another
+   ran beside this one, leave the nulls. Under `surge` the cycle's own waves are one window: start
+   it when the first wave began and divide by the green reps across every wave. It is an even split
+   of what the run spent, skips included,
+   so say so in the PR body. A second rep on one coach under `surge`
+   is stacked on the cycle branch, so its row lands after the first's: keep both, in order. `npm run loop:ledger` then prints the cycle's
+   numbers, and they go in the PR body.
+   Then verify green once, and open one PR titled
    `refactor: governed cycle <n> — <rep summaries>` with `/ship`. Never arm auto-merge by hand — the
    pipeline arms it once `verify` and integration tests pass. If any rep in the batch is a class the
    merge-policy table does not auto-merge (a ❌ row, or a ✅-only-if row whose condition fails), open

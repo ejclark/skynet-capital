@@ -66,7 +66,7 @@ above the Claude Code attribution footer, and write anything you post in the hou
 | --- | --- | --- |
 | **Shipped** | Open the PR — the `arm auto-merge` job arms it on green (a protected diff gets `hold-merge` instead — steps 4 and 7); never arm by hand | no |
 | **Sliced** | Ship the first coherent slice; comment what remains; label `next-slice` | no |
-| **Needs Eric** | Comment exactly what's missing; re-apply `needs-eric`; stop | **yes — only this** |
+| **Needs Eric** | Write the decision as the body's `Needs from you` callout (`docs/ISSUES.md` rule 7), with its options, your predicted answer and its confidence, and an **On silence** line (the template in `moneypenny-ci-repair.md`); comment exactly what's missing, then re-apply `needs-eric`; stop | **yes — only this** |
 
 There is no `needs-info` exit here the way the feedback lane has one: a plan issue's audience is
 Eric (or the settled-fork process that produced it), not an external member, so an unresolved

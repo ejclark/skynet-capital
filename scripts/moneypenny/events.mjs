@@ -3,6 +3,7 @@
 // moneypenny.mjs (formerly postmaster.mjs; 2026-08-26, the noExcessiveLinesPerFile split).
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { campaignRelevance } from "../campaign-links.mjs";
 import { routeAssignments } from "./assignments.mjs";
 import { routeContinuation } from "./continuation.mjs";
 import { FOOTER, LABELS } from "./labels.mjs";
@@ -34,7 +35,7 @@ const DISPATCH_BUDGET_FILE = join(process.cwd(), "research-dispatch-budget.json"
 
 const IMPACT_RANK = { critical: 0, high: 1, medium: 2, low: 3 };
 
-/** Close-outs first, then first coverage, then impact, then proximity, then id.
+/** Close-outs, then first coverage, then campaign relevance, then impact, proximity and id.
  *
  *  Close-outs (`event-passed-unscored`) outrank everything regardless of impact because they are
  *  the one class the cap could destroy rather than delay: assessment-cadence.json's
@@ -67,17 +68,25 @@ const sortKey = (e) => {
   // able to evict a close-out, which is the one class the cap destroys rather than delays. Its
   // `daysUntil` is negative (the event has passed), so inside its impact tier the longest-orphaned
   // row is served first — the same earliest-first instinct, for free.
-  if (e.reason === "event-passed-unscored") return [0, days, impact];
+  //
+  // CAMPAIGN RELEVANCE (#6949 criterion 5): "order due assessments by campaign relevance before
+  // impact × time-to-event, keeping the cadence floor." Among pulses it leads: an event a campaign's
+  // cast names, then one only a campaign's force matches, then the rest, and impact then proximity
+  // inside each. The two expiring classes keep their deadline order and take relevance only as a
+  // tie-break after it, because ranking a campaign event ahead by slack would let it destroy another
+  // event's record rather than delay it — that is the floor. Relevance reorders; it never adds or
+  // drops a row, so what is due is still the cadence's call alone (event-scan.mjs).
+  const relevance = campaignRelevance(e);
+  if (e.reason === "event-passed-unscored") return [0, days, relevance, impact];
   // First coverage expires at the print itself, so it sorts by slack too: soonest first.
-  if (e.reason === "never-assessed") return [1, days, impact];
-  return [2, impact, days];
+  if (e.reason === "never-assessed") return [1, days, relevance, impact];
+  return [2, relevance, impact, days];
 };
 
 const compareDispatchPriority = (a, b) => {
   const [ka, kb] = [sortKey(a), sortKey(b)];
-  return (
-    ka[0] - kb[0] || ka[1] - kb[1] || ka[2] - kb[2] || String(a.id).localeCompare(String(b.id))
-  );
+  for (let i = 0; i < ka.length; i++) if (ka[i] !== kb[i]) return ka[i] - kb[i];
+  return String(a.id).localeCompare(String(b.id));
 };
 
 /** Read the ceiling. A missing or malformed budget file is a LOUD FAILURE, never an uncapped run
@@ -318,7 +327,8 @@ export function dueForResearch(dueEvents = [], openPrHeads = [], cap = researchC
       `::notice::dispatch ceiling — ${dispatched.length} of ${eligible.length} eligible event(s) ` +
         `dispatched this tick (cap ${cap}, the work spigot's number for the dial's position — ` +
         `work-mode.json / research-dispatch-budget.json); ${deferred} deferred to later ticks, ` +
-        `close-outs, then first coverage, then highest impact then soonest. Next in line: ${next.id} (${next.impact}).`,
+        `close-outs, then first coverage, then campaign events, then highest impact then soonest. ` +
+        `Next in line: ${next.id} (${next.impact}).`,
     );
   }
   return dispatched;

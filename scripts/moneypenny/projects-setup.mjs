@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // PROJECTS V2 SETUP — one-time (idempotent, safe to re-run), #3818 slice B. Creates the
-// "Skynet Capital — Orchestration" project under ejclark and its four fields (Status, Priority,
-// Horizon, Target date) via `gh project`.
+// "Skynet Capital — Orchestration" project under ejclark and its fields (Status, Priority,
+// Horizon, Target date, and #6871's hidden "Synced priority" text record) via `gh project`.
 //
 // Needs `GH_TOKEN` to be Eric's own classic personal access token with `project` scope, never the
 // Moneypenny App's installation token. The first live run (2026-09-26, run 36270609136) proved
@@ -19,7 +19,8 @@
 //
 //   GH_TOKEN=<eric's classic PAT, project scope> node scripts/moneypenny/projects-setup.mjs
 import { sh, withRetry } from "./gh.mjs";
-import { FIELDS, PROJECT_TITLE, statusFieldUpdate } from "./projects.mjs";
+import { FIELDS, PROJECT_TITLE, ROLE, statusFieldUpdate } from "./projects.mjs";
+import { readSeatRegistry, roleOptionNames } from "./projects-role.mjs";
 import { writeStatusOptions } from "./projects-sync.mjs";
 
 const OWNER = "ejclark";
@@ -91,7 +92,14 @@ function main() {
     project = createProject(PROJECT_TITLE);
   }
 
-  for (const field of FIELDS) {
+  // Role's options are the seat registry's (#6886 slice 1b); the reconcile sweep keeps them in step
+  // after this, so a seat added later needs no second dispatch.
+  const role = {
+    name: ROLE,
+    dataType: "SINGLE_SELECT",
+    options: roleOptionNames(readSeatRegistry()),
+  };
+  for (const field of [...FIELDS, role]) {
     const existing = findField(project.number, field.name);
     if (!existing) {
       createField(project.number, field);

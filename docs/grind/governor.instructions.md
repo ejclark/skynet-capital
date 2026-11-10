@@ -29,7 +29,7 @@ cycle's two invariants hold by construction rather than by prose:
     { "coach": "Dead code",  "eye": "scripts/dead-scan.mjs",      "drill": "bury",      "prefix": "refactor/bury-" },
     { "coach": "Spec gap",   "eye": "scripts/spec-gap-scan.mjs",  "drill": "backfill",  "prefix": "test/backfill-" }
   ],
-  "itemSource": "the four athlete coaches in docs/COACHES.md's defensive roster; each rep runs its own eye",
+  "itemSource": "the four athlete coaches in docs/COACHES.md's defensive roster, in the order node scripts/cleanup-next.mjs --json ranks their scans; each rep runs its own eye",
   "skipEnvelopeCheck": "the target is unknown until the gate picks it at step 2, so grind's step 0 has nothing real to check — step 4 below runs envelope-scan on the gate's actual target instead",
   "steps": [
     { "kind": "instructions", "path": "docs/grind/governor.instructions.md", "effort": "high", "isolation": true, "model": "sonnet" },
@@ -38,7 +38,10 @@ cycle's two invariants hold by construction rather than by prose:
 }
 ```
 
-Three things the front matter cannot carry, because `grind.js` cannot enforce them:
+The items above are the roster, not the order. Before the call, run
+`node scripts/cleanup-next.mjs --json` and list them by where each scan first appears in its `rows`.
+
+Four things the front matter cannot carry, because `grind.js` cannot enforce them:
 
 - **`skipEnvelopeCheck` is not emitted by `--args`** — add it by hand, with that reason. Grind's
   automatic step 0 extracts a path field from an object item; the only path these items carry is
@@ -48,10 +51,13 @@ Three things the front matter cannot carry, because `grind.js` cannot enforce th
   ratchet-down budget file, and `docs/COACHES.md`'s WIP limit counts open PRs, not dispatches. With
   one item per coach, each budget's `--update` has exactly one writer, so the drill's own ratchet
   step is safe to run in-rep — no trailing once-per-batch `--update` to remember.
+- **Under `surge`, a coach's second rep is a later run, stacked on the cycle branch.** Its item
+  carries `"base"`, which steps 2 and 5 read; from `main`, the eye would name the first rep's
+  target again. How and when the caller builds that branch is `/governor` step 2, its one home.
 - **Under `work-mode:conserve`, pass fewer items than the roster has.** Grind's own spigot check
   refuses on `grindWidth` (5 under `conserve`), which four items clear — but
   `caps.governorDispatches` is **1** at that position (`work-mode.json`), and grind does not read
-  that key. Run the single highest-leverage coach and name the ones deferred, exactly as
+  that key. Run only the first coach in the order and name the ones deferred, exactly as
   `/governor` step 2 does.
 
 **Landing the wave is the caller's job, not a rep's.** Each rep pushes its own branch and opens
@@ -60,12 +66,10 @@ nothing. After the run, merge every green branch into one `refactor/governed-cyc
 `docs/COACHES.md` → *How the loop runs*. Never `scripts/ship.sh platter` — that is a different
 mechanism, reserved for the irreversible class.
 
-**What has actually been checked, and what has not** (2026-10-03, when this chore landed —
-"partial beats false shipped", `docs/COACHES.md` → *Defensive roster*). Steps 1–4 were dry-run by
-hand against live repo state for all four coaches: 7 open PRs, 46 changed files, no WIP hit, each
-eye naming a target, no collision, nothing envelope-blocking. The preflight above emits exactly the
-`steps` array shown. **Not yet proven:** a real dispatch — steps 5–8, the drill, the push, and the
-caller's cycle PR. The first run is the test, and the honest thing to do with its ledger is paste it
+**What has been checked** ("partial beats false shipped", `docs/COACHES.md` → *Defensive roster*).
+The preflight above emits exactly the `steps` array shown, and steps 1–8, the drill, the push and
+the caller's cycle PR have all run in real dispatches: the `refactor: governed cycle <n>` PRs on
+`main` and the rows in `loop-iterations/governor-<drill>.jsonl` are the record. Paste a run's ledger
 onto whatever issue asked for the cycle.
 
 ## Goal
@@ -77,14 +81,19 @@ runs to a green, pushed branch. Done is a branch on origin — or a stated reaso
 ## Steps
 
 Your item is a JSON object with `coach`, `eye`, `drill` and `prefix`. Read those four fields out of
-it yourself; nothing substitutes them for you.
+it yourself; nothing substitutes them for you. A surge second rep's item also carries `base`, the
+cycle branch its coach's first rep was merged into. Without one, your base is `main`.
 
 1. **WIP 1 — the cheapest skip, so it goes first.**
-   `gh pr list --state open --limit 100 --json headRefName --jq '.[].headRefName'`. If any open
+   `gh api 'repos/{owner}/{repo}/pulls?state=open&per_page=100' --jq '.[] | "\(.number) \(.head.ref)"'`
+   — REST, because gh's `pr` subcommands go through GraphQL, which a cloud session refuses with
+   HTTP 403 (governed cycle 7, 2026-11-02). If any open
    PR's head branch starts with your item's `prefix`, report `status: "skipped"` with
    `WIP 1: <branch> is already open for <coach>` and stop. Inventory is waste, and the next cycle
    recomputes this coach's target from a fresher `main` anyway.
-2. **The gate picks the target; you never do.** `git fetch origin main`, then
+2. **The gate picks the target; you never do.** `git fetch origin main`. With a `base`, also
+   `git fetch origin <base>` and then `git checkout -q --detach origin/<base>` (one call each), so
+   the eye reads the tree step 5 branches from. Then
    `node <eye> --candidate` (run it from the repo root; `npx` nothing). A `null` candidate, or no
    `candidate` key, means that budget is already met — report `status: "skipped"` with
    `<coach>: budget met, no candidate`. That is the goal, not a failure. Never fall back to
@@ -100,6 +109,9 @@ it yourself; nothing substitutes them for you.
    | `dead-scan.mjs` | `candidate.target` (a path) + `candidate.exports` / `candidate.types` | that one file, plus any importer the drill has to touch |
    | `spec-gap-scan.mjs` | `candidate.file` | the new spec file; `src` is never edited |
 
+   **Note the number now, as `<before>`, for step 8.** It's the debt this eye counts: `debt` plus
+   `app.debt` where that exists, from the same `node <eye> --candidate` output.
+
 3. **Collision — structural work never races feature work on the same file.** For each open PR from
    step 1, `gh api repos/{owner}/{repo}/pulls/<number>/files?per_page=100 --jq '.[].filename'`. If
    **any** file from your step-2 row appears in any of them, report `status: "skipped"` with
@@ -113,14 +125,15 @@ it yourself; nothing substitutes them for you.
    `target is envelope-protected` and stop. This is the check grind's step 0 could not do for you
    (see the calling convention above).
 5. **Branch and set up.** `bash scripts/wt-start.sh <prefix><slug> --fresh` (`<slug>` from the
-   target's basename, or the symbol's name for duplication) — fetch, a new branch off `origin/main`,
+   target's basename, or the symbol's name for duplication; add `--base <base>` when your item
+   carries one) — fetch, a new branch off `origin/main` (or `origin/<base>`),
    `node_modules` and one status line, in one call. Slugs repeat across cycles and athlete branches
    stay on origin, so if it refuses because the name is taken, re-run with the `-N` name it prints;
    never drop `--fresh`, which would resume that stale branch (#6272). After it, one plain command per call — never a
    `&&` chain around git; `/usr/bin/git` where plain `git` is refused (`docs/DELEGATION.md`
    rail 2). A later tool exiting 127 means this step was skipped or failed — read what it says
-   rather than hand-rolling a `node_modules` workaround. The drill's own step 1 (branch and set
-   up) is this step — skip it in step 6.
+   rather than hand-rolling a `node_modules` workaround. The drill's own branch-and-set-up step
+   (step 1 of `bury` and `backfill`) is this step — skip it in step 6.
 6. **Run the drill, following its own spec exactly.** Read `.claude/skills/<drill>/SKILL.md` and
    carry it out against the target, including its ratchet step. That file is the single copy of the
    loop — do not reconstruct it from this chore, and do not improvise past a guardrail it states.
@@ -128,7 +141,18 @@ it yourself; nothing substitutes them for you.
    drill name differs per coach. Reading the skill is how one chain reaches four drills.)
 7. **Verify by exit status, never tailed output.** `npm run typecheck`, `npm run lint`, `npm test` —
    each must exit 0. A pipeline exits with its last command's status, so never `cmd | tail`.
-8. **Commit, push with retries, report.** Conventional-Commit subject, lowercase-led, ≤100
+8. **Append the rep's row, then commit, push with retries, report.** Read the same number again as
+   `<after>`. If `loop-iterations/governor-<drill>.jsonl` doesn't exist, this is the loop's first rep,
+   so write its baseline first (worth 1, since one unit gone is what one rep is for):
+   `npm run loop:ledger -- --add --loop governor-<drill> --baseline <before> --worth 1 --changed "debt before the first rep"`.
+   Then the rep's row, in the same commit as the work:
+   `npm run loop:ledger -- --add --loop governor-<drill> --before <before> --after <after> --tokens-m unknown --changed "<what>"`.
+   `--before` is not optional here: other PRs move this debt between cycles, and without it the row
+   starts from the last row's number and charges their change to this rep. `<what>` names what moved
+   in plain words. You can't read your own tokens, and an estimate must not pass as a cost, so the
+   caller fills them in at landing. A rep that skips writes no row, since nothing moved and no PR
+   would carry it.
+   Conventional-Commit subject, lowercase-led, ≤100
    characters (the drill's own spec names the shape). Report the pushed branch name in the `branch`
    field — the trailing `git ls-remote` step verifies it against origin rather than trusting your
    `done`. Open no PR: athletes carry no GitHub write tooling by design, and the caller lands the
@@ -145,6 +169,7 @@ it yourself; nothing substitutes them for you.
   hand-picked target is the one thing the gate exists to prevent.
 - **A skip is a successful rep.** Three of the four stop conditions above (WIP, budget met,
   collision) are the cycle working as designed; report them plainly and do not retry in-run.
-- **Blocked means blocked.** Verify failing, the target already fixed on `main`, a protected path —
+- **Blocked means blocked.** Verify failing, the target already fixed on `main` (or on your
+  `base`), a protected path —
   report `status: "blocked"` with why. Never improvise past it, and never retry a failed rep inside
   the same run.

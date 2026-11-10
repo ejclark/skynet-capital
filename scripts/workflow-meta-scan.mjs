@@ -28,8 +28,8 @@
 // not the behaviour: tests/scripts/workflow-gate.spec.ts runs each script against a halt fixture.
 import { readdirSync, readFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import * as acorn from "acorn";
+import { isMain } from "./is-main.mjs";
 
 const LITERAL_NODES = new Set(["ObjectExpression", "ArrayExpression", "Property", "Literal"]);
 const GATE = "work-gate";
@@ -218,4 +218,4 @@ function main() {
   process.exit(1);
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();
+if (isMain(import.meta.url)) main();

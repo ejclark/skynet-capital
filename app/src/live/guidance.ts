@@ -212,6 +212,8 @@ export function longCallsOf(
         costPerContract: paid,
         ...(q?.bid !== undefined ? { bid: q.bid } : {}),
         ...(q?.ask !== undefined ? { ask: q.ask } : {}),
+        // Carried at purchase (#5709 slice 3): the verdict names the plan as the member's.
+        ...(p.exitPlan ? { planCarried: true as const } : {}),
       },
     ];
   });

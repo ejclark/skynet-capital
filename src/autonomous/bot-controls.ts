@@ -15,8 +15,14 @@
  *  - **Hardcore** (#4535 slice 2c) is DYNAMIC: the poll swaps the bot's persona, its order cooldown
  *    and the mode its readiness gate allows in one step, re-running that gate on the build being
  *    swapped in — no restart.
- *  - **Mode** (observe/live) swaps the trader construction, so it applies at the next `bots` boot.
- *    The page says so on the control; nothing pretends otherwise.
+ *  - **Watch only** (the stored `mode`, #6954 slice 5b) is DYNAMIC: each cycle reads it, so a bot
+ *    set to watch records what it would do and places nothing from the next poll. A stored mode
+ *    only ever NARROWS the house mode (#6954 slice 1): `observe` pins one bot to watching, and a
+ *    stored `live` never widens an observe process — placing paper orders at all is the house's
+ *    single switch (#4535).
+ *  - **Stop opening, keep exits** (`holdOpens`, #6954 slice 5b) is DYNAMIC: each cycle refuses the
+ *    bot's opens `opens-held` and still places its exits — the breaker's shape (`opensHalted`),
+ *    chosen by the owner instead of tripped by a loss. The forced pick on the bot obeys it too.
  *
  * The behaviour settings (hardcore, forced picks, staging) are the OWNER'S alone since #4535 slice
  * 4c-2: a bot with no stored value is off, whatever the env says — the dashboard copied each env
@@ -39,8 +45,13 @@ import { credentialFingerprint } from "./bot-credential-fingerprint.js";
 export interface BotControls {
   /** True = the owner suspended this bot's trading (dynamic — applies within one poll). */
   readonly suspended?: boolean;
-  /** Trading mode override (boot-applied). */
+  /** The owner's "watch only" (dynamic — read every cycle, #6954 slice 5b). Narrow-only: `observe`
+   *  holds this bot to watching, `live` defers to the house mode and can never widen it
+   *  (`effectiveMode`). */
   readonly mode?: "observe" | "live";
+  /** The owner's "stop opening, keep exits" (dynamic — read every cycle, #6954 slice 5b): every
+   *  order that adds risk is refused `opens-held`; exits still run. Absent = off. */
+  readonly holdOpens?: boolean;
   /** Run the bot's hardcore research build (dynamic — applies on the next poll; only bots with a
    *  hardcore build). Absent = off. */
   readonly hardcore?: boolean;
@@ -69,6 +80,11 @@ export interface ControlsState {
   /** Moneypenny's model override — absent falls back to `companion-model.ts`'s own default.
    *  Dynamic: `dashboard-companion.ts` reads it fresh per turn, no restart. */
   readonly companionModel?: CompanionModelId;
+  /** ISO time an owner last pressed "reset breaker" (#6954 slice 3b). Dynamic: the bots re-arm their
+   *  tripped breakers on the first poll that carries a stamp newer than the last they honoured, and
+   *  never for one older than their own boot (a restart already cleared it). Never touches the kill
+   *  switch or any suspend. */
+  readonly breakerResetAt?: string;
   /** ISO time of the last edit — the page's audit line. */
   readonly updatedAt?: string;
   /** Who edited (owner email) — same audit-trail principle as the allowlist store. */
@@ -86,6 +102,13 @@ export const MAX_BETA_PICKS = 10;
 
 /** Bounded — a fingerprint is 16 hex chars; generous headroom for a future longer digest. */
 const MAX_CREDENTIALS_VERSION_LENGTH = 64;
+
+/** A stored instant: an ISO string that parses, else absent (a hostile or torn value reads as unset). */
+function isoStamp(raw: unknown): string | undefined {
+  return typeof raw === "string" && raw.length <= 40 && !Number.isNaN(Date.parse(raw))
+    ? raw
+    : undefined;
+}
 
 function parseBot(raw: unknown): BotControls | null {
   if (!isRecord(raw)) return null;
@@ -106,6 +129,7 @@ function parseBot(raw: unknown): BotControls | null {
   return {
     ...(typeof raw.suspended === "boolean" ? { suspended: raw.suspended } : {}),
     ...(mode ? { mode } : {}),
+    ...(typeof raw.holdOpens === "boolean" ? { holdOpens: raw.holdOpens } : {}),
     ...(typeof raw.hardcore === "boolean" ? { hardcore: raw.hardcore } : {}),
     ...(betaPicks !== undefined ? { betaPicks } : {}),
     ...(typeof raw.betaStage === "boolean" ? { betaStage: raw.betaStage } : {}),
@@ -127,8 +151,10 @@ export function parseControlsState(raw: unknown): ControlsState | null {
     }
   }
   const companionModel = COMPANION_MODELS.find((m) => m === raw.companionModel);
+  const breakerResetAt = isoStamp(raw.breakerResetAt);
   return {
     bots,
+    ...(breakerResetAt ? { breakerResetAt } : {}),
     ...(typeof raw.allSuspended === "boolean" ? { allSuspended: raw.allSuspended } : {}),
     ...(companionModel ? { companionModel } : {}),
     ...(typeof raw.updatedAt === "string" ? { updatedAt: raw.updatedAt } : {}),
@@ -147,13 +173,36 @@ export function suspendedReason(state: ControlsState, botId: string): string | n
   return null;
 }
 
-/** Boot-applied mode: the store's override when present, else the env-derived default. */
+/** The owner's "stop opening, keep exits" for one bot, shaped for the trader's open gate: non-null
+ *  holds that bot's opens and lands on its decision record (#6954 slice 5b). */
+export const OPENS_HELD_REASON = "opens held by owner (exits still run)";
+
+export function opensHeldReason(state: ControlsState, botId: string): string | null {
+  return state.bots[botId]?.holdOpens ? OPENS_HELD_REASON : null;
+}
+
+/**
+ * The mode one bot runs this cycle: the mode it may run in (the house mode, after its readiness
+ * gate), narrowed by the store and never widened by it (#6954 slices 1, 5b). A stored `observe`
+ * holds this bot to watching under a live house; a stored `live` under an observe house still
+ * watches, because "do the bots place paper orders at all" is the house's one switch
+ * (`SKYNET_AUTONOMOUS_MODE`, #4535). The owner's "watch only" on the Settings card writes it.
+ */
 export function effectiveMode(
   state: ControlsState,
   botId: string,
-  envDefault: "observe" | "live",
+  houseMode: "observe" | "live",
 ): "observe" | "live" {
-  return state.bots[botId]?.mode ?? envDefault;
+  return state.bots[botId]?.mode === "observe" ? "observe" : houseMode;
+}
+
+/**
+ * Is the owner's reset stamp newer than the last one this process honoured? Compared as instants,
+ * never as strings, so a stamp written with a different offset still orders correctly.
+ */
+export function breakerResetDue(state: ControlsState, honouredAt: string): boolean {
+  if (!state.breakerResetAt) return false;
+  return Date.parse(state.breakerResetAt) > Date.parse(honouredAt);
 }
 
 /**

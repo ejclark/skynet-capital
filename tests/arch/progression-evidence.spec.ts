@@ -6,11 +6,11 @@ import { readFileSync } from "node:fs";
 // a snapshot rather than live fills", because thinkorswim's paperMoney reset wipes an account's
 // balances, positions and order history, and the fear was that a reset control would wipe a
 // member's earned ladder with it. The answer the code gives is better than the question assumed:
-// nothing in the ladder reads the broker at all. `readFills` is wired to our own append-only JSONL
-// journal (`SKYNET_ACTIVITY_DIR`, pinned to the volume by volume-persistence.spec.ts) and
-// `readTags` to our own order-audit log. A broker-side reset can erase everything Alpaca holds and
-// cannot touch either file — so the rungs survive a reset for free, with no snapshot mechanism to
-// build.
+// nothing in the ladder reads the broker at all. `readEvidence` folds our own append-only JSONL
+// journal (`SKYNET_ACTIVITY_DIR`, pinned to the volume by volume-persistence.spec.ts) and our own
+// order-audit log (`ladder-evidence.ts`, which holds the fold in memory and rebuilds it from those
+// two files). A broker-side reset can erase everything Alpaca holds and cannot touch either file —
+// so the rungs survive a reset for free, with no snapshot mechanism to build.
 //
 // That property is load-bearing AND invisible, which is why it needs a gate. A future refactor that
 // "simplified" either read into a `client.listOrders()` call would still pass every progression
@@ -28,26 +28,33 @@ const STORE = "src/server/progression-store.ts";
 /**
  * BOTH hops from the durable stores to the service, because the wiring is a pass-through and
  * pinning only one end leaves the other free to substitute a broker read: `serve-dashboard.ts`
- * hands `activity.list` / `orderAudit.list` to `setupCompanion`, and `dashboard-companion.ts` is
- * where `createProgressionService` is actually constructed. Pinning the outer hop alone was this
- * gate's own first bug (caught in review before it shipped) — swapping `deps.readFills` for a
- * client read in the inner hop would have left it green.
+ * builds one reader over the `activity` and `orderAudit` stores (shared with the Wire's milestones,
+ * #4619) and hands `setupCompanion` exactly that one, and
+ * `dashboard-companion.ts` is where `createProgressionService` is actually constructed. Pinning the
+ * outer hop alone was this gate's own first bug (caught in review before it shipped) — swapping
+ * `deps.readEvidence` for a client read in the inner hop would have left it green. The third hop is
+ * the reader itself (`ladder-evidence.ts`): it may read only those two stores.
  */
 const WIRING: ReadonlyArray<{ file: string; patterns: readonly RegExp[] }> = [
   {
     file: "src/scripts/serve-dashboard.ts",
     patterns: [
-      /readFills:\s*\(id\)\s*=>\s*activity\.list\(id\)/,
-      /readTags:\s*\(id\)\s*=>\s*orderAudit\.list\(id\)/,
+      /const readLadderEvidence = ladderEvidenceReader\(\{\s*activity,\s*orderAudit\s*\}\)/,
+      /readEvidence:\s*readLadderEvidence\b/,
+    ],
+  },
+  {
+    file: "src/server/ladder-evidence.ts",
+    patterns: [
+      /activity\.since\?\.bind\(activity\)/,
+      /orderAudit\.since\?\.bind\(orderAudit\)/,
+      /activity\.list\(participantId\)/,
+      /orderAudit\.list\(participantId\)/,
     ],
   },
   {
     file: "src/scripts/dashboard-companion.ts",
-    patterns: [
-      /createProgressionService\(\{/,
-      /readFills:\s*deps\.readFills/,
-      /readTags:\s*deps\.readTags/,
-    ],
+    patterns: [/createProgressionService\(\{/, /readEvidence:\s*deps\.readEvidence/],
   },
 ];
 
@@ -55,6 +62,7 @@ const WIRING: ReadonlyArray<{ file: string; patterns: readonly RegExp[] }> = [
 const DERIVATION = [
   "src/domain/progression.ts",
   SERVICE,
+  "src/server/ladder-evidence.ts",
   "src/server/progression-service-support.ts",
 ];
 
@@ -150,8 +158,7 @@ describe("progression evidence", () => {
     const fields = interfaceFields(read(SERVICE), "ProgressionServiceDeps");
     // The scan must not go blind — if the interface is renamed or restructured, fail loudly here
     // rather than pass on an empty field list.
-    expect(fields).toContain("readFills");
-    expect(fields).toContain("readTags");
+    expect(fields).toContain("readEvidence");
     for (const field of fields) {
       expect(
         /client|broker|alpaca/i.test(field),

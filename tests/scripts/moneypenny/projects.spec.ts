@@ -15,6 +15,7 @@ import {
   resolveBoardItem,
   STATUS_FIELD_OPTIONS,
   STATUS_OPTIONS,
+  statusFieldOptions,
   statusFieldUpdate,
   statusForIssue,
   statusOptionsMatch,
@@ -27,15 +28,18 @@ import {
 // Claude Code sessions; the live `gh project` calls in projects-setup.mjs are only exercised by a
 // real Actions run).
 describe("moneypenny projects: statusForIssue", () => {
-  it("closed always reads Done, even if it would otherwise be Blocked or Building now", () => {
+  it("closed always reads Done, even if it would otherwise wait on a person or be building", () => {
     expect(statusForIssue({ state: "closed", labels: ["needs-eric"], hasOpenLinkedPr: true })).toBe(
       "Done",
     );
   });
 
-  it("needs-eric or needs-info reads Blocked ahead of an open linked PR", () => {
-    expect(statusForIssue({ labels: ["needs-eric"], hasOpenLinkedPr: true })).toBe("Blocked");
-    expect(statusForIssue({ labels: ["needs-info"] })).toBe("Blocked");
+  // #6871 §3: the person-waiting labels, each read as Waiting on a person.
+  it("needs-eric, needs-info, needs-design and needs-session read Waiting on a person", () => {
+    for (const label of ["needs-eric", "needs-info", "needs-design", "needs-session"]) {
+      expect(statusForIssue({ labels: [label] })).toBe("Waiting on a person");
+      expect(statusForIssue({ labels: [label, "ready"] })).toBe("Waiting on a person");
+    }
   });
 
   it("an open linked PR reads Building now ahead of ready", () => {
@@ -48,27 +52,44 @@ describe("moneypenny projects: statusForIssue", () => {
     expect(statusForIssue({ labels: ["feedback", "ready", "in-progress"] })).toBe("Building now");
   });
 
-  // #3913 slice 2: a needs-eric with no "Needs from you" callout is not waiting on Eric yet.
-  it("does not read Blocked for a needs-eric whose decision callout is missing", () => {
+  // #3913 slice 2: a needs-eric with no "Needs from you" callout is not waiting on Eric yet —
+  // writing the ask is a session's job, so it reads Backlog (#6871 §3), even with `ready` on.
+  it("reads Backlog for a needs-eric whose decision callout is missing", () => {
     expect(statusForIssue({ labels: ["needs-eric"], decisionCalloutMissing: true })).toBe(
       "Backlog",
     );
     expect(statusForIssue({ labels: ["needs-eric", "ready"], decisionCalloutMissing: true })).toBe(
-      "Ready",
+      "Backlog",
     );
     expect(
       statusForIssue({ labels: ["needs-eric", "needs-info"], decisionCalloutMissing: true }),
-    ).toBe("Blocked");
+    ).toBe("Waiting on a person");
   });
 
-  it("in-progress still yields to Blocked and to Done", () => {
-    expect(statusForIssue({ labels: ["in-progress", "needs-info"] })).toBe("Blocked");
-    expect(statusForIssue({ labels: ["in-progress", "needs-eric"] })).toBe("Blocked");
+  // #6871 §3: the in-flight cap counts every open `in-progress` issue, so its column comes first.
+  it("in-progress reads Building now ahead of every needs-* label, and yields only to Done", () => {
+    expect(statusForIssue({ labels: ["in-progress", "needs-info"] })).toBe("Building now");
+    expect(statusForIssue({ labels: ["in-progress", "needs-eric"] })).toBe("Building now");
+    expect(statusForIssue({ labels: ["in-progress", "needs-session"] })).toBe("Building now");
     expect(statusForIssue({ state: "closed", labels: ["in-progress"] })).toBe("Done");
   });
 
   it("ready with no linked PR reads Ready", () => {
     expect(statusForIssue({ labels: ["ready"] })).toBe("Ready");
+  });
+
+  // Ready is exactly what the unattended sweep may pull (#6871 §3): `pullable`, plus its open-PR
+  // screen. Each of these carries `ready` and still waits on something.
+  it("a ready card the sweep may not pull reads Backlog", () => {
+    expect(statusForIssue({ number: 7, labels: ["ready"], blockedBy: 1 })).toBe("Backlog");
+    expect(statusForIssue({ number: 7, labels: ["ready", "hold-merge"] })).toBe("Backlog");
+    expect(statusForIssue({ number: 7, labels: ["ready"], boardedOn: new Map([[7, 70]]) })).toBe(
+      "Backlog",
+    );
+    expect(statusForIssue({ number: 7, labels: ["ready"], namedByOpenPr: true })).toBe("Backlog");
+    expect(statusForIssue({ number: 7, labels: ["ready"], boardedOn: new Map([[8, 80]]) })).toBe(
+      "Ready",
+    );
   });
 
   it("an open issue with none of the above reads Backlog", () => {
@@ -332,6 +353,59 @@ describe("moneypenny projects: a board that reads stale right after a sibling's 
     expect(reads).toBe(1);
   });
 
+  // #6775: on #6774 the whole-board list missed the item for all three reads (~30s), while a sibling
+  // run's per-issue `projectItems` lookup found it at once. The list here NEVER shows it — only the
+  // per-issue lookup can rescue the run, and it must be asked before the expensive list.
+  it("asks the issue's own lookup before each board re-read, and a hit skips the list", () => {
+    const own = [[], [ADDED]];
+    let listReads = 0;
+
+    const resolved = resolveBoardItem({
+      issueUrl: URL,
+      addItem: alreadyExists,
+      lookupItems: () => own.shift() ?? [],
+      listItems: () => {
+        listReads += 1;
+        return { items: [{ id: "PVTI_other" }], totalCount: 1 };
+      },
+      sleep: () => undefined,
+    });
+
+    expect(resolved).toEqual({ item: ADDED, added: false });
+    expect(listReads).toBe(1); // the first round's miss paid for one list; the hit paid for none
+  });
+
+  it("falls through to the board list when the per-issue lookup throws (a blind token)", () => {
+    const resolved = resolveBoardItem({
+      issueUrl: URL,
+      addItem: alreadyExists,
+      lookupItems: () => {
+        throw new Error("this token cannot see project #2");
+      },
+      listItems: () => ({ items: [ADDED], totalCount: 1 }),
+      sleep: () => undefined,
+    });
+
+    expect(resolved).toEqual({ item: ADDED, added: false });
+  });
+
+  it("still fails closed on the archived case when neither source ever shows the item", () => {
+    let lookups = 0;
+    expect(() =>
+      resolveBoardItem({
+        issueUrl: URL,
+        addItem: alreadyExists,
+        lookupItems: () => {
+          lookups += 1;
+          return [];
+        },
+        listItems: () => ({ items: [], totalCount: 0 }),
+        sleep: () => undefined,
+      }),
+    ).toThrow(/archived/);
+    expect(lookups).toBe(3);
+  });
+
   it("still never calls item-list at all when the add itself succeeds", () => {
     const fresh: BoardItem = { id: "PVTI_new", content: { url: URL } };
     expect(
@@ -349,37 +423,67 @@ describe("moneypenny projects: a board that reads stale right after a sibling's 
   });
 });
 
-// #4393 slice 4, criterion 5 — a started plan nobody is building reads Waiting. "Started" is a
-// closed sub-issue OR `next-slice` (most plans here slice by PR, not by sub-issue).
-describe("moneypenny projects: the Waiting column (#4393 criterion 5)", () => {
-  const plan = (labels: string[], total = 0, completed = 0) => ({
+// #4393 slice 4, criterion 5 — a started plan nobody is building reads in a next-part column.
+// "Started" is a closed sub-issue OR `next-slice` (most plans here slice by PR, not by sub-issue).
+// #6871 splits it on the cap seat: Next part queued holds one, Next part needs approval does not.
+describe("moneypenny projects: the next-part columns (#4393 criterion 5, #6871 §3)", () => {
+  const plan = (
+    labels: string[],
+    total = 0,
+    completed = 0,
+    openSubIssues?: { number: number; labels: string[] }[],
+  ) => ({
     labels: ["plan", ...labels],
     subIssues: { total, completed },
+    ...(openSubIssues ? { openSubIssues } : {}),
   });
 
-  it("WHEN a plan has a closed and an open sub-issue and no in-progress, it reads Waiting", () => {
-    expect(statusForIssue(plan(["ready"], 3, 1))).toBe("Waiting");
-    expect(statusForIssue(plan([], 11, 6))).toBe("Waiting");
+  it("WHEN a started plan has work a lane can pull and no in-progress, it reads Next part queued", () => {
+    expect(statusForIssue(plan(["ready"], 3, 1))).toBe("Next part queued");
+    expect(statusForIssue(plan([], 11, 6, [{ number: 9, labels: ["ready"] }]))).toBe(
+      "Next part queued",
+    );
   });
 
-  it("a plan the lane shipped a slice of (next-slice) reads Waiting with no sub-issues at all", () => {
-    expect(statusForIssue(plan(["ready", "next-slice"]))).toBe("Waiting");
+  it("a plan the lane shipped a slice of (next-slice) is queued with no sub-issues at all", () => {
+    expect(statusForIssue(plan(["ready", "next-slice"], 0, 0, []))).toBe("Next part queued");
+  });
+
+  it("WHEN nothing left is approved to build, it reads Next part needs approval", () => {
+    expect(statusForIssue(plan([], 11, 6, [{ number: 9, labels: [] }]))).toBe(
+      "Next part needs approval",
+    );
+    expect(statusForIssue(plan(["next-slice"], 0, 0, []))).toBe("Next part needs approval");
+    // a ready sub-PLAN is its own plan's pull, not this one's (#5494 / #5482)
+    expect(statusForIssue(plan([], 3, 1, [{ number: 9, labels: ["plan", "ready"] }]))).toBe(
+      "Next part needs approval",
+    );
+  });
+
+  it("a plan whose sub-issues were not read keeps its seat, as the cap does", () => {
+    expect(statusForIssue(plan([], 11, 6))).toBe("Next part queued");
   });
 
   it("being built wins: the same plan with in-progress reads Building now", () => {
     expect(statusForIssue(plan(["ready", "in-progress"], 3, 1))).toBe("Building now");
   });
 
-  it("blocked wins: a started plan waiting on Eric reads Blocked, not Waiting", () => {
-    expect(statusForIssue(plan(["needs-eric"], 3, 1))).toBe("Blocked");
+  it("a person wins: a started plan waiting on Eric reads Waiting on a person", () => {
+    expect(statusForIssue(plan(["needs-eric"], 3, 1))).toBe("Waiting on a person");
   });
 
-  it("a fresh plan (no closed sub-issue, no next-slice) is never Waiting", () => {
+  it("a parked plan with no written ask reads Backlog, never a next-part column (#6584)", () => {
+    expect(statusForIssue({ ...plan(["needs-eric"], 3, 1), decisionCalloutMissing: true })).toBe(
+      "Backlog",
+    );
+  });
+
+  it("a fresh plan (no closed sub-issue, no next-slice) is never in a next-part column", () => {
     expect(statusForIssue(plan(["ready"], 4, 0))).toBe("Ready");
     expect(statusForIssue(plan([], 0, 0))).toBe("Backlog");
   });
 
-  it("a plan with every sub-issue closed and no next-slice is finished, not Waiting", () => {
+  it("a plan with every sub-issue closed and no next-slice is finished, not waiting", () => {
     expect(statusForIssue(plan([], 8, 8))).toBe("Backlog");
   });
 
@@ -406,24 +510,34 @@ describe("moneypenny projects: the Waiting column (#4393 criterion 5)", () => {
 // for a column the board does not carry yet (that write throws and reddens `main`).
 describe("moneypenny projects: statusForIssue against an older board (columns)", () => {
   const OLD = ["Backlog", "Ready", "In Progress", "Blocked", "Done"];
+  const BEFORE_6871 = ["Backlog", "Ready", "Building now", "Waiting", "Blocked", "Done"];
 
   it("writes the building column under its old name until the rename lands", () => {
     expect(statusForIssue({ labels: ["in-progress"], columns: OLD })).toBe("In Progress");
   });
 
-  it("falls back to the column a plan would read without Waiting", () => {
+  it("falls back to the column a plan would read with no next-part column at all", () => {
     expect(statusForIssue({ labels: ["plan", "ready", "next-slice"], columns: OLD })).toBe("Ready");
+  });
+
+  it("on the pre-#6871 board, every renamed or new column resolves to the name it had", () => {
+    expect(statusForIssue({ labels: ["needs-info"], columns: BEFORE_6871 })).toBe("Blocked");
+    const queued = { labels: ["plan", "ready", "next-slice"], openSubIssues: [] };
+    expect(statusForIssue({ ...queued, columns: BEFORE_6871 })).toBe("Waiting");
+    const unapproved = { labels: ["plan", "next-slice"], openSubIssues: [] };
+    expect(statusForIssue({ ...unapproved, columns: BEFORE_6871 })).toBe("Waiting");
   });
 });
 
 describe("moneypenny projects: field/option constants", () => {
-  it("Status carries the six kanban columns, in column order (#4393 slice 4)", () => {
+  it("Status carries the seven columns, left to right as the Flow view shows them (#6871 §2)", () => {
     expect(STATUS_OPTIONS).toEqual([
       "Backlog",
+      "Waiting on a person",
+      "Next part needs approval",
       "Ready",
+      "Next part queued",
       "Building now",
-      "Waiting",
-      "Blocked",
       "Done",
     ]);
   });
@@ -440,14 +554,19 @@ describe("moneypenny projects: field/option constants", () => {
     expect(byName.get("Horizon")?.dataType).toBe("SINGLE_SELECT");
     expect(byName.get("Target date")?.dataType).toBe("DATE");
     expect(byName.get("Target date")?.options).toBeUndefined();
+    expect(byName.get("Synced priority")).toMatchObject({ dataType: "TEXT", hidden: true });
   });
 });
 
 describe("moneypenny projects: statusOptionsMatch", () => {
-  it("matches the same six names in any order", () => {
+  it("matches the same seven names in any order", () => {
+    expect(statusOptionsMatch([...STATUS_OPTIONS].reverse())).toBe(true);
+  });
+
+  it("does not match the board as it stood before #6871", () => {
     expect(
       statusOptionsMatch(["Done", "Waiting", "Backlog", "Blocked", "Ready", "Building now"]),
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it("does not match the board as it stood before #4393 slice 4", () => {
@@ -458,7 +577,7 @@ describe("moneypenny projects: statusOptionsMatch", () => {
     expect(statusOptionsMatch(["Todo", "In Progress", "Done"])).toBe(false);
   });
 
-  it("does not match a superset or a subset of the six", () => {
+  it("does not match a superset or a subset of the seven", () => {
     expect(statusOptionsMatch([...STATUS_OPTIONS, "Extra"])).toBe(false);
     expect(statusOptionsMatch(["Backlog", "Ready"])).toBe(false);
   });
@@ -475,6 +594,21 @@ describe("moneypenny projects: statusOptionsMatch", () => {
       expect(option.color.length).toBeGreaterThan(0);
     }
   });
+
+  // #6871 §3: gray but the one column a person acts on; one line each, never a paragraph.
+  it("every column is gray but Waiting on a person, and each description is one short line", () => {
+    const options = statusFieldOptions({
+      position: "normal",
+      caps: { inFlightCap: 3, startedPlanCap: 4 },
+    });
+    expect(options.filter((o) => o.color !== "GRAY").map((o) => [o.name, o.color])).toEqual([
+      ["Waiting on a person", "BLUE"],
+    ]);
+    for (const o of options) {
+      expect(o.description ?? "").not.toMatch(/\n/);
+      expect((o.description ?? "").length).toBeLessThanOrEqual(100);
+    }
+  });
 });
 
 // #4393 slice 4, criterion 9 — the rename must move no card. `updateProjectV2Field` replaces the
@@ -488,17 +622,30 @@ describe("moneypenny projects: statusFieldUpdate", () => {
     { id: "o-done", name: "Done" },
   ];
 
-  it("renames In Progress to Building now on the SAME option id, and adds Waiting without one", () => {
+  it("renames In Progress and Blocked on the SAME option ids, and adds the new columns without one", () => {
     const update = statusFieldUpdate(live);
     expect(update?.map((o) => [o.name, o.id])).toEqual([
       ["Backlog", "o-backlog"],
+      ["Waiting on a person", "o-blocked"],
+      ["Next part needs approval", undefined],
       ["Ready", "o-ready"],
+      ["Next part queued", undefined],
       ["Building now", "o-progress"],
-      ["Waiting", undefined],
-      ["Blocked", "o-blocked"],
       ["Done", "o-done"],
     ]);
     for (const option of update ?? []) expect(typeof option.color).toBe("string");
+  });
+
+  // #6871 slice 2: the board as it stood the day this merged.
+  it("renames Waiting to Next part queued on its own id, so its cards stay put", () => {
+    const before = ["Backlog", "Ready", "Building now", "Waiting", "Blocked", "Done"].map(
+      (name) => ({ id: `o-${name}`, name }),
+    );
+    const update = statusFieldUpdate(before, { keepExtras: true });
+    expect(update?.find((o) => o.name === "Next part queued")?.id).toBe("o-Waiting");
+    expect(update?.find((o) => o.name === "Waiting on a person")?.id).toBe("o-Blocked");
+    expect(update?.find((o) => o.name === "Next part needs approval")?.id).toBeUndefined();
+    expect(update?.filter((o) => o.id === "o-Waiting")).toHaveLength(1);
   });
 
   it("returns null once the board already matches — the sweep's every-push check writes nothing", () => {
@@ -527,6 +674,38 @@ describe("moneypenny projects: statusFieldUpdate", () => {
       description: "",
     });
     expect(update?.filter((o) => o.id === "o-progress")).toHaveLength(1);
+  });
+
+  // #6871 slice 2: names alone said "nothing to write" while the board printed a stale cap.
+  it("rewrites in place when a column's description or color drifts, and only then", () => {
+    const normal = { position: "normal", caps: { inFlightCap: 3, startedPlanCap: 4 } };
+    const surge = { position: "surge", caps: { inFlightCap: 6, startedPlanCap: 8 } };
+    const written = statusFieldOptions(normal).map((o, k) => ({ id: `o${k}`, ...o }));
+    expect(statusFieldUpdate(written, { keepExtras: true, mode: normal })).toBeNull();
+    const update = statusFieldUpdate(written, { keepExtras: true, mode: surge });
+    expect(update?.map((o) => o.id)).toEqual(written.map((o) => o.id));
+    expect(update?.find((o) => o.name === "Building now")?.description).toMatch(/up to 6/);
+    const recolored = written.map((o) => (o.name === "Ready" ? { ...o, color: "BLUE" } : o));
+    expect(statusFieldUpdate(recolored, { keepExtras: true, mode: normal })).not.toBeNull();
+  });
+
+  it("a column renamed onto a dial column never inherits the old column's sentence", () => {
+    const before = [
+      { id: "o-w", name: "Waiting", color: "ORANGE", description: "A plan started and idle" },
+    ];
+    const fallback = { position: "conserve", unreadable: true, caps: { inFlightCap: 1 } };
+    const update = statusFieldUpdate(before, { keepExtras: true, mode: fallback });
+    expect(update?.find((o) => o.name === "Next part queued")).toMatchObject({
+      id: "o-w",
+      description: "",
+    });
+  });
+
+  it("an unreadable dial keeps the description the board already shows", () => {
+    const normal = { position: "normal", caps: { inFlightCap: 3, startedPlanCap: 4 } };
+    const written = statusFieldOptions(normal).map((o, k) => ({ id: `o${k}`, ...o }));
+    const fallback = { position: "conserve", unreadable: true, caps: { inFlightCap: 1 } };
+    expect(statusFieldUpdate(written, { keepExtras: true, mode: fallback })).toBeNull();
   });
 
   it("fixes GitHub's own Todo/In Progress/Done default, keeping the ids it can", () => {
@@ -560,6 +739,18 @@ describe("moneypenny projects: viewsToCreate", () => {
   it("skips views that already exist by name", () => {
     const names = viewsToCreate(["Flow", "Backlog", "View 1"], ids).map((v) => v.name);
     expect(names).toEqual(["Roadmap"]);
+  });
+
+  // #6871 slice 2: REST refused "Flow by priority" (404, 2026-11-05) and the design makes Eric's
+  // own view the Flow, so a later setup dispatch must not create a second flow beside it.
+  it("never creates a second flow view", () => {
+    expect(viewsToCreate([], ids).map((v) => v.name)).toEqual(["Flow", "Backlog", "Roadmap"]);
+  });
+
+  it("names the card fields it shows, which keeps Synced priority hidden", () => {
+    const withCards = { ...ids, Assignees: 7, Labels: 8, "Synced priority": 9 };
+    const view = viewsToCreate([], withCards).find((v) => v.name === "Roadmap");
+    expect(view?.body.visible_fields).toEqual([7, 8]);
   });
 
   it("fails loudly when a field the views need is missing", () => {

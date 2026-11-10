@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import {
   MAX_STARTS_PER_DAY,
   retryHold,
@@ -5,6 +6,10 @@ import {
   runCli,
 } from "../../../scripts/moneypenny/admission.mjs";
 import { type ClaimCtx, claimNext, peekNext } from "../../../scripts/moneypenny/index.mjs";
+import {
+  OUTAGE_DAY_CAP,
+  OUTAGE_PEER_READS,
+} from "../../../scripts/moneypenny/retry-hold-outage.mjs";
 import {
   issue,
   mode,
@@ -182,6 +187,189 @@ describe("the sweep, with its default hold", () => {
     const halted = { ...setup(gh).deps, readMode: () => ({ ...mode("halt"), until: null }) };
     claimNext(NOW, "abc", halted as Parameters<typeof claimNext>[2]);
     expect(gh.calls).toEqual([]);
+  });
+});
+
+// A build that dies for a reason nothing to do with the issue charges the issue anyway, so an outage
+// used to walk down the queue and leave the healthy top of it barred until midnight, with only a log
+// line to show for it. Replayed through the real claimNext at #4621's pace: every start 3 minutes on.
+describe("a lane-wide failure, against one issue's failing build", () => {
+  const T0 = Date.parse(`${DAY}T05:00:00Z`);
+  const minutes = (m: number) => T0 + m * 60_000;
+  const iso = (ms: number) => new Date(ms).toISOString();
+
+  /** A queue ranked #101 first, a fake GitHub that grows as builds start, and a run that records. */
+  const lane = (numbers = [101, 102, 103, 104, 105, 106, 107, 108]) => {
+    const events: Record<number, unknown[]> = {};
+    const comments: Record<number, { body: string }[]> = {};
+    const closed: unknown[] = [];
+    const reads: string[] = [];
+    const posted: string[][] = [];
+    const ready = numbers.map((n) => issue(n, `surface ${n}`, ["ready", "feedback"]));
+    const claim = (ctx: ClaimCtx) => {
+      const n = ctx.payload?.issue?.number ?? -1;
+      return { claimed: true, reason: "claimed", number: n };
+    };
+    const deps = (extra = {}) => ({
+      readMode: () => ({ ...mode("normal"), until: null, reason: "set to normal" }),
+      readReady: () => ready,
+      readInFlight: () => [],
+      readPrIssues: noOpenPrs,
+      readPlans: noOpenPlans,
+      claims: { plan: claim, feedback: claim },
+      continuation: noContinuation,
+      holdReads: {
+        readAll: (path: string) => {
+          reads.push(path);
+          const n = Number(/^issues\/(\d+)\//.exec(path)?.[1]);
+          return path.endsWith("/comments") ? (comments[n] ?? []) : (events[n] ?? []);
+        },
+        read: (path: string) => (path === CLOSED_PRS ? closed : []),
+        run: (_cmd: string, args: string[]) => {
+          posted.push(args);
+          if (args[1] === "comment") {
+            const n = Number(args[2]);
+            comments[n] = [...(comments[n] ?? []), { body: args.at(-1) ?? "" }];
+          }
+          return "";
+        },
+        ...extra,
+      },
+    });
+    /** One tick at `at`: what the sweep picks; `dies` charges it a start, as a real claim does. */
+    const tick = (at: number, dies = true, extra = {}) => {
+      const out = claimNext(at, "abc", deps(extra)) as { number?: number };
+      if (dies && out.number) {
+        events[out.number] = [...(events[out.number] ?? []), started(iso(at))];
+      }
+      return out.number;
+    };
+    const land = (n: number, at: number) => closed.push(mergedPr(n, iso(at)));
+    return { tick, land, reads, posted, comments, deps, events };
+  };
+
+  /** The audit's replay: 18 starts, one every 3 minutes, every build dying. */
+  const outage = (l: ReturnType<typeof lane>) => {
+    const picks: (number | undefined)[] = [];
+    for (let i = 0; i < 18; i++) picks.push(l.tick(minutes(i * 3)));
+    return picks;
+  };
+
+  it("after an outage the top of the queue is first again, not the first issue nobody charged", () => {
+    const l = lane();
+    outage(l);
+    // The audit's assertion, once the hour has passed: it read #107 here and #101 waited for midnight.
+    expect(l.tick(minutes(70), false)).toBe(101);
+  });
+
+  it("a lower issue that builds first does not turn the outage into #101's own fault", () => {
+    const l = lane();
+    outage(l);
+    expect(l.tick(minutes(55), false)).toBe(107);
+    l.land(107, minutes(60));
+    expect(l.tick(minutes(70), false)).toBe(101);
+  });
+
+  it("one issue failing alone stays barred until midnight, however long the lane is quiet", () => {
+    const l = lane();
+    for (const m of [0, 3, 6]) l.tick(minutes(m));
+    // #102 starts once and is still building: a single start is no evidence about the lane.
+    expect(l.tick(minutes(9))).toBe(102);
+    expect(l.tick(minutes(300), false)).toBe(102);
+  });
+
+  it("two issues failing with a lane build landing between them are two issues, not an outage", () => {
+    const l = lane();
+    for (const m of [0, 3, 6]) l.tick(minutes(m));
+    l.land(999, minutes(8));
+    for (const m of [9, 12, 15]) expect(l.tick(minutes(m))).toBe(102);
+    expect(l.tick(minutes(300), false)).toBe(103);
+  });
+
+  it("a PR on a session's own branch says nothing about whether the lane can build", () => {
+    const l = lane();
+    for (const m of [0, 3, 6]) l.tick(minutes(m));
+    for (const m of [9, 12, 15]) l.tick(minutes(m));
+    // Merged in the middle of the failing stretch, but off a live session's branch.
+    const notLane = { ...mergedPr(999, iso(minutes(8))), head: { ref: "fix/by-hand" } };
+    expect(l.tick(minutes(300), false, { read: () => [notLane] })).toBe(101);
+  });
+
+  it("the retries an outage earns are bounded, so two bad issues cannot stall the queue all day", () => {
+    const l = lane([101, 102, 103]);
+    for (let i = 0; i < 6; i++) l.tick(minutes(i * 3)); // #101 and #102 charged, three each
+    let at = 70;
+    const picks: (number | undefined)[] = [];
+    for (let i = 0; i < 30; i++) {
+      picks.push(l.tick(minutes(at)));
+      at += 61;
+      if (at > 18 * 60) break;
+    }
+    const startsOf101 = l.events[101]?.length ?? 0;
+    expect(startsOf101).toBeLessThanOrEqual(OUTAGE_DAY_CAP);
+    expect(picks).toContain(103);
+    expect(OUTAGE_DAY_CAP).toBe(MAX_STARTS_PER_DAY * 3);
+  });
+
+  it("costs no peer read until the hour has passed: a fresh bar is decided by its own events", () => {
+    const l = lane();
+    for (const m of [0, 3, 6]) l.tick(minutes(m));
+    l.reads.length = 0;
+    l.tick(minutes(10), false);
+    expect(l.reads.filter((p) => p.endsWith("/events"))).toEqual([
+      "issues/101/events",
+      "issues/102/events",
+    ]);
+  });
+
+  it("reads a bounded number of peers however long the queue is", () => {
+    const l = lane(Array.from({ length: 40 }, (_, i) => 101 + i));
+    for (const m of [0, 3, 6]) l.tick(minutes(m));
+    l.reads.length = 0;
+    l.tick(minutes(120), false);
+    expect(l.reads.filter((p) => p.endsWith("/events")).length).toBeLessThanOrEqual(
+      OUTAGE_PEER_READS + 2,
+    );
+  });
+
+  describe("saying so on the issue", () => {
+    it("the sweep writes one note on a barred issue, naming why and how to start it sooner", () => {
+      const l = lane();
+      for (const m of [0, 3, 6]) l.tick(minutes(m));
+      l.tick(minutes(9), false);
+      const notes = l.posted.filter((a) => a[1] === "comment" && a[2] === "101");
+      expect(notes).toHaveLength(1);
+      const body = notes[0]?.at(-1) ?? "";
+      expect(body).toContain("3 builds started today");
+      expect(body).toContain("`ready`");
+      expect(body).toContain("Generated by");
+    });
+
+    it("says it once a UTC day, not once a tick", () => {
+      const l = lane();
+      for (const m of [0, 3, 6, 9, 12, 15]) l.tick(minutes(m));
+      expect(l.posted.filter((a) => a[1] === "comment" && a[2] === "101")).toHaveLength(1);
+      l.tick(minutes(24 * 60 + 1), false);
+      expect(l.posted.filter((a) => a[1] === "comment" && a[2] === "101")).toHaveLength(1);
+    });
+
+    it("a note that cannot be written never frees the hold", () => {
+      const l = lane();
+      for (const m of [0, 3, 6]) l.tick(minutes(m));
+      const refuse = () => {
+        throw new Error("HTTP 403");
+      };
+      expect(l.tick(minutes(9), false, { run: refuse })).toBe(102);
+    });
+
+    it("the dry run writes nothing, and the real sweep's default is the one that writes", () => {
+      // peekNext's hold takes no writer; claimNext's default is what production runs, so its wiring
+      // is pinned at the source, the way the audit executors are.
+      const src = readFileSync("scripts/moneypenny/index.mjs", "utf8");
+      expect(src).toContain("holdReads = { run: sh }");
+      expect(src).toContain("sweepHold({ now: nowMs, ...holdReads })");
+      expect(src).toMatch(/holdReads = \{\},\s*\n\s*\/\/ The same holds as the claim/);
+    });
   });
 });
 

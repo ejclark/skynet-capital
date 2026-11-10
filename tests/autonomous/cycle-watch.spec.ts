@@ -44,7 +44,7 @@ describe("cycle watch", () => {
     setBlock(null);
     watch.tick();
     expect(lines).toEqual([
-      "[safety] BLOCKED — daily-loss; no orders until cleared",
+      "[safety] BLOCKED — daily-loss; no new positions until cleared",
       "[safety] block cleared",
     ]);
   });

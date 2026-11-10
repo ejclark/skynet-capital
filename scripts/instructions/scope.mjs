@@ -25,6 +25,7 @@
 const LEDGERS = [
   "docs/research/",
   "docs/digests/",
+  "docs/newsletters/", // shipped editions are history; corrections go in the next one (#6872)
   "docs/JOURNEYS/",
   "docs/vendor/",
   "docs/plans/",

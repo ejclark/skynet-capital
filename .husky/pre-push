@@ -20,5 +20,11 @@ pushed=""
 while read -r _ local_sha _ _; do
   case "$local_sha" in *[!0]*) pushed="$pushed $local_sha" ;; esac
 done
+# A refusal ends on one `pre-push:` line, which `ship.sh push` reads as an answer rather than a
+# network blip to retry: each retry would run this hook again, a whole verify on a red tree (#6668).
 # shellcheck disable=SC2086 # one word per pushed sha
-bash scripts/verify-locked.sh --skip-if-stamped $pushed
+bash scripts/verify-locked.sh --skip-if-stamped $pushed || {
+  rc=$?
+  echo "pre-push: refused — the local verify ended with exit $rc, so nothing was pushed." >&2
+  exit "$rc"
+}

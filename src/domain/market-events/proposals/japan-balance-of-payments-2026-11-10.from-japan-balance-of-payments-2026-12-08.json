@@ -1,0 +1,11 @@
+{
+  "id": "japan-balance-of-payments-2026-11-10",
+  "kind": "macro-print",
+  "title": "Japan Balance of Payments (September 2026, preliminary) — the same series as the 12-08 print, one cycle earlier, and the next out-of-sample read of its yen tail",
+  "date": "2026-11-10",
+  "status": "estimate",
+  "source": "EST: mof.go.jp/english/policy/international_policy/reference/balance_of_payments/, fetched direct 2026-11-08 — the schedule lists 'November 10, 2026 (8:50 am) | Balance of Payments, September 2026 (Preliminary); 1st half of FY2026 (Preliminary); Regional Balance of Payments, Q2 2026', with the page's own note that the schedule is subject to change. Same publisher and 08:50 JST slot as the 12-08 release already tracked as japan-balance-of-payments-2026-12-08. Filed estimate: the confirmed-prefix taxonomy has no slot for Japan's Ministry of Finance, and this lane never self-confirms an event it discovered in-sweep",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BY THE japan-balance-of-payments-2026-12-08 LANE, 2026-11-08, during its first pulse. Why it earns a slot: that ledger registered a yen-tail observation (FT-japan-balance-of-payments-2026-12-08-3) that accumulates across releases, and this is the next one, two days out. The same morning carries US CPI and the BoJ Summary of Opinions, so any USD/JPY move on 11-10 is a confounded read, which is exactly why it is worth naming on the calendar. Impact is LOW: symbols is empty, no house playbook is FX-keyed."
+}

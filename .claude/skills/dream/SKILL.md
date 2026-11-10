@@ -23,7 +23,7 @@ sessions. Plan: #6470. The conductor: `.claude/workflows/dream.js`.
 3. **Build the digests**, one per session, into the run's scratch pad:
    `node scripts/dream-digest.mjs --recent 20`, then `--session <path>` for each. Add any run's
    `attempts.jsonl` that matters. Save the stale report from `--memory <dir>`.
-4. **Say the price, then run.** State agent count and model first (`CLAUDE.md`; a default run on 20
+4. **Say the price, then run.** State agent count and model first (`docs/READERS.md` → *What breaks his flow*: priced fan-outs still ask; a default run on 20
    sessions is about 9 agents, mostly Sonnet). Then run the `dream` workflow with `digests`,
    `memoryDir`, `staleReport` and any `instructions` that say what matters this time.
 5. **Hand over the proposals** on a page Eric can tap through, take or discard, in plain words and
@@ -32,6 +32,7 @@ sessions. Plan: #6470. The conductor: `.claude/workflows/dream.js`.
    it needs a gate or a hook.
 6. **Apply only what he takes**, through `node scripts/run-memory.mjs promote`, which refuses if the
    file changed since it was read. Repo rules go through a PR; protected ones board the platter.
+   When a correction of Eric's recurs, that PR also adds a case to `docs/evals/how-he-writes-set.json`, with what his next message showed as the evidence.
 7. **Score it.** Record taken, discarded, and recurrences session-time capture missed. Under 30%
    taken, or under 3 such recurrences, means do not schedule it.
 

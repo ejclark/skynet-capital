@@ -8,8 +8,8 @@ implement."
 one reference per reviewer, the same two refuters, each lens kept or killed by its own number. Not
 one agent told to look for six things, which is the "find gaps" prompt restated. Not six standing
 agents: the two review agents on the roster ran 4 times in 45 days, because nothing calls them.
-Confidence medium: no lens below has run on any PR. Wrong if, by 2026-12-15, the first two added each
-ran on 40 PRs and either trips its kill rule.
+Confidence medium: of the lenses below, only performance has run on live PRs, in the audit. Wrong
+if, by 2026-12-15, the first two added each ran on 40 PRs and either trips its kill rule.
 
 **The warning every lens carries:** a reviewer told to find gaps manufactures them. So each lens asks
 for a concrete failure or cost, and zero findings is a normal answer.
@@ -21,7 +21,7 @@ spec holds each under 4,000 characters (`tests/arch/review-lenses.spec.ts`).
 
 | Lens | What it reads for | Fires on | Characters |
 |---|---|---|---|
-| [`lenses/adversarial.md`](lenses/adversarial.md) | The input that proves a PR wrong | every code path | 3,931 |
+| [`lenses/adversarial.md`](lenses/adversarial.md) | The input that proves a PR wrong | every code path | 3,968 |
 | [`lenses/performance.md`](lenses/performance.md) | A request or boot path whose cost grows with history | server, observatory, storage | 3,564 |
 | [`lenses/context-loop.md`](lenses/context-loop.md) | What a change costs every session, and whether it can be judged | instructions, workflows, the loop registry | 3,961 |
 | [`lenses/smells-and-patterns.md`](lenses/smells-and-patterns.md) | Code and architecture smells, and the pattern that answers each | `src/`, `app/src/`, when a file or an import is added | 3,986 |
@@ -32,10 +32,22 @@ A recognised pattern has one home: `docs/PATTERNS.md` → *The ledger — code s
 says which problems are worth solving and which are taste, because a finding with no failure or cost
 to name is taste, however confident it sounds.
 
-**Where this stands.** The audit's lens table holds one row, correctness, and it does not read these
-files yet. A lens joins as one row, after its replay: performance, then smells and patterns, then
-context and loop, then security. The replay in #6555 scores a lens over labelled PRs before it joins, and its set opens with
-how that score could flatter a lens.
+**Where this stands.** The audit's lens table holds two rows, correctness and performance. A lens
+joins as one row, after its replay: smells and patterns next, then context and loop, then security.
+The replay in #6555 scores a lens over labelled PRs before it joins, and its set opens with how that
+score could flatter a lens.
+
+| Lens | Replay, 2026-11-01 | Controls | Call |
+|---|---|---|---|
+| Performance | 8 of 8 on reading; 5 by file match, and the other 3 named the same defect at the calling file | 13 of 14 clean, the 14th on a trap | Joined |
+| Smells and patterns | 1 of 3 on reading, 0 by file match; 2 of the 5 labelled PRs did not run | 8 of 8 clean | Not yet: it says little on the set, and every case in it was labelled for correctness |
+| Pre-merge, 2026-11-05 | 7 of 20 at Important on reading (8 by file match, 2 of them another defect, plus 1 named at its caller); 12 of 20 at any severity, 5 of them filed as Nit | 4 Important stand after the refuter (7 before); each traces to code still on main, so they are filed as #6878 to #6881, not counted as noise | Fails the S1 bar of 9: the Nit line is the lever, and its own replay is next (#6870) |
+| Pre-merge, iteration 2 (Nit means no wrong result) | 10 of 20 at Important on reading, 9 of them postable in the diff (12 by file match, 4 of them another defect, plus 2 named at their caller) | 5 Important stand on 3 controls: 2 repeat #6878 and #6881, 2 more check out on main (#6887, #6888), 1 is weak | Meets the bar on reading, at its floor. A run varies: 13 defects were found at Important in one run or the other |
+
+**The pre-merge reviewer** is a separate thing from these lenses: [`REVIEW.md`](REVIEW.md) is its whole
+rulebook, read on every code PR before merge, and `review-replay.mjs`'s `pre-merge` lens replays it
+with one trace refuter per PR. Its score passes only on hits the job could post, a finding in the
+PR's diff: 5 of the 21 correctness cases sit in a file their PR never changed.
 
 ## Keep or kill
 
@@ -61,8 +73,31 @@ Written in each lens's header, and owed a row in `docs/process/LEARNING-LOOP.md`
 A cause seen twice becomes, cheapest first: a spec on the owning module, a gate line, a row in the
 smell ledger, and a doctrine line only when a gate would cost more than the damage.
 
+## Before merge: the plain-code core (#6870)
+
+The pre-merge reviewer's model writes one `review.json`; everything else is plain code in
+`scripts/pr-review/`, each file a pure core with fixture specs in `tests/scripts/pr-review/`:
+
+| File | Decides |
+|---|---|
+| `triage.mjs` | Skip, light, standard or deep, scaled by the work dial and the day's token budget |
+| `post.mjs` | Which findings reach the PR (in a changed hunk, deduplicated, capped 5 + 3, not suppressed), one `COMMENT` review, the `pr-review` status |
+| `respond-route.mjs` | Whether an open Important finding gets a response session, red-session-pr's routing |
+| `reeval.mjs` | Whether every Important thread is fixed by a commit or declined with a reason |
+| `release.mjs` | Which holds nobody is answering after 2 hours |
+| `markers.mjs` | The hidden receipt, finding, reply and respond markers that carry state between rounds |
+| `ledger.mjs` | `review` / `outcome` / `escape` rows on the `data/pr-review` branch, `ledger/YYYY-MM-DD.jsonl` |
+
+Triage routes by `scripts/review-roots.mjs`, the audit's `DEEP_ROOTS` and `DOCS_ONLY`; the audit
+keeps its own copy because a workflow cannot import, and `tests/scripts/review-roots.spec.ts` fails
+when the two differ. The audit's receipts ride the same branch at `audit/YYYY-MM-DD.jsonl` (#6683).
+Nothing here runs in CI yet: the job that calls it is S3, on the platter.
+
 ## Not known yet
 
-No replay has run, so recall and manufacture are unmeasured for every lens. Each lens's real examples
-were checked against this repo's history; what a reviewer does with the lens has not been checked at
-all. The path counts come from one census of 650 code PRs since 2026-10-01, and they will drift.
+Adversarial, context and loop, security and reuse have not been replayed, so their recall and
+manufacture are unmeasured. Reading a miss by hand is what moved performance from 5 of 8 to 8 of 8:
+`score` matches on file, and a reviewer often names the route where the label names the view behind
+it. A post-merge lens's replay has no refuters, so whether the lens survives them is the 40-PR keep
+or kill above. The path counts come from one census of 650 code PRs since 2026-10-01, and they will
+drift.

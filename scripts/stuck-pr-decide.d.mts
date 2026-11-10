@@ -3,7 +3,11 @@
 // incident-runs.d.mts).
 
 export const REQUIRED_CHECKS: string[];
+export const ARM_GATE_CHECKS: string[];
+export const RED: Set<string>;
 export const DEFAULT_HOURS: number;
+/** A head with no Actions suite at all is named `headless` after this many minutes (#7112). */
+export const HEADLESS_MINUTES: number;
 
 export interface Suite {
   id?: number;
@@ -50,7 +54,16 @@ export function judgePr(input: {
   now?: number;
   hours?: number;
   required?: string[];
+  /** When the head commit was committed; a no-suite head is timed from it or the PR, whichever is later. */
+  headAt?: string | null;
 }): Stuck | null;
+/** Would `judgePr` time this head from its commit (no required run, no Actions suite)? */
+export function needsHeadAt(checkRuns?: CheckRun[], suites?: Suite[], required?: string[]): boolean;
+/** The latest check run of each required name (a re-run supersedes the run it replaced). */
+export function latestRequired(
+  checkRuns: CheckRun[],
+  required: string[],
+): Map<string, { at: number; run: CheckRun }>;
 export function describe(stuck: Stuck): string;
 export function stuckLine(stuck: Stuck[] | null): string;
 /** Is this branch named in an open `platter/` PR's ledger? Built once from the open PR list. */

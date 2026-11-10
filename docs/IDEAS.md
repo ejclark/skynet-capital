@@ -18,6 +18,66 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **A headless PR might start its checks with a body edit, not a commit.** `pipeline.yml` lists
+  `edited` in its `pull_request` types, and an edit from the App token starts workflows, so writing
+  the headless marker into the PR body (not a comment) could start `verify` with no new commit on
+  the branch, and so nothing a still-running session's push could collide with. #7112 shipped
+  `update-branch` and a same-tree commit because the brief asked for them; test whether one
+  App-token body edit starts a Pipeline run on a job-token PR, then swap if it does.
+  _(src: Claude · while: building #7112's act stage; code review flagged the push race)_
+- **grind could stop a run when many items block on one cause.** On 2026-11-08 the drift run
+  blocked 35 checks over about two hours with the same summary (a macOS-only spec red in the
+  pre-push verify), and kept dispatching. A breaker in `.claude/workflows/grind.js`, say three
+  items blocked at one step whose summaries share a cause, would stop dispatching and return,
+  naming the cause. The cause match is the hard part: summaries are free text.
+  _(src: Claude · while: retro on the 2026-11-08 instruction-drift run)_
+- **grind could re-run agents an outage killed, once, before it returns.** A DNS outage killed 44
+  drift agents mid-step on 2026-11-08 ("agent failed after retries"). Re-running them needed a
+  hand-built plan, because a re-run must start from the step each item had reached, not the first.
+  grind knows each item's last finished step, so one pass over `errored` items at the end could
+  resume each from there.
+  _(src: Claude · while: retro on the 2026-11-08 instruction-drift run)_
+- **An option play's stop, priced on the contract's own premium.** #6954 slice 4 put a stop on every share play, but `exitSafetyIntents` reads share positions only, so the long call, the LEAP and the spread exit on their target and time rules alone, and a long call can lose its whole premium before 45 days are left. A stop that closes a long contract once its bid is some fraction under its cost (and never on the wheel's sold contracts, which its owner holds to expiry on purpose) would close that gap. The open question is the level: no study prices how far these contracts fall before they pay. Also parked: stop orders held at the broker for shares, so a gap while the bots are down is managed (#6954 gate list). _(src: Claude · while: #6954 slice 4, 2026-11-07)_
+- **A held fold could say so when it falls back to a whole read in live mode.** #6597: a wrapper
+  dropped `since`, and two folds quietly re-read whole audits in production for hours. The
+  fallback is right for offline mode and specs and silent everywhere else. One `emitWarning` per
+  store, only when the mode is live, would have named it in the first request's log. A spec now
+  guards the publishing wrappers (`tests/observatory/activity-publishing-forwarding.spec.ts`), so
+  this is worth building only if a second fallback appears outside that file.
+  _(src: Claude · while: retro on #6597, #4612 slice 10)_
+- **Dupe and clone budgets can spread a costly helper to every caller.** Both scans count
+  definitions, not calls. #599 made `marketDayKey` the one shared helper, and it built an `Intl`
+  formatter per call, because a second copy "would have tripped dupe:scan". The `Intl` scan now
+  catches that one cost. The general question is whether a consolidation PR should say what the
+  shared helper allocates per call.
+  _(src: Claude · while: retro on #4612's audit, slice 10)_
+- **The bots app still runs under tsx on a 512 MB machine, and no budget measures it.**
+  `fly.bots.toml` starts `npm run run:autonomous`, which is the npm → tsx → node chain that #4425
+  measured at about 295 MB at boot for the dashboard. #4425 left the bots as a follow-up because
+  the trader is stateful. Measure its RSS first; slice 6's gauge only runs in the dashboard.
+  _(src: Claude · while: retro on #4425, #4612 slice 10)_
+- **A board view by digital team member: each lane's queue and what it ships.** Eric, 2026-11-05:
+  "one view in our project could be geared around digital team members roles/personas.. the work in
+  their queue that they pump out. This provides an interesting visual." Cheap once two things exist:
+  a derived "Role" field the sync writes from labels (the same machinery #6871 B1 built for Priority:
+  `feedback` → the build lane, `plan` → the plan lane, `bottleneck` → the research lane), and a way to
+  create views without his click (#6883). Needs the IA call first: what counts as a role on the board.
+  _(src: Eric · while: #6871 swimlanes, after the view-create 404s)_
+- **Hold a cite to the name it points at.** In 18 days at least ten cited rows in the playbook
+  anatomy page's appendix came to point at the wrong lines (`wheelPhase` moved from :132-154 to
+  :162-184) with every check green, because both cite checks only catch a file that shrank. A cite
+  written beside a backticked name could be checked for that name on the cited lines.
+  _(src: Claude · while: #6771 slice 1, re-reading the anatomy page)_
+- **A round page's read-back time is a session's guess.** Of 50 `readBackAt` stamps in the transcripts, 49 were a whole minute, 7 behind the real time and the median 230 seconds ahead, and the bar prints it as "Read back 9:41 AM". On a page opened later, one behind the press reads as not read at all. Sessions could take the time from `date -u`, or the page could print the time it saw the stamp land. _(src: Claude · while: #6606, 2026-11-01)_
+- **A round page open on a second device never hears Done.** The bar reads the press from what this view pressed or opened with, so Done on the phone leaves the laptop's page on "I'm done" with no "Received" until a reload. Reading `doneAt` from each update of the round's record would fix it, and it is the "marked done elsewhere" case. _(src: Claude · while: #6606, 2026-11-01)_
+- **Time a verify's wait and its run, per row.** `ship-verify.jsonl` says pass or fail with no duration, so nobody could see verifies slow from minutes to ten-minute timeouts. `waited` and `ran` seconds beside each row would let `npm run meter` report the queue. One verify alone took 78 seconds on 2026-11-01, so the 1,800-second wait fits about 23 in line; a row per run would show when that stops being true. _(src: Claude · while: retro on the verify queue, 2026-11-01)_
+- **List the specs that load turns red.** The same names failed on 5-second timeouts at load 25-80 and passed alone: steer-widths, steer-pins-client, trade-chain-tap, guidance-section, RollRow, and fitness.spec's 300 ms hung read. A verify run under a fixed stress load would name them, and each is a false red the queue only hides. _(src: Claude · while: retro on the verify queue, 2026-11-01)_
+- **A verify that hangs now stops the queue.** A working queue means one hung verify makes every waiter exit 75 after 30 minutes, with nothing running. It has not been seen, and it needs a limit on the holder that also stops the holder's children. Separately, `SKYNET_VERIFY_LOCKED=1` leaking into an agent's shell would turn the queue off with no line at all. _(src: Claude · while: retro on the verify queue, 2026-11-01)_
+- **A worker stage cannot run a review it is asked to run.** The `worker` agent has no Skill tool, and a brief told one to run `/code-review` before opening a PR, so it pushed two branches and opened nothing. A workflow check that a brief naming a skill does not run under `worker` would catch this before launch. _(src: Claude · while: retro on the verify queue, 2026-11-01)_
+- **Notice when the harness changes the memory index limit.** `scripts/run-memory.mjs` holds 25,000,
+  read by hand from Claude Code 2.1.263, and an upgrade could change it unseen. A check of the
+  installed binary needs a pattern that survives minified names.
+  _(src: Claude · while: fixing the index limit the post-merge audit confirmed, #6583)_
 - **The dupe scan counts same-named per-route constants as copies.** Three of today's dupe
   candidates were names, not code: `BODY_CAP_BYTES` (six routes, six different caps, 1–16 KB),
   `MAX_ID` (next in line, likely the same), and half of `num`/`pct`. The athlete has to diff every
@@ -35,6 +95,20 @@ Eric-sourced.
   container; each passed alone, and the merged cycle branches verified green. Not a CI flake on
   record — but if one shows up in CI, these are the suspects (timer- and spawn-heavy).
   _(src: Claude · while: governor cycles 1–4, 2026-10-26)_
+- **The spec-gap eye names a target its own drill must refuse.** After cycle 7's first rep,
+  `spec-gap-scan --candidate` names `src/playbooks/with-unsubscribed-exits.ts`, inside backfill's
+  trading carve-out (`src/playbooks/**`), where the drill stops for a human's word on correct
+  behavior; 3 of the 10 largest untested files sit there. The candidate is always the largest file,
+  so the coach stays wedged until someone confirms that file's behavior or the eye skips carve-out
+  paths for `--candidate` (still counting them in `debt`, listed apart as needing a human).
+  _(src: Claude · while: governor cycle 7, 2026-11-02)_
+- **The meter cannot see a cloud session's workflows.** `scripts/agent-meter.mjs` and
+  `scripts/dream-digest.mjs` hard-code the laptop's project folder
+  (`-Users-eric-Developer-skynet-capital`); a cloud session's transcripts live under
+  `-home-user-skynet-capital`, so `/governor` step 5's cost read returns nothing there, where
+  sessions now run by default. Cycle 7 got its number by calling the meter's own
+  `scanWorkflowAgents` and `agentSummary` with the container's folder. Matching every project
+  folder named for this repo would cover both. _(src: Claude · while: governor cycle 7, 2026-11-02)_
 - **IPO discovery runs only when someone types it.** `npm run research:lockups` now files a listing
   from its public S-1 (#5912 slice 3), but no schedule calls it, so "Anthropic's S-1 lands and
   discovery files it within one run" (the slice's falsifier) waits on a person remembering the run:
@@ -109,7 +183,8 @@ picks it up starts from the fork, not the wish.
   goes to (playbook, sleeve) instead of the account, and the parent's guards cap the sum. The
   deciding question before slicing: should two sleeves ever hold the same symbol at once? If not,
   nesting is just roster composition plus a capital split. `playbooks/registry.ts` and
-  `engine/guards.ts` are envelope-protected, so the build boards the platter.
+  `engine/guards.ts` are not protected (`envelope.json` `$openOnPurpose`, since #928), so the build
+  is an ordinary PR. Chaining, the handoff cousin of this, is #6959.
   _(src: Eric · while: brain-dump on trading mechanics)_
 - **Eric as game master: recruit Tony or Phil to run bot accounts, up to 6 bots in S1, as teams.**
   This changes a written frame. Era 1 says the only autonomous bots are Eric-account bots
@@ -642,6 +717,15 @@ duplication instantly once someone looked. _(src: Claude · while: fixing the ou
 `account-service.ts`), but `addParticipant` still checks only the derived id. If Ann renames
 herself "Joe", a later member adding "Joe" gets the free id `human-joe` and the board shows two
 Joes. Reuse the same check on the add path. _(src: Claude · while: #6077 rename-guard fix)_
+
+### A party campaign needs a reference its author's title can't collide on
+Member campaign ids are slugs of the title, unique per author only, and a house id wins
+(`readableCampaign` in `src/server/campaign-questions-api.ts`). Since #6949 slice 6 made every
+saved campaign the party's, two members titling a campaign "AI plays", or a member titling one
+"Energy for AI" (a house id), means a question asked in it by id lands in the other one. No
+screen exists yet, so nobody can hit it; before #6948's screen ships, give the party view an
+author-scoped reference that never exposes the member key (a hash of the scope), and accept it on
+`ask` and `questions`. _(src: Claude · while: #6949 slice 6, a spec fixture titled "Energy for AI")_
 
 ### Boot-time quarantine for a store row that collides with the roster
 The owner-link PR (#466) closed the write-time hole (`addParticipant` now refuses an id already
@@ -1524,11 +1608,11 @@ check is automatic rather than remembered. _(src: Claude · while: research-lab 
 - **`PRINT_WINDOWS` should DRIVE the guards, not mirror them.** The chain's earnings badge needs the
   same day-counts the S2 entry guard and the playbooks trade on, so `domain/earnings-calendar.ts`
   now names them (`entryFlatDays` 2 · `postPrintFlatDays` 3 · `deadZoneDays` 5) — but
-  `engine/guards.ts` and `playbooks/registry.ts` are envelope-protected, so they still hold their
-  own literals and the new constants are copies pinned by spec (`tests/domain/earnings-calendar.spec.ts`).
+  `engine/guards.ts` and `playbooks/registry.ts` were envelope-protected then, so they still hold
+  their own literals and the new constants are copies pinned by spec (`tests/domain/earnings-calendar.spec.ts`).
   The pins make drift loud, not impossible. The end state is a three-line change inside those two
-  files to import the constants instead; it is behaviour-identical, but it lands in the protected
-  class, so it wants Eric's eyes rather than an autonomous PR.
+  files to import the constants instead; it is behaviour-identical, and since #928 neither file is
+  protected (`envelope.json` `$openOnPurpose`), so it is an ordinary autonomous PR.
   _(src: Claude · while: badging the options chain with earnings proximity, #575, 2026-08-26)_
 
 - **The `ci-medic` repair lane still has no token that can push, generally, not just for #655.**
@@ -1819,6 +1903,14 @@ together, but that is one instance of a class — `workflow-lint.mjs` is where t
 names the exclusion). Worth doing only if a second instance turns up; noted so the second one is
 recognised as a pattern rather than re-diagnosed.
 _(src: Claude · while: writing the #4477 fix's falsifier spec)_
+
+### Most of a verify's peak memory is its first half-minute
+Measured 2026-11-02 (#6668): one verify peaked at 4.8 GiB 28 s in, when both tsc runs, biome and
+both test runners' builds overlap, then held near 2 GiB for the remaining four minutes of tests.
+`run-p` starts all five at once. Starting the type checks after the tests have their workers, or
+the reverse, could cut the burst by about 2 GiB without touching the worker cap, at some cost in
+wall time. Worth a measured try if the laptop still strains with the cap in place.
+_(src: Claude · while: measuring a verify to set #6668's worker cap)_
 
 ## The chat/companion feature will likely change alongside orchestration work
 

@@ -43,11 +43,14 @@ import { homedir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { LockBusyError, withFileLock } from "./file-lock.mjs";
+import { isMain } from "./is-main.mjs";
 
 export const BUDGET_PER_CLASS = 3;
 export const EMPTY_FILE_HASH = "absent";
 const INDEX_LINE_LIMIT = 200;
-const INDEX_BYTE_LIMIT = 25 * 1024;
+// The loader's own number, read from the installed harness (2.1.263), not the vendor docs' "25KB",
+// which reads as 25,600 and let through 600 bytes a session cuts.
+const INDEX_BYTE_LIMIT = 25_000;
 const LOCK_WAIT_MS = 10_000;
 const HISTORY_HOOK = new URL("./hooks/memory-history.mjs", import.meta.url);
 
@@ -77,8 +80,10 @@ export function checkAttempt(rows, next) {
 
 /**
  * Why an index would be cut off when a session loads it, or null when it fits. Past the limit the
- * harness drops the rest with no warning (docs/vendor/claude-code/memory.md). A final newline ends the
- * last line and does not start another.
+ * harness loads only part of it and adds a warning line, so the entries past the cut are gone for that
+ * session. The loader measures trimmed characters; bytes are never fewer, so this never passes what it
+ * cuts, and may refuse a heavily multibyte index early. A final newline ends the last line and does
+ * not start another.
  */
 export function indexOverLimit(text) {
   const lines = text.split("\n").length - (text.endsWith("\n") ? 1 : 0);
@@ -259,7 +264,7 @@ function promote(f) {
   console.log(outcome.hash);
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   const [command, ...rest] = process.argv.slice(2);
   const f = flags(rest);
   const commands = {

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
+import { humanizeOptionSymbol } from "../../../src/trading/option-symbols";
 import { type DeskActivityLine, fetchDeskActivity } from "../live/desk";
 import { EventLine } from "./order-event-line";
 
@@ -66,10 +67,11 @@ export function RecentOrdersStrip({
     <section className="wr-panel">
       <h3 className="wr-h">Your recent orders</h3>
       {events.length === 0 ? (
-        // This component gets only the raw `symbol` (an OCC symbol for an option, not a humanized
-        // display name) — shown as-is rather than threading a separate humanized string through,
-        // keeping the caller contract simple.
-        <p className="tkt-note">No recorded orders for {symbol} in the ledger's window.</p>
+        // Matched on the raw `symbol` (an OCC symbol for an option), said in words — "CRWV $50
+        // PUT · 27 NOV 26", never "CRWV261127P00050000" (Eric, 2026-11-06). A ticker passes through.
+        <p className="tkt-note">
+          No orders on {humanizeOptionSymbol(symbol)} in your recent history.
+        </p>
       ) : (
         <>
           <ul className="wr-list">

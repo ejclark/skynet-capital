@@ -2,7 +2,13 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { LOG_FORMAT, landings, ledgerItems, parseLog } from "../../scripts/platter-merge-scan.mjs";
+import {
+  LOG_FORMAT,
+  landings,
+  ledgerItems,
+  parseLog,
+  withFetchability,
+} from "../../scripts/platter-merge-scan.mjs";
 
 /**
  * The platter's per-item revert, made checkable (#3754).
@@ -63,7 +69,7 @@ const FIXTURE_LOG = [
   ),
 ].join("");
 
-describe("platter-merge-scan — a squashed platter is named, a merged one is not", () => {
+describe("platter-merge-scan — the shape each platter landed in, read off its parents", () => {
   const found = landings(parseLog(FIXTURE_LOG));
 
   it("reads only the platter landings out of the log, leaving ordinary PRs alone", () => {
@@ -71,15 +77,15 @@ describe("platter-merge-scan — a squashed platter is named, a merged one is no
     expect(found.map((l) => l.pr)).toEqual([3329, 2979]);
   });
 
-  it("flags the single-parent landing — one parent means the items were flattened into it", () => {
+  it("reads a single-parent landing as a squash — its items revert through ship platter revert", () => {
     expect(found[0]).toMatchObject({ pr: 3329, flattened: true });
   });
 
-  it("clears the merge commit — two parents is the shape that keeps per-item revert", () => {
+  it("reads a two-parent landing as a merge commit — its items revert with plain git revert", () => {
     expect(found[1]).toMatchObject({ pr: 2979, flattened: false });
   });
 
-  it("names the items a squash flattened, so the report says what was lost, not just that", () => {
+  it("names the items a landing carried, from the ledger in its own commit message", () => {
     expect(found[0]?.items).toEqual([
       expect.objectContaining({ item: "fix/repair-lane-push-token", revert: "3cbf4ac" }),
       expect.objectContaining({ item: "fix/screen-pr-wire-guard", revert: "90b8cfc" }),
@@ -100,6 +106,63 @@ describe("platter-merge-scan — ledgerItems survives how GitHub actually stores
 
   it("returns nothing when the commit message carries no ledger at all", () => {
     expect(ledgerItems("chore(platter): protected-path changes\n\nNo table here.")).toEqual([]);
+  });
+});
+
+// What the scan reports now: whether each item's commit is still fetchable. Local first; when an
+// item is missing and the landing names a PR, that PR's head ref is fetched once and the missing
+// ones are asked again. Both reads injected, so nothing here touches a repository or the network.
+describe("platter-merge-scan — an item is fetchable locally, or after one fetch of refs/pull/<pr>/head", () => {
+  const landing = landings(parseLog(FIXTURE_LOG))[0] as ReturnType<typeof landings>[number];
+
+  it("marks every item fetchable without fetching when the object store already has them", () => {
+    let fetched = 0;
+    const out = withFetchability(landing, {
+      exists: () => true,
+      fetch: () => {
+        fetched += 1;
+        return true;
+      },
+    });
+    expect(out.items.map((it) => it.fetchable)).toEqual([true, true]);
+    expect(fetched).toBe(0);
+  });
+
+  it("fetches the PR head once and re-asks only the missing items", () => {
+    const seen = new Set<string>();
+    let fetched = 0;
+    const out = withFetchability(landing, {
+      exists: (sha) => {
+        if (sha === "3cbf4ac") return true;
+        if (seen.has(sha)) return true;
+        seen.add(sha);
+        return false;
+      },
+      fetch: () => {
+        fetched += 1;
+        return true;
+      },
+    });
+    expect(fetched).toBe(1);
+    expect(out.items.map((it) => it.fetchable)).toEqual([true, true]);
+  });
+
+  it("reports an item unfetchable when the fetch fails or the PR is unknown", () => {
+    const out = withFetchability(landing, { exists: () => false, fetch: () => false });
+    expect(out.items.map((it) => it.fetchable)).toEqual([false, false]);
+    const noPr = withFetchability(
+      { ...landing, pr: null },
+      { exists: () => false, fetch: () => true },
+    );
+    expect(noPr.items.map((it) => it.fetchable)).toEqual([false, false]);
+  });
+
+  it("leaves a missing item unchecked, not unfetchable, when the fetch was not tried (--offline)", () => {
+    const out = withFetchability(landing, {
+      exists: (sha) => sha === "3cbf4ac",
+      fetch: () => null,
+    });
+    expect(out.items.map((it) => it.fetchable)).toEqual([true, null]);
   });
 });
 
@@ -127,28 +190,30 @@ describe("platter-merge-scan — the report is advisory, never a gate", () => {
   });
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
-  // Exit 0 on a finding is the design, not an oversight: the squashes already on `main` cannot be
-  // un-squashed, so a blocking check would be permanently red for a defect no PR can clear.
-  it("exits 0 even when it finds a flattened platter", () => {
-    expect(scan(["--log", logFile]).code).toBe(0);
+  // Exit 0 always: a squash is a shape, not a failure (2026-11-01), and an unfetchable item commit
+  // is nothing a PR can clear.
+  it("exits 0 and reads a squash as a shape, never as a failure", () => {
+    const { code, stdout } = scan(["--log", logFile]);
+    expect(code).toBe(0);
+    expect(stdout).toContain("2 platter landing(s) — 1 by squash, 1 by merge commit");
+    expect(stdout).not.toMatch(/were squashed|cannot be reverted alone|the whole platter, as one/);
   });
 
-  it("reports the flattened platter by PR number with the items it lost", () => {
+  it("names both landings, their shape, and both revert commands", () => {
     const { stdout } = scan(["--log", logFile]);
-    expect(stdout).toContain("1 of 2 platter landing(s) were squashed");
-    expect(stdout).toContain("#3329");
-    expect(stdout).toContain("fix/repair-lane-push-token");
-    expect(stdout).not.toContain("#2979");
+    expect(stdout).toContain("#3329 (38e3a4b) squash");
+    expect(stdout).toContain("#2979 (ff55c45) merge commit");
+    expect(stdout).toContain("scripts/ship.sh platter revert <pr> <sha>");
+    expect(stdout).toContain("git revert <sha>");
   });
 
-  it("names the revert path that actually exists for a squashed platter", () => {
-    expect(scan(["--log", logFile]).stdout).toContain("the whole platter, as one");
-  });
-
-  it("emits the same finding as JSON for anything downstream", () => {
+  it("leaves fetchability unchecked on a captured log, and says so", () => {
+    const { stdout } = scan(["--log", logFile]);
+    expect(stdout).toContain("fetchability not checked");
     const parsed = JSON.parse(scan(["--log", logFile, "--json"]).stdout);
     expect(parsed).toHaveLength(2);
     expect(parsed[0].flattened).toBe(true);
+    expect(parsed[0].items[0].fetchable).toBeNull();
   });
 
   it("pins the log format the parser expects, so a git-side change cannot pass silently", () => {

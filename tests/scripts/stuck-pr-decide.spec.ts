@@ -219,6 +219,64 @@ describe("judgePr — the head only ever got the ghost (#4877)", () => {
   });
 });
 
+// 2026-11-08 (#7112): #7089 was opened at 02:19Z by the Actions job token, which emits no event, so
+// its head got no check suite and no check run at all — there was no ghost for the branch above to
+// find, `judgePr` returned null, and it sat 16h until Eric asked what was in flight. This fixture is
+// that head as the API returned it: an empty check-runs list, an empty check-suites list.
+describe("judgePr — the head never got a suite at all (#7089)", () => {
+  const opened = (h: number) => pr({ number: 7089, auto_merge: null, created_at: ago(h) });
+
+  it("WHEN a PR opened 16h ago has no suite and no run, names it headless", () => {
+    const out = judgePr({ pr: opened(16), checkRuns: [], suites: [], now: NOW });
+    expect(out?.kind).toBe("headless");
+    expect(out?.hours).toBe(16);
+    expect(out?.ghosts).toEqual([]);
+    expect(out?.fix).toContain("App identity");
+  });
+
+  it("names it at 30 minutes, not at the 3h a green stall waits", () => {
+    expect(judgePr({ pr: opened(0.4), checkRuns: [], suites: [], now: NOW })).toBeNull();
+    const out = judgePr({ pr: opened(0.6), checkRuns: [], suites: [], now: NOW });
+    expect(out?.kind).toBe("headless");
+    expect(out?.why).toContain("36 minutes");
+  });
+
+  it("ignores the claude and fly-io suites, which sit queued with no runs on every PR", () => {
+    const out = judgePr({
+      pr: opened(16),
+      checkRuns: [],
+      suites: [queuedClaude, queuedFly],
+      now: NOW,
+    });
+    expect(out?.kind).toBe("headless");
+  });
+
+  it("times a fresh push onto an old PR from the push, not the PR", () => {
+    const fresh = { pr: opened(16), checkRuns: [], suites: [], now: NOW, headAt: ago(0.1) };
+    expect(judgePr(fresh)).toBeNull();
+    expect(judgePr({ ...fresh, headAt: ago(2) })?.hours).toBe(2);
+  });
+
+  it("does not fire on a head whose Actions suite is real, or that has a required run", () => {
+    expect(judgePr({ pr: opened(16), checkRuns: [], suites: [realSuite], now: NOW })).toBeNull();
+    const running = [{ name: "verify", status: "in_progress", conclusion: null }];
+    expect(judgePr({ pr: opened(16), checkRuns: running, suites: [], now: NOW })).toBeNull();
+  });
+
+  it("leaves a conflicted PR to the conflict flag: GitHub starts no run on one either", () => {
+    const dirty = { ...opened(16), mergeable_state: "dirty" };
+    expect(judgePr({ pr: dirty, checkRuns: [], suites: [], now: NOW })).toBeNull();
+  });
+
+  it("leaves drafts and held PRs alone", () => {
+    const base = { checkRuns: [], suites: [], now: NOW };
+    expect(judgePr({ ...base, pr: { ...opened(16), draft: true } })).toBeNull();
+    expect(
+      judgePr({ ...base, pr: { ...opened(16), labels: [{ name: "hold-merge" }] } }),
+    ).toBeNull();
+  });
+});
+
 describe("judgePr — a re-run supersedes the run it replaced", () => {
   it("judges the latest run of each required check", () => {
     const rerun = [
@@ -232,6 +290,69 @@ describe("judgePr — a re-run supersedes the run it replaced", () => {
       },
     ];
     expect(judgePr({ pr: pr(), checkRuns: rerun, suites: [], now: NOW })?.kind).toBe("blocked");
+  });
+});
+
+// The arm job waits on `stability budget` and branch protection does not know it, so a head green on
+// the two required checks and red on this one was reported "green … the arm job did not reach it",
+// with a fix line that armed past the failure. It is red, and red-lane-pr.mjs owns a red lane PR.
+describe("judgePr — the check the arm job waits on beside the required two", () => {
+  const unarmed = pr({ auto_merge: null, mergeable_state: "clean" });
+  const stability = (conclusion: string | null, h = 5, status = "completed") => ({
+    name: "stability budget",
+    status,
+    conclusion,
+    completed_at: status === "completed" ? ago(h) : null,
+    started_at: ago(h + 0.1),
+  });
+  const judged = (run: ReturnType<typeof stability>) =>
+    judgePr({ pr: unarmed, checkRuns: [...green(5), run], suites: [realSuite], now: NOW });
+
+  it.each(["failure", "timed_out"])("does not call a head green when it reads %s", (conclusion) => {
+    expect(judged(stability(conclusion))).toBeNull();
+  });
+
+  it("does not call a head green while it is still running", () => {
+    expect(judged(stability(null, 5, "in_progress"))).toBeNull();
+  });
+
+  it.each(["success", "skipped"])("still reports a head stuck when it reads %s", (conclusion) => {
+    expect(judged(stability(conclusion))?.kind).toBe("unarmed");
+  });
+
+  // Not red, and the arm job still does not run. Nothing clears this on its own: stuck-branch-update
+  // reads only armed PRs, and stranded-pr re-runs only a failed arm job, so the report is all there is
+  // and it has to name the move that works. `ship automerge` refuses a cancelled run.
+  it("names a cancelled run and the re-run that clears it, not the arm that would refuse", () => {
+    const verdict = judged(stability("cancelled"));
+    expect(verdict?.kind).toBe("unarmed");
+    expect(verdict?.why).toContain("`stability budget` was cancelled");
+    expect(verdict?.fix).toMatch(/re-run/i);
+    expect(verdict?.fix).not.toContain("ship.sh automerge <n>`");
+  });
+
+  it("still reports a head that never ran it, as every head before the job did", () => {
+    const verdict = judgePr({
+      pr: unarmed,
+      checkRuns: green(5),
+      suites: [realSuite],
+      now: NOW,
+    });
+    expect(verdict?.kind).toBe("unarmed");
+  });
+
+  it("ages the stall from its finish, when the arm job could first have run", () => {
+    expect(judged(stability("success", 1))).toBeNull();
+  });
+
+  it("takes a re-run's answer over the run it replaced", () => {
+    const verdict = judgePr({
+      pr: unarmed,
+      checkRuns: [...green(5), stability("failure", 9), stability("success", 5)],
+      suites: [realSuite],
+      now: NOW,
+    });
+    expect(verdict?.kind).toBe("unarmed");
   });
 });
 

@@ -268,6 +268,7 @@ Three predictions carry score-by dates and are registered in
 | 2026-10-26 | D-9 | **Deterministic screen (no Claude session).** Readings — VIX 18.2 (-1.8pt since last), band unchanged (medium:8+), 40 adjacent event(s) tracked, new in corridor since last pulse: `aapl-2026-10-29-print`, `bxdc-lockup-expiry-2026-11-09`, `cbrs-lockup-expiry-2026-11-09`, `sp-global-manufacturing-pmi-2026-11-02`, `sp-global-pmi-commodity-price-supply-2026-11-02` (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-11-02 |
 | 2026-10-30 | D-5 | **Pulse check, adjacency sweep.** `fiscaldata` `buybacks_operations` re-pulled direct (HTTP 200, 231 rows): **2026-10-27** (20Y-30Y, $6.0B cap) drew $10.746B offered, **full $6.0B at 1.79x cover** — the same cover at which 09-10 (10Y-20Y, 1.75x) under-filled, so fill is not a cover threshold; the 10-18 "≥2.48x" nuance is withdrawn. 10Y-20Y record unchanged at 27 of 28; FT-…-2/-3 untouched. **Schedule:** tentative PDF re-fetched direct (HTTP 200, 89,250 bytes, md5 `c49a5351bf2d31a367817abc62be51bd`) byte-identical — 11-04 row still `= or > $4 billion`; press index sb0664–sb0673 (10-21→10-30) has no buyback or refunding release (sb0663 not on the page read), so FT-…-1 stands. Peers: n/a (`symbols: []`). Macro: FOMC 10-28 reported held (single secondary source, 10-2 vote, unverified against federalreserve.gov). Volatility: VIX **20.77** (10-30) vs 18.17 at the last reading, +2.60pt, under the 3pt line (+3.57pt one-session from 17.20). ^TNX 4.921 / ^TYX 5.304 (10-30). Geopolitical: nothing sector-specific. `--on-date=2026-11-04` lists six entries, all tracked; no proposal; no conviction proposals pending. | — (stance held) | 2026-11-01 (medium, 0+d band: every 2d) |
 | 2026-11-01 | D-3 | **Pulse check, adjacency sweep.** `fiscaldata` `buybacks_operations` re-pulled direct (HTTP 200, 231 rows, unchanged since 10-30): no operation since 10-27, 10Y-20Y record stays 27 of 28; FT-…-2/-3 untouched. **Schedule:** tentative PDF re-fetched direct (HTTP 200, 89,250 bytes, md5 `c49a5351bf2d31a367817abc62be51bd`) byte-identical; press index tops out at sb0673 (10-30), no buyback or refunding release, so FT-…-1 stands — the 11-03 11:00 ET announcement is the next decisive datum. Search finds no published November buyback size; a CME/Econoday listing shows $4.0B, secondary, unverified. Peers: n/a (`symbols: []`). Macro: weekend, no new print. Volatility: VIX **19.42** (10-30 close, Yahoo; the 10-30 row's 20.77 was an intraday reading), -1.35pt vs it; ^TNX 4.929 / ^TYX 5.309. Geopolitical: nothing sector-specific. `--on-date=2026-11-04` lists six entries, all tracked; no proposal; beyond-horizon notes: none. | — (stance held) | 2026-11-03 (medium, 0+d band: every 2d) |
+| 2026-11-03 | D-1 | **Pulse check, adjacency sweep (07:30 UTC, before the 11:00 ET announcement).** `fiscaldata` `buybacks_operations` re-pulled direct (HTTP 200, 231 rows, newest 2026-10-27): nothing since, 10Y-20Y stays 27 of 28; FT-…-2/-3 untouched. **Schedule:** tentative PDF re-fetched direct (HTTP 200, 89,250 bytes, md5 `c49a5351bf2d31a367817abc62be51bd`) byte-identical. Press index now reaches sb0676 (sb0674 readout, **sb0675 borrowing estimates 11-02**: Oct–Dec $618B privately held, $10B below August, buybacks "not expected to significantly affect" net borrowing; sb0676 TBAC economy statement) — no buyback-size or refunding release, so FT-…-1 stands; search finds no published November size (a $4B listing is secondary). Peers: n/a (`symbols: []`). Volatility: VIX **21.15** (11-02, Yahoo), +1.73pt vs 19.42; ^TNX 4.894 / ^TYX 5.269. Geopolitical: nothing sector-specific. `--on-date=2026-11-04` lists six entries, all tracked; no proposal; beyond-horizon notes: none. No conviction proposals or declared intents name this event. | — (stance held) | 2026-11-04 (operation day; announcement 11-03 11:00 ET is the next decisive datum) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -294,3 +295,58 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-11-01
 <!-- probe-ref: {"symbols":{},"vix":19.42,"daysBand":"medium:0+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","amd-fq3-2026-results-2026-11-03","boe-decision-2026-11-05","boe-dmp-2026-10-30","boj-decision-2026-10-30","boj-minutes-2026-11-05","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","chicago-pmi-2026-10-30","construction-spending-2026-11-02","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","eurostat-hicp-flash-2026-11-04","g20-foreign-ministers-atlanta-2026-10-30","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","japan-cpi-tokyo-flash-2026-10-30","jgb-10y-auction-2026-11-05","jgb-climate-transition-5y-auction-2026-11-02","jobs-2026-11-06","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","opec-plus-meeting-2026-11-01","productivity-costs-q3-2026-11-05","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-3y-note-2026-11-09","treasury-borrowing-estimates-2026-11-02","treasury-buyback-1mo2y-2026-11-05","treasury-refunding-2026-11-04","uk-blue-book-2026-10-30","uk-pink-book-2026-10-30","umich-sentiment-prelim-2026-11-06","wholesale-trade-2026-11-09"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","eci-q3-2026-10-30","ism-manufacturing-2026-11-02","jobs-2026-11-06"],"screenStreak":0} -->
+
+**Last assessed:** 2026-11-03
+<!-- probe-ref: {"symbols":{},"vix":21.15,"daysBand":"medium:0+","adjacentIds":["adp-employment-2026-11-04","amd-fq3-2026-results-2026-11-03","boe-decision-2026-11-05","boe-dmp-2026-10-30","boj-decision-2026-10-30","boj-minutes-2026-11-05","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","chicago-pmi-2026-10-30","construction-spending-2026-11-02","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","eurostat-hicp-flash-2026-11-04","g20-foreign-ministers-atlanta-2026-10-30","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","japan-cpi-tokyo-flash-2026-10-30","jgb-10y-auction-2026-11-05","jgb-climate-transition-5y-auction-2026-11-02","jobs-2026-11-06","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","opec-plus-meeting-2026-11-01","productivity-costs-q3-2026-11-05","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","smci-fq1-2027-results-2026-11-03","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-3y-note-2026-11-09","treasury-borrowing-estimates-2026-11-02","treasury-buyback-1mo2y-2026-11-05","treasury-refunding-2026-11-04","uk-blue-book-2026-10-30","uk-pink-book-2026-10-30","umich-sentiment-prelim-2026-11-06","wholesale-trade-2026-11-09"],"screenStreak":0} -->
+
+
+## Outcome
+
+**Assessed 2026-11-06 (D+2, inside the close-out window).** `rates` event, `symbols: []`, so no
+`earnings-cycle`/`intraday-edges` target applies; the instrument caches were busted (`rm -rf`) with
+nothing to refill. Every figure is a fresh pull this session: `api.fiscaldata.treasury.gov`
+`buybacks_operations` and `buybacks_security_details` (plain curl, HTTP 200) and Yahoo daily closes.
+The calendar entry stays `estimate`: no Treasury-buyback primary prefix exists and this lane may not
+self-confirm an event it discovered in-sweep. No trade, no calendar-entry edit.
+
+**Verdict: the base case held on all three registered tests (3 pass, 0 kill).**
+
+| Field | Value |
+|---|---|
+| Announced maximum | **$6,000,000,000** (tentative schedule: `= or > $4 billion`) |
+| Total par offered | **$39,636,000,000** |
+| Total par accepted | **$6,000,000,000** |
+| Cover (offered ÷ max) | **6.61x** |
+| Fill (accepted ÷ max) | **100%** |
+| Issues | **7 accepted of 40 eligible** |
+| Window / settlement | 1:40–2:00pm ET **2026-11-04**, settled 2026-11-05 |
+
+Accepted par by line: 912810TC2 (2.000% 2041-11-15) **$4.924B** @ 66.781 · 912810SY5 (2.250% 2041-05-15)
+$0.950B @ 70.334 · 912810ST6 (1.375% 2040-11-15) $0.083B @ 62.530 · 912810TQ1 (3.875% 2043-02-15) $0.020B ·
+912810RD2 (3.750% 2043-11-15) $0.010B · 912810UJ5 (4.750% 2045-02-15) $0.008B · 912810UF3 (4.625% 2044-11-15)
+$0.005B. Sum $6.000B. As on 10-01 and 10-15, a deep book let Treasury take the cheapest low-coupon lines.
+
+### Forward tests scored
+
+- **`FT-…-1` — PASS.** Published maximum $6.000B ≥ $4.0B. The doubled cap covered its own end date.
+- **`FT-…-2` — PASS.** 100% fill. Sector record **28 of 29**; the enlarged-cap record is 3 full of 4.
+- **`FT-…-3` — PASS.** $39.636B offered ≥ $12.0B on a refunding-statement day, the larger of the two
+  such 10Y-20Y collisions on record (05-06: $19.69B).
+
+No new forward test is registered. Nothing here moves a kill list: no row was killed.
+
+### Tape, for context only (Yahoo daily closes; no attribution to a 1:40pm operation)
+
+The day carried the 08:30 refunding statement, ISM Services and ADP, one session after the midterms.
+^TNX 4.952 → **4.894**, ^TYX 5.324 → **5.282**, VIX 20.83 → **16.61** on 11-04. The next session's bar
+reads VIX **28.18** (11-05) with ^TNX 4.837; a web search found no wrap of that session, so no cause is
+claimed. Sizing for later operations was set by the refunding statement, assessed on
+[`treasury-refunding-2026-11-04`](treasury-refunding-2026-11-04.md): its tentative calendar sets
+**$6B/op** for 10Y-20Y and 20Y-30Y from 11-12, up from the lapsed window's $4B floor.
+
+**Loop stage a person still did (LEARNING-LOOP):** *sense*: comparing the published maximum with the
+schedule's floor was a manual read of `buybacks_operations`. A scripted per-operation scorecard (cap, fill,
+cover, issues) would turn every close-out in this family into a check.
+
+**Last assessed:** 2026-11-06
+<!-- probe-ref: {"symbols":{},"vix":28.18,"daysBand":"medium:0+","adjacentIds":["adp-employment-2026-11-04","amd-fq3-2026-results-2026-11-03","boe-decision-2026-11-05","boj-minutes-2026-11-05","jobs-2026-11-06","treasury-3y-note-2026-11-09","treasury-buyback-1mo2y-2026-11-05","treasury-refunding-2026-11-04","umich-sentiment-prelim-2026-11-06"],"adjacentStrongIds":["jobs-2026-11-06"],"screenStreak":0} -->

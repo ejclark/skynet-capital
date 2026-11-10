@@ -7,6 +7,11 @@ every load-bearing claim was re-verified against 2026 primary sources) and each 
 red-teamed. A red-team kill overrides a researcher's enthusiasm. Companion doc:
 [`constraint-watch.md`](constraint-watch.md) — the repeatable method distilled from this study.
 
+> **Re-checked 2026-11-07 — these verdicts are stale.** Against the 11-06 tape and the Q3 filings,
+> the five "enterable now" names are down 22.9% on average since this study: BWXT's own falsifier
+> fired (killed), and SPXC, CMI, ET and CEG moved to watch. Current verdicts and the evidence:
+> [`energy-ai-encounters.md`](energy-ai-encounters.md).
+
 ## The verdict in one paragraph
 
 The energy constraint is **real, quantified, and mostly already paid.** After 2+ years as the

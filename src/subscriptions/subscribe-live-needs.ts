@@ -14,6 +14,7 @@ import type { Playbook } from "../playbooks/playbook.js";
 import { findPlaybook } from "../playbooks/registry.js";
 import type { OptionMarketPort } from "../ports/option-market.js";
 import { capitalized } from "../ui/capitalized.js";
+import { usdWhole } from "../ui/usd-whole.js";
 
 /**
  * WHAT A NEW SUBSCRIPTION NEEDS FROM THE LIVE MARKET AND THE ACCOUNT (#4469 slice 3a part 2,
@@ -68,8 +69,6 @@ export interface LiveNeedsInput {
   readonly resolve?: (id: string) => Playbook | undefined;
   readonly sessionOpen?: boolean;
 }
-
-const dollars = (amount: number): string => `$${Math.round(amount).toLocaleString("en-US")}`;
 
 /** The cash one open of the playbook ties up: what the guards would reserve for it, plus premium. */
 function oneContractCash(intent: OrderIntent): number {
@@ -132,7 +131,7 @@ async function chainVerdict(
   return cash > capitalAllocated
     ? {
         ...measured,
-        refusal: `One contract of ${name} ties up about ${dollars(cash)} right now, and the budget is ${dollars(capitalAllocated)}. Raise the budget to at least that.`,
+        refusal: `One contract of ${name} ties up about ${usdWhole(cash)} right now, and the budget is ${usdWhole(capitalAllocated)}. Raise the budget to at least that.`,
       }
     : measured;
 }

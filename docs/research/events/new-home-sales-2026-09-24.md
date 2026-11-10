@@ -507,3 +507,18 @@ Atlanta Fed primaries re-fetched fresh at a corrected path (the site moved
 `cqer/researchcq/gdpnow/` → `research-and-data/data/gdpnow/` since the 2026-09-26 close-out's
 blocked attempt); no `PostedUpdates` row and no `ContribArchives` vintage exist for 2026-09-24.
 `-3` and `-4` still score 2026-11-03 and remain `_open_` in their own fragment — not due yet.
+
+**`forward-test-due` dispatch (2026-11-03).** `-3` scored **kill** and `-4` scored **pass** in their own
+fragment — see [`forward-tests/new-home-sales-2026-09-24.md`](../forward-tests/new-home-sales-2026-09-24.md).
+`-3`: re-run on 70 reference-month pairs (the two new ones are Aug and Sep 2026), the paired Wilcoxon
+puts XHB at p=0.0310/0.0375 and LEN at 0.0386 (range) with starts-day larger, so the registered kill
+switch fired and the starts-vs-sales asymmetry returns from refuted to open, unproven. It does not
+survive 14-test multiplicity (Bonferroni line 0.0036), and dropping the 09-17 pair (the morning after
+Lennar's Q3 print) leaves XHB at 0.0424/0.0531 and LEN at 0.0553 — borderline, not an edge, and still
+unpositionable. This is the Leg 4 hint, not Leg 3's release-day null, which this re-run does not
+touch. `-4`: the 2026-10-27 release (CB26-174) restates August to 680,000 against a July of 647,000,
++5.1%, so the sign held. No stance change: stand aside, `symbols: []`, no macro-keyed playbook. No
+conviction proposals or declared intents name this event.
+
+**Last assessed:** 2026-11-03
+<!-- probe-ref: {"symbols":{},"vix":20.61,"daysBand":"low:0+","adjacentIds":["bea-international-transactions-q2-2026-09-24","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","consumer-confidence-2026-09-29","costco-q4-fy2026-2026-09-24","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-tssos-2026-09-29","dmo-pilot-switch-auction-test-2026-09-24","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","eia-weekly-petroleum-status-2026-09-23","fhfa-hpi-2026-09-29","intl-transactions-q2-2026-09-24","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jolts-2026-09-29","jpx-market-closure-2026-09-21","jpx-market-closure-2026-09-22","jpx-market-closure-2026-09-23","kb-home-q3-fy2026-2026-09-22","meta-connect-2026-09-23","missouri-map-tro-expiry-2026-09-22","missouri-uocava-ballot-mailing-2026-09-19","openai-devday-2026-09-29","retail-benchmark-revision-2026-09-28","russell-quarterly-ipo-review-effective-2026-09-21","scoos-2026-09-24","sp-global-flash-eurozone-pmi-2026-09-23","sp-global-flash-france-pmi-2026-09-23","sp-global-flash-germany-pmi-2026-09-23","sp-global-flash-us-pmi-2026-09-23","sp-quarterly-rebalance-effective-2026-09-21","steel-imports-preliminary-2026-09-24","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-7y-note-2026-09-24","treasury-buyback-20y30y-2026-09-24","treasury-buyback-tips-1y10y-2026-09-29","trump-xi-summit-2026-09-24","uk-consumer-confidence-2026-09-25","uk-public-sector-finances-2026-09-22","umich-sentiment-final-2026-09-25","unga-81-general-debate-2026-09-22","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28","us-iip-q2-2026-2026-09-24"],"adjacentStrongIds":[],"screenStreak":0} -->

@@ -1,5 +1,13 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { hermeticGitEnv } from "../support/hermetic-git.js";
@@ -45,10 +53,53 @@ describe("autonomous-lane envelope", () => {
       "scripts/smoke-bots.sh",
       "Dockerfile",
       ".env.local",
+      // 2026-11-01 (#6470's study): the dial's numbers and read path, the brake's code, the arm
+      // job's merge logic, this spec, the hook scripts that run on Eric's Mac, the scripts that run
+      // beside the Fly token, and the issue forms.
+      "work-mode.json",
+      "research-circuit-breaker.json",
+      "scripts/moneypenny/work-mode.mjs",
+      "scripts/moneypenny/work-gate.mjs",
+      "scripts/moneypenny/circuit-breaker.mjs",
+      "scripts/arm-merge.mjs",
+      "tests/arch/envelope.spec.ts",
+      "scripts/hooks/guard-bash.mjs",
+      "scripts/hooks/memory-history.mjs",
+      ".claude/hooks/session-start.sh",
+      "scripts/fly-deploy.mjs",
+      "scripts/fly-image-ref.mjs",
+      "scripts/bots-deploy-preflight.mjs",
+      "scripts/bots-start-stopped.sh",
+      "scripts/smoke.sh",
+      ".github/ISSUE_TEMPLATE/bug_report.yml",
+      ".github/ISSUE_TEMPLATE/config.yml",
     ];
     for (const entry of check(...protectedPaths)) {
       expect(entry.protected, `${entry.path} must be protected`).toBe(true);
       expect(entry.why).toBeTruthy();
+    }
+  });
+
+  // The list once carried two helpers deleted with the diffAware mechanism (#928); a rule for a
+  // file that does not exist protects nothing and reads as a list nobody tends. Every exact-path
+  // rule must name a file that is here; globs are checked by the protected list above.
+  it("names no file that does not exist", () => {
+    const manifest = JSON.parse(readFileSync("envelope.json", "utf8")) as {
+      protected: { pattern: string }[];
+    };
+    const exact = manifest.protected.map((r) => r.pattern).filter((p) => !p.includes("*"));
+    expect(exact.length).toBeGreaterThan(10);
+    for (const pattern of exact)
+      expect(existsSync(pattern), `${pattern} is on the list`).toBe(true);
+  });
+
+  // What stays open on purpose, said in the manifest rather than listed: scripts/fitness.mjs runs
+  // beside the Fly token but its contracts are eval work the lanes keep improving, so its Fly read
+  // moves into a narrow protected helper instead (#928); gh.mjs and the dial's consumers wait for
+  // the same extraction rather than a listing that would cost five times the platter items.
+  it("leaves fitness.mjs and the dial's consumers open, as the manifest says", () => {
+    for (const entry of check("scripts/fitness.mjs", "scripts/moneypenny/admission.mjs")) {
+      expect(entry.protected, `${entry.path} stays open on purpose`).toBe(false);
     }
   });
 
@@ -63,7 +114,7 @@ describe("autonomous-lane envelope", () => {
       "src/server/feedback-service.ts",
       "src/server/page-shell.ts",
       "docs/FEEDBACK.md",
-      "tests/arch/envelope.spec.ts",
+      "tests/arch/envelope-check-path.spec.ts",
     ];
     for (const entry of check(...openPaths)) {
       expect(entry.protected, `${entry.path} must stay buildable`).toBe(false);

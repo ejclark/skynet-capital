@@ -1,0 +1,157 @@
+{
+  "id": "ai-buildout",
+  "title": "The AI buildout",
+  "storyline": "The chips, the neoclouds and the hyperscalers that buy from them, racing power, rates and export rules to build AI capacity.",
+  "sector": "Technology",
+  "mode": "play",
+  "cast": [
+    {
+      "role": "Chips",
+      "symbols": ["NVDA", "AMD", "AVGO", "MU", "MRVL", "TSM"],
+      "source": "docs/research/cycle-phase-crwv-nvda-2026-10.md (peer basket NVDA, CRWV, NBIS, MU, AVGO, AMD); TSM: docs/research/events/nvda-2026-11-18-print.md and docs/research/ai-hardware-constraints-aug-2026.md; MRVL: docs/research/multi-symbol-sweep.md (swept with AVGO and the hyperscalers as an AI-capex name)"
+    },
+    {
+      "role": "Neoclouds",
+      "symbols": ["CRWV", "NBIS"],
+      "source": "docs/research/convictions/ai-dip-2026-10.md; docs/research/cycle-phase-crwv-nvda-2026-10.md"
+    },
+    {
+      "role": "Hyperscalers (the buyers)",
+      "symbols": ["MSFT", "GOOG", "AMZN", "META"],
+      "source": "docs/research/events/crwv-2026-11-10-print.md and docs/research/events/nvda-2026-11-18-print.md (their capex prints read through to the chips)"
+    },
+    {
+      "role": "Benchmarks",
+      "symbols": ["SMH", "QQQ", "XLK"],
+      "source": "SMH and QQQ: docs/research/events/midterm-elections-2026-11-03.md (QQQ is FT-midterm-elections-2026-11-03-3's benchmark); XLK: the Technology fund in src/domain/sector-coverage.ts"
+    }
+  ],
+  "forces": [
+    {
+      "id": "capex",
+      "name": "Capex guidance in the prints",
+      "why": "The buyers' capex guidance is the demand the chips and neoclouds sell into; peer AI-hardware prints read through to it (each event's own notes say so).",
+      "prefixes": [
+        "smci-fq1-2027-results-2026-11-03",
+        "intc-fq3-2026-results-2026-10-29",
+        "cbrs-q3-2026-results-2026-11-11"
+      ],
+      "names": [
+        "AI capex",
+        "AI spending",
+        ["capex", "AI"],
+        ["capital expenditure", "AI"],
+        ["data center", "spending"]
+      ]
+    },
+    {
+      "id": "power",
+      "name": "Power and the grid",
+      "why": "Data centers wait on power: PJM capacity prices it, and ERCOT, NERC and the Texas PUC set the rules for connecting large loads (docs/research/ai-energy-constraint.md).",
+      "prefixes": ["pjm-", "ercot-", "nerc-computational-load-", "puct-", "texas-puct-"],
+      "names": [
+        "PJM",
+        "ERCOT",
+        "NERC",
+        "capacity auction",
+        "large load",
+        ["data center", "power"],
+        ["data center", "grid"],
+        ["data centre", "power"]
+      ]
+    },
+    {
+      "id": "ratepayers",
+      "name": "Ratepayer and data-center politics",
+      "why": "Who pays for the grid data centers need is on ballots and in bills; the midterm ledger's leg 6 tracks it (docs/research/events/midterm-elections-2026-11-03.md).",
+      "prefixes": [
+        "georgia-psc-data-center-cost-shift-",
+        "house-vote-ratepayer-protection-act-",
+        "midterm-elections-2026-11-03"
+      ],
+      "names": [
+        "Ratepayer Protection Act",
+        ["ratepayer", "data center"],
+        ["electricity bill", "data center"],
+        ["utility bill", "data center"]
+      ]
+    },
+    {
+      "id": "rates",
+      "name": "Rates",
+      "why": "Yields move long-duration AI names (the `rates` kind's own definition in src/domain/market-events-types.ts); the Fed's decisions and Treasury supply set them.",
+      "prefixes": ["fomc-"],
+      "kinds": ["rates"],
+      "names": ["FOMC", "federal funds rate", "Treasury yield", "Treasury auction", ["Fed", "rate"]]
+    },
+    {
+      "id": "export-controls",
+      "name": "Export controls and US–China trade",
+      "why": "Chip export rules and the US–China trade truce decide who may buy the cast's chips (the Trump–Xi summit's agenda names export controls).",
+      "prefixes": [
+        "trump-xi-summit-",
+        "us-china-tariff-truce-expiry-",
+        "china-retaliation-suspension-expiry-",
+        "apec-leaders-shenzhen-"
+      ],
+      "names": [
+        "export control",
+        ["chip", "export"],
+        "Entity List",
+        ["tariff", "China"],
+        "Trump-Xi",
+        ["Xi Jinping", "Trump"]
+      ]
+    },
+    {
+      "id": "benchmark-rebalances",
+      "name": "The benchmarks' own rebalances",
+      "why": "XLK and QQQ are the cast's benchmarks and their index owners cap and reweight them on fixed dates; the chips and hyperscalers are among the heaviest names in both, so a rebalance trades the same shares the story is about.",
+      "prefixes": [
+        "ndx-annual-reconstitution-",
+        "sp-select-sector-secondary-reweight-",
+        "sp-rebalance-reference-close-"
+      ],
+      "names": [["Nasdaq-100", "rebalance"], ["Nasdaq 100", "rebalance"], ["rebalance", "S&P"]]
+    },
+    {
+      "id": "ai-labor",
+      "name": "AI replacing workers",
+      "why": "Eric's view that employers cut salary budgets to pay for AI, with layoffs, unemployment and relief to follow (docs/research/convictions/ai-labor-2026-11.md). Challenger's monthly report counts the cuts that cite AI (claim 1); the 120th Congress's first day seats the majority any relief bill needs (claim 6).",
+      "prefixes": ["challenger-job-cuts-", "congress-120th-convenes-2027-01-03"],
+      "names": [["layoff", "AI"], ["job cut", "AI"], ["Challenger", "job cut"]]
+    }
+  ],
+  "openQuestions": [
+    {
+      "question": "Do CoreWeave's backlog and NVIDIA's stake cushion the downside?",
+      "conviction": "ai-dip-2026-10",
+      "claim": "3"
+    },
+    {
+      "question": "Is the election-season backlash against AI spending a passing headwind?",
+      "conviction": "ai-dip-2026-10",
+      "claim": "4"
+    },
+    {
+      "question": "Does NVDA run up into its print again?",
+      "conviction": "ai-dip-2026-10",
+      "claim": "5"
+    },
+    {
+      "question": "Where is CRWV's floor after this pullback?",
+      "conviction": "ai-dip-2026-10",
+      "claim": "7"
+    },
+    {
+      "question": "Does GPU-backed financing keep capacity growing?",
+      "conviction": "ai-dip-2026-10",
+      "claim": "10"
+    },
+    {
+      "question": "Does demand stay at whatever capacity exists?",
+      "conviction": "ai-dip-2026-10",
+      "claim": "11"
+    }
+  ]
+}

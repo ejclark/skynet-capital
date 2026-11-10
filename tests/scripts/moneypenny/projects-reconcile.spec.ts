@@ -3,12 +3,14 @@ import { STATUS_OPTIONS } from "../../../scripts/moneypenny/projects.mjs";
 import {
   boardIssueNumber,
   boardItemsOrThrow,
+  columnCounts,
   ensureStatusColumns,
   planReconcile,
   type ReconcileItem,
   type RestIssue,
   readOpenIssuesWithRetry,
   reconcileBoard,
+  sweepContext,
 } from "../../../scripts/moneypenny/projects-reconcile.mjs";
 import { createBoardContext } from "../../../scripts/moneypenny/projects-sync.mjs";
 
@@ -19,10 +21,14 @@ import { createBoardContext } from "../../../scripts/moneypenny/projects-sync.mj
 // the live script needs PROJECTS_PAT and has not been run from a session (see its header).
 
 const URL = "https://github.com/ejclark/skynet-capital/issues/";
+// Every card here already carries the P2 its labels derive, in step with its record, so these
+// specs stay about Status; the priority half of the sweep is projects-priority.spec.ts (#6871).
 const card = (number: number, status: string | null): ReconcileItem => ({
   id: `PVTI_${number}`,
   content: { type: "Issue", number, url: `${URL}${number}` },
   status,
+  priority: "P2",
+  syncedPriority: "P2",
 });
 const open = (
   number: number,
@@ -65,17 +71,17 @@ describe("planReconcile: which cards sit in the wrong column", () => {
     ).toEqual([{ number: 7, have: null, want: "Building now" }]);
   });
 
-  it("uses the same Blocked rule as the event job, decision callout included (#3913)", () => {
+  it("uses the same person-waiting rule as the event job, decision callout included (#3913)", () => {
     const drift = planReconcile({
-      items: [card(8, "Backlog"), card(9, "Blocked")],
+      items: [card(8, "Backlog"), card(9, "Waiting on a person")],
       openIssues: [
         open(8, ["needs-info"]),
         open(9, ["needs-eric"], { body: "no callout here", user: { login: "claude" } }),
       ],
     });
     expect(drift).toEqual([
-      { number: 8, have: "Backlog", want: "Blocked" },
-      { number: 9, have: "Blocked", want: "Backlog" },
+      { number: 8, have: "Backlog", want: "Waiting on a person" },
+      { number: 9, have: "Waiting on a person", want: "Backlog" },
     ]);
   });
 
@@ -118,10 +124,10 @@ describe("planReconcile: which cards sit in the wrong column", () => {
 });
 
 // #4303 (#3959 slice 3), the done-when: "WHEN a member looks for an open ask, the Blocked column
-// SHALL list every open needs-eric and needs-info issue." A card is only ever added by the event
+// SHALL list every open needs-eric and needs-info issue." Blocked is Waiting on a person since #6871. A card is only ever added by the event
 // job on a label change; when that run dies (2026-09-30: eight in a row on the rate limit) the
 // issue has no card, and a sweep that walks only cards never sees it.
-describe("planReconcile: every open ask reaches the Blocked column (#4303)", () => {
+describe("planReconcile: every open ask reaches the Waiting on a person column (#4303)", () => {
   it("adds an open needs-info or needs-eric issue the board has no card for", () => {
     const drift = planReconcile({
       items: [card(1, "Ready")],
@@ -132,12 +138,19 @@ describe("planReconcile: every open ask reaches the Blocked column (#4303)", () 
       ],
     });
     expect(drift).toEqual([
-      { number: 20, have: null, want: "Blocked" },
-      { number: 21, have: null, want: "Blocked" },
+      { number: 20, have: null, want: "Waiting on a person" },
+      { number: 21, have: null, want: "Waiting on a person" },
     ]);
   });
 
-  it("leaves uncarded issues outside Blocked to the backfill — the hourly sweep stays cheap", () => {
+  it("during the rename window, adds it under the column's old name", () => {
+    const old = ["Backlog", "Ready", "Building now", "Waiting", "Blocked", "Done"];
+    expect(
+      planReconcile({ items: [], openIssues: [open(22, ["needs-info"])], columns: old }),
+    ).toEqual([{ number: 22, have: null, want: "Blocked" }]);
+  });
+
+  it("leaves uncarded issues in other columns to the backfill — the hourly sweep stays cheap", () => {
     expect(
       planReconcile({
         items: [],
@@ -163,19 +176,34 @@ describe("planReconcile: every open ask reaches the Blocked column (#4303)", () 
 
   it("does not add a card twice — a carded blocked issue in the right column is quiet", () => {
     expect(
-      planReconcile({ items: [card(60, "Blocked")], openIssues: [open(60, ["needs-info"])] }),
+      planReconcile({
+        items: [card(60, "Waiting on a person")],
+        openIssues: [open(60, ["needs-info"])],
+      }),
     ).toEqual([]);
+  });
+
+  it("the sweep's column count includes the asks it is about to add", () => {
+    const line = columnCounts({
+      items: [card(1, "Ready")],
+      openIssues: [open(1, ["ready"]), open(70, ["needs-info"]), open(71)],
+    });
+    expect(line).toContain("Waiting on a person 1");
+    expect(line).toContain("Ready 1");
+    expect(line).toContain("Backlog 0"); // #71 has no card and is not an ask: not on the board
   });
 
   it("the sweep syncs the uncarded ask, still on one board read", () => {
     const s = sweep({
       items: [card(1, "Ready")],
       openIssues: [open(1, ["ready"]), open(70, ["needs-info"])],
-      syncImpl: () => ({ status: "Blocked" }),
+      syncImpl: () => ({ status: "Waiting on a person" }),
     });
     expect(s.synced).toEqual([70]);
     expect(s.boardReads()).toBe(1);
-    expect(s.result.fixed).toEqual([{ number: 70, have: null, want: "Blocked", now: "Blocked" }]);
+    expect(s.result.fixed).toEqual([
+      { number: 70, have: null, want: "Waiting on a person", now: "Waiting on a person" },
+    ]);
   });
 });
 
@@ -187,7 +215,7 @@ describe("planReconcile: every open ask reaches the Blocked column (#4303)", () 
 // exactly one answer and then stops moving it. Idempotence is the half that makes a second writer
 // harmless; without it, two writers oscillate.
 describe("planReconcile: one consistent Status, whatever else wrote the card (#4320)", () => {
-  const STATUSES = ["Backlog", "Ready", "Building now", "Waiting", "Blocked", "Done"];
+  const STATUSES = STATUS_OPTIONS;
 
   it("converges a closed card on Done from every column a second writer could leave it in", () => {
     for (const have of STATUSES) {
@@ -197,12 +225,12 @@ describe("planReconcile: one consistent Status, whatever else wrote the card (#4
   });
 
   it("is idempotent — the sweep that moved a card reports nothing to do on the next run", () => {
-    const items = [card(42, "Building now"), card(43, "Blocked")];
+    const items = [card(42, "Building now"), card(43, "Waiting on a person")];
     const openIssues = [open(43, ["ready"])];
     const first = planReconcile({ items, openIssues });
     expect(first).toEqual([
       { number: 42, have: "Building now", want: "Done" },
-      { number: 43, have: "Blocked", want: "Ready" },
+      { number: 43, have: "Waiting on a person", want: "Ready" },
     ]);
     const settled = items.map((item) => ({
       ...item,
@@ -219,6 +247,10 @@ describe("boardIssueNumber", () => {
     expect(boardIssueNumber(undefined)).toBeNull();
   });
 });
+
+const NORMAL = { position: "normal", caps: { inFlightCap: 3, startedPlanCap: 4 } };
+// The sweep's shared reads with nothing behind them: no open PR, no sub-issue read.
+const NO_READS = { readPulls: () => [], readAll: () => [] };
 
 const statusField = (names: readonly string[]) => ({
   id: "F_status",
@@ -253,6 +285,8 @@ function sweep({
     board,
     readOpenIssues: () => openIssues,
     rateLimit: () => ({ remaining, reset: 1_900_000_000 }),
+    readMode: () => NORMAL,
+    buildContext: (issues) => sweepContext(issues, NO_READS),
     sync: (n, opts) => {
       synced.push(n);
       opts.board.items(); // what syncIssue's resolveBoardItem does — must hit the cache
@@ -408,8 +442,8 @@ describe("boardItemsOrThrow: a truncated board page is fatal, not a quiet pass",
 });
 
 // #4393 slice 4 — the columns before the cards. The merge that changes projects.mjs's option list
-// is a push to main, so the sweep it triggers renames In Progress → Building now and adds Waiting
-// on the live field, keeping ids so no card moves, and only then plans the cards against it.
+// is a push to main, so the sweep it triggers renames the columns and adds the new ones on the
+// live field, keeping ids so no card moves, and only then plans the cards against it.
 describe("ensureStatusColumns: the live field follows projects.mjs", () => {
   const OLD = ["Backlog", "Ready", "In Progress", "Blocked", "Done"];
   const setup = (names: readonly string[]) => {
@@ -441,7 +475,10 @@ describe("ensureStatusColumns: the live field follows projects.mjs", () => {
     expect(s.writes).toHaveLength(1);
     expect(s.writes[0]?.fieldId).toBe("F_status");
     expect(s.writes[0]?.options.find((o) => o.name === "Building now")?.id).toBe("O_In Progress");
-    expect(s.writes[0]?.options.find((o) => o.name === "Waiting")?.id).toBeUndefined();
+    expect(s.writes[0]?.options.find((o) => o.name === "Waiting on a person")?.id).toBe(
+      "O_Blocked",
+    );
+    expect(s.writes[0]?.options.find((o) => o.name === "Next part queued")?.id).toBeUndefined();
     expect(columns).toEqual(STATUS_OPTIONS);
     expect(s.fieldReads()).toBe(2); // the read, then one refresh after the write
     expect(lines[0]).toContain("Status field: changed");
@@ -485,7 +522,7 @@ describe("ensureStatusColumns: the live field follows projects.mjs", () => {
     expect(drift).toEqual([]);
   });
 
-  it("on the new board, a started idle plan moves from Ready to Waiting", () => {
+  it("on the new board, a started idle plan moves from Ready to Next part queued", () => {
     const drift = planReconcile({
       items: [card(6, "Ready"), card(7, "Ready")],
       openIssues: [
@@ -494,8 +531,45 @@ describe("ensureStatusColumns: the live field follows projects.mjs", () => {
       ],
     });
     expect(drift).toEqual([
-      { number: 6, have: "Ready", want: "Waiting" },
-      { number: 7, have: "Ready", want: "Waiting" },
+      { number: 6, have: "Ready", want: "Next part queued" },
+      { number: 7, have: "Ready", want: "Next part queued" },
     ]);
+  });
+
+  // #6871 slice 2, design §3: the dial's cap is printed on the column, and rewritten when it moves.
+  it("rewrites the dial sentences when the dial moves, keeping every id", () => {
+    type Option = { id?: string; name: string; color?: string; description?: string };
+    let current = STATUS_OPTIONS.map((name) => ({
+      id: `O_${name}`,
+      name,
+      color: "GRAY",
+      description: "",
+    }));
+    const writes: Option[][] = [];
+    const board = createBoardContext({
+      readItems: () => ({ items: [], totalCount: 0 }),
+      readFields: () => [{ id: "F_status", name: "Status", options: current }],
+    });
+    const write = (_: string, options: Option[]) => {
+      writes.push(options);
+      current = options.map((o) => ({
+        id: o.id ?? `new_${o.name}`,
+        name: o.name,
+        color: o.color ?? "",
+        description: o.description ?? "",
+      }));
+    };
+    const surge = { position: "surge", caps: { inFlightCap: 6, startedPlanCap: 8 } };
+    ensureStatusColumns({ board, mode: surge, write, log: () => undefined });
+    expect(writes).toHaveLength(1);
+    expect(writes[0]?.map((o) => o.id)).toEqual(STATUS_OPTIONS.map((n) => `O_${n}`));
+    expect(writes[0]?.find((o) => o.name === "Building now")?.description).toBe(
+      "Lanes start up to 6; one fast-track card and hand-started sessions may add more",
+    );
+    expect(writes[0]?.find((o) => o.name === "Next part queued")?.description).toBe(
+      "Part built; next part approved. At 8 here, no new plan starts (fast-track excepted)",
+    );
+    ensureStatusColumns({ board, mode: surge, write, log: () => undefined });
+    expect(writes).toHaveLength(1); // a board already printing the dial is left alone
   });
 });

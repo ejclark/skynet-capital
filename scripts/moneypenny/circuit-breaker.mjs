@@ -23,16 +23,36 @@
 // require network calls through `gh`, which is exactly the kind of external dependency that must
 // never hide inside a shared function's default — it belongs behind an explicit call, made once,
 // at the one real call site that has GH_TOKEN and is willing to pay for the round trip.
+//
+// 2026-11-01 (#6020): for six weeks this read $0.00 on every tick. The cost line it looked for was
+// `::notice::cost — …`, the form the workflow ECHOES; what a run log actually carries is the
+// rendered annotation `##[notice]cost — event=<id> usd=<n> …` (the `::notice::` text survives only
+// inside the echoed script source, where `usd=$COST` carries no number). And `gh run list` with no
+// event filter returned the newest 50 runs of EVERY event type, which on 155 of 187 ticks reached
+// back less than the 4-hour window. Both are fixed here, pinned by a fixture cut from a real run
+// log (tests/fixtures/circuit-breaker/). The threshold moved with it, Eric's own pick on #6020
+// (2026-11-01T14:31Z, "A2": $100 per 4h, $200 at surge), read off the work-mode dial so a surge he
+// set gets the wider line and nothing else does. A trip now also assigns him on the tracking issue
+// — the same door the fitness contracts use — because a label and a comment reached nobody.
+//
+// A trip needs a human to clear it, so it is never spent on a reading the brake is unsure of. The
+// window holds past spend while the dial reads now, so two things read as a runaway that were not:
+// a dial it could not read (refused for this tick, with no label; the next tick reads it again), and
+// the end of a real surge, whose spend sits in the window under the narrower line (the surge's line
+// holds until the window has rolled past its end).
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { ERIC } from "./decision-callout.mjs";
 import { sleepSync, withRetry } from "./gh.mjs";
+import { loadWorkModeConfig, readWorkMode } from "./work-mode.mjs";
 
 const CONFIG_FILE = join(process.cwd(), "research-circuit-breaker.json");
 
 /** Fail-closed doctrine, same as loadDispatchCap/loadDailyBudget: a missing or malformed
  *  threshold must never read as "no breaker" — that is exactly the shape of the fail-open bug
- *  this whole file exists to guard against a second and third time. */
+ *  this whole file exists to guard against a second and third time. `maxSpendUsd` is the line for
+ *  every dial position but surge; `maxSpendUsdAtSurge` is surge's own, never below it. */
 export function loadBreakerConfig(file = CONFIG_FILE) {
   if (!existsSync(file))
     throw new Error(
@@ -40,10 +60,14 @@ export function loadBreakerConfig(file = CONFIG_FILE) {
         "ceiling — see issue #2946. Restore the file rather than removing the breaker.",
     );
   const cfg = JSON.parse(readFileSync(file, "utf8"));
-  const { maxSpendUsd, windowHours, trackingIssue, trippedLabel } = cfg;
+  const { maxSpendUsd, maxSpendUsdAtSurge, windowHours, trackingIssue, trippedLabel } = cfg;
   if (!(typeof maxSpendUsd === "number" && maxSpendUsd > 0))
     throw new Error(
       `moneypenny: ${file} maxSpendUsd must be a positive number, got ${JSON.stringify(maxSpendUsd)}.`,
+    );
+  if (!(typeof maxSpendUsdAtSurge === "number" && maxSpendUsdAtSurge >= maxSpendUsd))
+    throw new Error(
+      `moneypenny: ${file} maxSpendUsdAtSurge must be a number no lower than maxSpendUsd, got ${JSON.stringify(maxSpendUsdAtSurge)}.`,
     );
   if (!(Number.isInteger(windowHours) && windowHours >= 1))
     throw new Error(
@@ -57,7 +81,12 @@ export function loadBreakerConfig(file = CONFIG_FILE) {
     throw new Error(
       `moneypenny: ${file} trippedLabel must be a non-empty string, got ${JSON.stringify(trippedLabel)}.`,
     );
-  return { maxSpendUsd, windowHours, trackingIssue, trippedLabel };
+  return { maxSpendUsd, maxSpendUsdAtSurge, windowHours, trackingIssue, trippedLabel };
+}
+
+/** The line the dial position is held to: surge alone gets the wider one. Pure. */
+export function thresholdFor(position, { maxSpendUsd, maxSpendUsdAtSurge }) {
+  return position === "surge" ? maxSpendUsdAtSurge : maxSpendUsd;
 }
 
 /** Real `gh` calls by default; every function below takes `exec` so specs can inject a fake one
@@ -118,20 +147,70 @@ export function isBreakerTripped({
   return (labels ?? []).some((l) => l.name === trippedLabel);
 }
 
+/** The cost meter's line as a run log carries it (#2979 writes it; #6020 read the real shape):
+ *  `##[notice]cost — event=<id> usd=<n> turns=… is_error=…`. `##[notice]` is how GitHub renders a
+ *  `::notice::` annotation into the log; the `::notice::` form is accepted too, since the echoed
+ *  script source carries it (with `usd=$COST`, no digits, so it never counts). The dash is matched
+ *  loosely: the log is UTF-8 but one wrong decode of the em dash must not blind the brake again. */
+export const COST_LINE =
+  /(?:(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z) )?(?:##\[notice\]|::notice::)cost [^\n]*?event=\S+ usd=([\d.]+)/g;
+
+/** Pure: the `usd=` numbers summed over the cost lines in one log's text. With a window, a line
+ *  counts when ITS OWN timestamp (the one `gh run view --log` prints before it, the moment that
+ *  leg finished) falls inside `[sinceMs, untilMs]`; a line with no timestamp counts when
+ *  `fallbackMs` (the run's start) does. The window is keyed to when a leg FINISHED, not when its
+ *  run started: the 4h to 2026-10-30T21:24:50Z holds 103 legs for $83.37 that way (the number
+ *  the #6020 threshold was sized against) and 97 for $78.14 by run start, because a tick's run
+ *  starts before its legs end — and a brake must see a burst as it lands, not a run later. */
+export function sumCostLines(log, window = null) {
+  let total = 0;
+  for (const m of String(log ?? "").matchAll(COST_LINE)) {
+    const usd = Number(m[2]);
+    if (!Number.isFinite(usd)) continue;
+    if (window) {
+      const at = m[1] ? Date.parse(m[1]) : window.fallbackMs;
+      if (!(at >= window.sinceMs && at <= window.untilMs)) continue;
+    }
+    total += usd;
+  }
+  return total;
+}
+
+/** How many `workflow_dispatch` runs the list reads back. Every research leg runs on a dispatch
+ *  (the push tick re-fires itself as one), so no other event type can carry a cost line; 200 of
+ *  them is four hours at the busiest pace on record (50 in the 4h to 2026-10-30T21:24Z) plus the
+ *  slack below. */
+export const RUN_LIST_LIMIT = 200;
+
+/** How long before the window a run may have started and still have a leg finish inside it. A
+ *  research leg is capped at 150 turns and the longest green one on record ran under an hour. */
+export const LEG_SLACK_MS = 2 * 3_600_000;
+
 /** Total `total_cost_usd` across every matrix-leg research session that completed within the
  *  rolling window, read from real GitHub Actions run logs — the cost meter (#2979) already writes
- *  one greppable `::notice::cost — event=<id> usd=<n> ...` line per session, on every outcome.
+ *  one greppable cost line per session (`COST_LINE` above), on every outcome.
  *
  *  COST OF THIS CHECK, stated plainly (house doctrine: never hide a resource cost). One
  *  `gh run list` (cheap, a single list call), then one `gh run view --log` PER RUN in the window
  *  — not per matrix leg, since a single run's log already carries every leg's cost line, so this
- *  is bounded by TICK frequency, not by session count. `--limit 50` caps the worst case even
- *  during a real runaway, which is exactly when this needs to keep working cheaply. This is a
- *  read-only safety check, not speculative polling — the free-diagnostics-first doctrine
- *  (CLAUDE.md) governs probes that COULD avoid spending the resource; there is no cheaper way to
- *  learn what a session actually cost than reading what it reported. */
-export function recentResearchSpend({ windowHours, exec = defaultExec, sleep = sleepSync }) {
-  const sinceIso = new Date(Date.now() - windowHours * 3_600_000).toISOString();
+ *  is bounded by TICK frequency, not by session count. The list is filtered to `workflow_dispatch`
+ *  — the only event that can carry a cost line — and capped at `RUN_LIST_LIMIT`, so it looks back
+ *  the full window on the busiest tick seen and still bounds a real runaway, which is exactly when
+ *  this needs to keep working cheaply. This is a read-only safety check, not speculative polling —
+ *  the free-diagnostics-first doctrine (CLAUDE.md) governs probes that COULD avoid spending the
+ *  resource; there is no cheaper way to learn what a session actually cost than reading what it
+ *  reported. `now` is injectable so a window can be replayed against cached logs. */
+export function recentResearchSpend({
+  windowHours,
+  exec = defaultExec,
+  sleep = sleepSync,
+  now = Date.now(),
+}) {
+  const sinceMs = now - windowHours * 3_600_000;
+  // Runs started up to LEG_SLACK_MS before the window may still have a leg finish inside it. Only
+  // COMPLETED runs are read: an in-progress run has no combined log yet, and refusing on it would
+  // halt research on every tick a session is running.
+  const listedSinceIso = new Date(sinceMs - LEG_SLACK_MS).toISOString();
   let runsOut;
   try {
     runsOut = ghRead(
@@ -140,10 +219,12 @@ export function recentResearchSpend({ windowHours, exec = defaultExec, sleep = s
         "run",
         "list",
         "--workflow=moneypenny-events.yml",
+        "--event",
+        "workflow_dispatch",
         "--json",
         "databaseId,createdAt,status",
         "--limit",
-        "50",
+        String(RUN_LIST_LIMIT),
       ],
       sleep,
     );
@@ -160,10 +241,9 @@ export function recentResearchSpend({ windowHours, exec = defaultExec, sleep = s
       "moneypenny: 'gh run list' returned unparseable output — refusing to dispatch with unreadable spend.",
     );
   }
-  const inWindow = runs.filter((r) => r.status === "completed" && r.createdAt >= sinceIso);
+  const inWindow = runs.filter((r) => r.status === "completed" && r.createdAt >= listedSinceIso);
 
   let totalUsd = 0;
-  const COST_LINE = /::notice::cost — event=\S+ usd=([\d.]+)/g;
   for (const run of inWindow) {
     let log;
     try {
@@ -171,10 +251,11 @@ export function recentResearchSpend({ windowHours, exec = defaultExec, sleep = s
     } catch (err) {
       log = costLegLogs(run.databaseId, err, exec, sleep);
     }
-    for (const m of log.matchAll(COST_LINE)) {
-      const usd = Number(m[1]);
-      if (Number.isFinite(usd)) totalUsd += usd;
-    }
+    totalUsd += sumCostLines(log, {
+      sinceMs,
+      untilMs: now,
+      fallbackMs: Date.parse(run.createdAt),
+    });
   }
   return totalUsd;
 }
@@ -182,6 +263,13 @@ export function recentResearchSpend({ windowHours, exec = defaultExec, sleep = s
 /** Matrix legs of the `build-events` job — the only job that writes a cost line. GitHub names
  *  each leg "<job name> (<matrix value>)", and an unexpanded skipped matrix keeps the bare name. */
 const COST_JOB_PREFIX = "research due events";
+
+/** A leg cancelled before its first step has no log and launched no session: a known $0, like a
+ *  skipped one (#6921, 2026-11-06: run 42139604356 was cancelled while three legs still waited for
+ *  a runner, `steps: []`, and asking for their logs refused every tick for the next 6 hours). Only
+ *  an explicitly empty `steps` counts — a missing field, or a leg that ran a step, is still read. */
+const neverStarted = (job) =>
+  job.conclusion === "cancelled" && Array.isArray(job.steps) && job.steps.length === 0;
 
 /** The fallback when a run's combined log can't be read. `gh run view --log` fails for the WHOLE
  *  run when any one job has no log — a cancelled job does not (#4658, 2026-10-05: run
@@ -206,7 +294,10 @@ function costLegLogs(runId, cause, exec, sleep) {
   }
   if (!Array.isArray(jobs)) throw refuse(cause.message);
   const legs = jobs.filter(
-    (j) => String(j.name ?? "").startsWith(COST_JOB_PREFIX) && j.conclusion !== "skipped",
+    (j) =>
+      String(j.name ?? "").startsWith(COST_JOB_PREFIX) &&
+      j.conclusion !== "skipped" &&
+      !neverStarted(j),
   );
   return legs
     .map((leg) => {
@@ -221,17 +312,23 @@ function costLegLogs(runId, cause, exec, sleep) {
 }
 
 /** Trips the breaker: applies the label (creating it first if the repo doesn't have it yet — a
- *  fresh repo or a first-ever trip may not) and posts one comment naming the spend and window so
- *  the clearing human has the number, not just the fact. Idempotent — safe to call on a tick that
- *  finds itself over threshold again before anyone has cleared it; `gh issue edit --add-label` on
- *  an already-present label is a no-op, and the comment says so rather than re-alarming. */
+ *  fresh repo or a first-ever trip may not), posts one comment naming the spend and window so the
+ *  clearing human has the number, not just the fact, then assigns the owner on the tracking issue.
+ *  The assignment is what reaches him: a label and a comment on #2946 notify nobody, and clearing
+ *  the breaker is his hand alone. It goes through REST, the route every other assignment here uses
+ *  (assignments.mjs, fitness.mjs), and last, so a refused one costs a warning and never the comment:
+ *  the label is on by then, and a throw would leave a halt that explains itself to nobody.
+ *  Idempotent — safe to call on a tick that finds itself over threshold again before anyone has
+ *  cleared it; `--add-label` and a POST of an existing assignee are no-ops. */
 export function tripBreaker({
   trackingIssue,
   trippedLabel,
   spentUsd,
   maxSpendUsd,
   windowHours,
+  position = "normal",
   exec = defaultExec,
+  warn = console.error,
 }) {
   try {
     exec("gh", [
@@ -256,10 +353,57 @@ export function tripBreaker({
     "--body",
     `🔴 **Research circuit breaker tripped** — imputed usage in the trailing ${windowHours}h is ` +
       `$${spentUsd.toFixed(2)} (Claude Max 20 API-equivalent, not a literal charge), over the ` +
-      `$${maxSpendUsd} threshold (research-circuit-breaker.json). Dispatch is halted on every tick ` +
-      "until this is cleared, regardless of what the rolling window recomputes to later. To resume: " +
-      `remove the \`${trippedLabel}\` label from this issue.`,
+      `$${maxSpendUsd} line for the dial at \`${position}\` (research-circuit-breaker.json). ` +
+      "Dispatch is halted on every tick until this is cleared, regardless of what the rolling " +
+      `window recomputes to later. @${ERIC} is assigned because clearing it is his: remove the ` +
+      `\`${trippedLabel}\` label from this issue to resume.`,
   ]);
+  try {
+    exec("gh", [
+      "api",
+      "--method",
+      "POST",
+      `repos/{owner}/{repo}/issues/${trackingIssue}/assignees`,
+      "-f",
+      `assignees[]=${ERIC}`,
+    ]);
+  } catch (err) {
+    // stderr: the workflow parses this process's stdout as the verdict's JSON.
+    warn(
+      `::warning::circuit breaker: could not assign ${ERIC} on #${trackingIssue} (${err.message})`,
+    );
+  }
+}
+
+/** When the dial last stopped being at surge, in ms, or null if it never has. An ended surge keeps
+ *  its label until the next push takes it off, and the reader says when it ended; after that the
+ *  dial reads a plain `normal` (one REST call, nothing about the past), and the label event that
+ *  took it off is the only record. So this read is made only when a total is already over the
+ *  narrower line, never on an ordinary tick. Throws when the events cannot be read. */
+export function lastSurgeEnd({
+  mode,
+  exec = defaultExec,
+  sleep = sleepSync,
+  workMode = loadWorkModeConfig(),
+}) {
+  const label = `${workMode.labelPrefix}surge`;
+  if (mode.endedLabel === label) return mode.endedAtMs;
+  const out = ghRead(
+    exec,
+    [
+      "api",
+      "--paginate",
+      `repos/{owner}/{repo}/issues/${workMode.trackingIssue}/events?per_page=100`,
+      "--jq",
+      `.[] | select(.event == "unlabeled" and .label.name == "${label}") | .created_at`,
+    ],
+    sleep,
+  );
+  const ends = String(out ?? "")
+    .split("\n")
+    .map((line) => Date.parse(line))
+    .filter((ms) => !Number.isNaN(ms));
+  return ends.length > 0 ? Math.max(...ends) : null;
 }
 
 /** The one function the workflow calls. Returns `{ dispatch: boolean, reason: string }` — never
@@ -271,8 +415,12 @@ export function checkCircuitBreaker({
   config = loadBreakerConfig(),
   exec = defaultExec,
   sleep = sleepSync,
+  now = Date.now(),
+  // The dial decides which line applies (surge's, or everyone else's). Read only once a spend
+  // total exists to compare — a tripped breaker still costs one label read and nothing more.
+  readMode = () => readWorkMode(exec),
 } = {}) {
-  const { maxSpendUsd, windowHours, trackingIssue, trippedLabel } = config;
+  const { windowHours, trackingIssue, trippedLabel } = config;
 
   if (isBreakerTripped({ trackingIssue, trippedLabel, exec, sleep }))
     return {
@@ -280,17 +428,54 @@ export function checkCircuitBreaker({
       reason: `circuit breaker already tripped on issue #${trackingIssue}`,
     };
 
-  const spentUsd = recentResearchSpend({ windowHours, exec, sleep });
+  const spentUsd = recentResearchSpend({ windowHours, exec, sleep, now });
+  const spent = `spend $${spentUsd.toFixed(2)} over ${windowHours}h`;
+  const mode = readMode();
+  // Under the narrower line every position agrees, so only an overspend needs the dial's real word.
+  const unsure = !mode || mode.unreadable || mode.ambiguous;
+  const position = mode?.position ?? "conserve";
+  let maxSpendUsd = thresholdFor(position, config);
+  let dial = position;
   if (spentUsd > maxSpendUsd) {
-    tripBreaker({ trackingIssue, trippedLabel, spentUsd, maxSpendUsd, windowHours, exec });
+    if (unsure)
+      return {
+        dispatch: false,
+        reason: `${spent} is over $${maxSpendUsd} and the brake could not read the dial — refusing this tick without tripping`,
+      };
+    if (position !== "surge") {
+      let endedAt;
+      try {
+        endedAt = lastSurgeEnd({ mode, exec, sleep });
+      } catch (err) {
+        return {
+          dispatch: false,
+          reason: `${spent} is over $${maxSpendUsd} and the brake could not read when the last surge ended (${err.message}) — refusing this tick without tripping`,
+        };
+      }
+      if (endedAt !== null && now - endedAt < windowHours * 3_600_000) {
+        maxSpendUsd = thresholdFor("surge", config);
+        dial = `${position}, a surge ended inside the window`;
+      }
+    }
+  }
+  if (spentUsd > maxSpendUsd) {
+    tripBreaker({
+      trackingIssue,
+      trippedLabel,
+      spentUsd,
+      maxSpendUsd,
+      windowHours,
+      position: dial,
+      exec,
+    });
     return {
       dispatch: false,
-      reason: `spend $${spentUsd.toFixed(2)} over ${windowHours}h exceeds $${maxSpendUsd} — breaker tripped`,
+      reason: `${spent} exceeds $${maxSpendUsd} (dial at ${dial}) — breaker tripped`,
     };
   }
 
   return {
     dispatch: true,
-    reason: `spend $${spentUsd.toFixed(2)} of $${maxSpendUsd} over ${windowHours}h`,
+    reason: `spend $${spentUsd.toFixed(2)} of $${maxSpendUsd} over ${windowHours}h (dial at ${dial})`,
   };
 }

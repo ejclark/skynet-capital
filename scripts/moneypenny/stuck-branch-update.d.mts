@@ -6,7 +6,9 @@ export interface StuckBranch {
   title: string;
   hours: number;
   headSha: string;
-  /** Dependabot's own PR takes a rebase comment, not a merge commit. */
+  /** The branch, which the empty commit on a dependabot PR moves. */
+  headRef: string;
+  /** Dependabot's own PR takes an empty commit it may rebase over, not a merge commit. */
   dependabot: boolean;
   /** The heads already tried, from the marker on the PR's comments. */
   triedShas: string[];
@@ -15,6 +17,7 @@ export interface UpdateStuckIntent extends AuditIntent {
   kind: "update-stuck-branch";
   prNumber: number;
   headSha: string;
+  headRef: string;
   hours: number;
   dependabot: boolean;
   body: string;
@@ -33,6 +36,12 @@ export function stuckBranchesOrNone(
   nowMs: number,
   opts?: GatherOpts & { log?: (line: string) => void },
 ): StuckBranch[];
+/** A same-tree commit on top of the head, the branch moved onto it without force. */
+export function emptyCommitOnHead(
+  i: { headSha: string; headRef: string },
+  run: (cmd: string, args: string[]) => string,
+  message?: string,
+): void;
 export function updateStuckBranch(
   i: UpdateStuckIntent,
   opts?: { run?: (cmd: string, args: string[]) => string; log?: (line: string) => void },

@@ -9,10 +9,11 @@
 #      dashboard (`bridge: "armed"` — stamped only when the boot fetch returned a parsed state; the
 #      silent env-only-controls failure this smoke exists to catch stamps `unreachable`). Read over
 #      `flyctl machine exec … cat` — the file is readable the instant it lands. The older check,
-#      grepping `flyctl logs -n` for "[controls] bridge armed", stays as a FALLBACK only: that
-#      one-shot log read lags Fly's log pipeline (2026-08-27: widened to 150s; 2026-09-04: still
-#      rolled back a healthy boot, which dropped GIT_SHA and forced a second deploy). A fallback can
-#      only add ways to pass, never to fail.
+#      grepping `flyctl logs -n` for "[controls] bridge armed", stays as a FALLBACK only, and only
+#      for a stamp that CANNOT be read: that buffer still holds the previous boot's armed line for
+#      hours, so it can never overrule a stamp that says otherwise. It also lags Fly's log pipeline
+#      (2026-08-27: widened to 150s; 2026-09-04: still rolled back a healthy boot, which dropped
+#      GIT_SHA and forced a second deploy). A fallback can only add ways to pass, never to fail.
 #   3. both still hold SMOKE_HOLD seconds later, on the SAME process — no restart, no new machine
 #      event (see "the hold" below; #6004's boot armed, then OOM'd ~5s later and still passed).
 #
@@ -44,21 +45,29 @@ machine_ok() {
         "$PRIMARY_FILTER"' | any(.state == "started" and .config.env.GIT_SHA == $sha)' >/dev/null
 }
 
+# The process's own word: 0 when the started primary's /data/health.json names THIS commit and says
+# the bridge armed; 1 when a stamp was read and says anything else; 2 when no stamp could be read.
+# A stale stamp from the previous release is a 1 until the new process overwrites it (atomic rename
+# — never a half-written file).
 health_stamped() {
-  # The process's own word: the started primary's /data/health.json names THIS commit and says the
-  # bridge armed. A stale stamp from the previous release fails the sha check until the new process
-  # overwrites it (atomic rename — never a half-written file).
-  local id
+  local id stamp
   id=$(flyctl machine list -a "$APP" --json 2>/dev/null \
-    | jq -r "$PRIMARY_FILTER"' | map(select(.state == "started"))[0].id // empty') || return 1
-  [[ -n "$id" ]] || return 1
-  flyctl machine exec "$id" "cat $HEALTH_PATH" -a "$APP" 2>/dev/null \
-    | jq -e --arg sha "$WANT_SHA" '.gitSha == $sha and .bridge == "armed"' >/dev/null
+    | jq -r "$PRIMARY_FILTER"' | map(select(.state == "started"))[0].id // empty') || return 2
+  [[ -n "$id" ]] || return 2
+  stamp=$(flyctl machine exec "$id" "cat $HEALTH_PATH" -a "$APP" 2>/dev/null \
+    | jq -ce 'select(type == "object")' 2>/dev/null) || return 2
+  jq -e --arg sha "$WANT_SHA" '.gitSha == $sha and .bridge == "armed"' >/dev/null <<<"$stamp"
 }
 
 bridge_armed() {
-  # Stamp first; the bounded log read (never a stream) is the fallback — see the header.
-  health_stamped || flyctl logs -a "$APP" -n 2>/dev/null | grep -qF "$ARMED_MARKER"
+  # Stamp first; the bounded log read (never a stream) only when no stamp could be read — a boot
+  # whose stamp says the bridge did not arm must not pass on the previous boot's log line.
+  # A here-string, not a pipe: under pipefail a match makes grep -q close the pipe, flyctl dies of
+  # SIGPIPE, and a healthy bots deploy reads as not armed.
+  local stamp_status=0
+  health_stamped || stamp_status=$?
+  [[ $stamp_status -eq 2 ]] || return "$stamp_status"
+  grep -qF "$ARMED_MARKER" <<<"$(flyctl logs -a "$APP" -n 2>/dev/null)"
 }
 
 # ── the hold — a boot that dies seconds later is not a pass (#6004, #5955) ──────────────────────
@@ -68,6 +77,8 @@ bridge_armed() {
 # reads HOLD seconds apart, and the second must show the SAME process still running:
 #   - still `started`, same primary id, still stamped with the expected GIT_SHA;
 #   - no new machine event across the hold (Fly appends exit/start events on a process restart);
+#   - a stamp read at any point names this commit and says the bridge armed, even on a pass that came
+#     from the log fallback: a stamp outranks the log whenever one can be read;
 #   - when the pass came from the stamp: same `pid` and `bootedAt` (no restart inside the machine),
 #     and — only if a controls poll was due inside the hold — `updatedAt`/`lastControlsPollAt` moved.
 # Two `started` reads alone prove nothing: a crash-looping machine reads `started` on every pass.
@@ -104,9 +115,10 @@ hold_breach() {
     elif $b.id != $a.id then "the started primary changed (\($a.id) -> \($b.id))"
     elif $b.sha != $sha then "the primary no longer carries GIT_SHA=\($sha)"
     elif $b.lastEvent != $a.lastEvent then "the machine logged a new event during the hold (exit/restart)"
+    elif $b.health != null and $b.health.gitSha != $sha then "the health stamp no longer names \($sha)"
+    elif $b.health != null and $b.health.bridge != "armed" then "the health stamp says the bridge is \($b.health.bridge)"
     elif $a.health == null then empty
     elif $b.health == null then "the health stamp went unreadable"
-    elif $b.health.gitSha != $sha then "the health stamp no longer names \($sha)"
     elif $b.health.pid != $a.health.pid or $b.health.bootedAt != $a.health.bootedAt
       then "the process restarted (pid \($a.health.pid) -> \($b.health.pid), bootedAt \($a.health.bootedAt) -> \($b.health.bootedAt))"
     elif $poll_due and ($b.health.updatedAt == $a.health.updatedAt or $b.health.lastControlsPollAt == $a.health.lastControlsPollAt)

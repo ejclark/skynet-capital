@@ -23,14 +23,28 @@ import {
 } from "../subscriptions/subscriptions-file.js";
 
 /**
- * What an owner re-tunes on an existing subscription (#4649): every field the subscriptions.v1
- * wire carries except `enabled`. Absent capital = uncapped; absent or empty symbols = the whole
+ * What an owner re-tunes on an existing subscription (#4649): every field the subscriptions wire
+ * has fingerprinted since its first kind (v1), except `enabled`. Absent capital = uncapped; absent or empty symbols = the whole
  * basket; absent compounding = off. The same meanings `PlaybookSubscription` documents.
  */
 export type SubscriptionTuning = Pick<
   PlaybookSubscription,
   "mode" | "capitalAllocated" | "symbols" | "compoundAllocation"
->;
+> & {
+  /** The owner's below-bar floor (#6954 slice 5c-ii): a share sets it, `null` clears it, absent
+   *  keeps the one the subscription has. */
+  readonly belowBarFloorPct?: number | null;
+};
+
+/** The owner's below-bar floor an edit leaves on a subscription: the one it sets, none when it
+ *  clears (`null`), else the one already there. The route judges the fog on this same value. */
+export function floorAfter(
+  prior: PlaybookSubscription,
+  tuning: SubscriptionTuning,
+): number | undefined {
+  if (tuning.belowBarFloorPct === undefined) return prior.belowBarFloorPct;
+  return tuning.belowBarFloorPct ?? undefined;
+}
 
 /**
  * The durable state behind an account's Playbook Store — which playbooks an
@@ -249,8 +263,9 @@ export class SubscriptionStore {
    * Re-tune an existing subscription without changing whether it runs (#4649). Mode, capital,
    * symbols and compounding are replaced. `enabled` and `createdAt` are kept, so editing a paused
    * subscription never resumes it. A resubscribe would, because `subscribe` writes whatever
-   * `enabled` it is handed. Returns undefined and writes nothing when the account has no such
-   * subscription: configure never creates one.
+   * `enabled` it is handed. The owner's below-bar floor is set, cleared or kept (`floorAfter`).
+   * Returns undefined and writes nothing when the account has no such subscription: configure
+   * never creates one.
    */
   configure(
     accountId: string,
@@ -268,8 +283,10 @@ export class SubscriptionStore {
       capitalAllocated: _capital,
       symbols: _symbols,
       compoundAllocation: _compound,
+      belowBarFloorPct: _floor,
       ...kept
     } = prior;
+    const floor = floorAfter(prior, tuning);
     const next: PlaybookSubscription = {
       ...kept,
       mode: tuning.mode,
@@ -278,6 +295,7 @@ export class SubscriptionStore {
         : {}),
       ...(tuning.symbols && tuning.symbols.length > 0 ? { symbols: tuning.symbols } : {}),
       ...(tuning.compoundAllocation ? { compoundAllocation: true } : {}),
+      ...(floor !== undefined ? { belowBarFloorPct: floor } : {}),
       updatedAt: at.toISOString(),
     };
     const nextState: SubscriptionsState = {

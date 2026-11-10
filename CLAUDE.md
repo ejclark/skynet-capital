@@ -32,6 +32,18 @@ trust-but-verify. **Continual learning** — experiments, side quests, fast iter
 generative principle behind side quests — small investments in the *system* compound far beyond one task.
 Bias toward the process investment when it's cheap and reversible.
 
+**Reverse Conway — Conway's law as the benchmark, not the curse** (Eric, 2026-11-07: "The friction
+with AI that we've worked to optimize boils down to improving communication. AI can 'solve' conways
+Law to autonomously evolve our communication strucutre"). A system copies the communication structure
+that builds it, so redraw the communication on purpose and the system follows. The map is
+[`docs/architecture/org-chart.md`](docs/architecture/org-chart.md), generated from the seat registry
+`docs/agents/seats.json`: every seat, human or agent, and the friction measured on each edge. When a
+recurring breakdown is really a communication edge (an ask that is not his, a hand-off nobody reads,
+two lanes racing one file), change the edge and update the registry in the same PR. The game can
+borrow the same lens (his hunch, same day: "my gut tells me there are opportunities to leverage this
+into our gameplay"): draw the members' communication first (ask, steer, act, hear back), and the
+build org stays out of the game (#6948, #7031).
+
 **Apply these frameworks as a lattice, not a lexical ranking.** No single one is obeyed by the letter in
 isolation; when two collide (e.g. ToC vs. fix-at-the-source), the collision is the signal to find the
 higher synthesis — usually the *correct* reading of both agrees and only the naive reading conflicts.
@@ -130,16 +142,7 @@ iteration stops moving the number (`LEARNING-LOOP.md` field 14).
   a note in the relevant surface doc *before* an implementation PR opens — the PR then executes an
   already-settled call instead of re-litigating it live. This is a process step, not a gate: a trivial
   single-link move with no structural ambiguity doesn't need its own decision doc.
-- **Fog of war is a first-class reveal pattern, with written criteria** (Eric, 2026-09-06, on the
-  research day lens: "a spot on / perfect scenario"). Withhold a *capability* behind an earnable
-  rung, never *information* a member needs to stay safe; draw the door visible · named · disabled ·
-  counted. The decision tree and the instance ledger live in
-  [`docs/FOG-OF-WAR.md`](docs/FOG-OF-WAR.md) — run a candidate through it before fogging anything. **The general rule this instance taught:** Claude *proposes* patterns it
-  knows how to deliver, rendered on a candidate surface; Eric *places* them. A rejected placement
-  banks the pattern (`docs/IDEAS.md` inbox), never the idea — fog of war was declined for the
-  ticket on 2026-09-05 and landed on the research day lens a day later. Once a textbook case is
-  found, run its criteria across the app: the same tree finds the other candidates *and* strips the
-  gates that were never the pattern, which is how the emerging design gets its noise removed.
+- **Fog of war:** withhold a capability behind an earnable rung, never information a member needs to stay safe ([`docs/FOG-OF-WAR.md`](docs/FOG-OF-WAR.md)). Claude proposes patterns rendered on a candidate surface; Eric places them, and a rejected placement banks the pattern, never the idea. Full rule: [`docs/process/WORKING-AGREEMENTS.md`](docs/process/WORKING-AGREEMENTS.md).
 - **A surface decision arrives as 3–5 named shapes, and every named pattern lands in the ledger**
   (Eric, 2026-09-06: "3-5 design choices seems like a good pattern when building out UI design…
   there are good patterns to become aware of which plant seeds to let them marinade… this builds
@@ -488,9 +491,7 @@ is expected and fine; the docs are the memory.
 
 - Branch off latest `origin/main` per change **before editing** (`git fetch origin main && git
   checkout -B <branch> origin/main` — fetch first: a cached ref can be genuinely stale or diverged
-  from the real tip, not just a few commits behind, docs/LESSONS.md 2026-09-04; an isolated
-  worktree refuses that chain — its git rules are [`docs/DELEGATION.md`](docs/DELEGATION.md)
-  rail 2) — branch-first means never needing `git stash`, which is **banned here** (it has silently dropped edits). Small
+  from the real tip, not just a few commits behind, docs/LESSONS.md 2026-09-04) — branch-first means never needing `git stash`, which is **banned here** (it has silently dropped edits). Small
   focused PRs; squash-merge on green; Conventional-Commit subjects, **lowercase-led** (commitlint
   rejects a capitalized first word — even "PRs"/"Barad-dûr").
 - Open PRs with **`/ship`** (local verify + integration tests → push → REST open → stop; the pipeline arms; wraps
@@ -531,3 +532,10 @@ is expected and fine; the docs are the memory.
 - Background work runs via subagents under [`docs/DELEGATION.md`](docs/DELEGATION.md) (isolated
   worktrees, verify-before-merge). In burn-down mode, opening small green PRs and letting
   `pipeline.yml` arm their squash auto-merge is the expected loop.
+- **An agent isolated in a worktree: Claude Code's worktree check reads every Bash command** and
+  refuses what it cannot show stays inside: git aimed at another checkout (the real protection, never
+  worked around), a loop or `$(…)` around git, `bash file; echo $?`, `bash -c` whose text names git,
+  a variable as an argument to sed or node, `find` with `( … )`. On 2026-11-01 those cost 148 agents 129 failed calls.
+  Spell paths out, even long ones. The tool already reports a non-zero exit, so `echo $?` adds
+  nothing. Anything longer goes in a script file in your scratchpad, run as `bash <file>`, aimed at
+  your own worktree. Rail 2 of [`docs/DELEGATION.md`](docs/DELEGATION.md) has the rest. A workflow agent that ends its turn is done: wait in `until` loops.

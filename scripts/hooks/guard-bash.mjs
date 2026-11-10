@@ -18,10 +18,26 @@
 // pointed at the doctrine line; nothing else is touched.
 //
 // Exit codes: 0 allow (stdin unreadable, another tool, or no match) · 2 refuse (the reason on stderr).
+// A command the rtk hook would break also exits 0, with the input back as JSON on stdout (see below).
 import { fileURLToPath } from "node:url";
 
 /** The banned commands, each with the doctrine line that bans it and the alternative to offer. */
 export const BANNED = [
+  {
+    // 2026-11-01: a cleanup loop ran `git worktree remove "$w"` over a keep-list built in shell. An
+    // unquoted pipe left the list empty, `grep -E "^()"` then matched everything, and 115 worktrees
+    // went, at least 51 of them other sessions'. `npm run worktree:sweep` prints keep or remove and why for
+    // each entry first. One path typed out is still fine: a person can read what it will remove.
+    // Anchored to a command position, or `$G` in a script's shape, for the reason the rules around it
+    // are: its first draft refused the PR title that named it, on its first use.
+    name: "git worktree remove on a computed path",
+    test: (cmd) =>
+      /(^|[;&|(]\s*|\b(?:do|then)\s+|\bbash\s+-c\s+['"])(?:\S*\/)?(?:git|\$\{?\w+\}?)(?:\s+-C\s+\S+)?\s+worktree\s+remove\b[^;&|\n]*[$`]/m.test(
+        cmd,
+      ) || /\bxargs\b[^;&|\n]*\bworktree\s+remove\b/.test(cmd),
+    reason:
+      "`git worktree remove` on a computed path is refused (docs/LESSONS.md 2026-11-01: a bad filter removed 115). Run `npm run worktree:sweep` to see keep or remove and why, then `npm run worktree:sweep -- --apply`, or `--only <dir-or-branch>` for your own. To remove one, type its path out.",
+  },
   {
     name: "git stash",
     // `git stash list` / `show` only read; every other subcommand (push, pop, apply, drop, clear,
@@ -91,6 +107,43 @@ export function guardVerdict(input) {
   return { allow: true };
 }
 
+// WHY (2026-11-01, #6470): the user-level rtk hook rewrites a command before Claude Code runs it,
+// and two of its rewrites turn a working command into a failing one. These were the first-pass
+// errors on nearly every workflow agent that day; `docs/DELEGATION.md` rail 2 had the workaround.
+//   - An agent isolated in a worktree: `git status` becomes `rtk git status`, and the harness's own
+//     worktree check (not this file) refuses `rtk` with git among its operands, since it cannot
+//     tell where rtk would run it. `/usr/bin/git` passes, because rtk leaves it alone. Only commands
+//     naming git are taken: over 7,345 agent commands that is 35%, and it catches 96 of the 114
+//     refusals that named rtk. Also taking globs, variables and pipes (rtk's operands trip the check
+//     there too) caught the other 18 but took 85%, which would give up rtk's savings nearly everywhere.
+//   - Every session: `npx biome check x` and `npm run lint` become `rtk lint …`, which looks for
+//     ESLint (this repo has none) or takes `check` for a package name. Both exit 1 without linting.
+// So those commands go back exactly as written. Nothing is edited, so quoted text, a heredoc or a
+// commit message cannot be damaged, and the harness's worktree check still reads the final command:
+// `git -C <shared checkout>` is refused as before. Every other command keeps rtk's output savings.
+//
+// Claude Code runs matching PreToolUse hooks in parallel, and its docs do not say whose updatedInput
+// wins when two return one. This hook's won every live call on 2026-11-01, with the machine idle and
+// under a typecheck, and it finishes later (about 22ms against rtk's 8ms). If that changes, the
+// result is only the old behaviour: the refusal, and `/usr/bin/git` still works.
+const WORKTREE_CWD = /\/\.claude\/worktrees\/[^/]+(\/|$)/;
+const NAMES_GIT = /\bgit\b/;
+// At a command position, env and `time` prefixes allowed, the same anchoring as the rules above.
+const RTK_BREAKS_ANYWHERE =
+  /(^|[;&|(]\s*)(?:time\s+)?(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*(?:npx\s+biome\b|npm\s+run\s+lint(?=\s|$|[;&|)]))/m;
+
+/**
+ * The tool input to hand back as written, or null to leave the command to rtk. An isolated agent is
+ * named by its `agent_id` plus a working directory inside `.claude/worktrees/`.
+ */
+export function asWrittenInput(input) {
+  if (input?.tool_name !== "Bash") return null;
+  const cmd = String(input.tool_input?.command ?? "");
+  if (RTK_BREAKS_ANYWHERE.test(cmd)) return input.tool_input;
+  const isolated = Boolean(input.agent_id) && WORKTREE_CWD.test(String(input.cwd ?? ""));
+  return isolated && NAMES_GIT.test(cmd) ? input.tool_input : null;
+}
+
 async function readStdin() {
   const chunks = [];
   for await (const c of process.stdin) chunks.push(c);
@@ -108,9 +161,16 @@ async function main() {
     return;
   }
   const v = guardVerdict(input);
-  if (v.allow) return;
-  process.stderr.write(`guard-bash refused ${v.rule}: ${v.reason}\n`);
-  process.exit(2);
+  if (!v.allow) {
+    process.stderr.write(`guard-bash refused ${v.rule}: ${v.reason}\n`);
+    process.exit(2);
+  }
+  const updatedInput = asWrittenInput(input);
+  if (!updatedInput) return;
+  // No permissionDecision: `allow` would skip the prompt, and this only undoes a rewrite.
+  process.stdout.write(
+    JSON.stringify({ hookSpecificOutput: { hookEventName: "PreToolUse", updatedInput } }),
+  );
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) await main();

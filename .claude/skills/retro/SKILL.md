@@ -12,9 +12,9 @@ description: >-
 # Retro — the learning drill
 
 The *correction* half of the learning Coach. Its eye (`scripts/incident-scan.mjs` +
-`incident-budget.json`, enforced by `tests/arch/lessons.spec.ts`) watches one dimension no other
-coach watches: **how long a process gap goes unrecognized.** Every other gate looks at the code.
-This one looks at us.
+`incident-budget.json`, reported advisory in `npm test` by `tests/arch/lessons.spec.ts`) watches
+one dimension no other coach watches: **how long a process gap goes unrecognized.** Every other
+gate looks at the code. This one looks at us.
 
 Blameless, always. The question is never "who missed it" — it is "what about the *system* made
 missing it the likely outcome."
@@ -101,10 +101,12 @@ them exact, and never leave `STATUS: open` — an open entry fails the build by 
 `npm run lessons:held` — it lists unlearned runs on the same workflow as earlier lessons, as leads,
 and scores whether gate-type preventions recur less than doctrine-only ones.
 
+**A correction of Eric's that recurs** also adds a case to `docs/evals/how-he-writes-set.json` in the same PR, with what his next message showed as the evidence.
+
 ## 7. Verify and ratchet
 
 ```bash
-npm run verify                      # typecheck · lint · test (the ledger gate runs here)
+npm run verify                      # typecheck · lint · test (the ledger check runs here, advisory)
 node scripts/incident-scan.mjs      # every incident on main now has a lesson
 ```
 

@@ -1,9 +1,11 @@
 import type { PlaybookSubscription } from "../domain/types.js";
 import type { Conviction } from "../playbooks/conviction-record.js";
+import { floorPercent } from "../playbooks/fit-floor.js";
 import type { StrategyId } from "../playbooks/pair-table.js";
 import { pointerMove } from "../subscriptions/conviction-pointer.js";
 import { asOwnConviction, type OwnerReadSubscription } from "../subscriptions/pair-conviction.js";
 import type { SubscriptionsState } from "../subscriptions/subscription-state.js";
+import { usdWhole } from "../ui/usd-whole.js";
 import { convictionNames, pointerChange } from "./conviction-pointer-changes.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { type OwnViews, ownViewsOf } from "./pair-conviction-write.js";
@@ -33,8 +35,6 @@ import {
 
 const MAX_SYMBOLS_NAMED = 6;
 
-const dollars = (n: number): string => `$${Math.round(n).toLocaleString("en-US")}`;
-
 /** One subscription in words, at most `MAX_SETTING_TEXT` long; `null` when there is none. With
  *  `viewOf`, a pointer at the owner's own view on the pair reads as the conviction it states, so the
  *  line says "conviction checked …" as it did when that day was kept inline (#5482). */
@@ -52,9 +52,13 @@ export function subscriptionSummary(
   const parts = [
     sub.enabled ? "on" : "paused",
     sub.mode,
-    sub.capitalAllocated === undefined ? "no budget" : dollars(sub.capitalAllocated),
+    sub.capitalAllocated === undefined ? "no budget" : usdWhole(sub.capitalAllocated),
     ...(named ? [named] : []),
     ...(sub.compoundAllocation ? ["compounding"] : []),
+    // The owner's below-bar floor (#6954 slice 5c-ii): it sizes what the bot opens, so it is logged.
+    ...(sub.belowBarFloorPct !== undefined
+      ? [`each new order at most ${floorPercent(sub.belowBarFloorPct)}`]
+      : []),
     ...(sub.conviction ? [`conviction checked ${sub.conviction.checkOn}`] : []),
   ];
   const text = parts.join(" · ");
@@ -66,7 +70,7 @@ type Store = NonNullable<DashboardServerConfig["subscriptions"]>;
 const held = (state: SubscriptionsState, accountId: string, playbookId: string) =>
   (state[accountId] ?? []).find((s) => s.playbookId === playbookId);
 
-function change(
+export function change(
   setting: string,
   before: SettingValue,
   after: SettingValue,

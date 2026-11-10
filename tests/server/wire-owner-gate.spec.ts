@@ -4,6 +4,7 @@ import type { OrderIntent } from "../../src/domain/types.js";
 import type { TradeActivityRecord } from "../../src/observatory/activity-record.js";
 import { serveContentApi } from "../../src/server/content-api-routes.js";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
+import { wireFeedOf } from "../support/wire-feed.js";
 
 /**
  * #885 (Eric, 2026-08-29): "at this time, we do not show what playbooks others are using". The
@@ -74,7 +75,7 @@ async function wireReasoning(
   } as unknown as ServerResponse;
   const full = {
     hub: { getState: () => ({ generatedAt: "t", participants: [sauron], collisions: [] }) },
-    readAllTradeActivity: async () => [fill],
+    readWireFeed: wireFeedOf({ records: [fill] }),
     findByOrderId: (id: string) => (id === "ord-1" ? { record: decision, intent } : undefined),
     ...config,
   } as unknown as DashboardServerConfig;

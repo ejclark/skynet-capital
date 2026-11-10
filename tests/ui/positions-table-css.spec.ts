@@ -54,7 +54,7 @@ const rules: readonly Rule[] = readdirSync(STYLES)
 
 describe("the positions table's colgroup", () => {
   it("gives every column a <col> carrying its column's class (the premise this spec guards)", () => {
-    expect(keys).toEqual(["pos", "greeks", "value", "pl", "model", "event", "best", "open"]);
+    expect(keys).toEqual(["pos", "greeks", "value", "pl", "event", "best", "open"]);
     expect(table).toMatch(
       /POS_COLUMNS\.map\(\(key\) => \(\s*<col key=\{key\} className=\{colClass\(key\)\} \/>/,
     );

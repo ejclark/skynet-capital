@@ -1,0 +1,11 @@
+{
+  "id": "industrial-production-annual-revision-2026-11-24",
+  "kind": "macro-print",
+  "title": "Federal Reserve G.17 annual revision of industrial production and capacity utilization — 2022 base year, 2023 and 2024 Census benchmarks, seven days after the October print",
+  "date": "2026-11-24",
+  "status": "estimate",
+  "source": "EST: federalreserve.gov/feeds/g17.html re-fetched direct 2026-11-03 (HTTP 200, 619,956 bytes). The Board's own 2026-09-18 notice, titled 'G.17 Annual Revision Planned to be Released on November 24, 2026', reads: 'The Federal Reserve Board plans to issue its annual revision to the indexes of industrial production (IP) and the related measures of capacity utilization on November 24, 2026. The base year for the revised indexes will be 2022. New annual benchmark data for manufacturing from the U.S. Census Bureau for 2023 and 2024 will be incorporated'. The verb is 'plans to issue', and the notice states no release time. The notice was still unchanged on 2026-11-03, with no later G.17 posting after the 2026-10-16 data release. Filed estimate because the Board's verb is a plan and because this lane may not self-confirm an event it discovered in-sweep; the id that researches it should read the Board primary again and promote it if the Board has by then announced a time. Checked 2026-11-03",
+  "impact": "low",
+  "symbols": [],
+  "notes": "Discovered during the industrial-production-2026-11-17 D-14 pulse (2026-11-03). It was named in prose at D-30 (2026-10-18) because 11-24 was then D-37, past the 30-day all-impacts leash; it is D-21 today and inside it. WHY IT IS A CALENDAR ENTRY AND NOT JUST A NOTE: it is the restatement event for the series, standalone by every precedent the Board's feed records (2021-05-28, 2022-06-28, 2023-03-28, 2024-06-28, 2025-11-24, each a separate release rather than a folded-in monthly). The 2025 revision turned five years of manufacturing output from a rise into a decline of more than 1-1/2% on net, so the October level printed 2026-11-17 and every percentile in the 11-17 ledger are restated a week later. Proposed low impact with symbols [] to match its parent: no house playbook is macro-keyed and no instrument attaches. If the researching lane judges a low-impact restatement not worth its own session, the proposal is inert and costs nothing."
+}

@@ -14,16 +14,20 @@ export function waitingWork(input: {
   readyIssues?: (PullableIssue & { title?: string })[];
   researchDue?: number;
 }): WaitingWork;
-/** `quiet-with-work`, or null. A half that could not be read is null and counts as nothing;
- *  `waiting: null` (nothing read) is never due. */
+/** `quiet-with-work` when what was read shows work; `quiet-unknown` when it shows none and a half
+ *  (null) could not be read, which `--due` answers `due: null`; else null. `waiting: null` means no
+ *  read was needed. */
 export function quietReason(
   quietHours: number,
   waiting: { ready: WaitingWork["ready"] | null; researchDue: number | null } | null,
-): "quiet-with-work" | null;
+): "quiet-with-work" | "quiet-unknown" | null;
 
 export function digestFiles(): string[];
 export function latestDigestDate(): string | null;
 export function needsYouLines(planned: Pick<Planned, "needsYou">): string[];
+/** The "needs a session" line for "Noise absorbed" (#6953 slice 2). */
+export function calloutIncompleteLine(planned: Partial<Pick<Planned, "incomplete">>): string;
+export function needsSessionLine(planned: Partial<Pick<Planned, "needsSession">>): string;
 /** The "Noise absorbed" line for unlearned incidents (#4212); `unlearnedRuns: null` = unknown. */
 export function learningLine(count: {
   days?: number;

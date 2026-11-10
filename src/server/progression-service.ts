@@ -15,17 +15,15 @@ import {
   ENGAGEMENT_MILESTONES,
 } from "../domain/engagement.js";
 import {
-  deriveEarned,
   type EarnedMilestone,
   earnedCodes,
   LADDER_GATE_MILESTONE,
   lockedOnLadder,
 } from "../domain/progression.js";
 import type { TradeTypeCode } from "../domain/trade-types.js";
-import { collapseActivity, type TradeActivityRecord } from "../observatory/activity-store.js";
 import type { CompanionMessageLogEntry } from "./companion-message-log.js";
 import type { FeedbackLogEntry } from "./feedback-log.js";
-import type { OrderAuditRecord } from "./order-audit-log.js";
+import type { LadderEvidenceReader } from "./ladder-evidence.js";
 import {
   gateSatisfiedIds,
   openLadder,
@@ -147,10 +145,12 @@ export interface ProgressionService {
 }
 
 export interface ProgressionServiceDeps {
-  /** Raw activity journal lines for one participant — the service collapses per order. */
-  readonly readFills: (participantId: string) => Promise<readonly TradeActivityRecord[]>;
-  /** The tagged per-order audit lines for one participant. */
-  readonly readTags: (participantId: string) => Promise<readonly OrderAuditRecord[]>;
+  /**
+   * The milestones one participant's fills and tagged order audit prove, and whether they have
+   * ever filled — `ladder-evidence.ts` keeps it by folding only what was appended since the last
+   * read, so a view never re-reads either ledger whole (#4619).
+   */
+  readonly readEvidence: LadderEvidenceReader;
   /**
    * Messages logged for the engagement track (`companion-message-log.ts`), keyed by `view`'s
    * `opaqueMemberId` (falls back to `participantId` — see `view`'s doc). This is the ladder
@@ -178,21 +178,19 @@ export function createProgressionService(deps: ProgressionServiceDeps): Progress
   const now = deps.now ?? (() => new Date());
   return {
     async view(participantId, opaqueMemberId) {
-      const [journal, tags, messages, feedback] = await Promise.all([
-        deps.readFills(participantId),
-        deps.readTags(participantId),
+      const [evidence, messages, feedback] = await Promise.all([
+        deps.readEvidence(participantId),
         deps.readMessages?.(opaqueMemberId ?? participantId) ?? Promise.resolve([]),
         deps.readFeedback?.(opaqueMemberId ?? participantId) ?? Promise.resolve([]),
       ]);
-      const fills = collapseActivity([...journal]);
-      const earned = deriveEarned(fills, tags);
+      const { earned } = evidence;
       const engagementEarned = deriveEngagementEarned(messages.map((m) => m.at));
       const gateSatisfied = gateSatisfiedIds(engagementEarned, feedback);
       const codes = earnedCodes(earned);
       const milestoneIds = new Set(earned.map((m) => m.milestoneId));
       const points = pointsFor(milestoneIds);
 
-      const record = seedRecord(deps.store, participantId, now, fills, [
+      const record = seedRecord(deps.store, participantId, now, evidence.hasFill, [
         ...earned,
         ...engagementEarned,
       ]);
@@ -259,12 +257,7 @@ export function createProgressionService(deps: ProgressionServiceDeps): Progress
       // Re-derived fresh rather than trusted from a stale `view()`: acknowledge can be the very
       // first call this service sees for a participant.
       const earnedIds = mightGraduate
-        ? new Set(
-            deriveEarned(
-              collapseActivity([...(await deps.readFills(participantId))]),
-              await deps.readTags(participantId),
-            ).map((m) => m.milestoneId),
-          )
+        ? new Set((await deps.readEvidence(participantId)).earned.map((m) => m.milestoneId))
         : new Set<string>();
       const fresh = [
         ...new Set(

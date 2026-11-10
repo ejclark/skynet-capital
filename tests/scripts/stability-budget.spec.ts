@@ -8,8 +8,11 @@ import {
   commonGets,
   flyCommand,
   flyEnv,
+  nextStep,
   procMemory,
+  remeasured,
   repeatedRow,
+  researchGets,
   summary,
   verdict,
 } from "../../scripts/stability/budget-lib.mjs";
@@ -116,6 +119,37 @@ describe("commonGets / repeatedRow — the other GETs, each fired several times"
   });
 });
 
+describe("researchGets — R&D over the real research shelf (#4519's class, #4612 slice 10)", () => {
+  it("clicks the calendar, the shelf, Coverage and the forward-test register (#6957)", () => {
+    expect(researchGets()).toEqual(
+      expect.arrayContaining([
+        "/api/research/calendar",
+        "/api/research",
+        "/api/research/coverage",
+        "/research/forward-tests",
+      ]),
+    );
+  });
+
+  const research = (status: number, addMb: number, peakMb: number) =>
+    phase({
+      name: "research",
+      rows: [{ path: "/api/research", status, ms: 900, addMb }],
+      peakMb,
+    });
+
+  it("lets the once-per-boot corpus build add memory and take time, inside the peak", () => {
+    expect(verdict({ phases: [research(200, 60, 280)], state: alive, budgets }).ok).toBe(true);
+  });
+
+  it("fails a 5xx there, and a peak over budget", () => {
+    expect(verdict({ phases: [research(500, 1, 200)], state: alive, budgets }).failures).toEqual([
+      "research: /api/research answered 500",
+    ]);
+    expect(verdict({ phases: [research(200, 60, 320)], state: alive, budgets }).ok).toBe(false);
+  });
+});
+
 describe("procMemory", () => {
   it("reads resident memory, its high-water mark and the anon part in MB", () => {
     const status = "VmHWM:\t  204800 kB\nVmRSS:\t  102400 kB\nRssAnon:\t   51200 kB\n";
@@ -198,6 +232,31 @@ describe("verdict", () => {
     ]);
   });
 
+  it("prints time budgets as advisories, and keeps memory and breakage blocking, in CI mode", () => {
+    const fat = { path: "/api/wire", status: 200, ms: 400, msEach: [400, 410, 390], addMb: 25 };
+    const slow = { path: "/api/learn", status: 200, ms: 900, msEach: [900, 910, 890], addMb: 2 };
+    const slowAndFat = [fat, slow];
+    const ci = { ...budgets, advisoryLatency: true };
+    const v = verdict({
+      phases: [phase({ rows: [pulse(12, 400)] }), phase({ name: "common", rows: slowAndFat })],
+      state: alive,
+      budgets: ci,
+    });
+    expect(v.failures).toEqual(["common: /api/wire added 25 MB > budget 20 MB"]);
+    expect(v.advisories).toEqual([
+      "/api/desk/a/pulse took 400 ms > budget 150 ms",
+      "common: /api/wire took 400 ms (median) > budget 150 ms",
+      "common: /api/learn took 900 ms (median) > budget 150 ms",
+    ]);
+    const timesOnly = verdict({
+      phases: [phase({ name: "common", rows: [slow] })],
+      state: alive,
+      budgets: ci,
+    });
+    expect(timesOnly.ok).toBe(true);
+    expect(timesOnly.advisories).toHaveLength(1);
+  });
+
   it("skips the page budget for a phase the server died in — it has no peak to read", () => {
     const killed: BudgetPhase = {
       name: "accounts-open",
@@ -207,6 +266,49 @@ describe("verdict", () => {
     };
     const v = verdict({ phases: [killed], state: { ...alive, running: false }, budgets });
     expect(v.failures).toEqual(["the server exited (exit 0)"]);
+  });
+});
+
+describe("nextStep / remeasured — a breach is measured twice before it fails (#6737)", () => {
+  const ci = { ...budgets, advisoryLatency: true };
+  const run = (peakMb: number, rows: BudgetPhase["rows"] = [pulse(12, 40)]) =>
+    verdict({ phases: [phase({ peakMb, rows })], state: alive, budgets: ci });
+  const over = run(316);
+  const under = run(279);
+
+  it("fails a real regression: two readings over budget", () => {
+    expect(nextStep([over])).toBe("again");
+    expect(nextStep([over, run(312)])).toBe("fail");
+  });
+
+  it("passes when the fresh container reads under budget, and a first pass needs no second run", () => {
+    expect(nextStep([over, under])).toBe("pass");
+    expect(nextStep([under])).toBe("pass");
+  });
+
+  it("never re-runs a breakage, or a peak breach that came with one", () => {
+    const fiveHundred = [{ path: "/api/wire", status: 502, ms: 3 }];
+    expect(nextStep([run(250, fiveHundred)])).toBe("fail");
+    expect(nextStep([run(316, fiveHundred)])).toBe("fail");
+    expect(nextStep([run(250, [pulse(31, 40)])])).toBe("fail");
+    const killed = verdict({
+      phases: [phase()],
+      state: { running: false, oomKilled: true, exitCode: 137 },
+      budgets: ci,
+    });
+    expect(nextStep([killed])).toBe("fail");
+  });
+
+  it("fails a second run that breaks something else", () => {
+    expect(nextStep([over, run(250, [pulse(31, 40)])])).toBe("fail");
+  });
+
+  it("prints every run's peak and the call, and nothing for a single run", () => {
+    expect(remeasured([under], 300)).toBe("");
+    const passed = remeasured([over, under], 300);
+    expect(passed).toContain("**PASS** on the re-run");
+    expect(passed).toContain("run 1 peaked at 316 MB, run 2 peaked at 279 MB");
+    expect(remeasured([over, run(312)], 300)).toContain("**FAIL** on every run");
   });
 });
 
@@ -238,6 +340,23 @@ describe("summary", () => {
     expect(text).toContain("18,928 history samples per participant");
     expect(text).toContain("| `/api/desk/a/pulse` | 200 | 40 |");
     expect(text.trim().endsWith("**PASS** — within budget.")).toBe(true);
+  });
+
+  it("lists advisories after a PASS, under their own heading", () => {
+    const text = summary(
+      report({
+        verdict: {
+          ok: true,
+          peakMb: 180,
+          failures: [],
+          advisories: ["common: /api/learn took 900 ms (median) > budget 150 ms"],
+        },
+      }),
+    );
+    expect(text).toContain("**PASS** — within budget.");
+    expect(text).toContain(
+      "Slower than budget (advisory, not blocking):\n- common: /api/learn took 900 ms",
+    );
   });
 
   it("names a killed server and every failure instead of a peak it could not read", () => {

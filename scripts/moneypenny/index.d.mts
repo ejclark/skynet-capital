@@ -42,14 +42,20 @@ export type CalloutCtx = {
     sender?: { login?: string };
   };
 };
-/** #3913 slice 2b: `needs-eric` landed — comment once if the body never states the decision. */
+/** #3913 slice 2b: `needs-eric` landed — state a lane's ask, else comment once on the gap. */
 export function checkCallout(
   ctx: CalloutCtx,
   deps?: {
-    readComments?: (issueNumber: number) => (string | null)[];
+    readComments?: (issueNumber: number) => unknown[];
     post?: (issueNumber: number, body: string) => void;
+    readIssue?: (issueNumber: number) => {
+      body?: string | null;
+      labels?: { name: string }[];
+    } | null;
+    writeBody?: (issueNumber: number, body: string) => void;
+    now?: number;
   },
-): { posted: boolean; reason?: string; actor?: string };
+): { posted: boolean; lifted?: boolean; reason?: string; actor?: string };
 export type ClaimResult = { claimed: boolean; reason: string; number?: number; model?: string };
 /** The feedback lane's claim; refuses a parked issue before touching the lease (#3818 slice 2),
  *  re-reads the issue for a blocker the payload predates (#5266, `readIssue`), then asks the
@@ -85,7 +91,11 @@ export function claimNext(
     readPrIssues?: () => Map<number, number>;
     claims?: Record<"plan" | "feedback", typeof claimPlan>;
     /** The REST reads behind the default hold (`sweepHold`), for a spec that keeps that default. */
-    holdReads?: { readAll?: (path: string) => unknown[]; read?: (path: string) => unknown };
+    holdReads?: {
+      readAll?: (path: string) => unknown[];
+      read?: (path: string) => unknown;
+      run?: (cmd: string, args: string[]) => string;
+    };
     /** Why a pick has nothing to build (#5707, `readPickupHold`); inject it, or picks read GitHub. */
     readHold?: (issue: AdmissionIssue) => string | null;
   },
@@ -105,7 +115,13 @@ export function peekNext(
     /** The continuation context `pickContinuation` reads; inject it, or the default reads GitHub. */
     continuation?: () => unknown;
     /** The REST reads behind the default hold (`sweepHold`), for a spec that keeps that default. */
-    holdReads?: { readAll?: (path: string) => unknown[]; read?: (path: string) => unknown };
+    holdReads?: {
+      readAll?: (path: string) => unknown[];
+      read?: (path: string) => unknown;
+      /** The clock the retry limit counts a UTC day from; `Date.now()` unless a spec pins it. */
+      now?: number;
+      log?: (line: string) => void;
+    };
     /** Why a pick has nothing to build (#5707, `readPickupHold`); inject it, or picks read GitHub. */
     readHold?: (issue: AdmissionIssue) => string | null;
   },
@@ -129,5 +145,10 @@ export function claimPlan(
 ): ClaimResult;
 /** The shipped sweep, degrading to `[]` on an exhausted budget and rethrowing anything else. */
 export function sweepShipped(readIssues: () => unknown[], deps: ShippedDeps): ShippedRow[];
+/** The audit tick's reads, `null` (and one warning) on an exhausted budget; anything else rethrows. */
+export function auditIntentsOrSkip<T>(
+  readIntents: () => T[],
+  log?: (line: string) => void,
+): T[] | null;
 /** The pure router: an event (and its gathered deps) in, the intents to execute out. */
 export function route(ctx: unknown, deps?: unknown): Record<string, unknown>[];

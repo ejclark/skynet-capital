@@ -20,6 +20,10 @@ import { InlineResult } from "../ui";
  * operations setting" is the honest third choice: the app cannot see the bots app's own value, so
  * it never claims one, and choosing it hands the setting back.
  *
+ * First, on every bot, the two steering switches (#6954 slice 5b): "stop opening, keep exits" and
+ * "watch only". Each only narrows what the bot does — neither can make a bot place orders the house
+ * holds back — and the forced daily pick on this bot obeys both.
+ *
  * Under them, the change log: every change to this bot's settings, suspend included, with who
  * proposed it, who approved it, before and after (the plan's criterion 4). Ownership is the only
  * gate, so one person does both and the line says so once. The Playbook Store's writes land here
@@ -36,6 +40,9 @@ const SETTING_NAMES: Readonly<Record<string, string>> = {
   hardcore: "Build",
   betaPicks: "Forced picks per day",
   betaStage: "After-close staging",
+  breakerReset: "Breaker",
+  mode: "Watch only",
+  holdOpens: "Stop opening",
 };
 
 const SUBSCRIPTION = "subscription:";
@@ -60,6 +67,9 @@ function valueWords(setting: string, value: BotSettingChange["before"]): string 
     return typeof value === "number" ? `$${value.toLocaleString("en-US")}` : "none";
   }
   if (setting === "suspended") return value === true ? "suspended" : "on";
+  if (setting === "breakerReset") return value === null ? "never reset" : "re-armed by its owner";
+  if (setting === "mode") return value === "observe" ? "on" : "off";
+  if (setting === "holdOpens") return value === true ? "on" : "off";
   if (value === null) return OPS;
   if (setting === "hardcore") return value === true ? "hardcore" : "standard";
   if (setting === "betaPicks") return value === 0 ? "0 (off)" : String(value);
@@ -124,6 +134,8 @@ export function BotSettingsPanel({
   const buildId = useId();
   const picksId = useId();
   const stageId = useId();
+  const opensId = useId();
+  const watchId = useId();
   const settings: BotSettings | undefined = account.settings;
   if (!settings) return null;
   const hasBuild = settings.hardcore !== undefined;
@@ -133,6 +145,8 @@ export function BotSettingsPanel({
     hardcore?: boolean | null;
     betaPicks?: number | null;
     betaStage?: boolean | null;
+    watchOnly?: boolean;
+    holdOpens?: boolean;
   }) => {
     setBusy(true);
     setError(undefined);
@@ -149,6 +163,39 @@ export function BotSettingsPanel({
 
   return (
     <div className="bot-settings">
+      <div className="bot-settings-field">
+        <label htmlFor={opensId}>New positions</label>
+        <select
+          id={opensId}
+          value={String(settings.holdOpens)}
+          disabled={busy}
+          onChange={(e) => void save({ holdOpens: e.target.value === "true" })}
+        >
+          <option value="false">Open and exit</option>
+          <option value="true">Stop opening, keep exits</option>
+        </select>
+        <p className="mc-note">
+          Stopped, this bot opens nothing new, the forced daily pick included, and still sells what
+          it holds when its playbooks say so.
+        </p>
+      </div>
+      <div className="bot-settings-field">
+        <label htmlFor={watchId}>Paper orders</label>
+        <select
+          id={watchId}
+          value={String(settings.watchOnly)}
+          disabled={busy}
+          onChange={(e) => void save({ watchOnly: e.target.value === "true" })}
+        >
+          <option value="false">Place them</option>
+          <option value="true">Watch only — place nothing</option>
+        </select>
+        <p className="mc-note">
+          Watching, this bot records what it would do and places no paper orders at all, exits
+          included. It only narrows the house setting: when the house is watching, every bot
+          watches.
+        </p>
+      </div>
       {hasBuild ? (
         <div className="bot-settings-field">
           <label htmlFor={buildId}>Build</label>
@@ -219,11 +266,7 @@ export function BotSettingsPanel({
           </p>
         </div>
       ) : null}
-      {hasBuild || hasPicks ? (
-        <p className="mc-note">
-          Applies at the bots' next check-in, about 30 seconds — no restart.
-        </p>
-      ) : null}
+      <p className="mc-note">Applies at the bots' next check-in, about 30 seconds — no restart.</p>
       {error ? (
         <InlineResult as="span" tone="err">
           {error}
