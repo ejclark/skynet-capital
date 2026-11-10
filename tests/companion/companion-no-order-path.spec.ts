@@ -104,6 +104,7 @@ describe("behavioral: the dispatcher refuses every order-shaped or adversarial a
       "get_my_convictions",
       "get_my_curriculum_progress",
       "get_my_positions",
+      "get_my_research_questions",
       "get_my_round_trips",
       "get_play_catalog",
       "get_roadmap",

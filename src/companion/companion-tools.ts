@@ -11,6 +11,10 @@ import type { Outlook } from "../options/outlook.js";
 import type { Recommendation } from "../options/recommend.js";
 import type { FindSimilarFeedback } from "../server/feedback-similar.js";
 import type { ParticipantProgression, ProgressionService } from "../server/progression-service.js";
+import {
+  type ReadDeskResearchQuestions,
+  researchQuestionsResult,
+} from "../server/research-answers.js";
 import type { ReadRoadmap } from "../server/roadmap.js";
 import type { UpcomingEvents } from "../server/upcoming-events.js";
 import { MAX_ISSUES_PER_LOOKUP, type ReadWorkStatus } from "../server/work-status.js";
@@ -61,6 +65,7 @@ import {
 
 export const COMPANION_TOOL_NAMES = [
   "get_my_positions",
+  "get_my_research_questions",
   "get_my_round_trips",
   "get_my_curriculum_progress",
   "get_play_catalog",
@@ -169,6 +174,13 @@ export const COMPANION_TOOL_DEFS = [
     input_schema: { type: "object", properties: {} },
   },
   {
+    // #7286 named next slice 2 — research answers come back to the chat (`server/research-answers.ts`).
+    name: "get_my_research_questions",
+    description:
+      "What came of the research questions THIS member put on the house's research list — only their own, never anyone else's. Returns questions (newest first, up to 8), more (how many more are not shown), wait (one sentence on when the daily research pass runs, or that nothing reads the list yet) and note. Each question: kind (name, sector or market), subject, question (their own words, only when they asked first), askedAt, askedIn (a house campaign's title, 'your campaign' or 'a party campaign'; absent when asked outside a campaign), state ('answered', 'waiting' or 'no-finding-yet': it left the list and no finding is on the shelf yet), ahead (waiting only: asks ahead of it), passes (waiting only: about how many daily passes until it is taken), othersAsking (a count of other members on the same question, never who), writeUp (the research shelf file that answers it), opening (that file's first line, quoted as written) and findings (house campaign lessons that answer it, each with kind — tested, killed or on-watch — idea, on, recheckOn, falsifier and source). An empty list means they have no questions on record. Takes no input; returns 'no linked desk' without a linked account. Read-only.",
+    input_schema: { type: "object", properties: {} },
+  },
+  {
     name: "get_my_round_trips",
     description:
       "The member's own closed trades, FIFO-matched into round trips — the 10 most recent, oldest first. Each row: symbol, quantity, entryPrice, exitPrice, realized (P/L in dollars), returnPct, closedAt, and soldToOpen: true on a written (sold-to-open) option contract, where an exit near $0 means the writer kept the premium — read the outcome from realized, never from the price pair. Also returns openLots (lots still open), truncated (true when a stock sale had no visible opening lot, so the share record is a window, not the whole history) and writtenContracts (option contracts read as written — the options form of that caveat). It has no open dates or hold times. Returns 'no linked desk' when the member has no linked account. Read-only.",
@@ -268,6 +280,9 @@ export interface CompanionDeskDeps {
   /** Where a captured draft goes — the chat engine's own handoff hook, never a write. */
   readonly onDraft?: (draft: FeedbackDraft) => void;
   readonly readTradeActivity?: (participantId: string) => Promise<readonly TradeActivityRecord[]>;
+  /** #7286 named next slice 2: the desk owner's own research questions and what came of them
+   *  (`server/research-answers.ts`). Optional — without it the tool says "not available". */
+  readonly readMyResearchQuestions?: ReadDeskResearchQuestions;
   readonly progression?: ProgressionService;
   /** Rank candidate structures for a stated outlook, through the PARTICIPANT'S OWN linked broker
    *  client — never another member's. Optional, like every other capability here: a deployment
@@ -516,6 +531,9 @@ export async function runCompanionTool(
     }
     case "get_my_positions":
       return positionsResult(snapshot);
+    case "get_my_research_questions":
+      // The session's own desk only; the model's input is never read.
+      return researchQuestionsResult(deps.readMyResearchQuestions, participantId);
     case "get_my_round_trips":
       return participantId
         ? roundTripsResult(snapshot, deps.readTradeActivity, participantId)
