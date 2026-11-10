@@ -301,6 +301,9 @@ export const KIND_OPTIONS = KINDS;
 export const KIND = "Kind";
 export const WAITING_ON = "Waiting on";
 export const IN_COLUMN_SINCE = "In this column since";
+// The seat whose queue the card sits in (#6886 slice 1b). Not in FIELDS: its options are the seat
+// registry's (projects-role.mjs), so projects-setup.mjs and the reconcile sweep build it from there.
+export const ROLE = "Role";
 
 export const FIELDS = [
   { name: "Status", dataType: "SINGLE_SELECT", options: STATUS_OPTIONS },
@@ -829,16 +832,18 @@ export function priorityValues(node) {
 }
 
 /**
- * A card's Kind and "Waiting on" text from a GraphQL node's `kind` / `waiting` aliases (#6871
- * slice 3), as `{kind, waitingOn}` — only the keys GitHub set, so a field the board does not carry
- * yet (or a card never written) reads as absent. Pure.
+ * A card's Kind, "Waiting on" text and Role from a GraphQL node's `kind` / `waiting` / `role`
+ * aliases (#6871 slice 3, #6886 slice 1b), as `{kind, waitingOn, role}` — only the keys GitHub set,
+ * so a field the board does not carry yet (or a card never written) reads as absent. Pure.
  */
 export function cardFieldValues(node) {
   const kind = node?.kind?.name;
   const waitingOn = node?.waiting?.text;
+  const role = node?.role?.name;
   return {
     ...(kind ? { kind } : {}),
     ...(waitingOn ? { waitingOn } : {}),
+    ...(role ? { role } : {}),
   };
 }
 

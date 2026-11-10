@@ -117,6 +117,23 @@ feels them only as honest timing on their own ask ("queued behind 2 builds"), ne
 Below decks: 58 seats, every one in Builders, Quality, Chief of staff and Platform. A
 member sees their own ask's status in plain words, never the lanes.
 
+## The board's Role lanes
+
+Each open card on the Orchestration board gets a **Role**: the seat whose queue it sits in, and
+the field the seat swimlanes group by (#6886 slice 3 adds that view). The sync writes it from these
+rows and the issue's labels (`scripts/moneypenny/projects-role.mjs`); a card whose labels match
+more than one row takes the first. A card no row pulls gets no Role and sits in "No Role" until
+someone triages it. Who must act first is the card's "Waiting on" field, not its Role.
+
+| Order | Role | Seat | Pulls cards labelled |
+|---|---|---|---|
+| 1 | Live sessions | Live sessions | `needs-session` |
+| 2 | Design builds | Design build lane | `handoff` `needs-design` |
+| 3 | Event research | Event research lane | `event-research` |
+| 4 | Plan builds | Plan build lane | `plan` |
+| 5 | Feedback builds | Feedback build lane | `feedback` `bug` `fast-track` `ready` |
+| 6 | Bottleneck research | Batch chore fan-out and stage runner | `bottleneck` |
+
 ## Departments
 
 ### People

@@ -31,6 +31,7 @@ import { createPlayMilestoneLedger } from "../server/play-milestone-ledger.js";
 import { createSavedPositionsStore } from "../server/saved-positions-store.js";
 import { createSettingsChangeLog } from "../server/settings-change-log.js";
 import { createSubscriptionStore } from "../server/subscription-store.js";
+import { createTakenQuestStore } from "../server/taken-quest-store.js";
 
 export interface AccessSetup {
   allowlist: ReturnType<typeof createAllowlistStore>;
@@ -42,6 +43,7 @@ export interface AccessSetup {
   subscriptions: ReturnType<typeof createSubscriptionStore>;
   savedPositions: ReturnType<typeof createSavedPositionsStore>;
   exitPlans: ReturnType<typeof createExitPlanStore>;
+  takenQuests: ReturnType<typeof createTakenQuestStore>;
   authoredPlays: ReturnType<typeof createAuthoredPlayStore>;
   memberCampaigns: ReturnType<typeof createMemberCampaignStore>;
   memberChains: ReturnType<typeof createMemberChainStore>;
@@ -105,6 +107,9 @@ export function setupAccess(
   // Exit plans carried at purchase (#5709 slice 3) — a contract symbol and a timestamp per held
   // call, a sibling of the subscriptions file (no new env var).
   const exitPlans = createExitPlanStore(env, (m) => console.error(m));
+  // Quests members took (#7028 slice 6) — a quest id, an order id and the rate it carried, a
+  // sibling of the subscriptions file (no new env var).
+  const takenQuests = createTakenQuestStore(env, (m) => console.error(m));
   // Authored plays (#5457) — a member's draft playbooks, a sibling of the subscriptions file on the
   // same volume (no new env var). Plain JSON: a name, a ticker, a thesis and some numbers.
   const authoredPlays = createAuthoredPlayStore(env, (m) => console.error(m));
@@ -161,6 +166,7 @@ export function setupAccess(
     subscriptions,
     savedPositions,
     exitPlans,
+    takenQuests,
     authoredPlays,
     memberCampaigns,
     memberChains,

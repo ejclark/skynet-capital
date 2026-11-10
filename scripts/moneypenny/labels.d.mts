@@ -51,3 +51,5 @@ export function boardedReason(
 export function pullable(issue: PullableIssue | null | undefined, opts?: PullOptions): boolean;
 /** The labels that each say "this waits on someone" — nothing builds an issue carrying one. */
 export const PARKING_LABELS: readonly string[];
+/** Every label name the repo speaks — what `issue-lint` and the seat registry validate against. */
+export const LABEL_NAMES: readonly string[];

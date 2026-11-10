@@ -3,7 +3,7 @@
 // `allowJs` off (see index.d.mts for the same reasoning).
 import type { AdmissionIssue } from "./admission.d.mts";
 import type { BoardItem, StatusColumn } from "./projects.d.mts";
-import type { CardFieldWrite } from "./projects-fields.d.mts";
+import type { CardFieldWrite, WantedCardFields } from "./projects-fields.d.mts";
 import type { PriorityIssue, PriorityPlan } from "./projects-priority.d.mts";
 
 export interface BoardItemPage {
@@ -43,11 +43,29 @@ export function createBoardContext(readers?: {
   log?: (line: string) => void;
 }): BoardContext;
 
-/** Write the Status field's whole option list (`statusFieldUpdate`'s output) in place. */
+/** Write a single-select field's whole option list (Status's or Role's) in place. */
 export function writeStatusOptions(
   fieldId: string,
   options: { id?: string; name: string; color?: string; description?: string }[],
 ): unknown;
+
+/** Create a single-select field (#6886 slice 1b: the sweep makes Role itself). */
+export function createSingleSelectField(
+  input: {
+    projectId: string;
+    name: string;
+    options: { name: string; color: string; description: string }[];
+  },
+  deps?: { gh?: (argv: string[], input: string) => string },
+): { id: string; name: string; options?: { id: string; name: string }[] };
+
+/** `wantedCardFields` with Role checked against the live Role field's options (#6886 slice 1b). */
+export function wantedLiveFields(
+  issue: ColumnIssue,
+  card: Partial<WantedCard>,
+  roleField: { options?: { name: string }[] } | undefined,
+  opts?: { horizons?: Record<string, string> },
+): WantedCardFields;
 
 export function readIssueItemsFromGh(
   issue: SyncIssueRef,

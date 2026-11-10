@@ -253,6 +253,21 @@ export async function questsFor(
   };
 }
 
+/**
+ * The account a quests read is for: `?participantId=` or the session's own, and only when the
+ * session owns it — otherwise undefined, and the caller answers 404 (it does not exist for them).
+ */
+export function questsAccount(
+  params: URLSearchParams,
+  config: DashboardServerConfig,
+  session: Session | undefined,
+): string | undefined {
+  const asked = params.get("participantId") ?? "";
+  const id = asked || (config.auth ? (resolveCurrentId(session, config.resolveOwnerId) ?? "") : "");
+  const owned = config.auth ? resolveOwnedIds(session, config) : [id];
+  return id && owned.includes(id) ? id : undefined;
+}
+
 async function serveList(
   req: IncomingMessage,
   res: ServerResponse,
@@ -261,10 +276,8 @@ async function serveList(
   deps?: QuestsDeps,
 ): Promise<void> {
   const params = new URL(req.url ?? "/", "http://localhost").searchParams;
-  const asked = params.get("participantId") ?? "";
-  const id = asked || (config.auth ? (resolveCurrentId(session, config.resolveOwnerId) ?? "") : "");
-  const owned = config.auth ? resolveOwnedIds(session, config) : [id];
-  if (!(id && owned.includes(id))) {
+  const id = questsAccount(params, config, session);
+  if (!id) {
     sendJson(res, 404, { error: "no such account" });
     return;
   }

@@ -78,7 +78,8 @@ describe("position quests — calls you hold", () => {
   it("drafts on Trade for review — the member fires it, nothing places", () => {
     const [q] = questsOf({ heldCalls: [held({ bid: 24 })] });
     expect(q?.move.href).toBe(
-      "/app/trade?desk=member-1&symbol=CRWV&section=orders&manage=CRWV261120C00090000",
+      "/app/trade?desk=member-1&symbol=CRWV&section=orders&manage=CRWV261120C00090000" +
+        "&quest=position%3ACRWV261120C00090000%3Atake-profit",
     );
   });
 

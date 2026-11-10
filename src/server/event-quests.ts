@@ -1,8 +1,9 @@
 import { isTradable } from "../domain/campaigns.js";
 import type { MarketEvent } from "../domain/market-events-types.js";
-import type { Quest } from "../domain/quest.js";
+import { type Quest, withQuest } from "../domain/quest.js";
 import { CONTRACT, href } from "../options/conditions-quests.js";
 import { dayText } from "../options/position-guidance-rules.js";
+import { EVENT_UNTESTED } from "./event-quest-rate.js";
 import { readLedger } from "./ledger-stance.js";
 
 /**
@@ -40,11 +41,6 @@ export interface EventStance {
   readonly campaigns: readonly string[];
 }
 
-const UNTESTED = {
-  kind: "untested",
-  note: "No study has measured how this ledger's buy signal pays yet. It is the house's written stance, not a tested rate.",
-} as const;
-
 function quest(
   deskId: string,
   { event, md, campaigns }: EventStance,
@@ -62,15 +58,16 @@ function quest(
   if (ledger.confidence === "none") return undefined;
   const expires = until !== undefined && until < event.date ? until : event.date;
   const dateText = `${dayText(event.date)} (${event.status})`;
+  const id = `event:${event.id}:${symbol}:sell-cash-secured-put`;
   return {
-    id: `event:${event.id}:${symbol}:sell-cash-secured-put`,
+    id,
     source: "event",
     move: {
       kind: "sell-cash-secured-put",
       label: `Sell a cash-secured put on ${symbol}`,
       symbol,
       contracts: 1,
-      href: href(deskId, symbol, "201"),
+      href: withQuest(href(deskId, symbol, "201"), id),
     },
     why: [
       {
@@ -93,7 +90,7 @@ function quest(
         text: `The worst case is being assigned ${symbol} shares at the strike while they trade below it; the cash set aside covers the strike, and the premium is the only gain.`,
       },
     ],
-    baseRate: UNTESTED,
+    baseRate: EVENT_UNTESTED,
     exits: [
       {
         kind: "time",
