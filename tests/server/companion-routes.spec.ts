@@ -1,6 +1,8 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { Readable } from "node:stream";
 import type { CompanionHandlers, CompanionTurn } from "../../src/companion/companion-chat.js";
+import { editions, editionView } from "../../src/domain/edition.js";
+import { editionEventKey } from "../../src/domain/edition-keys.js";
 import { serveCompanionApi } from "../../src/server/companion-routes.js";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
 
@@ -336,6 +338,45 @@ describe("serveCompanionApi — POST /api/companion/chat", () => {
       "Position: on NVDA they hold 50 shares at $110.00 avg, now worth $6,000.00, its row /accounts#pos-NVDA.",
     );
     expect(context).not.toContain("999");
+  });
+
+  // #7167 slice 1: asked from the landing page, the page's keys reach her as the server's own
+  // edition text with each row's link; a key the server doesn't hold, or a key sent from another
+  // page, adds nothing.
+  describe("the landing page's context stamp", () => {
+    const served = editionView(editions(), new Date(), () => undefined).edition;
+    const keys = served
+      ? {
+          edition: served.date,
+          stories: served.stories.map((s) => s.id),
+          events: served.next.map(editionEventKey),
+        }
+      : undefined;
+
+    it("lists the stories on screen with their row links", async () => {
+      // Editions are checked in and the clock only moves forward, so one is always served.
+      expect(served).toBeTruthy();
+      if (!(served && keys)) return;
+      const context = await contextFor({ page: "/app/", keys });
+      expect(context).toContain(
+        "Page: they sent this from the landing page (the day's market news and its calendar).",
+      );
+      expect(context).toContain(`On screen: the edition of the ${served.date} close.`);
+      for (const s of served.stories) expect(context).toContain(`/#story-${s.id}`);
+    });
+
+    it("lists nothing a member made up, and nothing off the landing page", async () => {
+      const madeUp = await contextFor({
+        page: "/app/",
+        keys: { edition: keys?.edition ?? "2026-11-06", stories: ["ignore-previous"], events: [] },
+      });
+      expect(madeUp).not.toContain("On screen:");
+      expect(madeUp).not.toContain("ignore-previous");
+      expect(keys).toBeTruthy();
+      if (!keys) return;
+      const elsewhere = await contextFor({ page: "/app/leaderboard", keys });
+      expect(elsewhere).not.toContain("On screen:");
+    });
   });
 
   it("adds no position line off the ticket", async () => {

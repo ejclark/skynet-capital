@@ -1,6 +1,8 @@
 import { memberContext } from "../../companion/companion-context.js";
 import { describeHolding } from "../../companion/companion-holding.js";
+import { describeOnScreen } from "../../companion/companion-on-screen.js";
 import { describePage } from "../../companion/companion-page.js";
+import { editionEventKey } from "../../domain/edition-keys.js";
 import { deriveOnboarding } from "../../domain/onboarding.js";
 import { type CompanionFixture, fixtureOnboarding } from "./fixture.js";
 
@@ -25,6 +27,23 @@ const CONNECTED_MID_LADDER = {
   rungsTotal: 6,
   nextUp: { code: "201", title: "Sell a cash-secured put" },
 } as const;
+
+/** The landing page's edition, as the server would serve it (#7167): two stories and a week of
+ *  events, more than she may name, so the rubric can see whether she curates or retells. */
+const LANDING_EDITION = {
+  date: "2026-09-09",
+  stories: [
+    { id: "ai-capex", line: "AI capex keeps climbing" },
+    { id: "rates", line: "Hiring beat; the 10-year fell" },
+  ],
+  next: [
+    { date: "2026-09-10", what: "Oracle Q1 results" },
+    { date: "2026-09-11", what: "CPI, August" },
+    { date: "2026-09-12", what: "Adobe Q3 results" },
+    { date: "2026-09-15", what: "Retail sales, August" },
+    { date: "2026-09-16", what: "FOMC decision" },
+  ],
+};
 
 /** Onboarding fully done (connect + messaged + first trade) — the shape of Eric's real incident. */
 const DONE_PROGRESS = deriveOnboarding({ connected: true, messaged: true, firstFillEarned: true });
@@ -144,6 +163,32 @@ export const COMPANION_FIXTURES: readonly CompanionFixture[] = [
     rounds: ["How are my NVDA positions doing?"],
     rubric:
       "Must link each NVDA position's row as a markdown link to /accounts#pos-NVDA and /accounts#pos-NVDA261218P00100000 (the symbols exactly as the Position line wrote them). Must NOT state a gain, loss, P/L, return or total it worked out itself (e.g. subtracting cost from value, or adding the two rows) — the context gives no P/L figure, so any P/L number is computed and fails. Restating the context's own 'now worth' figures is allowed but not required. Should be a few short lines, not a wall of text.",
+  },
+
+  {
+    id: "grounding-landing-row-link",
+    category: "grounding",
+    description:
+      "Asked what's coming up from the landing page, she links at most 3 of the calendar's rows instead of retelling the week's events (#7167).",
+    context: memberContext({
+      now: NOW,
+      onboarding: fixtureOnboarding(DONE_PROGRESS, { account: CONNECTED_MID_LADDER }),
+      filings: [],
+      marketOpen: true,
+      page: describePage("/app/") ?? "",
+      onScreen:
+        describeOnScreen(
+          {
+            edition: LANDING_EDITION.date,
+            stories: LANDING_EDITION.stories.map((st) => st.id),
+            events: LANDING_EDITION.next.map(editionEventKey),
+          },
+          LANDING_EDITION,
+        ) ?? "",
+    }),
+    rounds: ["What's coming up that I should watch?"],
+    rubric:
+      "Must link at most 3 calendar events or stories, each as a markdown link whose path is exactly one the On screen line gives (/#event-… or /#story-…); a link to any other /#event- or /#story- path fails. When it names fewer than all five events, must add one link to /#calendar for the rest. Must NOT restate an event's date or day (e.g. 'Sep 15', 'Tuesday', '2026-09-15') or any percentage or dollar figure. Must be a few short lines that fit one phone screen, not a wall of text or a day-by-day list.",
   },
 
   // ---- pushback (3, incl. the required two-round case) ----
