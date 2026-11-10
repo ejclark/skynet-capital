@@ -1,9 +1,10 @@
 /**
- * DOES A LANE READ THE QUEUE? Not yet (#7034 slice 3b, 2026-11-09): nothing outside the specs calls
- * `takeForPass`, and the queue is a file on the dashboard's volume that the research lane, which
- * runs in GitHub Actions, cannot reach. Wiring it is a protected platter item (a workflow, a lane
- * prompt, and a credentialed read), Eric's to merge. Until it lands this stays false and every word
- * a member reads about the wait says so: "about N research passes" would promise a wait nothing
- * honors, which the honesty rule forbids. Flip it in the same PR that wires the lane.
+ * DOES A LANE READ THE QUEUE? Yes, once `.github/workflows/moneypenny-discovery.yml` is on `main`
+ * (#7034 slice 3b, 2026-11-09). Before that nothing outside the specs called `takeForPass`, and
+ * every word a member read about the wait said so. The lane runs once a day, so the wait it
+ * promises is in days: it reads the queue off the dashboard's volume, takes at most the work
+ * spigot's research ceiling, and lands each finding as a PR on the research shelf
+ * (`domain/discovery-pass.ts`). If that workflow is ever removed, set this back to false in the
+ * same change: "about N research passes" would then promise a wait nothing honors.
  */
-export const LANE_READS_QUEUE = false;
+export const LANE_READS_QUEUE = true;

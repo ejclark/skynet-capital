@@ -64,7 +64,6 @@ export function wantedLiveFields(
   issue: ColumnIssue,
   card: Partial<WantedCard>,
   roleField: { options?: { name: string }[] } | undefined,
-  opts?: { horizons?: Record<string, string> },
 ): WantedCardFields;
 
 export function readIssueItemsFromGh(
@@ -182,16 +181,12 @@ export function syncIssue(
       parent: number | null;
     };
 
-/** The hand Horizon triage file (issue number → Now/Next/Later), read once per process. */
-export function readHorizons(): Record<string, string>;
-
 /** One open issue's Priority card brought in line, or a drag carried back to its labels (#6871). */
 export function syncPriority(input: {
   issue: PriorityIssue;
   item?: BoardItem;
   fresh?: boolean;
   ready?: boolean;
-  horizons?: Record<string, string>;
   io: {
     readFresh: () => BoardItem | undefined;
     setPriority: (name: string) => void;

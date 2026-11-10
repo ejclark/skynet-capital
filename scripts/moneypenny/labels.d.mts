@@ -51,5 +51,16 @@ export function boardedReason(
 export function pullable(issue: PullableIssue | null | undefined, opts?: PullOptions): boolean;
 /** The labels that each say "this waits on someone" — nothing builds an issue carrying one. */
 export const PARKING_LABELS: readonly string[];
+
+/** A registered label: `managed` ones are applied by a lane; the rest are only named here. */
+export interface LabelSpec {
+  name: string;
+  color: string;
+  description: string;
+  managed?: boolean;
+}
+export const LABELS: Record<string, LabelSpec>;
+/** `P0`–`P3`, in lane order. */
+export const PRIORITY_LABELS: string[];
 /** Every label name the repo speaks — what `issue-lint` and the seat registry validate against. */
 export const LABEL_NAMES: readonly string[];
