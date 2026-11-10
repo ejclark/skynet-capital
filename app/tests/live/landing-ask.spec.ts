@@ -3,8 +3,10 @@ import { readFileSync } from "node:fs";
 import type { EditionStory } from "../../src/live/edition";
 import {
   askedByLine,
+  askForResearch,
   askTarget,
   chatQuestion,
+  filedLine,
   HOLDER,
   holderLine,
   NO_RECORD,
@@ -171,5 +173,36 @@ describe("what other members asked", () => {
     expect(replyLine({ ok: false, error: "That campaign isn't one you can ask in." })).toMatch(
       /can't|isn't/,
     );
+  });
+});
+
+describe("filing a research ask from the fast track (#7034 slice 3c)", () => {
+  const realFetch = globalThis.fetch;
+  afterEach(() => {
+    globalThis.fetch = realFetch;
+  });
+
+  it("posts a bare name ask, with no campaign, to the same route the campaigns use", async () => {
+    const seen: { url: string; body: unknown }[] = [];
+    globalThis.fetch = ((url: string, init?: RequestInit) => {
+      seen.push({ url, body: JSON.parse(String(init?.body)) });
+      return Promise.resolve(Response.json({ ok: true, tell: "Queued." }));
+    }) as typeof globalThis.fetch;
+    await askForResearch("NVDA");
+    expect(seen).toEqual([{ url: "/api/campaigns/ask", body: { kind: "name", subject: "NVDA" } }]);
+  });
+
+  it("shows the queue's own sentence for the wait, and its refusal in the server's words", () => {
+    expect(filedLine({ ok: true, tell: "Queued. It is next in line." })).toBe(
+      "Queued. It is next in line.",
+    );
+    expect(filedLine({ ok: false, error: "You already have 3 questions waiting." })).toMatch(
+      /already have/,
+    );
+  });
+
+  it("never invents a time when the server sent no sentence", () => {
+    expect(filedLine({ ok: true })).toBe("Kept on the research list.");
+    expect(filedLine({ ok: true })).not.toMatch(/\d|pass|day/);
   });
 });
