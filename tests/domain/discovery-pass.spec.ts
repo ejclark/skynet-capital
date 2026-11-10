@@ -1,3 +1,4 @@
+import { memberCampaignId } from "../../src/domain/campaign-form.js";
 import {
   branchFor,
   discoverySlug,
@@ -7,6 +8,9 @@ import {
   withoutAnswered,
 } from "../../src/domain/discovery-pass.js";
 import type { DiscoveryAsk } from "../../src/domain/discovery-queue.js";
+import { queueAsk } from "../../src/domain/discovery-queue.js";
+import { parseDiscoveryQueue } from "../../src/server/discovery-queue-store.js";
+import { opaqueMemberId } from "../../src/server/feedback-attribution.js";
 
 const ask = (
   over: Partial<DiscoveryAsk> & Pick<DiscoveryAsk, "kind" | "subject">,
@@ -54,7 +58,10 @@ describe("planPass (#7034 slice 3b)", () => {
       answered: (a) => a.subject === "PLTR",
       openHeads: [branchFor(queue[1] as DiscoveryAsk)],
     });
-    expect(taken.map((t) => t.id)).toEqual(["energy-for-ai/name:CEG", "abc1234567~mine/name:NVDA"]);
+    expect(taken.map((t) => t.id)).toEqual([
+      "energy-for-ai/name:CEG",
+      `${discoverySlug(queue[3] as DiscoveryAsk).slice(-8)}/name:NVDA`,
+    ]);
   });
 
   it("hands a session the subject and never a member's words or keys", () => {
@@ -74,6 +81,37 @@ describe("planPass (#7034 slice 3b)", () => {
       "subject",
     ]);
     expect(JSON.stringify(first)).not.toMatch(/buy|abcdef0123/);
+  });
+
+  // #7336: a question asked in a member's own draft campaign reached the public run log with the
+  // member's key in the taken ask's id. That key is also the `member-<id>` label beside their name.
+  it("hands a member-campaign ask on without the member's key or campaign in any field", () => {
+    const key = opaqueMemberId("ada@example.com");
+    const campaign = `${key}~${memberCampaignId("Private hedge idea")}`;
+    const queued = queueAsk(
+      [],
+      { kind: "name", subject: "TLT", by: key, campaign, question: "hedge my bonds?" },
+      [],
+      () => false,
+      new Date("2026-11-10T10:00:00.000Z"),
+    );
+    const onVolume = parseDiscoveryQueue(JSON.parse(JSON.stringify(queued.queue))) ?? [];
+    expect(onVolume.map((a) => a.id)).toEqual([`${campaign}/name:TLT`]);
+
+    const [taken] = planPass({
+      queue: onVolume,
+      ceiling: 1,
+      spentByEvents: 0,
+      answered: nothingAnswered,
+      openHeads: [],
+    });
+    expect(taken?.subject).toBe("TLT");
+    expect(taken?.id).toMatch(/^[0-9a-f]{8}\/name:TLT$/);
+    expect(JSON.stringify(taken)).not.toMatch(new RegExp(`${key}|private|hedge|~`));
+  });
+
+  it("keeps a house-campaign ask's id as queued, since its lesson record answers that id", () => {
+    expect(toTaken(queue[2] as DiscoveryAsk).id).toBe("energy-for-ai/name:CEG");
   });
 });
 
