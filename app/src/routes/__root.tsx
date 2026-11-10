@@ -11,6 +11,7 @@ import { useMoneypenny } from "../live/moneypenny";
 import { BrandEye } from "../shell/brand-eye";
 import { EyeLight } from "../shell/eye-light-layer";
 import { KeyboardChords } from "../shell/keyboard";
+import { LockInMoments } from "../shell/lock-in-ceremony";
 import { MemberMenu } from "../shell/member-menu";
 import { MoneypennyRail } from "../shell/moneypenny-rail";
 import { ShellError } from "../shell/route-error";
@@ -172,6 +173,7 @@ function RootShell(): ReactElement {
         <Vantage root={app} />
         <EyeLight root={app} />
         <KeyboardChords />
+        <LockInMoments />
       </div>
       <MoneypennyRail />
     </div>

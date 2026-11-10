@@ -8,7 +8,8 @@ import { type DeskOrderEvent, invalidateDesk, useOrderFill } from "../live/desk-
 import { parseQuantity } from "../live/quantity";
 import { InlineResult } from "../ui";
 import { isCompletedFill, useFillFlare } from "./fill-flare";
-import { type LockInFlag, lockedIn } from "./locked-in";
+import { useLockInMoment } from "./lock-in-ceremony";
+import type { LockInFlag } from "./locked-in";
 
 /**
  * WHAT A CLOSE DID, SAID ONCE IT IS SENT (#5959). Three gaps one report found:
@@ -37,7 +38,8 @@ export interface SentClose {
   readonly count: number;
   readonly estNotional?: number;
   /** Set when the position was marked Consider for its gain as this close was sent (#4609): its
-   *  fill is then said as a locked-in profit, with the reason (`locked-in.ts`). */
+   *  fill is then said as a locked-in profit, with the reason (`locked-in.ts`), here and in the
+   *  full celebration (`lock-in-ceremony.tsx`). */
   readonly lockIn?: LockInFlag;
 }
 
@@ -161,7 +163,10 @@ export function CloseReceipt({
 }): ReactElement {
   const queryClient = useQueryClient();
   const fill = useOrderFill(deskId, sent.orderId);
-  useFillFlare(fill);
+  // A locked-in profit gets the full celebration (`lock-in-ceremony.tsx`), whose shell flares the
+  // tower as the member leaves it: a flare at the fill would be spent under its opaque backdrop.
+  const kept = useLockInMoment(sent, fill);
+  useFillFlare(kept ? undefined : fill);
   const filled = isCompletedFill(fill);
   useEffect(() => {
     if (filled) refreshAfterClose(queryClient, deskId);
@@ -171,7 +176,6 @@ export function CloseReceipt({
     return () => clearTimeout(timer);
   }, [queryClient, deskId]);
   const line = soldLine(sent, fill);
-  const kept = lockedIn(sent, fill);
   return (
     <div className="close-receipt">
       <InlineResult as="span" tone={line.tone} className="tkt-close-note">

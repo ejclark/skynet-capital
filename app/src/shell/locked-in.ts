@@ -20,7 +20,7 @@ import { isCompletedFill } from "./fill-flare";
  * moment the order is sent, never re-read at the fill: by then the desk has refetched, and a full
  * close has no row left to ask. A written option is judged on its strike first and the opened row
  * has no live stock price, so a sold option is never flagged here (a badge we cannot confirm is a
- * celebration we must not make) — threading the price in is slice 2's.
+ * celebration we must not make) — threading the price in is #7383.
  *
  * WHO MAY SEE IT. The fill is the one `useOrderFill` hands the receipt: the desk's own stream,
  * owner-scoped on the server through `forVisibility` (#1211; `src/server/desk-events-route.ts`) and
@@ -32,6 +32,9 @@ import { isCompletedFill } from "./fill-flare";
  * about the market or about what the rest will do. A close that realized nothing or a loss is not
  * a locked-in profit: `lockedIn` returns undefined and the receipt's plain "Sold …" line stands
  * alone, with no celebration and no penalty (CLAUDE.md → *Positive reinforcement over negative*).
+ *
+ * THE MOMENT ITSELF (slice 2) is `lock-in-ceremony.tsx`: the full-screen celebration these words
+ * sit in, shown by one host in the root shell so a full close emptying the row cannot cut it off.
  */
 
 /** One buy's size and cost: per share, or per contract for an option — the scale a fill price ×
@@ -57,8 +60,10 @@ export interface LockInFlag {
 export interface LockedIn {
   /** Dollars realized by this fill, always above zero. */
   readonly realized: number;
-  /** "Locked in $1,240 on 2 AMD $180 CALL" */
+  /** "Locked in $1,240 on 2 contracts of AMD $180 call" */
   readonly headline: string;
+  /** What the fill closed, the headline's tail: "2 contracts of AMD $180 call". */
+  readonly what: string;
   /** "The other 2 contracts are still running." on a partial close; "Closed in full." otherwise. */
   readonly rest: string;
   /** The reason the call was right, past tense. */
@@ -142,9 +147,11 @@ export function lockedIn(
   if (Math.round(realized) <= 0) return undefined;
   const left = flag.held - qty;
   const partial = left > 0;
+  const what = `${units(qty, option)} of ${sent.display}`;
   return {
     realized,
-    headline: `Locked in ${dollars(realized)} on ${units(qty, option)} of ${sent.display}`,
+    headline: `Locked in ${dollars(realized)} on ${what}`,
+    what,
     rest: partial
       ? left === 1
         ? `The other ${option ? "contract" : "share"} is still running.`
