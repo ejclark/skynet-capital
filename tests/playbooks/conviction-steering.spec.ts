@@ -15,6 +15,7 @@ import {
   resolveSteering,
   type SteerBounds,
 } from "../../src/playbooks/conviction-steering.js";
+import type { HoldLookup } from "../../src/playbooks/conviction-adoptions.js";
 import { ConvictionStore, lookupConviction } from "../../src/playbooks/conviction-store.js";
 import { CRWV_LONG_CALL, CRWV_WHEEL } from "../../src/playbooks/registry.js";
 import { steeredBy } from "../../src/playbooks/steered-playbook.js";
@@ -42,6 +43,10 @@ const BOUNDS: SteerBounds = {
 const resolve = (narrowings: readonly Narrowing[], strict = true) =>
   resolveSteering(narrowings, BOUNDS, AI_DIP_2026_10.claims, strict);
 
+/** No adopted change holds any pair. These specs test what a view's narrowings do; the committed
+ *  ledger can hold a pair shut (claim 2a's fail held CRWV-WHEEL, #5482), which
+ *  conviction-adoptions.spec.ts covers. */
+const NO_HOLDS: HoldLookup = () => undefined;
 const ACCOUNT = "acct-eric";
 const aiDipSub = (playbookId: string) =>
   aSubscription(ACCOUNT, playbookId, { convictionId: "ai-dip-2026-10" });
@@ -361,11 +366,16 @@ describe("CRWV-WHEEL under the AI-dip view", () => {
       [...quotes("put", puts, asOf), ...quotes("call", calls, asOf)],
       { CRWV: LISTED },
     );
-  const narrowed = steeredBy(CRWV_WHEEL, aiDipSub("CRWV-WHEEL")).playbook;
+  const narrowed = steeredBy(
+    CRWV_WHEEL,
+    aiDipSub("CRWV-WHEEL"),
+    lookupConviction,
+    NO_HOLDS,
+  ).playbook;
   const strikeOf = (intents: readonly OrderIntent[]) => intents[0]?.option?.legs[0]?.occSymbol;
 
   it("is steered by the record, naming the floor it read", () => {
-    const result = steeredBy(CRWV_WHEEL, aiDipSub("CRWV-WHEEL"));
+    const result = steeredBy(CRWV_WHEEL, aiDipSub("CRWV-WHEEL"), lookupConviction, NO_HOLDS);
     expect(result).toMatchObject({
       says: [expect.stringMatching(/^strikes at or under \$53\.67 /)],
     });
@@ -435,6 +445,7 @@ describe("a subscription runs the playbook its conviction narrows", () => {
       ],
       undefined,
       (id) => (id === theirs.id ? theirs : lookupConviction(id)),
+      NO_HOLDS,
     );
     expect(roster.steeringRefused).toEqual([]);
     expect(roster.steered).toEqual([
@@ -489,10 +500,15 @@ describe("a subscription runs the playbook its conviction narrows", () => {
     };
     const reason =
       'conviction "ai-dip-2026-10" is refused whole: 7-45 days to expiry is wider than this playbook\'s 14-45';
-    const result = steeredBy(CRWV_WHEEL, aiDipSub("CRWV-WHEEL"), () => widening);
+    const result = steeredBy(CRWV_WHEEL, aiDipSub("CRWV-WHEEL"), () => widening, NO_HOLDS);
     expect(result).toEqual({ playbook: CRWV_WHEEL, refused: reason });
     // The roster fails safe: the pair stays on it, exits only, and the reason is reported.
-    const roster = subscriptionRoster([aiDipSub("CRWV-WHEEL")], undefined, () => widening);
+    const roster = subscriptionRoster(
+      [aiDipSub("CRWV-WHEEL")],
+      undefined,
+      () => widening,
+      NO_HOLDS,
+    );
     expect(roster.enabled).toEqual([{ playbook: CRWV_WHEEL, mode: "standard", exitsOnly: true }]);
     expect(roster.steeringRefused).toEqual([`CRWV-WHEEL: ${reason}`]);
     expect(roster.steered).toEqual([]);
