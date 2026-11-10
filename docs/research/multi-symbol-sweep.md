@@ -309,6 +309,20 @@ robust, alpha fragile — is the finding.
   moved GDPNow's inventories line −0.0952pp; do not re-register the 0.1pp bound as exceptionless, and do
   not read it as a regime without a second pre-benchmark edition.
 
+- **"The 2026-11-09 solo GDPNow vintage moves change-in-inventory-investment by 0.10pp or more", registered
+  LOUD against an 84.6%-quiet structural cell on a September class of n=5
+  (FT-wholesale-trade-2026-11-09-1)** — added 2026-11-10 from the
+  [wholesale-trade-2026-11-09 close-out](events/wholesale-trade-2026-11-09.md). The vintage moved
+  **−0.0661pp** (0.5897 → 0.5236), quiet; the September class becomes n=6, median 0.1261pp, 3 of 6 quiet. Do
+  not cite the September reference month as a reason to expect a loud wholesale vintage; the early-quarter
+  posting position (solo, prior-quarter) is the better predictor.
+
+- **"SPY's session range is below the unconditional 0.977% baseline on a Monday, CPI-eve, wholesale-release
+  day" (FT-wholesale-trade-2026-11-09-2)** — added 2026-11-10 from the same close-out. The session printed a
+  **1.90%** range (+2.37% close to close, VIX 25.64 → 19.92) after a 4.54% range the Thursday before; the
+  stacked-quiet classes were fitted in a VIX ~14.5 regime. Do not register a session-range bet from
+  unconditional class medians without conditioning on the prior close's VIX regime.
+
 - **A 30Y reopening's bid-to-cover band as "yield-insensitive", registered as 2.30–2.52 on evidence that
   stopped at a 5.058% clearing yield (FT-treasury-30y-bond-2026-10-08-1)** — added 2026-10-09 from the
   [treasury-30y-bond-2026-10-08 close-out](events/treasury-30y-bond-2026-10-08.md). The 2026-10-08 second
