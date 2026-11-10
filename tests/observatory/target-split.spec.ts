@@ -1,4 +1,8 @@
-import { judgeTargetSplit, parseTargetSplit } from "../../src/observatory/target-split.js";
+import {
+  compareSplit,
+  judgeTargetSplit,
+  parseTargetSplit,
+} from "../../src/observatory/target-split.js";
 
 /**
  * A target split (#4607) is the member's own three whole percents that add to 100, plus a tolerance
@@ -66,5 +70,50 @@ describe("parseTargetSplit", () => {
     const { updatedAt: _dropped, ...noStamp } = record;
     expect(parseTargetSplit(noStamp)).toBeUndefined();
     expect(parseTargetSplit({ ...record, cashPct: 31 })).toBeUndefined();
+  });
+});
+
+/**
+ * #4607 slice 2: the book against the member's target. The gap is actual − target in points and the
+ * same share of the bar's whole in dollars; a slice is over or under only past the tolerance.
+ */
+describe("compareSplit", () => {
+  const target = { sharesPct: 60, optionsPct: 15, cashPct: 25, tolerancePct: 5 };
+
+  it("names each slice's gap in points and in dollars of the whole", () => {
+    const comparison = compareSplit(
+      { sharesPct: 50, optionsPct: 25, cashPct: 25, total: 41_000 },
+      target,
+    );
+    expect(comparison?.outside).toBe(true);
+    expect(comparison?.slices.map((s) => [s.key, s.gapPct, s.gapDollars, s.status])).toEqual([
+      ["sharesPct", -10, -4_100, "under"],
+      ["optionsPct", 10, 4_100, "over"],
+      ["cashPct", 0, 0, "within"],
+    ]);
+  });
+
+  it("calls a slice within until it passes the tolerance, not when it reaches it", () => {
+    const comparison = compareSplit(
+      { sharesPct: 55, optionsPct: 20, cashPct: 25, total: 10_000 },
+      target,
+    );
+    expect(comparison?.outside).toBe(false);
+    expect(comparison?.slices.every((s) => s.status === "within")).toBe(true);
+  });
+
+  it("trims and adds the same dollars, so the moves land the book on the target", () => {
+    const comparison = compareSplit(
+      { sharesPct: 41.3, optionsPct: 33.9, cashPct: 24.8, total: 952_378 },
+      target,
+    );
+    const net = comparison?.slices.reduce((sum, s) => sum + s.gapDollars, 0) ?? NaN;
+    expect(Math.abs(net)).toBeLessThanOrEqual(1);
+  });
+
+  it("refuses an empty or unreadable book rather than invent a gap", () => {
+    const empty = { sharesPct: 0, optionsPct: 0, cashPct: 0 };
+    expect(compareSplit({ ...empty, total: 0 }, target)).toBeUndefined();
+    expect(compareSplit({ ...empty, total: Number.NaN }, target)).toBeUndefined();
   });
 });
