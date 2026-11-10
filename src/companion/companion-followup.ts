@@ -53,8 +53,32 @@ export const FOLLOWUP_CARD_SHOWN =
 
 const NUMBER_ERROR = "issueNumber must be the number of one of the member's own filings";
 const DETAILS_ERROR = "details must say what to add, in the member's own words";
+const MARKUP_ERROR =
+  "details must be plain sentences: no [words](links), no * or __ marks, and no bullet, numbered or heading lines, and no invisible characters. The member's card shows the text exactly as it will post";
 const NONE_FILED =
   "this member has filed nothing yet, so there is no filing of theirs to follow up on — offer draft_feedback instead";
+
+/**
+ * Markup the rail would redraw (#7286 slice 8 review): the card is drawn through her reply
+ * formatting (`app/src/live/moneypenny-markdown.ts`, `moneypenny-links.ts`), which shows only the
+ * words of a `[words](target)` link and drops emphasis and list or heading marks, while the tap
+ * posts the raw text. A link's hidden target could carry words the member never saw, and their tap
+ * is the only consent, so a draft carrying any of it is refused and the card always shows exactly
+ * what posts (`app/tests/shell/mp-message-followup.spec.tsx` draws the card and checks the two agree).
+ */
+const REDRAWN: readonly RegExp[] = [
+  /\[[^\]\n]*\]\(/, // a markdown link or image: its target is hidden
+  /\*/, // bold or italic by asterisks
+  /__/, // bold by underscores
+  /^\s*(?:[-+]\s|\d{1,3}[.)]\s)/m, // a bullet or numbered line, at any indent (the renderer's own test)
+  /^\s{0,3}#{1,6}\s/m, // a heading line
+  // Invisible format characters (zero-width, direction overrides, tag characters) carry text the
+  // card cannot show; the emoji joiner U+200D is the one kept, so a family emoji still drafts.
+  /(?!‍)\p{Cf}/u,
+];
+
+/** Whether the rail would draw `text` differently from how it posts. */
+export const redrawnOnCard = (text: string): boolean => REDRAWN.some((re) => re.test(text));
 
 /** The model's draft, bounded and typed, or the reason it isn't one. Ownership is checked after. */
 export function parseFollowup(
@@ -70,14 +94,16 @@ export function parseFollowup(
   }
   const details = typeof raw.details === "string" ? raw.details.trim() : "";
   if (!details) return { error: DETAILS_ERROR };
-  return { issueNumber, details: details.slice(0, FOLLOWUP_MAX_CHARS) };
+  const capped = details.slice(0, FOLLOWUP_MAX_CHARS);
+  if (redrawnOnCard(capped)) return { error: MARKUP_ERROR };
+  return { issueNumber, details: capped };
 }
 
 export const FOLLOWUP_TOOL_DEFS = [
   {
     name: "draft_followup",
     description:
-      "Show the member a DRAFT follow-up comment on one of their OWN filings as a card in the rail. Posts NOTHING: only the member's own tap on the card adds it to the filing. Call it once the member agreed, in their latest message, to add something to a filing they already made. issueNumber must be one of their own filings (the numbers in the MEMBER CONTEXT filings line); details is what to add, in their own words. Returns shown: true and a status line; returns an error naming their own filings when the number isn't one of them.",
+      "Show the member a DRAFT follow-up comment on one of their OWN filings as a card in the rail. Posts NOTHING: only the member's own tap on the card adds it to the filing. Call it once the member agreed, in their latest message, to add something to a filing they already made. issueNumber must be one of their own filings (the numbers in the MEMBER CONTEXT filings line); details is what to add, in their own words, as plain sentences with no links or formatting. Returns shown: true and a status line; returns an error naming their own filings when the number isn't one of them.",
     input_schema: {
       type: "object",
       properties: {

@@ -1,4 +1,4 @@
-import type { FollowupDraft } from "../../../src/companion/companion-followup";
+import { type FollowupDraft, redrawnOnCard } from "../../../src/companion/companion-followup";
 import { followupRequest, followupSentLine } from "./feedback";
 import type { Chip } from "./moneypenny-script";
 
@@ -19,6 +19,10 @@ export type { FollowupDraft };
  * Anything else the member types is a normal message and the card stays parked, so a question about
  * the card never posts it. Her own words can never post it either: only the member's message
  * reaches `followupAnswerFor`. A failed or refused post leaves the card parked for another tap.
+ *
+ * The card shows exactly what the tap posts: the chat refuses a draft carrying markup this thread
+ * would redraw (`redrawnOnCard` — a link's target is hidden here), and the lane refuses one again
+ * should it arrive any other way, so a member never consents to words they did not see.
  */
 
 export type FollowupAnswer = "post" | "not-now";
@@ -67,6 +71,12 @@ export function createFollowupLane(deps: FollowupLaneDeps) {
     act: async (answer: FollowupAnswer, draft: FollowupDraft): Promise<boolean> => {
       if (answer === "not-now") {
         await deps.say(["Moneypenny · set aside — nothing was posted."]);
+        return true;
+      }
+      if (redrawnOnCard(draft.details)) {
+        await deps.say([
+          "Moneypenny · that draft has formatting the card can't show exactly as it would post, so nothing was posted. ask me to write it again as plain sentences.",
+        ]);
         return true;
       }
       let reply: Awaited<ReturnType<typeof followupRequest>>;

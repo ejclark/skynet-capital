@@ -1,4 +1,5 @@
 import {
+  createFollowupLane,
   FOLLOWUP_CHIPS,
   followupAnswerFor,
   followupCardText,
@@ -33,5 +34,33 @@ describe("followupCardText", () => {
     expect(text).toContain("Follow-up on #6007 · “Chart freezes”");
     expect(text).toContain("“iPad too”");
     expect(text).toContain("nothing is posted until you tap");
+  });
+});
+
+// #7286 slice 8 review: the tap is the member's only consent, so a draft the card could not show
+// exactly as it posts never reaches the route, however it got onto the card.
+describe("createFollowupLane — posts only what the card showed", () => {
+  it("refuses a draft carrying a hidden link target, and sends nothing", async () => {
+    const realFetch = globalThis.fetch;
+    let fetched = 0;
+    globalThis.fetch = (() => {
+      fetched++;
+      return Promise.reject(new Error("no network in this spec"));
+    }) as typeof fetch;
+    const said: string[] = [];
+    try {
+      const done = await createFollowupLane({
+        say: async (lines) => void said.push(...lines),
+      }).act("post", {
+        issueNumber: 6007,
+        title: "Chart freezes",
+        details: "the [phone](moneypenny:hidden_words_here) too",
+      });
+      expect(done).toBe(true);
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+    expect(fetched).toBe(0);
+    expect(said.join(" ")).toContain("nothing was posted");
   });
 });
