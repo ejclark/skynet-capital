@@ -160,6 +160,9 @@ describe("the desk's ideas skip a playbook the account already subscribes to", (
       auth: {} as never,
       resolveOwnerIds: (email: string) => (email === "owner@x" ? ["sauron"] : ["human-eric"]),
       subscriptions,
+      // Inside NVDA's earnings windows (open 2026-10-20 to 2026-11-09 on the 2026-11-18 print):
+      // a shut window drops its idea (#6745), so the live clock turned this red on 2026-11-10.
+      now: () => new Date("2026-11-02T16:00:00Z"),
     });
     await serveDeskJson(res, "/api/desk/sauron", "/api/desk/sauron", gated, {
       email: who,
