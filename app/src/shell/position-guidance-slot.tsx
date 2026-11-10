@@ -11,6 +11,7 @@ import { priceRange } from "../live/price-context";
 import { CONFIDENCE_METER, type RowCall } from "../live/row-call";
 import { LessonTerm } from "./glossary-term";
 import { PositionActs } from "./position-act";
+import { PositionAsk, PositionThreadLine } from "./position-thread";
 import { SymbolRecapFor } from "./symbol-recap-for";
 import type { RowMark } from "./use-row-marks";
 
@@ -38,6 +39,8 @@ import type { RowMark } from "./use-row-marks";
  * and Undo are the owner's (ownership-gated controls); everyone sees the marks.
  * Last, "Full page ›" (#5070 slice 6, `position-page.tsx`): the opt-in deep dive, whose one way
  * back returns to this row, still open.
+ * On the member's own trading account the opened guidance also asks Moneypenny about this holding,
+ * and the question's side thread sits collapsed under the line (#7167, `position-thread.tsx`).
  * On a bot's own book, the playbook that opened the position rides one line under it (#5073 slice
  * 4b, `position-playbook-tag.tsx`) — beneath what opens, so the guidance still opens under its line.
  */
@@ -137,6 +140,7 @@ export function GuidanceSlot({
   onFullPage,
   onAside,
   onUndo,
+  threaded = false,
 }: {
   readonly position: DeskPosition;
   /** The account's positions: what a close frees depends on what else is held (slice 3). */
@@ -161,6 +165,9 @@ export function GuidanceSlot({
   /** Not now, with the price a share row watches while it is aside (`shareWatch`). */
   readonly onAside: (watch?: MarkWatch) => void;
   readonly onUndo: () => void;
+  /** The member's own trading account (`useOwnTradingAccount`): the opened guidance offers a
+   *  question to Moneypenny, and the row carries its side thread (#7167, `position-thread.tsx`). */
+  readonly threaded?: boolean;
 }): ReactElement {
   const [open, setOpen] = useState(initialOpen);
   const openId = useId();
@@ -218,6 +225,7 @@ export function GuidanceSlot({
               {call.word}, {call.confidence} confidence — from your guidance read at {call.readAt}.
             </p>
           ) : null}
+          {threaded ? <PositionAsk position={position} /> : null}
           {canTrade ? (
             <PositionActs
               deskId={deskId}
@@ -258,6 +266,7 @@ export function GuidanceSlot({
         </div>
       ) : null}
       {playbook}
+      {threaded ? <PositionThreadLine position={position} /> : null}
     </div>
   );
 }

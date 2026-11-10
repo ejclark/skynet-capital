@@ -21,6 +21,7 @@ import { PositionCards } from "./position-cards";
 import { GuidanceSlot } from "./position-guidance-slot";
 import { PositionPicture } from "./position-picture";
 import { PositionPlaybookTag, usePlaybookCards } from "./position-playbook-tag";
+import { useOwnTradingAccount } from "./position-thread";
 import { PositionsHead } from "./positions-head";
 import { type Lens, LensSwitch, MapLens, RunwayLens } from "./positions-lens";
 import { PositionsTable } from "./positions-table";
@@ -197,6 +198,9 @@ export function PositionsBlotter({
   const said = useMemo(() => decisionsByRow(positions, decisions), [positions, decisions]);
   // The playbook that opened each position, on a bot's own book (#5073 slice 4b).
   const cardOf = usePlaybookCards(deskId, positions);
+  // A question about a holding opens its side thread with Moneypenny (#7167), on the account her
+  // positions tool reads — the member's own — and no other.
+  const threaded = useOwnTradingAccount(deskId);
   const guide = (p: DeskPosition) => {
     const row = marks.rows.get(p.symbol);
     const call = rowCallOf(positions, p);
@@ -223,6 +227,7 @@ export function PositionsBlotter({
         {...(onFullPage ? { onFullPage: () => onFullPage(p.symbol) } : {})}
         onAside={(watch) => marks.setAside(p.symbol, watch)}
         onUndo={() => marks.undo(p.symbol)}
+        threaded={threaded}
       />
     ) : null;
   };
