@@ -15,14 +15,15 @@
  *      an ask whose shelf file exists (`withoutAnswered`), after the finding's PR merges and deploys.
  *   4. THE MEMBER'S WORDS STAY ON THE VOLUME. The queue holds the first asker's sentence and opaque
  *      member keys, shown only inside the invite gate (discovery-queue.ts). The repo and its run logs
- *      are public, so a taken ask is reduced to `{ id, kind, subject, campaign? }` here, and a
- *      session researches the subject, never the sentence.
+ *      are public, so a taken ask is reduced to `{ id, kind, subject, campaign? }` here, a member
+ *      campaign's scope is hashed in both its id and its slug (#7336), and a session researches the
+ *      subject, never the sentence.
  *
  * Paper only; educational. A finding never places an order and never sizes one.
  */
 import { createHash } from "node:crypto";
 import type { DiscoveryAsk, DiscoveryKind, DiscoveryQueue } from "./discovery-queue.js";
-import { takeForPass } from "./discovery-queue.js";
+import { askId, takeForPass } from "./discovery-queue.js";
 
 /** Where a finding lands, relative to the repo root. One file per ask, named by `discoverySlug`. */
 export const SHELF_DIR = "docs/research/discovery";
@@ -52,10 +53,26 @@ const kebab = (s: string): string =>
 export function discoverySlug(ask: Pick<DiscoveryAsk, "kind" | "subject" | "campaign">): string {
   const base = `${ask.kind}-${kebab(ask.subject)}`;
   if (!ask.campaign) return base;
-  const scope = ask.campaign.includes("~")
-    ? createHash("sha256").update(ask.campaign).digest("hex").slice(0, 8)
-    : kebab(ask.campaign);
+  const scope = isMemberScope(ask.campaign) ? scopeHash(ask.campaign) : kebab(ask.campaign);
   return `${base}-in-${scope}`.slice(0, 90);
+}
+
+/** A member campaign's scope is `<member key>~<campaign id>`; a house campaign's is its bare id. */
+const isMemberScope = (campaign: string): boolean => campaign.includes("~");
+
+/** Eight hex of the whole scope: stable per campaign, and neither the key nor the campaign name. */
+const scopeHash = (campaign: string): string =>
+  createHash("sha256").update(campaign).digest("hex").slice(0, 8);
+
+/**
+ * The id a session (and so the public run log) sees. A member campaign's scope is swapped for its
+ * hash, the same eight hex as the slug (#7336: the verbatim id put the member's key, which is also
+ * their `member-<id>` label, in the log). A house campaign's id passes through untouched, because
+ * its lesson record answers that exact id (`.github/prompts/discovery-research.md` step 5).
+ */
+function publicId(ask: DiscoveryAsk): string {
+  if (!(ask.campaign && isMemberScope(ask.campaign))) return ask.id;
+  return askId(ask.kind, ask.subject, scopeHash(ask.campaign));
 }
 
 export const shelfFileFor = (ask: Pick<DiscoveryAsk, "kind" | "subject" | "campaign">): string =>
@@ -66,9 +83,9 @@ export const branchFor = (ask: Pick<DiscoveryAsk, "kind" | "subject" | "campaign
 
 /** The ask as a session sees it: no sentence, no asker keys. */
 export function toTaken(ask: DiscoveryAsk): TakenAsk {
-  const house = ask.campaign && !ask.campaign.includes("~") ? ask.campaign : undefined;
+  const house = ask.campaign && !isMemberScope(ask.campaign) ? ask.campaign : undefined;
   return {
-    id: ask.id,
+    id: publicId(ask),
     kind: ask.kind,
     subject: ask.subject,
     ...(house ? { houseCampaign: house } : {}),
