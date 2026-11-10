@@ -98,6 +98,17 @@ export function relayLabels(labels = []) {
  * is the opposite of what this lane is for.
  */
 export function notRelayableReason(issue, { relayFrom = RELAY_FROM, backfill = false } = {}) {
+  const cheap = cheapReason(issue, { relayFrom, backfill });
+  if (cheap) return cheap;
+  const builtBy = finalSliceBy(issue);
+  if (builtBy) {
+    return `#${issue.number} was closed by #${builtBy}, a merged PR that says it closes #${issue.number} — the remainder is what it built`;
+  }
+  return null;
+}
+
+/** Every rule that needs no timeline — what `gatherRelayDeps` asks before paying for one. */
+function cheapReason(issue, { relayFrom, backfill }) {
   if (!issue) return "no issue to relay";
   const n = issue.number;
   if (!remainderLabels(issue.labels).length) {
@@ -112,10 +123,6 @@ export function notRelayableReason(issue, { relayFrom = RELAY_FROM, backfill = f
   const closedAt = String(issue.closedAt ?? "");
   if (!backfill && closedAt.slice(0, 10) < relayFrom) {
     return `#${n} closed ${closedAt.slice(0, 10)}, before the relay watermark ${relayFrom} — run \`--backfill\` to include it`;
-  }
-  const builtBy = finalSliceBy(issue);
-  if (builtBy) {
-    return `#${n} was closed by #${builtBy}, a merged PR that says it closes #${n} — the remainder is what it built`;
   }
   return null;
 }
@@ -221,8 +228,14 @@ export function routeRelay(deps = {}) {
   } = deps;
   const queued = new Set(openIssueTitles);
   const dropped = [];
+  const built = [];
   for (const issue of closedWithRemainder) {
-    if (notRelayableReason(issue, { relayFrom, backfill })) continue;
+    if (cheapReason(issue, { relayFrom, backfill })) continue;
+    const builtBy = finalSliceBy(issue);
+    if (builtBy) {
+      built.push({ issue, builtBy });
+      continue;
+    }
     const title = relayTitle(issue.number, issue.title);
     if (queued.has(title)) continue;
     queued.add(title);
@@ -238,7 +251,7 @@ export function routeRelay(deps = {}) {
         `tick (cap ${relayCap}); the rest drain on later pushes, oldest close first.`,
     );
   }
-  return batch.map((issue) => ({
+  const relays = batch.map((issue) => ({
     kind: "relay-remainder",
     source: issue.number,
     sourceTitle: issue.title,
@@ -248,7 +261,20 @@ export function routeRelay(deps = {}) {
     body: relayBody(issue),
     sourceComment: sourceCommentBody(issue),
   }));
+  // Same ceiling, its own count: a clear is two writes, and an exemption past the cap is simply
+  // read again next tick — the cost this fixes, paid once more, never a remainder lost.
+  const clears = built.slice(0, relayCap).map(({ issue, builtBy }) => ({
+    kind: "relay-clear-built",
+    source: issue.number,
+    builtBy,
+    clearLabels: remainderLabels(issue.labels),
+    sourceComment: builtCommentBody(issue, builtBy),
+  }));
+  return [...relays, ...clears];
 }
+
+/** Every intent kind this file plans and `executeRelay` carries out — what the router dispatches on. */
+export const RELAY_KINDS = new Set(["relay-remainder", "relay-clear-built"]);
 
 /**
  * The relay issue's body, in the house capsule grammar (docs/ISSUES.md).
@@ -311,6 +337,21 @@ export function sourceCommentBody(issue) {
   ].join("\n");
 }
 
+/** The receipt for a remainder the closing PR built (#6888). Worded so `statesRemainder` never reads
+ *  it as work left, should anyone put the label back. */
+export function builtCommentBody(issue, builtBy) {
+  const carried = carriedList(issue.labels);
+  return [
+    `🧹 **Remainder label cleared** — #${builtBy} merged saying it closes #${issue.number}, and this`,
+    `issue closed a moment later, so #${builtBy} was the last slice. ${carried}, left behind when it`,
+    "shipped, is removed now so the relay stops re-checking this issue on every push.",
+    "",
+    "If work is in fact left, re-file it as its own issue with a link back here.",
+    "",
+    FOOTER,
+  ].join("\n");
+}
+
 /**
  * Read the closed issues that still carry a remainder. REST on the core bucket and paged, never
  * `gh issue list --json` (which compiles to GraphQL — gh.mjs's header has the day that cost us the
@@ -343,9 +384,11 @@ export function gatherRelayDeps({
     }
   }
   // The timeline only for an issue every cheaper rule would relay — one page per real candidate,
-  // which on a normal push is none. `finalSliceBy` reads it.
+  // which on a normal push is none. `finalSliceBy` reads it. An issue it exempts is read ONCE: the
+  // same tick plans `relay-clear-built`, which takes the remainder label off, so the next tick's
+  // label query no longer lists it (#6888 — before that, every exemption was re-read every push).
   for (const issue of byNumber.values()) {
-    if (notRelayableReason(issue, { relayFrom, backfill })) continue;
+    if (cheapReason(issue, { relayFrom, backfill })) continue;
     const rows = withRetry(() => read(`issues/${issue.number}/timeline`), {
       sleep,
     });
@@ -385,6 +428,7 @@ const trimTimelineRow = (row) => {
  * router (which imports this file — the cycle that would be). The router's branch delegates here.
  */
 export function executeRelay(intent, { run = sh, ensure = ensureLabel } = {}) {
+  if (intent.kind === "relay-clear-built") return executeClearBuilt(intent, run);
   for (const name of intent.labels) ensure(LABELS_BY_NAME.get(name) ?? { name });
   const url = run("gh", [
     "issue",
@@ -407,6 +451,21 @@ export function executeRelay(intent, { run = sh, ensure = ensureLabel } = {}) {
     run("gh", ["issue", "edit", String(intent.source), "--remove-label", name]);
   }
   return `📨 relayed #${intent.source}'s remainder → ${url}`;
+}
+
+/** A remainder the closing PR built: receipt the issue, then take the label off. Receipt first for
+ *  the same reason as a relay — a failed removal leaves the label, so the next tick re-plans this
+ *  and at worst posts the receipt twice, where removing first could leave no record of why. */
+function executeClearBuilt(intent, run) {
+  run("gh", ["issue", "comment", String(intent.source), "--body", intent.sourceComment]);
+  run("gh", [
+    "issue",
+    "edit",
+    String(intent.source),
+    "--remove-label",
+    intent.clearLabels.join(","),
+  ]);
+  return `🧹 cleared ${intent.clearLabels.join(" + ")} from #${intent.source} — #${intent.builtBy} built it`;
 }
 
 /** The registry keyed by name, so `executeRelay` upserts a label with its real color/description
@@ -434,7 +493,9 @@ function main(argv = process.argv.slice(2)) {
   console.log(
     `${intents.length} dropped remainder(s)${apply ? "" : " — nothing written (--list)"}:`,
   );
-  for (const i of intents) console.log(`  #${i.source} → ${i.title}`);
+  for (const i of intents) {
+    console.log(`  #${i.source} → ${i.title ?? `clear the label, #${i.builtBy} built it`}`);
+  }
   if (!apply) {
     console.log("\nRun again with --apply to file them, oldest close first.");
     return;
