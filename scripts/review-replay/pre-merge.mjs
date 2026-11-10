@@ -15,6 +15,7 @@
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { triage } from "../pr-review/triage.mjs";
+import { FILE_FORM } from "./score.mjs";
 
 export const RULES_FILE = "docs/review/REVIEW.md";
 
@@ -72,7 +73,7 @@ export function preMergePrompt({ base, head, diff, stat, rules }) {
     diff.length <= DIFF_CAP
       ? `\`git diff ${base} ${head}\`:\n\n\`\`\`diff\n${diff}\n\`\`\``
       : `The diff is ${diff.length} characters, too long to print here. Its stat:\n\n\`\`\`\n${stat}\n\`\`\`\n\nRead all of it before anything else, file by file: \`git diff ${base} ${head} -- <path>\`.`;
-  return `Review one pull request before it merges. Read-only: write no file, and return only the schema you were given.
+  return `Review one pull request before it merges. Read-only: write no file, and return only the schema you were given. ${FILE_FORM}
 
 ## The change
 

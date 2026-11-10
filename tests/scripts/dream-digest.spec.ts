@@ -1,5 +1,13 @@
 import { spawnSync } from "node:child_process";
-import { chmodSync, mkdirSync, mkdtempSync, utimesSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "@rstest/core";
@@ -171,7 +179,17 @@ describe("memory review digest", () => {
 // End to end through the command line, so the wiring is in the test: a real git repo standing in for
 // origin/main, and a stub gh that says which issues are closed. No network, no real memory folder.
 describe("stale report on a memory folder", () => {
-  function fixture(memories: Record<string, string>) {
+  // A stub gh answers the REST read the report makes; "fails" stands in for no login, an expired
+  // token or a spent rate bucket, and logs each call so the spec can count them.
+  const GH_ANSWERS =
+    '#!/bin/sh\necho "$@" >> "$(dirname "$0")/calls"\ncase "$2" in */123) echo closed;; *) echo open;; esac\n';
+  const GH_FAILS =
+    '#!/bin/sh\necho "$@" >> "$(dirname "$0")/calls"\necho "HTTP 403: API rate limit exceeded" >&2\nexit 1\n';
+
+  function run(
+    memories: Record<string, string>,
+    { gh = GH_ANSWERS, main = true, packageJson = true } = {},
+  ) {
     const root = mkdtempSync(join(tmpdir(), "dream-stale-"));
     const repo = join(root, "repo");
     const memory = join(root, "memory");
@@ -179,12 +197,13 @@ describe("stale report on a memory folder", () => {
     mkdirSync(join(repo, "scripts"), { recursive: true });
     mkdirSync(memory);
     mkdirSync(bin);
-    writeFileSync(
-      join(repo, "package.json"),
-      JSON.stringify({
-        scripts: { live: "node scripts/live.mjs", nodejsless: "rstest run" },
-      }),
-    );
+    if (packageJson)
+      writeFileSync(
+        join(repo, "package.json"),
+        JSON.stringify({
+          scripts: { live: "node scripts/live.mjs", nodejsless: "rstest run" },
+        }),
+      );
     writeFileSync(join(repo, "scripts", "live.mjs"), 'const a = flag("real");\n');
     const env = hermeticGitEnv({ PATH: `${bin}:${process.env.PATH}` });
     const git = (...args: string[]) =>
@@ -196,12 +215,9 @@ describe("stale report on a memory folder", () => {
     git("init", "-q");
     git("add", "-A");
     git("commit", "-q", "-m", "base");
-    git("update-ref", "refs/remotes/origin/main", "HEAD");
+    if (main) git("update-ref", "refs/remotes/origin/main", "HEAD");
     // Only #123 is closed; every other number reads as open.
-    writeFileSync(
-      join(bin, "gh"),
-      '#!/bin/sh\nif [ "$3" = "123" ]; then echo CLOSED; else echo OPEN; fi\n',
-    );
+    writeFileSync(join(bin, "gh"), gh);
     chmodSync(join(bin, "gh"), 0o755);
     for (const [name, text] of Object.entries(memories)) writeFileSync(join(memory, name), text);
     const res = spawnSync("node", [SCRIPT, "--memory", memory], {
@@ -210,8 +226,63 @@ describe("stale report on a memory folder", () => {
       encoding: "utf8",
     });
     expect(res.status).toBe(0);
-    return JSON.parse(res.stdout);
+    const calls = existsSync(join(bin, "calls"))
+      ? readFileSync(join(bin, "calls"), "utf8").trim().split("\n")
+      : [];
+    return { rows: JSON.parse(res.stdout), stderr: res.stderr, calls };
   }
+  const fixture = (memories: Record<string, string>) => run(memories).rows;
+
+  // #6717: a gh that failed read as "open", so a memory waiting on a closed issue came back clean.
+  it("lists an issue gh could not read as unread, never as open, and reads it once", () => {
+    const { rows, stderr, calls } = run(
+      { "a.md": "Wait until #6699 lands.", "b.md": "See #6699." },
+      { gh: GH_FAILS },
+    );
+    for (const row of rows) {
+      expect(row.unreadIssues).toEqual([6699]);
+      expect(row.closedIssues).toEqual([]);
+    }
+    expect(rows[0].futureOnClosedIssue).toEqual([]);
+    expect(calls).toHaveLength(1);
+    expect(stderr).toContain("#6699");
+    expect(stderr).toContain("HTTP 403");
+  });
+
+  it("reads an issue through REST, which answers where gh's GraphQL is refused", () => {
+    const { rows, calls } = run({ "a.md": "Once #123 has merged, do the other thing." });
+    expect(rows[0]).toMatchObject({ closedIssues: [123], unreadIssues: [] });
+    expect(calls).toEqual(["api repos/{owner}/{repo}/issues/123 --jq .state"]);
+  });
+
+  it("says unread, not nothing missing, when there is no origin/main to read", () => {
+    const [row] = run(
+      { "a.md": "Run `npm run live -- --real` and `node scripts/live.mjs --real`." },
+      { main: false },
+    ).rows;
+    expect(row).toMatchObject({
+      missingPaths: "unread: not checked, so not clean",
+      missingNpmScripts: "unread: not checked, so not clean",
+      flagsNotInScript: "unread: not checked, so not clean",
+    });
+  });
+
+  it("says unread on the npm rows when main has no package.json, and still checks paths", () => {
+    const [cites, quiet] = run(
+      {
+        "a.md": "Run `npm run live -- --real`, see `scripts/gone.mjs`.",
+        "b.md": "Nothing to run here.",
+      },
+      { packageJson: false },
+    ).rows;
+    expect(cites).toMatchObject({
+      missingPaths: ["scripts/gone.mjs"],
+      missingNpmScripts: "unread: not checked, so not clean",
+      flagsNotInScript: "unread: not checked, so not clean",
+    });
+    // A memory that cites no npm script has nothing left unchecked.
+    expect(quiet).toMatchObject({ missingNpmScripts: [], flagsNotInScript: [] });
+  });
 
   it("lists a dead npm script, a dead flag and future tense on a closed issue", () => {
     const [row] = fixture({
@@ -243,6 +314,7 @@ describe("stale report on a memory folder", () => {
     expect(row).toMatchObject({
       missingPaths: [],
       closedIssues: [],
+      unreadIssues: [],
       missingNpmScripts: [],
       flagsNotInScript: [],
       futureOnClosedIssue: [],
