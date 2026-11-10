@@ -76,6 +76,20 @@ api() {
     curl "${args[@]}" "$API/repos/$(repo)$2"
   fi
 }
+# GitHub refuses a PR body over 65,536 CHARACTERS with a 422 "body is too long" — a second, lower
+# wall behind the argv cap above. Moving the body to stdin (#6216) got #5852's ~122 KB ledger past
+# curl, only for GitHub to refuse it, so the ledger still never synced (#6879). Every PR-body write
+# measures first and refuses by name, before the request: dropping ledger rows to fit would post a
+# body that no longer lists every item a merge lands, and since #6252 a ledger holds only real items,
+# so ~200 of them is a platter overdue to land, not a body to trim.
+GH_BODY_MAX=65536
+# body_fits WHAT FIX < body → 0 when the body on stdin fits; else names the limit and FIX, returns 1.
+body_fits() {
+  local n; n="$(python3 -c 'import sys; print(len(sys.stdin.buffer.read().decode("utf-8", "replace")))')"
+  [ "$n" -le "$GH_BODY_MAX" ] && return 0
+  echo "ship: $1 is $n characters; GitHub refuses a PR body over $GH_BODY_MAX (HTTP 422, #6879) — $2" >&2
+  return 1
+}
 http_of() { printf '%s' "${1##*__SHIP_HTTP__}"; }              # code from an api() result
 body_of() { printf '%s' "${1%$'\n'__SHIP_HTTP__*}"; }         # body from an api() result
 json_field() { python3 -c "import sys,json; print(json.load(sys.stdin).get('$1',''))"; }
@@ -387,6 +401,7 @@ cmd_open() {
 
   # The picture/format contract — fail fast, before spending verify or a push.
   cmd_checkbody "$bodyfile"
+  body_fits "the PR body" "shorten it, or move detail into a comment on the PR." < "$bodyfile" || exit 1
 
   # Screenshot weight is permanent git history (the one irreversible cost) — budget by construction.
   if git rev-parse --verify -q "origin/$base" >/dev/null; then
@@ -1271,6 +1286,8 @@ platter_sync_body() {
   fi
   platter_range_check "$branch" "$num" || return 1
   newbody="$(platter_body)"
+  printf '%s' "$newbody" | body_fits "#$num's platter body" \
+    "land this platter and board the rest onto a new one ('ship platter open <item> --name platter/<new>')." || return 1
   payload="$(printf '%s' "$newbody" | python3 -c "import json,sys; print(json.dumps({'body': sys.stdin.read()}))")"
   resp="$(api PATCH "/pulls/$num" "$payload")" || true
   http="$(http_of "$resp")"
