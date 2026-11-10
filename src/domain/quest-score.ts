@@ -17,6 +17,12 @@ import type { QuestBaseRate, QuestMoveKind, QuestSource } from "./quest.js";
  *    expect, ± two standard deviations of that count. Inside the band is "in line".
  *  - A measured rate (`quest.ts`) came from a study holding a fixed time; a member closes when they
  *    close. `HOLD_NOTE` says so on every row that compares against one.
+ *  - An assigned contract is not a kept premium (#7306). The ledger closes an assigned written leg
+ *    at $0, which is honest for the OPTION — but a sold put that is assigned leaves the member
+ *    holding shares bought at the strike, and that share leg is not on the ledger yet (OPTRD,
+ *    `src/trading/option-lifecycle.ts`, #837). So an assigned quest stays `open`, flagged
+ *    `assigned`, with no realized number and no verdict of its own: "+100%, paid" on a put that
+ *    left the member $3,580 down was the false reading this rule removes.
  *
  * PURE: no I/O, no clock. The ledger is duck-typed (the fields of `RoundTripLedger` it reads), so
  * the domain layer does not import the trading layer's matcher.
@@ -54,6 +60,8 @@ export interface ScoredLedger {
     readonly realized: number;
     readonly entryPrice: number;
     readonly quantity: number;
+    /** Closed by an assignment rather than a trade or an expiry (`RoundTrip.assigned`). */
+    readonly assigned?: boolean;
   }[];
   readonly open: readonly { readonly entryOrderId?: string }[];
 }
@@ -72,6 +80,12 @@ export interface QuestScore {
   readonly returnPct?: number;
   /** True when a closed quest made money. Only a closed quest is judged. */
   readonly paid?: boolean;
+  /**
+   * The option the order opened was assigned. The quest is then `open` — what it opened became
+   * shares (a put) or gave them up (a call), and the premium kept is not its outcome — and it
+   * carries no realized number, return or `paid` until the share leg can be scored (#837).
+   */
+  readonly assigned?: true;
 }
 
 /** Score one taken quest against the account's own round trips. */
@@ -82,6 +96,7 @@ export function scoreTakenQuest(taken: TakenQuest, ledger: ScoredLedger): QuestS
   );
   const stillOpen = opens && ledger.open.some((lot) => lot.entryOrderId === taken.orderId);
   if (trips.length === 0) return { taken, state: stillOpen ? "open" : "unseen" };
+  if (opens && trips.some((t) => t.assigned)) return { taken, state: "open", assigned: true };
   const realized = trips.reduce((sum, t) => sum + t.realized, 0);
   const basis = trips.reduce((sum, t) => sum + t.entryPrice * t.quantity, 0);
   const returnPct = basis > 0 ? (realized / basis) * 100 : 0;
@@ -111,19 +126,36 @@ export interface QuestTypeScore {
   readonly closed: number;
   readonly unseen: number;
   readonly paid: number;
-  /** Closed quests of this type that carried a tested or measured rate — the compared sample. */
+  /** Of `open`, how many are open because the option they sold was assigned. */
+  readonly assigned: number;
+  /**
+   * The compared sample: closed quests of this type that carried a tested or measured rate, plus
+   * any rated cash-secured put that was assigned, counted as not paid (`ASSIGNED_PUT_UNPAID`).
+   */
   readonly rated: number;
   /** Of `rated`, how many paid, and how many the carried rates expected to (Σ rate). */
   readonly ratedPaid: number;
   readonly expectedPaid: number;
   /**
-   * `untested`: no closed quest of this type carried a rate. `too-few`: fewer than `MIN_CLOSED`
-   * did. Otherwise `above`, `below` or `in-line`: paid against expected, ± two standard deviations.
+   * `untested`: the compared sample (`rated`) is empty. `too-few`: it holds fewer than
+   * `MIN_CLOSED`. Otherwise `above`, `below` or `in-line`: paid against expected, ± two standard deviations.
    */
   readonly verdict: "untested" | "too-few" | "above" | "below" | "in-line";
   /** `HOLD_NOTE` when any compared quest carried a measured rate. */
   readonly note?: string;
 }
+
+/**
+ * Why an assigned cash-secured put counts in the comparison, as not paid, while it is still open
+ * (#7306). Leaving it out would compare only the puts that were never assigned — the losers
+ * dropped, the rate flattered. The rate's own basis (`drawdown-base-rates.ts`) is premium −
+ * max(strike − end, 0) ÷ strike: assignment means the put finished below its strike, and it paid
+ * only if it finished within the premium of it. The ledger cannot see that close, so this counts
+ * every assigned put as not paid — a bound that can only lean against the quest, never for it. In
+ * the QQQ study the put was assigned in 12% of cycles and failed to pay in 10.5%, so at most about
+ * one assigned put in eight paid.
+ */
+const ASSIGNED_PUT_UNPAID: QuestMoveKind = "sell-cash-secured-put";
 
 /** Per quest type (source × move): what was taken, what closed, and how that compares. */
 export function questScoreboard(scores: readonly QuestScore[]): QuestTypeScore[] {
@@ -147,7 +179,9 @@ export function questScoreboard(scores: readonly QuestScore[]): QuestTypeScore[]
 function typeScore({ source, moveKind }: TakenQuest, group: readonly QuestScore[]): QuestTypeScore {
   const count = (state: QuestScore["state"]) => group.filter((s) => s.state === state).length;
   const closed = group.filter((s) => s.state === "closed");
-  const rated = closed.filter((s) => s.taken.baseRate.kind !== "untested");
+  const assigned = group.filter((s) => s.assigned);
+  const comparable = moveKind === ASSIGNED_PUT_UNPAID ? [...closed, ...assigned] : closed;
+  const rated = comparable.filter((s) => s.taken.baseRate.kind !== "untested");
   const rate = (s: QuestScore): number =>
     s.taken.baseRate.kind === "untested" ? 0 : s.taken.baseRate.rate;
   const expectedPaid = rated.reduce((sum, s) => sum + rate(s), 0);
@@ -172,6 +206,7 @@ function typeScore({ source, moveKind }: TakenQuest, group: readonly QuestScore[
     closed: closed.length,
     unseen: count("unseen"),
     paid: closed.filter((s) => s.paid).length,
+    assigned: assigned.length,
     rated: rated.length,
     ratedPaid,
     expectedPaid: Math.round(expectedPaid * 100) / 100,
