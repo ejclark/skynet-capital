@@ -172,3 +172,50 @@ describe("EyeLight · her link to the whole calendar", () => {
     expect(document.querySelector("[data-eye-ring]")).toBeNull();
   });
 });
+
+// #7227 — the item the Eye lands on lifts its own edge, and is wholly in view first: with the
+// phone's chat over the whole page nothing is, so the light waits for the chat to close.
+describe("EyeLight · the landing, articulated, on an item in view", () => {
+  let restore: () => void;
+  let chat: HTMLElement | undefined;
+  beforeEach(() => {
+    useEyeLight.setState({ request: undefined });
+    restore = layOut();
+    const box = Element.prototype.getBoundingClientRect;
+    Element.prototype.getBoundingClientRect = function (this: Element) {
+      if (!this.classList.contains("mp-rail")) return box.call(this);
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      return { top: 0, left: 0, width: w, height: h, bottom: h, right: w } as DOMRect;
+    };
+  });
+  afterEach(() => {
+    chat?.remove();
+    chat = undefined;
+    restore();
+  });
+
+  /** Long enough for the light to find the item, see it hold still, and act on it. */
+  const settle = () => act(() => new Promise((r) => setTimeout(r, 600)));
+
+  it("lifts the item's own edge while the ring holds it, and lets it settle when it goes", async () => {
+    await mount();
+    const row = document.getElementById("pos-NVDA") as HTMLElement;
+    act(() => requestLight("/accounts#pos-NVDA"));
+    await waitFor(() => expect(row).toHaveAttribute("data-eye-lit"));
+    fireEvent.pointerDown(screen.getByRole("button", { name: "AAPL" }));
+    expect(row).not.toHaveAttribute("data-eye-lit");
+  });
+
+  it("waits while the chat covers the whole page, and lands once it closes", async () => {
+    await mount();
+    chat = document.createElement("aside");
+    chat.className = "mp-rail";
+    document.body.append(chat);
+    act(() => requestLight("/accounts#pos-NVDA"));
+    await settle();
+    expect(document.querySelector("[data-eye-ring]")).toBeNull();
+    chat.remove();
+    await waitFor(() => expect(document.querySelector("[data-eye-ring]")).not.toBeNull());
+  });
+});
