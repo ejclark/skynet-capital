@@ -22,6 +22,9 @@ export interface DeskAllocation {
   /** Signed shares held across every stock position. Their delta, which the Money strip adds to
    *  the option book's delta for "market exposure". */
   readonly shareCount: number;
+  /** Raw twin of the bar's whole (long shares + long options + cash, in dollars) — the total the
+   *  three percents are of, so a gap against a target split can be said in dollars (#4607). */
+  readonly totalRaw: number;
 }
 
 export function allocationOf(snapshot: ParticipantSnapshot): DeskAllocation {
@@ -59,5 +62,6 @@ export function allocationOf(snapshot: ParticipantSnapshot): DeskAllocation {
     cashPct: share(cash),
     cashShare: `${share(cash).toFixed(1)}%`,
     shareCount,
+    totalRaw: total,
   };
 }

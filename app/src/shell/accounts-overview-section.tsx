@@ -102,6 +102,7 @@ export function OverviewSection({
                 accountId={accountId}
                 allocation={singleDesk.allocation}
                 hasOptions={singleDesk.positions.some((p) => p.isOption)}
+                bookReadable={!singleDesk.error && stats.cashKnown}
               />
             ) : null}
           </NetWorthCard>
