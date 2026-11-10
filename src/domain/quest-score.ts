@@ -36,7 +36,10 @@ export interface TakenQuest {
   readonly symbol: string;
   /** The contract the move acted on, for a move on an option already held. */
   readonly occ?: string;
-  /** The broker's id for the order the quest drafted — the join key onto the ledger. */
+  /**
+   * The broker's id for the order the quest drafted — the join key onto the ledger. When Modify
+   * replaces that order, this becomes the replacement's id (#7309), where its fills land.
+   */
   readonly orderId: string;
   /** ISO-8601, when the order was accepted. */
   readonly takenAt: string;

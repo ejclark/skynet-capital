@@ -81,6 +81,27 @@ describe("TakenQuestStore", () => {
     expect(errors.length).toBeGreaterThan(0);
   });
 
+  it("moves a quest onto the order that replaced its own, and nothing else (#7309)", () => {
+    const store = new TakenQuestStore(path);
+    store.record("ann-1", shares("o-A"));
+    store.record("ann-1", takeProfit);
+    store.record("bob-1", shares("o-A"));
+    expect(store.replace("ann-1", "o-A", "o-B")).toBe(true);
+    expect(store.replace("ann-1", "o-B", "o-C")).toBe(true);
+    expect(store.replace("ann-1", "o-unknown", "o-D")).toBe(true);
+    const again = new TakenQuestStore(path);
+    expect(again.taken("ann-1")).toEqual([{ ...shares("o-A"), orderId: "o-C" }, takeProfit]);
+    expect(again.taken("bob-1")).toEqual([shares("o-A")]);
+  });
+
+  it("refuses to move a quest in a file it could not read whole", () => {
+    const bad = { ...shares("o-bad"), baseRate: { kind: "looks-good" } };
+    writeFileSync(path, JSON.stringify({ "ann-1": [shares("o-A"), bad] }));
+    const store = new TakenQuestStore(path, () => undefined);
+    expect(store.replace("ann-1", "o-A", "o-B")).toBe(false);
+    expect(JSON.parse(readFileSync(path, "utf8"))["ann-1"][0].orderId).toBe("o-A");
+  });
+
   it("answers empty for a missing file", () => {
     expect(new TakenQuestStore(join(dir, "none.json")).taken("ann-1")).toEqual([]);
   });
