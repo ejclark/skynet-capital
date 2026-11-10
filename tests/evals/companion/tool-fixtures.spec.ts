@@ -66,6 +66,23 @@ describe("COMPANION_TOOL_FIXTURES", () => {
       expect(context).toContain("#1204");
     });
 
+    it("answers the filing lookup through the real reader: open, waiting to be picked, unknown numbers not found", async () => {
+      const read = byId("grounding-tool-filing-status").toolUse?.desk.readWorkStatus;
+      if (!read) throw new Error("the filing fixture stubs no work-status read");
+      const [filing, other] = await read([1204, 9999]);
+      expect(filing).toMatchObject({
+        number: 1204,
+        found: true,
+        kind: "issue",
+        state: "open",
+        status: "Filed — waiting to be picked",
+        title: '"Trade ticket shows stale price after a fill"',
+        labels: ["feedback", "bug"],
+        openPullRequests: [],
+      });
+      expect(other).toEqual({ number: 9999, found: false });
+    });
+
     it("reads the roadmap before naming what is next", () => {
       expect(byId("grounding-tool-roadmap-next").toolUse?.expect.called).toEqual(["get_roadmap"]);
     });

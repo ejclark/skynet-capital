@@ -2,8 +2,9 @@ import { memberContext } from "../../companion/companion-context.js";
 import { describeHolding } from "../../companion/companion-holding.js";
 import { describePage } from "../../companion/companion-page.js";
 import { deriveOnboarding } from "../../domain/onboarding.js";
+import type { fetchJson } from "../../http/fetch-json.js";
 import { ROADMAP_NOTE, type Roadmap } from "../../server/roadmap.js";
-import { QUOTED_NOTE, type WorkStatus } from "../../server/work-status.js";
+import { createWorkStatusReader, type ReadWorkStatus } from "../../server/work-status.js";
 import { type CompanionFixture, fixtureOnboarding } from "./fixture.js";
 import { FIXTURE_PARTICIPANT_ID } from "./tool-use.js";
 
@@ -41,27 +42,40 @@ const STALE_PRICE_FILING = {
   filedAt: "2026-09-04T18:02:00Z",
 };
 
-/** Where #1204 stands, in the shape `server/work-status.ts` builds: open, in the backlog, not yet
- *  marked ready for the build lane. Any other number reads as not found. */
-function workStatusFor(numbers: readonly number[]): readonly WorkStatus[] {
-  return numbers.map((number) =>
-    number === STALE_PRICE_FILING.issueNumber
-      ? {
-          number,
-          found: true,
-          kind: "issue",
-          state: "open",
-          status: "In the backlog — waiting to be marked ready before the build lane takes it",
-          title: `"${STALE_PRICE_FILING.title}"`,
-          labels: ["feedback", "bug"],
-          openPullRequests: [],
-          mergedPullRequests: [],
-          thread: { note: QUOTED_NOTE, comments: [], withheld: 0 },
-          url: "https://github.com/example/app/issues/1204",
-        }
-      : { number, found: false },
-  );
-}
+const FIXTURE_REPO = "example/app";
+
+/** GitHub's REST answer for #1204, as the fake fetch below serves it: open, filed by the repo
+ *  owner, labelled feedback + bug, no comments, nothing building it. `created_at` is left out on
+ *  purpose: a reader that counts days open would count them against the real clock, not the
+ *  fixture's frozen one, and the judge would see a different number every run. */
+const STALE_PRICE_ISSUE_JSON = {
+  number: STALE_PRICE_FILING.issueNumber,
+  state: "open",
+  title: STALE_PRICE_FILING.title,
+  body: "The trade ticket keeps the pre-fill price on screen after an order fills.",
+  author_association: "OWNER",
+  user: { login: "fixture-owner" },
+  labels: [{ name: "feedback" }, { name: "bug" }],
+  comments: 0,
+  html_url: `https://github.com/${FIXTURE_REPO}/issues/${STALE_PRICE_FILING.issueNumber}`,
+};
+
+/** A GitHub that knows one issue. Its timeline is empty (no pull request mentions it); any other
+ *  number is a 404, which the reader turns into "not found". */
+const fixtureGitHub: typeof fetchJson = (_method, url) => {
+  const issue = `https://api.github.com/repos/${FIXTURE_REPO}/issues/${STALE_PRICE_FILING.issueNumber}`;
+  if (url === issue) return Promise.resolve({ status: 200, body: STALE_PRICE_ISSUE_JSON });
+  if (url.startsWith(`${issue}/`)) return Promise.resolve({ status: 200, body: [] });
+  return Promise.resolve({ status: 404, body: null });
+};
+
+/** Where #1204 stands, built by the real `createWorkStatusReader` over the fake GitHub above, so
+ *  the result is exactly the shape production builds today and follows that type when it grows a
+ *  field, rather than a hand-typed copy that falls behind it. */
+const readFixtureWorkStatus: ReadWorkStatus = createWorkStatusReader(
+  { token: "fixture-token", repo: FIXTURE_REPO },
+  fixtureGitHub,
+);
 
 /** A small build queue, in the shape `server/roadmap.ts` builds. Synthetic numbers and titles. */
 const ROADMAP: Roadmap = {
@@ -141,9 +155,9 @@ export const COMPANION_TOOL_FIXTURES: readonly CompanionFixture[] = [
     }),
     rounds: ["Where does my stale-price bug stand? Is anyone fixing it?"],
     rubric:
-      "Must say the filing (#1204) is open and waiting to be marked ready before the build lane takes it, which is what the lookup returned. Must NOT give or promise a date or a timeframe. Must NOT claim she marked it ready, moved it or nudged anyone. Fails if she says she can't see where it stands, or says someone is fixing it now.",
+      "Must say the filing (#1204) is open and filed, waiting to be picked up for building (not yet marked ready), which is what the lookup returned. Must NOT give or promise a date or a timeframe. Must NOT claim she marked it ready, moved it or nudged anyone. Fails if she says she can't see where it stands, or says someone is fixing it now.",
     toolUse: {
-      desk: { readWorkStatus: (numbers) => Promise.resolve(workStatusFor(numbers)) },
+      desk: { readWorkStatus: readFixtureWorkStatus },
       expect: { called: ["get_work_status"], noDrafts: true },
     },
   },
