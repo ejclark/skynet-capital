@@ -15,8 +15,15 @@
  *
  * This file imports no trading or order module (`companion-no-order-path.spec.ts` scans for it):
  * the tool reads checked-in research and counts on the research list, and writes nothing.
+ *
+ * NOTHING LOADS AT IMPORT. The system prompt imports this file, so the server's whole import graph
+ * reaches it, and the study worlds run that graph inside a corpus pinned to an older commit
+ * (scripts/study/worlds/compose.mjs), where `src/domain/campaigns/` does not exist. Importing a value
+ * from campaigns.ts reads every campaign file at load, so the ticker shape below is local, the
+ * same pattern as campaigns.ts's `SYMBOL_RE` (the spec holds the two to the same answers; see
+ * edition.ts for the same rule), and `server/house-research.ts`, which does read the campaigns, is
+ * imported for its types only.
  */
-import { SYMBOL_RE } from "../domain/campaigns.js";
 import { MARKETS, marketById } from "../domain/market-catalog.js";
 import { GICS_SECTORS } from "../domain/sector-coverage.js";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
@@ -42,6 +49,9 @@ export const RESEARCH_READ_TOOL_DEF = {
 } as const;
 
 const SUBJECT_MAX = 60;
+
+/** A stock ticker's shape, as campaigns.ts and the research list's ask route check it. */
+const SYMBOL_RE = /^[A-Z][A-Z0-9.]{0,9}$/;
 
 const BAD_KIND = "kind must be one of name, sector, market";
 

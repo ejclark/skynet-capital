@@ -9,6 +9,7 @@ import {
   declaredToolNames,
   runCompanionTool,
 } from "../../src/companion/companion-tools.js";
+import { SYMBOL_RE } from "../../src/domain/campaigns.js";
 import type { ParticipantSnapshot } from "../../src/observatory/participant-snapshot.js";
 import { HOUSE_RESEARCH_NOTE, type HouseResearch } from "../../src/server/house-research.js";
 
@@ -102,6 +103,15 @@ describe("parseResearchSubject — the catalogs decide, before any read", () => 
     for (const subject of ["NVDA261218C00150000", "buy 10 NVDA", "", 42]) {
       const out = parseResearchSubject({ kind: "name", subject });
       expect("error" in out && out.error).toContain("ticker");
+    }
+  });
+
+  it("takes a ticker exactly when the research list's ask route would (campaigns.ts's shape)", () => {
+    // The check is a local copy so the prompt's import graph never loads the campaign files; this
+    // holds the copy to the original.
+    for (const subject of ["NVDA", "BRK.B", "X", "A1", "1NVDA", "ABCDEFGHIJK", "NV-DA", ".A"]) {
+      const out = parseResearchSubject({ kind: "name", subject });
+      expect("error" in out).toBe(!SYMBOL_RE.test(subject));
     }
   });
 });
