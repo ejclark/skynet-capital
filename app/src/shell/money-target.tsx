@@ -22,7 +22,7 @@ import { fetchTargetSplit, targetSplitKey } from "../live/target-split";
  *    still shows, every actual and gap reads "—". A gap from part of the book would be a fiction
  *    (`greeks-aggregator.ts`'s rule).
  *
- * Over and under ride an arrow and a word (▲ over · ▼ under · ✓ within), never a hue alone — a
+ * Over and under ride an arrow and a verb (▲ trim · ▼ add · ✓ within), never a hue alone — a
  * standing reader is red/green colourblind (docs/BRAND.md → Accessibility). Trim and add are
  * guidance to review, never an order: nothing here places or stages a trade.
  *
@@ -38,11 +38,11 @@ const money = new Intl.NumberFormat("en-US", {
 
 const pct = (n: number): string => `${Math.round(n)}%`;
 
-/** "▲ over · trim $4,100", "▼ under · add $3,000", "✓ within" — the word and the arrow carry it. */
+/** "▲ trim $4,100", "▼ add $3,000", "✓ within" — the arrow and the verb carry it, never a hue. */
 export function gapLabel(slice: SliceGap): string {
   if (slice.status === "within") return "✓ within";
   const dollars = money.format(Math.abs(slice.gapDollars));
-  return slice.status === "over" ? `▲ over · trim ${dollars}` : `▼ under · add ${dollars}`;
+  return slice.status === "over" ? `▲ trim ${dollars}` : `▼ add ${dollars}`;
 }
 
 const joinAnd = (parts: readonly string[]): string =>

@@ -82,11 +82,7 @@ describe("rebalanceLine", () => {
 describe("gapLabel", () => {
   it("carries over and under in an arrow and a word, never a hue alone", () => {
     const c = compareSplit({ ...allocation, total: 41_000 }, target);
-    expect(c?.slices.map(gapLabel)).toEqual([
-      "▼ under · add $4,100",
-      "▲ over · trim $4,100",
-      "✓ within",
-    ]);
+    expect(c?.slices.map(gapLabel)).toEqual(["▼ add $4,100", "▲ trim $4,100", "✓ within"]);
   });
 });
 
@@ -103,7 +99,7 @@ describe("MoneyTarget", () => {
     mount(allocation);
     const region = await screen.findByRole("region", { name: "Against your target split" });
     const shares = within(region).getByText("target 60%").closest("li") as HTMLElement;
-    expect(shares).toHaveTextContent("Shares50%target 60%▼ under · add $4,100");
+    expect(shares).toHaveTextContent("Shares50%target 60%▼ add $4,100");
     expect(region).toHaveTextContent(
       "To match your target, trim $4,100 of options and add it to shares.",
     );

@@ -149,24 +149,29 @@
   height: 6px;
 }
 .money-target-rows {
-  display: grid;
-  grid-template-columns: auto auto auto 1fr;
-  column-gap: 10px;
-  row-gap: 3px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
   margin: 0;
   padding: 0;
   list-style: none;
   font-size: 12px;
-  align-items: baseline;
 }
+/* One row per slice; the fixed widths line the columns up across rows, and the gap wraps under
+   them, right-aligned, when the cell is too narrow to hold all four (the desktop strip's left cell). */
 .money-target-row {
-  display: contents;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 10px;
 }
 .money-target-name {
+  flex: 0 0 64px;
   color: var(--muted);
   white-space: nowrap;
 }
 .money-target-row b.num {
+  flex: 0 0 34px;
   font-family: var(--mono);
   text-align: right;
 }
@@ -176,6 +181,7 @@
   white-space: nowrap;
 }
 .money-target-gap {
+  margin-left: auto;
   text-align: right;
   font-weight: 600;
   white-space: nowrap;
