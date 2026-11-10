@@ -37,7 +37,11 @@ export function pipelineRuns(rest, cache, w, maxRest, persist = noop) {
   };
 }
 
-/** Closed PRs newest-updated first, until the page runs past the window; merged_at says which merged. */
+/**
+ * Closed PRs newest-updated first, until the page runs past the window; merged_at says which merged.
+ * No end bound here: a PR merged inside a past window can be updated after it, so paging starts at
+ * now and mergeMinutes drops merges past --until (#6690).
+ */
 export function mergedPrs(rest, sinceMs) {
   const prs = [];
   for (let page = 1; page <= 5; page += 1) {

@@ -2,7 +2,7 @@
 // <projects>/<project folder>/<session>/subagents/workflows/<run>/agent-*.jsonl, with the agent
 // type in the sibling .meta.json and the workflow's name in <session>/workflows/<run>.json. The
 // project has one folder per checkout (the main one and each worktree), and all of them launch
-// agents, so every folder that starts with the project's name is scanned.
+// agents, so every folder named for the checkout or one of its worktrees is scanned (project.mjs).
 //
 // Usage is deduped by message id: a streamed reply writes one row per content block, all with the
 // same id and the same usage, and counting rows overstated an Opus agent's calls by 60%.
@@ -13,6 +13,7 @@
 import { createReadStream, existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
+import { isProjectFolder } from "./project.mjs";
 
 /** Calls deduped by message id; the first call is the first message's input plus both cache sides. */
 export function agentUsage(lines) {
@@ -230,7 +231,7 @@ export function listDirs(path) {
  */
 export async function scanWorkflowAgents(projectsDir, project, sinceMs, untilMs) {
   const agents = [];
-  for (const folder of listDirs(projectsDir).filter((name) => name.startsWith(project))) {
+  for (const folder of listDirs(projectsDir).filter((name) => isProjectFolder(name, project))) {
     for (const session of listDirs(join(projectsDir, folder))) {
       const sessionDir = join(projectsDir, folder, session);
       for (const run of listDirs(join(sessionDir, "subagents", "workflows")))

@@ -16,16 +16,15 @@ import { readFileSync } from "node:fs";
 import { isMain } from "./is-main.mjs";
 import { ensureGhToken, ghRestAll } from "./moneypenny/gh.mjs";
 
-// One rep from any scan's candidate. Clone-scan's src paths are relative to src/, so they gain it
-// here to match the path an open PR reports. No target means the output changed shape: `rank` names
-// that scan as unreadable, rather than it looking clean.
-const fromRoot = (where) => {
-  const file = where.split(":")[0];
-  return /^(app|src|scripts|tests)\//.test(file) ? file : `src/${file}`;
-};
-const repOf = (c) => {
-  const files =
-    c.files ?? (c.a ? [fromRoot(c.a), fromRoot(c.b)] : [c.target ?? c.file, c.from, c.to]);
+// One rep from any scan's candidate. Clone-scan's root scope reports paths relative to src/, so they
+// gain it here to match the path an open PR reports; the app scope's already carry app/src/. The
+// scope decides, never the first folder: src/scripts/ exists, and a first-folder guess kept
+// `scripts/x.ts` as a repo path that is not there, missing the open PR on it (#6721).
+// No target means the output changed shape: `rank` names that scan as unreadable, rather than it
+// looking clean.
+const repOf = (c, root) => {
+  const at = (where) => `${root ? "src/" : ""}${where.split(":")[0]}`;
+  const files = c.files ?? (c.a ? [at(c.a), at(c.b)] : [c.target ?? c.file, c.from, c.to]);
   const target = c.name ? `${c.name} ×${c.copies}` : (c.target ?? c.file ?? c.from ?? c.a);
   if (!target) throw new Error("no target");
   const moves = c.copies
@@ -35,11 +34,9 @@ const repOf = (c) => {
 };
 const picks = (o) => {
   if (!("candidate" in o)) throw new Error("no candidate key");
-  return [o, o.app]
-    .filter(Boolean)
-    .flatMap((s) => [s.candidate, s.runnerUp])
-    .filter(Boolean)
-    .map(repOf);
+  const fromScope = (s, root) =>
+    [s?.candidate, s?.runnerUp].filter(Boolean).map((c) => repOf(c, root));
+  return [...fromScope(o, true), ...fromScope(o.app, false)];
 };
 const cssReps = (o) => {
   const byFile = {};
