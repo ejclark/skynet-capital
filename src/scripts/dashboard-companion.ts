@@ -17,6 +17,7 @@ import type { TradeActivityRecord } from "../observatory/activity-store.js";
 import { rankStructures } from "../options/recommend.js";
 import type { BotControlsStore } from "../server/bot-controls-store.js";
 import { createCompanionMessageLogStore } from "../server/companion-message-log.js";
+import { shelfAnswered } from "../server/discovery-answered.js";
 import { createDiscoveryQueueStore } from "../server/discovery-queue-store.js";
 import { opaqueMemberId } from "../server/feedback-issue.js";
 import type { FeedbackLogStore } from "../server/feedback-log.js";
@@ -83,11 +84,13 @@ export function setupCompanion(env: NodeJS.ProcessEnv, deps: CompanionSetupDeps)
   const readRoadmap = resolveRoadmap(env);
   // A read-only second handle on the research list's file (the access wiring holds the writing
   // one, `dashboard-access.ts`); the store reads the file fresh on each load, so a new ask shows
-  // up on the next turn. The shelf is read fresh per call too, the way the ask route reads it.
+  // up on the next turn. The shelf is read fresh per call too, the way the ask route reads it, and
+  // an ask the shelf already answers is dropped the way every other reader of the list drops it.
   const researchList = createDiscoveryQueueStore(env, (m) => console.error(m));
   const readResearchOn = createHouseResearchReader({
     shelf: () => shelfResearched(),
     queue: () => researchList.load(),
+    answered: shelfAnswered(),
     today: () => marketDayKey(new Date().toISOString()),
   });
   const tools: CompanionDeskDeps = {

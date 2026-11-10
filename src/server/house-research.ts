@@ -6,9 +6,12 @@
  * it, and lessons recorded against it, Moneypenny said the house had nothing, because none of her
  * tools read any of it. This module gathers the four answers from what is already checked in or
  * already kept:
- *   1. the shelf — whether a research ledger covers the name (`shelfResearched`, names only);
+ *   1. the shelf — whether a research ledger covers the name (`shelfResearched`, names only); for
+ *      a sector, which of its names have one (`symbolsInSector`, the rule `coverageBySector` uses);
+ *      for a market, whether the fund it is played through has one (`market-catalog.ts`);
  *   2. the house campaigns that follow it — the same "holds" rule `coveringCampaign` uses (a
- *      sector's campaign, a market's campaign, a cast that names the ticker);
+ *      sector's campaign, a market's campaign or a cast holding its fund, a cast that names the
+ *      ticker);
  *   3. the lessons recorded (tested, killed, on watch), each with its date, re-check date and
  *      falsifier as the house wrote them, marked stale once the re-check date has passed;
  *   4. whether a question about it already waits on the research list (`discovery-queue.ts`).
@@ -18,6 +21,14 @@
  * the question text. The one member-specific field, `onYourBook`, reads only the asking member's
  * own held names, passed in by the caller.
  *
+ * A SECTOR OR MARKET IS NEVER "NOTHING" BY OMISSION. No campaign set in a sector does not mean the
+ * house has not researched it: the ledgers are per ticker, so a sector read carries its names that
+ * have one, and a market read checks its fund. Without that, a sector with five ledgers read empty.
+ *
+ * ANSWERED ASKS ARE OFF THE LIST. The daily lane answers an ask by writing a finding to the shelf and
+ * never touches the volume file, so the live reader drops answered asks at read time
+ * (`withoutAnswered`), the way every dashboard reader of the list does.
+ *
  * HONEST ABOUT THE WAIT. While no lane reads the research list (`LANE_READS_QUEUE`), the wait line
  * says so rather than promising a place in line that nothing honors — the same rule `tellMember`
  * follows.
@@ -26,17 +37,23 @@
  */
 import { LESSON_RECORDS, type Lesson, type LessonRecord } from "../domain/campaign-lessons.js";
 import { CAMPAIGNS, type Campaign, castSymbols } from "../domain/campaigns.js";
+import { withoutAnswered } from "../domain/discovery-pass.js";
 import {
+  type DiscoveryAsk,
   type DiscoveryKind,
   type DiscoveryQueue,
   LANE_READS_QUEUE,
 } from "../domain/discovery-queue.js";
+import { marketById } from "../domain/market-catalog.js";
+import { symbolsInSector } from "../domain/sector-coverage.js";
 import { heldNames } from "./upcoming-events.js";
 
 /** The most house campaigns one read lists. */
 export const CAMPAIGN_ROWS = 3;
 /** The most lessons one read lists; the rest are counted in `more`. */
 export const LESSON_ROWS = 6;
+/** The most names with a ledger one sector read lists; the rest are counted in `more`. */
+export const LEDGER_NAME_ROWS = 12;
 
 /** Said on every read, so no rendering of it can drop what house research is and is not. */
 export const HOUSE_RESEARCH_NOTE =
@@ -64,8 +81,13 @@ export interface HouseLessonRow {
 export interface HouseResearch {
   readonly kind: DiscoveryKind;
   readonly subject: string;
-  /** Names only: whether a research ledger on the shelf covers the ticker. */
+  /** Names only: whether a research ledger on the shelf covers the ticker — for a market, the
+   *  ticker of the fund it is played through. */
   readonly shelf?: "has a research ledger" | "no ledger yet";
+  /** Markets only: the US-listed fund the market is played through. */
+  readonly fund?: string;
+  /** Sectors only: the names in the sector that have a research ledger, sorted, and how many more. */
+  readonly ledgersInSector?: { readonly names: readonly string[]; readonly more: number };
   readonly campaigns: readonly {
     readonly id: string;
     readonly title: string;
@@ -97,13 +119,44 @@ export interface HouseResearchDeps {
   readonly laneReads?: boolean;
   readonly campaigns?: readonly Campaign[];
   readonly lessons?: readonly LessonRecord[];
+  /** The names the directory files under a sector (`symbolsInSector` by default). */
+  readonly namesInSector?: (sector: string) => readonly string[];
 }
 
-/** Whether a campaign follows the subject — `coveringCampaign`'s rule, without the ask scope. */
+/** Whether a campaign follows the subject — `coveringCampaign`'s rule, without the ask scope. A
+ *  market is also followed by a campaign whose cast holds the fund it is played through. */
 function follows(c: Campaign, { kind, subject }: ResearchSubject): boolean {
   if (kind === "sector") return c.sector === subject;
-  if (kind === "market") return c.market === subject;
+  if (kind === "market") {
+    const fund = marketById(subject)?.fund;
+    return c.market === subject || (fund !== undefined && castSymbols(c).includes(fund));
+  }
   return castSymbols(c).includes(subject);
+}
+
+function shelfLine(has: boolean): NonNullable<HouseResearch["shelf"]> {
+  return has ? "has a research ledger" : "no ledger yet";
+}
+
+/** What the shelf says, by kind: a name's own ledger, a sector's names with one, a market's fund. */
+function shelfPart(
+  ask: ResearchSubject,
+  deps: HouseResearchDeps,
+): Pick<HouseResearch, "shelf" | "fund" | "ledgersInSector"> {
+  if (ask.kind === "name") return { shelf: shelfLine(deps.isResearched(ask.subject)) };
+  if (ask.kind === "sector") {
+    const names = (deps.namesInSector ?? symbolsInSector)(ask.subject).filter((n) =>
+      deps.isResearched(n),
+    );
+    return {
+      ledgersInSector: {
+        names: names.slice(0, LEDGER_NAME_ROWS),
+        more: Math.max(0, names.length - LEDGER_NAME_ROWS),
+      },
+    };
+  }
+  const fund = marketById(ask.subject)?.fund;
+  return fund ? { fund, shelf: shelfLine(deps.isResearched(fund)) } : {};
 }
 
 function lessonRow(l: Lesson, today: string): HouseLessonRow {
@@ -162,13 +215,7 @@ export function houseResearchOn(ask: ResearchSubject, deps: HouseResearchDeps): 
   return {
     kind: ask.kind,
     subject: ask.subject,
-    ...(isName
-      ? {
-          shelf: deps.isResearched(ask.subject)
-            ? ("has a research ledger" as const)
-            : ("no ledger yet" as const),
-        }
-      : {}),
+    ...shelfPart(ask, deps),
     campaigns: followed
       .slice(0, CAMPAIGN_ROWS)
       .map((c) => ({ id: c.id, title: c.title, storyline: c.storyline })),
@@ -187,9 +234,12 @@ export type ReadResearchOn = (ask: ResearchSubject, held: readonly string[]) => 
 
 /** Where a live reader gets each source, read fresh on every call. */
 export interface HouseResearchSources {
-  /** The shelf's ledger check (`shelfResearched`), called only for a name. */
+  /** The shelf's ledger check (`shelfResearched`), read fresh on every call. */
   readonly shelf: () => (ticker: string) => boolean;
   readonly queue: () => DiscoveryQueue;
+  /** Whether the shelf already answers an ask (`shelfAnswered`); an answered ask is dropped from
+   *  the list before it is counted, so a question the house answered never reads as waiting. */
+  readonly answered: (ask: DiscoveryAsk) => boolean;
   readonly today: () => string;
   readonly laneReads?: boolean;
   readonly campaigns?: readonly Campaign[];
@@ -202,12 +252,12 @@ export function createHouseResearchReader(sources: HouseResearchSources): ReadRe
   return (ask, held) => {
     let queue: DiscoveryQueue = [];
     try {
-      queue = sources.queue();
+      queue = withoutAnswered(sources.queue(), sources.answered);
     } catch {
       queue = [];
     }
     return houseResearchOn(ask, {
-      isResearched: ask.kind === "name" ? sources.shelf() : () => false,
+      isResearched: sources.shelf(),
       queue,
       held,
       today: sources.today(),

@@ -5,6 +5,7 @@ import {
   createHouseResearchReader,
   HOUSE_RESEARCH_NOTE,
   houseResearchOn,
+  LEDGER_NAME_ROWS,
   LESSON_ROWS,
 } from "../../src/server/house-research.js";
 
@@ -37,6 +38,12 @@ const OIL = campaign({
   title: "Oil supply",
   sector: "Energy",
   cast: [{ role: "Majors", symbols: ["XOM"], source: "research/xom.md" }],
+});
+const CRUDE = campaign({
+  id: "crude-fund",
+  title: "Crude through the fund",
+  sector: "Energy",
+  cast: [{ role: "Fund", symbols: ["USO"], source: "research/uso.md" }],
 });
 const BROAD = campaign({
   id: "broad-market",
@@ -102,8 +109,14 @@ const ask = (over: Partial<DiscoveryAsk> & Pick<DiscoveryAsk, "id">): DiscoveryA
   ...over,
 });
 
+const SECTOR_NAMES: Record<string, readonly string[]> = {
+  "Consumer Discretionary": ["AMZN", "DHI", "KBH", "LEN", "NKE"],
+  Technology: ["AMD", "NVDA"],
+};
+
 const base = {
   isResearched: (t: string) => t === "NVDA",
+  namesInSector: (sector: string) => SECTOR_NAMES[sector] ?? [],
   queue: [] as readonly DiscoveryAsk[],
   held: [] as readonly string[],
   today: TODAY,
@@ -191,12 +204,46 @@ describe("houseResearchOn — a sector or a market", () => {
     expect(out.lessons.map((l) => l.idea)).toEqual(["Majors hold up when crude dips."]);
     expect(out).not.toHaveProperty("shelf");
     expect(out).not.toHaveProperty("onYourBook");
+    expect(out.ledgersInSector).toEqual({ names: [], more: 0 });
+  });
+
+  it("names the sector's companies that have a ledger even when no house campaign is set in it", () => {
+    const researched = new Set(["AMZN", "DHI", "KBH", "LEN"]);
+    const out = houseResearchOn(
+      { kind: "sector", subject: "Consumer Discretionary" },
+      { ...base, isResearched: (t: string) => researched.has(t) },
+    );
+    expect(out.campaigns).toEqual([]);
+    expect(out.ledgersInSector).toEqual({ names: ["AMZN", "DHI", "KBH", "LEN"], more: 0 });
+  });
+
+  it("lists at most the name cap for a sector and counts the rest", () => {
+    const many = Array.from({ length: LEDGER_NAME_ROWS + 2 }, (_, i) => `T${i}`);
+    const out = houseResearchOn(
+      { kind: "sector", subject: "Technology" },
+      { ...base, isResearched: () => true, namesInSector: () => many },
+    );
+    expect(out.ledgersInSector?.names).toHaveLength(LEDGER_NAME_ROWS);
+    expect(out.ledgersInSector?.more).toBe(2);
+  });
+
+  it("reads a market through its fund: the fund's ledger, and a campaign whose cast holds the fund", () => {
+    const out = houseResearchOn(
+      { kind: "market", subject: "oil" },
+      { ...base, isResearched: (t: string) => t === "USO", campaigns: [AI, OIL, CRUDE, BROAD] },
+    );
+    expect(out.fund).toBe("USO");
+    expect(out.shelf).toBe("has a research ledger");
+    expect(out.campaigns.map((c) => c.id)).toEqual(["crude-fund"]);
+    expect(out).not.toHaveProperty("ledgersInSector");
   });
 
   it("finds a market through the house campaign played through it", () => {
     const out = houseResearchOn({ kind: "market", subject: "us-large-caps" }, base);
     expect(out.campaigns.map((c) => c.id)).toEqual(["broad-market"]);
     expect(out.lessons).toEqual([]);
+    expect(out.fund).toBe("SPY");
+    expect(out.shelf).toBe("no ledger yet");
   });
 
   it("includes a sector-wide lesson (no symbols) for the sector, which a name read leaves out", () => {
@@ -260,7 +307,7 @@ describe("houseResearchOn — nothing held", () => {
 });
 
 describe("createHouseResearchReader", () => {
-  it("reads the shelf only for a name, and turns a failed list read into an empty list", () => {
+  it("reads the shelf fresh on every call, and turns a failed list read into an empty list", () => {
     let shelfReads = 0;
     const read = createHouseResearchReader({
       shelf: () => {
@@ -270,6 +317,7 @@ describe("createHouseResearchReader", () => {
       queue: () => {
         throw new Error("disk gone");
       },
+      answered: () => false,
       today: () => TODAY,
       campaigns: [AI],
       lessons: LESSONS,
@@ -279,6 +327,28 @@ describe("createHouseResearchReader", () => {
     expect(out.onYourBook).toBe(true);
     expect(out.onTheList).toEqual({ waiting: false });
     read({ kind: "sector", subject: "Technology" }, []);
-    expect(shelfReads).toBe(1);
+    expect(shelfReads).toBe(2);
+  });
+
+  it("drops an ask the shelf already answers: it is not waiting, and it is not counted ahead of another", () => {
+    const read = createHouseResearchReader({
+      shelf: () => () => false,
+      queue: () => [
+        ask({ id: "name:AAPL", subject: "AAPL" }),
+        ask({ id: "name:MSFT", subject: "MSFT" }),
+        ask({ id: "name:PLTR" }),
+      ],
+      answered: (a) => a.subject === "AAPL",
+      today: () => TODAY,
+      laneReads: true,
+      campaigns: [],
+      lessons: [],
+    });
+    const answered = read({ kind: "name", subject: "AAPL" }, []);
+    expect(answered.onTheList).toEqual({ waiting: false });
+    expect(answered.wait).toBe("No question about it is waiting on the research list.");
+    const behind = read({ kind: "name", subject: "PLTR" }, []);
+    expect(behind.onTheList).toEqual({ waiting: true, ahead: 1, askedBy: 1 });
+    expect(behind.wait).toBe("1 ask is ahead of it on the research list.");
   });
 });
