@@ -148,6 +148,10 @@ describe("what a reviewer is told", () => {
     expect(prompt).toMatch(/concrete failure or cost/i);
   });
 
+  it("asks for the file in the set's own form, repo-relative with no :line", () => {
+    expect(prompt).toMatch(/repo-relative path.*never absolute, never with :line/);
+  });
+
   it("refuses a PR the lens does not run on", () => {
     expect(() => promptFor(SET, "performance", "h4", LENS)).toThrow(/h4/);
   });
@@ -171,6 +175,23 @@ describe("the score", () => {
     const low = score(withRow({ pr: 1, findings: [finding("src/a.ts", "low")] })).recall;
     expect(low.hit).toBe(0);
     expect(low.lowOnly).toEqual([1]);
+  });
+
+  // A reviewer runs in its own worktree and often cites `file:line`; the set is repo-relative (#6719).
+  it.each([
+    ["absolute, from the reviewer's own worktree", "/tmp/wt/agent-1/src/a.ts"],
+    ["with a :line suffix", "src/a.ts:368"],
+    ["with a :line:col suffix", "src/a.ts:368:4"],
+    ["absolute and with a :line suffix", "/home/runner/work/repo/src/a.ts:12"],
+    ["with a leading ./", "./src/a.ts"],
+  ])("counts the defect's file written %s as a hit", (_form, file) => {
+    expect(score(withRow({ pr: 1, findings: [finding(file)] })).recall.hit).toBe(1);
+  });
+
+  it("does not count a file whose name only ends like the defect's", () => {
+    for (const file of ["/tmp/wt/xsrc/a.ts", "lib/src/a.tsx", "other-src/a.ts:3"]) {
+      expect(score(withRow({ pr: 1, findings: [finding(file)] })).recall.hit).toBe(0);
+    }
   });
 
   it("counts a PR with two defects once", () => {

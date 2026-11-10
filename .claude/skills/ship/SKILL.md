@@ -85,7 +85,7 @@ costs Eric a separate hand-merge.
 
 ```
 scripts/ship.sh platter open <item-branch>   # cut platter/<date> off main, board item 1, open it HELD
-scripts/ship.sh platter board <item-branch>  # board the next item; push; refresh the PR's ledger
+scripts/ship.sh platter board <item-branch>  # catch up to main; board the next item; push; refresh the ledger
 scripts/ship.sh platter ledger [--body]      # the table (or the whole PR body), read from git
 scripts/ship.sh platter sync                 # re-post the ledger; refuses if the range ≠ GitHub's count
 ```
@@ -102,7 +102,10 @@ scripts/ship.sh platter sync                 # re-post the ledger; refuses if th
   branches: [main]`, so a PR based on a platter branch runs **no CI at all** — the platter PR is the
   union's first CI run, and local verify per board is the only per-item proof that exists.
 - **Never a workspace.** A conflicting item catches up to `main` on its own branch and re-boards;
-  nothing is ever fixed on the platter.
+  nothing is ever fixed on the platter. `board` does merge `main` into a platter that is behind
+  before it squashes, then boards with `main`'s copy of `ship.sh` (#5390): a catch-up, so the
+  item commit holds only the item's own files. If `main` conflicts with a boarded item it aborts
+  and the platter is re-opened; `--no-merge` refuses instead of merging.
 - **No same-file fence.** Feast mode's "two items must not touch the same file" comes from parallel
   athletes. The platter boards sequentially onto one integration branch, so same-file items are fine
   in order — a conflict is just an item that has to catch up first.

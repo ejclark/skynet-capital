@@ -209,7 +209,7 @@ export const COMPANION_TOOL_DEFS = [
   {
     name: "get_work_status",
     description:
-      "Where any issue or pull request on the Skynet Capital build queue stands: state, the member-facing status (the same words as the Feedback badge, or 'Being built — PR #N open'), open and merged PRs that reference it, its quoted title, and a short excerpt of the thread from project members only. For 'where's my feedback?', pass the issue numbers from the MEMBER CONTEXT filings line. Read-only; up to 5 numbers per call.",
+      "Where any issue or pull request on the Skynet Capital build queue stands: state, the member-facing status (the same words as the Feedback badge, or 'Being built — PR #N open'), open and merged PRs that reference it, its quoted title, and a short excerpt of the thread from project members only. For 'where's my feedback?', pass the issue numbers from the MEMBER CONTEXT filings line. Read-only; up to 5 numbers per call. waiting (open issues only) says what it waits on, why, and what would move it; openDays is how long it has been open.",
     input_schema: {
       type: "object",
       properties: {
@@ -265,7 +265,7 @@ export const COMPANION_TOOL_DEFS = [
         details: {
           type: "string",
           description:
-            "What / where in the app / expected vs. actual (bug) or what 'done' looks like (feature, idea), in the member's own words where possible. Facts from this conversation only.",
+            "What / where in the app / expected vs. actual (bug) or what 'done' looks like (feature, idea), in the member's own words where possible. Facts from this conversation only. End with one line starting 'Done when:' saying what the member would see once it is fixed or built.",
         },
       },
       required: ["kind", "title", "details"],

@@ -13,7 +13,18 @@ import type { OnboardingView } from "../../server/onboarding-api-routes.js";
  * one) needs the harness to feed each of Moneypenny's own replies back into the transcript before
  * sending the next round, exactly as the real client does (`moneypenny.ts`'s `transcript()`).
  */
-export type CompanionFixtureCategory = "grounding" | "pushback" | "unknown" | "size" | "filing";
+export type CompanionFixtureCategory =
+  | "grounding"
+  | "pushback"
+  | "unknown"
+  | "size"
+  | "filing"
+  // Her four jobs (the Moneypenny operator plan, 2026-11-10): size up, research, hand work on,
+  // propose a change. One fixture each, so an improvement to any one job is measurable.
+  | "assess"
+  | "research"
+  | "delegate"
+  | "evolve";
 
 export interface CompanionFixture {
   readonly id: string;
