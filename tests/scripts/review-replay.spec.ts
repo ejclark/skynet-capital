@@ -234,6 +234,7 @@ describe("the labelled set", () => {
       "context-loop",
       "reuse-composability",
       "smells-and-patterns",
+      "information-architecture",
     ]) {
       expect(casesFor(set, lens).inputs.length, lens).toBeGreaterThan(0);
     }
@@ -348,7 +349,7 @@ describe("the command line", () => {
   it("checks every sha in the real set resolves and fits its PR, or says it cannot tell", () => {
     const run = cli("check");
     if (run.status === 2) expect(run.stderr).toContain("shallow");
-    else expect(run.stdout + run.stderr).toContain("60 of 60");
+    else expect(run.stdout + run.stderr).toContain("69 of 69");
     expect(run.status === 0 || run.status === 2).toBe(true);
   });
 });

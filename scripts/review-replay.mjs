@@ -44,6 +44,7 @@ export const LENSES = {
   "context-loop": "context-loop",
   "reuse-composability": "reuse",
   "smells-and-patterns": "structure",
+  "information-architecture": "ia",
   "pre-merge": "correctness",
 };
 export const PRE_MERGE = "pre-merge";

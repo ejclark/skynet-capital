@@ -1112,6 +1112,20 @@
       "cite": "docs/review/README.md:37, 40-45; docs/review/README.md:11 'no lens below has run on any PR'; docs/review/README.md:35"
     },
     {
+      "id": "ia-steward",
+      "department": "quality",
+      "name": "Information-architecture reviewer (IA lens)",
+      "kind": "lens",
+      "job": "Reads a route, nav or docs/IA.md change for a page a member can no longer reach, data placed at a key it is not fetched by, or a home that contradicts the written IA decision",
+      "wakesOn": "a review-replay run of the information-architecture lens; joins post-merge-audit only once its replay keeps it",
+      "speaksOn": "findings scored by scripts/review-replay.mjs, never filed while on trial",
+      "cadence": "per replay, on trial",
+      "invoker": "session",
+      "status": "on trial",
+      "codeRoots": ["docs/review/lenses/information-architecture.md"],
+      "cite": "#6886 slice 2: the first hire is a lens, not an agent (/charter step 3; docs/review/README.md:7-10); docs/review/lenses/information-architecture.md:6-12 (kill rule, on trial); first replay 2026-11-10: 3 of 3 labelled defects on reading, 5 of 5 controls clean, one unlabelled dead link found (docs/review/README.md:47)"
+    },
+    {
       "id": "intent-replay",
       "department": "quality",
       "name": "How-Eric-writes replay (intent-replay)",
