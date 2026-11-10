@@ -221,6 +221,12 @@ export function mainEpisodes(runs, capsules, commits, w) {
         greenBeforeFix: Boolean(verifiedAt && (!fix || fix.at > verifiedAt)),
         stillRed: !verifiedAt,
         startedBeforeWindow,
+        // The stage keeps such a streak unknown, but the ledger cannot drop it (#6691): the time it
+        // has run inside the window is known, and at least that long is still a reading.
+        toVerifiedFloorMs:
+          startedBeforeWindow || !verifiedAt
+            ? span(Math.max(firstEnded, w.sinceMs), verifiedAt ?? w.untilMs)
+            : null,
       }),
     ];
   });
@@ -330,6 +336,20 @@ export function formatStage(label, s) {
 
 const sourceOf = (episodes, extra = {}) => ({ episodes, stages: stagesOf(episodes), ...extra });
 
+/**
+ * Main CI's failure to verified for the ledger row: each streak's span, or, for one still red or
+ * begun before the window, its time inside the window as a floor (#6691). Dropping those left a
+ * 3-day outage beside one 15-minute streak reading 15, the same as a healthy week. A larger value
+ * never lowers a quantile, so when `floors` is above 0 the p50 itself is a floor.
+ */
+export function ledgerStage(episodes) {
+  const floors = episodes.filter((e) => e.toVerifiedMs === null && e.toVerifiedFloorMs != null);
+  return {
+    ...stage(episodes.map((e) => e.toVerifiedMs ?? e.toVerifiedFloorMs ?? null)),
+    floors: floors.length,
+  };
+}
+
 const dayOf = (ms) => new Date(ms).toISOString().slice(0, 10);
 
 /**
@@ -373,11 +393,13 @@ export function readFailureToFix({
   const pipelineCapsules = capsules.filter((c) => c.title.startsWith("[ci] Pipeline — "));
   const fitness = searchIssues(rest, `"[fitness]" in:title is:issue created:>=${dayOf(w.sinceMs)}`);
   const audit = auditIssues ?? defectIssues(rest, w.sinceMs);
+  const mainCiEpisodes = mainEpisodes(runs, pipelineCapsules, commits, w);
   return {
     window: w,
     commits: ref,
     sources: {
-      mainCi: sourceOf(mainEpisodes(runs, pipelineCapsules, commits, w), {
+      mainCi: sourceOf(mainCiEpisodes, {
+        ledger: ledgerStage(mainCiEpisodes),
         // Lane workflows file capsules too. Their runs are not listed here, so they are counted out
         // loud rather than left to look like a clean record.
         otherWorkflowCapsules: capsules.filter(
@@ -410,17 +432,24 @@ const stagesText = (s) =>
 /**
  * The row's arguments for `loop-ledger.mjs --add`. The number is main CI's failure to verified p50
  * in minutes, the one source with a reading every week: a p50 across all three would move whenever
- * an audit happened to run. The other two ride in the row's words so nothing is lost.
+ * an audit happened to run. The other two ride in the row's words so nothing is lost. A streak
+ * still red, or begun before the window, counts at its time inside the window, and the words then
+ * say the number is a floor (#6691): the loop's stop and verdict rules read this number.
  */
 export function ledgerArgs(reading, rows, date) {
   const { mainCi, contracts, audit } = reading.sources;
-  const p50 = mainCi.stages.toVerified.p50Min;
+  const { p50Min: p50, floors } = mainCi.ledger;
   if (p50 === null)
     throw new Error("no main CI reading in this window, so no row: a ledger row needs a number");
   if (rows.at(-1)?.date === date) throw new Error(`${LEDGER_LOOP} already has a row for ${date}`);
   const number = String(Math.round(p50));
   const changed = [
     `${Math.round(reading.window.hours / 24)} days to ${dayOf(Date.parse(reading.window.until))}.`,
+    ...(floors
+      ? [
+          `The number is a floor: ${floors} red streak(s) still red or begun before the window count at their time inside it.`,
+        ]
+      : []),
     `main CI, ${stagesText(mainCi.stages)}.`,
     `[fitness] contracts, ${stagesText(contracts.stages)}.`,
     `audit, time on main, ${stagesText(audit.stages)}.`,
