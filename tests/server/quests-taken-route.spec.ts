@@ -4,11 +4,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable } from "node:stream";
 import type { QuestScore, QuestTypeScore } from "../../src/domain/quest-score.js";
+import { lifecycleLedgerRecord } from "../../src/observatory/option-lifecycle-activity.js";
 import type { ActivityView } from "../../src/observatory/participant-snapshot.js";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
 import { QUESTS_TAKEN_PATH, serveQuestsTakenApi } from "../../src/server/quests-taken-route.js";
 import { TakenQuestStore } from "../../src/server/taken-quest-store.js";
 import { serveTradeApi } from "../../src/server/trade-api-routes.js";
+import { parseLifecycleActivity } from "../../src/trading/option-lifecycle.js";
 
 /**
  * #7028 slice 6, end to end: a quest's ticket sends its id with the order; the accepted order is
@@ -169,5 +171,64 @@ describe("GET /api/quests/taken", () => {
     expect((await takenFor(bob)).status).toBe(404);
     expect((await takenFor(bob, "?participantId=ann-1")).status).toBe(404);
     expect((await takenFor(ann, "?participantId=ann-1")).body.taken).toHaveLength(1);
+  });
+
+  it("never scores an assigned put as closed and paid on the premium it kept (#7306)", async () => {
+    // Sell 1 QQQ 400 put for $4.20; QQQ ends at 360 and the put is assigned: the member now holds
+    // 100 shares bought at 400, about $4,000 under water, and kept $420 of premium.
+    const occ = "QQQ261218P00400000";
+    config.takenQuests?.record("ann-1", {
+      questId: "conditions:QQQ:sell-cash-secured-put",
+      source: "conditions",
+      moveKind: "sell-cash-secured-put",
+      symbol: "QQQ",
+      orderId: "o-put",
+      takenAt: "2026-11-10T15:00:00.000Z",
+      baseRate: {
+        kind: "measured",
+        rate: 0.895,
+        sample: 76,
+        episodes: 20,
+        episodesNeeded: 32,
+        mean: -0.0016,
+        worstDecile: -0.0128,
+        worstSingle: -0.2702,
+        source: "docs/research/drawdown-quests-2026-11.md",
+        note: "Edge untested.",
+      },
+    });
+    activity.push({
+      orderId: "o-put",
+      symbol: occ,
+      side: "sell",
+      quantity: 1,
+      filledQuantity: 1,
+      price: 4.2,
+      status: "filled",
+      at: "2026-11-10T15:01:00Z",
+    });
+    const lifecycle = (raw: Record<string, string>) => {
+      const event = parseLifecycleActivity(raw);
+      if (!event) throw new Error("fixture did not parse");
+      return lifecycleLedgerRecord(event, "ann-1");
+    };
+    activity.push(
+      lifecycle({ id: "a1", activity_type: "OPASN", symbol: occ, qty: "1", date: "2026-12-18" }),
+      lifecycle({
+        id: "a2",
+        activity_type: "OPTRD",
+        symbol: "QQQ",
+        qty: "100",
+        price: "400",
+        side: "buy",
+        date: "2026-12-18",
+      }),
+    );
+
+    const { body } = await takenFor(ann);
+    expect(body.taken[0]?.paid).not.toBe(true);
+    expect(body.taken[0]).toMatchObject({ state: "open", assigned: true });
+    expect(body.taken[0]?.returnPct).toBeUndefined();
+    expect(body.byType[0]).toMatchObject({ closed: 0, open: 1, assigned: 1, paid: 0 });
   });
 });
