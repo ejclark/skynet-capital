@@ -102,13 +102,6 @@ Eric-sourced.
   so the coach stays wedged until someone confirms that file's behavior or the eye skips carve-out
   paths for `--candidate` (still counting them in `debt`, listed apart as needing a human).
   _(src: Claude · while: governor cycle 7, 2026-11-02)_
-- **The meter cannot see a cloud session's workflows.** `scripts/agent-meter.mjs` and
-  `scripts/dream-digest.mjs` hard-code the laptop's project folder
-  (`-Users-eric-Developer-skynet-capital`); a cloud session's transcripts live under
-  `-home-user-skynet-capital`, so `/governor` step 5's cost read returns nothing there, where
-  sessions now run by default. Cycle 7 got its number by calling the meter's own
-  `scanWorkflowAgents` and `agentSummary` with the container's folder. Matching every project
-  folder named for this repo would cover both. _(src: Claude · while: governor cycle 7, 2026-11-02)_
 - **IPO discovery runs only when someone types it.** `npm run research:lockups` now files a listing
   from its public S-1 (#5912 slice 3), but no schedule calls it, so "Anthropic's S-1 lands and
   discovery files it within one run" (the slice's falsifier) waits on a person remembering the run:

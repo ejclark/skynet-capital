@@ -532,8 +532,14 @@ describe("npm run meter -- --jobs", () => {
     spawnSync("node", ["scripts/agent-meter.mjs", "--jobs", ...window, ...args], {
       cwd: process.cwd(),
       encoding: "utf8",
-      // A fake gh that records and refuses, so a spec can never spend the real shared bucket.
-      env: { ...process.env, PATH: `${join(dir, "bin")}:${process.env.PATH}`, ...env },
+      // A fake gh that records and refuses, so a spec can never spend the real shared bucket. The
+      // fixture folders are named for the laptop's checkout, so the meter is told that is the one.
+      env: {
+        ...process.env,
+        AGENT_CHECKOUT_DIR: "/Users/eric/Developer/skynet-capital",
+        PATH: `${join(dir, "bin")}:${process.env.PATH}`,
+        ...env,
+      },
       timeout: 60000,
     });
 
