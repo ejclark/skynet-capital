@@ -154,15 +154,18 @@ describe("the desk's ideas skip a playbook the account already subscribes to", (
         sauron: ids.map((playbookId) => ({ playbookId, enabled: false, accountId: "sauron" })),
       }),
     }) as unknown as DashboardServerConfig["subscriptions"];
-  const ideasFor = async (who: string, subscriptions = subscribedTo()) => {
+  // An idea is pitched only while its earnings window is open (`windowClosedAt`, #5719), so the
+  // clock is pinned inside the NVDA playbooks' window. On the wall clock this spec went red the day
+  // that window shut (2026-11-10, #7326) with nothing in the code changed.
+  const inWindow = new Date("2026-11-05T15:00:00Z");
+  const afterWindow = new Date("2026-11-15T15:00:00Z");
+  const ideasFor = async (who: string, subscriptions = subscribedTo(), at = inWindow) => {
     const { res, out } = fakeRes();
     const gated = configWith({
       auth: {} as never,
       resolveOwnerIds: (email: string) => (email === "owner@x" ? ["sauron"] : ["human-eric"]),
       subscriptions,
-      // Inside NVDA's earnings windows (open 2026-10-20 to 2026-11-09 on the 2026-11-18 print):
-      // a shut window drops its idea (#6745), so the live clock turned this red on 2026-11-10.
-      now: () => new Date("2026-11-02T16:00:00Z"),
+      now: () => at,
     });
     await serveDeskJson(res, "/api/desk/sauron", "/api/desk/sauron", gated, {
       email: who,
@@ -189,5 +192,10 @@ describe("the desk's ideas skip a playbook the account already subscribes to", (
     expect(owners.length).toBeGreaterThan(0);
     const ids = owners.map((c) => c.id.replace(/^opportunity-/, "").replace(/-NVDA$/, ""));
     expect(await ideasFor("guest@x", subscribedTo(...ids))).toEqual(owners);
+  });
+
+  it("stops pitching the NVDA playbooks once their earnings window shuts", async () => {
+    const after = await ideasFor("owner@x", subscribedTo(), afterWindow);
+    expect(after.filter((c) => c.id.endsWith("-NVDA"))).toEqual([]);
   });
 });
