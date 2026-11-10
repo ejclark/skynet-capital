@@ -11,7 +11,7 @@ import { type ServerWriteFinding, scanServerFile } from "../support/server-write
 // EARS:
 // - WHEN code under src/server names a work-mode label, the spec SHALL fail at that line.
 // - WHEN code under src/server writes the `plan` label, or lists it among labels, it SHALL fail.
-// - WHEN a write adds or removes `ready` in a file that never asks `isPlanIssue`, it SHALL fail.
+// - WHEN a write adds or removes `ready` in a file that never asks `hasPlanLabel`, it SHALL fail.
 // - WHEN a file outside KNOWN_WRITERS writes a GitHub comment or label, it SHALL fail at that line.
 // - WHILE a KNOWN_WRITERS entry no longer writes, or skips the plan check it promises, it SHALL fail.
 // - Text inside comments, and reads such as `work-mode.json` or `?labels=plan`, SHALL NOT count.
@@ -73,7 +73,7 @@ describe("server label guard: the scanner, against fixtures", () => {
     const { findings } = scanFixture("ready-unguarded", "feedback-followup.ts");
     expect(rules(findings)).toEqual(["ready-unguarded"]);
     expect(findings[0]?.message).toContain("src/server/feedback-followup.ts:1");
-    expect(findings[0]?.message).toContain("isPlanIssue");
+    expect(findings[0]?.message).toContain("hasPlanLabel");
     expect(scanFixture("ready-guarded", "feedback-followup.ts").findings).toEqual([]);
   });
 
@@ -113,9 +113,9 @@ describe("server label guard: src/server as it stands", () => {
       const result = results.find((r) => r.file === file);
       expect({ file, writes: (result?.writes.length ?? 0) > 0 }).toEqual({ file, writes: true });
       if (entry.refusesPlans) {
-        expect({ file, asksIsPlanIssue: result?.callsPlanGuard }).toEqual({
+        expect({ file, asksHasPlanLabel: result?.callsPlanGuard }).toEqual({
           file,
-          asksIsPlanIssue: true,
+          asksHasPlanLabel: true,
         });
       }
     }

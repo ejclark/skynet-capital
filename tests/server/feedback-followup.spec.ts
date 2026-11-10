@@ -62,16 +62,17 @@ describe("feedback-followup", () => {
       url: "https://github.com/x/y/issues/7",
       outcome: "restarted",
     });
-    // The read comes first: a filing that has become a plan is refused before anything posts (#7286).
+    // Read first (never on a plan, #7286), then the comment, then the build restart's own read.
     expect(calls[0]).toMatchObject({ method: "GET", url: ISSUE });
     expect(calls[1]).toMatchObject({ method: "POST", url: `${ISSUE}/comments` });
     expect((calls[1]?.body as { body: string } | undefined)?.body).toContain(
       "still happening, here's more detail",
     );
-    expect(calls[2]).toMatchObject({ method: "DELETE", url: `${ISSUE}/labels/ready` });
-    expect(calls[3]).toMatchObject({ method: "POST", url: `${ISSUE}/labels` });
-    expect((calls[3]?.body as { labels: string[] } | undefined)?.labels).toEqual(["ready"]);
-    expect(calls).toHaveLength(4);
+    expect(calls[2]).toMatchObject({ method: "GET", url: ISSUE });
+    expect(calls[3]).toMatchObject({ method: "DELETE", url: `${ISSUE}/labels/ready` });
+    expect(calls[4]).toMatchObject({ method: "POST", url: `${ISSUE}/labels` });
+    expect((calls[4]?.body as { labels: string[] } | undefined)?.labels).toEqual(["ready"]);
+    expect(calls).toHaveLength(5);
   });
 
   it("on a filing still in Backlog, posts the comment and touches no label — a follow-up never skips the gate", async () => {
@@ -138,10 +139,11 @@ describe("feedback-followup", () => {
       submitterName: "Tony",
     });
 
-    const comment = calls.find((c) => c.url.endsWith("/comments"));
-    const commentBody = (comment?.body as { body: string } | undefined)?.body ?? "";
-    expect(commentBody).toContain("Follow-up from **Tony**");
-    expect(commentBody).not.toContain("member@example.com");
+    const commentBody = calls.find((c) => c.url.endsWith("/comments"))?.body as
+      | { body: string }
+      | undefined;
+    expect(commentBody?.body).toContain("Follow-up from **Tony**");
+    expect(commentBody?.body).not.toContain("member@example.com");
   });
 
   it("rejects an empty follow-up before ever calling GitHub", async () => {
@@ -157,13 +159,11 @@ describe("feedback-followup", () => {
     expect(called).toBe(false);
   });
 
-  it("reports the comment failure honestly, and never relabels off a comment that didn't post", async () => {
+  it("reports the comment failure honestly, and never reads or relabels off a comment that didn't post", async () => {
     const calls: string[] = [];
     const doFetch = (method: string, url: string): Promise<JsonResponse> => {
       calls.push(`${method} ${url}`);
-      if (method === "GET") {
-        return Promise.resolve({ status: 200, body: { labels: [{ name: "ready" }] } });
-      }
+      if (method === "GET") return Promise.resolve({ status: 200, body: { labels: [] } });
       return Promise.resolve({ status: 403, body: { message: "no write access" } });
     };
 
@@ -210,13 +210,45 @@ describe("feedback-followup", () => {
     expect(warnings[0]).toContain("#7");
   });
 
-  // Unread, nobody can say the filing is not a plan, so nothing posts (#7286): the member is told
-  // to try again rather than having their words land, as the owner, on a plan.
-  it("posts nothing when the filing cannot be read, or its labels are missing", async () => {
+  it("still counts the comment as sent when the label read fails or throws", async () => {
     for (const read of [
       () => Promise.resolve({ status: 404, body: {} }),
       () => Promise.reject(new Error("socket hang up")),
-      () => Promise.resolve({ status: 200, body: { number: 7 } }),
+    ]) {
+      const calls: string[] = [];
+      let reads = 0;
+      const doFetch = (method: string, url: string): Promise<JsonResponse> => {
+        calls.push(`${method} ${url}`);
+        if (url.endsWith("/comments")) return Promise.resolve({ status: 201, body: {} });
+        // The pre-post read answers; only the build restart's read after the comment fails.
+        reads += 1;
+        return reads === 1 ? Promise.resolve({ status: 200, body: { labels: [] } }) : read();
+      };
+
+      const result = await createFollowup(config, doFetch)({ issueNumber: 7, body: "hi" });
+
+      expect(result).toMatchObject({ ok: true, outcome: "unchanged" });
+      expect(calls.some((c) => c.includes("/labels"))).toBe(false);
+    }
+  });
+
+  // #7286 slice 8: the server's token comments as the owner, and the plan lane reads an owner's
+  // comment as a go — so a follow-up never lands on a plan, whatever the chat or the form asked.
+  it("refuses a filing that has become a plan, and posts nothing", async () => {
+    const { calls, doFetch } = github(["feedback", "plan", "ready"]);
+
+    const result = await createFollowup(config, doFetch)({ issueNumber: 7, body: "ready" });
+
+    expect(result).toMatchObject({ ok: false });
+    expect(!result.ok && result.error).toContain("plan");
+    expect(calls).toEqual([{ method: "GET", url: ISSUE, body: undefined }]);
+  });
+
+  it("posts nothing when it can't read the filing first — it fails closed", async () => {
+    for (const read of [
+      () => Promise.resolve({ status: 502, body: {} }),
+      () => Promise.resolve({ status: 200, body: { title: "no labels field" } }),
+      () => Promise.reject(new Error("socket hang up")),
     ]) {
       const calls: string[] = [];
       const doFetch = (method: string, url: string): Promise<JsonResponse> => {
@@ -227,7 +259,8 @@ describe("feedback-followup", () => {
 
       const result = await createFollowup(config, doFetch)({ issueNumber: 7, body: "hi" });
 
-      expect(result).toMatchObject({ ok: false, error: expect.stringContaining("Try again") });
+      expect(result).toMatchObject({ ok: false });
+      expect(!result.ok && result.error).toContain("nothing was posted");
       expect(calls).toEqual([`GET ${ISSUE}`]);
     }
   });

@@ -64,5 +64,3 @@ export const LABELS: Record<string, LabelSpec>;
 export const PRIORITY_LABELS: string[];
 /** Every label name the repo speaks — what `issue-lint` and the seat registry validate against. */
 export const LABEL_NAMES: readonly string[];
-/** Not a `plan`: the feedback lane's share of `ready` (2026-10-26); the app server's plan check (#7286). */
-export function inFeedbackLane(issue: Pick<PullableIssue, "labels"> | null | undefined): boolean;

@@ -22,7 +22,8 @@ export interface ServerWriteScan {
   readonly findings: readonly ServerWriteFinding[];
   /** Each call that writes a comment or a label onto GitHub, by line. */
   readonly writes: readonly { readonly line: number; readonly target: "comment" | "label" }[];
-  /** Whether the file asks `isPlanIssue` (src/server/plan-write-guard.ts) anywhere. */
+  /** Whether the file asks `hasPlanLabel` (scripts/moneypenny/plan-claim.mjs, the plan lane's own
+   *  test for a plan) anywhere. */
   readonly callsPlanGuard: boolean;
 }
 
@@ -181,7 +182,7 @@ export function scanServerFile(
   const at = (index: number) => `src/server/${file}:${lineAt(code, index)}`;
   const findings: ServerWriteFinding[] = [];
   const writes: { line: number; target: "comment" | "label" }[] = [];
-  const callsPlanGuard = /\bisPlanIssue\s*\(/.test(code);
+  const callsPlanGuard = /\bhasPlanLabel\s*\(/.test(code);
   const flag = (rule: ServerWriteFinding["rule"], index: number, why: string) =>
     findings.push({ rule, line: lineAt(code, index), message: `${at(index)} ${why}` });
 
@@ -227,7 +228,7 @@ export function scanServerFile(
       flag(
         "ready-unguarded",
         m.index,
-        "writes the ready label without asking isPlanIssue (src/server/plan-write-guard.ts) first: an owner-login ready on a plan starts its build (#7286)",
+        "writes the ready label without asking hasPlanLabel (scripts/moneypenny/plan-claim.mjs) first: an owner-login ready on a plan starts its build (#7286)",
       );
     }
   }
