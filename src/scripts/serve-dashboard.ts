@@ -60,6 +60,7 @@ import { installGracefulShutdown } from "../server/graceful-shutdown.js";
 import { heldActivity, heldOrderOrigins } from "../server/held-activity.js";
 import { ladderEvidenceReader } from "../server/ladder-evidence.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
+import { ownerQueueWiring } from "../server/owner-queue.js";
 import { ParticipantService } from "../server/participant-service.js";
 import { recordPasses } from "../server/play-milestone-sync.js";
 import { publicOriginFrom } from "../server/public-url.js";
@@ -438,6 +439,10 @@ async function main(): Promise<void> {
           resolveOwnerId,
           resolveOwnerIds,
           isOwnerEmail: (email: string) => owners.has(email.toLowerCase()),
+          // What waits on the owner, for his own Moneypenny turn only (owner-queue.ts) — read
+          // behind `isOwnerEmail` in companion-routes.ts, so it rides the same OAuth-only branch.
+          // Two read-only GETs on the feedback lane's token; inert without it.
+          ...ownerQueueWiring(process.env),
           rosterIds: () => new Set(envRoster.map((p) => p.id)),
         }
       : {}),
