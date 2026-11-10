@@ -16,7 +16,7 @@ flowchart TD
   front_desk["Front desk (in the app) · 7 seats"]
   build["Builders · 13 seats"]
   staff["Chief of staff · 16 seats"]
-  quality["Quality · 17 seats"]
+  quality["Quality · 18 seats"]
   owner(["Eric · owner and game master"])
   live_sessions["Live sessions"]
   platform["Platform · 12 seats"]
@@ -114,7 +114,7 @@ feels them only as honest timing on their own ask ("queued behind 2 builds"), ne
 | The trading floor: your bots, each a character with a strategy | Bot runtime (paper) |
 | The research desk: what is coming up, and what the house has written about it | Market-event calendar |
 
-Below decks: 58 seats, every one in Builders, Quality, Chief of staff and Platform. A
+Below decks: 59 seats, every one in Builders, Quality, Chief of staff and Platform. A
 member sees their own ask's status in plain words, never the lanes.
 
 ## The board's Role lanes
@@ -229,6 +229,7 @@ Gates, repair lanes, reviewers and the debt coach.
 | Evals expert (evals-expert) | Author mode writes a check; blind grader mode writes deliberate bugs without reading the spec | /fitness steps 7 and 10; 'how would we know if this broke' | bug list + attack returned to the caller | hired | `.claude/agents/evals-expert.md` |
 | Post-merge correctness audit | Reviews merged PRs against main per lens, refutes each high/medium finding twice | after a surge wave, governor cycle or burn-down | confirmed findings for a session to file as bug + fast-track; receipts in post-merge-audit.jsonl | hired | `.claude/workflows/post-merge-audit.js` `docs/review/` |
 | Review lenses and their replay | Replays one review lens over labelled PRs and scores it before it runs for real | a lens under docs/review/lenses changes | results scored by scripts/review-replay.mjs | on trial | `.claude/workflows/review-replay.js` `scripts/review-replay.mjs` `docs/review/lenses/` |
+| Information-architecture reviewer (IA lens) | Reads a route, nav or docs/IA.md change for a page a member can no longer reach, data placed at a key it is not fetched by, or a home that contradicts the written IA decision | a review-replay run of the information-architecture lens; joins post-merge-audit only once its replay keeps it | findings scored by scripts/review-replay.mjs, never filed while on trial | on trial | `docs/review/lenses/information-architecture.md` |
 | How-Eric-writes replay (intent-replay) | Replays real messages with and without the how-he-writes page, one blind judge | docs/READERS.md page or the eval set changes; dated check in LEARNING-LOOP | results scored by scripts/intent-replay.mjs | hired | `.claude/workflows/intent-replay.js` `docs/evals/how-he-writes-set.json` |
 | Debt head coach and drills (governor) | One dispatch cycle per coach: WIP check, gate-named target, collision check, cheap athlete via the governor chore, one cycle PR; also owns the merge-policy table | 'run the coaches', 'clean up the code', 'burn down debt' | a cycle PR; ratcheted *-budget.json | hired | `.claude/skills/governor/SKILL.md` `docs/grind/governor.instructions.md` `.claude/skills/decompose/SKILL.md` `.claude/skills/dedupe/SKILL.md` `.claude/skills/bury/SKILL.md` `.claude/skills/backfill/SKILL.md` |
 | Unused-capability check (config-audit) | Reference-counts .claude capabilities nothing routes to, owner-claim contradictions, recurring corrections | daily digest Routine ride-along | digest Needs-you tier | hired | `scripts/config-audit.mjs` |

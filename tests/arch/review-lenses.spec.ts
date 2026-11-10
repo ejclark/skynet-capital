@@ -9,6 +9,7 @@ const DIR = "docs/review/lenses";
 const LENSES = [
   "adversarial",
   "context-loop",
+  "information-architecture",
   "performance",
   "reuse-composability",
   "security",
