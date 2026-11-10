@@ -98,6 +98,7 @@ import {
   writeIssueBody,
 } from "./decision-callout.mjs";
 import { executeDialTap, executeDialTidy, routeDial } from "./dial-tap.mjs";
+import { closeStaleDiscovery, flagStaleDiscovery } from "./discovery-pr-sweep.mjs";
 import { dueForResearch, RECEIPT_TITLE_RE, routeSweep } from "./events.mjs";
 import { guardFeedbackOutcome } from "./feedback-guard.mjs";
 import { ghRest, ghRestAll, sh, withRetry } from "./gh.mjs";
@@ -1620,6 +1621,9 @@ const ONE_CALL_INTENTS = {
   "close-superseded-research": (i) => closeSupersededResearch(i),
   "flag-red-research": (i) => flagRedResearch(i),
   "report-research-sweep": (i) => reportResearchSweep(i),
+  // #7341 — the discovery-PR sweep: the writes live in discovery-pr-sweep.mjs beside the decision.
+  "close-stale-discovery": (i) => closeStaleDiscovery(i),
+  "flag-stale-discovery": (i) => flagStaleDiscovery(i),
   "edit-issue-body": (i) => {
     sh("gh", ["issue", "edit", String(i.issueNumber), "--body", i.body]);
     console.log(`· refreshed the body of #${i.issueNumber}`);

@@ -4,6 +4,7 @@
 // the same "silence looks like nothing happened" failure mode as the other two lanes here.
 import { existsSync } from "node:fs";
 import { clockIntents, clockOrUnknown } from "./clock-watch.mjs";
+import { discoveryPrsOrNone, discoverySweep } from "./discovery-pr-sweep.mjs";
 import { driftChoreFromRepo } from "./drift-chore.mjs";
 import { ghRestAll, sh } from "./gh.mjs";
 import { headlessOrNone, nudgeIntents } from "./headless-pr.mjs";
@@ -334,6 +335,9 @@ export function audit(deps = {}) {
   // The research-PR sweep (research-pr-sweep.mjs, #5689): close a superseded `research/*` PR, flag
   // a red one once per head, and count the tick. `halt` stops the acts, not the count.
   intents.push(...researchSweep(deps.researchPrs, rearmed, halted));
+  // The discovery-PR sweep (discovery-pr-sweep.mjs, #7341): close a red or conflicted `discovery/*`
+  // PR so the daily lane takes its member's question again, or flag it once past the retake cap.
+  intents.push(...discoverySweep(deps.discoveryPrs, halted));
   // A red lane PR whose session has ended (red-lane-pr.mjs): close it and release its issue. `halt`
   // stops this too, because a released issue is a build the sweep may start.
   if (deps.workMode?.mode?.position !== "halt") intents.push(...redLaneIntents(deps.redLanePrs));
@@ -635,6 +639,8 @@ export function gatherAuditDeps(nowMs, hourly = {}) {
     redLanePrs: redLaneOrNone(nowMs),
     // One REST call on a tick where no research PR has sat open 6h.
     researchPrs: researchPrsOrNone(nowMs),
+    // One REST call on a tick where no discovery PR has sat untouched 6h.
+    discoveryPrs: discoveryPrsOrNone(nowMs),
   };
 }
 
