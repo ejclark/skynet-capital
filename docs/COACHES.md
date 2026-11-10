@@ -209,6 +209,11 @@ else a same-tree commit — once per head sha, at most 3 heads per PR, with a
 ledger is already assessed on or after its own is closed, naming its successor; a red one is flagged
 once per head sha; and each tick logs re-armed / closed / flagged / left, the After for the 10 found
 stuck on 2026-10-18.
+**Discovery PRs get the same net** (#7341; `scripts/moneypenny/discovery-pr-sweep.mjs`): an open
+`discovery/<slug>` PR makes the daily discovery lane skip its member's question and holds a slot of the
+pass's research ceiling, so one untouched 6h while red or conflicting is closed and its branch deleted,
+and the next pass researches the question again inside the same ceiling. After 2 unmerged closes on
+one branch it is flagged once per head sha instead, so an ask that always fails cannot cost a session a day.
 
 **The lesson drains from the capsule's close, not from a session's choice** (#4212, #4056 slice 7).
 When a `ci-failure` capsule closes as completed, the events router (`issues: closed`) runs

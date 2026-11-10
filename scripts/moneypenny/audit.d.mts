@@ -74,6 +74,8 @@ export interface AuditDeps {
   headless?: import("./headless-pr.mjs").HeadlessPr[];
   /** `research/*` PRs open past 6h (research-pr-sweep.mjs, #5689) — null when unreadable. */
   researchPrs?: import("./research-pr-sweep.mjs").ResearchPr[] | null;
+  /** `discovery/*` PRs untouched past 6h (discovery-pr-sweep.mjs, #7341) — null when unreadable. */
+  discoveryPrs?: import("./discovery-pr-sweep.mjs").DiscoveryPr[] | null;
   /** Lane PRs red past the age limit, their sessions over (red-lane-pr.mjs). */
   redLanePrs?: import("./red-lane-pr.mjs").RedLanePr[];
   /** The 15-minute clock as this tick read it (clock-watch.mjs, #6470) — null when unreadable. */
