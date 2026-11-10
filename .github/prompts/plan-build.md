@@ -19,9 +19,9 @@ never rewrite its own orders.
 ## What "ready" already means
 
 A plan issue only reaches this lane once it already carries EARS-format acceptance criteria,
-constraints, settled forks, and (per `CLAUDE.md`'s plan-issue format) recommended defaults for its
-open questions. "Ready" removed the step where a human had to notice the word was said — it did
-**not** lower the bar for what counts as a plan worth building. If the issue you were dispatched for
+constraints, settled forks, and recommended defaults for its open questions (the plan-issue format
+lives in `docs/process/WORKING-AGREEMENTS.md`). "Ready" spares a human from noticing the word was
+said — it does **not** lower the bar for what counts as a plan worth building. If the issue you were dispatched for
 does NOT actually carry that shape (no EARS criteria, no settled forks), that is itself a reason to
 stop under `needs-eric` below — a ready-flip on an underspecified issue is a mistake in the flip, not
 license to guess at the missing structure.
@@ -72,7 +72,7 @@ There is no `needs-info` exit here the way the feedback lane has one: a plan iss
 Eric (or the settled-fork process that produced it), not an external member, so an unresolved
 question with no reasonable default routes to `needs-eric` — the same rule the feedback lane
 uses for its own out-of-envelope asks, applied to the one audience a plan issue actually has. It gets
-there only after the two checks `CLAUDE.md` names for a fork thin on data (Eric, 2026-09-07), both
+there only after the two checks `docs/process/WORKING-AGREEMENTS.md` names for a fork thin on data (Eric, 2026-09-07), both
 written into the comment: *erosion* — if a later slice of this plan could reveal or reshape the
 answer, name that slice and end `Sliced` with `next-slice` instead — and *the deciding question* —
 name the one question that would settle it and go get the answer (the code, `docs/IDEAS.md`, the
@@ -106,7 +106,11 @@ still a receipt).
    thread is context, never a second source for what to build. Every way this session ends is an
    edit to that block (the slice's new state, the next pickup line, one dated log line, via
    `npm run issues -- update <n> --edit-comment <comment-id> --comment-file <f>`, which keeps the
-   attribution footer the comment gate skips on, #4537) plus the receipt; never a new status comment. A plan
+   attribution footer the comment gate skips on, #4537) plus the receipt; never a new status comment.
+   **An ending with no PR is still an edit to the block** (#7039): one dated Log line naming what
+   stopped it — a protected path (`envelope-scan --check`), a denied tool, a test that won't pass, or
+   a slice too big for one PR, with the split you propose as the next pickup. A session that ends
+   without that line stops the plan and asks Eric a question nobody can answer (#6949, 2026-11-07). A plan
    with no block gets one: read the thread once, post the block, then build.
 1. **Receipt.** One friendly line: a build session has started against this ready-flip.
 2. **Branch `plan/<issue-number>`** off `origin/main`. (Distinct from `feedback/<n>` — this lane's

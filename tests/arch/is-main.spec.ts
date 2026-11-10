@@ -93,16 +93,17 @@ describe("the study harness on a pin older than scripts/is-main.mjs", () => {
 
 // A protected file (envelope.json) cannot be edited by an autonomous lane, so its swap boards the
 // platter. Each one leaves this list in the same commit that swaps it; the spec fails while a
-// listed file is already fixed, so the list only shrinks.
-const AWAITING_PLATTER = [
-  "scripts/arm-merge.mjs",
-  "scripts/envelope-scan.mjs",
-  "scripts/hooks/fresh-checkout.mjs",
-  "scripts/hooks/guard-bash.mjs",
-  "scripts/hooks/memory-history.mjs",
-  "scripts/moneypenny/work-gate.mjs",
-  "scripts/moneypenny/work-mode.mjs",
-];
+// listed file is already fixed, so the list only shrinks. The last seven were swapped together on
+// the platter (#7046), so it is empty: a new protected script uses isMain from the start.
+const AWAITING_PLATTER: string[] = [];
+
+// Written out, not imported, for one reason each. RAW matches any equality between the two values,
+// so these are named here, and the last describe proves each compares real paths on both sides.
+const INLINED = {
+  // pipeline.yml runs the base commit's copy of this file alone, so it imports node built-ins only.
+  "scripts/envelope-scan.mjs":
+    /realpathSync\(resolve\(process\.argv\[1\]\)\) === realpathSync\(fileURLToPath\(import\.meta\.url\)\)/,
+};
 
 /** A line that compares the entry path to this module's URL or path with a raw string equality. */
 const RAW =
@@ -121,7 +122,7 @@ describe("every script uses isMain for its direct-run check", () => {
   const raw = scriptFiles(SCRIPTS).filter((f) => RAW.test(readFileSync(join(ROOT, f), "utf8")));
 
   it("no script outside the platter list compares argv[1] to import.meta.url as raw strings", () => {
-    expect(raw.filter((f) => !AWAITING_PLATTER.includes(f))).toEqual([]);
+    expect(raw.filter((f) => !(AWAITING_PLATTER.includes(f) || f in INLINED))).toEqual([]);
   });
 
   it("every file on the platter list still needs its swap (remove it once swapped)", () => {
@@ -138,5 +139,50 @@ describe("every script uses isMain for its direct-run check", () => {
     ])
       expect(RAW.test(line)).toBe(true);
     expect(RAW.test("if (isMain(import.meta.url)) main();")).toBe(false);
+  });
+});
+
+describe("the protected scripts run their main() through a symlinked path (#7046)", () => {
+  const link = join(tmp, "scripts-link-protected");
+  symlinkSync(SCRIPTS, link);
+
+  it("envelope-scan.mjs imports node built-ins only, since pipeline.yml runs the base copy alone", () => {
+    // pipeline.yml's envelope gate copies scripts/envelope-scan.mjs (and envelope.json) out of the
+    // base commit into a scratch folder and runs it there. A relative import would crash the gate,
+    // which fails closed: no PR would arm. So this file writes isMain's comparison out in full.
+    const source = readFileSync(join(SCRIPTS, "envelope-scan.mjs"), "utf8");
+    const specifiers = [...source.matchAll(/^import\s[^;]*?from\s+"([^"]+)"/gms)].map(
+      (m) => m[1] ?? "",
+    );
+    expect(specifiers.length).toBeGreaterThan(0);
+    expect(specifiers.filter((s) => !s.startsWith("node:"))).toEqual([]);
+    expect(source).not.toMatch(/\bimport\(/);
+  });
+
+  it("each inlined direct-run check compares real paths on both sides", () => {
+    for (const [file, shape] of Object.entries(INLINED)) {
+      expect(readFileSync(join(ROOT, file), "utf8")).toMatch(shape);
+    }
+  });
+
+  it("envelope-scan.mjs answers --check when launched through the symlink", () => {
+    const run = spawnSync(
+      process.execPath,
+      [join(link, "envelope-scan.mjs"), "--check", "--", "envelope.json"],
+      { cwd: ROOT, encoding: "utf8" },
+    );
+    expect(run.status).toBe(0);
+    expect(JSON.parse(run.stdout)).toEqual([expect.objectContaining({ path: "envelope.json" })]);
+  });
+
+  it("the Bash guard hook still refuses when launched through the symlink", () => {
+    // Before #7046 a session whose path ran through a symlink got no guard at all: main() never
+    // ran, so every command passed. `git stash` is refused outright (exit 2).
+    const input = JSON.stringify({ tool_name: "Bash", tool_input: { command: "git stash" } });
+    const run = spawnSync(process.execPath, [join(link, "hooks/guard-bash.mjs")], {
+      input,
+      encoding: "utf8",
+    });
+    expect(run.status).toBe(2);
   });
 });

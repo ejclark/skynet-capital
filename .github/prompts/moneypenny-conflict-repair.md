@@ -73,7 +73,7 @@ HOW TO WORK IT:
    remote at your own App token — the ambient credential `actions/checkout` set up is read-only**
    (this job's own `contents: read` permission; #3334, 2026-09-19: a plain `git push` here always
    failed with `403 — Permission denied to github-actions[bot]`, even though a real write-capable
-   token was minted). The job's checkout no longer persists that credential, but clear any
+   token was minted). The job's checkout does not persist that credential, but clear any
    leftover auth header too — a header beats the token in the URL (#4027, 2026-09-29). Run:
    ```
    git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
