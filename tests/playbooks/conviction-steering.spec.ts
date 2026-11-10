@@ -7,6 +7,7 @@ import type {
   Portfolio,
   Position,
 } from "../../src/domain/types.js";
+import type { HoldLookup } from "../../src/playbooks/conviction-adoptions.js";
 import type { Conviction } from "../../src/playbooks/conviction-record.js";
 import { AI_DIP_2026_10 } from "../../src/playbooks/conviction-seeds.js";
 import {
@@ -15,7 +16,6 @@ import {
   resolveSteering,
   type SteerBounds,
 } from "../../src/playbooks/conviction-steering.js";
-import type { HoldLookup } from "../../src/playbooks/conviction-adoptions.js";
 import { ConvictionStore, lookupConviction } from "../../src/playbooks/conviction-store.js";
 import { CRWV_LONG_CALL, CRWV_WHEEL } from "../../src/playbooks/registry.js";
 import { steeredBy } from "../../src/playbooks/steered-playbook.js";
