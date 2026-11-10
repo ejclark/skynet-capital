@@ -12,7 +12,10 @@
 tr[id^="act-"],
 tr[id^="pos-"],
 .pos-card[data-pos-anchor],
-.pbb-card {
+.pbb-card,
+li.story[id^="story-"],
+li.ecal-event[id^="event-"],
+.ecal[id="calendar"] {
   scroll-margin-top: calc(var(--landing-clear, 64px) + 12px);
 }
 
@@ -34,11 +37,23 @@ tr[data-landed] > td:first-child {
   outline-offset: 2px;
   box-shadow: inset 5px 0 0 var(--text);
 }
+/* The landing page's rows (#7167): a story or a calendar event Moneypenny linked. The same thick
+ * outline and inset bar, so the mark is a shape on both pages. The calendar section itself, her
+ * "N more on the calendar", only scrolls: an outline round the whole calendar would mark nothing. */
+li.story[data-landed],
+li.ecal-event[data-landed] {
+  background: color-mix(in oklab, var(--accent) 14%, var(--surface));
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+  box-shadow: inset 5px 0 0 var(--text);
+}
 @media (prefers-reduced-motion: no-preference) {
   tr[data-landed],
   .pos-card[data-landed],
-  .pbb-card[data-landed] {
-    animation: pos-landed 2.4s ease-out both;
+  .pbb-card[data-landed],
+  li.story[data-landed],
+  li.ecal-event[data-landed] {
+    animation: pos-landed 4s ease-out both;
   }
 }
 @keyframes pos-landed {

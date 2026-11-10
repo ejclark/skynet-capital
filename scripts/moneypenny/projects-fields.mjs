@@ -15,6 +15,10 @@
 //                          still sees the old Status, writes the day again, and heals. The other
 //                          order would leave a moved card with a stale day and nothing to notice.
 //
+//   Role                 — the seat whose queue the card sits in (#6886 slice 1b), from the seat
+//                          registry and the labels (projects-role.mjs). Cleared when no seat pulls
+//                          the card, so it lands in the board's "No Role" lane.
+//
 // WHAT IS NOT HERE, said plainly: a clock-based hold ("Held until 2026-11-10") lives in a plan's
 // state block, a comment the sweep does not read per card, so `Waiting on` does not name it yet.
 //
@@ -27,8 +31,10 @@ import {
   isBacklogCandidate,
   KIND,
   NEXT_NEEDS_APPROVAL,
+  ROLE,
   WAITING_ON,
 } from "./projects.mjs";
+import { wantedRoleOf } from "./projects-role.mjs";
 
 /** The Kind an open issue's labels give it. */
 export function wantedKindOf(issue) {
@@ -84,9 +90,16 @@ export function waitingOnFor(issue, card = {}) {
   }
 }
 
-/** Kind and "Waiting on" for one open issue — what its card should show. Pure. */
-export function wantedCardFields(issue, card) {
-  return { kind: wantedKindOf(issue), waitingOn: waitingOnFor(issue, card) };
+/**
+ * Kind, "Waiting on" and Role for one open issue — what its card should show. `seats` is the seat
+ * registry (projects-role.mjs `readSeatRegistry`); left out, Role is not planned at all. Pure.
+ */
+export function wantedCardFields(issue, card, { seats } = {}) {
+  return {
+    kind: wantedKindOf(issue),
+    waitingOn: waitingOnFor(issue, card),
+    ...(seats ? { role: wantedRoleOf(issue, seats) } : {}),
+  };
 }
 
 /**
@@ -117,6 +130,13 @@ export function planCardFields({ have = {}, wanted, status, today, present = {} 
         : { field: WAITING_ON, kind: "clear", value: "" },
     );
   }
+  if (present[ROLE] && wanted.role !== undefined && wanted.role !== (have.role ?? "")) {
+    writes.push(
+      wanted.role
+        ? { field: ROLE, kind: "select", value: wanted.role }
+        : { field: ROLE, kind: "clear", value: "" },
+    );
+  }
   return writes;
 }
 
@@ -136,9 +156,9 @@ export function describeCardFields(number, writes = []) {
 export const CARD_FIELD_WRITES_PER_SWEEP = 40;
 
 /**
- * Which open cards need Kind or "Waiting on" touched this sweep? `items` are the board's cards
- * (with `kind` / `waitingOn` from the read); `wantedFor(issue)` returns that issue's
- * `{kind, waitingOn}` (the sweep's `wantedCardFields` over its shared context), or null for a card
+ * Which open cards need Kind, "Waiting on" or Role touched this sweep? `items` are the board's cards
+ * (with `kind` / `waitingOn` / `role` from the read); `wantedFor(issue)` returns that issue's
+ * `{kind, waitingOn, role?}` (the sweep's `wantedCardFields` over its shared context), or null for a card
  * the board never carries. `present` is `planCardFields`'s field map: with neither field on the
  * board there is nothing to plan. Returns `[{number, writes}]` ascending, capped, plus how many
  * more are left for the next sweep. Pure.
@@ -152,7 +172,7 @@ export function planCardFieldDrift({
   skip = new Set(),
   cap = CARD_FIELD_WRITES_PER_SWEEP,
 } = {}) {
-  if (!(present[KIND] || present[WAITING_ON])) return { drift: [], deferred: 0 };
+  if (!(present[KIND] || present[WAITING_ON] || present[ROLE])) return { drift: [], deferred: 0 };
   const open = new Map(openIssues.filter((i) => i && !i.pull_request).map((i) => [i.number, i]));
   const due = [];
   for (const item of items) {

@@ -13,11 +13,14 @@ import { createAllowlistStore } from "../server/auth/allowlist-store.js";
 import { resolveAuth } from "../server/auth/resolve-auth.js";
 import { createAuthoredPlayStore } from "../server/authored-play-store.js";
 import { createBotControlsStore } from "../server/bot-controls-store.js";
+import { createCampaignQuestionsStore } from "../server/campaign-questions-store.js";
 import { createCouncilRepliesStore } from "../server/council-replies-store.js";
 import { createCouncilStore } from "../server/council-store.js";
+import { createDiscoveryQueueStore } from "../server/discovery-queue-store.js";
 import { createExitPlanStore } from "../server/exit-plan-store.js";
 import { createFilingCommentsStore } from "../server/filing-comments-store.js";
 import { createMemberCampaignStore } from "../server/member-campaign-store.js";
+import { createMemberChainStore } from "../server/member-chain-store.js";
 import { createMemberConvictionStore } from "../server/member-conviction-store.js";
 import {
   createOwnerLinkStore,
@@ -28,6 +31,7 @@ import { createPlayMilestoneLedger } from "../server/play-milestone-ledger.js";
 import { createSavedPositionsStore } from "../server/saved-positions-store.js";
 import { createSettingsChangeLog } from "../server/settings-change-log.js";
 import { createSubscriptionStore } from "../server/subscription-store.js";
+import { createTakenQuestStore } from "../server/taken-quest-store.js";
 
 export interface AccessSetup {
   allowlist: ReturnType<typeof createAllowlistStore>;
@@ -39,8 +43,12 @@ export interface AccessSetup {
   subscriptions: ReturnType<typeof createSubscriptionStore>;
   savedPositions: ReturnType<typeof createSavedPositionsStore>;
   exitPlans: ReturnType<typeof createExitPlanStore>;
+  takenQuests: ReturnType<typeof createTakenQuestStore>;
   authoredPlays: ReturnType<typeof createAuthoredPlayStore>;
   memberCampaigns: ReturnType<typeof createMemberCampaignStore>;
+  memberChains: ReturnType<typeof createMemberChainStore>;
+  discoveryQueue: ReturnType<typeof createDiscoveryQueueStore>;
+  campaignQuestions: ReturnType<typeof createCampaignQuestionsStore>;
   memberConvictions: ReturnType<typeof createMemberConvictionStore>;
   playMilestones: ReturnType<typeof createPlayMilestoneLedger>;
   knownPersonaIds: Set<string>;
@@ -99,11 +107,19 @@ export function setupAccess(
   // Exit plans carried at purchase (#5709 slice 3) — a contract symbol and a timestamp per held
   // call, a sibling of the subscriptions file (no new env var).
   const exitPlans = createExitPlanStore(env, (m) => console.error(m));
+  // Quests members took (#7028 slice 6) — a quest id, an order id and the rate it carried, a
+  // sibling of the subscriptions file (no new env var).
+  const takenQuests = createTakenQuestStore(env, (m) => console.error(m));
   // Authored plays (#5457) — a member's draft playbooks, a sibling of the subscriptions file on the
   // same volume (no new env var). Plain JSON: a name, a ticker, a thesis and some numbers.
   const authoredPlays = createAuthoredPlayStore(env, (m) => console.error(m));
   // Members' own campaigns (#6949 slice 3a) — private to their author, a sibling of the same file.
   const memberCampaigns = createMemberCampaignStore(env, (m) => console.error(m));
+  // Members' own chains (#6959 slice 3b) — shadow only, a sibling of the same file.
+  const memberChains = createMemberChainStore(env, (m) => console.error(m));
+  // Questions waiting for the research lane (#6952 slice 2b), another sibling file; appending starts nothing.
+  const discoveryQueue = createDiscoveryQueueStore(env, (m) => console.error(m));
+  const campaignQuestions = createCampaignQuestionsStore(env, (m) => console.error(m));
   // What happened to those plays (#5457 slice 5) — the Activity feed's playbook rows, beside them.
   const playMilestones = createPlayMilestoneLedger(env, (m) => console.error(m));
   const knownPersonaIds = new Set(createDefaultPersonas().map((p) => p.id));
@@ -150,8 +166,12 @@ export function setupAccess(
     subscriptions,
     savedPositions,
     exitPlans,
+    takenQuests,
     authoredPlays,
     memberCampaigns,
+    memberChains,
+    discoveryQueue,
+    campaignQuestions,
     memberConvictions,
     playMilestones,
     knownPersonaIds,

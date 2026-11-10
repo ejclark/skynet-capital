@@ -59,7 +59,7 @@ Main CI and audit findings have a reading. A contract's lag reads unknown, becau
 the read that files, and when the failure began is stored nowhere.
 
 **The first run, 2026-11-01:** bots running, bots responsive, main deploys and memory history passed.
-Alerts reaching the owner failed. Startup size read unknown until its budget merges.
+Alerts reaching the owner failed. Startup size is not a contract: `scripts/config-audit.mjs` prints that number.
 
 ## The shape of a pillar
 

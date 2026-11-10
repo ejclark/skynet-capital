@@ -1,5 +1,10 @@
 import { describe, expect, it } from "@rstest/core";
-import { decide, lockPid, parseWorktrees } from "../../scripts/worktree-sweep.mjs";
+import {
+  decide,
+  isAppSessionBranch,
+  lockPid,
+  parseWorktrees,
+} from "../../scripts/worktree-sweep.mjs";
 
 // #5548: WHEN a session sweeps `.claude/worktrees/`, the system SHALL remove a worktree only if its
 // HEAD is safe on a remote, it has no uncommitted work, and no live process holds its lock —
@@ -9,6 +14,7 @@ import { decide, lockPid, parseWorktrees } from "../../scripts/worktree-sweep.mj
 const finished = (over: Record<string, unknown> = {}) => ({
   primary: false,
   current: false,
+  appSession: false,
   lock: null,
   released: false,
   dirty: 0,
@@ -131,6 +137,48 @@ describe("decide — never the wrong worktree", () => {
 
   it("keeps a worktree whose age cannot be read", () => {
     expect(decide(finished({ ageMinutes: null })).remove).toBe(false);
+  });
+});
+
+// #7102: WHEN a worktree's branch is a desktop-app session's, the sweep SHALL keep it as an
+// "app session folder" unless --include-sessions is passed, which judges it by the usual rules.
+describe("decide — desktop-app session folders", () => {
+  it("keeps an idle session folder that meets every other removal condition", () => {
+    expect(decide(finished({ appSession: true }))).toEqual({
+      remove: false,
+      unlock: false,
+      reason: "app session folder",
+    });
+  });
+
+  it("judges it by the usual rules under --include-sessions", () => {
+    const opts = { includeSessions: true };
+    expect(decide(finished({ appSession: true }), opts)).toMatchObject({
+      remove: true,
+      reason: "merged",
+    });
+    expect(decide(finished({ appSession: true, dirty: 2 }), opts).remove).toBe(false);
+  });
+
+  it("still removes a finished agent worktree on another branch name", () => {
+    const appSession = isAppSessionBranch("worktree-agent-a1b2c3");
+    expect(decide(finished({ appSession }))).toMatchObject({ remove: true, reason: "merged" });
+  });
+});
+
+describe("isAppSessionBranch", () => {
+  it.each([
+    ["claude/brave-otter-3f9a1c", true],
+    ["claude/quiet-lake-000abc", true],
+    ["worktree-agent-a1b2c3", false], // an isolated agent's branch
+    ["claude/clever-bohr-sfrr6u", false], // a cloud session's suffix is not hex
+    ["claude/activity-log-audit-a1b2c3", false], // three words
+    ["claude/brave-otter-3f9a1", false], // five hex
+    ["docs/brave-otter-3f9a1c", false],
+    ["feat/brave-otter-3f9a1c", false],
+    [null, false],
+  ])("%s -> %s", (branch, want) => {
+    expect(isAppSessionBranch(branch)).toBe(want);
   });
 });
 

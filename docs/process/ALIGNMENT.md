@@ -38,8 +38,8 @@ their own reply path resumes the build with the reply as the answer. Nothing act
 a reply of "merge it" is never read as the merge.
 
 `node scripts/moneypenny/answer-readback.mjs --ledger [--apply]` collects the last week's rows into
-the table below, once each, with the row's key in a hidden comment. A weekly PR that runs it, and a
-graduation PR when a class meets rule 3, are the next piece; until then a session runs it.
+the table below, once each, with the row's key in a hidden comment. No scheduled lane runs it or
+opens rule 3's graduation PR: a session does both.
 
 ## Ledger
 
@@ -67,5 +67,19 @@ graduation PR when a class meets rule 3, are the next piece; until then a sessio
 | 2026-11-08 | screen design (taste) | #6948 · the landing page's first round: close, he adds or cuts a section? | Close; he adds or cuts a section (medium) | Cut "what's new"; asked each story to fold to its key facts | match |
 | 2026-11-08 | screen design (taste) | #7018 round 2 Q2 · where do the coming reports sit? | On the story they bear on (medium) | Build "Dates on the story"; lead with the events and add up / down / volatile icons | match |
 | 2026-11-08 | screen design (taste) | #7018 round 2 Q1 · confirm your own question first | As drawn (high) | Unanswered; decided on his behalf at his ask ("make judgement calls on my behalf to get this movement rolling") | decided on his behalf |
+| 2026-11-08 | screen design (taste) | #7018 round 3 Q1 · how do the 11 sectors read: lines, tiles or bars? | C, bars (no confidence stated; the simulated Eric's pick, #7118) | More of all three; on his second read, bars "fully redundant with the percentage change" | miss |
+| 2026-11-08 | screen design (taste) | #7018 round 3 Q2 · how do the stories sit on the calendar? | A, today then the days (no confidence stated; the simulated Eric's pick, #7118) | More of A, Not the week strip; his second read added B's grouping by day | match |
+| 2026-11-09 | screen design (taste) | #7018 round 3 · does round 1's "actionable items at the top" put the question box back above the overview (AT9)? | — (no prediction recorded; AT9 shipped as the default) | No: that note "was geared towards singular-ish path oriented workflows" | not predicted |
+| 2026-11-09 | screen design (taste) | #7018 live review · his notes list the mission box first: does it lead again, or does AT9 stand? | AT9 stands; the list was the design method, not the page order (medium) | Overview first | match |
+| 2026-11-09 | screen design (taste) | #7018 round 4 Q2 · after her answer, outline one row or pivot the page? | B, the pivot (medium) | More of B, with notes on the Eye's light and threads | match |
+| 2026-11-09 | screen design (taste) | #7018 round 5 Q1 · the refined page as drawn, the overview first | Build as drawn (medium) | The question box and canned paths first, "after seeing the visual"; a desktop calendar grid. Reverses his chat answer above | miss |
+| 2026-11-09 | screen design (taste) | #7018 round 5 Q2 · an outline, or the Eye's light? | B, the Eye's light (medium) | Build B | match |
+| 2026-11-09 | screen design (taste) | #7018 round 5 Q3 · where does a side thread live? | A, under each answer (low) | More of C, on its row; collapsible, with dividers | miss |
+| 2026-11-09 | screen design (taste) | #7018 round 6 Q3 · how does the light travel: a sweep, a spark, or a spotlight? | B, the spark (medium) | Build B; More of C, the spotlight, banked | match |
+| 2026-11-09 | screen design (taste) | #7018 round 8 Q1 · the page with your goal first, as drawn | Build as drawn (medium) | Build A | match |
+| 2026-11-09 | screen design (taste) | #7018 round 8 Q2 · where does the Eye watch from while the chat is open? | A, between the chat and the page (medium) | Build A | match |
+| 2026-11-09 | screen design (taste) | #7018 round 8 Q3 · the spark with the spotlight folded in, as drawn | Build as drawn (medium) | Build A | match |
+| 2026-11-09 | screen design (taste) | #7018 round 8 Q4 · a priced band, or the 20 closes inside the band? | B, the 20 closes (medium) | More of B | match |
+| 2026-11-09 | screen design (taste) | #7018 round 9 · where does the tower live: right then between, or a left rail? | B, a left rail (low) | Build B | match |
 
 The 2026-11-01 predictions are copied from each issue, where they were written before he answered; the rows themselves were added after, on the day the ledger was caught up.

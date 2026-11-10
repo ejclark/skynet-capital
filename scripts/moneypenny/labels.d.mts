@@ -62,3 +62,5 @@ export interface LabelSpec {
 export const LABELS: Record<string, LabelSpec>;
 /** `P0`–`P3`, in lane order. */
 export const PRIORITY_LABELS: string[];
+/** Every label name the repo speaks — what `issue-lint` and the seat registry validate against. */
+export const LABEL_NAMES: readonly string[];

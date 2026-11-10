@@ -1,13 +1,12 @@
 import type { ReactElement } from "react";
 import {
-  addDays,
   type DayRange,
-  daysOf,
   type FiscalQuarterLabel,
   type MarketClosure,
   rangeLabel,
 } from "../live/horizon-range";
 import type { Lens, ResearchEvent } from "../live/research";
+import { CalendarGrid, ClosedKey, type DayMark } from "./calendar-grid";
 import { CalendarHead, type DayFog, headLine } from "./calendar-head";
 import { CalendarSheet } from "./calendar-sheet";
 import { usePhoneWidth } from "./use-media";
@@ -37,94 +36,10 @@ import { usePhoneWidth } from "./use-media";
  * `span=all` — every ledger in view (Eric, 2026-09-06: a fifth pill "getting pushed below has a
  * clunky feel. couldn't the toggle cluster… be deselectable which implicitly enable ALL records to
  * show?"). The head names the state — "all research · N events" — so the empty cluster reads.
+ *
+ * THE GRID ITSELF is `calendar-grid.tsx` (#7077 AT10, AT11), shared with the landing page; this
+ * file says what marks R&D's days (a dot, filled when a ledger exists) and where the grid sits.
  */
-
-const WEEKDAYS = ["M", "T", "W", "T", "F", "S", "S"] as const;
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-/**
- * The month's grid as ISO dates in complete Monday-first rows: the days before the 1st and after
- * the last day come from the neighbouring months (OUTSIDE DAYS), so a week that straddles a month
- * boundary is still one full row — Eric, 2026-09-06: "week view should show a full row, even when
- * the days are listed in different months. other visual feedback should make this obvious and
- * verifiable to which month it belongs." The cell dims an outside day and tags every 1st with its
- * month, so the boundary reads at a glance.
- */
-function monthGrid(key: string): string[] {
-  const first = new Date(`${key}-01T00:00:00Z`);
-  const lead = (first.getUTCDay() + 6) % 7;
-  const start = first.getTime() - lead * DAY_MS;
-  const days: string[] = [];
-  for (
-    let t = start;
-    days.length < lead || new Date(t).toISOString().slice(0, 7) <= key;
-    t += DAY_MS
-  ) {
-    const iso = new Date(t).toISOString().slice(0, 10);
-    if (days.length >= lead && iso.slice(0, 7) > key) break;
-    days.push(iso);
-  }
-  while (days.length % 7 !== 0) days.push(addDays(days[days.length - 1] as string, 1));
-  return days;
-}
-
-const MONTH_TAGS = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-] as const;
-
-const isWeekend = (iso: string): boolean => {
-  const day = new Date(`${iso}T00:00:00Z`).getUTCDay();
-  return day === 0 || day === 6;
-};
-
-/**
- * COMMON REGION (docs/BRAND.md → Visual grammar): "in range" is a fact about the week, so it is
- * drawn as ONE band per row — a cell is band-start/band-end where the band begins or ends on its
- * row — never as seven outlined cells (Tufte's 1 + 1 = 3). At the month and quarter lenses every
- * visible day is in range, so the caller passes `inRange: false` and the grid itself is the region.
- * Weekends and full closures share the dimmed inactive state; a closure keeps its strike.
- */
-function dayClassName({
-  date,
-  column,
-  inRange,
-  rangeDays,
-  today,
-  closure,
-}: {
-  readonly date: string;
-  readonly column: number;
-  readonly inRange: boolean;
-  readonly rangeDays: ReadonlySet<string>;
-  readonly today: string;
-  readonly closure: MarketClosure | undefined;
-}): string {
-  const bandStart = inRange && (column === 0 || !rangeDays.has(addDays(date, -1)));
-  const bandEnd = inRange && (column === 6 || !rangeDays.has(addDays(date, 1)));
-  return [
-    "eh-day",
-    inRange ? "eh-band" : "",
-    bandStart ? "eh-band-start" : "",
-    bandEnd ? "eh-band-end" : "",
-    date === today ? "eh-today" : "",
-    closure && !closure.early ? "eh-closed" : "",
-    closure?.early ? "eh-early" : "",
-    isWeekend(date) ? "eh-weekend" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
-}
 
 /** @category hero */
 export function EventHorizon({
@@ -170,26 +85,18 @@ export function EventHorizon({
 }): ReactElement | null {
   const phone = usePhoneWidth();
   const month = anchor.slice(0, 7);
-  const allLens = lens === "all";
   const all = {
     name: rangeLabel(range, "all"),
     count: `${String(events.length)} ${events.length === 1 ? "event" : "events"}`,
   };
-  const blockLens = lens === "month" || lens === "quarter";
-  const byDate = new Map<string, ResearchEvent[]>();
+  const marks = new Map<string, DayMark>();
   for (const event of events) {
-    byDate.set(event.date, [...(byDate.get(event.date) ?? []), event]);
+    const prev = marks.get(event.date);
+    marks.set(event.date, {
+      titles: [...(prev?.titles ?? []), event.title],
+      glyph: prev?.glyph === "hot" || event.researched ? "hot" : "dot",
+    });
   }
-  const closedOn = new Map(closures.map((c) => [c.date, c] as const));
-  const rangeDays = new Set(allLens ? [] : daysOf(range));
-
-  const titleFor = (date: string): string | undefined => {
-    const parts = [
-      closedOn.get(date)?.reason,
-      ...(byDate.get(date)?.map((e) => e.title) ?? []),
-    ].filter((p): p is string => Boolean(p));
-    return parts.length > 0 ? parts.join(" · ") : undefined;
-  };
 
   const head = (
     <CalendarHead
@@ -210,69 +117,32 @@ export function EventHorizon({
   ) : null;
   /** The month grid; `onPicked` runs after a day is picked (the phone's sheet closes on it). */
   const grid = (onPicked?: () => void): ReactElement => (
-    <div className="eh">
-      <div className={blockLens ? "eh-grid eh-block" : "eh-grid"}>
-        {WEEKDAYS.map((d, i) => (
-          <span key={`${d}${String(i)}`} className="eh-wd" aria-hidden="true">
-            {d}
-          </span>
-        ))}
-        {monthGrid(month).map((date, i) => {
-          const closure = closedOn.get(date);
-          const outside = date.slice(0, 7) !== month;
-          const className = `${dayClassName({
-            date,
-            column: i % 7,
-            inRange: !blockLens && rangeDays.has(date),
-            rangeDays,
-            today,
-            closure,
-          })}${outside ? " eh-outside" : ""}`;
-          return (
-            <button
-              key={date}
-              type="button"
-              className={className}
-              aria-pressed={pinned && anchor === date}
-              title={titleFor(date)}
-              onClick={() => {
-                onPick(date);
-                onPicked?.();
-              }}
-            >
-              {date.endsWith("-01") ? (
-                <span className="eh-month-tag" aria-hidden="true">
-                  {MONTH_TAGS[Number(date.slice(5, 7)) - 1]}
-                </span>
-              ) : null}
-              <span className="eh-num">{Number(date.slice(8, 10))}</span>
-              {decideDays?.has(date) ? (
-                <i className="eh-decide" aria-hidden="true">
-                  ▲
-                </i>
-              ) : null}
-              {byDate.has(date) ? (
-                <i
-                  className={
-                    byDate.get(date)?.some((e) => e.researched) ? "eh-dot eh-hot" : "eh-dot"
-                  }
-                />
-              ) : null}
-            </button>
-          );
-        })}
-      </div>
-      <p className="eh-legend">
-        <i className="eh-dot eh-hot" /> researched · <i className="eh-dot" /> dated ·{" "}
-        <s className="eh-legend-closed num">7</s> closed
-        {decideDays && decideDays.size > 0 ? (
-          <>
-            {" "}
-            · <i className="eh-decide eh-decide-key">▲</i> decide by
-          </>
-        ) : null}
-      </p>
-    </div>
+    <CalendarGrid
+      month={month}
+      lens={lens}
+      range={range}
+      today={today}
+      closures={closures}
+      marks={marks}
+      picked={pinned ? anchor : undefined}
+      {...(decideDays ? { decideDays } : {})}
+      legend={
+        <>
+          <i className="eh-dot eh-hot" /> researched · <i className="eh-dot" /> dated ·{" "}
+          <ClosedKey />
+          {decideDays && decideDays.size > 0 ? (
+            <>
+              {" "}
+              · <i className="eh-decide eh-decide-key">▲</i> decide by
+            </>
+          ) : null}
+        </>
+      }
+      onPick={(date) => {
+        onPick(date);
+        onPicked?.();
+      }}
+    />
   );
 
   // A phone's R&D (#3977): the head and the grid, unfolded, in the calendar's one sheet; the chip

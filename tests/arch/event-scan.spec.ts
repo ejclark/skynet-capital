@@ -67,6 +67,7 @@ function dueFixture(
   reason: string;
   forwardTestsBeyondWindow?: { id: string; scoreBy: string }[];
   forwardTestsDue?: { id: string; scoreBy: string }[];
+  campaigns?: { id: string; via: string }[];
 }[] {
   const dir = mkdtempSync(join(tmpdir(), "event-scan-due-"));
   try {
@@ -605,5 +606,59 @@ describe("event-scan missing ledger dir", () => {
     expect(res.stderr).toMatch(
       /^· no ledger dir at .*no-ledgers — tables checked, ledger contract skipped$/m,
     );
+  });
+});
+
+// #6949 criterion 5: each --due row names the campaigns that link it, read from the real campaign
+// files by the dependency-free linker (scripts/campaign-links.mjs), so the dispatch ceiling can
+// rank campaign events first. An unreadable campaign directory fails loud, never "links nothing".
+describe("event-scan campaign links on --due rows", () => {
+  const due = (id: string, symbols: string[], kind = "macro-print") => ({
+    ...entry(id, "2026-09-16"),
+    kind,
+    impact: "critical",
+    symbols,
+  });
+
+  it("names the campaign and its strongest reason on each due row", () => {
+    const rows = dueFixture("2026-09-15", {
+      "nvda-fixture": due("nvda-fixture", ["NVDA"]),
+      "auction-fixture": due("auction-fixture", [], "rates"),
+      "plain-fixture": due("plain-fixture", []),
+    });
+    const by = (id: string) => rows.find((r) => r.id === id)?.campaigns;
+    expect(by("nvda-fixture")).toContainEqual({ id: "ai-buildout", via: "cast" });
+    expect(by("auction-fixture")).toContainEqual({ id: "ai-buildout", via: "force" });
+    expect(by("plain-fixture")).toEqual([]);
+  });
+
+  it("refuses to guess when the campaign directory cannot be read", () => {
+    const dir = mkdtempSync(join(tmpdir(), "event-scan-nocampaigns-"));
+    try {
+      mkdirSync(join(dir, "events", "proposals"), { recursive: true });
+      mkdirSync(join(dir, "ledgers"));
+      writeFileSync(join(dir, "events", "alpha.json"), JSON.stringify(due("alpha", ["NVDA"])));
+      writeFileSync(
+        join(dir, "earnings-calendar.ts"),
+        "export const UPCOMING_PRINTS: readonly EarningsPrint[] = [];\n",
+      );
+      const res = spawnSync(
+        "node",
+        [
+          "scripts/event-scan.mjs",
+          "--due",
+          "--today=2026-09-15",
+          `--events-dir=${join(dir, "events")}`,
+          `--calendar-file=${join(dir, "earnings-calendar.ts")}`,
+          `--ledger-dir=${join(dir, "ledgers")}`,
+          `--campaigns-dir=${join(dir, "no-campaigns")}`,
+        ],
+        { cwd: process.cwd(), encoding: "utf8" },
+      );
+      expect(res.status).toBe(1);
+      expect(res.stderr).toContain("refusing to guess");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

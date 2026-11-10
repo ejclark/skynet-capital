@@ -6,6 +6,7 @@ import {
   type Edition,
   editions,
   editionView,
+  isLevel,
   loadEditions,
   marketToday,
   parseEdition,
@@ -23,9 +24,10 @@ function valid(): Record<string, unknown> {
       {
         id: "lead",
         headline: "Chip stocks fell hard.",
+        line: "Chips fell hard",
         narrator: "Sensors logged a hard hit.",
         symbols: ["SMH"],
-        facts: [{ label: "SMH", value: "−11.2%" }],
+        facts: [{ label: "SMH", value: "−11.2%", move: "down" }],
         reports: [
           { date: "2026-11-10", when: "after the close", what: "CRWV Q3", status: "confirmed" },
         ],
@@ -68,7 +70,7 @@ describe("the edition record", () => {
     const line = { text: "It filled 38% of the time.", mark: "measured", source: "study" };
     expect(() => parse(withStory({ more: [line] }))).toThrow(/base rate with no sample size/);
     expect(parse(withStory({ more: [{ ...line, n: 65 }] })).stories[0]?.more[0]?.n).toBe(65);
-    const fact = { label: "Fill rate", value: "38%", note: "38% of the time" };
+    const fact = { label: "Fill rate", value: "38%", move: "up", note: "38% of the time" };
     expect(() => parse(withStory({ facts: [fact] }))).toThrow(/sample size/);
   });
 
@@ -96,6 +98,13 @@ describe("the edition record", () => {
     );
   });
 
+  it("holds each story's one line to what fits beside its number at 390 (round 3, AT4)", () => {
+    expect(() => parse(withStory({ line: undefined }))).toThrow(/line must be one line/);
+    expect(() => parse(withStory({ line: "x".repeat(35) }))).toThrow(/at most 34/);
+    expect(() => parse(withStory({ line: "Chips fell\nhard" }))).toThrow(/one line/);
+    expect(() => parse(withStory({ line: "A chance to buy" }))).toThrow(/good to buy/);
+  });
+
   it("holds the narrator to one original line (criterion 4)", () => {
     expect(() => parse(withStory({ narrator: "Captain's log: chips fell." }))).toThrow(/franchise/);
     // Market words that a franchise also uses stay usable.
@@ -104,6 +113,43 @@ describe("the edition record", () => {
     ).toBeTruthy();
     expect(() => parse(withStory({ narrator: "x".repeat(161) }))).toThrow(/one line/);
     expect(() => parse(withStory({ narrator: "One.\nTwo." }))).toThrow(/one line/);
+  });
+
+  it("draws every key fact's move as a shape, so it needs one (docs/IA.md §5.9)", () => {
+    expect(() => parse(withStory({ facts: [{ label: "SMH", value: "1" }] }))).toThrow(
+      /move must be/,
+    );
+    expect(() =>
+      parse(withStory({ facts: [{ label: "SMH", value: "1", move: "sideways" }] })),
+    ).toThrow(/move must be/);
+  });
+
+  it("never puts a bare level in the row's change column (#7182)", () => {
+    // The one-line row shows the lead fact's figure as the story's move. A level ("4.86%", a
+    // yield) there reads as a 4.86% move, so it must carry its change.
+    const yieldFact = { label: "10-year Treasury yield", value: "4.86%", move: "down" };
+    expect(() => parse(withStory({ facts: [yieldFact] }))).toThrow(/is a level; give it a change/);
+    const fixed = { ...yieldFact, change: "−0.07 pts" };
+    expect(parse(withStory({ facts: [fixed] })).stories[0]?.facts[0]?.change).toBe("−0.07 pts");
+    // An unsigned change is no move at all.
+    expect(() => parse(withStory({ facts: [{ ...yieldFact, change: "0.07 pts" }] }))).toThrow(
+      /change must be signed/,
+    );
+    // A level behind the lead fact is fine: only the lead's figure rides the row.
+    const facts = [{ label: "SMH", value: "−11.2%", move: "down" }, yieldFact];
+    expect(parse(withStory({ facts })).stories[0]?.facts).toHaveLength(2);
+  });
+
+  it("gives the 2026-11-06 edition's 10-year line its move, not its level (#7182)", () => {
+    const rates = editions()
+      .find((e) => e.date === "2026-11-06")
+      ?.stories.find((s) => s.id === "rates");
+    const [lead] = rates?.facts ?? [];
+    expect(lead?.label).toBe("10-year Treasury yield");
+    expect(lead && isLevel(lead)).toBe(true);
+    expect(lead?.value).toBe("4.86%");
+    expect(lead?.change).toBe("−0.07 pts");
+    expect(lead?.note).toBe("−0.07 points on the week");
   });
 
   it("names the list when an entry is not an object, never a bare TypeError", () => {
@@ -117,7 +163,7 @@ describe("the edition record", () => {
   });
 
   it("refuses a repeat in a list the page keys its rows by", () => {
-    const fact = { label: "NVDA", value: "1" };
+    const fact = { label: "NVDA", value: "+1%", move: "up" };
     expect(() => parse(withStory({ facts: [fact, fact] }))).toThrow(/lists "NVDA" twice/);
     const line = { text: "Up.", mark: "measured", source: "x" };
     expect(() => parse(withStory({ more: [line, line] }))).toThrow(/twice/);
@@ -127,7 +173,7 @@ describe("the edition record", () => {
 
   it("keeps key facts to one to four", () => {
     expect(() => parse(withStory({ facts: [] }))).toThrow(/1 to 4/);
-    const fact = { label: "A", value: "1" };
+    const fact = { label: "A", value: "1", move: "up" };
     expect(() => parse(withStory({ facts: [fact, fact, fact, fact, fact] }))).toThrow(/1 to 4/);
   });
 

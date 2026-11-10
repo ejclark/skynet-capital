@@ -27,6 +27,7 @@ import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { serveDeskAlertsApi } from "./desk-alerts-route.js";
 import { serveDeskEventsApi } from "./desk-events-route.js";
 import { serveDraftOrderApi } from "./draft-order-route.js";
+import { serveFastTrackApi } from "./fast-track-route.js";
 import { serveFeedbackApi } from "./feedback-api-routes.js";
 import { serveFeedbackRoute } from "./feedback-routes.js";
 import { serveFilingCommentsApi } from "./filing-comments-api-routes.js";
@@ -34,6 +35,7 @@ import { serveJoinApi } from "./join-api-routes.js";
 import { serveLearnApi } from "./learn-api-routes.js";
 import { serveLegacyRedirect } from "./legacy-redirects.js";
 import { serveMemberCampaignsApi } from "./member-campaigns-api-routes.js";
+import { serveMemberChainsApi } from "./member-chains-api-routes.js";
 import { serveMemberConvictionsApi } from "./member-convictions-api-routes.js";
 import { serveOnboardingApi } from "./onboarding-api-routes.js";
 import { serveOptionApi } from "./option-api-routes.js";
@@ -41,6 +43,8 @@ import { serveOptionLifecycleApi } from "./option-lifecycle-route.js";
 import { serveOptionPositionsApi } from "./option-positions-route.js";
 import { servePlaybooksApi } from "./playbooks-api-routes.js";
 import { servePlaysApi } from "./plays-api-routes.js";
+import { serveQuestsApi } from "./quests-route.js";
+import { serveQuestsTakenApi } from "./quests-taken-route.js";
 import { serveQuoteStream } from "./quote-stream-route.js";
 import { isResearchDocPath, serveResearchDoc } from "./research-page-routes.js";
 import { serveSavedPositionsApi } from "./saved-positions-api-routes.js";
@@ -195,6 +199,7 @@ async function servePlaybookWrites(
   if (await serveSubscriptionsApi(req, res, path, config, session)) return true;
   if (await serveMemberConvictionsApi(req, res, path, config, session)) return true;
   if (await serveMemberCampaignsApi(req, res, path, config, session)) return true;
+  if (await serveMemberChainsApi(req, res, path, config, session)) return true;
   return serveAuthoredPlaysApi(req, res, path, config, session);
 }
 
@@ -213,6 +218,9 @@ async function serveWriteApis(
   if (await serveOptionPositionsApi(req, res, path, config, session)) return true;
   if (await serveOptionLifecycleApi(req, res, path, config, session)) return true;
   if (await serveDeskAlertsApi(req, res, path, config, session)) return true;
+  if (await serveQuestsApi(req, res, path, config, session)) return true;
+  if (await serveQuestsTakenApi(req, res, path, config, session)) return true;
+  if (await serveFastTrackApi(req, res, path, config, session)) return true;
   if (await serveAlertDeliveryApi(req, res, path, config, session)) return true;
   if (await serveWatchlistApi(req, res, path, config, session)) return true;
   if (await serveOptionApi(req, res, path, config, session)) return true;

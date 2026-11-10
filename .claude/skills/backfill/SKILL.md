@@ -86,5 +86,6 @@ counts open PRs, not dispatches).
 }
 ```
 
-Hand-written for now: `scripts/grind-manifest.mjs` reads `docs/grind/*.instructions.md` front matter
-only — teaching it to read a skill header is #1325's remaining half.
+Hand-written: `scripts/grind-manifest.mjs`, and the dispatch-time resolution in `grind.js`, read
+`docs/grind/*.instructions.md` front matter only, never `SKILL.md` (`docs/grind/README.md` →
+*Known limitations*).

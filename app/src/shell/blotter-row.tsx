@@ -1,8 +1,7 @@
 import type { ReactElement, ReactNode } from "react";
-import { useState } from "react";
 import type { DeskPosition } from "../live/desk";
 import type { HoldingGreeks } from "./holding-decay";
-import { positionAnchor } from "./position-anchor";
+import { positionAnchor, useOpenWhenTargeted } from "./position-anchor";
 import {
   BestWorstContent,
   colClass,
@@ -43,7 +42,7 @@ export function BlotterRow({
   /** The position's guidance line (#5070), a full-width row right under this one. */
   readonly guide?: ReactNode;
 }): ReactElement {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useOpenWhenTargeted(position.symbol);
   return (
     <>
       <tr id={positionAnchor(position.symbol)} className={open ? "row-opened" : undefined}>

@@ -6,6 +6,7 @@ import { existsSync } from "node:fs";
 import { clockIntents, clockOrUnknown } from "./clock-watch.mjs";
 import { driftChoreFromRepo } from "./drift-chore.mjs";
 import { ghRestAll, sh } from "./gh.mjs";
+import { headlessOrNone, nudgeIntents } from "./headless-pr.mjs";
 import { FOOTER, LABELS, PARKING_LABELS } from "./labels.mjs";
 import { hasPlanLabel, isReadySignal } from "./plan-claim.mjs";
 import { redLaneIntents, redLaneOrNone } from "./red-lane-pr.mjs";
@@ -324,8 +325,12 @@ export function audit(deps = {}) {
   // The stranded-PR act stage (stranded-pr.mjs): re-run a green PR's failed arm job, once per head.
   // `halt` stops every lane, so it stops this too — re-arming lands work.
   const halted = deps.workMode?.mode?.position === "halt";
-  const rearmed = halted ? [] : rearmIntents(deps.stranded);
-  intents.push(...rearmed);
+  // A PR whose head never got a required check run gets one App-identity commit, once per head
+  // (headless-pr.mjs, #7112). `halt` stops it too: a new head runs the Pipeline that can land it.
+  const [rearmed, nudged] = halted
+    ? [[], []]
+    : [rearmIntents(deps.stranded), nudgeIntents(deps.headless)];
+  intents.push(...rearmed, ...nudged);
   // The research-PR sweep (research-pr-sweep.mjs, #5689): close a superseded `research/*` PR, flag
   // a red one once per head, and count the tick. `halt` stops the acts, not the count.
   intents.push(...researchSweep(deps.researchPrs, rearmed, halted));
@@ -621,6 +626,9 @@ export function gatherAuditDeps(nowMs, hourly = {}) {
     // One REST call on a tick with no armed PR past 3h; the rest of its reads run at most hourly.
     stuckBranches: stuckBranchesOrNone(nowMs, hourly),
     stranded: strandedOrNone(nowMs),
+    // One list call, one check-runs read per unarmed PR past 30 minutes, and a few more only for a
+    // head with no `verify` run.
+    headless: headlessOrNone(nowMs),
     // One REST call; the open issue comes from the `issues` list already in hand.
     clock: clockOrUnknown(nowMs, issues),
     // One REST call on a tick where no lane PR has sat a day untouched.

@@ -1,12 +1,14 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import type { KeyboardEvent, MouseEvent, ReactElement, ReactNode } from "react";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { myConvictionsKey } from "../live/member-convictions";
 import { formatTranscript, type MpMessage, useMoneypenny } from "../live/moneypenny";
 import { CONVICTION_CHIPS } from "../live/moneypenny-conviction";
 import { linkPieces } from "../live/moneypenny-links";
+import { type Run, readMarkdown } from "../live/moneypenny-markdown";
 import { chipsFor } from "../live/moneypenny-script";
+import { requestLight } from "./eye-light";
 import { usePhoneWidth } from "./use-media";
 
 /**
@@ -44,12 +46,22 @@ function PlaceLink({ path, text }: { readonly path: string; readonly text: strin
     if (phone) closeRail();
     if (!router) return;
     e.preventDefault();
+    // A link that names an item on a page (`#pos-NVDA`) also asks for the Eye's light onto it
+    // (#7216 slice 2, `eye-light-layer.tsx`), which waits for the item to land wherever it renders.
+    requestLight(path);
     // "Open-position return" while the board is already showing re-ranks it in place — the member keeps
     // their spot; any other page opens at its top, as a new view should.
     const samePage = router.state.location.pathname === path.split(/[?#]/)[0];
-    void (samePage
-      ? router.navigate({ href: path, resetScroll: false })
-      : router.navigate({ href: path }));
+    if (!samePage) {
+      void router.navigate({ href: path });
+      return;
+    }
+    // A row she points at on the page already open (#7167, `/accounts#pos-NVDA`): the router's
+    // pushState fires no `hashchange`, and the page's landing (`landing.ts`) listens for exactly
+    // that, so it is announced here. Re-tapping the same link lands again rather than doing nothing.
+    void router.navigate({ href: path, resetScroll: false }).then(() => {
+      if (path.includes("#")) window.dispatchEvent(new HashChangeEvent("hashchange"));
+    });
   };
   return (
     <a className="mp-place" href={`/app${path}`} onClick={onClick}>
@@ -77,8 +89,63 @@ function linkify(text: string): readonly ReactNode[] {
   });
 }
 
+/** One run of her line: its links, wrapped in bold or italic when she marked it (#7166). */
+function RunView({ run }: { readonly run: Run }): ReactElement {
+  const body = <>{linkify(run.text)}</>;
+  const em = run.em ? <em>{body}</em> : body;
+  return run.strong ? <strong>{em}</strong> : em;
+}
+
+const runs = (rs: readonly Run[]) =>
+  // biome-ignore lint/suspicious/noArrayIndexKey: a parsed, immutable line — position is identity
+  rs.map((r, i) => <RunView key={i} run={r} />);
+
+/** Her reply, its markdown read as structure (`moneypenny-markdown.ts`) — elements, never HTML. */
+function Reply({ text }: { readonly text: string }): ReactElement {
+  return (
+    <>
+      {readMarkdown(text).map((b, i) => {
+        if (b.kind === "list") {
+          const items = b.items.map((it, j) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: a parsed, immutable list
+            <li key={j}>{runs(it)}</li>
+          ));
+          return b.ordered ? (
+            // biome-ignore lint/suspicious/noArrayIndexKey: a parsed, immutable reply
+            <ol key={i} start={b.start}>
+              {items}
+            </ol>
+          ) : (
+            // biome-ignore lint/suspicious/noArrayIndexKey: a parsed, immutable reply
+            <ul key={i}>{items}</ul>
+          );
+        }
+        // No wrapper: a list beside these lines is a block, so they break around it on their own,
+        // and a reply with no list stays plain text in the message itself.
+        return (
+          // biome-ignore lint/suspicious/noArrayIndexKey: a parsed, immutable reply
+          <Fragment key={i}>
+            {b.lines.map((l, j) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: a parsed, immutable reply
+              <Fragment key={j}>
+                {j > 0 ? "\n" : null}
+                {runs(l)}
+              </Fragment>
+            ))}
+          </Fragment>
+        );
+      })}
+    </>
+  );
+}
+
+/** The member's own words stay exactly as typed; hers (and system notes) get her formatting. */
 function Message({ m }: { readonly m: MpMessage }): ReactElement {
-  return <div className={`mp-msg mp-${m.role}`}>{linkify(m.text)}</div>;
+  return (
+    <div className={`mp-msg mp-${m.role}`}>
+      {m.role === "user" ? linkify(m.text) : <Reply text={m.text} />}
+    </div>
+  );
 }
 
 const dayOf = (at: number | undefined) => (at ? new Date(at).toDateString() : undefined);
@@ -88,6 +155,8 @@ export function MoneypennyRail(): ReactElement | null {
   const messages = useMoneypenny((s) => s.messages);
   const typing = useMoneypenny((s) => s.typing);
   const streaming = useMoneypenny((s) => s.streaming);
+  // A question from the landing page's ask box, drawn at once while the thread binds (#7165).
+  const pending = useMoneypenny((s) => s.pending);
   const flow = useMoneypenny((s) => s.flow);
   const draft = useMoneypenny((s) => s.draft);
   const conviction = useMoneypenny((s) => s.conviction);
@@ -104,15 +173,16 @@ export function MoneypennyRail(): ReactElement | null {
   const list = useRef<HTMLDivElement>(null);
   const atEnd = useRef(true);
   const queryClient = useQueryClient();
-  const busy = typing || streaming;
+  const waiting = typing || pending !== undefined;
+  const busy = waiting || streaming;
   const chipsShown = !busy && (flow === "idle" || draft !== undefined || conviction !== undefined);
 
   // Follow the thread: every append scrolls the list to its end.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: messages/typing ARE the trigger
+  // biome-ignore lint/correctness/useExhaustiveDependencies: messages/waiting ARE the trigger
   useEffect(() => {
     const el = list.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [messages, typing]);
+  }, [messages, waiting]);
 
   // The chips come back when `streaming` ends — a render where neither trigger above changes —
   // and shorten the list from below, hiding her last line (#5182). Re-pin before paint, but only
@@ -238,7 +308,12 @@ export function MoneypennyRail(): ReactElement | null {
             </div>
           );
         })}
-        {typing ? <div className="mp-typing num">Moneypenny · typing ···</div> : null}
+        {pending !== undefined ? (
+          <div className="mp-entry">
+            <Message m={{ role: "user", text: pending }} />
+          </div>
+        ) : null}
+        {waiting ? <div className="mp-typing num">Moneypenny · typing ···</div> : null}
       </div>
       {chips.length ? (
         <div className="mp-chips">

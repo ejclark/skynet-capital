@@ -18,6 +18,25 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **A headless PR might start its checks with a body edit, not a commit.** `pipeline.yml` lists
+  `edited` in its `pull_request` types, and an edit from the App token starts workflows, so writing
+  the headless marker into the PR body (not a comment) could start `verify` with no new commit on
+  the branch, and so nothing a still-running session's push could collide with. #7112 shipped
+  `update-branch` and a same-tree commit because the brief asked for them; test whether one
+  App-token body edit starts a Pipeline run on a job-token PR, then swap if it does.
+  _(src: Claude · while: building #7112's act stage; code review flagged the push race)_
+- **grind could stop a run when many items block on one cause.** On 2026-11-08 the drift run
+  blocked 35 checks over about two hours with the same summary (a macOS-only spec red in the
+  pre-push verify), and kept dispatching. A breaker in `.claude/workflows/grind.js`, say three
+  items blocked at one step whose summaries share a cause, would stop dispatching and return,
+  naming the cause. The cause match is the hard part: summaries are free text.
+  _(src: Claude · while: retro on the 2026-11-08 instruction-drift run)_
+- **grind could re-run agents an outage killed, once, before it returns.** A DNS outage killed 44
+  drift agents mid-step on 2026-11-08 ("agent failed after retries"). Re-running them needed a
+  hand-built plan, because a re-run must start from the step each item had reached, not the first.
+  grind knows each item's last finished step, so one pass over `errored` items at the end could
+  resume each from there.
+  _(src: Claude · while: retro on the 2026-11-08 instruction-drift run)_
 - **An option play's stop, priced on the contract's own premium.** #6954 slice 4 put a stop on every share play, but `exitSafetyIntents` reads share positions only, so the long call, the LEAP and the spread exit on their target and time rules alone, and a long call can lose its whole premium before 45 days are left. A stop that closes a long contract once its bid is some fraction under its cost (and never on the wheel's sold contracts, which its owner holds to expiry on purpose) would close that gap. The open question is the level: no study prices how far these contracts fall before they pay. Also parked: stop orders held at the broker for shares, so a gap while the bots are down is managed (#6954 gate list). _(src: Claude · while: #6954 slice 4, 2026-11-07)_
 - **A held fold could say so when it falls back to a whole read in live mode.** #6597: a wrapper
   dropped `since`, and two folds quietly re-read whole audits in production for hours. The
@@ -698,6 +717,15 @@ duplication instantly once someone looked. _(src: Claude · while: fixing the ou
 `account-service.ts`), but `addParticipant` still checks only the derived id. If Ann renames
 herself "Joe", a later member adding "Joe" gets the free id `human-joe` and the board shows two
 Joes. Reuse the same check on the add path. _(src: Claude · while: #6077 rename-guard fix)_
+
+### A party campaign needs a reference its author's title can't collide on
+Member campaign ids are slugs of the title, unique per author only, and a house id wins
+(`readableCampaign` in `src/server/campaign-questions-api.ts`). Since #6949 slice 6 made every
+saved campaign the party's, two members titling a campaign "AI plays", or a member titling one
+"Energy for AI" (a house id), means a question asked in it by id lands in the other one. No
+screen exists yet, so nobody can hit it; before #6948's screen ships, give the party view an
+author-scoped reference that never exposes the member key (a hash of the scope), and accept it on
+`ask` and `questions`. _(src: Claude · while: #6949 slice 6, a spec fixture titled "Energy for AI")_
 
 ### Boot-time quarantine for a store row that collides with the roster
 The owner-link PR (#466) closed the write-time hole (`addParticipant` now refuses an id already

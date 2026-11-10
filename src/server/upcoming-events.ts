@@ -95,8 +95,9 @@ export function heldNames(symbols: readonly string[]): string[] {
 }
 
 /** The event with what its ledger says; a ledger that can't be read or parsed costs this row its
- *  stance, never the member their answer (the same guard as `pair-forecast.ts`). */
-function withLedger(root: string, event: MarketEvent, asOf: string): FastTrackEvent {
+ *  stance, never the member their answer (the same guard as `pair-forecast.ts`). The landing
+ *  page's card walk reads every ledger in the fortnight through this too (`fast-track-route.ts`). */
+export function withLedger(root: string, event: MarketEvent, asOf: string): FastTrackEvent {
   const file = join(root, "events", `${event.id}.md`);
   if (!(LEDGER_SLUG.test(event.id) && existsSync(file)))
     return fastTrackEventOf(event, undefined, asOf);

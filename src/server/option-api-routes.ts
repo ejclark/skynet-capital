@@ -31,6 +31,7 @@ import {
   sendJson,
 } from "./page-shell.js";
 import { type ParticipantProgression, playLocked } from "./progression-service.js";
+import { questIdOf, questOrderOf, settleTakenQuest } from "./quest-taken.js";
 import { serveQuote } from "./quote-route.js";
 import { serveSpotChecks } from "./spot-checks-route.js";
 import { serveStructures } from "./structures-route.js";
@@ -304,6 +305,8 @@ async function submitOption(
   progression: ParticipantProgression | undefined,
   /** The member tapped Carry on the review's exit plan (#5709 slice 3). */
   carry: boolean,
+  /** The quest whose ticket this is, when the form was opened from one (#7028 slice 6). */
+  questId: string | undefined,
 ): Promise<void> {
   if (request.kind === "open") {
     const refusal = optionOpenRefusal(request, progression, config.now?.() ?? new Date());
@@ -320,6 +323,7 @@ async function submitOption(
     return;
   }
   const result = await config.submitOptionTrade(request, requesterId);
+  settleTakenQuest(questId, request.participantId, questOrderOf(request), result, config);
   sendJson(res, 200, { ...result, ...settleExitPlan(request, result, carry, config) });
 }
 
@@ -390,6 +394,14 @@ export async function serveOptionApi(
     await reviewOption(res, request, snapshot, config, orderRequesterId, progression);
     return true;
   }
-  await submitOption(res, request, config, orderRequesterId, progression, carriesExitPlan(raw));
+  await submitOption(
+    res,
+    request,
+    config,
+    orderRequesterId,
+    progression,
+    carriesExitPlan(raw),
+    questIdOf(raw),
+  );
   return true;
 }

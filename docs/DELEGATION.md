@@ -45,12 +45,12 @@ into separate lint, typecheck and per-suite calls (#5191).
    **The harness's worktree check reads every command an isolated agent runs, after hooks rewrite
    it.** It is Claude Code's, not this repo's, and it is the real protection: `git -C` or `cd` aimed
    at the shared checkout or another worktree is refused, and stays refused. The user-level rtk hook
-   used to trip it, by putting `rtk` in front of `git` (#5055); `scripts/hooks/guard-bash.mjs` now
-   hands those commands back as written, so `git status` and `git a && git b` work as typed (#6470).
+   trips it by putting `rtk` in front of `git` (#5055), so `scripts/hooks/guard-bash.mjs` hands
+   those commands back as written, and `git status` and `git a && git b` work as typed (#6470).
    If a refusal still names rtk (a glob, variable or quoted pipe handed to `rtk grep` or `rtk ls`),
    the absolute path passes: `/usr/bin/grep`, `/bin/ls`, `/usr/bin/git`. **What it still refuses on its own:** a loop
-   or `$(…)` around git, `bash file; echo $?`, `bash -c` with shell text, a variable as an argument
-   to sed or node. The 2026-10-11 token audit counted 285 such refusals in 79 agents, about 15.4M
+   or `$(…)` around git, `bash file; echo $?`, `bash -c` whose text names git, a variable as an
+   argument to sed or node, `find` with `( … )`. The 2026-10-11 token audit counted 285 such refusals in 79 agents, about 15.4M
    tokens a week. A non-zero exit is reported by the tool, so `echo $?` adds nothing. Anything longer
    goes in a script file in your scratchpad, run as `bash <file>`, still aimed at your own worktree
    (#5192). **An isolated agent never waits on a PR merge** — its dispatcher
@@ -82,7 +82,9 @@ into separate lint, typecheck and per-suite calls (#5191).
    keep or remove, and why) **then `npm run worktree:sweep -- --apply`.** It removes a worktree
    only when its HEAD is in `origin/main` or a remote branch, it has no uncommitted or untracked
    files, it has sat untouched for an hour, and its lock names no live process; it never removes
-   the primary or the worktree it runs in, and removing one deletes the directory only — the
+   the primary, the worktree it runs in, or a desktop-app session's folder (branch
+   `claude/<word>-<word>-<6 hex>`: an idle open session holds no lock, #7102; `--include-sessions`
+   judges those by the same rules), and removing one deletes the directory only — the
    branch and its commits stay. A squash merge leaves no ancestor of `main` and usually deletes
    the remote branch, so pass `--gh` to also accept "a PR merged at exactly this head". Every
    agent worktree is locked to the harness process that spawned it, which outlives the agent, so

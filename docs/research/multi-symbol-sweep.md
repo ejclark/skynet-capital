@@ -71,6 +71,15 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"An M3-2 update the Atlanta Fed lists as internal-only leaves no observable GDPNow vintage" (FT-m3-full-report-2026-11-03-1)** — added 2026-11-09 from the
+  [m3-full-report-2026-11-03 close-out](events/m3-full-report-2026-11-03.md). The workbook's current-quarter tabs carry an **11-03** column ("M3-2 Manufacturing (Full report)", GDPNow 3.7383 to 3.7213),
+  and `ContribArchives` already holds vintages on the 2026-06-03, 07-02, 09-02 and 10-02 internal dates. Do not infer "no vintage" from `InternalUpdates`; read the vintage tabs. The registered cell,
+  `ContribArchives`, does not hold the current quarter at all until it rolls.
+
+- **"A midterm Election Day session clears the M3-2-day SPY range p75 of 1.600% because control is in play" (FT-m3-full-report-2026-11-03-2)** — added 2026-11-09 from the
+  [m3-full-report-2026-11-03 close-out](events/m3-full-report-2026-11-03.md). SPY ranged **0.620%** on 2026-11-03 and then gapped **+1.145%** overnight into 11-04. Do not register a session-range
+  test off election-day ranges dominated by the two contested years (2020, 2022); register the overnight gap, or the next session, which is where the dispersion landed.
+
 - **"Solve the print's thresholds from the published index levels and they hold to the release" (FT-productivity-costs-q3-2026-11-05-1, -2, -3)** — added 2026-11-06 from the
   [productivity-costs-q3-2026-11-05 close-out](events/productivity-costs-q3-2026-11-05.md). The ledger's identity arithmetic was exact (151.663 ÷ 121.922 × 100 = 124.393), but every anchor
   came from a vintage the 2026 NIPA annual update then revised: ULC y/y printed **2.4%** (called <2.0%), productivity y/y **2.1%** (called 1.0–2.0%), labor-share index **93.729**
@@ -120,6 +129,19 @@ robust, alpha fragile — is the finding.
   [amd-fq3-2026-results-2026-11-03 close-out](events/amd-fq3-2026-results-2026-11-03.md). Registered at $528.75 (10-16) after an 8-session, -18.6% streak; the 11-03 close was **$483.90**
   (-8.5%) after Intel's 10-29 guide-down took AMD -10.9% on 10-30. Do not register a rebound-into-print off a sector streak whose cause is still live: the modern-era D-5→D +2.36%/67% base rate
   says nothing about a window that spans another peer's print and the hyperscaler capex week.
+
+- **"AMD's reaction day is red, because 10 of the last 16 close-to-close reactions were negative" (FT-amd-fq3-2026-results-2026-11-03-1)** — added 2026-11-10 from the
+  [amd-fq3-2026-results-2026-11-03 ledger](events/amd-fq3-2026-results-2026-11-03.md). A beat-and-raise (revenue $13.38B, Q4 guide ~$17B) closed **+1.01%** ($483.90 → $488.78) on 11-04.
+  Do not carry a 16-print sign tilt (62% negative) onto one print as a directional call; a 60/40 base rate is not a prediction, and the beat itself is the case it never priced.
+
+- **"AMD's print night moves at least 6% close-to-close because 12 of its last 16 did" (FT-amd-fq3-2026-results-2026-11-03-2)** — added 2026-11-10 from the
+  [amd-fq3-2026-results-2026-11-03 ledger](events/amd-fq3-2026-results-2026-11-03.md). The 11-03 → 11-04 move was **+1.01%** (open +0.28%); the after-hours spike to +9.4% at the high
+  faded through the session. Do not read the fat-tail count as a floor on the move; it describes the distribution, and a print that is priced in lands inside it.
+  The S2 flat-by-close guard is untouched (it prices the tail, not the median); a ≥ 6% bar is not a prediction for the next print.
+
+- **"NVDA's reaction window agrees in sign with AMD's because 12 of 16 co-windows did" (FT-amd-fq3-2026-results-2026-11-03-3)** — added 2026-11-10 from the
+  [amd-fq3-2026-results-2026-11-03 ledger](events/amd-fq3-2026-results-2026-11-03.md). AMD **+1.01%** against NVDA **-3.17%** (11-03 → 11-04), with QQQ +0.97% — NVDA fell on a day the
+  market rose. Do not lean the NVDA 11-18 stance on AMD's night as a gauge; the 0.68 correlation shares market beta and one opposite-sign print is the first read of how thin it is.
 
 - **"A paired-refuted starts-vs-sales homebuilder asymmetry stays refuted when two more reference-month pairs arrive" (FT-new-home-sales-2026-09-24-3)** — added 2026-11-03 from the
   [new-home-sales-2026-09-24 ledger](events/new-home-sales-2026-09-24.md). At 70 pairs the paired Wilcoxon put XHB at p=0.0310/0.0375 and LEN at 0.0386 with the housing-starts session larger,
@@ -286,6 +308,20 @@ robust, alpha fragile — is the finding.
   0.3pp). It landed in the last cycle before the 2026-10-26 AIES restatement, where the same revision also
   moved GDPNow's inventories line −0.0952pp; do not re-register the 0.1pp bound as exceptionless, and do
   not read it as a regime without a second pre-benchmark edition.
+
+- **"The 2026-11-09 solo GDPNow vintage moves change-in-inventory-investment by 0.10pp or more", registered
+  LOUD against an 84.6%-quiet structural cell on a September class of n=5
+  (FT-wholesale-trade-2026-11-09-1)** — added 2026-11-10 from the
+  [wholesale-trade-2026-11-09 close-out](events/wholesale-trade-2026-11-09.md). The vintage moved
+  **−0.0661pp** (0.5897 → 0.5236), quiet; the September class becomes n=6, median 0.1261pp, 3 of 6 quiet. Do
+  not cite the September reference month as a reason to expect a loud wholesale vintage; the early-quarter
+  posting position (solo, prior-quarter) is the better predictor.
+
+- **"SPY's session range is below the unconditional 0.977% baseline on a Monday, CPI-eve, wholesale-release
+  day" (FT-wholesale-trade-2026-11-09-2)** — added 2026-11-10 from the same close-out. The session printed a
+  **1.90%** range (+2.37% close to close, VIX 25.64 → 19.92) after a 4.54% range the Thursday before; the
+  stacked-quiet classes were fitted in a VIX ~14.5 regime. Do not register a session-range bet from
+  unconditional class medians without conditioning on the prior close's VIX regime.
 
 - **A 30Y reopening's bid-to-cover band as "yield-insensitive", registered as 2.30–2.52 on evidence that
   stopped at a 5.058% clearing yield (FT-treasury-30y-bond-2026-10-08-1)** — added 2026-10-09 from the
@@ -1100,6 +1136,11 @@ robust, alpha fragile — is the finding.
   non-inaugural GX prints at a near-constant ¥1,115.3bn (cv 12.3%) while the offering fell ¥350bn to ¥250bn. The eleventh drew **¥959.9bn**
   (cover 3.84), the lowest of the 5-year line. Do not register a "bid volume is constant, so cover is arithmetic" claim off a range fitted to
   prints at larger offerings; the ¥250bn prints (¥1,155.6bn, ¥875.9bn, ¥959.9bn) sit below it.
+
+- **"The election night lifts the AI-infra basket: EW NVDA/CRWV/NBIS/MU/AVGO/AMD beats QQQ by more than +3.81pp over the three sessions after the result" (FT-midterm-elections-2026-11-03-3)** — added 2026-11-09 from the
+  [midterm-elections-2026-11-03 close-out](events/midterm-elections-2026-11-03.md). The basket lost **12.68%** against QQQ's **4.26%** (excess **−8.42pp**, 11-03 → 11-06), with the AMD print confound not rescuing it (AMD was the smallest loser). Do not register a
+  "removed political overhang" lift off a result whose own winners campaigned on the overhang: Democrats took both chambers and the Texas governor's race on a pledge to halt new data centers,
+  and the power sleeve fell −10.65% on 11-04 alone while the S&P rose 1.58%.
 
 ## Portfolio-level critique — what no single-symbol view sees
 

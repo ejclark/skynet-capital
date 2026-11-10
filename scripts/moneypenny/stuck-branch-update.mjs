@@ -128,8 +128,12 @@ export function stuckBranchesOrNone(nowMs, { log = console.log, ...opts } = {}) 
   }
 }
 
-/** The empty commit on dependabot's branch. Each step throws on refusal, so the receipt is true. */
-function emptyCommitOnHead(i, run) {
+/**
+ * A commit with the head's own tree on top of the head, moved onto the branch without force. Used
+ * for dependabot's branch here, and by headless-pr.mjs when `update-branch` says the branch is
+ * already current. Each step throws on refusal, so the receipt is true.
+ */
+export function emptyCommitOnHead(i, run, message = NEW_HEAD_MESSAGE) {
   const repo = "repos/{owner}/{repo}/git";
   const tree = run("gh", ["api", `${repo}/commits/${i.headSha}`, "--jq", ".tree.sha"]);
   const sha = run("gh", [
@@ -138,7 +142,7 @@ function emptyCommitOnHead(i, run) {
     "POST",
     `${repo}/commits`,
     "-f",
-    `message=${NEW_HEAD_MESSAGE}`,
+    `message=${message}`,
     "-f",
     `tree=${tree}`,
     "-f",

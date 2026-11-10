@@ -90,7 +90,7 @@ describe("grind's stage agent", () => {
     });
     expect(calls.map((c) => [c.label?.split(" · ").pop(), c.agentType])).toEqual([
       ["envelope", "worker"],
-      ["check", "worker"],
+      ["script", "worker"],
     ]);
   });
 

@@ -1,0 +1,61 @@
+/* The Eye's light (#7216 slice 2) — `shell/eye-light-layer.tsx`, its arithmetic `shell/eye-light.ts`.
+ * A layer above the page and outside the tower's canvas: the pool, the spark, its trail and the
+ * spotlight, then the dim around the item. It never takes a click. The colours are the Eye's own
+ * ramp (docs/BRAND.md: amber → orange → red belongs to the Eye and its beam). */
+
+.eye-light {
+  position: fixed;
+  top: 0;
+  height: 100vh;
+  z-index: 6;
+  pointer-events: none;
+  overflow: visible;
+}
+
+/* Step 4, held: a ring outside the item's edge, never over its text. Shape, not hue (a standing
+ * reader is red/green colorblind, CLAUDE.md): a night line inside an amber line, so one of them
+ * holds a real step against either palette's surface, and a label naming the Eye on its edge. */
+.eye-ring {
+  position: fixed;
+  z-index: 6;
+  pointer-events: none;
+  border-radius: 9px;
+  box-shadow:
+    0 0 0 2px #05070b,
+    0 0 0 4px #ffc24d,
+    0 0 22px 6px rgb(255 122 46 / 0.32);
+}
+.eye-ring-label {
+  position: absolute;
+  top: 0;
+  left: 12px;
+  transform: translateY(-50%);
+  padding: 0 6px;
+  border: 1px solid #ffc24d;
+  border-radius: 4px;
+  background: #05070b;
+  color: #ffc24d;
+  font: 600 9px / 12px var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.eye-ring-glyph {
+  color: #fff3d6;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .eye-ring {
+    animation: eye-ring-in 320ms ease-out both;
+  }
+}
+@keyframes eye-ring-in {
+  from {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

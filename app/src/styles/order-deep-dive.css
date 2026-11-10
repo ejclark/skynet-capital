@@ -60,13 +60,15 @@ tr[data-detail] > td:first-child {
   background: var(--surface);
   box-shadow: var(--elev-raised);
 }
-/* From the bench width (1280) the frame keeps a 384px column beside the stage (the tower's,
-   tower-column.css): the panel docks over it, under the topbar, and the list keeps its full width. */
+/* Where the frame keeps a 384px column beside the stage (the tower's, tower-column.css, on the left
+   since #7216): the panel docks over it, under the topbar, and the list keeps its full width. The
+   app column starts at the viewport's left edge whether or not Moneypenny's rail is open on the
+   right, so the left anchor holds in both. */
 [data-docked] > .act-deep-panel {
   position: fixed;
   z-index: 5;
   top: calc(var(--topbar-h, 52px) + var(--stage-gap, 22px));
-  right: max(var(--gutter), calc((100vw - var(--shell-max)) / 2 + var(--gutter)));
+  left: max(var(--gutter), calc((100vw - var(--shell-max)) / 2 + var(--gutter)));
   bottom: 16px;
   width: 384px;
   max-height: none;

@@ -1,4 +1,5 @@
 import type { ChatConvictionDraft } from "../../../src/companion/companion-convictions";
+import { pageKeys } from "./page-keys";
 
 export type { ChatConvictionDraft };
 
@@ -93,7 +94,8 @@ export async function streamCompanionTurn(
     method: "POST",
     credentials: "same-origin",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ messages, page: currentPage() }),
+    // The page's keys ride beside it (#7167 slice 1): what's on screen, for her links to land on.
+    body: JSON.stringify({ messages, page: currentPage(), keys: pageKeys() }),
   });
   if (!(res.headers.get("content-type") ?? "").includes("text/event-stream")) {
     const body = (await res.json().catch(() => ({}))) as { error?: string };

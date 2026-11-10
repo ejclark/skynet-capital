@@ -8,6 +8,7 @@
 import type { LongCallPlan } from "../../../src/playbooks/long-call-rules";
 import type { PayoffCurve } from "./draft-order";
 import { postJson } from "./post";
+import { questOfPage } from "./quest-link";
 import type { Quote } from "./quote";
 import type { TicketResult } from "./ticket";
 
@@ -257,5 +258,6 @@ export const reviewOption = (draft: OptionDraft): Promise<{ preview: OptionPrevi
 /** The receipt, plus what became of a carried exit plan: recorded, or the write was refused. */
 export type OptionTicketResult = TicketResult & { readonly exitPlan?: "carried" | "not-saved" };
 
+/** Sends the order with the quest the ticket was opened from, if any (#7028 slice 6). */
 export const submitOption = (draft: OptionDraft): Promise<OptionTicketResult> =>
-  postJson("/api/trade/option/submit", draft);
+  postJson("/api/trade/option/submit", { ...draft, ...questOfPage() });

@@ -61,6 +61,7 @@ import {
   isStartedPlan,
   KIND,
   priorityValues,
+  ROLE,
   resolveBoardItem,
   runThroughRateLimit,
   SYNCED_PRIORITY,
@@ -70,6 +71,7 @@ import {
 } from "./projects.mjs";
 import { describeCardFields, planCardFields, wantedCardFields } from "./projects-fields.mjs";
 import { describePriority, planPriority, wantedPriorityOf } from "./projects-priority.mjs";
+import { liveRole, readSeatRegistry } from "./projects-role.mjs";
 
 const OWNER = "ejclark";
 const PROJECT_NUMBER = 2; // created by projects-setup.mjs's first live run (2026-09-27)
@@ -162,9 +164,11 @@ const PRIORITY_VALUES = `priority: fieldValueByName(name:"Priority"){ ... on Pro
 
 // #6871 slice 3: Kind and "Waiting on" ride along the same way. A field the board does not carry yet
 // answers null, so a sweep before the setup dispatch reads them as unset. "In this column since" is
-// write-only: the sync stamps it when Status changes and never needs to read it back.
+// write-only: the sync stamps it when Status changes and never needs to read it back. Role (#6886
+// slice 1b) rides the same way, one more single object.
 const CARD_VALUES = `kind: fieldValueByName(name:"${KIND}"){ ... on ProjectV2ItemFieldSingleSelectValue{ name } }
-        waiting: fieldValueByName(name:"${WAITING_ON}"){ ... on ProjectV2ItemFieldTextValue{ text } }`;
+        waiting: fieldValueByName(name:"${WAITING_ON}"){ ... on ProjectV2ItemFieldTextValue{ text } }
+        role: fieldValueByName(name:"${ROLE}"){ ... on ProjectV2ItemFieldSingleSelectValue{ name } }`;
 
 const BOARD_ITEMS_QUERY = `query($owner:String!,$project:Int!,$after:String){
   user(login:$owner){ projectV2(number:$project){
@@ -516,7 +520,10 @@ const UPDATE_STATUS_OPTIONS_MUTATION = `
   }
 `;
 
-/** Send `options` (from `statusFieldUpdate`) as the Status field's whole option list. */
+/**
+ * Send `options` as a single-select field's whole option list — Status's (`statusFieldUpdate`) or,
+ * since #6886 slice 1b, Role's (`roleFieldUpdate`). The mutation is the same for any field.
+ */
 export function writeStatusOptions(fieldId, options) {
   const body = JSON.stringify({
     query: UPDATE_STATUS_OPTIONS_MUTATION,
@@ -526,6 +533,36 @@ export function writeStatusOptions(fieldId, options) {
     input: body,
   });
   return JSON.parse(out || "null")?.data?.updateProjectV2Field?.projectV2Field ?? null;
+}
+
+// #6886 slice 1b — THE SWEEP MAKES THE ROLE FIELD ITSELF, so no setup dispatch has to be
+// remembered: the merge that adds a seat's `role` to the registry also puts it on the board, on the
+// same push, the way `ensureStatusColumns` does for a new column. The input shape is GitHub's
+// `CreateProjectV2FieldInput` (projectId, dataType, name, singleSelectOptions); the first sweep after
+// this merges is its live test, and a failure there is logged, never fatal (projects-reconcile.mjs).
+const CREATE_SINGLE_SELECT_MUTATION = `
+  mutation($projectId: ID!, $name: String!, $options: [ProjectV2SingleSelectFieldOptionInput!]) {
+    createProjectV2Field(input: {
+      projectId: $projectId, dataType: SINGLE_SELECT, name: $name, singleSelectOptions: $options
+    }) {
+      projectV2Field { ... on ProjectV2SingleSelectField { id name options { id name } } }
+    }
+  }
+`;
+
+/** Create a single-select field named `name` carrying `options` (`{name, color, description}`). */
+export function createSingleSelectField(
+  { projectId, name, options },
+  { gh = (argv, input) => runGh("`gh api graphql` (createProjectV2Field)", argv, { input }) } = {},
+) {
+  const body = JSON.stringify({
+    query: CREATE_SINGLE_SELECT_MUTATION,
+    variables: { projectId, name, options },
+  });
+  const out = gh(["api", "graphql", "--input", "-"], body);
+  const field = JSON.parse(out || "null")?.data?.createProjectV2Field?.projectV2Field;
+  if (!field?.id) throw new Error(`creating the "${name}" field returned no field`);
+  return field;
 }
 
 /**
@@ -783,15 +820,17 @@ export function syncIssue(
   // made yet is skipped, not an error. The day is
   // written BEFORE Status (projects-fields.mjs header): a failed Status write then re-writes both.
   const closed = status === "Done";
+  const roleField = findField(fieldList, ROLE);
   const present = {
     [IN_COLUMN_SINCE]: Boolean(findField(fieldList, IN_COLUMN_SINCE)),
     [KIND]: !closed && Boolean(findField(fieldList, KIND)),
     [WAITING_ON]: Boolean(findField(fieldList, WAITING_ON)),
+    [ROLE]: !closed && Boolean(roleField),
   };
   const fieldWrites = planCardFields({
     have: item,
-    // A closed card keeps its Kind, but nothing waits on anyone: "Waiting on" is cleared.
-    wanted: closed ? { waitingOn: "" } : wantedCardFields(issue, card),
+    // A closed card keeps its Kind and Role, but nothing waits on anyone: "Waiting on" is cleared.
+    wanted: closed ? { waitingOn: "" } : wantedLiveFields(issue, card, roleField),
     status,
     today,
     present,
@@ -842,6 +881,22 @@ export function syncIssue(
     fields: fieldWrites,
     parent: localParentOf(issue),
   };
+}
+
+/**
+ * `wantedCardFields` with Role checked against the live field's options (`liveRole`): a seat whose
+ * option the sweep has not added yet leaves the card's Role alone instead of failing the sync.
+ * Shared by the one-issue sync and the sweep.
+ */
+export function wantedLiveFields(issue, card, roleField) {
+  const wanted = wantedCardFields(issue, card, roleField ? { seats: readSeatRegistry() } : {});
+  if (!roleField) return wanted;
+  const { role, ...rest } = wanted;
+  const live = liveRole(
+    role,
+    (roleField.options ?? []).map((o) => o.name),
+  );
+  return live === undefined ? rest : { ...rest, role: live };
 }
 
 /**

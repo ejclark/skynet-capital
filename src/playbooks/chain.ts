@@ -17,7 +17,8 @@
  *   filled        an order fills (`trading/round-trips.ts` TradeFill)
  *   take-profit   a playbook's own profit exit fires (`long-call-rules.ts` longCallExit → "profit")
  *   stopped       a playbook's own stop fires: the long call's time stop (longCallExit → "time"),
- *                 COND-SCOUT's price stop (`cond-scout-ledger.ts`)
+ *                 the long LEAP's (`long-leap-rules.ts` longLeapExit → "time"), COND-SCOUT's price
+ *                 stop (`cond-scout-ledger.ts`)
  *   assigned      a written contract is assigned (`trading/option-lifecycle.ts` OPASN; on the wheel,
  *                 `wheelPhase` going from put-open to assigned)
  *   expired       a contract expires worthless (OPEXP; on the wheel, put-open going straight to flat)
@@ -28,7 +29,8 @@
  *
  * Paper only. This module is the record and its rules; nothing here places an order. The shadow
  * replay that runs a chain on history is `chain-replay.ts`; live handoff waits on per-playbook
- * ledgers (#4269, the plan's slice 2).
+ * ledgers (#4269, the plan's slice 2). Whether a link's next playbook can HOLD what it is handed is
+ * `chain-form.ts` (slice 3a): this file knows the events, that one knows the playbooks.
  */
 
 /** The closed menu. Adding an event here is the only way the menu grows. */

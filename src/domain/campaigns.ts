@@ -53,8 +53,16 @@ export interface CastRole {
 }
 
 /**
+ * One way a headline names a force: a word or phrase, or a list of them that must ALL appear
+ * (`["tariff", "China"]`). Matching rules live in campaign-news.ts → `titleNames`. Put a list's
+ * distinctive word first: the collector searches by it (news-sources.ts → `queryWord`).
+ */
+export type ForceName = string | readonly string[];
+
+/**
  * A named force that moves the cast — power, rates, export rules. It links an event by the event
- * id's PREFIX (a full id is its own prefix) or by the event's kind; either one is enough.
+ * id's PREFIX (a full id is its own prefix) or by the event's kind; either one is enough. It links
+ * a news item only when the item's title says one of its `names` (slice 4, campaign-news.ts).
  */
 export interface CampaignForce {
   readonly id: string;
@@ -63,6 +71,12 @@ export interface CampaignForce {
   readonly why: string;
   readonly prefixes?: readonly string[];
   readonly kinds?: readonly EventKind[];
+  /**
+   * The words a headline uses for this force (#6949 slice 4). Specific on purpose: a bare "capex"
+   * or "power grid" would pull another sector's story into this one, which is the slice's
+   * falsifier — a news item linked to a campaign it does not name.
+   */
+  readonly names?: readonly ForceName[];
 }
 
 /** An open question the landscape should answer, pointing at the conviction claim it tests. */
@@ -128,7 +142,8 @@ export function anchorOf(campaign: Campaign): Anchor {
 /** The storyline cap a member's form will hold too (#6949 criterion 7, #2224's 200-char precedent). */
 export const MAX_STORYLINE = 200;
 
-/** Why an event links to a campaign: the cast symbol it names, or the force that matched it. */
+/** Why an event (or a news item, campaign-news.ts) links to a campaign: the cast symbol it names,
+ *  or the force that matched it. */
 export type LinkReason =
   | { readonly via: "cast"; readonly symbol: string }
   | { readonly via: "force"; readonly force: string };
@@ -300,10 +315,17 @@ function checkForce(force: Raw, fail: Fail): void {
   if (!(isText(force.name) && isText(force.why))) fail(`force "${id}" needs a name and a why`);
   const prefixes = force.prefixes ?? [];
   const kinds = force.kinds ?? [];
+  const names = force.names ?? [];
   if (!isTextList(prefixes)) fail(`force "${id}": prefixes must be strings`);
   if (!(isTextList(kinds) && kinds.every((k) => EVENT_KINDS.has(k))))
     fail(`force "${id}": kinds must be calendar event kinds`);
-  if ((prefixes as string[]).length + (kinds as string[]).length === 0)
+  const isName = (n: unknown): boolean => isText(n) || (isTextList(n) && n.length > 0);
+  if (!(Array.isArray(names) && names.every(isName)))
+    fail(`force "${id}": names must be words, or lists of words that all must appear`);
+  if (
+    (prefixes as string[]).length + (kinds as string[]).length + (names as unknown[]).length ===
+    0
+  )
     fail(`force "${id}" matches nothing`);
 }
 

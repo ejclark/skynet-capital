@@ -211,7 +211,7 @@ Field 8 is no longer optional. A strategy carries its exit plan before it execut
 
 Eric answered #6771's question on 2026-11-06 ("fully autonomous trade execution where we steer, not
 just watching"), read as C: a pair below its strategy's own fit line trades as it does today, at a
-smaller size written once. Field 3's "who may admit a ticker below that line" now has an answer: the
+smaller size written once. Field 3's "who may admit a ticker below that line" is answered: the
 △ tier, at the below-bar floor (`src/playbooks/fit-floor.ts`).
 
 | Pair | Why it is below its bar | What changes |

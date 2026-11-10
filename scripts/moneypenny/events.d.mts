@@ -35,8 +35,9 @@ export function researchCapNow(readMode?: () => WorkMode, budgetCap?: number): n
 
 /**
  * Which due events actually get researched this run: drop anything whose `research/<id>` branch
- * already has an open PR, rank the rest (close-outs by slack, then impact, then proximity), and
- * return at most `cap` of them. The remainder is deferred, not dropped, and reported on stderr.
+ * already has an open PR, rank the rest (close-outs and first coverage by slack; pulses by campaign
+ * relevance — a row's `campaigns`, #6949 criterion 5 — then impact, then proximity), and return at
+ * most `cap` of them. The remainder is deferred, not dropped, and reported on stderr.
  */
 export function dueForResearch<T extends DueEvent>(
   dueEvents?: readonly T[],

@@ -1,6 +1,7 @@
 // Type surface for scripts/moneypenny/projects-fields.mjs — the card's Kind, "Waiting on" and
 // "In this column since" fields, decided (#6871 slice 3), pure. The scripts/ tree is plain ESM with
 // `allowJs` off (see index.d.mts).
+import type { SeatRegistry } from "./projects-role.d.mts";
 import type { WantedCard } from "./projects-sync.d.mts";
 
 type Labelled = { labels?: ({ name?: string } | string)[] };
@@ -15,10 +16,18 @@ export function wantedKindOf(issue: CardIssue): string;
 
 export function waitingOnFor(issue: CardIssue, card?: Partial<WantedCard>): string;
 
+export interface WantedCardFields {
+  kind?: string;
+  waitingOn?: string;
+  /** Only when the caller passed the seat registry (#6886 slice 1b); "" clears the card's Role. */
+  role?: string;
+}
+
 export function wantedCardFields(
   issue: CardIssue,
   card: Partial<WantedCard>,
-): { kind: string; waitingOn: string };
+  opts?: { seats?: SeatRegistry },
+): { kind: string; waitingOn: string; role?: string };
 
 export interface CardFieldWrite {
   field: string;
@@ -27,8 +36,8 @@ export interface CardFieldWrite {
 }
 
 export function planCardFields(input?: {
-  have?: { kind?: string; waitingOn?: string; status?: string | null };
-  wanted?: { kind?: string; waitingOn?: string };
+  have?: { kind?: string; waitingOn?: string; role?: string; status?: string | null };
+  wanted?: WantedCardFields;
   status?: string;
   today?: string;
   present?: Record<string, boolean>;
@@ -39,12 +48,12 @@ export function describeCardFields(number: number | string, writes?: CardFieldWr
 export const CARD_FIELD_WRITES_PER_SWEEP: number;
 
 export function planCardFieldDrift<
-  Item extends { id?: string; kind?: string; waitingOn?: string },
+  Item extends { id?: string; kind?: string; waitingOn?: string; role?: string },
 >(input?: {
   items?: Item[];
   openIssues?: (CardIssue & { number: number })[];
   numberOf: (item: Item) => number | null;
-  wantedFor: (issue: CardIssue & { number: number }) => { kind: string; waitingOn: string } | null;
+  wantedFor: (issue: CardIssue & { number: number }) => WantedCardFields | null;
   present?: Record<string, boolean>;
   /** Numbers the sweep syncs anyway — their fields are written in that sync. */
   skip?: ReadonlySet<number>;

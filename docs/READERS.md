@@ -67,7 +67,7 @@ Use this to work out what a message from Eric asks for before you reply, so he d
 | Fact | Consequence for the author | Source |
 |---|---|---|
 | Phone first, often travelling; github.com in a **browser** (the GitHub mobile app renders no Mermaid) | 390px is the reading condition; `TD` over `LR`; ≤4 participants; big labels | PICTURES.md; 2026-09-04 (five approval taps on a phone) |
-| ~10 seconds on the opening frame, F-pattern: first line, then left edges | the picture is the argument; the left edge of every list carries the verb | CLAUDE.md → fridge rule (2026-08-20) |
+| ~10 seconds on the opening frame, F-pattern: first line, then left edges | the picture is the argument; the left edge of every list carries the verb | WORKING-AGREEMENTS.md → fridge rule (2026-08-20) |
 | Mild red/green colourblindness; dark mode | hue never carries meaning alone; ≥3:1 non-text contrast; shape/weight/word beside every colour | BRAND.md → Accessibility (2026-09-06) |
 | Reads *reactions*, not checklists, on a live surface | hand him the route/URL; feedback comes back as reactions | 2026-08-16 |
 | Digests over play-by-play as autonomy rises | tiered: needs-you · headlines · noise-absorbed | 2026-08-15 |

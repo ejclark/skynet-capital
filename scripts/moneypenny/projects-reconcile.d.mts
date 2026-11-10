@@ -3,6 +3,7 @@
 import type { BoardItem, DialReading } from "./projects.d.mts";
 import type { CardFieldWrite } from "./projects-fields.d.mts";
 import type { PriorityPlan } from "./projects-priority.d.mts";
+import type { SeatRegistry } from "./projects-role.d.mts";
 import type { BoardContext, ColumnContext } from "./projects-sync.d.mts";
 
 export interface ReconcileItem extends BoardItem {
@@ -93,6 +94,27 @@ export function ensureStatusColumns(deps: {
   log?: (line: string) => void;
 }): string[];
 
+/** A live single-select field as the board context reads it. */
+export interface LiveSelectField {
+  id: string;
+  name: string;
+  options?: { id: string; name: string; color?: string; description?: string }[];
+}
+
+/** Make the Role field, or keep its options equal to the seat registry's (#6886 slice 1b). */
+export function ensureRoleField(deps: {
+  board: BoardContext;
+  seats?: SeatRegistry;
+  write?: (fieldId: string, options: StatusFieldOption[]) => unknown;
+  create?: (input: {
+    projectId: string;
+    name: string;
+    options: { name: string; color: string; description: string }[];
+  }) => unknown;
+  dryRun?: boolean;
+  log?: (line: string) => void;
+}): LiveSelectField | undefined;
+
 export function planReconcile(input?: {
   items?: ReconcileItem[];
   openIssues?: RestIssue[];
@@ -121,6 +143,11 @@ export function reconcileBoard(deps?: {
     dryRun: boolean;
     log: (line: string) => void;
   }) => readonly string[];
+  ensureRole?: (deps: {
+    board: BoardContext;
+    dryRun: boolean;
+    log: (line: string) => void;
+  }) => LiveSelectField | undefined;
   readMode?: () => DialReading & { warning?: string };
   buildContext?: (openIssues: RestIssue[]) => ColumnContext;
   statusOf?: (item: ReconcileItem) => string | null | undefined;

@@ -219,14 +219,13 @@ flowchart TD
     pr@{ shape: stadium, label: "**one held PR**<br/>one click by Eric,<br/>never auto-merged" }
     items e1@==> pr e2@==> button{"`**which button lands it?**<br/>the click decides<br/>what can be undone`"}
     button e3@==>|Create a merge commit| merged@{ shape: cyl, label: "**main: three commits**<br/>any one item<br/>reverts alone" }
-    button e4@-->|Squash and merge| squashed@{ shape: cyl, label: "**main: one commit**<br/>reverts only as<br/>a block, #3754" }
+    button e4@-->|Squash and merge| squashed@{ shape: cyl, label: "**main: one commit**<br/>an item reverts<br/>by ship revert" }
     e1@{ animate: true }
     e2@{ animate: true }
     e3@{ animate: true }
     e4@{ animate: true }
-    class items,pr,merged paper
+    class items,pr,merged,squashed paper
     class button gold
-    class squashed defect
     classDef paper fill:#F4EFE6,color:#141210,stroke:#141210,stroke-width:3px
     classDef gold fill:#E0A33A,color:#1A1300,stroke:#1A1300,stroke-width:3px
     classDef defect fill:#B3261E,color:#FFF4EC,stroke:#FFF4EC,stroke-width:3px
@@ -240,7 +239,7 @@ kind of edge label allowed (rule 9). Drawn for the moment the PR is read, before
 ````markdown
 ```mermaid
 ---
-title: "PR #3711: no item reverts alone"
+title: "PR #3711: an item reverts by ship revert"
 config:
   flowchart:
     nodeSpacing: 24
@@ -253,14 +252,14 @@ flowchart TD
         i2@{ shape: doc, label: "2 update upload-artifact" }
         i3@{ shape: doc, label: "3 update cache" }
     end
-    held ==>|Squash and merge| main@{ shape: cyl, label: "main: 1 + 2 + 3<br/>as one commit,<br/>reverts only<br/>as a block, #3754" }
+    held ==>|Squash and merge| main@{ shape: cyl, label: "main: 1 + 2 + 3<br/>as one commit;<br/>an item reverts<br/>by ship revert" }
     classDef default font-size:20px,font-family:Verdana
 ```
 ````
 _The record after landing, generated from the log and posted as a comment, in whichever ending is
-true: the squash above (today, #3754), or `held ==>|Create a merge commit| main["main: one merge
-commit, any one item reverts alone"]` once the setting is fixed. A gitGraph was tried for this
-story and retired: its commit connectors are a fixed 8 px, it takes no classDef, and plain-word
+true: the squash above (#3754), or `held ==>|Create a merge commit| main["main: one merge
+commit, any one item reverts alone"]` when the merge-commit button lands it. A gitGraph does not
+fit this story: its commit connectors are a fixed 8 px, it takes no classDef, and plain-word
 branch names overlap its labels; it stays in the table for branch topology only._
 
 ````markdown
@@ -279,10 +278,10 @@ _A call sheet as a picture: confidence × edge; never a P/L claim (`BRAND.md`)._
 **The legibility budget** (the real reading condition is a phone at 390px): **a picture fits one
 phone screen and its text clears 12px**. At 390px wide the drawing is no taller than one 844px
 screen, and 390 ÷ drawing width × font is at least 12px; `npm run shoot:mermaid-pairs` prints both
-numbers per side (`phone before 16.4px 1.06 screens`) and flags a miss, advisory. This replaced
-"≤15 nodes" (#4550): [the drawn pair](https://github.com/ejclark/skynet-capital/issues/3778#issuecomment-5981857928)
-put 20 nodes at 12.9px, still readable, but 1.60 screens against 1.06 for the same story in 8. The
-count was standing in for the glance, and the glance is measured directly now. Then: plain words,
+numbers per side (`phone before 16.4px 1.06 screens`) and flags a miss, advisory. A node count is
+not the budget (#4550): [the drawn pair](https://github.com/ejclark/skynet-capital/issues/3778#issuecomment-5981857928)
+put 20 nodes at 12.9px, still readable, but 1.60 screens against 1.06 for the same story in 8. A
+count only stands in for the glance, and the pair renderer measures the glance directly. Then: plain words,
 not paths (`login canvas`, never `src/three/pieces/eye-shader.ts`). When a builder needs the path,
 it goes in a table beside the picture and the label says what the thing does (rule 1, the same
 answer as for a sha). [The pair](https://github.com/ejclark/skynet-capital/issues/3778#issuecomment-5981860237)
@@ -383,7 +382,7 @@ a colour alone (`BRAND.md` → *Accessibility*). Brand-styled mermaid is allowed
 contrast-verified snippet checked in here, never improvised per-PR (hand-picked hex that looks
 right in one theme breaks in the other — that exact drift already shipped once).
 
-**The one sanctioned colour snippet** (verified by `tests/ui/mermaid-classdef.spec.ts` against both
+**The house teal snippet** (verified by `tests/ui/mermaid-classdef.spec.ts` against both
 of GitHub's canvases with the same formula the app's tokens pass): the fill and the text are fixed together, so their 7.4:1 never depends on the
 theme; the 3px stroke carries the boundary in light mode and the fill carries it in dark; `removed`
 and `changed` live in the stroke alone. Copy it whole; never pick a hex in flight.
@@ -463,8 +462,8 @@ flowchart TD
   ceiling, so fix size problems there, not by hand-recompressing.
 - **A new `/app/*` surface needs a script, not a waiver.** Copy an existing one
   (`scripts/shoot/feedback.mjs`, ~115 lines), swap the stubs and the frames, add its `shoot:<name>`
-  npm script. #1308 and #1312 both shipped with "Picture: waived" because no script existed for the
-  surface they changed — that is the cost this harness was built to remove (#1327).
+  npm script. A surface with no script ships its PR with "Picture: waived" — the cost this harness
+  exists to remove (#1327).
 - **"Did this change any pixels?": `npm run shoot:steady -- scripts/shoot/<name>.mjs <outdir>`, then
   `npm run shoot:diff -- <before> <after> --baseline <before-again>`.** A plain shoot can't answer it,
   because passes of one clean build differ on their own. Shoot the before build at least twice, since

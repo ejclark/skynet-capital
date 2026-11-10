@@ -159,7 +159,8 @@ gate. Run it over one agent or the whole roster (`.claude/agents/` and `docs/age
    (`node scripts/doc-rot-scan.mjs`, `grep -rn <name> CLAUDE.md .claude docs/process docs/grind`), and
    a dated row in `docs/COACHES.md`.
 
-Due: linguist and the bench on 2026-12-31.
+Due: linguist, the bench and `evals-expert` on 2026-12-31 (`docs/process/LEARNING-LOOP.md` →
+*Roster sunset pass*).
 
 ## Hard rules
 

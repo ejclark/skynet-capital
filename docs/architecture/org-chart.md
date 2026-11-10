@@ -117,6 +117,23 @@ feels them only as honest timing on their own ask ("queued behind 2 builds"), ne
 Below decks: 58 seats, every one in Builders, Quality, Chief of staff and Platform. A
 member sees their own ask's status in plain words, never the lanes.
 
+## The board's Role lanes
+
+Each open card on the Orchestration board gets a **Role**: the seat whose queue it sits in, and
+the field the seat swimlanes group by (#6886 slice 3 adds that view). The sync writes it from these
+rows and the issue's labels (`scripts/moneypenny/projects-role.mjs`); a card whose labels match
+more than one row takes the first. A card no row pulls gets no Role and sits in "No Role" until
+someone triages it. Who must act first is the card's "Waiting on" field, not its Role.
+
+| Order | Role | Seat | Pulls cards labelled |
+|---|---|---|---|
+| 1 | Live sessions | Live sessions | `needs-session` |
+| 2 | Design builds | Design build lane | `handoff` `needs-design` |
+| 3 | Event research | Event research lane | `event-research` |
+| 4 | Plan builds | Plan build lane | `plan` |
+| 5 | Feedback builds | Feedback build lane | `feedback` `bug` `fast-track` `ready` |
+| 6 | Bottleneck research | Batch chore fan-out and stage runner | `bottleneck` |
+
 ## Departments
 
 ### People
@@ -167,7 +184,7 @@ The event calendar, the research ledgers, position guidance, campaigns.
 | Pulse screen (no model) | Screens interval-elapsed pulses without a model and opens a moneypenny/screen-* PR with the ledger rows | push or scan | A screen PR, auto-merge attempted | hired | `scripts/moneypenny/open-screen-pr.mjs` `scripts/event-material-scan.mjs` |
 | Research PR sweep and stall repair | Finds an open research/<id> PR that stopped moving and frees the event it holds | Push audit | Rearm or close intents | hired | `scripts/moneypenny/research-pr-sweep.mjs` `.github/prompts/moneypenny-event-stall-repair.md` |
 | Position guidance | Reads market inputs live through the member's own account, checks each one's freshness against its source, adds the nearest research ledger's summary; the stake math runs in the browser | GET /api/trade/guidance?symbol= | market half of guidance plus freshness rows | hired | `src/server/guidance-route.ts` `src/server/guidance-pulse.ts` `src/server/guidance-market.ts` |
-| Campaigns | A market or sector people want to play, held as a record (storyline, sector, cast of symbols, forces, open questions) that links calendar events; two exist (AI buildout, oil supply) | A PR adding or editing src/domain/campaigns/<id>.json (a member form is slice 3, not built; no app code reads it yet) | linked events marked measured, reported or estimated; scope for research and the narrator | on trial | `src/domain/campaigns.ts` `src/domain/campaigns/` |
+| Campaigns | A market or sector people want to play, held as a record (storyline, sector, cast of symbols, forces, open questions) that links calendar events and news; three house campaigns plus members' own, each answering one landscape read (what moved, what is scheduled, what is reported, what the house has tested) | A PR adding or editing src/domain/campaigns/<id>.json, a member's saved form, or `npm run campaign:landscape` | the landscape read, every line marked measured, reported or estimated; the explore and find-names encounters it generates, each question before its answer, and build a strategy's names handed to the conviction, authored-play or chain form, left only with a view or a shadow test (`--encounters`); event-scan --due rows name the campaigns that link them, and research dispatch ranks those first | on trial | `src/domain/campaigns.ts` `src/domain/campaigns/` `src/domain/campaign-landscape.ts` `src/domain/campaign-encounters.ts` `src/domain/campaign-strategy.ts` `scripts/campaign-links.mjs` |
 | Ticker sweep (symbol-sweep) | Runs earnings-cycle + intraday-edges instruments per ticker, red-teams each, judges playbook fit | 'research X, Y, Z', 'run the sweep on' | research docs under docs/research/ | hired | `.claude/workflows/symbol-sweep.js` `docs/research/multi-symbol-sweep.md` |
 | Reference teardown (teardown) | Redacts and decomposes another app's screens into named patterns with a borrow/adapt/skip call sheet | screenshots of someone else's app | comment on the plan issue; images in a private artifact | hired | `.claude/skills/teardown/SKILL.md` `scripts/teardown/redact.mjs` |
 | Link intake (intake) | Reads a dropped post/video/talk without an account, finds the primary source, records what it changes | Eric pastes a link 'to scan' | findings applied to process docs | hired | `.claude/skills/intake/SKILL.md` |
@@ -248,7 +265,7 @@ The router, the App identity, merge, deploy, sessions and their hooks.
 | Event router and its wakes (Moneypenny Events) | One router for every issue-driven automation: decides intents purely, then executes them with the App token | Every push to main, issue labeled/unlabeled/closed/reopened, new issue comments, dependabot PR opened, scan/audit/release-claim dispatch | Issues, labels, comments, claim leases, a re-dispatch of itself as scan | hired | `.github/workflows/moneypenny-events.yml` `scripts/moneypenny/index.mjs` `scripts/moneypenny/wake.mjs` `scripts/moneypenny/clock-wake.mjs` |
 | Claim lease (one builder per issue) | A 2h compare-and-set lease under refs/tags/claim/<slug> so one issue is built by one run | A claim step or a live session's --hold | A tag ref; release on failure; --release-claim dispatch button | hired | `scripts/moneypenny/index.mjs` `scripts/moneypenny/claim-lease.mjs` |
 | GitHub App identity (Moneypenny) | The token every lane writes with; its writes start further workflow runs where GITHUB_TOKEN's do not | Minted per job | Every lane comment, label, PR and arm | hired | `.github/actions/app-token/action.yml` `docs/MONEYPENNY.md` |
-| Auto-merge arm and stranded-PR rearm | The only arming path: after verify and integration tests (and stability) pass, re-reads live hold-merge, runs the envelope check, arms squash with the App token | Pipeline PR events | Native auto-merge armed | hired | `.github/workflows/pipeline.yml` `scripts/arm-merge.mjs` `scripts/moneypenny/stranded-pr.mjs` `scripts/moneypenny/stuck-branch-update.mjs` |
+| Auto-merge arm and stranded-PR rearm | The only arming path: after verify and integration tests (and stability) pass, re-reads live hold-merge, runs the envelope check, arms squash with the App token | Pipeline PR events | Native auto-merge armed | hired | `.github/workflows/pipeline.yml` `scripts/arm-merge.mjs` `scripts/moneypenny/stranded-pr.mjs` `scripts/moneypenny/stuck-branch-update.mjs` `scripts/moneypenny/headless-pr.mjs` |
 | Release and deploy | On push to main: semantic-release, deploy the dashboard when the image changed, smoke, roll back; deploy the bots app when bot-relevant, reusing the image | push main; force_bots_deploy dispatch | A release tag, Fly deploys | hired | `.github/workflows/pipeline.yml` `scripts/bots-deploy-preflight.mjs` `scripts/fly-deploy.mjs` |
 | Ops buttons (autonomy ops, Fly logs, companion eval) | Phone-operable ops: status, machine-status, logs, bootstrap, flip-mode observe/live, set-bridge-secret; filtered log pull; companion replay eval | workflow_dispatch from a session; autonomy-ops and companion-eval then wait on Eric's autonomy-ops Environment approval | Fly secrets and status, job logs | hired | `.github/workflows/autonomy-ops.yml` `.github/workflows/fly-logs.yml` `.github/workflows/companion-eval.yml` |
 | Live sessions (interactive Claude Code) | Does what unattended lanes cannot: edits under .claude/, taste rounds, the held batch of protected changes, needs-session hand-offs | Eric opening a session, or a session another one started | Pull requests, issue comments, private pages | hired | `.claude/settings.json` `docs/DELEGATION.md` |

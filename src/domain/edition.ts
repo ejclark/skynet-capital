@@ -7,6 +7,7 @@
  * until a user expresses interest." So a story is held in two halves: its KEY FACTS (what moved, by
  * how much, and the dated reports that bear on it) shown on the tile, and the REST (`more`), opened
  * only on a tap. One narrator line rides each story in a mission voice; the headline stays news.
+ * The tile leads with the reports, then works back to what moved (docs/IA.md §5.9, #7081).
  *
  * WRITTEN BY HAND, FOR NOW. Nothing produces an edition yet: #6949 slice 5 (the landscape read)
  * will, and #6948 slice 4 voices it. Until then each edition is a checked-in JSON file,
@@ -34,6 +35,12 @@
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
+import {
+  checkSectors,
+  type EditionSectors,
+  type SectorsView,
+  sectorsView,
+} from "./edition-sectors.js";
 import { daysBetween } from "./market-calendar.js";
 import { marketDayKey } from "./market-day.js";
 
@@ -41,12 +48,23 @@ import { marketDayKey } from "./market-day.js";
 export const EDITION_MARKS = ["measured", "reported", "modeled", "call"] as const;
 export type EditionMark = (typeof EDITION_MARKS)[number];
 
+/** Which way a key fact moved: drawn ▲ ▼ ∿ beside its word, never by hue (docs/IA.md §5.9). */
+export const EDITION_MOVES = ["up", "down", "mixed"] as const;
+export type EditionMove = (typeof EDITION_MOVES)[number];
+
 /** One key fact on a story's tile: what moved and by how much. */
 export interface EditionFact {
   /** What it is, in plain words ("SMH, the chip fund"). */
   readonly label: string;
-  /** The number, preformatted with its sign ("−11.2%", "186.64"). */
+  /** The number, preformatted: a change carries its sign ("−11.2%"), a level does not ("186.64",
+   *  a yield's "4.86%"). */
   readonly value: string;
+  /** A level's move over the story's span, signed and with its unit ("−0.07 pts"). The one-line row
+   *  shows it in place of the level, so "▼ 4.86%" never reads as a 4.86% fall (#7182); required on a
+   *  story's lead fact when its value is a level. */
+  readonly change?: string;
+  /** Which way it moved over the story's span; `mixed` when it went both ways. */
+  readonly move: EditionMove;
   /** When, and against what ("Thu Nov 5 · worst day since Mar 16, 2020"). */
   readonly note?: string;
   /** Absent means measured. */
@@ -81,6 +99,8 @@ export interface EditionStory {
   readonly id: string;
   /** The headline, in the news voice. */
   readonly headline: string;
+  /** The headline cut to one line at 390, drawn beside the lead fact's number (round 3, AT4). */
+  readonly line: string;
   /** At most one line in the mission voice (criterion 4). */
   readonly narrator?: string;
   /** The tickers the story is about. */
@@ -104,6 +124,8 @@ export interface Edition {
   readonly stories: readonly EditionStory[];
   /** What's next for the week, in date order. */
   readonly next: readonly EditionDate[];
+  /** The whole market's closes for the sector overview (round 3, AT1–AT3; `edition-sectors.ts`). */
+  readonly sectors?: EditionSectors;
 }
 
 // ── The honesty checks ──────────────────────────────────────────────────────────────────────────
@@ -125,7 +147,17 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
 const SYMBOL_RE = /^[A-Z][A-Z0-9.]{0,9}$/;
 const MAX_NARRATOR = 160;
+/** A story's one line: about what fits at 390 beside a glyph and its number (AT4). The page still
+ *  cuts a longer one with an ellipsis rather than wrap it; this keeps the words whole. */
+const MAX_LINE = 34;
 const MAX_FACTS = 4;
+/** A value that opens with a sign is a change; one that doesn't is a level (#7182). A negative level
+ *  (a real yield below zero) would read as a change here; none is written yet, and the honest fix
+ *  then is an explicit field, not a looser sign rule. */
+const SIGNED_RE = /^[+\-−]/;
+
+/** Whether a fact's value is a level (a price, a yield, the VIX) rather than a change. */
+export const isLevel = (f: Pick<EditionFact, "value">): boolean => !SIGNED_RE.test(f.value);
 
 type Raw = Record<string, unknown>;
 type Fail = (what: string) => never;
@@ -173,10 +205,21 @@ function checkDate(d: Raw, where: string, fail: Fail): void {
 function checkFact(f: Raw, where: string, fail: Fail): void {
   if (!(isText(f.label) && isText(f.value))) fail(`${where}: a fact needs a label and a value`);
   if (f.note !== undefined && !isText(f.note)) fail(`${where}: note must be text`);
+  if (f.change !== undefined && !(isText(f.change) && SIGNED_RE.test(f.change)))
+    fail(`${where}: change must be signed text with its unit ("−0.07 pts")`);
   if (f.mark !== undefined && !isMark(f.mark)) fail(`${where}: unknown mark "${String(f.mark)}"`);
+  if (!(EDITION_MOVES as readonly unknown[]).includes(f.move))
+    fail(`${where}: move must be one of ${EDITION_MOVES.join(", ")}`);
   const copy = `${String(f.label)} ${String(f.value)} ${String(f.note ?? "")}`;
   checkBaseRate(copy, f.n, where, fail);
   checkCopy(copy, where, fail);
+}
+
+/** The one-line row shows the lead fact's figure as the story's move, so a level there needs its
+ *  change beside it (#7182): a bare "4.86%" in that column reads as a 4.86% move. */
+function checkLeadFact(lead: Raw | undefined, id: string, fail: Fail): void {
+  if (!lead || lead.change !== undefined || !isLevel(lead as Pick<EditionFact, "value">)) return;
+  fail(`story "${id}": its lead fact "${String(lead.value)}" is a level; give it a change to show`);
 }
 
 function checkLine(l: Raw, where: string, fail: Fail): void {
@@ -192,6 +235,9 @@ function checkStory(s: Raw, fail: Fail): void {
   if (!(isText(s.id) && SLUG_RE.test(s.id))) fail("a story id must be a slug");
   if (!isText(s.headline)) fail(`story "${id}" has no headline`);
   checkCopy(s.headline as string, `story "${id}" headline`, fail);
+  if (!isText(s.line) || s.line.length > MAX_LINE || s.line.includes("\n"))
+    fail(`story "${id}": line must be one line of at most ${MAX_LINE} characters`);
+  checkCopy(s.line as string, `story "${id}" line`, fail);
   if (s.narrator !== undefined) {
     if (!isText(s.narrator)) fail(`story "${id}": narrator must be one line of text`);
     const line = s.narrator as string;
@@ -206,6 +252,7 @@ function checkStory(s: Raw, fail: Fail): void {
   if (facts.length === 0 || facts.length > MAX_FACTS)
     fail(`story "${id}": key facts must be 1 to ${MAX_FACTS}`);
   for (const [i, f] of facts.entries()) checkFact(f, `story "${id}" fact ${i + 1}`, fail);
+  checkLeadFact(facts[0], id, fail);
   distinct(facts, (f) => String(f.label), `story "${id}": facts`, fail);
   const reports = objects(s.reports, `story "${id}": reports`, fail);
   for (const [i, d] of reports.entries()) checkDate(d, `story "${id}" report ${i + 1}`, fail);
@@ -240,6 +287,7 @@ export function parseEdition(raw: unknown, file: string, expectedDate: string): 
   const next = objects(e.next, "next", fail);
   for (const [i, d] of next.entries()) checkDate(d, `next ${i + 1}`, fail);
   distinct(next, dateKey, "next", fail);
+  if (e.sectors !== undefined) checkSectors(e.sectors, e.date as string, fail);
   return raw as Edition;
 }
 
@@ -281,11 +329,13 @@ export type EditionStoryView = Omit<EditionStory, "reports"> & {
  *  age. `edition: null` is the honest empty state. */
 export interface EditionView {
   readonly edition:
-    | (Omit<Edition, "stories"> & {
+    | (Omit<Edition, "stories" | "sectors"> & {
         readonly campaignTitle?: string;
         /** Calendar days from the close it describes to today. */
         readonly ageDays: number;
         readonly stories: readonly EditionStoryView[];
+        /** Each fund's move over each period, worked out of the closes. */
+        readonly sectors?: SectorsView;
       })
     | null;
   /** Today in New York (YYYY-MM-DD), the day the dates were read against. */
@@ -313,11 +363,13 @@ export function editionView(
   if (!latest) return { edition: null, today };
   const ahead = (d: EditionDate) => d.date >= today;
   const title = latest.campaign ? campaignTitle(latest.campaign) : undefined;
+  const { sectors, ...rest } = latest;
   return {
     today,
     edition: {
-      ...latest,
+      ...rest,
       ...(title ? { campaignTitle: title } : {}),
+      ...(sectors ? { sectors: sectorsView(sectors, latest.date) } : {}),
       ageDays: daysBetween(latest.date, today),
       stories: latest.stories.map((s) => ({
         ...s,

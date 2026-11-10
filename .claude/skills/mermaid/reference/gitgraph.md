@@ -6,7 +6,6 @@
 **Measured on 11.17.2 (2026-09-26, the round-3 design session):** commit connectors are a fixed 8 px, the diagram takes no `classDef`, its theme is locked, and long plain-word branch names overlap the `main` label. Retired for the held-PR story (`docs/PICTURES.md` → the held PR starter, rule 10); keep it for branch topology with few, short-named branches, vertical (`TB:`, `rotateCommitLabel: false`) on a phone.
 
 ## When to reach for it
-- Platter PRs (one commit per item): each item is a commit on a `platter` lane, a dropped or rejected item is a REVERSE commit tagged 'dropped', the verify gate is a HIGHLIGHT commit, and the auto-merge into main carries a 'deploy' tag. The picture is the PR's structure.
 - PR lifecycle, verify, auto-merge, deploy: a branch, a HIGHLIGHT verify commit, a merge with id 'auto-merge' and tag 'deploy'. Useful as a fridge-rule picture on ship and merge-policy PRs.
 - Governor or grind cycles: several athlete worktree branches forking from main and landing one by one. Shows parallelism and landing order.
 - Retros and LESSONS.md incident timelines about git history: the change lands (tag 'deploy'), the regression shows up, a revert as a REVERSE commit, then a fix commit. Also hotfix cherry-picks onto a hotfix lane.

@@ -445,6 +445,8 @@ entry, and there is no instrument to enter.
 | 2026-10-10 | D-30 | **Deterministic screen (no Claude session).** Readings — VIX 14.8 (+0.3pt since last), band unchanged (low:15+), 30 adjacent event(s) tracked, new in corridor since last pulse: `boe-decision-2026-11-05`, `bund-30y-auction-2026-11-11`, `crwv-2026-11-10-print`, `eia-steo-2026-11-10`, `existing-home-sales-2026-11-12`, `jgb-10y-auction-2026-11-05` +10 more (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-11-09 |
 | 2026-10-26 | D-14 | **Pulse.** Date holds: Census's 2026 calendar list view (HTTP 200) still lists Monthly Wholesale Trade, Nov 9, 10:00 AM, Sep 2026; its 4 `Suspended` rows are steel imports and Jan–Feb 2026 advance reports. **Restatement landed today** (`mwts-benchmark-revision-2026-10-26`, now confirmed): Census's notice revises history through **August 2026 only** and names no monthly edition as first on the restated basis, so September's basis is still set by the 10-28 advance; kill switch 2 untripped. Search-relayed, unverified (TradingEconomics): August inventories +0.5% on 10-08 vs +0.7% advance, a 0.2pp revision, under the 0.30pp ceiling (switch 4 untripped). **VIX 17.85** (+3.0pt vs 14.84; 19.45 on 10-23; FOMC 10-28 ahead); SPY 765.23; band now low:0+ (7d). New strong adjacent `cbrs-q3-2026-results-2026-11-11` recorded, not assessed. No peer or macro print hit this release; no proposal, nothing past the horizon; no forward test registered or scored. | **Stance unchanged: stand aside; 11-09 stays a waiting room for 11-10 CPI, and the information still arrives 10-28.** | 2026-11-02 (low, 0+ band: every 7d) |
 | 2026-11-02 | D-7 | **Pulse.** Date holds: Census's 2026 list view (`calendar-listview-2026.html`, HTTP 200) still reads Monthly Wholesale Trade, Nov 9, 10:00 AM, Sep 2026; its 4 `Suspended` rows are unchanged (2 steel imports, Jan–Feb 2026 advance reports). **The 10-28 advance report did publish September wholesale inventories (kill switch 2 untripped; Leg 2 premise confirmed):** $1,011.5bn, **+0.6%** m/m (±0.2), August unrevised at +0.5% (Census advance_report2609, search-relayed; PDF unreadable here). This is the number `-3` is scored against: the full report must print within 0.1pp of +0.6%. No Census notice naming a monthly edition as first on the restated basis seen. Adjacency: BEA advance Q3 GDP 10-29 +3.4% (search-relayed); FOMC 10-28 held, two dissents for a hike (one aggregator, unverified); S&P 500 −1.82% to 7,580.07 on 10-30, tech-led; **VIX 19.42** (+1.6pt vs 17.85; 23.93 intraday). New strong adjacent in corridor: `cbrs-lockup-expiry-2026-11-09` (same day), recorded, not assessed. No dated adjacent beyond the leash; no proposal; no conviction proposal or declared intent names this event; no forward test registered or scored. | **Stance unchanged: stand aside; the 11-09 session stays a waiting room for 11-10 CPI, and the number to beat is +0.6%.** | 2026-11-09 (low, 0+ band: every 7d) |
+| 2026-11-09 | D-0 | **Pulse, run 01:43 UTC - before the 10:00 ET print; nothing here scores yet.** Date holds: Census `calendar-listview-2026.html` (HTTP 200) still reads Monthly Wholesale Trade, Nov 9, 10:00 AM, Sep 2026 (`A202611091000`); its 4 `Suspended` rows are unchanged. Still `estimate`, no primary flip. Number to beat is the 10-28 advance +0.6% (search-relayed); no newer figure seen. **Tape:** Fri 11-06 S&P 500 7,376.86 (+0.31%), payrolls +165k vs ~65k, unemployment 4.1%, **VIX 25.58** (28.17 Thu; +6.2pt vs 19.42), worst week since June (search-relayed). **Geopolitics:** US-China truce expiry 11-10 reads extended to 2027-01-10 (Bessent 9/23; BIS rule per the 11-09 sibling ledger); MOFCOM paper unseen. New strong adjacent `nbis-2026-11-12-print`; `cbrs-lockup-expiry` same day, recorded not assessed. Nothing dated inside the horizon to propose; 2027-01-10 is past it. No conviction proposal or declared intent printed. `-1/-2/-3` due today, open: close-out scores them from re-run data. | **Stance unchanged: stand aside; 11-09 stays a waiting room for 11-10 CPI, now at VIX 25.6.** | 2026-11-10 (close-out after the print; score FT -1/-2/-3) |
+| 2026-11-10 | D+1 | **Close-out.** Print read direct from Census (CB26-168): Sep inventories **+0.7%** m/m ($1,013.1B), revised from the advance +0.6%; sales $840.1B, **+2.8%** m/m. GDPNow solo vintage moved change-in-inventory-investment **−0.0661pp** (0.5897 → 0.5236). SPY 11-09 range **1.90%**, VIX 25.64 → 19.92. Scored `-1` kill, `-2` kill, `-3` pass; no kill switch tripped; Outcome below. Header date stays `estimate` (no self-confirm). | Stance held on the print and the nowcast; the tape leg failed | — (closed) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -464,3 +466,64 @@ this doc goes quiet.
 
 **Last assessed:** 2026-11-02
 <!-- probe-ref: {"symbols":{},"vix":19.42,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-11-04","boe-decision-2026-11-05","boj-minutes-2026-11-05","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","eia-steo-2026-11-10","eurostat-hicp-flash-2026-11-04","existing-home-sales-2026-11-12","intl-trade-full-report-2026-11-04","ism-services-2026-11-04","jgb-10y-auction-2026-11-05","jgb-30y-auction-2026-11-10","jgb-5y-auction-2026-11-12","jobs-2026-11-06","mts-october-2026-11-12","ppi-2026-11-13","productivity-costs-q3-2026-11-05","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","sp-global-investment-manager-index-2026-11-10","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-3y-note-2026-11-09","treasury-buyback-10y20y-2026-11-04","treasury-buyback-1mo2y-2026-11-05","treasury-coupon-announcement-2026-11-12","treasury-refunding-2026-11-04","uk-gdp-q3-first-2026-11-12","uk-gilt-auction-long-2026-11-10","umich-sentiment-prelim-2026-11-06","us-china-tariff-truce-expiry-2026-11-10"],"adjacentStrongIds":["cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","jobs-2026-11-06"],"screenStreak":0} -->
+
+**Last assessed:** 2026-11-09
+<!-- probe-ref: {"symbols":{},"vix":25.64,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-11-04","boe-decision-2026-11-05","boj-minutes-2026-11-05","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","erock-q3-2026-results-2026-11-12","eurostat-hicp-flash-2026-11-04","existing-home-sales-2026-11-12","intl-trade-full-report-2026-11-04","ism-services-2026-11-04","japan-balance-of-payments-2026-11-10","jgb-10y-auction-2026-11-05","jgb-30y-auction-2026-11-10","jgb-5y-auction-2026-11-12","jobs-2026-11-06","mts-october-2026-11-12","nbis-2026-11-12-print","pbls-q3-2026-results-2026-11-12","ppi-2026-11-13","productivity-costs-q3-2026-11-05","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","sp-global-investment-manager-index-2026-11-10","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-3y-note-2026-11-09","treasury-buyback-10y20y-2026-11-04","treasury-buyback-1mo2y-2026-11-05","treasury-coupon-announcement-2026-11-12","treasury-refunding-2026-11-04","uk-gdp-q3-first-2026-11-12","uk-gilt-auction-long-2026-11-10","umich-sentiment-prelim-2026-11-06","us-china-tariff-truce-expiry-2026-11-10"],"adjacentStrongIds":["cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","jobs-2026-11-06","nbis-2026-11-12-print"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out (2026-11-10, D+1).** Macro-print mode runs no `earnings-cycle` / `intraday-edges` instrument
+(`symbols: []` by design); the cache was busted first (`rm -rf node_modules/.cache/earnings-cycle
+node_modules/.cache/intraday-edges`) and nothing here reads it. The *print* is scored from Census's own
+release (CB26-168, `census.gov/wholesale/current/index.html`), the *nowcast* from the Atlanta Fed GDPNow
+workbook (`ContribHistory`; `PostedUpdates` for the vintage composition), the *tape* from Yahoo daily and
+5-minute SPY and `^VIX` bars — all fetched direct 2026-11-10. The header date stays **estimate**: the
+release landed on the day filed, but this lane does not self-confirm. No September consensus was
+reachable, so "vs expectations" is not claimed.
+
+| Measure | Sep 2026 | Line | Result |
+|---|---|---|---|
+| **Inventories m/m, full report** | **+0.7%** (±0.2), $1,013.1B, +7.6% y/y | advance (10-28) **+0.6%**; kill line > 0.1pp | **FT-3 pass**, at the bound (+0.1pp) |
+| **GDPNow Q4 change-in-inventory-investment** | **0.5897 → 0.5236 = −0.0661pp** (solo vintage) | kill below 0.10pp | **FT-1 kill** |
+| GDPNow total, same vintage | 3.5493% → 3.4810% (−0.068) | — | only inventories moved |
+| **SPY 2026-11-09 range** | **1.9038%** of close, +2.37% close to close | kill at or above 0.977% | **FT-2 kill** |
+| VIX | 25.64 → **19.92** (−5.72) | registration cited +0.11 into CPI-eve | volatility was sold |
+| Sales m/m | **+2.8%** (±0.4), $840.1B, +19.8% y/y | Aug revised +1.8% → +2.0% | not registered |
+| Inventories/sales ratio | **1.21** | Sep 2025 1.34 | not registered |
+| SPY 10:00–11:00 ET | +0.53% (10:00 bar +0.09%), 30.7% of range | hourly baseline 40.6% | the print's hour was not the wide one |
+
+**What happened vs the stance.** The stance — stand aside, treat the print as a small correction to the
+10-28 advance, expect a quiet nowcast cell and a waiting-room tape — held on the print and the nowcast and
+failed on the tape.
+
+- **The print was the preview.** The full report revised the advance m/m by +0.1pp, inside the modal bound
+  and nothing like the 0.30pp ceiling. A benchmark restatement did not make the advance report an unreliable
+  preview, which is the claim `-3` and kill switch 4 were written to test. The sample is now 10 pairs.
+- **The nowcast sat in its structural cell, not the September one.** −0.0661pp is quiet against the 0.10pp
+  line and far under the 0.30pp kill switch. Registering LOUD against an 84.6%-quiet cell (on a September
+  class of n=5) lost; with this edition the class is n=6 at a median of 0.1261pp, 3 of 6 quiet. The
+  Leg 4 correction (one classifier, how early the vintage posts) stands, and the September month is no longer
+  evidence against it.
+- **The waiting room was a rebound session.** Range 1.90% is almost twice the line, after Thursday's 4.54%
+  range and a VIX that closed Friday at 25.64. The registration's evidence was built in a VIX ~14.5 regime
+  and the baseline was unconditional; the 11-09 pulse (VIX 25.58) recorded the regime and held the stance
+  anyway, so the miss was visible one day before. The cause of the rally is **not attributed** (no recap
+  found in two searches). The US-China truce expiry (11-10) is the one void clause that could not be
+  checked.
+- **None of the five kill switches fired.** GDPNow move ≥ 0.30pp: no (0.0661). Advance report omitted or
+  restated-basis notice: no. Reference month suspended: no. Revision > 0.30pp: no (0.1). Macro-keyed
+  playbook: no (`trade-playbooks.md` has zero wholesale/inventory hits).
+
+Forward tests: `FT-wholesale-trade-2026-11-09-3` **pass**, `-1` and `-2` **kill**, all in
+[`forward-tests/wholesale-trade-2026-11-09.md`](../forward-tests/wholesale-trade-2026-11-09.md). The two kills
+move to the [sweep doc's kill list](../multi-symbol-sweep.md). Next on the series:
+[wholesale-trade-2026-12-09](wholesale-trade-2026-12-09.md) (October data) — its advance→full sample now
+has a tenth pair, and its stance should read the tape kill above before it leans on a quiet-session claim.
+
+**Loop census (sense · decide · act · verify · remember).** Still manual: the *sense* step for the tape
+leg — the 11-09 pulse had the regime (VIX 25.58) in hand but nothing compared it with the regime a
+session-range prediction was registered in; a forward-test row carrying a "registered at VIX x" field
+would let the pulse flag it mechanically.
+
+**Last assessed:** 2026-11-10
+<!-- probe-ref: {"symbols":{},"vix":19.92,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-11-04","boe-decision-2026-11-05","boj-minutes-2026-11-05","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","erock-q3-2026-results-2026-11-12","eurostat-hicp-flash-2026-11-04","existing-home-sales-2026-11-12","intl-trade-full-report-2026-11-04","ism-services-2026-11-04","japan-balance-of-payments-2026-11-10","jgb-10y-auction-2026-11-05","jgb-30y-auction-2026-11-10","jgb-5y-auction-2026-11-12","jobs-2026-11-06","mts-october-2026-11-12","nbis-2026-11-12-print","pbls-q3-2026-results-2026-11-12","ppi-2026-11-13","productivity-costs-q3-2026-11-05","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","sp-global-investment-manager-index-2026-11-10","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-3y-note-2026-11-09","treasury-buyback-10y20y-2026-11-04","treasury-buyback-1mo2y-2026-11-05","treasury-coupon-announcement-2026-11-12","treasury-refunding-2026-11-04","uk-gdp-q3-first-2026-11-12","uk-gilt-auction-long-2026-11-10","umich-sentiment-prelim-2026-11-06","us-china-tariff-truce-expiry-2026-11-10"],"adjacentStrongIds":["cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","jobs-2026-11-06","nbis-2026-11-12-print"],"screenStreak":0} -->

@@ -10,6 +10,7 @@ import type { HouseRosterReport } from "../autonomous/house-roster-wire.js";
 import type { PlaybookFunnelView } from "../autonomous/playbook-funnel.js";
 import type { SignalWindows } from "../autonomous/signal-windows.js";
 import type { CompanionTurn } from "../companion/companion-chat.js";
+import type { Lesson } from "../domain/campaign-lessons.js";
 import type { OrderIntent, PlaybookVerdict } from "../domain/types.js";
 import type { ActivityEventBus } from "../observatory/activity-event.js";
 import type { TradeActivityRecord } from "../observatory/activity-store.js";
@@ -27,12 +28,14 @@ import type { AccountAdmin } from "./account-forms.js";
 import type { Authenticator } from "./auth/authenticator.js";
 import type { AuthoredPlayStore } from "./authored-play-store.js";
 import type { BookHealthHistoryPort } from "./book-health-history-store.js";
+import type { CampaignQuestionsStore } from "./campaign-questions-store.js";
 import type { ClaimDeps } from "./claim-form.js";
 import type { CommunityProgressionService } from "./community-progression-service.js";
 import type { CompanionMessageLogEntry } from "./companion-message-log.js";
 import type { ControlsDeps } from "./controls-form.js";
 import type { CouncilDeps } from "./council-form.js";
 import type { CouncilRepliesDeps } from "./council-replies-form.js";
+import type { DiscoveryQueueStore } from "./discovery-queue-store.js";
 import type { SubmitDraftOrder } from "./draft-trade-service.js";
 import type { ExitPlanStore } from "./exit-plan-store.js";
 import type { FeedbackRouteDeps } from "./feedback-routes.js";
@@ -40,6 +43,7 @@ import type { FilingCommentsDeps } from "./filing-comments-form.js";
 import type { GithubTokenDeps } from "./github-token.js";
 import type { InviteDeps } from "./invite-form.js";
 import type { MemberCampaignStore } from "./member-campaign-store.js";
+import type { MemberChainStore } from "./member-chain-store.js";
 import type { MemberConvictionStore } from "./member-conviction-store.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
 import type { OpsStatusDeps } from "./ops-status-routes.js";
@@ -56,6 +60,7 @@ import type { ProgressionService } from "./progression-service.js";
 import type { QuoteStreamPort } from "./quote-stream-hub.js";
 import type { SavedPositionsStore } from "./saved-positions-store.js";
 import type { SubscriptionStore } from "./subscription-store.js";
+import type { TakenQuestStore } from "./taken-quest-store.js";
 import type { SubmitDeskTrade } from "./trade-service.js";
 import type { WireRouteDeps } from "./wire-routes.js";
 
@@ -368,22 +373,50 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    */
   readonly exitPlans?: ExitPlanStore;
   /**
+   * THE QUESTS MEMBERS TOOK (#7028 slice 6) — an accepted order a quest drafted, recorded with the
+   * base rate the quest carried, for `GET /api/quests/taken` to score. Omit to disable (offline
+   * mode): orders place as ever, and the scores answer empty.
+   */
+  readonly takenQuests?: TakenQuestStore;
+  /**
    * THE AUTHORED PLAYS STORE (#5457 slice 1) — the drafts a member writes on R&D → Playbooks. Omit to
    * disable (offline mode): the list answers empty and a save answers "not wired in this deployment."
    * Nothing in it reaches a bot; a draft is not on any roster.
    */
   readonly authoredPlays?: AuthoredPlayStore;
   /**
-   * MEMBERS' OWN CAMPAIGNS (#6949 slice 3a) — the campaigns a member crafts from the form, private
-   * to their author. Omit to disable (offline mode): the list answers empty and a save answers "not
-   * wired in this deployment."
+   * MEMBERS' OWN CAMPAIGNS (#6949 slices 3a, 6) — the campaigns a member crafts from the form, the
+   * party's once saved unless the author holds one back as a draft. Omit to disable (offline mode):
+   * the list answers empty and a save answers "not wired in this deployment."
    */
   readonly memberCampaigns?: MemberCampaignStore;
+  /**
+   * MEMBERS' OWN CHAINS (#6959 slice 3b) — the playbook chains a member draws, private to their
+   * author and shadow only: nothing reads this store to trade. Omit to disable (offline mode): the
+   * list answers empty and a save answers "not wired in this deployment."
+   */
+  readonly memberChains?: MemberChainStore;
   /**
    * Whether the house has a ledger on a symbol, for a campaign's research ask. Omit to read the
    * research shelf on each save (`shelfResearched`); specs pass a fixed answer.
    */
   readonly campaignShelf?: (symbol: string) => boolean;
+  /**
+   * THE DISCOVERY QUEUE (#6952 slice 2b) — questions about things no campaign covers, waiting for
+   * the research lane. Omit to disable (offline mode): an ask answers "not wired in this
+   * deployment" and a campaign save queues nothing. Appending to it starts no research.
+   */
+  readonly discoveryQueue?: DiscoveryQueueStore;
+  /** Asks the lane takes per pass, for the "roughly when". Omit to read `work-mode.json`. */
+  readonly discoveryPerPass?: number;
+  /**
+   * WHAT THE PARTY ASKED (#6949 slice 6) — every question asked inside a campaign, with who asked
+   * by display name. Omit to disable (offline mode): asks still queue, and a campaign's question
+   * list answers empty.
+   */
+  readonly campaignQuestions?: CampaignQuestionsStore;
+  /** The findings that answer one ask in a house campaign. Omit to read the checked-in lesson records. */
+  readonly campaignFindings?: (campaign: string, askId: string) => readonly Lesson[];
   /**
    * MEMBERS' CONVICTIONS (#5482 slice 6a) — the views a member states and keeps as drafts. Omit to
    * disable (offline mode): the list answers empty and a save answers "not wired in this
