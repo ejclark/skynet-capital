@@ -14,6 +14,16 @@ export function parseArgs(argv: string[]): {
   /** A value flag given last has no value: its key is present, set to undefined (#6285). */
   flags: Record<string, string | true | undefined>;
 };
+/** #7352: the flags each subcommand reads; any other is refused before a write. */
+export const KNOWN_FLAGS: Record<"create" | "link" | "update" | "search" | "show", string[]>;
+export function unknownFlags(
+  cmd: string | undefined,
+  flags: Record<string, string | true | undefined>,
+): string[];
+/** #7352: `update --dry-run`'s preview of the writes it would make. */
+export function dryRunLines(
+  ops: Array<{ method: string; path: string; payload?: Record<string, unknown> }>,
+): string[];
 export function csv(s: unknown): string[];
 export function titleWords(title: string): Set<string>;
 export function findDuplicates<T extends IssueLike>(
