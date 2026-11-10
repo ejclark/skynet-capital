@@ -32,6 +32,7 @@ import { createSavedPositionsStore } from "../server/saved-positions-store.js";
 import { createSettingsChangeLog } from "../server/settings-change-log.js";
 import { createSubscriptionStore } from "../server/subscription-store.js";
 import { createTakenQuestStore } from "../server/taken-quest-store.js";
+import { createTargetSplitStore } from "../server/target-split-store.js";
 
 export interface AccessSetup {
   allowlist: ReturnType<typeof createAllowlistStore>;
@@ -42,6 +43,7 @@ export interface AccessSetup {
   filingComments: ReturnType<typeof createFilingCommentsStore>;
   subscriptions: ReturnType<typeof createSubscriptionStore>;
   savedPositions: ReturnType<typeof createSavedPositionsStore>;
+  targetSplits: ReturnType<typeof createTargetSplitStore>;
   exitPlans: ReturnType<typeof createExitPlanStore>;
   takenQuests: ReturnType<typeof createTakenQuestStore>;
   authoredPlays: ReturnType<typeof createAuthoredPlayStore>;
@@ -104,6 +106,9 @@ export function setupAccess(
   // volume beside the other member data (SKYNET_SAVED_POSITIONS_FILE → /data/saved-positions.json
   // in prod). Plain JSON — the same tier as a playbook subscription's capital allocation.
   const savedPositions = createSavedPositionsStore(env, (m) => console.error(m));
+  // Target splits (#4607) — a member's wanted shares/options/cash split, a sibling of the
+  // saved-positions file (no new env var). Three percents and a tolerance per member.
+  const targetSplits = createTargetSplitStore(env, (m) => console.error(m));
   // Exit plans carried at purchase (#5709 slice 3) — a contract symbol and a timestamp per held
   // call, a sibling of the subscriptions file (no new env var).
   const exitPlans = createExitPlanStore(env, (m) => console.error(m));
@@ -165,6 +170,7 @@ export function setupAccess(
     filingComments,
     subscriptions,
     savedPositions,
+    targetSplits,
     exitPlans,
     takenQuests,
     authoredPlays,
