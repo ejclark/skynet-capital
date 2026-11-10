@@ -83,6 +83,11 @@ Sources, in pull order (`npm run rank`):
   **`.claude/workflows/clear-path-flip.js`** (`{issues: [...]}`), save the result as JSON, run
   `node scripts/clear-path-post.mjs <file> --dry-run`, then without `--dry-run`. Gate on its exit
   status, never through `| tail`. Survivors become the next wave's Ready work.
+  **Send at most 6 issues per run.** For more, launch runs of 6 or fewer together and post each one
+  as it lands. Why: a run caps how many agents it runs at once (2 in a 4-CPU cloud container), and
+  its refuters queue behind every judge, so one long list posts nothing until the whole list is
+  judged, and a usage stop strands every judged issue (#6711: 0 flips 50 minutes into a run of 33).
+  A run of 6 took 5.5 minutes on a laptop (2026-11-10).
 - **Debt** — `/governor` cycles (surge allows 8 dispatches a cycle).
 - **Fan-out from findings** — a bug found mid-wave is filed `bug` + `fast-track` and pulled next.
 
