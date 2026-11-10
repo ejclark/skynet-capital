@@ -9,7 +9,7 @@ import { type PageKeys, usePublishPageKeys } from "../live/page-keys";
 import { fetchQuests, placeQuests } from "../live/quests";
 import { useLandOnEdition } from "../shell/edition-anchor";
 import { PageFrame } from "../shell/frame";
-import { AskBox, StoryAsk } from "../shell/landing-ask";
+import { AskBox, EventThread, StoryAsk } from "../shell/landing-ask";
 import { calendarShows, LandingCalendar } from "../shell/landing-calendar";
 import { AccountQuests, StoryQuests } from "../shell/landing-quests";
 import { SectorOverview } from "../shell/sector-overview";
@@ -137,6 +137,7 @@ function Landing(): ReactElement {
                 <StoryQuests quests={placed.byStory.get(s.id)} />
               </>
             )}
+            eventAsk={(e) => <EventThread event={e} />}
           />
           {answer ? <AccountQuests quests={placed.account} unread={answer.unread} /> : null}
           <footer className="obs-foot">{edition.writtenBy}</footer>

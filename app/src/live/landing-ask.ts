@@ -1,6 +1,13 @@
 import { LANE_READS_QUEUE } from "../../../src/domain/discovery-lane";
+import {
+  editionEventKey,
+  eventAnchor,
+  landingRow,
+  storyAnchor,
+} from "../../../src/domain/edition-keys";
 import { WHATS_COMING_UP } from "../../../src/domain/fast-track";
-import type { EditionLine, EditionStory } from "./edition";
+import type { EditionDate, EditionLine, EditionStory } from "./edition";
+import type { MpThread } from "./moneypenny-threads";
 import { postJson } from "./post";
 
 /**
@@ -82,6 +89,24 @@ export function askTarget(story: EditionStory, campaign: string | undefined): As
 /** A story's question for the chat, with the headline as its referent ("this" has one). */
 export function chatQuestion(story: EditionStory, question: string): string {
   return `About "${story.headline}": ${question.trim()}`;
+}
+
+/** An event's question for the chat, named with its date so "this" has one referent. */
+export function eventQuestion(event: EditionDate, question: string): string {
+  const when = event.when ? ` (${event.when})` : "";
+  return `About "${event.what}"${when}: ${question.trim()}`;
+}
+
+/** A story's side thread (#7167 criterion 11): named by its row's key, titled by its one line. */
+export function storyThread(story: EditionStory): MpThread {
+  const key = storyAnchor(story.id);
+  return { key, title: story.line, path: landingRow(key) };
+}
+
+/** An event's side thread, named by its row's key (`event-<date>-<name>`). */
+export function eventThread(event: EditionDate): MpThread {
+  const key = eventAnchor(editionEventKey(event));
+  return { key, title: event.what, path: landingRow(key) };
 }
 
 // ── What the party asked (GET /api/campaigns/questions) ─────────────────────────────────────────

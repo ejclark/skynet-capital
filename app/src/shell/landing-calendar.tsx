@@ -57,12 +57,17 @@ const STATUS: Readonly<Record<EditionDate["status"], { glyph: string; word: stri
   estimate: { glyph: "⬡", word: "Date estimated from its usual timing" },
 };
 
+/** What an event's row carries below its details: its ask and its side thread (#7167 criterion 11). */
+type EventAsk = (event: EditionDate) => ReactNode;
+
 function EventLine({
   event,
   stories,
+  eventAsk,
 }: {
   readonly event: EditionDate;
   readonly stories: readonly EditionStory[];
+  readonly eventAsk?: EventAsk;
 }): ReactElement {
   const waiting = waitingOn(event, stories);
   const status = STATUS[event.status];
@@ -99,6 +104,7 @@ function EventLine({
               {WAITS_GLYPH} Waiting on it: {waiting.map((s) => s.line).join(" · ")}
             </p>
           ) : null}
+          {eventAsk?.(event)}
         </div>
       </details>
     </li>
@@ -109,10 +115,12 @@ function Day({
   day,
   today,
   stories,
+  eventAsk,
 }: {
   readonly day: CalendarDay;
   readonly today: string;
   readonly stories: readonly EditionStory[];
+  readonly eventAsk?: EventAsk;
 }): ReactElement {
   const id = `ecal-day-${day.date}`;
   return (
@@ -123,7 +131,7 @@ function Day({
       </h4>
       <ul className="ecal-lines" aria-labelledby={id}>
         {day.events.map((e) => (
-          <EventLine key={`${e.date}-${e.what}`} event={e} stories={stories} />
+          <EventLine key={`${e.date}-${e.what}`} event={e} stories={stories} eventAsk={eventAsk} />
         ))}
       </ul>
     </li>
@@ -135,11 +143,13 @@ function Week({
   edition,
   today,
   storyAsk,
+  eventAsk,
 }: {
   readonly week: CalendarWeek;
   readonly edition: Edition;
   readonly today: string;
   readonly storyAsk: (story: EditionStory) => ReactNode;
+  readonly eventAsk?: EventAsk;
 }): ReactElement {
   const id = `ecal-week-${week.monday}`;
   return (
@@ -170,7 +180,7 @@ function Week({
           </li>
         ) : null}
         {week.days.map((d) => (
-          <Day key={d.date} day={d} today={today} stories={edition.stories} />
+          <Day key={d.date} day={d} today={today} stories={edition.stories} eventAsk={eventAsk} />
         ))}
       </ol>
     </li>
@@ -223,12 +233,15 @@ export function LandingCalendar({
   edition,
   today,
   storyAsk,
+  eventAsk,
 }: {
   readonly edition: Edition;
   /** The exchange's today, as the server cut the edition's passed dates against it. */
   readonly today: string;
   /** A story's asks, drawn inside it once opened (slice 2). */
   readonly storyAsk: (story: EditionStory) => ReactNode;
+  /** An event's ask and side thread, drawn under its details once opened (#7167 criterion 11). */
+  readonly eventAsk?: EventAsk;
 }): ReactElement {
   const phone = usePhoneWidth();
   const horizon = useHorizonRange();
@@ -270,7 +283,14 @@ export function LandingCalendar({
         <div className="ecal-agenda">
           <ol className="ecal-weeks">
             {weeks.map((w) => (
-              <Week key={w.monday} week={w} edition={edition} today={today} storyAsk={storyAsk} />
+              <Week
+                key={w.monday}
+                week={w}
+                edition={edition}
+                today={today}
+                storyAsk={storyAsk}
+                eventAsk={eventAsk}
+              />
             ))}
           </ol>
           {inside.length === 0 ? (

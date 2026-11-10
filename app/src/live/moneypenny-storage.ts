@@ -1,6 +1,7 @@
 import type { CoachMessage, FeedbackKind } from "./feedback";
 import type { MpMessage } from "./moneypenny";
 import type { Flow } from "./moneypenny-script";
+import type { MpThread } from "./moneypenny-threads";
 
 /**
  * THE THREAD'S PERSISTENCE — split from `moneypenny.ts` at the 300-line cap. One blob per MEMBER
@@ -20,10 +21,14 @@ export interface Persisted {
   readonly note: string;
   readonly coach: readonly CoachMessage[];
   readonly kind: FeedbackKind;
+  /** The side threads this member started on a page's rows (#7167 criterion 11) — their names
+   *  and places; their lines are in `messages`, tagged with the thread's key. */
+  readonly threads: readonly MpThread[];
 }
 
 export const EMPTY: Persisted = {
   messages: [],
+  threads: [],
   introDone: false,
   flow: "idle",
   note: "",
@@ -36,7 +41,13 @@ export function load(member: string): Persisted {
     const raw = localStorage.getItem(keyFor(member));
     if (!raw) return EMPTY;
     const parsed = JSON.parse(raw) as Partial<Persisted>;
-    return { ...EMPTY, ...parsed, messages: Array.isArray(parsed.messages) ? parsed.messages : [] };
+    return {
+      ...EMPTY,
+      ...parsed,
+      messages: Array.isArray(parsed.messages) ? parsed.messages : [],
+      // A blob saved before threads existed has none.
+      threads: Array.isArray(parsed.threads) ? parsed.threads : [],
+    };
   } catch {
     return EMPTY;
   }
