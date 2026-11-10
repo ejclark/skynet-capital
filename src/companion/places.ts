@@ -67,8 +67,16 @@ export function placeHref(raw: string): string | undefined {
  * anchor the blotter row carries (`app/src/shell/position-anchor.ts`) and the Events rows already
  * link (#4348), so her link and the page's row meet on one key with no wiring between them. The
  * rail lands on it the way it lands every `#pos-` link: scroll, open the row, outline it.
+ *
+ * `account` pins the account the row lives on (#7305). Without it Profile opens on the member's
+ * default account, which can be a bot's desk where the row isn't — so an address that knows its
+ * account (a position thread's way back) names it; her prose links, written from symbols alone,
+ * keep the short form.
  */
-export const positionRow = (symbol: string): string => `/accounts#pos-${symbol}`;
+export const positionRow = (symbol: string, account?: string): string =>
+  account === undefined
+    ? `/accounts#pos-${symbol}`
+    : `/accounts?account=${encodeURIComponent(account)}#pos-${symbol}`;
 
 /**
  * THE PAGE OWNS THE NUMBERS; SHE OWNS THE POINTERS (#7167, Eric 2026-11-09: her answers were "a

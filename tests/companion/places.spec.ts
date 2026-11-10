@@ -167,6 +167,14 @@ describe("positionRow — a position's address on Profile", () => {
     expect(positionRow("NVDA")).toBe("/accounts#pos-NVDA");
     expect(placeHref(positionRow("NVDA261218P00100000"))).toBe("/accounts#pos-NVDA261218P00100000");
   });
+
+  it("names the account when it is given, so Profile never opens a default account instead (#7305)", () => {
+    expect(positionRow("NVDA", "human-eric")).toBe("/accounts?account=human-eric#pos-NVDA");
+    expect(positionRow("NVDA", "a b&c")).toBe("/accounts?account=a%20b%26c#pos-NVDA");
+    expect(placeHref(positionRow("NVDA", "human-eric"))).toBe(
+      "/accounts?account=human-eric#pos-NVDA",
+    );
+  });
 });
 
 describe("POSITION_ROW_RULE — link the row, never retype or compute its figures", () => {
