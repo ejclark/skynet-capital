@@ -20,6 +20,7 @@ import { resolveCurrentId } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { opaqueMemberId } from "./feedback-issue.js";
 import { onboardingView } from "./onboarding-api-routes.js";
+import { describeOwnerQueue, type OwnerQueue, type ReadOwnerQueue } from "./owner-queue.js";
 import { parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
 import { openSseStream, sseFrame } from "./sse.js";
 
@@ -120,9 +121,14 @@ async function memberContextFor(
   onScreen?: string,
 ): Promise<string | undefined> {
   try {
-    const [onboarding, filings] = await Promise.all([
+    // The owner desk (the Moneypenny operator plan): only the server's own owner check turns it
+    // on — nothing in the request or the prompt can — and a slow or failed read drops the line,
+    // never the turn.
+    const owner = config.isOwnerEmail?.(session.email) === true;
+    const [onboarding, filings, ownerQueue] = await Promise.all([
       onboardingView(config, session),
       config.readFeedback ? config.readFeedback(opaqueMemberId(session.email)) : [],
+      owner && config.readOwnerQueue ? ownerQueueWithin(config.readOwnerQueue) : undefined,
     ]);
     return memberContext({
       now: new Date(),
@@ -134,9 +140,26 @@ async function memberContextFor(
       ...(page ? { page } : {}),
       ...(holding ? { holding } : {}),
       ...(onScreen ? { onScreen } : {}),
+      ...(ownerQueue ? { ownerDesk: describeOwnerQueue(ownerQueue) } : {}),
     });
   } catch {
     return undefined;
+  }
+}
+
+const OWNER_QUEUE_WAIT_MS = 1_500;
+
+/** The owner queue, or `undefined` if it fails or has not answered in a second and a half — the
+ *  turn never waits on GitHub longer than that. The timer is cleared so it never holds the loop. */
+async function ownerQueueWithin(read: ReadOwnerQueue): Promise<OwnerQueue | undefined> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<undefined>((ok) => {
+    timer = setTimeout(() => ok(undefined), OWNER_QUEUE_WAIT_MS);
+  });
+  try {
+    return await Promise.race([read().catch(() => undefined), timeout]);
+  } finally {
+    clearTimeout(timer);
   }
 }
 
