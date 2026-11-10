@@ -92,7 +92,9 @@ The pre-merge reviewer's model writes one `review.json`; everything else is plai
 
 Triage routes by `scripts/review-roots.mjs`, the audit's `DEEP_ROOTS` and `DOCS_ONLY`; the audit
 keeps its own copy because a workflow cannot import, and `tests/scripts/review-roots.spec.ts` fails
-when the two differ. The audit's receipts ride the same branch at `audit/YYYY-MM-DD.jsonl` (#6683).
+when the two differ. The audit's receipts ride the same branch at `audit/YYYY-MM-DD.jsonl` (#6683),
+beside `audit/marker.json`: the main commit the last due-checked audit covered, which
+`scripts/audit-due.mjs` reads to say whether 6 or more code PRs have merged since (#7311).
 Nothing here runs in CI yet: the job that calls it is S3, on the platter.
 
 ## Not known yet
