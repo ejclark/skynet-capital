@@ -49,6 +49,7 @@ import type { ObservatoryHub } from "./observatory-hub.js";
 import type { OpsStatusDeps } from "./ops-status-routes.js";
 import type { SubmitOptionTrade } from "./option-trade-service.js";
 import type { OrderAuditRecord } from "./order-audit-log.js";
+import type { ReadOwnerQueue } from "./owner-queue.js";
 import type {
   AddParticipantInput,
   AddResult,
@@ -331,6 +332,9 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * picker, whose authorization has no such bypass. Omit when OAuth isn't configured.
    */
   readonly isOwnerEmail?: (email: string) => boolean;
+  /** What waits on the owner's decision or merge (`owner-queue.ts`); read into Moneypenny's turn
+   *  only when `isOwnerEmail` passes for the session. Omit when the feedback token is unset. */
+  readonly readOwnerQueue?: ReadOwnerQueue;
   /**
    * Every host-configured (env-roster) participant id, for the same picker. An owner's OWN
    * account is a roster row too — without this, an owner whose `SKYNET_HUMAN_<ID>_EMAIL` was
