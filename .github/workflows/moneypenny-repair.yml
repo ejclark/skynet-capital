@@ -91,7 +91,13 @@ concurrency:
   # `workflow_run` object at all, so it keys on whichever input was given instead — different
   # targets (two PRs, two stalled issues, a PR and an issue) must never serialize behind each other,
   # but the same target dispatched twice should.
-  group: moneypenny-repair-${{ github.event.workflow_run.name || (github.event.inputs.issue_number != '' && format('issue-{0}', github.event.inputs.issue_number)) || format('pr-{0}', github.event.inputs.pr_number) }}
+  #
+  # A red PR's run keys on its head branch too (#6728). Since #6669 a red session PR can dispatch a
+  # repair session inside this run, holding the group until it ends, and GitHub keeps only one
+  # pending run per group: a red `main` queued behind it was replaced by the next Pipeline
+  # completion and never triaged. `main`'s key is unchanged. Specced in
+  # tests/arch/repair-concurrency.spec.ts.
+  group: moneypenny-repair-${{ (github.event.workflow_run.event == 'pull_request' && format('{0}-pr-{1}', github.event.workflow_run.name, github.event.workflow_run.head_branch)) || github.event.workflow_run.name || (github.event.inputs.issue_number != '' && format('issue-{0}', github.event.inputs.issue_number)) || format('pr-{0}', github.event.inputs.pr_number) }}
   cancel-in-progress: false
 
 jobs:
