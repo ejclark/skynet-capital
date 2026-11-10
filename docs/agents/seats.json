@@ -1618,7 +1618,7 @@
       "role": "Bottleneck research",
       "pulls": ["bottleneck"],
       "codeRoots": [".claude/workflows/grind.js", "docs/grind/", ".claude/agents/worker.md"],
-      "cite": "CLAUDE.md:387-388; .claude/skills/governor/SKILL.md:65; .claude/workflows/grind.js:165, 229; .claude/workflows/dream.js:87; docs/COACHES.md:530"
+      "cite": "CLAUDE.md:387-388; .claude/skills/governor/SKILL.md:65; .claude/workflows/grind.js:165, 229; .claude/workflows/dream.js:92; docs/COACHES.md:530"
     },
     {
       "id": "hooks",
