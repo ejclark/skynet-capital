@@ -30,6 +30,26 @@ member's own reply ("send", or an answer to her one question) is what posts it t
 `/api/feedback`. The scripted lines in
 `app/src/live/moneypenny-script.ts` are the fallback when the key isn't set.
 
+### Four jobs
+
+Eric, 2026-11-10: "her ability to assess and evaluate the situation to perform research, delegate
+work, and evolve our systems to meet the ever changing outcomes users are pursuing." Her prompt
+names four jobs and one rule for sorting each message (`src/companion/routing-rule.ts`):
+
+| The ask | What she does by herself | What goes out, and where |
+|---|---|---|
+| The record answers it (their desk, the calendar, the build queue, the help desk) | Looks it up with her read-only tools and answers | Nothing |
+| It needs research nobody has done | Says what her tools show and what they don't | A draft feedback idea titled "Research: …", which lands as a feedback issue |
+| Something to build or fix | Writes the brief | A draft feedback issue (bug, feature or idea) |
+| How the app works has fallen behind what members are after | Checks the roadmap for a plan that already covers it | A draft feedback idea in four lines: outcome members are after, what the app does today, proposed change, how we would know it worked |
+
+She only ever reads by herself. Every write is a draft card, and the member's own tap or reply
+sends it; she never says something was asked, filed or started before that. Asked to size up where
+a member stands, she answers in three short beats (their desk, what is coming, one question back)
+and never recommends a trade. One eval fixture per job (`assess-`, `research-`, `delegate-`,
+`evolve-` in `src/evals/companion/fixtures.ts`) makes a change to any of them measurable with
+`npm run eval:companion`.
+
 ## Mandate
 
 Moneypenny **sequences work across GitHub issues and PRs so outcomes ship on the most efficient
