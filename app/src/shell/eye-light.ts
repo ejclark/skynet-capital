@@ -39,6 +39,10 @@ export const LAND_MS = 280;
 export const LIFT_MS = 320;
 export const LIGHT_MS = FOCUS_MS + ARC_MS + LAND_MS + LIFT_MS;
 
+/** The ring draws itself round the item from where the light touched it, starting the moment the
+ *  spark lands and done inside 300 ms of it (#7227 criterion 1): it finishes as the dim peaks. */
+export const RING_DRAW_MS = LAND_MS;
+
 /** How dark the page goes around the item at the height of the landing. */
 export const DIM_MAX = 0.55;
 
@@ -117,7 +121,7 @@ export interface LightFrame {
   readonly trail?: readonly Point[];
   /** Steps 3–4: how dark the page is around the item. */
   readonly dim?: number;
-  /** Step 4 on: the ring and its label are on the item. */
+  /** Step 3 on: the ring and its label are on the item (it draws itself through step 3). */
   readonly ring: boolean;
 }
 
@@ -142,11 +146,86 @@ export function lightAt(ms: number, from: Point, to: Point, ceiling = 0): LightF
     };
   }
   const landEnd = arcEnd + LAND_MS;
-  if (ms < landEnd)
-    return { step: 3, dim: DIM_MAX * clamp01((ms - arcEnd) / LAND_MS), ring: false };
+  // The ring starts as the spark lands (#7227): it draws round the item while the page dims.
+  if (ms < landEnd) return { step: 3, dim: DIM_MAX * clamp01((ms - arcEnd) / LAND_MS), ring: true };
   if (ms < LIGHT_MS)
     return { step: 4, dim: DIM_MAX * (1 - clamp01((ms - landEnd) / LIFT_MS)), ring: true };
   return { step: "done", ring: true };
+}
+
+/**
+ * WHERE THE LIGHT TOUCHED THE ITEM (#7227 criterion 1): the spark comes down the arc's last leg,
+ * from the arc's control point toward the item's centre, and crosses the item's edge on the way
+ * in. The ring draws itself out both ways from there, so the motion starts where the eye followed
+ * the spark to. Returned as a share (0–1) of the edge's length, clockwise from the top-left corner
+ * — the way an SVG `<rect>`'s outline runs.
+ */
+export function touchShare(item: Rect, from: Point): number {
+  const c = centre(item);
+  const dx = from.x - c.x;
+  const dy = from.y - c.y;
+  const hw = item.width / 2;
+  const hh = item.height / 2;
+  const w = item.width;
+  const h = item.height;
+  const edge = 2 * (w + h);
+  if (edge <= 0) return 0;
+  // The ray from the centre toward `from` meets whichever edge it reaches first.
+  const t = Math.min(dx ? hw / Math.abs(dx) : Infinity, dy ? hh / Math.abs(dy) : Infinity);
+  const p = Number.isFinite(t) ? { x: c.x + dx * t, y: c.y + dy * t } : { x: c.x, y: item.top };
+  const x = Math.min(w, Math.max(0, p.x - item.left));
+  const y = Math.min(h, Math.max(0, p.y - item.top));
+  let along: number;
+  if (y <= 0.5) along = x;
+  else if (x >= w - 0.5) along = w + y;
+  else if (y >= h - 0.5) along = w + h + (w - x);
+  else along = 2 * w + h + (h - y);
+  return (along / edge) % 1;
+}
+
+/** The part of the window the member can see the page through: under the sticky topbar, inside
+ *  the window, and outside the chat panel. Undefined when the chat covers the whole page (the
+ *  phone's full-screen chat): then nothing on the page is in view, and the light waits. */
+export interface ViewArea {
+  readonly top: number;
+  readonly bottom: number;
+  readonly left: number;
+  readonly right: number;
+}
+
+export function viewArea(
+  clear: number,
+  win: { readonly width: number; readonly height: number },
+  chat: Rect | null,
+): ViewArea | undefined {
+  let area: ViewArea = { top: clear, bottom: win.height, left: 0, right: win.width };
+  if (!chat || chat.width <= 0 || chat.height <= 0) return area;
+  const cr = chat.left + chat.width;
+  const cb = chat.top + chat.height;
+  // Clear of the page already (scrolled away, or off to one side of it).
+  if (cr <= area.left || chat.left >= area.right || cb <= area.top || chat.top >= area.bottom)
+    return area;
+  if (chat.left > area.left) area = { ...area, right: chat.left };
+  else if (cr < area.right) area = { ...area, left: cr };
+  else if (chat.top > area.top) area = { ...area, bottom: chat.top };
+  else if (cb < area.bottom) area = { ...area, top: cb };
+  else return undefined;
+  return area.right > area.left && area.bottom > area.top ? area : undefined;
+}
+
+/** The item wholly inside the area: nothing under the topbar, the chat or the window's edge. */
+export const fullyInView = (r: Rect, a: ViewArea): boolean =>
+  r.top >= a.top - 0.5 &&
+  r.top + r.height <= a.bottom + 0.5 &&
+  r.left >= a.left - 0.5 &&
+  r.left + r.width <= a.right + 0.5;
+
+/** How far to scroll the page down (negative: up) to bring the item into the area: centred when
+ *  it fits, its top at the area's top when it is taller than the area. */
+export function scrollToFit(r: Rect, a: ViewArea): number {
+  const room = a.bottom - a.top;
+  if (r.height >= room) return r.top - a.top;
+  return r.top + r.height / 2 - (a.top + room / 2);
 }
 
 /** A request to light the item an anchor names (`pos-NVDA`): `seq` changes on every tap, so the
