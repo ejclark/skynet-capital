@@ -12,6 +12,7 @@ import {
   driveBoardChannel,
   streamBoardPatches,
 } from "./board-patch-routes.js";
+import { serveBookWaitApi } from "./book-wait-routes.js";
 import { serveClientErrorApi } from "./client-error-route.js";
 import { serveCompanionApi } from "./companion-routes.js";
 import { serveJsonApi } from "./content-api-routes.js";
@@ -220,6 +221,7 @@ async function serveWriteApis(
   if (await serveDeskAlertsApi(req, res, path, config, session)) return true;
   if (await serveQuestsApi(req, res, path, config, session)) return true;
   if (await serveQuestsTakenApi(req, res, path, config, session)) return true;
+  if (await serveBookWaitApi(req, res, path, config, session)) return true;
   if (await serveFastTrackApi(req, res, path, config, session)) return true;
   if (await serveAlertDeliveryApi(req, res, path, config, session)) return true;
   if (await serveWatchlistApi(req, res, path, config, session)) return true;

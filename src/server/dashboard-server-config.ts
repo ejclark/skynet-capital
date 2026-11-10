@@ -28,6 +28,7 @@ import type { AccountAdmin } from "./account-forms.js";
 import type { Authenticator } from "./auth/authenticator.js";
 import type { AuthoredPlayStore } from "./authored-play-store.js";
 import type { BookHealthHistoryPort } from "./book-health-history-store.js";
+import type { BookWaitStore } from "./book-wait-store.js";
 import type { CampaignQuestionsStore } from "./campaign-questions-store.js";
 import type { ClaimDeps } from "./claim-form.js";
 import type { CommunityProgressionService } from "./community-progression-service.js";
@@ -382,6 +383,12 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * mode): orders place as ever, and the scores answer empty.
    */
   readonly takenQuests?: TakenQuestStore;
+  /**
+   * THE WAITS MEMBERS SET ON THEIR BOOKS (#4608) — one per account: the day the question reopens
+   * and the member's reason. Omit to disable (offline mode): reads answer no wait, and a set answers
+   * "not wired in this deployment." A wait places and cancels nothing.
+   */
+  readonly bookWaits?: BookWaitStore;
   /**
    * THE AUTHORED PLAYS STORE (#5457 slice 1) — the drafts a member writes on R&D → Playbooks. Omit to
    * disable (offline mode): the list answers empty and a save answers "not wired in this deployment."
