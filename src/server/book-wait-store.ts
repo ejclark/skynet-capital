@@ -1,7 +1,8 @@
-import { type BookWait, cleanWaitReason, isDayKey } from "../domain/book-wait.js";
+import { type BookWait, cleanWaitReason } from "../domain/book-wait.js";
 import { JsonFileStore } from "../storage/json-file-store.js";
 import { boundedString, isRecord } from "../storage/parse-guards.js";
 import { siblingPath } from "../storage/sibling-path.js";
+import { isCalendarDay } from "../subscriptions/subscription-state.js";
 
 /**
  * THE WAITS MEMBERS SET ON THEIR BOOKS (#4608 slice 1). At most one per account: the day the
@@ -19,7 +20,7 @@ import { siblingPath } from "../storage/sibling-path.js";
 type BookWaitsState = Readonly<Record<string, BookWait>>;
 
 function parseWait(raw: unknown): BookWait | undefined {
-  if (!(isRecord(raw) && isDayKey(raw.reopensOn))) return undefined;
+  if (!(isRecord(raw) && isCalendarDay(raw.reopensOn))) return undefined;
   const reason = cleanWaitReason(raw.reason);
   const setAt = boundedString(raw.setAt, 40);
   return reason && setAt ? { reopensOn: raw.reopensOn, reason, setAt } : undefined;
@@ -27,7 +28,8 @@ function parseWait(raw: unknown): BookWait | undefined {
 
 function parseBookWaitsState(raw: unknown): BookWaitsState | undefined {
   if (!isRecord(raw)) return undefined;
-  const state: Record<string, BookWait> = {};
+  // No prototype: a desk id is a key here, never a name `Object.prototype` already answers to.
+  const state: Record<string, BookWait> = Object.create(null);
   for (const [desk, wait] of Object.entries(raw)) {
     const kept = parseWait(wait);
     if (kept) state[desk] = kept;
@@ -50,7 +52,8 @@ export class BookWaitStore {
 
   /** The wait recorded on this desk's book, standing or reopened, or undefined. */
   wait(deskId: string): BookWait | undefined {
-    return this.file.load()[deskId];
+    const state = this.file.load();
+    return Object.hasOwn(state, deskId) ? state[deskId] : undefined;
   }
 
   /** Record (or replace) the desk's wait. False when the file could not be read whole, so the
@@ -66,7 +69,7 @@ export class BookWaitStore {
   clear(deskId: string): boolean {
     const state = this.file.loadIfReadable();
     if (!state) return false;
-    if (!(deskId in state)) return true;
+    if (!Object.hasOwn(state, deskId)) return true;
     this.file.write(Object.fromEntries(Object.entries(state).filter(([desk]) => desk !== deskId)));
     return true;
   }

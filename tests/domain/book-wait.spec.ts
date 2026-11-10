@@ -2,7 +2,6 @@ import {
   bookWaitFrom,
   bookWaitState,
   cleanWaitReason,
-  isDayKey,
   MAX_WAIT_REASON,
 } from "../../src/domain/book-wait.js";
 
@@ -81,9 +80,19 @@ describe("bookWaitState", () => {
 
 describe("the input guards", () => {
   it("reads only real calendar days", () => {
-    expect(isDayKey("2028-02-29")).toBe(true);
-    expect(isDayKey("2026-02-29")).toBe(false);
-    expect(isDayKey("2026-11-10T00:00:00Z")).toBe(false);
+    expect(bookWaitFrom({ reopensOn: "2028-02-29", reason: "why" }, "2028-02-01", SET_AT).ok).toBe(
+      true,
+    );
+    for (const reopensOn of ["2027-02-29", "2026-11-20T00:00:00Z"]) {
+      expect(bookWaitFrom({ reopensOn, reason: "why" }, TODAY, SET_AT)).toMatchObject({
+        error: "no-reopen-day",
+      });
+    }
+  });
+
+  it("strips control, zero-width and direction-override characters from a reason", () => {
+    expect(cleanWaitReason("CPI\u202e first\u0000\u200b ok")).toBe("CPI first ok");
+    expect(cleanWaitReason("\u202e\u200b")).toBeUndefined();
   });
 
   it("folds a reason onto one trimmed line", () => {

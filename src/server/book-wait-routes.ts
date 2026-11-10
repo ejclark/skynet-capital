@@ -39,8 +39,8 @@ const BODY_CAP_BYTES = 2_048;
 const NOT_WIRED = "Waits aren't wired in this deployment.";
 const NOT_SAVED = "The wait couldn't be saved just now — try again in a moment.";
 
-const today = (config: DashboardServerConfig): string =>
-  marketDayKey((config.now?.() ?? new Date()).toISOString());
+const clock = (config: DashboardServerConfig): Date => config.now?.() ?? new Date();
+const dayOf = (at: Date): string => marketDayKey(at.toISOString());
 
 const deskExists = (config: DashboardServerConfig, id: string): boolean =>
   config.hub.getState().participants.some((p) => p.id === id);
@@ -59,7 +59,7 @@ function serveRead(
     return;
   }
   const wait = config.bookWaits?.wait(id);
-  sendJson(res, 200, { wait: wait ? bookWaitState(wait, today(config)) : null });
+  sendJson(res, 200, { wait: wait ? bookWaitState(wait, dayOf(clock(config))) : null });
 }
 
 /** The body's account, when the session owns it and the desk exists — else the 404 is sent. */
@@ -96,10 +96,12 @@ async function serveWrite(
     sendJson(res, 200, store.clear(id) ? { ok: true } : { ok: false, error: NOT_SAVED });
     return;
   }
-  const now = config.now?.() ?? new Date();
+  // One clock read: the stamp, the "is it ahead?" check and the reply all name the same day.
+  const now = clock(config);
+  const today = dayOf(now);
   const asked = bookWaitFrom(
     { reopensOn: body.reopensOn, reason: body.reason },
-    today(config),
+    today,
     now.toISOString(),
   );
   if (!asked.ok) {
@@ -110,7 +112,7 @@ async function serveWrite(
     sendJson(res, 200, { ok: false, error: NOT_SAVED });
     return;
   }
-  sendJson(res, 200, { ok: true, wait: bookWaitState(asked.wait, today(config)) });
+  sendJson(res, 200, { ok: true, wait: bookWaitState(asked.wait, today) });
 }
 
 /** Handle `/api/book-wait*`. Returns true when answered. */

@@ -1,3 +1,4 @@
+import { isCalendarDay } from "../subscriptions/subscription-state.js";
 import { daysBetween } from "./market-calendar.js";
 
 /**
@@ -12,12 +13,13 @@ import { daysBetween } from "./market-calendar.js";
  * chain still owns expiration (#3407/#3523), and it never hides a position flagged at risk — the
  * surfaces put it beside the decision pager, never over it. It is a reminder the member set.
  *
- * Days are `YYYY-MM-DD` in market time (`market-day.ts`), the same keys the book's calendar marks.
- * Pure: no clock, no I/O — the caller passes today.
+ * Days are `YYYY-MM-DD` calendar days in market time (`market-day.ts`), the same keys the book's
+ * calendar marks. Any calendar day may be picked, a weekend included: it is the member's reminder
+ * date, not a session. Pure: no clock, no I/O — the caller passes today.
  */
 
 export interface BookWait {
-  /** The market day the question opens again — always after the day the wait was set. */
+  /** The day (market time) the question opens again — always after the day the wait was set. */
   readonly reopensOn: string;
   /** The member's own line: why they are waiting. */
   readonly reason: string;
@@ -35,19 +37,14 @@ export const MAX_WAIT_REASON = 140;
 /** The furthest a reopen day may sit: a year. A wait past that is not a decision about this book. */
 export const MAX_WAIT_DAYS = 366;
 
-const DAY_KEY = /^\d{4}-\d{2}-\d{2}$/;
-
-/** A real calendar day in `YYYY-MM-DD` — "2026-02-31" is not one. */
-export function isDayKey(raw: unknown): raw is string {
-  if (typeof raw !== "string" || !DAY_KEY.test(raw)) return false;
-  const at = new Date(`${raw}T00:00:00Z`);
-  return !Number.isNaN(at.getTime()) && at.toISOString().slice(0, 10) === raw;
-}
+/** Control and format characters (zero-width, direction overrides, the BOM) and the line and
+ *  paragraph separators: never part of a line a member reads. */
+const INVISIBLE = /[\p{Cc}\p{Cf}\u2028\u2029]/gu;
 
 /** The reason, trimmed and on one line, or undefined when it is empty or too long. */
 export function cleanWaitReason(raw: unknown): string | undefined {
   if (typeof raw !== "string") return undefined;
-  const line = raw.replace(/\s+/g, " ").trim();
+  const line = raw.replace(INVISIBLE, " ").replace(/\s+/g, " ").trim();
   return line.length > 0 && line.length <= MAX_WAIT_REASON ? line : undefined;
 }
 
@@ -76,7 +73,7 @@ export function bookWaitFrom(
 ):
   | { readonly ok: true; readonly wait: BookWait }
   | { readonly ok: false; readonly error: WaitInputError } {
-  if (!isDayKey(input.reopensOn)) return { ok: false, error: "no-reopen-day" };
+  if (!isCalendarDay(input.reopensOn)) return { ok: false, error: "no-reopen-day" };
   const ahead = daysBetween(today, input.reopensOn);
   if (ahead < 1) return { ok: false, error: "reopen-day-not-ahead" };
   if (ahead > MAX_WAIT_DAYS) return { ok: false, error: "reopen-day-too-far" };

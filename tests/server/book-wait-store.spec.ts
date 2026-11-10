@@ -66,6 +66,16 @@ describe("BookWaitStore", () => {
     expect(store.wait("cat-1")).toBeUndefined();
   });
 
+  it("never mistakes an Object.prototype name for a stored wait", () => {
+    const store = new BookWaitStore(path);
+    store.set("ann-1", cpi);
+    for (const id of ["constructor", "toString", "__proto__", "hasOwnProperty"]) {
+      expect(store.wait(id)).toBeUndefined();
+    }
+    expect(store.clear("constructor")).toBe(true);
+    expect(store.wait("ann-1")).toEqual(cpi);
+  });
+
   it("refuses to write over a file it could not read whole", () => {
     writeFileSync(path, "{ not json");
     const errors: string[] = [];
