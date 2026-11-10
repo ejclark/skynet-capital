@@ -113,7 +113,7 @@ export function writeSnapshot(symbol: string, stakeId: string, snapshot: Guidanc
 
 /** A dollar figure ("$165.00") as a number. Sizes never come through here: they go through
  *  `parseQuantity`, which keeps a typographic minus that this strip would drop (#5091). */
-const num = (s: string): number => Number(s.replace(/[^0-9.-]/g, ""));
+export const num = (s: string): number => Number(s.replace(/[^0-9.-]/g, ""));
 
 /**
  * The member's paper position in `symbol`, as a stake (#3729 step 4): shares and average cost from

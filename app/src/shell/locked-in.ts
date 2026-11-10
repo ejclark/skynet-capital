@@ -2,6 +2,7 @@ import { contractMultiplier } from "../../../src/trading/option-symbols";
 import { dollars } from "../live/book-health";
 import type { DeskPosition } from "../live/desk";
 import type { DeskOrderEvent } from "../live/desk-events";
+import { num } from "../live/guidance";
 import { atLockInBar, markOf } from "../live/position-mark";
 import { held, parseQuantity } from "../live/quantity";
 import { isCompletedFill } from "./fill-flare";
@@ -63,8 +64,6 @@ export interface LockedIn {
   /** The reason the call was right, past tense. */
   readonly why: string;
 }
-
-const num = (s: string): number => Number(s.replace(/[^0-9.-]/g, ""));
 
 const validCost = (c: BuyCost): boolean =>
   Number.isFinite(c.qty) && c.qty > 0 && Number.isFinite(c.unitCost) && c.unitCost > 0;
