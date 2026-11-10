@@ -1,0 +1,1 @@
+doFetch("DELETE", `${issueUrl}/labels/plan`, headers);

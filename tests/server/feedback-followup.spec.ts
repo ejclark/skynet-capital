@@ -62,11 +62,12 @@ describe("feedback-followup", () => {
       url: "https://github.com/x/y/issues/7",
       outcome: "restarted",
     });
-    expect(calls[0]).toMatchObject({ method: "POST", url: `${ISSUE}/comments` });
-    expect((calls[0]?.body as { body: string } | undefined)?.body).toContain(
+    // The read comes first: a filing that has become a plan is refused before anything posts (#7286).
+    expect(calls[0]).toMatchObject({ method: "GET", url: ISSUE });
+    expect(calls[1]).toMatchObject({ method: "POST", url: `${ISSUE}/comments` });
+    expect((calls[1]?.body as { body: string } | undefined)?.body).toContain(
       "still happening, here's more detail",
     );
-    expect(calls[1]).toMatchObject({ method: "GET", url: ISSUE });
     expect(calls[2]).toMatchObject({ method: "DELETE", url: `${ISSUE}/labels/ready` });
     expect(calls[3]).toMatchObject({ method: "POST", url: `${ISSUE}/labels` });
     expect((calls[3]?.body as { labels: string[] } | undefined)?.labels).toEqual(["ready"]);
@@ -137,7 +138,8 @@ describe("feedback-followup", () => {
       submitterName: "Tony",
     });
 
-    const commentBody = (calls[0]?.body as { body: string } | undefined)?.body ?? "";
+    const comment = calls.find((c) => c.url.endsWith("/comments"));
+    const commentBody = (comment?.body as { body: string } | undefined)?.body ?? "";
     expect(commentBody).toContain("Follow-up from **Tony**");
     expect(commentBody).not.toContain("member@example.com");
   });
@@ -155,17 +157,20 @@ describe("feedback-followup", () => {
     expect(called).toBe(false);
   });
 
-  it("reports the comment failure honestly, and never reads or relabels off a comment that didn't post", async () => {
+  it("reports the comment failure honestly, and never relabels off a comment that didn't post", async () => {
     const calls: string[] = [];
     const doFetch = (method: string, url: string): Promise<JsonResponse> => {
       calls.push(`${method} ${url}`);
+      if (method === "GET") {
+        return Promise.resolve({ status: 200, body: { labels: [{ name: "ready" }] } });
+      }
       return Promise.resolve({ status: 403, body: { message: "no write access" } });
     };
 
     const result = await createFollowup(config, doFetch)({ issueNumber: 7, body: "hi" });
 
     expect(result).toEqual({ ok: false, error: "GitHub responded 403: no write access." });
-    expect(calls).toEqual([`POST ${ISSUE}/comments`]);
+    expect(calls).toEqual([`GET ${ISSUE}`, `POST ${ISSUE}/comments`]);
   });
 
   it("still counts the comment as sent when removing ready fails, and never re-adds it", async () => {
@@ -205,22 +210,25 @@ describe("feedback-followup", () => {
     expect(warnings[0]).toContain("#7");
   });
 
-  it("still counts the comment as sent when the label read fails or throws", async () => {
+  // Unread, nobody can say the filing is not a plan, so nothing posts (#7286): the member is told
+  // to try again rather than having their words land, as the owner, on a plan.
+  it("posts nothing when the filing cannot be read, or its labels are missing", async () => {
     for (const read of [
       () => Promise.resolve({ status: 404, body: {} }),
       () => Promise.reject(new Error("socket hang up")),
+      () => Promise.resolve({ status: 200, body: { number: 7 } }),
     ]) {
       const calls: string[] = [];
       const doFetch = (method: string, url: string): Promise<JsonResponse> => {
         calls.push(`${method} ${url}`);
-        if (url.endsWith("/comments")) return Promise.resolve({ status: 201, body: {} });
-        return read();
+        if (method === "GET") return read();
+        return Promise.resolve({ status: 201, body: {} });
       };
 
       const result = await createFollowup(config, doFetch)({ issueNumber: 7, body: "hi" });
 
-      expect(result).toMatchObject({ ok: true, outcome: "unchanged" });
-      expect(calls.some((c) => c.includes("/labels"))).toBe(false);
+      expect(result).toMatchObject({ ok: false, error: expect.stringContaining("Try again") });
+      expect(calls).toEqual([`GET ${ISSUE}`]);
     }
   });
 

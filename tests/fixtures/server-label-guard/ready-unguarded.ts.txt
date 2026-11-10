@@ -1,0 +1,1 @@
+await doFetch("POST", `${issueUrl}/labels`, headers, { labels: ["ready"] });
