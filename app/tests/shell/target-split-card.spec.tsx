@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { sumLine, TargetSplitCard } from "../../src/shell/target-split-card";
 
 /**
@@ -25,14 +25,20 @@ beforeEach(() => {
   }) as typeof fetch;
 });
 
-function mount(): void {
+function mount(): QueryClient {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
       <TargetSplitCard />
     </QueryClientProvider>,
   );
+  return client;
 }
+
+const targetOf = (sharesPct: number, cashPct: number, updatedAt: string) => ({
+  wired: true,
+  target: { sharesPct, optionsPct: 0, cashPct, tolerancePct: 5, updatedAt },
+});
 
 const type = (label: string, value: string) =>
   fireEvent.change(screen.getByLabelText(label), { target: { value } });
@@ -121,6 +127,40 @@ describe("TargetSplitCard", () => {
     expect(screen.getByText(/Last set Nov 10, 2026/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Clear target" }));
     await waitFor(() => expect(posted[0]?.url).toBe("/api/target-split/clear"));
+  });
+
+  it("follows a target another device saved, while the form is untouched", async () => {
+    read = targetOf(60, 40, "2026-11-10T12:00:00.000Z");
+    const client = mount();
+    await waitFor(() => expect(screen.getByLabelText("Shares")).toHaveValue("60"));
+    read = targetOf(70, 30, "2026-11-10T13:00:00.000Z");
+    await act(() => client.invalidateQueries());
+    await waitFor(() => expect(screen.getByLabelText("Shares")).toHaveValue("70"));
+    expect(screen.getByRole("button", { name: "Save target" })).toBeDisabled();
+  });
+
+  it("keeps the member's own edits when another device saves meanwhile", async () => {
+    read = targetOf(60, 40, "2026-11-10T12:00:00.000Z");
+    const client = mount();
+    await waitFor(() => expect(screen.getByLabelText("Shares")).toHaveValue("60"));
+    type("Shares", "50");
+    read = targetOf(70, 30, "2026-11-10T13:00:00.000Z");
+    await act(() => client.invalidateQueries());
+    await screen.findByText(/Last set/);
+    expect(screen.getByLabelText("Shares")).toHaveValue("50");
+  });
+
+  it("keeps the form when a background re-read fails", async () => {
+    read = targetOf(60, 40, "2026-11-10T12:00:00.000Z");
+    const client = mount();
+    await waitFor(() => expect(screen.getByLabelText("Shares")).toHaveValue("60"));
+    type("Shares", "50");
+    const ok = globalThis.fetch;
+    globalThis.fetch = (() => Promise.resolve(new Response("", { status: 502 }))) as typeof fetch;
+    await act(() => client.invalidateQueries());
+    globalThis.fetch = ok;
+    expect(screen.getByLabelText("Shares")).toHaveValue("50");
+    expect(screen.queryByText(/needs a signed-in session/)).not.toBeInTheDocument();
   });
 
   it("says so when the deployment has no store, instead of a form", async () => {

@@ -68,6 +68,13 @@ const dateLine = (iso: string): string =>
 function TargetForm({ target }: { readonly target: TargetSplit | null }): ReactElement {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<Draft>(() => draftFrom(target));
+  // Another device may save while this one is open (a focus refetch brings it in). An untouched
+  // form follows the new target; one the member is editing keeps their numbers.
+  const [seen, setSeen] = useState(target);
+  if (target?.updatedAt !== seen?.updatedAt) {
+    setSeen(target);
+    if (JSON.stringify(draft) === JSON.stringify(draftFrom(seen))) setDraft(draftFrom(target));
+  }
   const [result, setResult] = useState<TargetSplitWriteResult | null>(null);
   const [busy, setBusy] = useState(false);
   const baseId = useId();
@@ -193,7 +200,9 @@ function TargetForm({ target }: { readonly target: TargetSplit | null }): ReactE
           <InlineResult tone="err">{result.error}</InlineResult>
         )
       ) : null}
-      {target ? <p className="set-hint">Last set {dateLine(target.updatedAt)}.</p> : null}
+      {target && !(result?.ok && !result.target) ? (
+        <p className="set-hint">Last set {dateLine(target.updatedAt)}.</p>
+      ) : null}
     </div>
   );
 }
@@ -208,14 +217,18 @@ export function TargetSplitCard(): ReactElement {
         sign-in, so every device sees the same target. Next, Overview's money row will compare your
         book against it and name what to trim or add — guidance to review, never an order.
       </p>
-      {read.isPending ? (
-        <p className="note">Reading your target…</p>
+      {/* Data first: a failed background refetch keeps the last answer, so the form (and an
+          unsaved draft) stays put; only a first read that failed shows the sign-in line. */}
+      {read.data ? (
+        read.data.wired ? (
+          <TargetForm target={read.data.target} />
+        ) : (
+          <p className="note">A target split isn't wired in this deployment.</p>
+        )
       ) : read.isError ? (
         <p className="note">Your target split needs a signed-in session — sign in to set one.</p>
-      ) : !read.data.wired ? (
-        <p className="note">A target split isn't wired in this deployment.</p>
       ) : (
-        <TargetForm target={read.data.target} />
+        <p className="note">Reading your target…</p>
       )}
     </section>
   );
