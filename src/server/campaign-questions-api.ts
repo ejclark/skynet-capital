@@ -7,8 +7,10 @@ import {
   recordQuestion,
 } from "../domain/campaign-questions.js";
 import { CAMPAIGNS, type Campaign, campaignById } from "../domain/campaigns.js";
+import { withoutAnswered } from "../domain/discovery-pass.js";
 import type { CoveringCandidate, QueueOutcome } from "../domain/discovery-queue.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
+import { shelfAnswered } from "./discovery-answered.js";
 import { boundedString, requireGet, sendJson } from "./page-shell.js";
 
 /**
@@ -110,12 +112,22 @@ export function questionsFor(
   readable: Readable,
 ): readonly QuestionView[] {
   const log = config.campaignQuestions?.load() ?? [];
-  const queue = config.discoveryQueue?.load() ?? [];
+  const queue = withoutAnswered(config.discoveryQueue?.load() ?? [], shelfAnswered());
   const found = config.campaignFindings ?? lessonsAnswering;
   // A member's campaign has no lesson record yet (records are checked in per house campaign).
   const house = campaignById(readable.scope) !== undefined;
-  return questionsIn(log, readable.scope, readable.campaign, queue, (askId) =>
-    house ? found(readable.scope, askId) : [],
+  const shelved = config.campaignShelfAnswered ?? shelfAnswered();
+  const byId = new Map(log.map((q) => [q.id, q]));
+  return questionsIn(
+    log,
+    readable.scope,
+    readable.campaign,
+    queue,
+    (askId) => (house ? found(readable.scope, askId) : []),
+    (askId) => {
+      const q = byId.get(askId);
+      return q !== undefined && shelved(q);
+    },
   );
 }
 

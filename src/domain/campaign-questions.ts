@@ -139,9 +139,11 @@ export interface QuestionView {
   readonly askedAt: string;
   /**
    * `found` once a finding answers it; `waiting` while it is still in the queue (`ahead` asks before
-   * it); `no-finding-yet` when neither holds, which is said plainly rather than guessed at.
+   * it); `on-the-shelf` when the lane wrote it up on the research shelf but no lesson in this
+   * campaign carries it (a bare ask, or a member's campaign, which has no lesson record, #7034
+   * slice 3b); `no-finding-yet` when none holds, which is said plainly rather than guessed at.
    */
-  readonly state: "found" | "waiting" | "no-finding-yet";
+  readonly state: "found" | "waiting" | "on-the-shelf" | "no-finding-yet";
   readonly ahead?: number;
   readonly found: readonly FindingView[];
   /** It points outside the cast or anchor: the author sees it as a suggestion, never as an edit. */
@@ -170,13 +172,21 @@ export function questionsIn(
   campaign: Campaign,
   queue: DiscoveryQueue,
   findings: (askId: string) => readonly Lesson[],
+  onShelf: (askId: string) => boolean = () => false,
 ): readonly QuestionView[] {
   return log
     .filter((q) => q.campaign === scope)
     .map((q): QuestionView => {
       const found = findings(q.id).map(findingOf);
       const ahead = queue.findIndex((a) => a.id === askId(q.kind, q.subject, q.campaign));
-      const state = found.length > 0 ? "found" : ahead >= 0 ? "waiting" : "no-finding-yet";
+      const state: QuestionView["state"] =
+        found.length > 0
+          ? "found"
+          : ahead >= 0
+            ? "waiting"
+            : onShelf(q.id)
+              ? "on-the-shelf"
+              : "no-finding-yet";
       return {
         kind: q.kind,
         subject: q.subject,
