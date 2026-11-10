@@ -133,6 +133,23 @@ export class TakenQuestStore {
     this.file.write({ ...state, [deskId]: [...rows, taken].slice(-MAX_PER_DESK) });
     return true;
   }
+
+  /**
+   * The broker replaced an order (Modify, `POST /api/trade/replace`): the quest recorded against
+   * the old id now follows the new one, since every later fill lands under the new id (#7309).
+   * Only the join key moves — the quest, its move and the rate it carried stay as fired. A second
+   * replace moves it again, so a chain always ends on the latest order. True when nothing needed
+   * moving or the move was written; false when the file could not be read whole.
+   */
+  replace(deskId: string, fromOrderId: string, toOrderId: string): boolean {
+    const state = this.file.loadIfReadable();
+    if (!state) return false;
+    const rows = state[deskId] ?? [];
+    if (!rows.some((r) => r.orderId === fromOrderId)) return true;
+    const moved = rows.map((r) => (r.orderId === fromOrderId ? { ...r, orderId: toOrderId } : r));
+    this.file.write({ ...state, [deskId]: moved });
+    return true;
+  }
 }
 
 /** The file beside the subscriptions file (`SKYNET_SUBSCRIPTIONS_FILE`, pinned on the volume in
