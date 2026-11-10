@@ -1,4 +1,5 @@
 import type { ReactElement, ReactNode } from "react";
+import { CALENDAR_ANCHOR, editionEventKey, eventAnchor } from "../../../src/domain/edition-keys";
 import { MARKET_CLOSURES } from "../../../src/domain/market-calendar";
 import { dayLabel } from "../live/book-events";
 import {
@@ -14,7 +15,7 @@ import {
   waitingOn,
 } from "../live/edition";
 import { useHorizonRange } from "../live/horizon-params";
-import { rangeFor, rangeLabel, stepAnchor } from "../live/horizon-range";
+import { type DayRange, rangeFor, rangeLabel, stepAnchor } from "../live/horizon-range";
 import type { Lens } from "../live/research";
 import { CalendarGrid, ClosedKey, type DayMark, WAITS_GLYPH } from "./calendar-grid";
 import { CalendarHead, headLine } from "./calendar-head";
@@ -42,6 +43,11 @@ import { usePhoneWidth } from "./use-media";
  *
  * Replaces `edition-calendar.tsx` (#7144), the second calendar whose classes had to be prefixed
  * `ecal-` to keep clear of R&D's; the rows keep that prefix, the head and the grid are R&D's own.
+ *
+ * Moneypenny's anchors carried over (#7167): each event row's `event-<key>`, the section's
+ * `calendar`, and the story rows' `story-<id>` (in `edition-story.tsx`). Only events in the selected
+ * range have a row, so the landing page publishes only those keys (`calendarShows`, shared with
+ * `routes/index.tsx`). `app/tests/shell/edition-anchor.spec.tsx` fails if the page drops them.
  */
 
 const LANDING_LENSES: readonly Lens[] = ["day", "week", "month"];
@@ -61,7 +67,7 @@ function EventLine({
   const waiting = waitingOn(event, stories);
   const status = STATUS[event.status];
   return (
-    <li className="ecal-event">
+    <li id={eventAnchor(editionEventKey(event))} className="ecal-event">
       <details className="story-row">
         <summary className="ecal-line">
           <span className="ecal-mark">
@@ -194,6 +200,25 @@ function scrollToDay(date: string): void {
   el.scrollIntoView({ block: "start", behavior: still ? "auto" : "smooth" });
 }
 
+/**
+ * The range the calendar shows and the coming dates inside it. One function, so the rows drawn and
+ * the keys the page publishes to Moneypenny (`routes/index.tsx`) can't disagree.
+ */
+export function calendarShows(
+  edition: Edition,
+  today: string,
+  horizon: Pick<ReturnType<typeof useHorizonRange>, "lens" | "pinned" | "anchor">,
+): {
+  readonly anchor: string;
+  readonly range: DayRange;
+  readonly inside: readonly EditionDate[];
+  readonly after: EditionDate | undefined;
+} {
+  const anchor = horizon.pinned ? horizon.anchor : planningDay(today);
+  const range = rangeFor(anchor, horizon.lens);
+  return { anchor, range, ...datesIn(edition.next, range) };
+}
+
 export function LandingCalendar({
   edition,
   today,
@@ -208,9 +233,7 @@ export function LandingCalendar({
   const phone = usePhoneWidth();
   const horizon = useHorizonRange();
   const lens = horizon.lens;
-  const anchor = horizon.pinned ? horizon.anchor : planningDay(today);
-  const range = rangeFor(anchor, lens);
-  const { inside, after } = datesIn(edition.next, range);
+  const { anchor, range, inside, after } = calendarShows(edition, today, horizon);
   const weeks = calendarWeeks(edition.date, calendarDays(inside), today);
   // No lens pressed is the all lens (`calendar-head.tsx`): every coming date, counted.
   const all = { name: "Every coming date", count: `${String(edition.next.length)} dated` };
@@ -230,7 +253,7 @@ export function LandingCalendar({
   );
 
   return (
-    <section className="ecal" aria-labelledby="ecal-title">
+    <section id={CALENDAR_ANCHOR} className="ecal" aria-labelledby="ecal-title">
       <div className="cal-head ecal-cal-head">
         <CalendarHead
           lens={lens}

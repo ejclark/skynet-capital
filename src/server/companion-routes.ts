@@ -7,8 +7,10 @@ import {
   COMPANION_THROTTLE_MAX,
   COMPANION_THROTTLE_WINDOW_MS,
 } from "../companion/companion-limits.js";
-import { describePage, pageSymbol } from "../companion/companion-page.js";
+import { describeOnScreen, parsePageKeys } from "../companion/companion-on-screen.js";
+import { describePage, pagePath, pageSymbol } from "../companion/companion-page.js";
 import { COMPANION_DISCLOSURE, FIRST_TRADE_TOUR } from "../companion/companion-system-prompt.js";
+import { editions, editionView } from "../domain/edition.js";
 import { regularSessionOpen } from "../domain/market-session.js";
 import type { Session } from "./auth/session.js";
 import { companionConvictionsFor } from "./companion-convictions-port.js";
@@ -114,6 +116,7 @@ async function memberContextFor(
   session: Session,
   page?: string,
   holding?: string,
+  onScreen?: string,
 ): Promise<string | undefined> {
   try {
     const [onboarding, filings] = await Promise.all([
@@ -129,7 +132,21 @@ async function memberContextFor(
       marketOpen: regularSessionOpen(),
       ...(page ? { page } : {}),
       ...(holding ? { holding } : {}),
+      ...(onScreen ? { onScreen } : {}),
     });
+  } catch {
+    return undefined;
+  }
+}
+
+/** The landing page's items, by key (#7167 slice 1): only asked from `/`, and only the keys the
+ *  server's own edition holds (`companion-on-screen.ts`). A failed edition read adds nothing. */
+function landingOnScreen(page: unknown, keys: unknown): string | undefined {
+  if (pagePath(page) !== "/") return undefined;
+  const parsed = parsePageKeys(keys);
+  if (!parsed) return undefined;
+  try {
+    return describeOnScreen(parsed, editionView(editions(), new Date(), () => undefined).edition);
   } catch {
     return undefined;
   }
@@ -169,7 +186,14 @@ async function serveChat(
     ? config.hub.getState().participants.find((p) => p.id === participantId)
     : undefined;
   const holding = describeHolding(pageSymbol(body?.page), desk);
-  const context = await memberContextFor(config, session, describePage(body?.page), holding);
+  const onScreen = landingOnScreen(body?.page, body?.keys);
+  const context = await memberContextFor(
+    config,
+    session,
+    describePage(body?.page),
+    holding,
+    onScreen,
+  );
 
   openSseStream(res);
   let seq = 0;
