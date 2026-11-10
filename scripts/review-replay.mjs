@@ -29,7 +29,7 @@ import {
   shapeOf,
   verdictOf,
 } from "./review-replay/pre-merge.mjs";
-import { scoreRows, summary } from "./review-replay/score.mjs";
+import { FILE_FORM, scoreRows, summary } from "./review-replay/score.mjs";
 import { readRunAgents, renderTokens, tokensPerTier } from "./review-replay/tokens.mjs";
 
 const SET_FILE = "docs/review/replay-set.json";
@@ -107,7 +107,7 @@ export function promptFor(set, lens, head, lensText) {
   const input = inputsFor(set, lens).find((row) => row.head === head);
   if (!input) throw new Error(`${lens} does not run on ${head}`);
   const { base } = input;
-  return `Review one change as it stood when it merged. Read-only: write no file, and return only the schema you were given.
+  return `Review one change as it stood when it merged. Read-only: write no file, and return only the schema you were given. ${FILE_FORM}
 
 The change is \`git diff ${base} ${head}\`. Read anything else in the tree as it stood then with \`git show ${head}:<path>\` and \`git grep <pattern> ${head}\`. The working tree is shared and on some other commit: never read its files for this, and never run git checkout, switch, reset, commit or clean in it.
 
