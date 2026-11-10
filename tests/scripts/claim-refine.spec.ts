@@ -37,6 +37,10 @@ const scoredAs = (labels: Record<string, "pass" | "fail">): Conviction => ({
   }),
 });
 
+/** Every claim pending. The seeded view itself is not this: the scoring pass decides its claims
+ *  live (2a failed on 2026-11-10), so a spec that reads it as "nothing decided" goes red the day a
+ *  real score lands. */
+const UNSCORED = scoredAs({});
 const FAILED_2A = scoredAs({ "2a": "fail" });
 const KEY = "ai-dip-2026-10/2a/CRWV-WHEEL";
 
@@ -110,7 +114,7 @@ describe("adopt", () => {
   });
 
   it("refuses a key no decided claim proposes, and a day that is not one", () => {
-    expect(adopt(KEY, {}, [AI_DIP_2026_10], "2026-11-10")).toMatchObject({ ok: false });
+    expect(adopt(KEY, {}, [UNSCORED], "2026-11-10")).toMatchObject({ ok: false });
     expect(adopt(KEY, {}, [FAILED_2A], "tomorrow")).toMatchObject({ ok: false });
   });
 });
@@ -239,7 +243,7 @@ describe("listing", () => {
         rules: [{ kind: "quiet", sessionsAfterPrint: 6 }],
       },
     };
-    expect(listing([], ledger, [AI_DIP_2026_10], QUIET_ADOPTED)).toBe(
+    expect(listing([], ledger, [UNSCORED], QUIET_ADOPTED)).toBe(
       `${KEY_9} · adopted, but the claim now reads pending: review it, and delete the line to drop the pair's own rule\n`,
     );
   });
@@ -254,7 +258,7 @@ describe("listing", () => {
     const ledger: AdoptionLedger = {
       [KEY]: { change: "stop-new-entries", adoptedOn: "2026-11-10", basis: "x" },
     };
-    expect(listing([], ledger, [AI_DIP_2026_10])).toBe(
+    expect(listing([], ledger, [UNSCORED])).toBe(
       `${KEY} · adopted, but the claim now reads pending: review it, and delete the line to lift the hold\n`,
     );
     // Re-read as a pass, the claim proposes under the same key; the line still says it once.
@@ -345,7 +349,7 @@ describe("main", () => {
   });
 
   it("leaves the ledger alone when it refuses, and takes one key per run", () => {
-    expect(main([KEY], { path, convictions: [AI_DIP_2026_10] })).toBe(1);
+    expect(main([KEY], { path, convictions: [UNSCORED] })).toBe(1);
     expect(main([KEY, KEY], { path, convictions: [FAILED_2A] })).toBe(1);
     expect(main([KEY, "--on"], { path, convictions: [FAILED_2A] })).toBe(1);
     expect(readFileSync(path, "utf8")).toBe("{}\n");
