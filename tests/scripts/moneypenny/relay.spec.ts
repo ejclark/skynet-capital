@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import {
   type ClosedWithRemainder,
   executeRelay,
@@ -357,6 +358,43 @@ describe("relay — a remainder the closing PR built", () => {
 
     expect(finalSliceBy(issue)).toBeNull();
     expect(only(routeRelay({ closedWithRemainder: [issue] })).source).toBe(5214);
+  });
+
+  // #6880: a final slice that follows .github/pull_request_template.md keeps its Follow-ups
+  // comment ("…, the next slice."), and a last slice calls itself "the remaining" work. Neither
+  // states work still to build, so neither may cancel the #6014 fix on its main path.
+  it("does not relay when the closing PR is the real template plus Closes #N (#6880)", () => {
+    const template = readFileSync(".github/pull_request_template.md", "utf8");
+    const body = template.replace(/^-\s*$/m, "- Closes #5214 — slice 2, the last one.");
+    expect(body).toContain("the next slice");
+
+    expect(finalSliceBy(issue5214([prRef({ body })]))).toBe(6012);
+  });
+
+  it.each([
+    "- Closes #5214 — slice 2, the remaining 8 files.",
+    "- Closes #5214 — the remainder of the plan.",
+    "- Closes #5214 — what remained after slice 1: the 8 `.claude/` files.",
+  ])("does not relay when a final slice calls itself the remaining work: %s", (body) => {
+    expect(finalSliceBy(issue5214([prRef({ body })]))).toBe(6012);
+  });
+
+  it("does not count a pickup-style 'remaining' in a later comment as work left (#6880)", () => {
+    const issue = issue5214([
+      prRef(),
+      comment("2026-10-26T10:05:00Z", "Shipped the remaining 8 files in #6012."),
+    ]);
+
+    expect(finalSliceBy(issue)).toBe(6012);
+  });
+
+  it.each([
+    "- Closes #5214\n\n## Follow-ups\n\n- Remaining: the stop-limit leg.",
+    "- Closes #5214\n- The stop-limit leg remains to be built.",
+    "- Closes #5214\n- Slice 3 is left: the stop-limit leg.",
+    "- Closes #5214\n- Still to build: the stop-limit leg.",
+  ])("still relays when the closing PR's body names work still to build: %s", (body) => {
+    expect(finalSliceBy(issue5214([prRef({ body })]))).toBeNull();
   });
 
   it("relays when the PR only says Part of — an early slice never closes the issue", () => {
