@@ -2,9 +2,13 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Lesson } from "../../src/domain/campaign-lessons.js";
-import type { QuestionLog } from "../../src/domain/campaign-questions.js";
+import { type QuestionLog, recordQuestion } from "../../src/domain/campaign-questions.js";
 import { shelfFileFor } from "../../src/domain/discovery-pass.js";
-import type { DiscoveryAsk, DiscoveryQueue } from "../../src/domain/discovery-queue.js";
+import {
+  type DiscoveryAsk,
+  type DiscoveryQueue,
+  queueAsk,
+} from "../../src/domain/discovery-queue.js";
 import {
   DAILY_PASS_UTC,
   MAX_RETURNED,
@@ -26,7 +30,8 @@ import {
  *   3. WHILE one waits on the list, it SHALL be `waiting` with asks ahead and passes until taken, and
  *      the wait SHALL name the daily pass's time; WHILE no lane reads the list, no time is promised.
  *   4. The read SHALL NOT return another member's key, name or words: the wording only when this
- *      member asked first, others as a count, a member campaign never by its author's key.
+ *      member is its sole asker (a joiner's words fill a wordless first ask, so "asked first" is
+ *      not proof), others as a count, a member campaign never by its author's key.
  *   5. The pass time SHALL match the discovery workflow's cron.
  */
 
@@ -81,20 +86,55 @@ describe("myResearchQuestions — only the requester's own questions (criteria 1
     expect(read.questions.map((q) => q.subject)).toEqual(["PLTR"]);
   });
 
-  it("gives the wording only when this member asked first, and others only as a count", () => {
+  it("gives the wording only when this member is its sole asker, and others only as a count", () => {
     const queue: DiscoveryQueue = [
-      ask({ subject: "PLTR", askers: [ME, OTHER], question: "my own words" }),
+      ask({ subject: "ASTS", question: "my own words" }),
+      ask({ subject: "PLTR", askers: [ME, OTHER], question: "shared words" }),
       ask({ subject: "SNOW", askers: [OTHER, ME], question: "someone else's words" }),
     ];
     const read = myResearchQuestions(sources({ queue: () => queue }), ME);
     const bySubject = new Map(read.questions.map((q) => [q.subject, q]));
-    expect(bySubject.get("PLTR")?.question).toBe("my own words");
+    expect(bySubject.get("ASTS")?.question).toBe("my own words");
+    expect(bySubject.get("ASTS")?.othersAsking).toBe(0);
+    expect(bySubject.get("PLTR")?.question).toBeUndefined();
     expect(bySubject.get("PLTR")?.othersAsking).toBe(1);
     expect(bySubject.get("SNOW")?.question).toBeUndefined();
     expect(bySubject.get("SNOW")?.othersAsking).toBe(1);
     const text = JSON.stringify(read);
     expect(text).not.toContain(OTHER);
+    expect(text).not.toContain("shared words");
     expect(text).not.toContain("someone else's words");
+  });
+
+  it("never hands the first asker a joiner's words when the first ask had none (list)", () => {
+    // Through the real write path: a wordless first ask, then a joiner whose words fill the gap.
+    const at = new Date("2026-11-08T10:00:00.000Z");
+    const first = queueAsk([], { kind: "name", subject: "PLTR", by: ME }, [], () => false, at);
+    const joined = queueAsk(
+      first.queue,
+      { kind: "name", subject: "PLTR", by: OTHER, question: "a joiner's private sentence" },
+      [],
+      () => false,
+      at,
+    );
+    expect(joined.queue[0]?.question).toBe("a joiner's private sentence");
+    const read = myResearchQuestions(sources({ queue: () => joined.queue }), ME);
+    expect(read.questions.map((q) => q.subject)).toEqual(["PLTR"]);
+    expect(read.questions[0]?.question).toBeUndefined();
+    expect(JSON.stringify(read)).not.toContain("a joiner's private sentence");
+  });
+
+  it("never hands the first asker a joiner's words when the first ask had none (log)", () => {
+    const campaign = `${ME}~mine`;
+    const bare = ask({ subject: "ZIM", campaign });
+    const worded = { ...bare, question: "a joiner's private sentence" };
+    let log: QuestionLog = recordQuestion([], bare, { key: ME, name: "Me" });
+    log = recordQuestion(log, worded, { key: OTHER, name: "Pat" });
+    expect(log[0]?.question).toBe("a joiner's private sentence");
+    const read = myResearchQuestions(sources({ log: () => log }), ME);
+    expect(read.questions.map((q) => q.subject)).toEqual(["ZIM"]);
+    expect(read.questions[0]?.question).toBeUndefined();
+    expect(JSON.stringify(read)).not.toContain("a joiner's private sentence");
   });
 
   it("names a member campaign only as yours or a party one, never by its author's key", () => {

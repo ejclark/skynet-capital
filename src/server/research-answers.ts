@@ -18,9 +18,17 @@
  * ONLY THE REQUESTER'S OWN QUESTIONS. The list and the log key askers by an opaque member id,
  * never an email. A question is returned only when that id is among its askers, and what comes
  * back about other people is a count: the question's wording is returned only when this member
- * was the first to ask it (the record keeps the first asker's words, so a joiner would otherwise
- * read someone else's sentence), and a member campaign is named only as "your campaign" or "a
- * party campaign", never by its author's key. No key or no match returns an empty list.
+ * is its sole asker, and a member campaign is named only as "your campaign" or "a party
+ * campaign", never by its author's key. No key or no match returns an empty list.
+ *
+ * WHY SOLE, NOT FIRST. Neither record says who wrote its words. The first asker's words stay, but
+ * a joiner's fill the gap when the first asker gave none (`queueAsk`, `recordQuestion`: `prior.question
+ * ?? input.question`), and every name a campaign save queues is wordless. So "asked first" would
+ * hand the first asker a joiner's sentence as their own; only a sole asker's words are provably
+ * theirs. One gap stays: a log entry is created from the list's merged ask, so a sole log asker
+ * whose entry was written after someone else's words landed on the list could still read them.
+ * Recording each sentence's author at write time closes it; until then that path is rare (the
+ * log normally holds the first asker already) and is left to a follow-up.
  *
  * ONE GAP, SAID OUT LOUD. A question asked outside any campaign lives only on the list, and the
  * list drops an answered ask the next time anyone asks something (`withoutAnswered` on write). After
@@ -65,7 +73,7 @@ type Askish = Pick<DiscoveryAsk, "kind" | "subject" | "campaign">;
 export interface MyResearchQuestion {
   readonly kind: DiscoveryKind;
   readonly subject: string;
-  /** The member's own words; absent when they joined someone else's question or gave none. */
+  /** The member's own words; absent unless they are its only asker (see WHY SOLE, NOT FIRST). */
   readonly question?: string;
   readonly askedAt: string;
   /** Where it was asked: a house campaign's title, "your campaign", or "a party campaign". */
@@ -146,6 +154,11 @@ interface Mine {
   readonly othersAsking: number;
 }
 
+/** Whether this member is the only asker: the one case where the stored words are provably theirs. */
+function soleAsker(askers: readonly string[], memberKey: string): boolean {
+  return askers.length === 1 && askers[0] === memberKey;
+}
+
 /** The member's own asks, from the list and the log, one per ask id (the list's entry first). */
 function ownAsks(queue: DiscoveryQueue, log: QuestionLog, memberKey: string): readonly Mine[] {
   const byId = new Map<string, Mine>();
@@ -157,7 +170,7 @@ function ownAsks(queue: DiscoveryQueue, log: QuestionLog, memberKey: string): re
       subject: a.subject,
       ...(a.campaign ? { campaign: a.campaign } : {}),
       askedAt: a.askedAt,
-      ...(a.askers[0] === memberKey && a.question ? { question: a.question } : {}),
+      ...(soleAsker(a.askers, memberKey) && a.question ? { question: a.question } : {}),
       othersAsking: a.askers.length - 1,
     });
   }
@@ -169,7 +182,12 @@ function ownAsks(queue: DiscoveryQueue, log: QuestionLog, memberKey: string): re
       subject: q.subject,
       campaign: q.campaign,
       askedAt: q.askedAt,
-      ...(q.askers[0]?.key === memberKey && q.question ? { question: q.question } : {}),
+      ...(soleAsker(
+        q.askers.map((a) => a.key),
+        memberKey,
+      ) && q.question
+        ? { question: q.question }
+        : {}),
       othersAsking: q.askers.length - 1,
     });
   }
