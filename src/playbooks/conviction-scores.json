@@ -11,9 +11,10 @@
     {
       "statement": "2a. Sell puts before the print: the pre-print premium is worth selling.",
       "score": {
-        "outcome": "pending",
-        "basis": "Not due: scored on 2026-11-06.",
-        "dueOn": "2026-11-06"
+        "outcome": "fail",
+        "basis": "CRWV closed at $46.40 on 2026-11-06, under the $54.00 2026-11-06 put's strike: it finished in the money.",
+        "dueOn": "2026-11-06",
+        "scoredOn": "2026-11-10"
       }
     },
     {
