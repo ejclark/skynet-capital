@@ -142,6 +142,20 @@ describe("a page opened later finds the answers newer than the read-back (#7119)
     expect(v.told()).toMatch(/^Read back .+ · 1 pick posted$/);
     expect(armed(v)).toBe(false);
   });
+
+  // #6730: a read-back's guessed stamp can sit behind the press, yet the read-back came after it.
+  it("keeps Done pressed for an answer saved just before the press, under a read-back stamped behind it", async () => {
+    const docs = answered({
+      doneAt: DONE_AT,
+      readBackAt: "2026-10-10T22:21:00Z",
+      readBackSummary: "1 pick posted",
+    });
+    const first = Object.keys(docs).find((p) => p.startsWith(decision)) as string;
+    docs[first] = { ...docs[first], at: "2026-10-10T22:21:40Z" };
+    const v = await openWith(docs);
+    expect(v.told()).toMatch(/^Read back .+ · 1 pick posted$/);
+    expect(armed(v)).toBe(false);
+  });
 });
 
 describe("a mark saved after the read-back re-arms Done (#7119 criterion 3)", () => {
