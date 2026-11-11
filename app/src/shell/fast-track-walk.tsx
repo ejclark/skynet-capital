@@ -376,7 +376,7 @@ function WalkOver({
     if (done.complete.kind === "watchlist") watch.mutate(done.complete.symbol);
     if (done.complete.kind === "research-ask") {
       const subject = researchSubject(input, done.complete.eventId);
-      if (subject) file.mutate(subject);
+      if (subject) file.mutate({ subject, question: done.complete.question });
       setAsked("pending");
       void onAsk(done.complete.question).then(
         (sent) => setAsked(sent ? "sent" : "failed"),

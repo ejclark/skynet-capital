@@ -210,11 +210,19 @@ export function askInCampaign(input: {
 
 /**
  * File one name on the research list with no campaign (a bare ask, #7034 slice 3c): "Ask what we
- * know" on a calendar event. The server's reply carries the queue's own wait, so nothing here
- * words a time.
+ * know" on a calendar event. The walk's question rides with the name, as the chat's research card
+ * sends its own (#7300), so the desk reads what was asked. The server's reply carries the queue's
+ * own wait, so nothing here words a time.
  */
-export function askForResearch(symbol: string): Promise<AskReply> {
-  return postJson<AskReply>("/api/campaigns/ask", { kind: "name", subject: symbol });
+export function askForResearch(input: {
+  readonly subject: string;
+  readonly question: string;
+}): Promise<AskReply> {
+  return postJson<AskReply>("/api/campaigns/ask", {
+    kind: "name",
+    subject: input.subject,
+    question: input.question.trim().slice(0, QUESTION_MAX),
+  });
 }
 
 /** What a filed research ask tells the member: the queue's own sentence, never a guessed wait. */

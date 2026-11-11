@@ -11,6 +11,7 @@ import {
   holderLine,
   NO_RECORD,
   type PartyQuestion,
+  QUESTION_MAX,
   QUICK_QUESTIONS,
   questionState,
   RECORD_CODA,
@@ -182,14 +183,29 @@ describe("filing a research ask from the fast track (#7034 slice 3c)", () => {
     globalThis.fetch = realFetch;
   });
 
-  it("posts a bare name ask, with no campaign, to the same route the campaigns use", async () => {
+  it("posts a name ask with its question and no campaign, to the route the campaigns use", async () => {
     const seen: { url: string; body: unknown }[] = [];
     globalThis.fetch = ((url: string, init?: RequestInit) => {
       seen.push({ url, body: JSON.parse(String(init?.body)) });
       return Promise.resolve(Response.json({ ok: true, tell: "Queued." }));
     }) as typeof globalThis.fetch;
-    await askForResearch("NVDA");
-    expect(seen).toEqual([{ url: "/api/campaigns/ask", body: { kind: "name", subject: "NVDA" } }]);
+    await askForResearch({ subject: "NVDA", question: "  What do we know about NVDA earnings?  " });
+    expect(seen).toEqual([
+      {
+        url: "/api/campaigns/ask",
+        body: { kind: "name", subject: "NVDA", question: "What do we know about NVDA earnings?" },
+      },
+    ]);
+  });
+
+  it("caps the question at the server's length", async () => {
+    let sent = "";
+    globalThis.fetch = ((_url: string, init?: RequestInit) => {
+      sent = (JSON.parse(String(init?.body)) as { question: string }).question;
+      return Promise.resolve(Response.json({ ok: true }));
+    }) as typeof globalThis.fetch;
+    await askForResearch({ subject: "NVDA", question: "x".repeat(QUESTION_MAX + 50) });
+    expect(sent).toHaveLength(QUESTION_MAX);
   });
 
   it("shows the queue's own sentence for the wait, and its refusal in the server's words", () => {
