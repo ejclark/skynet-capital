@@ -12,6 +12,7 @@ import {
   NOT_RESEARCHED,
   nextStep,
   rankEvents,
+  researchSubject,
   startFastTrack,
   type Walk,
   WHATS_COMING_UP,
@@ -310,6 +311,33 @@ describe("fast track — the card walk engine", () => {
           notes: [],
         },
       });
+    });
+  });
+
+  describe("the name a research ask files (slice 3c)", () => {
+    const multi: FastTrackEvent = {
+      event: event({ id: "multi", symbols: ["AMD", "MU", "NVDA"] }),
+      killSwitches: [],
+    };
+    const cpi: FastTrackEvent = {
+      event: event({ id: "cpi", kind: "macro-print", symbols: [] }),
+      killSwitches: [],
+    };
+
+    it("files the member's own name on a multi-name event, held before watched", () => {
+      const i = input({ events: [multi], book: { held: ["NVDA"], watched: ["MU"] } });
+      expect(researchSubject(i, "multi")).toBe("NVDA");
+    });
+
+    it("falls back to the event's first name when the member has none of them", () => {
+      expect(
+        researchSubject(input({ events: [multi], book: { held: [], watched: [] } }), "multi"),
+      ).toBe("AMD");
+    });
+
+    it("files nothing for a market-wide event or an event that is gone, so no guess is queued", () => {
+      expect(researchSubject(input({ events: [cpi] }), "cpi")).toBeUndefined();
+      expect(researchSubject(input(), "retired")).toBeUndefined();
     });
   });
 
