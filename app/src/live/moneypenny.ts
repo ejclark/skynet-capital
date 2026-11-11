@@ -11,6 +11,12 @@ import {
 import { marketIsOpen } from "./market-hours";
 import { answerFor, convictionCardText, createConvictionLane } from "./moneypenny-conviction";
 import { createFilingLane, NEVER_MIND, SEND_AS_IS } from "./moneypenny-filing";
+import {
+  createFollowupLane,
+  type FollowupDraft,
+  followupAnswerFor,
+  followupCardText,
+} from "./moneypenny-followup";
 import { plainReply } from "./moneypenny-markdown";
 import {
   createResearchAskLane,
@@ -107,6 +113,9 @@ export interface MoneypennyState extends Persisted {
   /** A view she drafted (#5482 criterion 9), parked until the member taps one of its three exits —
    *  in memory only, never persisted, like `draft`. */
   readonly conviction?: ChatConvictionDraft;
+  /** A follow-up she drafted on the member's own filing (#7286 slice 8), parked until the member
+   *  taps "Post the follow-up" or "Not now" — in memory only, never persisted, like `draft`. */
+  readonly followup?: FollowupDraft;
   /** A research question she drafted, parked until the member taps "Ask the research desk" or
    *  "Not now" — in memory only, never persisted, like `draft` and `conviction`. */
   readonly researchAsk?: ResearchAskDraft;
@@ -221,7 +230,14 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
       if (was !== undefined && was !== "anon") set({ thread: undefined });
       forgetOthers(member);
       const thread = load(member);
-      set({ ...thread, member, draft: undefined, conviction: undefined, researchAsk: undefined });
+      set({
+        ...thread,
+        member,
+        draft: undefined,
+        conviction: undefined,
+        followup: undefined,
+        researchAsk: undefined,
+      });
       // An unbound store saves under "anon", so loading "anon" already holds the carried lines.
       if (carry.length > 0 && (was ?? "anon") !== member) {
         // A side thread the carried question was asked in moves with it, by name.
@@ -366,17 +382,40 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
             draft,
             kind: draft.kind,
             conviction: undefined,
+            followup: undefined,
             researchAsk: undefined,
             parkedIn: key,
           });
           append("draft", [draftCard(draft)]);
         },
         (conviction) => {
-          set({ conviction, draft: undefined, researchAsk: undefined, parkedIn: key });
+          set({
+            conviction,
+            draft: undefined,
+            followup: undefined,
+            researchAsk: undefined,
+            parkedIn: key,
+          });
           append("draft", [convictionCardText(conviction)]);
         },
+        (followup) => {
+          set({
+            followup,
+            draft: undefined,
+            conviction: undefined,
+            researchAsk: undefined,
+            parkedIn: key,
+          });
+          append("draft", [followupCardText(followup)]);
+        },
         (researchAsk) => {
-          set({ researchAsk, draft: undefined, conviction: undefined, parkedIn: key });
+          set({
+            researchAsk,
+            draft: undefined,
+            conviction: undefined,
+            followup: undefined,
+            parkedIn: key,
+          });
           append("draft", [researchAskCardText(researchAsk)]);
         },
       );
@@ -418,6 +457,24 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
     saved: () => set({ convictionSeq: get().convictionSeq + 1 }),
   });
 
+  /** The follow-up lane — the only thing here that posts a follow-up (`moneypenny-followup.ts`). */
+  const followups = createFollowupLane({ say });
+
+  /** A parked follow-up's exits: "Post the follow-up" or "Not now", exactly. Busy while the post
+   *  runs, like a view's tap; a failed or refused post parks the card again for another tap. */
+  const answeredFollowup = async (note: string): Promise<boolean> => {
+    const { followup, parkedIn } = get();
+    const answer = followup ? followupAnswerFor(note) : undefined;
+    if (!(followup && answer)) return false;
+    set({ followup: undefined, streaming: true });
+    try {
+      if (!(await followups.act(answer, followup))) set({ followup, parkedIn });
+    } finally {
+      set({ streaming: false });
+    }
+    return true;
+  };
+
   /** The research lane — the only thing here that puts a question on the research list
    *  (`moneypenny-research.ts`). */
   const research = createResearchAskLane({ say });
@@ -438,8 +495,9 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
     return true;
   };
 
-  /** A parked card's exits. A view: one of its three exact answers acts on it. A research question:
-   *  "Ask the research desk" or "Not now", exactly; a failed post parks it again. A filing draft:
+  /** A parked card's exits. A view: one of its three exact answers acts on it. A follow-up:
+   *  "Post the follow-up" or "Not now", exactly. A research question: "Ask the research desk" or
+   *  "Not now", exactly; a failed post parks either again. A filing draft:
    *  "send" files it, "never mind" drops it. Anything else leaves either parked and is a normal
    *  message (false). */
   const answeredParked = async (note: string): Promise<boolean> => {
@@ -458,8 +516,9 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
       return true;
     }
     // After the view's branch, never before it: a parked view's tap marks the rail busy in the same
-    // tick it lands (the cards are exclusive — drafting one clears the others).
-    if (await answeredResearch(note)) return true;
+    // tick it lands (the cards are exclusive — drafting one clears the others). So only the parked
+    // card's handler is awaited: an extra await ahead of it would push its busy mark a tick late.
+    if (await (get().followup ? answeredFollowup(note) : answeredResearch(note))) return true;
     if (draft && SEND_AS_IS.test(note)) {
       await lane.sendDraft(draft);
       return true;
@@ -581,6 +640,7 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
         ...EMPTY,
         draft: undefined,
         conviction: undefined,
+        followup: undefined,
         researchAsk: undefined,
         pending: undefined,
         thread: undefined,

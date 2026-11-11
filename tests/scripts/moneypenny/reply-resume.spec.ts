@@ -1,6 +1,10 @@
 import { readFileSync } from "node:fs";
 import { claimFeedbackReply } from "../../../scripts/moneypenny/index.mjs";
-import { laneOf, replyResumeIntent } from "../../../scripts/moneypenny/reply-resume.mjs";
+import {
+  isRelayedFollowup,
+  laneOf,
+  replyResumeIntent,
+} from "../../../scripts/moneypenny/reply-resume.mjs";
 
 // #3959 slice 1 (sub-issue #4299) — the second door into the feedback lane: not "this was readied"
 // but "the question we asked got answered". Fixture-shaped payloads, no network and no clock; the
@@ -38,6 +42,37 @@ describe("replyResumeIntent — an authorized reply on a blocked feedback issue"
 
   it("resumes a `needs-info` issue that never carried `ready` — the reply is the flip", () => {
     expect(replyResumeIntent(reply(["feedback", "needs-info"])).resume).toBe(true);
+  });
+
+  // #7286 slice 8: the app relays a member's follow-up under the owner's login, so GitHub calls it
+  // OWNER. Its trailer is the only tell, and it narrows what the reply may do.
+  describe("a follow-up the app relayed for a member", () => {
+    const relayed =
+      "it also happens on the iPad\n\n---\n_Follow-up from **Tony**, relayed by the app._";
+    it("is told apart by its trailer", () => {
+      expect(isRelayedFollowup(relayed)).toBe(true);
+      expect(isRelayedFollowup("the weekly one")).toBe(false);
+    });
+    it("answers the build lane's own question on a ready filing", () => {
+      expect(replyResumeIntent(reply(["feedback", "ready", "needs-info"], relayed)).resume).toBe(
+        true,
+      );
+    });
+    it("never answers `needs-eric` — that decision is Eric's own", () => {
+      for (const labels of [
+        ["feedback", "ready", "needs-eric"],
+        ["feedback", "needs-eric"],
+      ]) {
+        const intent = replyResumeIntent(reply(labels, relayed));
+        expect(intent.resume).toBe(false);
+        expect(intent.reason).toContain("needs-eric");
+      }
+    });
+    it("never readies a filing that was never readied — no skipping the backlog gate", () => {
+      const intent = replyResumeIntent(reply(["feedback", "needs-info"], relayed));
+      expect(intent.resume).toBe(false);
+      expect(intent.reason).toContain("never readies");
+    });
   });
 
   it("refuses an issue carrying no question of ours", () => {

@@ -101,6 +101,7 @@ describe("behavioral: the dispatcher refuses every order-shaped or adversarial a
     expect(COMPANION_TOOL_DEFS.map((t) => t.name).sort()).toEqual([
       "draft_conviction",
       "draft_feedback",
+      "draft_followup",
       "draft_research_ask",
       "get_my_convictions",
       "get_my_curriculum_progress",
