@@ -71,6 +71,10 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"The release-day US session is indifferent to a BoJ Minutes release, so the clean-subset base rate (0.35x) is operative" (FT-boj-minutes-2026-11-05-4)** — added 2026-11-11 from the
+  [boj-minutes-2026-11-05 close-out](events/boj-minutes-2026-11-05.md). The S&P 500 fell **4.355%** on 11-05 (7,688.62 to 7,353.73; VIX 16.61 to 28.18), a post-midterm AI/chip rout the press
+  does not tie to Tokyo. Do not register a US-session threshold against a BoJ document that lands in the Nov 2-7 corridor; the calendar, not the document, sets the day.
+
 - **"The Tokyo open is a null on a Japan Balance of Payments release day: the Nikkei |opening gap| lands below 1.0% (FT-japan-balance-of-payments-2026-11-10-3)"** — added 2026-11-11 from the
   [japan-balance-of-payments-2026-11-10 close-out](events/japan-balance-of-payments-2026-11-10.md). Nikkei opened **59,372.28** against a 58,775.50 prior close (**+1.02%**, a 0.015-point miss), the first 1-hour bar standing in for a null daily bar. One print after a −5.96% / +2.3% two-session swing and with the BoJ Summary of Opinions in the same minute. Do not register a below-1.0% open prediction for this series in a VIX-20+ regime without a vol-conditioned base rate; this is one marginal kill, not a refutation of the 12-08 ledger's null.
 
