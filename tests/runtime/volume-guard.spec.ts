@@ -1,5 +1,6 @@
 import {
   DEFAULT_ROOT_ON_FLY,
+  DERIVED_STORES,
   dataRoot,
   dataRootProblem,
   OPT_IN_STORES,
@@ -55,9 +56,21 @@ describe("volumePersistenceWarnings", () => {
     const custom = Object.fromEntries(
       Object.keys(PERSISTED_STORES).map((name) => [name, `/srv/${name.toLowerCase()}`]),
     );
-    expect(
-      volumePersistenceWarnings({ FLY_APP_NAME: "skynet-capital", ...custom }, "/srv"),
-    ).toEqual([]);
+    // A host mounting at /srv points the derived-store root there too (docs/DEPLOY.md).
+    const env = { FLY_APP_NAME: "skynet-capital", SKYNET_DATA_ROOT: "/srv", ...custom };
+    expect(volumePersistenceWarnings(env, "/srv")).toEqual([]);
+  });
+
+  it("warns when a derived store's root is off the mount (#6007's chat screenshots, the first)", () => {
+    expect(DERIVED_STORES).toHaveProperty("SKYNET_COMPANION_SCREENSHOTS_DIR");
+    expect(volumePersistenceWarnings({ FLY_APP_NAME: "skynet-capital", ...pinned })).toEqual([]);
+    const warnings = volumePersistenceWarnings({
+      FLY_APP_NAME: "skynet-capital",
+      ...pinned,
+      SKYNET_DATA_ROOT: "/app/data",
+    });
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain("SKYNET_COMPANION_SCREENSHOTS_DIR");
   });
 
   it("leaves an unset opt-in store alone — unset means the feature is dark, not unpinned", () => {

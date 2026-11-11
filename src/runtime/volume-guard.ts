@@ -65,7 +65,10 @@ export const DEFAULT_ROOT_ON_FLY = "/data";
  * store cannot exist without the boot check, the gate and the `[stores]` line seeing it.
  * The 19 `PERSISTED_STORES` stay explicit — this is for new stores, not a migration.
  */
-export const DERIVED_STORES = {} as const satisfies Readonly<Record<string, string>>;
+export const DERIVED_STORES = {
+  // Screenshots attached in Moneypenny's chat (#6007): signed-in members only, capped at 100 MB.
+  SKYNET_COMPANION_SCREENSHOTS_DIR: "companion-screenshots",
+} as const satisfies Readonly<Record<string, string>>;
 
 /**
  * Where derived stores live: `SKYNET_DATA_ROOT` when set, the Fly mount on a Fly Machine, and a

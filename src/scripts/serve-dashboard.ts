@@ -347,6 +347,7 @@ async function main(): Promise<void> {
     companion,
     progression: progressionService,
     companionMessageLog,
+    companionScreenshots,
   } = setupCompanion(process.env, {
     hub,
     readFills: (id) => activity.list(id),
@@ -482,6 +483,7 @@ async function main(): Promise<void> {
     // `/api/companion/ack`'s store — the caller there already has the session's own opaque id.
     readMessages: (id) => companionMessageLog.list(id),
     recordMessage: (id) => companionMessageLog.record(id),
+    companionScreenshots,
     refreshParticipant: (id) => brokerSync.syncParticipant(id),
     readPulseHistory,
     readHeldLedger,

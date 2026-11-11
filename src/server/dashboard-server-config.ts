@@ -33,6 +33,7 @@ import type { CampaignQuestionsStore } from "./campaign-questions-store.js";
 import type { ClaimDeps } from "./claim-form.js";
 import type { CommunityProgressionService } from "./community-progression-service.js";
 import type { CompanionMessageLogEntry } from "./companion-message-log.js";
+import type { CompanionScreenshotStore } from "./companion-screenshots-store.js";
 import type { ControlsDeps } from "./controls-form.js";
 import type { CouncilDeps } from "./council-form.js";
 import type { CouncilRepliesDeps } from "./council-replies-form.js";
@@ -360,6 +361,10 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
   /** Record one real message as ladder-gate evidence — called once, on the first message a member
    *  ever sends the rail (`/api/companion/ack`), regardless of how it's routed. */
   readonly recordMessage?: (opaqueMemberId: string) => Promise<void>;
+  /** Screenshots attached in Moneypenny's chat (#6007, `companion-screenshots-store.ts`): any
+   *  signed-in member may open one by id, never a visitor. Omit and `/api/companion/screenshots*`
+   *  does not exist (offline wiring). */
+  readonly companionScreenshots?: CompanionScreenshotStore;
   /**
    * The Playbook Store (issue #885) — an account's own playbook subscriptions and capital
    * sub-allocations. Omit to disable (offline mode) — the catalog still browses, just with no
