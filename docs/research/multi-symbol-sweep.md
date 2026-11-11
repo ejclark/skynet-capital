@@ -75,6 +75,10 @@ robust, alpha fragile — is the finding.
   [boj-minutes-2026-11-05 close-out](events/boj-minutes-2026-11-05.md). The S&P 500 fell **4.355%** on 11-05 (7,688.62 to 7,353.73; VIX 16.61 to 28.18), a post-midterm AI/chip rout the press
   does not tie to Tokyo. Do not register a US-session threshold against a BoJ document that lands in the Nov 2-7 corridor; the calendar, not the document, sets the day.
 
+- **"A crude spike carries retail gasoline higher into the next month's collection window, so the pump's October level holds at or above September's" (FT-cpi-2026-11-10-1)** — added 2026-11-11 from the
+  [cpi-2026-11-10 close-out](events/cpi-2026-11-10.md). EIA weekly US regular averaged **$4.3095** over the four October Mondays against **$4.3548** over September's (**−1.04%**) while Brent settled at $117.64 on 10-30:
+  retail stepped up in September, then fell four Mondays running. Do not register a pump-level hold off a crude run-up without a lag measurement; retail follows crude on a delay that the run's own peak can outlast.
+
 - **"An M3-2 update the Atlanta Fed lists as internal-only leaves no observable GDPNow vintage" (FT-m3-full-report-2026-11-03-1)** — added 2026-11-09 from the
   [m3-full-report-2026-11-03 close-out](events/m3-full-report-2026-11-03.md). The workbook's current-quarter tabs carry an **11-03** column ("M3-2 Manufacturing (Full report)", GDPNow 3.7383 to 3.7213),
   and `ContribArchives` already holds vintages on the 2026-06-03, 07-02, 09-02 and 10-02 internal dates. Do not infer "no vintage" from `InternalUpdates`; read the vintage tabs. The registered cell,
