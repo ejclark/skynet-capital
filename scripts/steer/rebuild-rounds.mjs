@@ -158,6 +158,21 @@ function noInput(round, byId) {
     : `no inputs on this machine for ${round.id}`;
 }
 
+/** The round a page's own read-back copy says it shows, when it disagrees with the state comment's
+ *  (#6731). The state comment is a stand-in for the page: it can lag it, or name no store id and
+ *  fall back to an older round named elsewhere on the issue. Only the page's copy says what is up,
+ *  so a publish planned from the comment alone could put an older round over a newer page. A screen
+ *  draws each round on the same page, so of several copies read back, the highest round is the one
+ *  it shows now. Null when no copy was read back, or the copy agrees. */
+function pageDisagrees(round, byId) {
+  const n = (id) => Number(id.slice(id.lastIndexOf("-r") + 2));
+  const shown = [...byId.entries()]
+    .filter(([id, list]) => id.startsWith(`design-${round.issue}-r`) && list[0].kind === "page")
+    .map(([id]) => id)
+    .sort((a, b) => n(b) - n(a))[0];
+  return shown && shown !== round.id ? shown : null;
+}
+
 /** The tooling's render of a round's input and its pictures, or an error that says so. */
 function render(tp) {
   try {
@@ -243,6 +258,14 @@ export function rebuildRounds(rounds, { roots, out, tooling, now, commits = comm
       fail(round, "its issue does not say which round the page shows");
     } else {
       result.fetch.push({ id: round.id, url: round.url, path: INPUT_FILE });
+      const shown = pageDisagrees(round, byId);
+      if (shown) {
+        fail(
+          round,
+          `the page's own copy says it shows ${shown}, but its issue's state comment resolves to ${round.id}, so nothing is planned over it: correct the state comment, or read the page back again`,
+        );
+        continue;
+      }
       const found = byId.get(round.id)?.[0];
       if (!found) {
         fail(round, noInput(round, byId));

@@ -35,6 +35,16 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### `PR #7319 is red` red on main: pin the desk-ideas spec's clock inside the nvda earnings window
+- **SHA:** 9282f4a   **DATE:** 2026-11-10   **STATUS:** closed
+- **COVERS:** 6d9560e
+- **SIGNAL:** 1 failed run(s) of `Pipeline` → `PR #7319 is red` on `main`, the first [42760727025](https://github.com/ejclark/skynet-capital/actions/runs/42760727025) at 2026-11-10T05:13:07Z. Repair capsule #7326 filed 2026-11-10T05:17:51Z, closed 19m later by #7329.
+- **ROOT CAUSE:** `/api/desk/:id` folds house playbooks matching a held symbol into the desk's idea cards, but only while the playbook's earnings window is open (`windowClosedAt(now)`, #5719). The two specs in `tests/server/desk-json-routes-subscriptions.spec.ts` built their config without `now`, so `deskView` used `new Date()`. Both NVDA earnings windows shut on 2026-11-10, so today the desk pitched no NVDA idea and both cases failed on `expect(...length).toBeGreaterThan(0)`. It reproduced identically on `main` (64c503cc3) with no change, so #7319 (the PR whose `verify` it reddened, issue #7326) was a bystander: every branch cut today is red on the same two cases.
+- **PREVENTION:** spec — `tests/server/desk-json-routes-subscriptions.spec.ts` (#7329).
+- **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
+
+---
+
 ### `release · deploy` red on main: a third flyctl download failure, so the Fly jobs retry it once after a pause
 - **SHA:** 35c754d   **DATE:** 2026-11-08   **STATUS:** closed
 - **RECURS:** Three one-off infra failures in the Claude-lane window: a lost runner and two flyctl downloads

@@ -103,8 +103,8 @@ describe("a side thread on a position's row", () => {
             initialOpen
             {...(threaded
               ? {
-                  ask: <PositionAsk position={PUT} />,
-                  thread: <RowThread thread={positionThread(PUT)} />,
+                  ask: <PositionAsk position={PUT} accountId="member-desk" />,
+                  thread: <RowThread thread={positionThread(PUT, "member-desk")} />,
                 }
               : {})}
             onAside={() => undefined}
@@ -140,7 +140,7 @@ describe("a side thread on a position's row", () => {
     expect(chats.at(-1)?.messages.map((m) => m.content)).toEqual([lines[0]?.text]);
     expect(within(rail()).getByRole("link", { name: PUT.display })).toHaveAttribute(
       "href",
-      `/app/accounts#${KEY}`,
+      `/app/accounts?account=member-desk#${KEY}`,
     );
     expect(within(rail()).getByRole("button", { name: "Main conversation" })).toBeEnabled();
   });
@@ -162,7 +162,9 @@ describe("a side thread on a position's row", () => {
     mount(true);
     await askOnRow("should I roll this?");
     const saved = JSON.parse(localStorage.getItem(keyFor("member-1")) ?? "{}");
-    expect(saved.threads).toEqual([{ key: KEY, title: PUT.display, path: `/accounts#${KEY}` }]);
+    expect(saved.threads).toEqual([
+      { key: KEY, title: PUT.display, path: `/accounts?account=member-desk#${KEY}` },
+    ]);
   });
 
   it("offers no ask on an account her positions tool doesn't read", () => {

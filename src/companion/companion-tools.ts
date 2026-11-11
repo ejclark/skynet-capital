@@ -13,6 +13,7 @@ import type { FindSimilarFeedback } from "../server/feedback-similar.js";
 import type { ParticipantProgression, ProgressionService } from "../server/progression-service.js";
 import type { ReadRoadmap } from "../server/roadmap.js";
 import type { UpcomingEvents } from "../server/upcoming-events.js";
+import { type ReadWhatMembersAsk, whatMembersAskResult } from "../server/what-members-ask.js";
 import { MAX_ISSUES_PER_LOOKUP, type ReadWorkStatus } from "../server/work-status.js";
 import { isOccSymbol, UNDERLYING_PATTERN } from "../trading/option-symbols.js";
 import {
@@ -76,6 +77,7 @@ export const COMPANION_TOOL_NAMES = [
   "get_work_status",
   "get_roadmap",
   "get_upcoming_events",
+  "get_what_members_ask",
   "draft_feedback",
   ...CONVICTION_TOOL_NAMES,
   ...RESEARCH_ASK_TOOL_NAMES,
@@ -251,6 +253,17 @@ export const COMPANION_TOOL_DEFS = [
     },
   },
   {
+    name: "get_what_members_ask",
+    description:
+      "What members across the league asked for over the last 7, 30 or 90 days (days, default 30), as counts only — never a name, a member id or anyone's words. Returns since (the first day counted); researchList: questions (asks on the research list, each subject counted once per campaign it was asked in), askedBy (how many members), bySubject (up to 8: kind, subject, questions, askedBy — most members first), more (subjects not listed); filings (feedback filed from the app): total, filedBy (how many members), byKind (bug, feature, idea); notCounted (what these numbers leave out); note. available: false means that source could not be read, not that nobody asked. Use it to cite evidence when proposing a change to how the app works, or when a member asks what others are asking for. Read-only.",
+    input_schema: {
+      type: "object",
+      properties: {
+        days: { type: "integer", enum: [7, 30, 90] },
+      },
+    },
+  },
+  {
     name: "draft_feedback",
     description:
       "Hand the member a DRAFT feedback filing (bug, feature, or idea) distilled from this whole conversation. Files NOTHING: the rail shows the draft and only the member's own reply sends it. Call it once the member has agreed, in their latest message, to report something. Returns captured: true and a status line, plus `similar` open feedback issues when any look like duplicates; returns an error when title or details is missing (a missing or unrecognized kind is drafted as an idea).",
@@ -294,6 +307,10 @@ export interface CompanionDeskDeps {
   /** #3952: where any issue stands, read off the public repo with the feedback lane's token.
    *  Optional — without it `get_work_status` says "not available", never guesses. */
   readonly readWorkStatus?: ReadWorkStatus;
+  /** #7286 slice 4: what members across the league asked for, as counts only — the research list
+   *  by subject and app filings by kind (`server/what-members-ask.ts`). Optional — without it
+   *  `get_what_members_ask` says "not available", never zero. */
+  readonly readWhatMembersAsk?: ReadWhatMembersAsk;
   /** #3952 slice 3: what is coming — the open plan queue grouped Now / Next / Later, same token.
    *  Optional — without it `get_roadmap` says "not available", never guesses. */
   readonly readRoadmap?: ReadRoadmap;
@@ -544,6 +561,11 @@ export async function runCompanionTool(
       return structuresResult(deps.rankFor, participantId, input);
     case "get_work_status":
       return workStatusResult(deps.readWorkStatus, input);
+    case "get_what_members_ask":
+      // League-wide counts; offered with a linked desk only for now (#7286 slice 4).
+      return participantId
+        ? whatMembersAskResult(deps.readWhatMembersAsk, input)
+        : { ok: false, error: "no linked desk" };
     case "get_roadmap":
       return roadmapResult(deps.readRoadmap);
     case "get_upcoming_events":

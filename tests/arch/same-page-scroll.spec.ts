@@ -45,6 +45,16 @@ const RESETS: Record<string, ReadonlyArray<readonly [snippet: string, why: strin
   ],
   "app/src/shell/events-agenda.tsx": [
     ["section: undefined, events: undefined", "leaves Events for the row's #pos- anchor"],
+    [
+      "events: undefined, section: undefined",
+      "leaves Events for the Overview's #book-wait (#4608)",
+    ],
+  ],
+  "app/src/shell/book-wait-line.tsx": [
+    [
+      "on: wait.reopensOn",
+      "the wait's door into Events on its reopen day, a section switch (#4608)",
+    ],
   ],
   "app/src/shell/held-events-line.tsx": [
     ['section: "events" as const', "Overview's door into Events, a section switch (#5074)"],

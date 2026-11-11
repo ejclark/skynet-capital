@@ -70,6 +70,7 @@
 @import "./networth-card.css";
 @import "./new-high.css";
 @import "./level-up.css";
+@import "./lock-in.css";
 @import "./onboarding.css";
 @import "./overview-grid.css";
 @import "./saved-positions.css";
@@ -98,6 +99,7 @@
 @import "./vantage.css";
 @import "./eye-light.css";
 @import "./events-section.css";
+@import "./book-wait.css";
 @import "./book-calendar.css";
 @import "./route-error.css";
 @import "./session-status.css";

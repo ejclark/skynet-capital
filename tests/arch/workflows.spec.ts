@@ -400,6 +400,25 @@ describe("arm-auto-merge — a hold applied after the triggering event still hol
   });
 });
 
+// #3621, the twin of #4169's fix above: `verify` is PR-only, so on a push to `main` it is skipped,
+// and the implicit `success()` that `needs: verify` adds skipped `integration tests` with it. The
+// push leg of the `if:` (#3333, the header's "ALSO runs on push to main") never got evaluated.
+describe("integration tests — a push to main runs them though verify is skipped", () => {
+  const pipeline = readFileSync(".github/workflows/pipeline.yml", "utf8");
+  const job = pipeline.slice(pipeline.indexOf("\n  e2e:"), pipeline.indexOf("\n  arm-auto-merge:"));
+  const condition = job.slice(job.indexOf("if: >-"), job.indexOf("runs-on:"));
+
+  it("evaluates its condition when verify was skipped", () => {
+    expect(condition).toContain("!cancelled()");
+    expect(condition).toContain("github.event_name == 'push' && github.ref == 'refs/heads/main'");
+  });
+
+  it("still requires verify's success on a PR, now that the implicit gate is gone", () => {
+    const prLeg = condition.slice(condition.indexOf("github.event_name == 'pull_request'"));
+    expect(prLeg.slice(0, prLeg.indexOf("||"))).toContain("needs.verify.result == 'success'");
+  });
+});
+
 // #4939 (retro #5589), #5932, #6093: the arm step's fallbacks — a direct merge when GitHub says the
 // PR is already clean/unstable or the base moved under the arm call, three tries on a moved base or
 // a GitHub hiccup, an immediate fail on anything else — moved out of inline bash into
@@ -773,6 +792,25 @@ describe("moneypenny-events — build lanes push as the App, never the persisted
       expect(jobBody(name)).toContain("github_token: ${{ steps.app-token.outputs.token }}");
     });
   }
+
+  // #5936: a build past the hour opens its PR with the job token, which starts no CI. After the
+  // session, with the re-minted App token, the job edits that PR's body once so `verify` starts.
+  for (const [name, lane] of [
+    ["build-feedback", "feedback"],
+    ["build-plan", "plan"],
+  ] as const) {
+    it(`${name}: starts CI on a check-less lane PR with the re-minted App token, on every ending`, () => {
+      const body = jobBody(name);
+      const at = body.indexOf("scripts/moneypenny/rekick-pr.mjs");
+      expect(at).toBeGreaterThan(body.indexOf("id: app-token-late"));
+      const step = body.slice(body.lastIndexOf("\n      - ", at), at + 200);
+      expect(step).toContain(`if: always() && needs.route.outputs.${lane}_issue != ''`);
+      expect(step).toContain("GH_TOKEN: ${{ steps.app-token-late.outputs.token }}");
+      // A red step here would flip `failure()` and free the lease of a build that succeeded.
+      expect(step).toContain("continue-on-error: true");
+      expect(step).toContain(`rekick-pr.mjs ${lane}-\${{ needs.route.outputs.${lane}_issue }}`);
+    });
+  }
 });
 
 // The 2026-11-01 audit of #6476: the step that starts a stopped bots machine failed the job before
@@ -967,4 +1005,28 @@ describe("pipeline — a failed flyctl download gets a second attempt before the
       });
     });
   }
+});
+
+// #6188 (retro in docs/LESSONS.md, #6174): claude.yml is the human-directed lane, but its gate
+// decided "human" from author_association plus the footer link, never from the sender's type. A
+// Moneypenny comment without the footer armed the lane twice, and the action's own bot refusal
+// turned each into a red run. The gate itself has to turn a bot sender away.
+describe("claude — the human-directed lane never arms on a bot's comment", () => {
+  const claude = readFileSync(".github/workflows/claude.yml", "utf8");
+  const gate = claude.slice(claude.indexOf("\n  gate:"), claude.indexOf("\n    runs-on:"));
+  const condition = /if: >-\n\s+\$\{\{([\s\S]*?)\}\}\s*$/.exec(gate)?.[1] ?? "";
+
+  it("refuses a sender whose type is Bot, as a top-level clause of the armed? gate", () => {
+    expect(gate).toContain("name: armed?");
+    expect(condition).toMatch(/&&\s*github\.event\.sender\.type != 'Bot'\s*&&/);
+  });
+
+  it("still arms on a member's own comment exactly as before", () => {
+    expect(condition).toContain("github.event_name == 'issue_comment'");
+    expect(condition).toContain("github.event_name == 'pull_request_review_comment'");
+    expect(condition).toContain("github.event.sender.login != 'claude[bot]'");
+    expect(condition).toContain(
+      `contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association || github.event.issue.author_association)`,
+    );
+  });
 });

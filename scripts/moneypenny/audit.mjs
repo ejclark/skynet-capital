@@ -4,6 +4,7 @@
 // the same "silence looks like nothing happened" failure mode as the other two lanes here.
 import { existsSync } from "node:fs";
 import { clockIntents, clockOrUnknown } from "./clock-watch.mjs";
+import { discoveryPrsOrNone, discoverySweep } from "./discovery-pr-sweep.mjs";
 import { driftChoreFromRepo } from "./drift-chore.mjs";
 import { ghRestAll, sh } from "./gh.mjs";
 import { headlessOrNone, nudgeIntents } from "./headless-pr.mjs";
@@ -319,12 +320,14 @@ export function audit(deps = {}) {
       Boolean,
     ),
   );
+  // Every act below can land work, so `halt` stops each one — and so does a dial this run did not
+  // actually read (#6887): fail closed, as work-gate, admission and the spend brake do.
+  const halted = haltedOrUnread(deps.workMode);
   // A green, armed PR held by a cancelled suite gets a new head (stuck-branch-update.mjs). `halt`
   // stops this too: a new head can land work.
-  if (deps.workMode?.mode?.position !== "halt") intents.push(...updateIntents(deps.stuckBranches));
+  if (!halted) intents.push(...updateIntents(deps.stuckBranches));
   // The stranded-PR act stage (stranded-pr.mjs): re-run a green PR's failed arm job, once per head.
   // `halt` stops every lane, so it stops this too — re-arming lands work.
-  const halted = deps.workMode?.mode?.position === "halt";
   // A PR whose head never got a required check run gets one App-identity commit, once per head
   // (headless-pr.mjs, #7112). `halt` stops it too: a new head runs the Pipeline that can land it.
   const [rearmed, nudged] = halted
@@ -334,15 +337,32 @@ export function audit(deps = {}) {
   // The research-PR sweep (research-pr-sweep.mjs, #5689): close a superseded `research/*` PR, flag
   // a red one once per head, and count the tick. `halt` stops the acts, not the count.
   intents.push(...researchSweep(deps.researchPrs, rearmed, halted));
+  // The discovery-PR sweep (discovery-pr-sweep.mjs, #7341): close a red or conflicted `discovery/*`
+  // PR so the daily lane takes its member's question again, or flag it once past the retake cap.
+  intents.push(...discoverySweep(deps.discoveryPrs, halted));
   // A red lane PR whose session has ended (red-lane-pr.mjs): close it and release its issue. `halt`
   // stops this too, because a released issue is a build the sweep may start.
-  if (deps.workMode?.mode?.position !== "halt") intents.push(...redLaneIntents(deps.redLanePrs));
+  if (!halted) intents.push(...redLaneIntents(deps.redLanePrs));
   // The clock's watcher (clock-watch.mjs, #6470): one `[fitness] clock-running` issue while the
   // 15-minute schedule's newest successful run is over 3h old, closed when it is back. Not gated on
   // `halt`: a stopped clock under halt is still a stopped clock, and an issue is not work. Null
   // means the Actions list could not be read this tick — `clockIntents` decides nothing on it.
   intents.push(...clockIntents(deps.clock));
   return intents;
+}
+
+/**
+ * Should the audit hold every act that can land work this tick (#6887)? Yes at `halt`, and yes
+ * whenever the dial was not truly read: `workModeState` returned null (config would not load),
+ * `readWorkMode` fell back to conserve because the tracking issue could not be fetched
+ * (`unreadable`), or the labels named no single position mid-flip (`ambiguous` — the pair may hold
+ * `halt`). The same "unsure" test the spend brake uses (circuit-breaker.mjs). The cost of a wrong
+ * hold is one tick's delay; the cost of a wrong act is work landing while every lane is stopped.
+ */
+function haltedOrUnread(workMode) {
+  const mode = workMode?.mode;
+  if (!mode || mode.unreadable || mode.ambiguous) return true;
+  return mode.position === "halt";
 }
 
 /**
@@ -635,6 +655,8 @@ export function gatherAuditDeps(nowMs, hourly = {}) {
     redLanePrs: redLaneOrNone(nowMs),
     // One REST call on a tick where no research PR has sat open 6h.
     researchPrs: researchPrsOrNone(nowMs),
+    // One REST call on a tick where no discovery PR has sat untouched 6h.
+    discoveryPrs: discoveryPrsOrNone(nowMs),
   };
 }
 
@@ -643,11 +665,12 @@ export function gatherAuditDeps(nowMs, hourly = {}) {
  * the position the lanes resolve, so `workModeRetitle` can tell a stale dashboard from a fresh one.
  * The same reader every lane uses, so this can never disagree with them about what the position is.
  *
- * SOFT ON FAILURE, unlike `dueEventIds`' loud throw above, and deliberately so: this is the only
- * thing in this file that is a DISPLAY rather than a pair of eyes. Every lane that acts on the dial
- * reads it itself and fails closed on its own, so a malformed work-mode.json or a GitHub blip must
- * cost one stale title — not the stall, silent-feedback, plan-stall and conflict checks that ride
- * the same run. The warning says so out loud rather than failing silently.
+ * SOFT ON FAILURE, unlike `dueEventIds`' loud throw above, and deliberately so: a malformed
+ * work-mode.json or a GitHub blip must cost one stale title — not the stall, silent-feedback,
+ * plan-stall and conflict checks that ride the same run, none of which reads the dial. The warning
+ * says so out loud rather than failing silently. The audit's own acts DO read the dial (re-arm,
+ * branch update, headless nudge, the PR sweeps, the red-lane close), so a null here holds every one
+ * of them — `haltedOrUnread` fails closed on it (#6887).
  */
 function workModeState(nowMs) {
   try {

@@ -122,12 +122,25 @@ deliverable. The stage a person still did is named first.
 | Loop | Stage still by hand | Now automated by |
 |---|---|---|
 | Clear-path flip (`docs/ISSUES.md` → *Who may flip it*) | decide + verify: a session judged 21 issues and recruited refuters itself; 2 flips lacked `feedback` and sat unbuilt (lane fixed by #6219) | `.claude/workflows/clear-path-flip.js` (judge → two refuters) and `scripts/clear-path-post.mjs` (posts survivors only) |
-| Post-merge correctness audit | sense + verify: a session read 11 merged builds and re-checked its own findings | `.claude/workflows/post-merge-audit.js` (reviewer per PR → trace + reproduce refuters) |
+| Post-merge correctness audit | sense + verify: a session read 11 merged builds and re-checked its own findings | `.claude/workflows/post-merge-audit.js` (reviewer per PR → trace + reproduce refuters); `file: true` and `scripts/audit-file.mjs` file what it confirms and move the marker (#7311) |
 | The surge itself | remember: the dial, the pre-reset revert, the relay and resume traps lived in one session's context | `.claude/skills/surge/SKILL.md` |
 
 Still human: the *sense* that quota is spare (Eric's phrase starts it, by rule — surge is his) and
 the *act* of filing confirmed audit findings, which stays a session step until a finding's shape is
 stable enough to file mechanically.
+
+**2026-11-10 — the second surge.** A throughput study measured it (19 PRs merged in 82 minutes,
+6.9x the prior day's rate). The stage a person still did is named first.
+
+| Loop | Stage still by hand | Now automated by |
+|---|---|---|
+| Clear-path flip | sense: Eric saw "stalled" before any session did; the lanes had 0 buildable Ready items against a cap of 6. A session then readied 26 of 62 judged issues | #7311 slice 3 (a due-check when the queue runs dry) |
+| Post-merge audit | sense: a session started it when Eric asked for more threads; a workflow filed its 5 confirmed bugs and 1 reviewer line | #7311 slices 1–2 |
+| Held-PR merge (protected class) | sense: a session had to tell Eric that 4 green PRs blocked 3 plans (37.6 h median green); his 4 clicks took 93 s | the study's same-day ask proposal (#7313–#7317) |
+| Laptop build waves | sense: 2 of 3 waves launched only after his message; 3 of 5 built parts in wave 1 got no PR until a session opened them | the study's worktree proposal (#7313–#7317) |
+
+Still human: the *act* of merging the protected class (his, by rule), and the *sense* that a
+local wave has gone idle. The measured ceiling was the App's hourly API limit, not tokens.
 
 ## Starting a new loop
 
@@ -217,4 +230,6 @@ Urgent decisions stay in the daily digest's Needs you; these are the important, 
 | Playbook library | Are proposed playbooks graded in the order he would fund them? | #6771 | running | the newsletter in each month's first week — the proposed playbooks not yet graded | Pick which proposed playbooks to grade next | Monthly |
 | Brand ideas | Do candidate names survive his keep-or-drop? | #6616 | running | the newsletter in each month's first week — the candidate names on #6616's list | Keep or drop candidate names | Monthly |
 | Role catalog | Does each role earn its tokens? Its measured return is tokens per verified result from the job scoreboard (`npm run meter -- --jobs`) | #6872 | planned | when #6872's role-card slice lands its catalog | Hire or retire a role from its measured return | Monthly |
+| Post-merge audit | Does an audit that starts when 6 or more code PRs have merged keep finding defects worth fixing? The due-check and the filing run without a person; the Routine that starts them waits on his word (#7311 slice 5). Yield: confirmed defects per audited PR, `metrics.defects.perPr` in each newsletter (`scripts/audit-due.mjs` says when one is due; `file: true` files what it confirms). Baseline 2026-11-10: 5 confirmed in 6 PRs (0.83; 2026-W45 was 0.52) | #7311 | running | 2026-12-01 — wrong if under 0.3 confirmed per audited PR across the next 30 audited PRs; its second call, that a prevention line cuts repeats, is wrong if the same cause is confirmed twice again after its reviewer line lands | — | — |
+| Clear-path flip | Does flipping issues `ready` when the lanes' pullable queue is below the work dial's cap keep the lanes fed? Yield: issues readied of issues judged, `metrics.flip.readiedShare` in each newsletter (`scripts/flip-due.mjs` says when one is due; `scripts/clear-path-post.mjs` posts survivors and records the counts). Baseline 2026-11-10: 26 of 62 judged readied (0.42); at 04:14Z the lanes had 0 buildable Ready items against a cap of 6 | #7311 | running | 2026-11-17 — wrong if any hour in 2026-11-11..17 had admissible lane capacity and 0 pullable items (the hours are not measured yet, so the first check reads the lanes' own logs) | — | — |
 | Pre-merge PR review | Does a reviewer that runs before merge cut post-merge defects per PR (0.52 in 2026-W45's audits), with its Important findings right at least half the time? | #6870 | planned | when #6870's S1 replay reports — pass bar: at least 9 of 22 correctness cases, at most 2 Important findings across 14 clean controls | none: no standing human gate (#6870); its weekly veto is the Review rules row | — |

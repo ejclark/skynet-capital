@@ -56,6 +56,9 @@ const ON_SCREEN: Conversation = "on-screen";
 /** The onboarding read did not answer inside `bindWaitMs`. */
 const LATE: unique symbol = Symbol("late");
 
+/** The onboarding read could not answer (a non-2xx, a dropped connection) — never a sign-out. */
+const READ_FAILED: unique symbol = Symbol("read-failed");
+
 export type MpRole = "user" | "mp" | "sys" | "draft";
 
 export interface MpMessage {
@@ -129,6 +132,10 @@ export interface MoneypennyState extends Persisted {
   readonly openRail: (opts?: { readonly intro?: boolean }) => Promise<void>;
   readonly closeRail: () => void;
   readonly toggleRail: () => void;
+  /** Load the member's saved conversation without opening the rail, so a row's thread shows on
+   *  page load (#7308). Binds only a store nothing else has touched yet, and only to a member the
+   *  read named: a failed read must never bind "anon", which would forget the member's own blob. */
+  readonly hydrate: () => Promise<void>;
   /** Forget this thread and start over — she introduces herself again. */
   readonly newConversation: () => Promise<void>;
   /** The member's turn — a typed message or a chip's canned one. False when not accepted (a
@@ -190,12 +197,23 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
 
   /** Bind the thread to `ob`'s member and refresh the facts the intro and chips read. `carry` is
    *  the lines a question added before its member was known (an `ask` that stopped waiting): on a
-   *  member switch they move into that member's thread instead of staying behind in `anon`'s. */
+   *  member switch they move into that member's thread instead of staying behind in `anon`'s.
+   *
+   *  A read that could not answer (`READ_FAILED`: a 5xx, a dropped connection) is not a sign-out —
+   *  the server answers a signed-out session 200 without `viewerId` — so it changes nothing: the
+   *  member, their open thread and their saved blob all stay (#7307, where one 503 deleted a
+   *  member's chat for good). A store not yet bound shows `anon`'s thread meanwhile, as before,
+   *  but forgets no one: the next read that answers decides whose chat this device keeps. */
   const applyBind = (
-    ob: Onboarding | undefined,
+    read: Onboarding | typeof READ_FAILED,
     carry: readonly MpMessage[] = [],
   ): Onboarding | undefined => {
-    const member = ob?.viewerId ?? "anon";
+    if (read === READ_FAILED) {
+      if (get().member === undefined) set({ ...load("anon"), member: "anon" });
+      return undefined;
+    }
+    const ob = read;
+    const member = ob.viewerId ?? "anon";
     const was = get().member;
     if (was !== member) {
       // A thread open under another member is not this one's (no row of theirs to show it on);
@@ -215,14 +233,29 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
       }
     }
     set({
-      connected: ob?.account !== undefined,
-      firstTradeDone: ob?.steps.some((s) => s.id === "first-trade" && s.done) ?? false,
-      messaged: ob?.steps.some((s) => s.id === "first-message" && s.done) ?? false,
+      connected: ob.account !== undefined,
+      firstTradeDone: ob.steps.some((s) => s.id === "first-trade" && s.done),
+      messaged: ob.steps.some((s) => s.id === "first-message" && s.done),
     });
     return ob;
   };
-  const bind = async (): Promise<Onboarding | undefined> =>
-    applyBind(await fetchOnboarding().catch(() => undefined));
+  const readOnboarding = () => fetchOnboarding().catch((): typeof READ_FAILED => READ_FAILED);
+  const bind = async (): Promise<Onboarding | undefined> => applyBind(await readOnboarding());
+
+  /** `hydrate`'s one read in flight, shared by every row that mounts while it is out. */
+  let hydrating: Promise<void> | undefined;
+  /** Untouched: never bound, and no turn started — a question asked meanwhile binds on its own
+   *  path (`sendPending`), carrying its lines, which a bare load here would overwrite. */
+  const untouched = () => {
+    const s = get();
+    return (
+      s.member === undefined &&
+      s.pending === undefined &&
+      !s.typing &&
+      !s.streaming &&
+      s.messages.length === 0
+    );
+  };
 
   /** A known thread's title and place follow its row (a story re-cut under the same id); one never
    *  asked about stays unknown until its first line lands (`append`). */
@@ -248,7 +281,7 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
    *  If the read was late, the question goes out under the member already known, and the read's
    *  answer is applied after the turn — carrying the question and her reply with it. */
   const sendPending = async (note: string) => {
-    const reading = fetchOnboarding().catch(() => undefined);
+    const reading = readOnboarding();
     const first = await Promise.race([
       reading,
       sleep(timing.bindWaitMs).then((): typeof LATE => LATE),
@@ -476,6 +509,18 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
           set({ thread: undefined });
         void get().openRail({ intro: true });
       }
+    },
+    hydrate: () => {
+      if (!untouched()) return Promise.resolve();
+      hydrating ??= fetchOnboarding()
+        .then((ob) => {
+          if (ob.viewerId !== undefined && untouched()) applyBind(ob);
+        })
+        .catch(() => undefined)
+        .finally(() => {
+          hydrating = undefined;
+        });
+      return hydrating;
     },
     newConversation: async () => {
       get().reset();

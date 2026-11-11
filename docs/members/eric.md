@@ -142,10 +142,9 @@ is still open is its step's `known_gap` in `e2e/journeys/eric.journey.json`):
   tooltip he cannot hover on a phone.
 - **Not one of the eight, and the one that matters most to him:** every decision surface is
   per position. The calendar of what he holds is a cockpit section (Events, j1 s3b). Even so, the split of his
-  money (`app/src/shell/money-strip.tsx`) has no target to be measured against, a "wait"
-  (`src/options/position-guidance-rules.ts`, `CALL_WORDS.WAIT`) has no book-level home and no
-  reopen date, and "Lock in profit" is a decision kind (`lock-in`, `app/src/live/desk.ts`),
-  not a rung celebrated beside its explanation.
+  money (`app/src/shell/money-strip.tsx`) has no target to be measured against. (A "wait" now has
+  a book-level home with its reopen date, #4608. Taking profit is now celebrated beside its explanation when a close of a
+  position marked Consider fills at a gain, #4609.)
 
 - **2026-10-08 — his own walk of the profile, in his words.** Kept out of this file until the blind
   member study (#4943) had been graded, so no member card could carry it; the study then found all
@@ -220,11 +219,14 @@ Each step: `goto` · what he sees · the EARS acceptance line · the judge line.
    `tests/options/position-guidance*.spec.ts`, which the crawl cannot reach without a quote).
    **WHEN the owner opens a position's guidance, the app shall open the guidance pane for that
    symbol and say when it cannot advise.** Judge: can this reader tell whether to take profit today?
-3. same page — a per-position sheet; nothing says what taking profit here does to the whole book,
-   and no win is celebrated. **WHEN a lever call says take profit, the app shall celebrate the rung
-   beside the explanation of why it was right.** _known gap — "Lock in profit" is a card kind, not
-   a celebrated rung (BRAND: celebration pairs with explanation)._ Judge: does this reader feel the
-   win and know why it was earned?
+3. same page — a per-position sheet; nothing says what taking profit here does to the whole book.
+   A close placed from it, on a position marked **Consider ▲**, that fills at a gain opens "Profit
+   locked in": the dollars, what they were on, whether the rest is still running, and why the call
+   was right (`app/src/shell/lock-in-ceremony.tsx`, #4609). **WHEN a close of a position the app
+   marked Consider fills at a gain, the app shall celebrate it beside the explanation of why it was
+   right.** _Fixed in the app; still a known gap for the walk — the frozen offline fixtures replay
+   no fill, so no step can reach the moment (its specs: `app/tests/shell/lock-in-ceremony.spec.tsx`)._
+   Judge: does this reader feel the win and know why it was earned?
 
 ### j3 — rebalance
 
@@ -232,10 +234,11 @@ Each step: `goto` · what he sees · the EARS acceptance line · the judge line.
    amount, with the cash ready to use. **WHEN the owner reads where the money is, the app shall
    show the split as amounts and shares of the whole.** _Fixed — crawl finding 9 (README → "Plus
    one run 0 found"); the step passes._ Judge: can this reader tell what is over- or under-weight?
-2. `/app/accounts` — the split, with nothing to compare it to. **WHEN the owner reads the split, the
-   app shall show it against a target allocation he set once, and name what to trim or add.**
-   _known gap — no target allocation exists anywhere; settings never asks for one._ Judge: can this
-   reader tell what to trim or add?
+2. `/app/accounts` — the split against the target split he set once in Settings → Target split.
+   **WHEN the owner reads the split, the app shall show it against a target allocation he set once,
+   and name what to trim or add.** _Fixed — #4607: each slice beside its target, ▲ over / ▼ under
+   in words, and what to trim or add in dollars; with no target yet, one link to set it. The step
+   passes._ Judge: can this reader tell what to trim or add?
 
 ### j4 — wait
 
@@ -243,10 +246,11 @@ Each step: `goto` · what he sees · the EARS acceptance line · the judge line.
    whose call is Wait, with what would change it. **WHEN a lever's call is wait, the app shall say
    so as a first-class call and name what would change it.** Judge: does this reader know they are
    waiting on purpose?
-2. `/app/accounts` — the book; no standing wait, no date that reopens the question. **WHEN the
-   owner has decided to wait, the app shall carry the wait on the book with the date that reopens
-   it.** _known gap — "wait" is per position only; nothing at book level carries a wait or a
-   reopen date._ Judge: does this reader know when to look again?
+2. `/app/accounts` — the book's Overview: with no wait, "Wait until a date…" under the next-date
+   line; once he names a day, "Wait until <day>" and his reason lead the money column, and the
+   reopen day is a ⧗ on Events (#4608). **WHEN the owner has decided to wait, the app shall carry
+   the wait on the book with the date that reopens it.** Judge: does this reader know when to look
+   again?
 
 ### j5 — the phone check (every step at 390×844, touch)
 
@@ -291,9 +295,11 @@ One line each; routed to `docs/IDEAS.md` or a `feedback` issue by the plan's sli
   with confidence, why and what proves it wrong. _(src: Eric · while: j2 s3)_
 - **A target allocation he sets once** (settings: shares / options / cash, or by playbook) that
   rebalance guidance reads and the money strip is drawn against — "what to trim or add" in words.
-  _(src: Eric · while: j3 s2)_
+  _(src: Eric · while: j3 s2)_ _Shipped as #4607 (shares / options / cash); "by playbook" is not
+  built._
 - **"Wait" as a first-class call with the date that reopens it** — carried on the book, not only
   in one position's sheet; the reopen date is a day on the calendar. _(src: Eric · while: j4 s2)_
+  _Shipped as #4608 (one wait per account, on Overview and on Events)._
 - **Profit-take celebration with its explanation beside it** — the rung, the number, and the
   sentence that says why it was right, in one frame (BRAND: celebration pairs with explanation;
   positive reinforcement never distorts honesty). _(src: Eric · while: j2 s3)_

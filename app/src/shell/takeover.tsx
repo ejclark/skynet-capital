@@ -1,5 +1,6 @@
 import { type ReactElement, type ReactNode, type RefObject, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import { usePrefs } from "./prefs";
 import { type FlareKind, flareTower } from "./tower-bus";
 
 /**
@@ -9,7 +10,9 @@ import { type FlareKind, flareTower } from "./tower-bus";
  * S&P, a streak). A caller brings its own content and its own "seen" rule; the shell owns what
  * must not drift between them:
  *  - Matrix-rain glyphs under a vignette behind the content. Static under `prefers-reduced-motion`
- *    (`new-high.css`); the content itself never moves.
+ *    AND under the member's own Settings → Display → "Tower motion" = Still (`prefs.ts`, #4609):
+ *    that setting is their pause for the page's ambient motion, and a celebration is no exception.
+ *    `nh-overlay--still` (`new-high.css`) stills the rain and every celebration's own entrance.
  *  - Leaving is one Escape, one click on the backdrop, or the caller's own button (`focus`, given
  *    focus on open).
  *  - Leaving is when the tower hears about it (`flare`): the Eye flares once as the page comes back
@@ -46,6 +49,7 @@ export function Takeover({
   readonly children: (leave: () => void) => ReactNode;
 }): ReactElement {
   const told = useRef(false);
+  const still = usePrefs((s) => s.crest) === "still";
   function leave(): void {
     onLeave();
     if (told.current) return;
@@ -64,7 +68,7 @@ export function Takeover({
 
   return createPortal(
     <div
-      className="nh-overlay"
+      className={still ? "nh-overlay nh-overlay--still" : "nh-overlay"}
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}

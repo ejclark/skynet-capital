@@ -24,7 +24,10 @@
 //   node scripts/issues.mjs link <parent> <child…>   (attach existing issues as sub-issues)
 //   node scripts/issues.mjs update 123 [--body-file b.md] [--title "…"] [--add a,b] [--remove c]
 //                                      [--close completed|not_planned] [--reopen] [--comment-file c.md]
-//                                      [--blocked-by a,b] [--edit-comment <id>]
+//                                      [--blocked-by a,b] [--edit-comment <id>] [--dry-run]
+//     (--dry-run prints every write it would make, a comment's full text included, and makes none.
+//      Every subcommand refuses a flag it does not read, and an empty --comment-file is refused —
+//      both before any write, #7352.)
 //     (--edit-comment <id> with --comment-file EDITS that comment in place instead of posting a new
 //      one — a state block's "edit in place". Both paths add the footer, so claude.yml's gate skips
 //      the wake: a raw `gh api --method PATCH` edit carried none and woke the interactive lane 28+
@@ -78,6 +81,39 @@ export function parseArgs(argv) {
     else positional.push(a);
   }
   return { cmd, positional, flags };
+}
+
+/**
+ * The flags each subcommand reads (#7352). Anything else is refused before a token is read or a
+ * write is made: parseArgs takes any `--word` as a boolean, so a flag a subcommand never reads was
+ * silently dropped — `update --dry-run` posted the comment it was asked to preview (#7308).
+ */
+export const KNOWN_FLAGS = {
+  create: ["title", "body-file", "labels", "force", "dry-run", "parent", "blocked-by", "closed"],
+  link: [],
+  update: [
+    "body-file",
+    "title",
+    "add",
+    "remove",
+    "close",
+    "reopen",
+    "comment-file",
+    "blocked-by",
+    "edit-comment",
+    "dry-run",
+  ],
+  search: ["label", "state", "limit", "json"],
+  show: ["json"],
+};
+
+/** The flags `cmd` does not read, as typed (`--x`). Empty for an unknown command — usage covers it. */
+export function unknownFlags(cmd, flags) {
+  const known = KNOWN_FLAGS[cmd];
+  if (!known) return [];
+  return Object.keys(flags)
+    .filter((f) => !known.includes(f))
+    .map((f) => `--${f}`);
 }
 
 export const csv = (s) =>
@@ -138,9 +174,37 @@ export function updateCommentOp({ n, flags, read = readBody }) {
   const editing = "edit-comment" in flags;
   if (editing && !flags["comment-file"])
     throw new Error("--edit-comment needs --comment-file (the new body)");
+  // Same presence rule as --edit-comment: a trailing `--comment-file` with no path is a refusal,
+  // not "no comment".
+  if ("comment-file" in flags && !flags["comment-file"])
+    throw new Error("--comment-file needs a file path");
   if (!flags["comment-file"]) return null;
   const editId = editing ? (flags["edit-comment"] ?? "") : undefined;
-  return commentWrite({ n, body: read(flags["comment-file"]), editId });
+  const body = read(flags["comment-file"]);
+  // #7352: an empty file posted a comment holding only the footer (#7308). Whitespace counts as
+  // empty — the comment it would post is the same footer-only one.
+  if (!String(body).trim())
+    throw new Error(
+      `--comment-file ${flags["comment-file"]} is empty — refusing to post a comment`,
+    );
+  return commentWrite({ n, body, editId });
+}
+
+/**
+ * What `update --dry-run` prints in place of its writes (#7352): one line per write, and a comment's
+ * or body's full text under its line, so the preview shows exactly what would be published.
+ */
+export function dryRunLines(ops) {
+  if (!ops.length) return ["dry-run: nothing to write"];
+  const lines = [];
+  for (const op of ops) {
+    const { body, ...rest } = op.payload ?? {};
+    const fields = Object.keys(rest).length ? ` ${JSON.stringify(rest)}` : "";
+    lines.push(`dry-run: would ${op.method} ${op.path}${fields}`);
+    if (body !== undefined) lines.push(String(body).trimEnd());
+  }
+  lines.push("dry-run: nothing written");
+  return lines;
 }
 
 const labelNames = (issue) => (issue.labels ?? []).map((l) => (typeof l === "string" ? l : l.name));
@@ -280,7 +344,7 @@ export function followUps({ child, parentNumber, blockers = [], afterLinks = [],
 
 // ─── IO (REST core bucket, curl so HTTPS_PROXY is honoured — see gh.mjs's ghRest header) ──────────
 
-function ghWrite(method, path, payload) {
+export function ghWrite(method, path, payload) {
   const out = sh(
     "curl",
     [
@@ -308,7 +372,7 @@ function ghWrite(method, path, payload) {
 }
 
 /** Every issue in `state` (PRs dropped — the issues endpoint returns both), newest first. */
-function listIssues(state = "open") {
+export function listIssues(state = "open") {
   return ghRestAll(`issues?state=${state}&sort=created&direction=desc`).filter(
     (i) => !i.pull_request,
   );
@@ -402,10 +466,23 @@ function update({ positional, flags }) {
   }
   if (flags.close) Object.assign(patch, { state: "closed", state_reason: flags.close });
   if (flags.reopen) patch.state = "open";
+  // Blockers are read before any write, as create does, so a bad number refuses before a PATCH lands.
+  const blockers = csv(flags["blocked-by"]).map((b) => ghRest(`issues/${Number(b)}`));
+  const links = followUps({ child: current, blockers });
+  if (flags["dry-run"]) {
+    const ops = [
+      ...(Object.keys(patch).length
+        ? [{ method: "PATCH", path: `issues/${n}`, payload: patch }]
+        : []),
+      ...(commentOp ? [commentOp] : []),
+      ...links,
+    ];
+    for (const line of dryRunLines(ops)) console.log(line);
+    return;
+  }
   const issue = Object.keys(patch).length ? ghWrite("PATCH", `issues/${n}`, patch) : current;
   if (commentOp) ghWrite(commentOp.method, commentOp.path, commentOp.payload);
-  const blockers = csv(flags["blocked-by"]).map((b) => ghRest(`issues/${Number(b)}`));
-  for (const op of followUps({ child: issue, blockers })) ghWrite(op.method, op.path, op.payload);
+  for (const op of links) ghWrite(op.method, op.path, op.payload);
   for (const b of blockers)
     console.log(`#${n} blocked by #${b.number} — it starts when that closes`);
   console.log(`${row(issue)}  ${issue.html_url}`);
@@ -475,6 +552,13 @@ if (isMain(import.meta.url)) {
   if (!run) {
     console.error(
       "usage: node scripts/issues.mjs <create|update|search|show|link> … (see file header)",
+    );
+    process.exit(2);
+  }
+  const unknown = unknownFlags(args.cmd, args.flags);
+  if (unknown.length) {
+    console.error(
+      `issues: refused — ${args.cmd} does not take ${unknown.join(", ")} (known: ${KNOWN_FLAGS[args.cmd].map((f) => `--${f}`).join(" ") || "none"}). Nothing was written.`,
     );
     process.exit(2);
   }

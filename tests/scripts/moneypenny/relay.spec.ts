@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import {
   type ClosedWithRemainder,
   executeRelay,
@@ -7,6 +8,7 @@ import {
   RELAY_CAP,
   RELAY_FROM,
   REMAINDER_LABELS,
+  type RelayIntent,
   relayLabels,
   relayTitle,
   routeRelay,
@@ -23,6 +25,13 @@ const noUpsert = () => {
 const only = <T>(intents: readonly T[]): T => {
   if (intents.length !== 1) throw new Error(`expected exactly one intent, got ${intents.length}`);
   return intents[0] as T;
+};
+
+/** `only`, narrowed to a relay — the cases that read the relay issue's own title and body. */
+const onlyRelay = (deps: Parameters<typeof routeRelay>[0]): RelayIntent => {
+  const intent = only(routeRelay(deps));
+  if (intent.kind !== "relay-remainder") throw new Error(`expected a relay, got ${intent.kind}`);
+  return intent;
 };
 
 // THE RELAY (#3818 slice 4, #4287). A sliced build writes its remainder onto the issue and marks it
@@ -46,7 +55,7 @@ const closed = (over: Partial<ClosedWithRemainder> = {}): ClosedWithRemainder =>
 
 describe("relay — which dropped remainders get carried", () => {
   it("relays a closed issue that still carries next-slice", () => {
-    const intent = only(routeRelay({ closedWithRemainder: [closed()] }));
+    const intent = onlyRelay({ closedWithRemainder: [closed()] });
 
     expect(intent.kind).toBe("relay-remainder");
     expect(intent.source).toBe(3595);
@@ -154,7 +163,7 @@ describe("relay — what the new issue carries", () => {
   });
 
   it("points at the source rather than restating a remainder nobody pinned the shape of", () => {
-    const intent = only(routeRelay({ closedWithRemainder: [closed()] }));
+    const intent = onlyRelay({ closedWithRemainder: [closed()] });
 
     expect(intent.body).toContain("The remainder of #3595 was never built");
     expect(intent.body).toContain("Done when:");
@@ -326,7 +335,9 @@ describe("relay — a remainder the closing PR built", () => {
 
     expect(finalSliceBy(issue)).toBe(6012);
     expect(notRelayableReason(issue)).toMatch(/closed by #6012/);
-    expect(routeRelay({ closedWithRemainder: [issue] })).toEqual([]);
+    expect(routeRelay({ closedWithRemainder: [issue] }).map((i) => i.kind)).toEqual([
+      "relay-clear-built",
+    ]);
   });
 
   it("relays a plain manual close that still carries the label", () => {
@@ -357,6 +368,43 @@ describe("relay — a remainder the closing PR built", () => {
 
     expect(finalSliceBy(issue)).toBeNull();
     expect(only(routeRelay({ closedWithRemainder: [issue] })).source).toBe(5214);
+  });
+
+  // #6880: a final slice that follows .github/pull_request_template.md keeps its Follow-ups
+  // comment ("…, the next slice."), and a last slice calls itself "the remaining" work. Neither
+  // states work still to build, so neither may cancel the #6014 fix on its main path.
+  it("does not relay when the closing PR is the real template plus Closes #N (#6880)", () => {
+    const template = readFileSync(".github/pull_request_template.md", "utf8");
+    const body = template.replace(/^-\s*$/m, "- Closes #5214 — slice 2, the last one.");
+    expect(body).toContain("the next slice");
+
+    expect(finalSliceBy(issue5214([prRef({ body })]))).toBe(6012);
+  });
+
+  it.each([
+    "- Closes #5214 — slice 2, the remaining 8 files.",
+    "- Closes #5214 — the remainder of the plan.",
+    "- Closes #5214 — what remained after slice 1: the 8 `.claude/` files.",
+  ])("does not relay when a final slice calls itself the remaining work: %s", (body) => {
+    expect(finalSliceBy(issue5214([prRef({ body })]))).toBe(6012);
+  });
+
+  it("does not count a pickup-style 'remaining' in a later comment as work left (#6880)", () => {
+    const issue = issue5214([
+      prRef(),
+      comment("2026-10-26T10:05:00Z", "Shipped the remaining 8 files in #6012."),
+    ]);
+
+    expect(finalSliceBy(issue)).toBe(6012);
+  });
+
+  it.each([
+    "- Closes #5214\n\n## Follow-ups\n\n- Remaining: the stop-limit leg.",
+    "- Closes #5214\n- The stop-limit leg remains to be built.",
+    "- Closes #5214\n- Slice 3 is left: the stop-limit leg.",
+    "- Closes #5214\n- Still to build: the stop-limit leg.",
+  ])("still relays when the closing PR's body names work still to build: %s", (body) => {
+    expect(finalSliceBy(issue5214([prRef({ body })]))).toBeNull();
   });
 
   it("relays when the PR only says Part of — an early slice never closes the issue", () => {
@@ -399,6 +447,105 @@ describe("relay — a remainder the closing PR built", () => {
     const rows = gatherRelayDeps({ read, labels: ["next-slice"] });
 
     expect(asked).toEqual(["issues?state=closed&labels=next-slice", "issues/5214/timeline"]);
-    expect(routeRelay({ closedWithRemainder: rows })).toEqual([]);
+    expect(routeRelay({ closedWithRemainder: rows }).map((i) => i.kind)).toEqual([
+      "relay-clear-built",
+    ]);
+  });
+});
+
+// #6888 (2026-11-05, pre-merge reviewer replay on #6222): an exemption decided above left the
+// remainder label on the issue, and only a relay ever took it off. So every later push listed the
+// issue again and paged its timeline again — one more core-bucket read per exemption, forever, and
+// one more uncaught throw point for the whole gather. These run whole ticks against a fake GitHub
+// whose labels change when the router writes, which is the only way the second tick can see what
+// the first one did.
+describe("relay — an exempted final slice is read once, not every push", () => {
+  const prRow = {
+    event: "cross-referenced",
+    created_at: "2026-10-26T10:00:52Z",
+    source: {
+      issue: {
+        number: 6012,
+        body: "## Summary\n\n- Closes #5214 — slice 2, the 8 `.claude/` files.",
+        pull_request: { merged_at: "2026-10-26T10:01:41Z" },
+      },
+    },
+  };
+
+  /** One closed issue on a fake GitHub: `read` serves the label query and the timeline from the
+   *  issue's current labels, and `run` applies a `--remove-label` to them. The default timeline is
+   *  #5214's: #6012 merged with `Closes #5214` a second before it closed. */
+  const fakeGitHub = (labels: string[], timeline: readonly Record<string, unknown>[] = [prRow]) => {
+    const state = { labels: [...labels], reads: [] as string[], writes: [] as string[][] };
+    const read = (path: string) => {
+      state.reads.push(path);
+      if (path.includes("/timeline")) return timeline;
+      const wanted = decodeURIComponent(/labels=([^&]+)/.exec(path)?.[1] ?? "");
+      if (!state.labels.includes(wanted)) return [];
+      return [
+        {
+          number: 5214,
+          title: "Move the agent files",
+          labels: state.labels.map((name) => ({ name })),
+          closed_at: "2026-10-26T10:01:42Z",
+          state_reason: "completed",
+          state: "closed",
+        },
+      ];
+    };
+    const run = (_cmd: string, args: readonly string[]) => {
+      state.writes.push([...args]);
+      for (let at = args.indexOf("--remove-label"); at >= 0; ) {
+        const gone = String(args[at + 1]).split(",");
+        state.labels = state.labels.filter((l) => !gone.includes(l));
+        at = args.indexOf("--remove-label", at + 1);
+      }
+      return "https://github.com/ejclark/skynet-capital/issues/9003";
+    };
+    const tick = () => {
+      const intents = routeRelay({ closedWithRemainder: gatherRelayDeps({ read }) });
+      for (const intent of intents) executeRelay(intent, { run, ensure: noUpsert });
+      return intents;
+    };
+    return { state, tick };
+  };
+  const timelineReads = (reads: readonly string[]) => reads.filter((p) => p.endsWith("/timeline"));
+
+  it("reads no timeline on the next tick for an issue it exempted on this one", () => {
+    const gh = fakeGitHub(["enhancement", "next-slice"]);
+
+    gh.tick();
+    const afterFirst = gh.state.reads.length;
+    gh.tick();
+
+    expect(timelineReads(gh.state.reads.slice(0, afterFirst))).toEqual(["issues/5214/timeline"]);
+    expect(timelineReads(gh.state.reads.slice(afterFirst))).toEqual([]);
+  });
+
+  it("clears every remainder label the issue carried, and files no relay issue", () => {
+    const gh = fakeGitHub(["enhancement", "next-slice", "needs-session"]);
+
+    const intents = gh.tick();
+
+    expect(gh.state.labels).toEqual(["enhancement"]);
+    expect(gh.state.writes.some((a) => a[1] === "create")).toBe(false);
+    expect(only(intents).source).toBe(5214);
+  });
+
+  it("says on the issue which PR built the remainder, so the label's removal has a record", () => {
+    const gh = fakeGitHub(["enhancement", "next-slice"]);
+
+    gh.tick();
+
+    const comment = gh.state.writes.find((a) => a[1] === "comment");
+    const body = String(comment?.[(comment?.indexOf("--body") ?? -2) + 1]);
+    expect(body).toContain("#6012");
+    expect(body).toContain("`next-slice`");
+  });
+
+  it("still files the relay, and only the relay, for a remainder nobody built", () => {
+    const gh = fakeGitHub(["enhancement", "next-slice"], []);
+
+    expect(only(gh.tick()).kind).toBe("relay-remainder");
   });
 });

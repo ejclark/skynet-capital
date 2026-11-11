@@ -152,3 +152,54 @@ registered forward test whose `Score by` has arrived (`forward-test-due`).
 
 **Last assessed:** 2026-11-08
 <!-- probe-ref: {"symbols":{},"vix":25.64,"daysBand":"low:0+","adjacentIds":["boe-decision-2026-11-05","boj-minutes-2026-11-05","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","erock-q3-2026-results-2026-11-12","existing-home-sales-2026-11-12","jgb-10y-auction-2026-11-05","jgb-30y-auction-2026-11-10","jgb-5y-auction-2026-11-12","jobs-2026-11-06","mts-october-2026-11-12","nbis-2026-11-12-print","ppi-2026-11-13","productivity-costs-q3-2026-11-05","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","sp-global-investment-manager-index-2026-11-10","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-3y-note-2026-11-09","treasury-buyback-1mo2y-2026-11-05","treasury-coupon-announcement-2026-11-12","uk-gdp-q3-first-2026-11-12","uk-gilt-auction-long-2026-11-10","umich-sentiment-prelim-2026-11-06","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","jobs-2026-11-06","nbis-2026-11-12-print"],"screenStreak":0,"blocked":[]} -->
+
+## Outcome
+
+**Close-out (2026-11-11, D+1, inside the `closeOutWithinDays: 6` window).** `symbols: []`, so no
+`earnings-cycle`/`intraday-edges` run has a target; the mandated cache bust ran first regardless. "Re-run
+data" here is a fresh Yahoo pull of `^N225`, `JPY=X`, `^VIX` and `^GSPC` (daily and 1-hour bars,
+2026-11-11) and a fresh direct fetch of MOF's release calendar. Stand aside stands as the final word: no
+trade was taken, none is authorized.
+
+**Date:** MOF's release calendar lists *November 10, 2026 — Preliminary: 1st half of FY2026,
+September 2026*, and its PDF `preliminary/bp202609.pdf` (HTTP 200, 153,477 B) is stamped `Last-Modified`
+Mon 09 Nov 2026 22:50:53 GMT, the same hour-early stamp the August PDF carries (07 Oct 22:50 GMT for the
+2026-10-08 release). The date held; the 08:50 JST minute is a proxy match, not a direct reading. The date
+stays `estimate` in the calendar: no confirmed source prefix exists for MOF and this lane may not
+self-confirm.
+
+**Headline figure not retrieved.** The release PDF is object-stream compressed with no text tool in this
+runner, and two searches found no September 2026 or April-September 2026 current-account number. Nothing
+scored below depends on it, but the ledger's "beat or miss" question for September is **unanswered**,
+so the 12-08 ledger's surprise-leg has no second datum from this print.
+
+| Tape (Yahoo, 2026-11-10) | Reading | Prior |
+|---|---|---|
+| Nikkei 225 open vs prior close | **59,372.28 vs 58,775.50 = +1.02%** | 11-09 close; 10-08 (Aug print) was −0.28% |
+| Nikkei 225 close-to-close | about **+2.9%** (derived; the daily bar is null) | 11-06 had closed −5.96% |
+| USD/JPY close-to-close | **157.98 vs 158.29 = −0.20%** | 10-08 (Aug print) 0.00% |
+| VIX | **19.46** (19.92 on 11-09; 25.64 on 11-06) | regime had cooled |
+| S&P 500 | 7,520.93 (−0.38%) | 11-09 +2.3% |
+
+**Scored** ([fragment](../forward-tests/japan-balance-of-payments-2026-11-10.md)):
+
+| Test | Verdict |
+|---|---|
+| FT-japan-balance-of-payments-2026-11-10-1 (date and 08:50 JST) | **pass** (date direct; minute by proxy) |
+| FT-japan-balance-of-payments-2026-11-10-2 (USD/JPY \|move\| < 1.0%) | **pass**, −0.20% |
+| FT-japan-balance-of-payments-2026-11-10-3 (Nikkei \|gap\| < 1.0%) | **kill**, +1.02%, a 0.015-point margin |
+
+**What the model got right and wrong.** The yen leg held and the open leg did not, narrowly. The gap was
+a rebound after a −5.96% session and a +2.3% Monday, with the BoJ Summary of Opinions in the same minute,
+so the tape cannot credit the print. It does not touch the stance: `symbols: []`, so no gap moves anything we hold. It
+does cost the 12-08 ledger a datum: the open is **no longer 1-for-1 quiet** on this series (10-08 −0.28%,
+11-10 +1.02%), and the 12-08 ledger's both-≥1.0% falsifier stays unfired (10-08 was 0.28%). That ledger's
+next pulse reads this row; it is not edited here. FT-3 goes on the kill list as one marginal observation
+in a high-vol regime, not as a refutation of the null.
+
+**Adjacency:** CPI 11-10 and the tariff-truce expiry shared the day (see their ledgers); nothing dated
+past the horizon was found. No conviction proposal or declared intent names this event
+(`conviction-proposals.mjs` and `intents.mjs` printed `[]` at initial research). **This document is now closed.**
+
+**Last assessed:** 2026-11-11
+<!-- probe-ref: {"symbols":{},"vix":19.46,"daysBand":"closed","adjacentIds":["boe-decision-2026-11-05","boj-minutes-2026-11-05","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","jgb-30y-auction-2026-11-10","sp-global-investment-manager-index-2026-11-10","treasury-10y-note-2026-11-10","uk-gilt-auction-long-2026-11-10","us-china-tariff-truce-expiry-2026-11-10"],"adjacentStrongIds":["cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10"],"screenStreak":0,"blocked":[]} -->

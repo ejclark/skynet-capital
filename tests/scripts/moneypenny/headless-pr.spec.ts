@@ -205,7 +205,10 @@ describe("gatherHeadless — the #7089 head, read through REST", () => {
 
 describe("audit — the headless deps feed the intent list", () => {
   it("emits nudge-headless from deps.headless", () => {
-    const intents = audit({ headless: [headless()] });
+    const workMode = { trackingIssue: 1, title: null, mode: { position: "normal" } };
+    const intents = audit({ headless: [headless()], workMode } as unknown as Parameters<
+      typeof audit
+    >[0]);
     expect(intents.map((i: { kind: string }) => i.kind)).toContain("nudge-headless");
   });
 
