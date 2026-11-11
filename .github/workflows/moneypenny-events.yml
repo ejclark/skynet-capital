@@ -955,6 +955,18 @@ jobs:
           client-id: ${{ vars.APP_CLIENT_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
+      # START CI ON A PR THE JOB TOKEN OPENED (#5936). Past the hour the session opens its PR with
+      # the job token, whose events start no workflow (#5935 waited 48h, #7089 16h). With the fresh
+      # App token, one body edit on a check-less `feedback/<n>` PR sends `pull_request.edited`, which
+      # starts `verify` and the arm job. A PR whose CI started is never touched; a refusal warns only.
+      - if: always() && needs.route.outputs.feedback_issue != ''
+        name: Start CI on a lane PR the job token opened
+        # A step that fails would make `failure()` true for the lease release below; this one only reports.
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ steps.app-token-late.outputs.token }}
+        run: node scripts/moneypenny/rekick-pr.mjs feedback-${{ needs.route.outputs.feedback_issue }}
+
       # THE LEASE IS PART OF THE TERMINAL-STATE PROMISE. A build that dies leaves the issue claimed
       # for the full 2h TTL, so a member's feedback reads as "in progress" while nothing is running
       # and a re-label is a no-op — the exact shape that hid three separate failures on 2026-08-22.
@@ -1093,6 +1105,15 @@ jobs:
         with:
           client-id: ${{ vars.APP_CLIENT_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      # Start CI on a `plan/<n>` PR the job token opened — see the same step on `build-feedback`.
+      - if: always() && needs.route.outputs.plan_issue != ''
+        name: Start CI on a lane PR the job token opened
+        # A step that fails would make `failure()` true for the lease release below; this one only reports.
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ steps.app-token-late.outputs.token }}
+        run: node scripts/moneypenny/rekick-pr.mjs plan-${{ needs.route.outputs.plan_issue }}
 
       # Same terminal-state promise as the feedback lane: a build that dies must not leave the issue
       # claimed for the full 2h TTL while looking "in progress" with nothing running.

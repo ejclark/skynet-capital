@@ -20,13 +20,20 @@
 // Subagent text reaches the workflow result HTML-escaped (`&lt;details&gt;`), so every string is
 // unescaped before it is posted — otherwise the comment renders the entities literally.
 //
+// Refusals are remembered (#7311 slice 3): every `refuted` and `notClear` entry is appended to
+// `flip/refusals.jsonl` on the `data/pr-review` branch, so scripts/flip-due.mjs leaves it out of the
+// next list for 7 days. The record is bookkeeping, not an authorization: a failed write warns and
+// the posts go on, and the worst case is one issue judged again.
+//
 // Exit 0: every survivor posted (or nothing to post). Exit 1: refused or a write failed. Gate on
 // the exit status, never through `| tail` (a pipeline reports the last command's status).
 // Token: GH_TOKEN or GITHUB_TOKEN, else `gh auth token`. REST core bucket, curl so HTTPS_PROXY holds.
 import { readFileSync } from "node:fs";
+import { FLIP_REFUSALS_PATH, readiedRows, refusalRows } from "./flip-refusals.mjs";
 import { isMain } from "./is-main.mjs";
 import { ensureGhToken, ghRest, sh } from "./moneypenny/gh.mjs";
 import { FOOTER } from "./moneypenny/labels.mjs";
+import { appendLedgerRows } from "./pr-review/ledger.mjs";
 
 const REPO = () => process.env.GITHUB_REPOSITORY ?? "ejclark/skynet-capital";
 const CHECKS = ["criteria", "size", "noFork", "notBlocked"];
@@ -128,6 +135,26 @@ function ghWrite(method, path, payload) {
   );
 }
 
+/**
+ * Remember the refusals for flip-due.mjs. A failed write is a warning, never a failed run — and a
+ * missing token is one more failed write: a run with nothing to post must still exit 0 (#7380
+ * closed red on exactly that, the token lookup sitting outside this try).
+ */
+function recordRefusals(rows, what = "refusal") {
+  if (!rows.length) return;
+  try {
+    ensureGhToken();
+    appendLedgerRows(FLIP_REFUSALS_PATH, rows, {
+      message: `chore(flip): ${rows.length} ${what}(s) to ${FLIP_REFUSALS_PATH}`,
+    });
+    console.log(`clear-path-post: recorded ${rows.length} ${what}(s)`);
+  } catch (err) {
+    console.log(
+      `::warning::could not record ${rows.length} flip ${what}(s): ${String(err?.stderr || err?.message).slice(0, 200)}`,
+    );
+  }
+}
+
 function main(argv) {
   const file = argv.find((a) => !a.startsWith("--"));
   const dryRun = argv.includes("--dry-run");
@@ -136,12 +163,16 @@ function main(argv) {
     return 1;
   }
   let plan;
+  let refusals;
   try {
-    plan = planPosts(JSON.parse(readFileSync(file, "utf8")));
+    const result = JSON.parse(readFileSync(file, "utf8"));
+    plan = planPosts(result);
+    refusals = refusalRows(result, new Date().toISOString());
   } catch (err) {
     console.error(`clear-path-post: ${err.message}`);
     return 1;
   }
+  if (!dryRun) recordRefusals(refusals);
   if (!plan.length) {
     console.log("clear-path-post: no survivors — nothing to post");
     return 0;
@@ -150,11 +181,14 @@ function main(argv) {
     for (const p of plan) {
       console.log(`── #${p.issue} ${p.title} → labels: ${p.labels.join(", ")}\n${p.body}`);
     }
-    console.log(`clear-path-post: dry run — ${plan.length} would post`);
+    console.log(
+      `clear-path-post: dry run — ${plan.length} would post, ${refusals.length} refusal(s) would be recorded`,
+    );
     return 0;
   }
   ensureGhToken();
   let failed = 0;
+  const flipped = [];
   for (const p of plan) {
     try {
       const skip = liveSkip(ghRest(`issues/${p.issue}`));
@@ -165,12 +199,15 @@ function main(argv) {
       // Comment first: a label with no paper trail is the one outcome the flip rule forbids.
       ghWrite("POST", `issues/${p.issue}/comments`, { body: p.body });
       ghWrite("POST", `issues/${p.issue}/labels`, { labels: p.labels });
+      flipped.push(p.issue);
       console.log(`#${p.issue} flipped — ${p.labels.join(" + ")}`);
     } catch (err) {
       failed++;
       console.error(`#${p.issue} FAILED — ${String(err.stderr || err.message).trim()}`);
     }
   }
+  // The yield's numerator (#7311 slice 4): only issues a flip actually readied, bookkeeping like the refusals.
+  recordRefusals(readiedRows(flipped, new Date().toISOString()), "readied");
   return failed ? 1 : 0;
 }
 

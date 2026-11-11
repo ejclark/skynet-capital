@@ -63,12 +63,68 @@ describe("fitness judges", () => {
     expect(judgeMachine([standby]).status).toBe("fail");
   });
 
-  it("fails every state that is not started, not only stopped", () => {
-    for (const state of ["suspended", "replacing", "failed", "destroying", "created"]) {
-      const verdict = judgeMachine([standby, { state, config: {} }]);
-      expect(verdict.status).toBe("fail");
-      expect(verdict.detail).toContain(state);
+  it("fails every settled state that is not started, not only stopped", () => {
+    for (const state of ["suspended", "failed", "destroying", "created", "restarting"]) {
+      const verdict = judgeMachine([standby, { state, config: {} }], NOW);
+      expect(verdict).toEqual({ status: "fail", detail: `machine is ${state}` });
     }
+  });
+
+  // #6700: a tick mid-deploy opened #6686, promising a start the start script never makes.
+  it("gives a state a deploy passes through the deploy grace, then fails it with a fix for it", () => {
+    const at = (state: string, ms: number, field: "event" | "updated_at" = "event") =>
+      judgeMachine(
+        [
+          standby,
+          field === "event"
+            ? {
+                state,
+                config: {},
+                events: [
+                  { type: "update", status: state, timestamp: NOW - 60 * MIN },
+                  { type: "update", status: state, timestamp: NOW - ms },
+                  { type: "exit", status: "stopped", timestamp: NOW - ms / 2 },
+                ],
+              }
+            : { state, config: {}, updated_at: iso(NOW - ms) },
+        ],
+        NOW,
+      );
+    for (const state of ["replacing", "updating", "stopping", "starting"]) {
+      expect(at(state, 2 * MIN)).toEqual({
+        status: "quiet",
+        detail: `machine is ${state}, inside the 20 min deploy grace`,
+      });
+    }
+    // The newest event in that state ages it, and updated_at stands in when no event does.
+    expect(at("replacing", 20 * MIN).status).toBe("quiet");
+    expect(at("replacing", 20 * MIN + 1000).status).toBe("fail");
+    expect(at("replacing", 5 * MIN, "updated_at").status).toBe("quiet");
+    const wedged = at("replacing", 25 * MIN, "updated_at");
+    expect(wedged).toMatchObject({
+      status: "fail",
+      detail: "machine is replacing past the 20 min deploy grace",
+      rung: "wait",
+      attempts: undefined,
+    });
+    expect(wedged.corrector).toContain("stopping the machine");
+    expect(whatHappensNext(wedged)).toBe(
+      "The owner is assigned if this still fails after 2 hours.",
+    );
+    // Two clocks differ by seconds; a date it cannot age is not young.
+    expect(at("replacing", -30_000).status).toBe("quiet");
+    expect(at("replacing", -60 * MIN).detail).toBe(
+      "machine is replacing and when it began cannot be dated",
+    );
+    const undated = judgeMachine([standby, { state: "replacing", config: {} }], NOW);
+    expect(undated).toMatchObject({
+      status: "fail",
+      detail: "machine is replacing and when it began cannot be dated",
+    });
+    expect(undated.corrector).toContain("stopping the machine");
+    // A stopped machine is still the start script's, as before.
+    const stopped = judgeMachine([standby, { state: "stopped", config: {} }], NOW);
+    expect(stopped).toEqual({ status: "fail", detail: "machine is stopped" });
   });
 
   it("passes a stop a person marked", () => {

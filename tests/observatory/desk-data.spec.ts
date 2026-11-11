@@ -270,6 +270,8 @@ describe("fillsFrom (lifecycle events, #468 criterion 6)", () => {
         price: 0,
         at: "t2",
         synthetic: true,
+        // Only the assignment says so (#7306): an assigned put's premium is not its outcome.
+        assigned: true,
       },
     ]);
   });

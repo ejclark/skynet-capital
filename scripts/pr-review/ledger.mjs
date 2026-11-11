@@ -18,13 +18,17 @@
 // The branch is an orphan made on the first write, so it carries the data and no copy of the code.
 //
 // The post-merge audit's receipt rides the same branch at `audit/YYYY-MM-DD.jsonl`, in the shape
-// scripts/agent-meter/defects.mjs already reads, which is what fixes #6683.
+// scripts/agent-meter/defects.mjs already reads, which is what fixes #6683. Beside the receipts sits
+// `audit/marker.json`, one object naming the main commit the last due-checked audit covered, so
+// scripts/audit-due.mjs can say "is an audit due?" in one read (#7311).
 import { sleepSync, withRetry } from "../moneypenny/gh.mjs";
 import { defaultApi, isConflict, isNotFound } from "./rest.mjs";
 
 export const LEDGER_BRANCH = "data/pr-review";
 export const ledgerPath = (date) => `ledger/${date}.jsonl`;
 export const receiptPath = (date) => `audit/${date}.jsonl`;
+/** Where the last due-checked audit stopped on main (#7311): scripts/audit-due.mjs reads it. */
+export const AUDIT_MARKER_PATH = "audit/marker.json";
 
 const DATE = /^\d{4}-\d\d-\d\d$/;
 const REASON_CAP = 300;
@@ -197,6 +201,40 @@ export function appendLedgerRows(
           api.send("PUT", contents(path), {
             message: message ?? `chore(pr-review): ${rows.length} row(s) to ${path}`,
             content: Buffer.from(appendJsonl(file?.body ?? "", rows)).toString("base64"),
+            branch: LEDGER_BRANCH,
+            ...(file?.sha ? { sha: file.sha } : {}),
+          }),
+        { sleep },
+      );
+      return path;
+    } catch (err) {
+      if (!isConflict(err) || n === attempts - 1) throw err;
+      sleep(250 * 2 ** n);
+    }
+  }
+  return path;
+}
+
+/**
+ * Replace one whole file on the ledger branch (the audit's marker, #7311): a single JSON object
+ * whose newest write is the only one that matters, so it overwrites rather than appends. Sha-checked
+ * like an append, so a racing writer re-reads and writes again instead of failing on a stale sha.
+ */
+export function writeLedgerFile(
+  path,
+  text,
+  { api = defaultApi(), attempts = 4, sleep = sleepSync, message } = {},
+) {
+  for (let n = 0; n < attempts; n++) {
+    const file = readLedgerFile(path, { api });
+    if (file?.body === text) return path; // a 5xx write that landed, or nothing to change
+    if (!file) ensureLedgerBranch({ api });
+    try {
+      withRetry(
+        () =>
+          api.send("PUT", contents(path), {
+            message: message ?? `chore(pr-review): write ${path}`,
+            content: Buffer.from(text).toString("base64"),
             branch: LEDGER_BRANCH,
             ...(file?.sha ? { sha: file.sha } : {}),
           }),

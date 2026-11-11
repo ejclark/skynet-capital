@@ -85,6 +85,7 @@ export function fillsFrom(
         ...(row.price !== undefined ? { price: row.price * scale } : {}),
         at: row.at,
         ...(LIFECYCLE_SYNTHETIC_CLOSE.has(row.status) ? { synthetic: true } : {}),
+        ...(row.status === LIFECYCLE_STATUS.OPASN ? { assigned: true } : {}),
         ...(tag?.playbookId ? { playbookId: tag.playbookId } : {}),
         ...(tag?.playbookMode ? { playbookMode: tag.playbookMode } : {}),
         ...(tag?.initiator ? { initiator: tag.initiator } : {}),

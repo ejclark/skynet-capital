@@ -98,6 +98,7 @@ import {
   writeIssueBody,
 } from "./decision-callout.mjs";
 import { executeDialTap, executeDialTidy, routeDial } from "./dial-tap.mjs";
+import { closeStaleDiscovery, flagStaleDiscovery } from "./discovery-pr-sweep.mjs";
 import { dueForResearch, RECEIPT_TITLE_RE, routeSweep } from "./events.mjs";
 import { guardFeedbackOutcome } from "./feedback-guard.mjs";
 import { ghRest, ghRestAll, sh, withRetry } from "./gh.mjs";
@@ -119,7 +120,7 @@ import { feedbackReadyIntent, planReadyIntent } from "./plan-claim.mjs";
 import { executePlanClose, gatherPlanCloseDeps } from "./plan-close.mjs";
 import { openPrsByIssue } from "./pr-issues.mjs";
 import { closeRedLanePr } from "./red-lane-pr.mjs";
-import { executeRelay, gatherRelayDeps, routeRelay } from "./relay.mjs";
+import { executeRelay, gatherRelayDeps, RELAY_KINDS, routeRelay } from "./relay.mjs";
 import { replyResumeIntent } from "./reply-resume.mjs";
 import {
   closeSupersededResearch,
@@ -1583,11 +1584,11 @@ function executeSweepIntent(i) {
     console.log(`::warning::${line}`);
     return line;
   }
-  if (i.kind === "relay-remainder") {
-    // The three writes (file the relay, receipt the source, clear the remainder label) live in
+  if (RELAY_KINDS.has(i.kind)) {
+    // The writes (file the relay or not, receipt the source, clear the remainder label) live in
     // relay.mjs so its own CLI can reuse them without importing this router.
     const line = executeRelay(i);
-    console.log(`::notice::relayed #${i.source}'s remainder — ${i.title}`);
+    console.log(`::notice::${line}`);
     return line;
   }
   return undefined;
@@ -1620,6 +1621,9 @@ const ONE_CALL_INTENTS = {
   "close-superseded-research": (i) => closeSupersededResearch(i),
   "flag-red-research": (i) => flagRedResearch(i),
   "report-research-sweep": (i) => reportResearchSweep(i),
+  // #7341 — the discovery-PR sweep: the writes live in discovery-pr-sweep.mjs beside the decision.
+  "close-stale-discovery": (i) => closeStaleDiscovery(i),
+  "flag-stale-discovery": (i) => flagStaleDiscovery(i),
   "edit-issue-body": (i) => {
     sh("gh", ["issue", "edit", String(i.issueNumber), "--body", i.body]);
     console.log(`· refreshed the body of #${i.issueNumber}`);

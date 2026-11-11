@@ -115,6 +115,14 @@ export function ensureRoleField(deps: {
   log?: (line: string) => void;
 }): LiveSelectField | undefined;
 
+/** Keep the Priority lanes' option descriptions equal to the P labels'; fail-open (#6871 §12b). */
+export function ensurePriorityDescriptions(deps: {
+  board: BoardContext;
+  write?: (fieldId: string, options: StatusFieldOption[]) => unknown;
+  dryRun?: boolean;
+  log?: (line: string) => void;
+}): void;
+
 export function planReconcile(input?: {
   items?: ReconcileItem[];
   openIssues?: RestIssue[];
@@ -148,6 +156,11 @@ export function reconcileBoard(deps?: {
     dryRun: boolean;
     log: (line: string) => void;
   }) => LiveSelectField | undefined;
+  ensurePriority?: (deps: {
+    board: BoardContext;
+    dryRun: boolean;
+    log: (line: string) => void;
+  }) => void;
   readMode?: () => DialReading & { warning?: string };
   buildContext?: (openIssues: RestIssue[]) => ColumnContext;
   statusOf?: (item: ReconcileItem) => string | null | undefined;

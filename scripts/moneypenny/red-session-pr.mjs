@@ -25,6 +25,13 @@
 // belongs. And the workflow keys its concurrency on the workflow's name, so a repair session running
 // for one PR holds Pipeline's slot and GitHub keeps only the newest event waiting behind it.
 //
+// SO THE DISPATCH IS HELD (#6727). #6669 shipped it live anyway, and the first session it sent (#6716,
+// at PR #6714) could only open a second PR off `main` or stop on `needs-eric`, spending the PR's one
+// attempt without the fix ever reaching its branch. Until both protected edits land, a red session PR
+// gets its one line and keeps its attempt (`attempted=0`). Lifting the hold is one constant, flipped in
+// the same change as the prompt and the concurrency key: red-session-pr.spec.ts reads both protected
+// files and fails if the dispatch can fire while either is still missing (#6733).
+//
 // SHAPE. Pure core (`routeRedSessionPr`) and a thin gather, like repair.mjs, so every branch is
 // fixture-drivable. repair.mjs's `execute` is the act: the triage step runs with no `npm ci`, so nothing
 // this file reaches may import a package.
@@ -41,6 +48,10 @@ const PIPELINE = "Pipeline";
 export const RED_ATTEMPT_CAP = 1;
 /** Filled in by the act, once the capsule has a number. */
 export const CAPSULE_SLOT = "{capsule}";
+/** #6727: no session until its orders can push to the PR's own branch. See the header. */
+export const RED_PR_DISPATCH_HELD = true;
+const HELD_REASON =
+  "repair sessions are held for PRs until their orders can push a fix to the PR's own branch (#6727)";
 
 const HOLDING = [...REQUIRED_CHECKS, ...ARM_GATE_CHECKS];
 /** The last line of every session's PR body (`ship.sh checkbody`, .github/pull_request_template.md). */
@@ -160,9 +171,11 @@ function capsuleBody(run, pr, failure, red, files) {
  *
  * @param ctx {{ run: object, defaultBranch?: string, failures: object[] }}
  * @param deps {{ pr?: object, files?: string[], comments?: object[], gate?: {dispatch: boolean, reason: string}, rules?: object[], openIssues?: {number: number, title: string}[] }}
+ * @param opts {{ held?: boolean }} — the hold, a third argument so an event fixture's `deps` cannot
+ *   lift it; the spec passes `held: false` to keep the dispatch path itself under test.
  * @returns intents — `[]` means this run was not about a red PR at all.
  */
-export function routeRedSessionPr(ctx, deps = {}) {
+export function routeRedSessionPr(ctx, deps = {}, { held = RED_PR_DISPATCH_HELD } = {}) {
   const run = ctx.run ?? {};
   const red = redChecks(run, ctx.failures);
   const { pr, files = [], comments = [], gate, rules = [] } = deps;
@@ -212,6 +225,7 @@ export function routeRedSessionPr(ctx, deps = {}) {
   }
   if (!gate) return noSession("the work dial could not be read");
   if (!gate.dispatch) return noSession(gate.reason);
+  if (held) return noSession(HELD_REASON);
 
   return [
     {

@@ -28,6 +28,7 @@ import type { AccountAdmin } from "./account-forms.js";
 import type { Authenticator } from "./auth/authenticator.js";
 import type { AuthoredPlayStore } from "./authored-play-store.js";
 import type { BookHealthHistoryPort } from "./book-health-history-store.js";
+import type { BookWaitStore } from "./book-wait-store.js";
 import type { CampaignQuestionsStore } from "./campaign-questions-store.js";
 import type { ClaimDeps } from "./claim-form.js";
 import type { CommunityProgressionService } from "./community-progression-service.js";
@@ -62,6 +63,7 @@ import type { QuoteStreamPort } from "./quote-stream-hub.js";
 import type { SavedPositionsStore } from "./saved-positions-store.js";
 import type { SubscriptionStore } from "./subscription-store.js";
 import type { TakenQuestStore } from "./taken-quest-store.js";
+import type { TargetSplitStore } from "./target-split-store.js";
 import type { SubmitDeskTrade } from "./trade-service.js";
 import type { WireRouteDeps } from "./wire-routes.js";
 
@@ -371,6 +373,12 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    */
   readonly savedPositions?: SavedPositionsStore;
   /**
+   * A MEMBER'S TARGET SPLIT (#4607) — shares, options and cash as the member wants them, plus one
+   * tolerance, set on Settings and carried across devices. Omit to disable (offline mode): the
+   * section says it isn't wired and the money row renders as it always has.
+   */
+  readonly targetSplits?: TargetSplitStore;
+  /**
    * THE EXIT PLANS MEMBERS CARRIED (#5709 slice 3) — the house's long-call plan, recorded against a
    * contract when a member taps Carry in the options ticket's review step. Omit to disable (offline
    * mode): the review still shows the plan, and the receipt says it was not saved.
@@ -382,6 +390,12 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * mode): orders place as ever, and the scores answer empty.
    */
   readonly takenQuests?: TakenQuestStore;
+  /**
+   * THE WAITS MEMBERS SET ON THEIR BOOKS (#4608) — one per account: the day the question reopens
+   * and the member's reason. Omit to disable (offline mode): reads answer no wait, and a set answers
+   * "not wired in this deployment." A wait places and cancels nothing.
+   */
+  readonly bookWaits?: BookWaitStore;
   /**
    * THE AUTHORED PLAYS STORE (#5457 slice 1) — the drafts a member writes on R&D → Playbooks. Omit to
    * disable (offline mode): the list answers empty and a save answers "not wired in this deployment."

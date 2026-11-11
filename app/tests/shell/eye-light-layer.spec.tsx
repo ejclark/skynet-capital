@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-router";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useRef } from "react";
+import { CALENDAR_ANCHOR } from "../../../src/domain/edition-keys";
 import { requestLight, useEyeLight } from "../../src/shell/eye-light";
 import { EyeLight } from "../../src/shell/eye-light-layer";
 
@@ -31,18 +32,24 @@ async function mount() {
     getParentRoute: () => root,
     path: "/accounts",
     component: () => (
-      <table>
-        <tbody>
-          <tr id="pos-NVDA">
-            <td>NVDA</td>
-          </tr>
-          <tr id="pos-AAPL">
-            <td>
-              <button type="button">AAPL</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <>
+        <table>
+          <tbody>
+            <tr id="pos-NVDA">
+              <td>NVDA</td>
+            </tr>
+            <tr id="pos-AAPL">
+              <td>
+                <button type="button">AAPL</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        {/* The landing calendar's section, by its real anchor (#7337). */}
+        <section id={CALENDAR_ANCHOR}>
+          <h2>the calendar</h2>
+        </section>
+      </>
     ),
   });
   const trade = createRoute({
@@ -115,5 +122,100 @@ describe("EyeLight · the ring on the item her link names", () => {
     await act(() => router.navigate({ to: "/trade" }));
     await screen.findByText("the ticket");
     expect(document.querySelector("[data-eye-ring]")).toBeNull();
+  });
+});
+
+// #7337 — her `[N more on the calendar](/#calendar)` link only scrolls (`landing.css` says why: an
+// outline round the whole calendar would mark nothing). The light neither rings the section nor
+// re-centres it over the landing's top-aligned scroll.
+describe("EyeLight · her link to the whole calendar", () => {
+  let restore: () => void;
+  let blocks: unknown[];
+  const scrollIntoView = Element.prototype.scrollIntoView;
+  beforeEach(() => {
+    useEyeLight.setState({ request: undefined });
+    restore = layOut();
+    // The calendar is taller than the window and starts below it, as on a phone: the light's own
+    // "wholly in view" check fails, which is what made it call `scrollIntoView({block:"center"})`.
+    const box = Element.prototype.getBoundingClientRect;
+    const tall = { top: 900, left: 400, width: 600, height: 1400, bottom: 2300, right: 1000 };
+    Element.prototype.getBoundingClientRect = function (this: Element) {
+      return this.id === CALENDAR_ANCHOR ? (tall as DOMRect) : box.call(this);
+    };
+    blocks = [];
+    Element.prototype.scrollIntoView = function (this: Element, arg?: unknown) {
+      if (this.id === CALENDAR_ANCHOR) blocks.push((arg as ScrollIntoViewOptions)?.block ?? arg);
+    };
+  });
+  afterEach(() => {
+    restore();
+    Element.prototype.scrollIntoView = scrollIntoView;
+  });
+
+  /** Long enough for the light to find the section, see it hold still, and act on it. */
+  const settle = () => act(() => new Promise((r) => setTimeout(r, 600)));
+
+  it("draws no ring round the calendar and never re-centres it", async () => {
+    await mount();
+    act(() => requestLight(`/#${CALENDAR_ANCHOR}`));
+    await settle();
+    expect(blocks).not.toContain("center");
+    expect(document.querySelector("[data-eye-ring]")).toBeNull();
+  });
+
+  it("lets go of a ring on an earlier item, as any newer link of hers does", async () => {
+    await mount();
+    act(() => requestLight("/accounts#pos-NVDA"));
+    await waitFor(() => expect(document.querySelector("[data-eye-ring]")).not.toBeNull());
+    act(() => requestLight(`/#${CALENDAR_ANCHOR}`));
+    await settle();
+    expect(document.querySelector("[data-eye-ring]")).toBeNull();
+  });
+});
+
+// #7227 — the item the Eye lands on lifts its own edge, and is wholly in view first: with the
+// phone's chat over the whole page nothing is, so the light waits for the chat to close.
+describe("EyeLight · the landing, articulated, on an item in view", () => {
+  let restore: () => void;
+  let chat: HTMLElement | undefined;
+  beforeEach(() => {
+    useEyeLight.setState({ request: undefined });
+    restore = layOut();
+    const box = Element.prototype.getBoundingClientRect;
+    Element.prototype.getBoundingClientRect = function (this: Element) {
+      if (!this.classList.contains("mp-rail")) return box.call(this);
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      return { top: 0, left: 0, width: w, height: h, bottom: h, right: w } as DOMRect;
+    };
+  });
+  afterEach(() => {
+    chat?.remove();
+    chat = undefined;
+    restore();
+  });
+
+  /** Long enough for the light to find the item, see it hold still, and act on it. */
+  const settle = () => act(() => new Promise((r) => setTimeout(r, 600)));
+
+  it("lifts the item's own edge while the ring holds it, and lets it settle when it goes", async () => {
+    await mount();
+    const row = document.getElementById("pos-NVDA") as HTMLElement;
+    act(() => requestLight("/accounts#pos-NVDA"));
+    await waitFor(() => expect(row).toHaveAttribute("data-eye-lit"));
+    fireEvent.pointerDown(screen.getByRole("button", { name: "AAPL" }));
+    expect(row).not.toHaveAttribute("data-eye-lit");
+  });
+
+  it("waits while the chat covers the whole page, and lands once it closes", async () => {
+    await mount();
+    chat = document.createElement("aside");
+    chat.className = "mp-rail";
+    document.body.append(chat);
+    act(() => requestLight("/accounts#pos-NVDA"));
+    await settle();
+    expect(document.querySelector("[data-eye-ring]")).toBeNull();
+    chat.remove();
+    await waitFor(() => expect(document.querySelector("[data-eye-ring]")).not.toBeNull());
   });
 });

@@ -45,6 +45,10 @@ import {
  * NO FAKE DATES. A playbook store card's window ("D-20 to D-6") is relative to a print, not a day
  * (`playbook-store.ts`), so ideas carry no `due` and are never placed on a day here.
  *
+ * THE BOOK'S WAIT (#4608): when the member parked a whole account on "wait", the day it reopens is
+ * a `decide` row on no position (`book`) — the question is theirs again that day — drawn with the
+ * same ⧗ a decision's due day takes, on the book's own lane (`book-lanes.ts`).
+ *
  * A position's own `nextEvent` backs the corpus up: when the research payload is missing (the
  * endpoint unreachable, an older server), each position's server-joined event still lands on its
  * day, so the section degrades to exactly what the Overview's line already shows.
@@ -99,6 +103,8 @@ export interface BookEvent {
   readonly what?: string;
   /** The one position it is about — a decision's contract, an option's expiry. */
   readonly on?: { readonly deskId: string; readonly symbol: string };
+  /** The whole book it is about, on no position — a wait's reopen day (#4608). */
+  readonly book?: { readonly deskId: string };
   /** The held names it lands on — for a market-wide print, the ones it is the next event for
    *  (it moves all of them; these are the ones with nothing sooner of their own). */
   readonly touches: readonly TouchedPosition[];
@@ -351,6 +357,29 @@ function expiries(
   return out;
 }
 
+/** A standing (or just-retired) wait on one account: the day it reopens and the member's reason. */
+export interface BookWaitDay {
+  readonly deskId: string;
+  readonly reopensOn: string;
+  readonly reason: string;
+}
+
+/** Each wait's reopen day in range, as a `decide` row on the whole book. */
+function waitDays(waits: readonly BookWaitDay[], range: DayRange): BookEvent[] {
+  return waits
+    .filter((w) => inRange(w.reopensOn, range))
+    .map((w) => ({
+      id: `wait ${w.deskId}`,
+      title: `Your wait ends — the question is open again (you waited: ${w.reason})`,
+      date: w.reopensOn,
+      tier: "decide" as const,
+      mark: "Wait ends",
+      what: "your wait on the book ends",
+      book: { deskId: w.deskId },
+      touches: [],
+    }));
+}
+
 /**
  * The book's events in `range`: the decisions due, the corpus's events naming a held ticker, each
  * held name's next print, each option's expiry, the headline macro prints, and — as the backstop —
@@ -362,12 +391,15 @@ export function bookEventsIn({
   calls,
   range,
   lens,
+  waits = [],
 }: {
   readonly desks: readonly BookDesk[];
   readonly events: readonly ResearchEvent[];
   readonly calls: readonly ResearchCall[];
   readonly range: DayRange;
   readonly lens: Lens;
+  /** The member's waits on these books (#4608) — each reopen day a `decide` row. */
+  readonly waits?: readonly BookWaitDay[];
 }): BookEvents {
   const touched = touchedPositions(desks);
   const callById = new Map(calls.map((call) => [call.eventId, call] as const));
@@ -390,7 +422,7 @@ export function bookEventsIn({
   }
   prints(desks, range, touched, held);
   backstop(desks, range, touched, held, market);
-  const decide = dueDecisions(desks, range, touched);
+  const decide = [...dueDecisions(desks, range, touched), ...waitDays(waits, range)];
   held.push(...expiries(desks, range, touched, decide));
   return {
     decide: decide.sort(byDay),
