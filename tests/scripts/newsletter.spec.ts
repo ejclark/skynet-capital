@@ -31,6 +31,26 @@ describe("buildNewsletter over the 2026-W45 fixture", () => {
     expect(main(["--inputs", FIXTURE, "--week", "2026-W45"])).toBe(JSON.stringify(n, null, 2));
   });
 
+  it("reads the flip's yield from the ledger text, unknown when the fixture has none", () => {
+    expect(n.metrics.flip).toBeNull();
+    const at = "2026-11-03T10:00:00Z"; // inside 2026-W45
+    const ledger = [
+      { at, issue: 1, kind: "readied" },
+      { at, issue: 2, kind: "refuted" },
+    ]
+      .map((r) => JSON.stringify(r))
+      .join("\n");
+    expect(buildNewsletter({ ...inputs(), flipLedger: { text: ledger } }).metrics.flip).toEqual({
+      judged: 2,
+      readied: 1,
+      refused: 1,
+      readiedShare: 0.5,
+    });
+    expect(buildNewsletter({ ...inputs(), flipLedger: "unavailable: no token" }).metrics.flip).toBe(
+      "unavailable: no token",
+    );
+  });
+
   it("counts merged PRs by kind inside the week only", () => {
     expect(n.metrics.mergedPrs).toEqual({
       total: 7,

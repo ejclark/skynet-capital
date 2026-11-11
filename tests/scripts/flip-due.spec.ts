@@ -9,6 +9,8 @@ import {
   // @ts-expect-error plain .mjs script, no declarations
 } from "../../scripts/flip-due.mjs";
 import {
+  flipYield,
+  readiedRows,
   recentlyRefused,
   refusalRows,
   // @ts-expect-error plain .mjs script, no declarations
@@ -112,6 +114,54 @@ describe("the refusal record", () => {
     expect([...recentlyRefused(body, NOW)].sort()).toEqual([1, 2]);
     expect(recentlyRefused("", NOW).size).toBe(0);
     expect(recentlyRefused(undefined, NOW).size).toBe(0);
+  });
+});
+
+// #7311 slice 4. The flip's yield is the number the newsletter prints beside its falsifier: of the
+// issues a flip judged in the week, how many it readied. A readied row shares the refusals file but
+// never keeps an issue out of the next list.
+describe("the flip's yield", () => {
+  const WEEK_FROM = Date.parse("2026-11-09T00:00:00Z");
+  const WEEK_TO = Date.parse("2026-11-16T00:00:00Z");
+  const row = (at: string, issue: number, kind: string) => JSON.stringify({ at, issue, kind });
+
+  it("records one readied row per distinct posted issue, and nothing for junk", () => {
+    expect(readiedRows([5, 5, 6, 0, "x"], "2026-11-10T12:00:00Z")).toEqual([
+      { at: "2026-11-10T12:00:00Z", issue: 5, kind: "readied" },
+      { at: "2026-11-10T12:00:00Z", issue: 6, kind: "readied" },
+    ]);
+    expect(readiedRows([], "2026-11-10T12:00:00Z")).toEqual([]);
+  });
+
+  it("counts readied of judged inside the week, an issue readied after a refusal as readied", () => {
+    const body = [
+      row("2026-11-10T01:00:00Z", 1, "readied"),
+      row("2026-11-10T01:00:00Z", 2, "refuted"),
+      row("2026-11-10T01:00:00Z", 3, "notClear"),
+      row("2026-11-10T01:00:00Z", 4, "refuted"),
+      row("2026-11-12T01:00:00Z", 4, "readied"),
+      row("2026-11-02T01:00:00Z", 9, "refuted"), // last week
+      "not json",
+    ].join("\n");
+    expect(flipYield(body, WEEK_FROM, WEEK_TO)).toEqual({
+      judged: 4,
+      readied: 2,
+      refused: 2,
+      readiedShare: 0.5,
+    });
+  });
+
+  it("reads unknown, never 0%, in a week no flip ran", () => {
+    const none = { judged: null, readied: null, refused: null, readiedShare: null };
+    expect(flipYield("", WEEK_FROM, WEEK_TO)).toEqual(none);
+    expect(flipYield(undefined, WEEK_FROM, WEEK_TO)).toEqual(none);
+    expect(flipYield(row("2026-11-02T01:00:00Z", 9, "readied"), WEEK_FROM, WEEK_TO)).toEqual(none);
+  });
+
+  it("does not let a readied row keep an issue out of the next flip list", () => {
+    const at = new Date(NOW - DAY).toISOString();
+    const body = [row(at, 1, "readied"), row(at, 2, "refuted")].join("\n");
+    expect([...recentlyRefused(body, NOW)]).toEqual([2]);
   });
 });
 

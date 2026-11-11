@@ -20,6 +20,10 @@ as unknown is printed as unknown.
    each measure with this week's value beside `lastWeek` (read from the series; `null` is "no
    reading", never zero) and its target. The first row, open asks that need him, is the one to
    watch; the rest explain why it moved. `unread` names any read that failed.
+   **The two learning loops' yields** (#7311 slice 4) are two lines, each beside its falsifier from
+   the loop's row in `docs/process/LEARNING-LOOP.md`: `metrics.defects.perPr` (confirmed defects per
+   audited PR, falsified under 0.3 across 30 audited PRs) and `metrics.flip` (`readied` of `judged`,
+   as `readiedShare`). A week where neither loop ran reads `unknown`, never 0.
    **Playthroughs and reactions** (#7031 slice 3) is two lines. `metrics.playthroughGaps` is the
    count of journey steps still marked `known_gap` (expected to fail), by member; a falling count
    is the ratchet working, and a step written for a PR's own acceptance line never carries one.
