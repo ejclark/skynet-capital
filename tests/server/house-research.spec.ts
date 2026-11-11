@@ -246,6 +246,91 @@ describe("houseResearchOn — a sector or a market", () => {
     expect(out.shelf).toBe("no ledger yet");
   });
 
+  // #7442: Real Estate read "researched nothing" beside 32 house-price and home-sales ledgers,
+  // because the sector read counted only per-ticker ledgers. The coverage map files those series
+  // under the sector (`SECTOR_MACRO_SERIES`); the read now counts them by the same rule.
+  it("counts the macro-series ledgers filed under a sector, grouped by series, when no name in it has one", () => {
+    const out = houseResearchOn(
+      { kind: "sector", subject: "Real Estate" },
+      {
+        ...base,
+        ledgerIds: [
+          "fhfa-hpi-2026-09-29",
+          "case-shiller-hpi-2026-09-29",
+          "case-shiller-hpi-2026-10-27",
+          "pending-home-sales-2026-09-17",
+          "construction-spending-2026-10-01",
+          "nvda-2026-08-26-print",
+        ],
+      },
+    );
+    expect(out.campaigns).toEqual([]);
+    expect(out.ledgersInSector).toEqual({ names: [], more: 0 });
+    expect(out.seriesInSector).toEqual([
+      { series: "case-shiller-hpi", ledgers: 2 },
+      { series: "fhfa-hpi", ledgers: 1 },
+      { series: "pending-home-sales", ledgers: 1 },
+    ]);
+  });
+
+  it("gives a sector with no macro series an empty series list, and a name or market none at all", () => {
+    const ledgerIds = ["case-shiller-hpi-2026-09-29"];
+    const tech = houseResearchOn({ kind: "sector", subject: "Technology" }, { ...base, ledgerIds });
+    expect(tech.seriesInSector).toEqual([]);
+    const name = houseResearchOn({ kind: "name", subject: "NVDA" }, { ...base, ledgerIds });
+    expect(name).not.toHaveProperty("seriesInSector");
+    const market = houseResearchOn(
+      { kind: "market", subject: "us-large-caps" },
+      { ...base, ledgerIds },
+    );
+    expect(market).not.toHaveProperty("seriesInSector");
+  });
+
+  // #7442: Industrials read empty although an on-watch lesson on CMI (filed under Industrials) was
+  // recorded under a campaign anchored on Utilities. A lesson naming a company in the sector bears
+  // on the sector whichever campaign wrote it down.
+  it("includes a lesson naming a company in the sector even when another sector's campaign recorded it", () => {
+    const POWER = campaign({ id: "power-for-ai", sector: "Utilities" });
+    const lessons: readonly LessonRecord[] = [
+      ...LESSONS,
+      {
+        campaign: "power-for-ai",
+        lessons: [
+          {
+            id: "cmi-gensets",
+            kind: "on-watch",
+            idea: "Backup generator orders track data-centre builds.",
+            symbols: ["CMI"],
+            on: "2026-11-07",
+            source: "research/cmi.md",
+          },
+        ],
+      },
+    ];
+    const out = houseResearchOn(
+      { kind: "sector", subject: "Industrials" },
+      {
+        ...base,
+        campaigns: [AI, OIL, POWER],
+        lessons,
+        namesInSector: (s: string) => (s === "Industrials" ? ["CAT", "CMI"] : []),
+      },
+    );
+    expect(out.campaigns).toEqual([]);
+    expect(out.lessons.map((l) => l.idea)).toEqual([
+      "Backup generator orders track data-centre builds.",
+    ]);
+  });
+
+  it("lists a lesson once when both its campaign and its company place it in the sector", () => {
+    const out = houseResearchOn({ kind: "sector", subject: "Technology" }, base);
+    expect(out.lessons.map((l) => l.idea)).toEqual([
+      "Chip makers lead when capex guides up.",
+      "AMD takes share in data centres.",
+      "Every AI name moves together.",
+    ]);
+  });
+
   it("includes a sector-wide lesson (no symbols) for the sector, which a name read leaves out", () => {
     const sector = houseResearchOn({ kind: "sector", subject: "Technology" }, base);
     expect(sector.lessons.map((l) => l.idea)).toContain("Every AI name moves together.");
@@ -329,6 +414,25 @@ describe("createHouseResearchReader", () => {
     expect(out.onTheList).toEqual({ waiting: false });
     read({ kind: "sector", subject: "Technology" }, []);
     expect(shelfReads).toBe(2);
+  });
+
+  it("reads the shelf's ledger ids fresh on every call, for a sector's macro series", () => {
+    let ids: readonly string[] = [];
+    const read = createHouseResearchReader({
+      shelf: () => () => false,
+      ledgerIds: () => ids,
+      queue: () => [],
+      answered: () => false,
+      writeUps: () => [],
+      today: () => TODAY,
+      campaigns: [],
+      lessons: [],
+    });
+    expect(read({ kind: "sector", subject: "Industrials" }, []).seriesInSector).toEqual([]);
+    ids = ["construction-spending-2026-10-01"];
+    expect(read({ kind: "sector", subject: "Industrials" }, []).seriesInSector).toEqual([
+      { series: "construction-spending", ledgers: 1 },
+    ]);
   });
 
   it("drops an ask the shelf already answers: it is not waiting, and it is not counted ahead of another", () => {

@@ -37,6 +37,7 @@ import {
 } from "../server/progression-service.js";
 import { createProgressionStore } from "../server/progression-store.js";
 import { createResearchAnswersReader } from "../server/research-answers.js";
+import { researchedEventIds } from "../server/research-service.js";
 import { resolveRoadmap } from "../server/roadmap.js";
 import { shelfWriteUps } from "../server/shelf-write-ups.js";
 import { upcomingEvents } from "../server/upcoming-events.js";
@@ -101,6 +102,7 @@ export function setupCompanion(env: NodeJS.ProcessEnv, deps: CompanionSetupDeps)
   const researchList = createDiscoveryQueueStore(env, (m) => console.error(m));
   const readResearchOn = createHouseResearchReader({
     shelf: () => shelfResearched(),
+    ledgerIds: () => researchedEventIds(),
     queue: () => researchList.load(),
     answered: shelfAnswered(),
     writeUps: shelfWriteUps(),

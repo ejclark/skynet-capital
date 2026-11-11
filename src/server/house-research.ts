@@ -25,6 +25,11 @@
  * A SECTOR OR MARKET IS NEVER "NOTHING" BY OMISSION. No campaign set in a sector does not mean the
  * house has not researched it: the ledgers are per ticker, so a sector read carries its names that
  * have one, and a market read checks its fund. Without that, a sector with five ledgers read empty.
+ * A sector is also covered by series, not names — the house-price and home-sales ledgers are Real
+ * Estate's (`SECTOR_MACRO_SERIES`, the rule the coverage map reads) — so a sector read counts those
+ * too, and takes every lesson naming one of its companies, whichever campaign recorded it (#7442:
+ * Real Estate read empty beside 32 such ledgers; Industrials beside a CMI lesson filed under a
+ * Utilities campaign).
  *
  * ANSWERED ASKS ARE OFF THE LIST. The daily lane answers an ask by writing a finding to the shelf and
  * never touches the volume file, so the live reader drops answered asks at read time
@@ -48,7 +53,7 @@ import {
   LANE_READS_QUEUE,
 } from "../domain/discovery-queue.js";
 import { marketById } from "../domain/market-catalog.js";
-import { symbolsInSector } from "../domain/sector-coverage.js";
+import { macroPrefixesFor, symbolsInSector } from "../domain/sector-coverage.js";
 import { heldNames } from "./upcoming-events.js";
 
 /** The most house campaigns one read lists. */
@@ -97,6 +102,9 @@ export interface HouseResearch {
   readonly fund?: string;
   /** Sectors only: the names in the sector that have a research ledger, sorted, and how many more. */
   readonly ledgersInSector?: { readonly names: readonly string[]; readonly more: number };
+  /** Sectors only: the macro series filed under the sector (`SECTOR_MACRO_SERIES`) with a ledger on
+   *  the shelf, in the table's order, each with how many ledgers it has. */
+  readonly seriesInSector?: readonly { readonly series: string; readonly ledgers: number }[];
   readonly campaigns: readonly {
     readonly id: string;
     readonly title: string;
@@ -122,6 +130,8 @@ export interface HouseResearch {
 
 export interface HouseResearchDeps {
   readonly isResearched: (ticker: string) => boolean;
+  /** The shelf's ledger ids (`researchedEventIds`), for a sector's macro series; none by default. */
+  readonly ledgerIds?: Iterable<string>;
   readonly queue: DiscoveryQueue;
   /** The asking member's own position symbols. */
   readonly held: readonly string[];
@@ -151,11 +161,24 @@ function shelfLine(has: boolean): NonNullable<HouseResearch["shelf"]> {
   return has ? "has a research ledger" : "no ledger yet";
 }
 
-/** What the shelf says, by kind: a name's own ledger, a sector's names with one, a market's fund. */
+/** A sector's macro series with a ledger on the shelf — matched by id prefix, as
+ *  `eventInSector` and the coverage map match them — named without the trailing dash. */
+function seriesIn(sector: string, ledgerIds: Iterable<string>): HouseResearch["seriesInSector"] {
+  const ids = [...ledgerIds];
+  return macroPrefixesFor(sector)
+    .map((prefix) => ({
+      series: prefix.replace(/-$/, ""),
+      ledgers: ids.filter((id) => id.startsWith(prefix)).length,
+    }))
+    .filter((s) => s.ledgers > 0);
+}
+
+/** What the shelf says, by kind: a name's own ledger, a sector's names and series with one, a
+ *  market's fund. */
 function shelfPart(
   ask: ResearchSubject,
   deps: HouseResearchDeps,
-): Pick<HouseResearch, "shelf" | "fund" | "ledgersInSector"> {
+): Pick<HouseResearch, "shelf" | "fund" | "ledgersInSector" | "seriesInSector"> {
   if (ask.kind === "name") return { shelf: shelfLine(deps.isResearched(ask.subject)) };
   if (ask.kind === "sector") {
     const names = (deps.namesInSector ?? symbolsInSector)(ask.subject).filter((n) =>
@@ -166,6 +189,7 @@ function shelfPart(
         names: names.slice(0, LEDGER_NAME_ROWS),
         more: Math.max(0, names.length - LEDGER_NAME_ROWS),
       },
+      seriesInSector: seriesIn(ask.subject, deps.ledgerIds ?? []),
     };
   }
   const fund = marketById(ask.subject)?.fund;
@@ -185,17 +209,21 @@ function lessonRow(l: Lesson, today: string): HouseLessonRow {
 }
 
 /** The lessons that bear on the subject: for a name, every lesson listing it; for a sector or a
- *  market, every lesson of the campaigns that follow it. Newest first. */
+ *  market, every lesson of the campaigns that follow it — and, for a sector, every lesson listing
+ *  one of its companies, whichever campaign recorded it. Each lesson once, newest first. */
 function matchingLessons(
   ask: ResearchSubject,
   followed: readonly Campaign[],
   records: readonly LessonRecord[],
+  namesInSector: (sector: string) => readonly string[],
 ): Lesson[] {
   const ids = new Set(followed.map((c) => c.id));
-  const found =
+  const names = new Set(ask.kind === "sector" ? namesInSector(ask.subject) : []);
+  const bears = (r: LessonRecord, l: Lesson): boolean =>
     ask.kind === "name"
-      ? records.flatMap((r) => r.lessons.filter((l) => l.symbols.includes(ask.subject)))
-      : records.filter((r) => ids.has(r.campaign)).flatMap((r) => r.lessons);
+      ? l.symbols.includes(ask.subject)
+      : ids.has(r.campaign) || (ask.kind === "sector" && l.symbols.some((s) => names.has(s)));
+  const found = records.flatMap((r) => r.lessons.filter((l) => bears(r, l)));
   return [...found].sort((a, b) => (a.on < b.on ? 1 : a.on > b.on ? -1 : 0));
 }
 
@@ -222,7 +250,12 @@ function waitLine(onTheList: HouseResearch["onTheList"], laneReads: boolean): st
 /** What the house already holds on one company, sector or market. Pure: every source injected. */
 export function houseResearchOn(ask: ResearchSubject, deps: HouseResearchDeps): HouseResearch {
   const followed = (deps.campaigns ?? CAMPAIGNS).filter((c) => follows(c, ask));
-  const lessons = matchingLessons(ask, followed, deps.lessons ?? LESSON_RECORDS);
+  const lessons = matchingLessons(
+    ask,
+    followed,
+    deps.lessons ?? LESSON_RECORDS,
+    deps.namesInSector ?? symbolsInSector,
+  );
   const onTheList = listStanding(ask, deps.queue);
   const isName = ask.kind === "name";
   const writeUps = deps.writeUps?.(ask) ?? [];
@@ -251,6 +284,9 @@ export type ReadResearchOn = (ask: ResearchSubject, held: readonly string[]) => 
 export interface HouseResearchSources {
   /** The shelf's ledger check (`shelfResearched`), read fresh on every call. */
   readonly shelf: () => (ticker: string) => boolean;
+  /** The shelf's ledger ids (`researchedEventIds`), read fresh on every call — a sector's macro
+   *  series. Unset, a sector read counts no series. */
+  readonly ledgerIds?: () => Iterable<string>;
   readonly queue: () => DiscoveryQueue;
   /** Whether the shelf already answers an ask (`shelfAnswered`); an answered ask is dropped from
    *  the list before it is counted, so a question the house answered never reads as waiting. */
@@ -275,6 +311,7 @@ export function createHouseResearchReader(sources: HouseResearchSources): ReadRe
     }
     return houseResearchOn(ask, {
       isResearched: sources.shelf(),
+      ...(sources.ledgerIds ? { ledgerIds: sources.ledgerIds() } : {}),
       queue,
       held,
       today: sources.today(),
