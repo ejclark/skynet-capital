@@ -32,6 +32,7 @@ import {
   type ProgressionService,
 } from "../server/progression-service.js";
 import { createProgressionStore } from "../server/progression-store.js";
+import { createResearchAnswersReader } from "../server/research-answers.js";
 import { resolveRoadmap } from "../server/roadmap.js";
 import { upcomingEvents } from "../server/upcoming-events.js";
 import { resolveWhatMembersAsk } from "../server/what-members-ask.js";
@@ -80,6 +81,9 @@ export function setupCompanion(env: NodeJS.ProcessEnv, deps: CompanionSetupDeps)
     store: createProgressionStore(env, (m) => console.error(m)),
   });
   const optionsClientFor = deps.optionsClientFor;
+  // #7286 slice: a desk's owner reads their own research questions. An owner email that doesn't
+  // resolve reads nothing — never the desk id as if it were someone's member key.
+  const readResearchQuestions = createResearchAnswersReader(env, (m) => console.error(m));
   const findSimilarFeedback = resolveSimilarFeedback(env);
   const readWorkStatus = resolveWorkStatus(env);
   const readRoadmap = resolveRoadmap(env);
@@ -97,6 +101,10 @@ export function setupCompanion(env: NodeJS.ProcessEnv, deps: CompanionSetupDeps)
   const tools: CompanionDeskDeps = {
     snapshotFor: (id) => deps.hub.getState().participants.find((p) => p.id === id),
     readTradeActivity: deps.readFills,
+    readMyResearchQuestions: (id) => {
+      const email = deps.ownerEmailFor(id);
+      return readResearchQuestions(email ? opaqueMemberId(email) : undefined);
+    },
     progression,
     // League-wide counts only (#7286 slice 4): the research list and question log on the volume,
     // and the feedback log this boot already holds. Never a name, a key or a member's words.

@@ -12,6 +12,10 @@ import type { Recommendation } from "../options/recommend.js";
 import type { FindSimilarFeedback } from "../server/feedback-similar.js";
 import type { ReadResearchOn } from "../server/house-research.js";
 import type { ParticipantProgression, ProgressionService } from "../server/progression-service.js";
+import {
+  type ReadDeskResearchQuestions,
+  researchQuestionsResult,
+} from "../server/research-answers.js";
 import type { ReadRoadmap } from "../server/roadmap.js";
 import type { UpcomingEvents } from "../server/upcoming-events.js";
 import { type ReadWhatMembersAsk, whatMembersAskResult } from "../server/what-members-ask.js";
@@ -69,6 +73,7 @@ import {
 
 export const COMPANION_TOOL_NAMES = [
   "get_my_positions",
+  "get_my_research_questions",
   "get_my_round_trips",
   "get_my_curriculum_progress",
   "get_play_catalog",
@@ -176,6 +181,13 @@ export const COMPANION_TOOL_DEFS = [
     name: "get_my_positions",
     description:
       "The member's own current holdings on their linked paper account: cash, equity, and one row per open position with symbol, kind ('option', quantity in contracts, or 'stock'), side ('long', or 'short' for a written option), quantity (negative when short), avgPrice, marketValue, costBasis and unrealizedPl (dollars). Read each position's gain or loss from unrealizedPl, never from the price pair: on a written option costBasis is the premium collected and marketValue the cost to buy it back, both signed negative. Use it when a question is about what they hold or what a holding is worth now and the MEMBER CONTEXT block doesn't already answer it. Covers only this member's account; returns 'no linked desk' when they have no linked account. Read-only.",
+    input_schema: { type: "object", properties: {} },
+  },
+  {
+    // #7286 named next slice 2 — research answers come back to the chat (`server/research-answers.ts`).
+    name: "get_my_research_questions",
+    description:
+      "What came of the research questions THIS member put on the house's research list — only their own, never anyone else's. Returns questions (newest first, up to 8), more (how many more are not shown), wait (one sentence on when the daily research pass runs, or that nothing reads the list yet) and note. Each question: kind (name, sector or market), subject, question (their own words, only when they asked first), askedAt, askedIn (a house campaign's title, 'your campaign' or 'a party campaign'; absent when asked outside a campaign), state ('answered', 'waiting' or 'no-finding-yet': it left the list and no finding is on the shelf yet), ahead (waiting only: asks ahead of it), passes (waiting only: about how many daily passes until it is taken), othersAsking (a count of other members on the same question, never who), writeUp (the research shelf file that answers it), opening (that file's first line, quoted as written) and findings (house campaign lessons that answer it, each with kind — tested, killed or on-watch — idea, on, recheckOn, falsifier and source). An empty list means they have no questions on record. Takes no input; returns 'no linked desk' without a linked account. Read-only.",
     input_schema: { type: "object", properties: {} },
   },
   {
@@ -290,6 +302,9 @@ export interface CompanionDeskDeps {
   /** Where a captured draft goes — the chat engine's own handoff hook, never a write. */
   readonly onDraft?: (draft: FeedbackDraft) => void;
   readonly readTradeActivity?: (participantId: string) => Promise<readonly TradeActivityRecord[]>;
+  /** #7286 named next slice 2: the desk owner's own research questions and what came of them
+   *  (`server/research-answers.ts`). Optional — without it the tool says "not available". */
+  readonly readMyResearchQuestions?: ReadDeskResearchQuestions;
   readonly progression?: ProgressionService;
   /** Rank candidate structures for a stated outlook, through the PARTICIPANT'S OWN linked broker
    *  client — never another member's. Optional, like every other capability here: a deployment
@@ -546,6 +561,9 @@ export async function runCompanionTool(
     }
     case "get_my_positions":
       return positionsResult(snapshot);
+    case "get_my_research_questions":
+      // The session's own desk only; the model's input is never read.
+      return researchQuestionsResult(deps.readMyResearchQuestions, participantId);
     case "get_my_round_trips":
       return participantId
         ? roundTripsResult(snapshot, deps.readTradeActivity, participantId)
