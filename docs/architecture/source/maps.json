@@ -420,7 +420,7 @@
             "id": "companion",
             "label": "Moneypenny companion and feedback coach",
             "path": "src/companion/*, src/server/companion-routes.ts, src/server/companion-screenshot-routes.ts, src/server/companion-screenshots-store.ts, src/server/companion-message-log.ts, src/server/feedback-coach.ts, src/server/feedback-coach-*.ts, src/http/anthropic-reply.ts, src/scripts/dashboard-companion.ts",
-            "responsibility": "Bounded tool rounds over a closed read-only tool list then one streamed reply over SSE; the coach shapes a filing into a build spec; structurally cannot reach any order-placing function (tests/companion/companion-no-order-path.spec.ts)."
+            "responsibility": "Bounded tool rounds over a closed read-only tool list then one streamed reply over SSE; a user turn's screenshot ids load from the store as image blocks (3 at most a request, newest first, the rest a one-line note, src/companion/companion-screenshots.ts); the coach shapes a filing into a build spec; structurally cannot reach any order-placing function (tests/companion/companion-no-order-path.spec.ts)."
           },
           {
             "id": "feedback",
