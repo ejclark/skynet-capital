@@ -103,6 +103,16 @@ export type QueueOutcome =
       /** Set when a campaign the party shares covers it, so the member is pointed at it by name. */
       readonly party?: { readonly title: string };
     }
+  | {
+      /**
+       * The lane already wrote this exact ask up on the research shelf (#7333). It joins that
+       * write-up rather than queueing: the lane never takes an answered ask again, so "queued" would
+       * promise research that never happens. `ask` is what the question log records the asker on.
+       */
+      readonly status: "answered";
+      readonly queue: DiscoveryQueue;
+      readonly ask: DiscoveryAsk;
+    }
   | { readonly status: "full"; readonly queue: DiscoveryQueue }
   | { readonly status: "limit"; readonly queue: DiscoveryQueue };
 
@@ -153,7 +163,9 @@ export interface AskInput {
  * Put one question on the queue. A subject a house or party campaign covers is `covered` (there is
  * nothing to discover outside it, so the member is pointed at it to ask in); one already waiting is
  * `joined`; a full queue is `full` and unchanged. `campaigns` is the house list followed by the
- * party's, and `researched` says a name already has a ledger.
+ * party's, and `researched` says a name already has a ledger. `answered` says the lane already wrote
+ * this exact ask up on the shelf: such an ask is `answered`, never `queued`, because a research pass
+ * skips it and the next queue write would drop it (#7333).
  */
 export function queueAsk(
   queue: DiscoveryQueue,
@@ -161,6 +173,7 @@ export function queueAsk(
   campaigns: readonly CoveringCandidate[],
   researched: (symbol: string) => boolean,
   at: Date = new Date(),
+  answered: (ask: Pick<DiscoveryAsk, "kind" | "subject" | "campaign">) => boolean = () => false,
 ): QueueOutcome {
   const covering = coveringCampaign(input.kind, input.subject, campaigns, input.campaign);
   if (covering)
@@ -175,6 +188,22 @@ export function queueAsk(
     return { status: "covered", queue, campaign: "the research shelf" };
   }
   const id = askId(input.kind, input.subject, input.campaign);
+  const scoped = {
+    kind: input.kind,
+    subject: input.subject,
+    ...(input.campaign ? { campaign: input.campaign } : {}),
+  };
+  if (answered(scoped)) {
+    // Joined to the write-up already on the shelf; the queue is untouched, so nothing is promised.
+    const ask: DiscoveryAsk = {
+      id,
+      ...scoped,
+      askedAt: at.toISOString(),
+      askers: [input.by],
+      ...(input.question ? { question: input.question } : {}),
+    };
+    return { status: "answered", queue, ask };
+  }
   const at0 = queue.findIndex((a) => a.id === id);
   if (at0 >= 0) {
     const prior = queue[at0] as DiscoveryAsk;
@@ -241,6 +270,8 @@ export function tellMember(
     return outcome.party
       ? `"${outcome.party.title}", a campaign the party shares, already covers this. Ask in it to look further.`
       : `The house already covers this in ${outcome.campaign}, so there is nothing new to look into.`;
+  if (outcome.status === "answered")
+    return `The research desk already wrote up ${outcome.ask.subject} ${outcome.ask.campaign ? "for this campaign" : "here"}, and your question is joined to that write-up on the research shelf. Asking again doesn't start new research. Nothing is bought or sold.`;
   if (outcome.status === "full" || outcome.status === "limit")
     return outcome.status === "full"
       ? "The house has a full list of questions to look into right now. Ask again in a day or two."
