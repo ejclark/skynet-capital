@@ -31,6 +31,12 @@ import {
   runConvictionTool,
 } from "./companion-convictions.js";
 import {
+  type CompanionFollowup,
+  FOLLOWUP_TOOL_DEFS,
+  FOLLOWUP_TOOL_NAMES,
+  runFollowupTool,
+} from "./companion-followup.js";
+import {
   RESEARCH_ASK_TOOL_DEFS,
   RESEARCH_ASK_TOOL_NAMES,
   type ResearchAskDraft,
@@ -73,6 +79,9 @@ import {
  * research ledgers — repo content, reviewed in PRs — and uses the member's own held names only to
  * put their events first. It reads no one else's desk.
  *
+ * `draft_followup` (#7286 slice 8, `companion-followup.ts`) posts nothing: it hands the rail a
+ * follow-up comment on one of the member's OWN filings, which only their tap posts.
+ *
  * `get_research_on` (the Moneypenny operator plan, ASSESS — `assess-research.ts`) reads the house's
  * own research on one company, sector or market: checked-in ledgers, campaigns and lessons, plus
  * counts off the research list (never another member's key or words). Offered with a linked desk
@@ -92,6 +101,7 @@ export const COMPANION_TOOL_NAMES = [
   "get_upcoming_events",
   "get_what_members_ask",
   "draft_feedback",
+  ...FOLLOWUP_TOOL_NAMES,
   ...CONVICTION_TOOL_NAMES,
   ...RESEARCH_ASK_TOOL_NAMES,
 ] as const;
@@ -302,6 +312,7 @@ export const COMPANION_TOOL_DEFS = [
       required: ["kind", "title", "details"],
     },
   },
+  ...FOLLOWUP_TOOL_DEFS,
   ...CONVICTION_TOOL_DEFS,
   ...RESEARCH_ASK_TOOL_DEFS,
 ] as const;
@@ -338,6 +349,9 @@ export interface CompanionDeskDeps {
   /** #3952 slice 3: what is coming — the open plan queue grouped Now / Next / Later, same token.
    *  Optional — without it `get_roadmap` says "not available", never guesses. */
   readonly readRoadmap?: ReadRoadmap;
+  /** #7286 slice 8: the session's own filings and the rail's card hook, bound per turn by the chat
+   *  route. Absent: `draft_followup` says "not available". */
+  readonly followup?: CompanionFollowup;
   /** The Moneypenny operator plan (ASSESS): what the house's own research holds on one subject
    *  (`server/house-research.ts`). Optional — without it `get_research_on` says "not available",
    *  never "the house has nothing". */
@@ -599,6 +613,10 @@ export async function runCompanionTool(
         : { ok: false, error: "no linked desk" };
     case "get_roadmap":
       return roadmapResult(deps.readRoadmap);
+    case "draft_followup":
+      return participantId
+        ? runFollowupTool(input, deps.followup)
+        : { ok: false, error: "no linked desk" };
     case "get_research_on":
       return participantId
         ? researchReadResult(deps.readResearchOn, snapshot, input)

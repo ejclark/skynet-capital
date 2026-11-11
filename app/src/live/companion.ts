@@ -1,4 +1,5 @@
 import type { ChatConvictionDraft } from "../../../src/companion/companion-convictions";
+import type { FollowupDraft } from "../../../src/companion/companion-followup";
 import type { ResearchAskDraft } from "../../../src/companion/companion-research-ask";
 import { pageKeys } from "./page-keys";
 
@@ -91,6 +92,8 @@ export async function streamCompanionTurn(
   onText: (delta: string) => void,
   onHandoff?: (draft: CompanionDraft) => void,
   onConviction?: (drafted: ChatConvictionDraft) => void,
+  /** A follow-up on the member's own filing (#7286 slice 8) — its card, for the member's tap. */
+  onFollowup?: (draft: FollowupDraft) => void,
   onResearchAsk?: (draft: ResearchAskDraft) => void,
 ): Promise<void> {
   const res = await fetch("/api/companion/chat", {
@@ -115,6 +118,8 @@ export async function streamCompanionTurn(
       if (text) onText(text);
     } else if (event === "handoff") {
       onHandoff?.(JSON.parse(data) as CompanionDraft);
+    } else if (event === "followup") {
+      onFollowup?.(JSON.parse(data) as FollowupDraft);
     } else if (event === "conviction") {
       onConviction?.(JSON.parse(data) as ChatConvictionDraft);
     } else if (event === "research-ask") {

@@ -14,6 +14,7 @@ import { editions, editionView } from "../domain/edition.js";
 import { regularSessionOpen } from "../domain/market-session.js";
 import type { Session } from "./auth/session.js";
 import { companionConvictionsFor } from "./companion-convictions-port.js";
+import { companionFollowupFor } from "./companion-followup-port.js";
 import { recordFirstMessageSafely } from "./companion-message-log.js";
 import { SCREENSHOTS_PATH, serveCompanionScreenshots } from "./companion-screenshot-routes.js";
 import { resolveCurrentId } from "./dashboard-identity.js";
@@ -228,6 +229,10 @@ async function serveChat(
       ...(participantId ? { participantId } : {}),
       ...(context ? { context } : {}),
       convictions: companionConvictionsFor(config, session),
+      // A drafted follow-up on the member's own filing — their tap there is what posts it (#7286).
+      followup: companionFollowupFor(config, session, (draft) => {
+        res.write(sseFrame(JSON.stringify(draft), "followup", seq++));
+      }),
     },
     {
       onText: (chunk) => {

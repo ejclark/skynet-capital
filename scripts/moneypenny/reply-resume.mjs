@@ -56,6 +56,19 @@ const asResumed = (issue, answered) => ({
 const no = (reason) => ({ resume: false, reason });
 
 /**
+ * A FOLLOW-UP THE APP RELAYED (#7286 slice 8). The app's feedback token comments under the owner's
+ * login, so GitHub reports a member's relayed follow-up as OWNER and the workflow's gate cannot tell
+ * it from Eric. `src/server/feedback-followup.ts` appends a trailer that opens with this text to
+ * every follow-up it posts, and that trailer is the tell. A relayed reply may answer the question
+ * the build lane asked the member (`needs-info`) on a filing already through the backlog gate; it
+ * never answers `needs-eric` (that decision is Eric's own) and never adds `ready` to a filing that
+ * was never readied (a member cannot skip the backlog gate by replying). Matching anywhere in the
+ * body fails closed: a member who types the words themselves only stops their own reply resuming.
+ */
+export const RELAY_TRAILER_OPENER = "_Follow-up from ";
+export const isRelayedFollowup = (body) => String(body ?? "").includes(RELAY_TRAILER_OPENER);
+
+/**
  * The pure decision: given an `issue_comment: created` payload the workflow's authorization gate has
  * already let through, does this reply resume the lane that is blocked on it?
  *
@@ -97,6 +110,18 @@ export function replyResumeIntent(ctx) {
   }
   if (!String(comment.body ?? "").trim()) {
     return no(`#${issue.number} — an empty reply answers nothing`);
+  }
+  if (isRelayedFollowup(comment.body)) {
+    if (answered === LABELS.needsEric.name) {
+      return no(
+        `#${issue.number} — a follow-up the app relayed never answers \`needs-eric\`; that decision is Eric's own`,
+      );
+    }
+    if (!names.includes(LABELS.ready.name)) {
+      return no(
+        `#${issue.number} — a follow-up the app relayed never readies a filing; it resumes only one already \`ready\``,
+      );
+    }
   }
   const notPullable = notPullableReason(asResumed(issue, answered));
   if (notPullable) return no(notPullable);
