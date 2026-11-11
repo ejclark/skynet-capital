@@ -105,6 +105,7 @@ describe("createResearchAskLane", () => {
         ok: true,
         status: "covered",
         campaign: "m-abc~energy",
+        cover: "party",
         tell: `"${title}", a campaign the party shares, already covers this. Ask in it to look further.`,
       }),
     );
@@ -117,8 +118,52 @@ describe("createResearchAskLane", () => {
     const line = said[0] ?? "";
     expect(line).not.toContain("evil.example");
     expect(line).not.toContain("Sign in again");
-    expect(line).toMatch(/already covers this/);
+    expect(line).toMatch(/a campaign your party shares already covers this/);
     expect(linkPieces(line).filter((p) => p.kind !== "text")).toEqual([]);
+  });
+
+  // #7443: the house's own covers (the research shelf, a house campaign) were swapped for a fixed
+  // sentence naming "a campaign" — false for the shelf, and it dropped the house campaign's id.
+  async function coveredReply(body: Record<string, unknown>) {
+    stub(() => reply({ ok: true, status: "covered", ...body }));
+    const said: string[] = [];
+    const lane = createResearchAskLane({ say: async (l) => void said.push(...l) });
+    const done = await lane.act("ask", DRAFT);
+    return { done, said };
+  }
+
+  it("says the server's own sentence when the research shelf covers the name (#7443)", async () => {
+    const tell =
+      "The house already covers this in the research shelf, so there is nothing new to look into.";
+    const out = await coveredReply({ campaign: "the research shelf", cover: "house", tell });
+    expect(out).toEqual({ done: true, said: [`Moneypenny · ${tell}`] });
+    expect(out.said.join()).not.toMatch(/a campaign already covers/i);
+  });
+
+  it("names the house campaign the server sent when one covers the subject (#7443)", async () => {
+    const tell =
+      "The house already covers this in ai-buildout, so there is nothing new to look into.";
+    const out = await coveredReply({ campaign: "ai-buildout", cover: "house", tell });
+    expect(out).toEqual({ done: true, said: [`Moneypenny · ${tell}`] });
+  });
+
+  it("strips link markup from a house cover's sentence too", async () => {
+    const out = await coveredReply({
+      campaign: "x",
+      cover: "house",
+      tell: "The house already covers this in [x](https://evil.example), so nothing new.",
+    });
+    expect(out.done).toBe(true);
+    expect(out.said).toHaveLength(1);
+    expect(linkPieces(out.said.join()).filter((p) => p.kind !== "text")).toEqual([]);
+  });
+
+  it("never says the server's sentence when a cover doesn't say whose it is", async () => {
+    const out = await coveredReply({ campaign: "m-abc~energy", tell: '"Some title", a campaign…' });
+    expect(out).toEqual({
+      done: true,
+      said: ["Moneypenny · that's already covered, so nothing new was asked."],
+    });
   });
 
   it("strips link markup from any other server sentence it says", async () => {

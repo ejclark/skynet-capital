@@ -250,6 +250,7 @@ function queueDiscoveries(
       readonly status: string;
       readonly tell: string;
       readonly campaign?: string;
+      readonly cover?: "house" | "party";
       readonly writeUp?: string;
     }
   | undefined {
@@ -301,8 +302,11 @@ function queueDiscoveries(
   return {
     status: last.status,
     tell: tellMember(last, perPass) + note,
-    // A covered subject names the campaign to ask in.
-    ...(last.status === "covered" ? { campaign: last.campaign } : {}),
+    // A covered subject names the campaign to ask in, and whose cover it is: a party campaign's
+    // sentence quotes a member-written title, so the chat says only the house's sentences (#7443).
+    ...(last.status === "covered"
+      ? { campaign: last.campaign, cover: last.party ? ("party" as const) : ("house" as const) }
+      : {}),
     // An answered ask names the write-up it joined.
     ...(last.status === "answered" ? { writeUp: shelfFileFor(last.ask) } : {}),
   };

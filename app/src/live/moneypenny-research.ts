@@ -66,14 +66,20 @@ function unlinked(text: string): string {
 }
 
 /**
- * What she says once the list took the ask. A `covered` reply is composed here from the status
- * alone: the server's sentence for it quotes a party campaign's title, which another member wrote,
- * and that text never speaks as her in this member's chat. Any other reply's sentence is the
- * server's own words, with link markup stripped all the same.
+ * What she says once the list took the ask. A `covered` reply's sentence is the server's own words
+ * only when the server marks the cover as the house's (`cover: "house"` — the research shelf or a
+ * house campaign, both house-written; #7443). A party campaign's sentence quotes its title, which
+ * another member wrote, and that text never speaks as her in this member's chat, so that cover —
+ * and one that doesn't say whose it is — gets a sentence composed here. Every server sentence she
+ * says has its link markup stripped all the same.
  */
 function askedLine(reply: Extract<AskReply, { ok: true }>): string {
-  if (reply.status === "covered")
-    return "a campaign already covers this, so nothing new was asked. ask about it inside that campaign to look further.";
+  if (reply.status === "covered") {
+    if (reply.cover === "house" && reply.tell) return unlinked(reply.tell);
+    return reply.cover === "party"
+      ? "a campaign your party shares already covers this, so nothing new was asked. ask about it inside that campaign to look further."
+      : "that's already covered, so nothing new was asked.";
+  }
   return reply.tell ? unlinked(reply.tell) : "asked — it's on the house's research list.";
 }
 
