@@ -158,8 +158,8 @@ function Week({
 }: {
   readonly week: CalendarWeek;
   readonly edition: Edition;
-  /** The stories drawn: every one, or a pivot's (slice 3). ◆ still reads the whole edition. */
-  readonly shown: readonly EditionStory[];
+  /** A pivot's stories (slice 3); absent draws every story, as before. ◆ reads the whole edition. */
+  readonly shown?: readonly EditionStory[];
   readonly today: string;
   readonly storyAsk: (story: EditionStory) => ReactNode;
   readonly eventAsk?: EventAsk;
@@ -178,13 +178,13 @@ function Week({
         </ul>
       ) : null}
       <ol className="ecal-days" aria-labelledby={id}>
-        {week.stories && shown.length > 0 ? (
+        {week.stories && (shown === undefined || shown.length > 0) ? (
           <li className="ecal-day">
             <h4 id="ecal-stories" className="ecal-day-title">
               The stories, to the {dayLabel(edition.date)} close
             </h4>
             <ul className="ecal-lines" aria-labelledby="ecal-stories">
-              {shown.map((s) => (
+              {(shown ?? edition.stories).map((s) => (
                 <EditionStoryLine key={s.id} story={s} lead={s.id === edition.stories[0]?.id}>
                   {storyAsk(s)}
                 </EditionStoryLine>
@@ -265,12 +265,17 @@ export function calendarShows(
 function PivotBar({
   heading,
   count,
+  named,
   onClear,
 }: {
   readonly heading: ReactNode;
+  /** The rows found in this edition. */
   readonly count: number;
-  readonly onClear: () => void;
+  /** The rows the pivot named. */
+  readonly named: number;
+  readonly onClear?: () => void;
 }): ReactElement {
+  const gone = named - count;
   return (
     <div className="ecal-pivot">
       {heading}
@@ -279,10 +284,15 @@ function PivotBar({
         {count > 0
           ? `Moneypenny's answer: ${String(count)} ${count === 1 ? "row" : "rows"} of the calendar`
           : "The rows Moneypenny named aren't in this edition any more"}
+        {count > 0 && gone > 0
+          ? ` · ${String(gone)} more she named ${gone === 1 ? "isn't" : "aren't"} in this edition any more`
+          : ""}
       </p>
-      <button type="button" className="ecal-jump ecal-pivot-clear" onClick={onClear}>
-        <span aria-hidden="true">✕</span> Show the whole calendar
-      </button>
+      {onClear ? (
+        <button type="button" className="ecal-jump ecal-pivot-clear" onClick={onClear}>
+          <span aria-hidden="true">✕</span> Show the whole calendar
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -338,7 +348,12 @@ export function LandingCalendar({
   return (
     <section id={CALENDAR_ANCHOR} className="ecal" aria-labelledby="ecal-title">
       {pivoted ? (
-        <PivotBar heading={heading} count={pivotCount} onClear={() => onClearPivot?.()} />
+        <PivotBar
+          heading={heading}
+          count={pivotCount}
+          named={pivot?.length ?? 0}
+          onClear={onClearPivot}
+        />
       ) : (
         <div className="cal-head ecal-cal-head">
           <CalendarHead
@@ -361,7 +376,7 @@ export function LandingCalendar({
                 key={w.monday}
                 week={w}
                 edition={edition}
-                shown={stories}
+                shown={pivoted ? stories : undefined}
                 today={today}
                 storyAsk={storyAsk}
                 eventAsk={eventAsk}

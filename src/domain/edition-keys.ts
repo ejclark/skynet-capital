@@ -40,11 +40,15 @@ export function editionEventKey(event: KeyedDate): string {
   return words ? `${event.date}-${words}` : event.date;
 }
 
+/** The prefixes a row's anchor starts with, so building an anchor and reading one back agree. */
+const STORY_PREFIX = "story-";
+const EVENT_PREFIX = "event-";
+
 /** The element id a story's row carries on the landing page. */
-export const storyAnchor = (id: string): string => `story-${id}`;
+export const storyAnchor = (id: string): string => `${STORY_PREFIX}${id}`;
 
 /** The element id a calendar event's row carries on the landing page. */
-export const eventAnchor = (key: string): string => `event-${key}`;
+export const eventAnchor = (key: string): string => `${EVENT_PREFIX}${key}`;
 
 /** The calendar section's own anchor, for "N more on the calendar". */
 export const CALENDAR_ANCHOR = "calendar";
@@ -69,12 +73,8 @@ export const PIVOT_MAX = 6;
 
 /** A row anchor a pivot may name: a story or a calendar event, never the calendar section. */
 export function isRowAnchor(anchor: string): boolean {
-  const key = anchor.startsWith("story-")
-    ? anchor.slice("story-".length)
-    : anchor.startsWith("event-")
-      ? anchor.slice("event-".length)
-      : undefined;
-  return key !== undefined && KEY_RE.test(key);
+  const prefix = [STORY_PREFIX, EVENT_PREFIX].find((p) => anchor.startsWith(p));
+  return prefix !== undefined && KEY_RE.test(anchor.slice(prefix.length));
 }
 
 /** The rows a `?show=` value names, in order, de-duplicated; anything else drops, never strands. */

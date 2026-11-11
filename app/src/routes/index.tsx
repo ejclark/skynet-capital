@@ -178,15 +178,20 @@ function Landing(): ReactElement {
 }
 
 export const Route = createFileRoute("/")({
-  validateSearch: (search: Record<string, unknown>): BoardAsk => ({
-    ...(search.by !== undefined ? { by: parseBoardMetric(search.by) } : {}),
-    ...(asId(search.a) ? { a: asId(search.a) } : {}),
-    ...(asId(search.b) ? { b: asId(search.b) } : {}),
-    ...(asPivot(search[PIVOT_PARAM]) ? { show: asPivot(search[PIVOT_PARAM]) } : {}),
-  }),
+  validateSearch: (search: Record<string, unknown>): BoardAsk => {
+    const show = asPivot(search[PIVOT_PARAM]);
+    return {
+      ...(search.by !== undefined ? { by: parseBoardMetric(search.by) } : {}),
+      ...(asId(search.a) ? { a: asId(search.a) } : {}),
+      ...(asId(search.b) ? { b: asId(search.b) } : {}),
+      ...(show ? { show } : {}),
+    };
+  },
   beforeLoad: ({ search }) => {
     if (search.by === undefined && search.a === undefined && search.b === undefined) return;
-    throw redirect({ to: "/leaderboard", search: { ...search, by: search.by ?? "equity" } });
+    // The board's ask goes on; a pivot is the landing page's own and stays behind.
+    const { show: _pivot, ...ask } = search;
+    throw redirect({ to: "/leaderboard", search: { ...ask, by: search.by ?? "equity" } });
   },
   component: Landing,
 });

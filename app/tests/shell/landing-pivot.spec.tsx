@@ -123,6 +123,14 @@ describe("her answer offers the pivot (live/moneypenny-links.ts)", () => {
     ).toBeUndefined();
   });
 
+  it("offers none past PIVOT_MAX rows, so a pivot never quietly drops one she named", () => {
+    const links = Array.from(
+      { length: PIVOT_MAX + 1 },
+      (_, i) => `[s${String(i)}](/#story-s${String(i)})`,
+    ).join(" ");
+    expect(pivotOf(links)).toBeUndefined();
+  });
+
   it("counts a row named twice once", () => {
     const answer = `[CoreWeave](/#${ev(coreweave)}), again [CoreWeave](/#${ev(coreweave)}), and [CPI](/#${ev(cpi)})`;
     expect(pivotOf(answer)?.count).toBe(2);
@@ -210,6 +218,13 @@ describe("the landing page pivots to her answer", () => {
     await mount("/app/?show=story-gone,story-also-gone");
     expect(screen.getByText(/aren't in this edition any more/)).toBeInTheDocument();
     expect(rowShown("story-ai-capex")).toBe(false);
+  });
+
+  it("says how many rows she named have since left the edition", async () => {
+    await mount("/app/?show=story-ai-capex,story-gone");
+    expect(
+      screen.getByText(/1 row of the calendar · 1 more she named isn't in this edition any more/),
+    ).toBeInTheDocument();
   });
 
   it("✕ brings the whole calendar back", async () => {

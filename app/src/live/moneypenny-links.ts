@@ -64,6 +64,7 @@ export function linkPieces(line: string): readonly Piece[] {
  * landing page's rows (`/#story-…`, `/#event-…`), the answer is a set the page can narrow to:
  * `pivotHref` builds the address from those same keys, in the order she named them. One row needs
  * no pivot, her link already lands on it; "N more on the calendar" is the section, never a row.
+ * More than `PIVOT_MAX` rows offers none, so a pivot never quietly drops a row she named.
  */
 export function pivotOf(
   text: string,
@@ -73,8 +74,9 @@ export function pivotOf(
     const anchor = p.kind === "place" ? landingRowAnchor(p.path) : undefined;
     if (anchor && !anchors.includes(anchor)) anchors.push(anchor);
   }
-  const rows = anchors.slice(0, PIVOT_MAX);
-  return rows.length >= 2 ? { href: pivotHref(rows), count: rows.length } : undefined;
+  // Past PIVOT_MAX the pivot would hide rows she named, so it isn't offered at all.
+  if (anchors.length < 2 || anchors.length > PIVOT_MAX) return undefined;
+  return { href: pivotHref(anchors), count: anchors.length };
 }
 
 /** The line as a member reads it, with the link markup gone — for the copied transcript. */
