@@ -35,7 +35,9 @@ import { parseJsonRecord, readJsonPost, requireGet, sendJson } from "./page-shel
  *                                             old one `replaced`; the audit line for the new id
  *                                             carries `replaces`, so the ledger keeps the
  *                                             lineage the UI needs to say "this is that order,
- *                                             changed" rather than two unrelated rows.
+ *                                             changed" rather than two unrelated rows. A quest
+ *                                             taken as the old order moves to the new id
+ *                                             (`taken-quest-store.ts`), so it is still scored.
  */
 
 const CANCEL_BODY_CAP_BYTES = 2_048;
@@ -266,6 +268,8 @@ async function serveReplace(
     symbol: replaced.symbol,
     side: replaced.side,
   });
+  // A quest fired as the old order is scored from the new one's fills (#7309, `quest-score.ts`).
+  config.takenQuests?.replace(body.participantId, body.orderId, replaced.id);
   sendJson(res, 200, {
     ok: true,
     orderId: replaced.id,

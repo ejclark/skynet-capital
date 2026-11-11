@@ -31,6 +31,7 @@ import { createProgressionStore } from "../server/progression-store.js";
 import { createResearchAnswersReader } from "../server/research-answers.js";
 import { resolveRoadmap } from "../server/roadmap.js";
 import { upcomingEvents } from "../server/upcoming-events.js";
+import { resolveWhatMembersAsk } from "../server/what-members-ask.js";
 import { resolveWorkStatus } from "../server/work-status.js";
 
 export interface CompanionSetupDeps {
@@ -90,6 +91,9 @@ export function setupCompanion(env: NodeJS.ProcessEnv, deps: CompanionSetupDeps)
       return readResearchQuestions(email ? opaqueMemberId(email) : undefined);
     },
     progression,
+    // League-wide counts only (#7286 slice 4): the research list and question log on the volume,
+    // and the feedback log this boot already holds. Never a name, a key or a member's words.
+    readWhatMembersAsk: resolveWhatMembersAsk(env, deps.feedbackLog, (m) => console.error(m)),
     ...(findSimilarFeedback ? { findSimilarFeedback } : {}),
     ...(readWorkStatus ? { readWorkStatus } : {}),
     ...(readRoadmap ? { readRoadmap } : {}),

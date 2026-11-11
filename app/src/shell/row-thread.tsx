@@ -1,4 +1,4 @@
-import { type FormEvent, type ReactElement, useId, useState } from "react";
+import { type FormEvent, type ReactElement, useEffect, useId, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useMoneypenny } from "../live/moneypenny";
 import { type MpThread, messageCount, rowLines } from "../live/moneypenny-threads";
@@ -22,6 +22,12 @@ export function RowThread({ thread }: { readonly thread: MpThread }): ReactEleme
   // (or the main conversation) re-renders nothing here.
   const lines = useMoneypenny(useShallow((s) => rowLines(s.messages, thread.key)));
   const openThread = useMoneypenny((s) => s.openThread);
+  // The store loads the member's saved conversation only when something binds it; without this,
+  // a reload showed the row empty until the chat opened (#7308). One read, shared by every row.
+  const hydrate = useMoneypenny((s) => s.hydrate);
+  useEffect(() => {
+    void hydrate();
+  }, [hydrate]);
   if (lines.length === 0) return null;
   return (
     <details className="story-more row-thread">

@@ -382,7 +382,10 @@ describe("the state block after a red plan PR closes", () => {
 
 describe("the audit carries it", () => {
   it("audit() emits the intent from deps.redLanePrs", () => {
-    const intents = audit({ redLanePrs: [candidate()] });
+    const workMode = { trackingIssue: 1, title: null, mode: { position: "normal" } };
+    const intents = audit({ redLanePrs: [candidate()], workMode } as unknown as Parameters<
+      typeof audit
+    >[0]);
     expect(intents.map((i: { kind: string }) => i.kind)).toEqual(["close-red-lane-pr"]);
   });
 

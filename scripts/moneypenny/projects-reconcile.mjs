@@ -50,6 +50,7 @@ import {
   isStartedPlan,
   KIND,
   planBoardSweep,
+  priorityFieldUpdate,
   ROLE,
   STATUS_OPTIONS,
   statusFieldUpdate,
@@ -214,6 +215,42 @@ export function ensureStatusColumns({
 }
 
 /**
+ * THE PRIORITY LANES' TEXT, KEPT IN STEP WITH THE P LABELS (#6871 §12b). Each Priority option
+ * carries its label's description (`priorityFieldUpdate`), so a lane header can say what the lane
+ * means. Written in place with ids kept, so no card changes lane; FAIL-OPEN like Role, because the
+ * words are a display and a refused write must not leave Status and Priority unhealed. An exhausted
+ * quota is rethrown, as everywhere here. Returns nothing the sweep reads.
+ */
+export function ensurePriorityDescriptions({
+  board,
+  write = writeStatusOptions,
+  dryRun = false,
+  log = console.log,
+} = {}) {
+  const field = (board.fields() ?? []).find((f) => f?.name === "Priority");
+  if (!field) return;
+  const options = priorityFieldUpdate(field.options ?? []);
+  if (!options) return;
+  if (dryRun) {
+    log("Priority field: would rewrite its lane descriptions");
+    return;
+  }
+  try {
+    write(field.id, options);
+  } catch (err) {
+    const text = `${err?.stderr ?? ""} ${err?.message ?? ""}`;
+    if (isRateLimitExhausted(text)) throw err;
+    log(
+      `::warning title=Priority descriptions not written::${text.replace(/\s+/g, " ").trim().slice(0, 200)} — the lanes keep their old text this sweep`,
+    );
+    return;
+  }
+  log(
+    `Priority field: lane descriptions now match the P labels, ids kept for ${options.filter((o) => o.id).length}`,
+  );
+}
+
+/**
  * THE ROLE FIELD, MADE AND KEPT IN STEP (#6886 slice 1b). The options are the seat registry's
  * (`roleFieldUpdate`), so a seat hired or renamed in docs/agents/seats.json reaches the board on the
  * push that merges it — no setup dispatch to remember, the same reasoning as `ensureStatusColumns`.
@@ -370,6 +407,8 @@ export function reconcileBoard({
   // Read-only by default so a spec's injected board never reaches GitHub; `main` passes
   // `ensureRoleField`, which makes the field and keeps its options in step.
   ensureRole = ({ board: b }) => (b.fields() ?? []).find((f) => f?.name === ROLE),
+  // Likewise read-only (a no-op) by default; `main` passes `ensurePriorityDescriptions`.
+  ensurePriority = () => undefined,
   readMode = () => readWorkMode(),
   buildContext = (issues) => sweepContext(issues, { log }),
   statusOf,
@@ -388,6 +427,7 @@ export function reconcileBoard({
   if (mode?.unreadable) log(`::warning::${mode.warning} — the dial sentences are left as they are`);
   const columns = ensureColumns({ board, mode, dryRun, log });
   const roleField = ensureRole({ board, dryRun, log });
+  ensurePriority({ board, dryRun, log });
   const items = boardItemsOrThrow(board);
   const context = buildContext(openIssues);
   const moved = planReconcile({
@@ -478,7 +518,11 @@ export function reconcileBoard({
 
 function main() {
   const dryRun = process.argv.includes("--dry-run");
-  const result = reconcileBoard({ dryRun, ensureRole: ensureRoleField });
+  const result = reconcileBoard({
+    dryRun,
+    ensureRole: ensureRoleField,
+    ensurePriority: ensurePriorityDescriptions,
+  });
   if (!result.started) process.exit(1);
   console.log(
     `\nreconcile: ${result.drift.length} drifted, ${result.fixed.length} fixed, ` +

@@ -429,3 +429,9 @@ tape is not evidence. **Recorded, not claimed.**
   closed `estimate`, `symbols: []`, and already past. What it cost was one wrong framing sentence in
   a proposal, corrected here before anything was built on it — which is the whole reason research
   runs before positions do.
+
+**Forward test scored 2026-11-11 (`forward-test-due`, FT-canada-counter-tariffs-effective-2026-09-08-1): pass.**
+CLF/NUE/STLD equal-weight +0.97% (price) vs `^GSPC` −1.99% over 2026-09-08 → 2026-11-10, +2.96 pp ahead
+against a −5 pp kill line; the Section 338 duty had not been voided or withdrawn as of 2026-11-04
+(importer suit at the CIT, argument set for January). Scored from a fresh Yahoo v8 pull; detail is in
+the fragment. The assessment above is not reopened. Estimate-labelled event; research is not action.

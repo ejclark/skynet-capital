@@ -228,6 +228,56 @@ describe("Done says received once a session has read it (#6606)", () => {
     expect(v.told()).toBe(UNHEARD);
   });
 
+  // #6730: of 50 `readBackAt` guesses in the transcripts, 49 were a whole minute and 7 sat behind the
+  // real time. A page opened later can't see the read-back land, so one stamped behind the press
+  // must still read as this Done's — never "Not received yet" for a round a session read back.
+  it("shows the read-back on a page opened late, though its stamp sits behind the press", async () => {
+    const doneAt = ago(10 * MIN);
+    const v = await openWith(
+      answered({ doneAt, readBackAt: ago(10 * MIN + 20_000), readBackSummary: "1 pick posted" }),
+    );
+    await new Promise((r) => setTimeout(r, 20));
+    expect(v.told()).toMatch(/^Read back .+ · 1 pick posted$/);
+  });
+
+  it("shows it too when the session's ack names this press", async () => {
+    const doneAt = "2026-10-10T22:21:59Z";
+    const v = await openWith(
+      answered({
+        doneAt,
+        ackAt: "2026-10-10T22:21:00Z",
+        ackFor: doneAt,
+        readBackAt: "2026-10-10T22:21:00Z",
+        readBackSummary: "done",
+      }),
+    );
+    await new Promise((r) => setTimeout(r, 20));
+    expect(v.told()).toMatch(/^Read back .+ · done$/);
+  });
+
+  // Order still counts (#7119): a Done re-armed after an older read-back has no read-back of its own.
+  it("still says not received when the session's ack names the press before this one", async () => {
+    const v = await openWith(
+      answered({
+        doneAt: ago(10 * MIN),
+        ackAt: ago(14 * MIN),
+        ackFor: ago(14 * MIN),
+        readBackAt: ago(12 * MIN),
+        readBackSummary: "1 pick posted",
+      }),
+    );
+    await new Promise((r) => setTimeout(r, 20));
+    expect(v.told()).toBe(UNHEARD);
+  });
+
+  it("still says not received when the only read-back is from long before the press", async () => {
+    const v = await openWith(
+      answered({ doneAt: ago(10 * MIN), readBackAt: ago(HOUR), readBackSummary: "1 pick posted" }),
+    );
+    await new Promise((r) => setTimeout(r, 20));
+    expect(v.told()).toBe(UNHEARD);
+  });
+
   it("counts the two minutes from the press, not from the page opening", async () => {
     const v = await openWith(answered({ doneAt: ago(2 * MIN - 300) }));
     await new Promise((r) => setTimeout(r, 400));

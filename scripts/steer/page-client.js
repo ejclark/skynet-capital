@@ -115,6 +115,7 @@
     clock,
     notSaved,
     readBackOf,
+    readsBack,
     refused,
     unable,
   } = globalThis.steerStatus;
@@ -524,19 +525,23 @@
     if (focused) doneBtn.focus();
   }
 
-  /** The round's document as it opened: a read-back after the last Done shows, then its ack; a Done
-   *  with neither says it is waiting, and the two minutes still run from the press, so a page
-   *  revisited hours later says at once that no session read it. */
+  /** The round's document as it opened: a read-back of the last Done shows (its guessed stamp may
+   *  sit a little behind the press, `readsBack`), then its ack; a Done with neither says it is
+   *  waiting, and the two minutes still run from the press, so a page revisited hours later says at
+   *  once that no session read it. */
   function opened(d) {
     const rb = readBackOf(d);
     heardKey = rb ? rb.key : null;
     ackSeen = ackKey(d);
     const doneMs = meta.doneAt ? Date.parse(meta.doneAt) : Number.NaN;
-    if (rb && (Number.isNaN(doneMs) || rb.ms >= doneMs)) {
+    if (readsBack(rb, d, meta.doneAt)) {
       readBackFor = meta.doneAt;
       toldLine = rb.line;
-      // An answer or a page note saved after that read-back: Done is armed again (#7119).
-      since = Boolean(meta.doneAt) && Math.max(newestAt, notesAt(d)) > rb.ms;
+      // An answer or a page note saved after that read-back: Done is armed again (#7119). A
+      // read-back of this Done came after the press, whatever its stamp says (#6730), so an answer
+      // saved before the press is never newer than it.
+      const readAt = Number.isNaN(doneMs) ? rb.ms : Math.max(rb.ms, doneMs);
+      since = Boolean(meta.doneAt) && Math.max(newestAt, notesAt(d)) > readAt;
       if (since) toldLine = NEWER;
     } else if (acks(d, meta.doneAt, false)) toldLine = ACK;
     else if (!Number.isNaN(doneMs)) {

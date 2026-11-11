@@ -29,6 +29,7 @@
  * every follow-up bound by the same `envelope.json` scan as the original submission.
  */
 import { notPullableReason, type PullableIssue } from "../../scripts/moneypenny/labels.mjs";
+import { hasPlanLabel } from "../../scripts/moneypenny/plan-claim.mjs";
 import { fetchJson, type JsonResponse } from "../http/fetch-json.js";
 import { submitterFor } from "./feedback-attribution.js";
 import { githubErrorMessage, githubHeaders } from "./github-api.js";
@@ -143,6 +144,42 @@ async function restartReadyBuild(
   return "stranded";
 }
 
+const CANT_CHECK =
+  "Couldn't check that filing just now, so nothing was posted. Try again in a minute.";
+const ON_A_PLAN =
+  "That filing has become a plan, and follow-ups aren't taken on plans here, so nothing was posted.";
+
+/**
+ * NEVER ON A PLAN (#7286, named next slice 8). This route's token comments as the owner's login,
+ * and the plan lane reads an owner's comment as a go (`isReadySignal` in
+ * scripts/moneypenny/plan-claim.mjs) — so a member's "ready", relayed onto a filing that has since
+ * become a plan, would read as the owner's authorization. One GET before the comment, and any
+ * issue carrying `plan` is refused. It fails CLOSED: a read that fails, or answers no label list,
+ * posts nothing, because a comment that can't be checked is the one that could reach a plan.
+ * Ownership is the caller's check (`serveFollowup`, against the member's own feedback log); this
+ * guard sits here so every door that follows up — the Feedback screen and Moneypenny's card —
+ * goes through it. Returns the refusal, or undefined when the comment may post.
+ */
+async function refusedBeforePosting(
+  issueNumber: number,
+  config: FollowupConfig,
+  doFetch: DoFetch,
+): Promise<string | undefined> {
+  let res: JsonResponse;
+  try {
+    res = await doFetch(
+      "GET",
+      `https://api.github.com/repos/${config.repo}/issues/${issueNumber}`,
+      githubHeaders(config.token),
+    );
+  } catch {
+    return CANT_CHECK;
+  }
+  const labels = ok2xx(res) ? (res.body as { labels?: unknown } | undefined)?.labels : undefined;
+  if (!Array.isArray(labels)) return CANT_CHECK;
+  return hasPlanLabel({ labels }) ? ON_A_PLAN : undefined;
+}
+
 /** Build the bound follow-up function. Live path (uses global fetch); `doFetch` is injectable so
  *  tests never hit the network, same discipline as `uploadFeedbackImages` / `createStatusFetcher`. */
 export function createFollowup(
@@ -154,6 +191,8 @@ export function createFollowup(
     const body = input.body.trim();
     if (!body) return { ok: false, error: "Add a few words so there's something to follow up on." };
     const commentBody = `${body}\n\n---\n_Follow-up from ${submitterFor(input)}._`;
+    const refused = await refusedBeforePosting(input.issueNumber, config, doFetch);
+    if (refused) return { ok: false, error: refused };
     try {
       const res = await doFetch(
         "POST",

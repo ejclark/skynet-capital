@@ -18,9 +18,11 @@ import { defectIssues, searchIssues } from "../agent-meter/github.mjs";
 import { parseRows } from "../agent-meter/jobs.mjs";
 import { createRest, listRuns, REPO } from "../agent-meter/lanes.mjs";
 import { CONTRACTS } from "../fitness.mjs";
+import { FLIP_REFUSALS_PATH } from "../flip-refusals.mjs";
 import { parseLoopList } from "../loop-list-decide.mjs";
 import { askRank, decisionLine } from "../moneypenny/ask-card.mjs";
 import { trustedComment } from "../moneypenny/gh.mjs";
+import { readLedgerFile } from "../pr-review/ledger.mjs";
 import { readCorpus, scorecard } from "../research-scorecard.mjs";
 import { ciCapsules, decisionsSnapshot, labelHistory, seriesRead } from "./decision-reads.mjs";
 import { journeyGaps, memberSurfacePrs, reactionIssues } from "./member-reads.mjs";
@@ -200,6 +202,8 @@ export function gather(week, asOfMs, nowMs = Date.now()) {
         .filter(trustedComment)
         .map((i) => ({ created_at: i.created_at, body: i.body })),
     ),
+    // The flip's rows on the ledger branch; an absent file is a week with no flip ({ text: "" }), not a failed read.
+    flipLedger: attempt(() => ({ text: readLedgerFile(FLIP_REFUSALS_PATH)?.body ?? "" })),
     failureToFix: attempt(() => meter(["--failure-to-fix"], w)),
     jobs: attempt(() => meter(["--jobs"], w)),
     ciRuns: attempt(() =>

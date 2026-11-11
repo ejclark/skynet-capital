@@ -194,6 +194,54 @@ describe("a side thread on its row", () => {
     expect(within(rail()).getByRole("button", { name: "New conversation" })).toBeEnabled();
   });
 
+  /** A page reload: a fresh store (the module re-runs), the member's saved blob still on disk. */
+  const reload = (view: ReturnType<typeof render>) => {
+    view.unmount();
+    act(() => useMoneypenny.setState(useMoneypenny.getInitialState(), true));
+    return mount();
+  };
+
+  it("shows the saved thread on its row after a reload, before the chat is opened (#7308)", async () => {
+    const before = mount();
+    await askOnRow("what's the setup?");
+    reload(before);
+    await flush();
+    expect(useMoneypenny.getState().open).toBe(false);
+    expect(within(row()).getByText(/Your thread with Moneypenny/)).toHaveTextContent(
+      "Your thread with Moneypenny · 2 messages",
+    );
+  });
+
+  it("asks again on a reloaded row without doubling the lines it loaded (#7308)", async () => {
+    const before = mount();
+    await askOnRow("what's the setup?");
+    reload(before);
+    await flush();
+    await askOnRow("and the options?");
+    const tagged = useMoneypenny.getState().messages.filter((m) => m.thread === KEY);
+    expect(tagged.map((m) => m.text)).toEqual([
+      'About "CoreWeave Q3 results" (Tue 10 Nov): what\'s the setup?',
+      "Moneypenny · answer 1",
+      'About "CoreWeave Q3 results" (Tue 10 Nov): and the options?',
+      "Moneypenny · answer 2",
+    ]);
+  });
+
+  it("keeps the saved thread when the page-load read fails, binding no one (#7308)", async () => {
+    const before = mount();
+    await askOnRow("what's the setup?");
+    const saved = localStorage.getItem(keyFor("member-1"));
+    const working = globalThis.fetch;
+    globalThis.fetch = ((url: string, init?: RequestInit) =>
+      url === "/api/onboarding"
+        ? Promise.resolve(new Response("{}", { status: 500 }))
+        : working(url, init)) as typeof globalThis.fetch;
+    reload(before);
+    await flush();
+    expect(useMoneypenny.getState().member).toBeUndefined();
+    expect(localStorage.getItem(keyFor("member-1"))).toBe(saved);
+  });
+
   it("drops a saved thread it cannot link to, keeping the good ones", () => {
     const good = { key: KEY, title: "CoreWeave Q3 results", path: `/#${KEY}` };
     localStorage.setItem(

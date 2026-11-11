@@ -19,14 +19,19 @@ import { RowAsk } from "./row-thread";
  * account, so a thread on a bot's row, or on another member's, would be answered from the wrong
  * book: an honest answer about it isn't available, so the ask isn't drawn there. That also keeps the
  * key unambiguous — one account carries threads, so `pos-<symbol>` names one row.
+ *
+ * The thread's way back names that account (`?account=<id>`, #7305): Profile otherwise opens on the
+ * member's DEFAULT account, and a member who set a bot as default landed on the bot's desk, where
+ * the row isn't (or where the bot's own row with the same symbol opened instead).
  */
 
-/** A position's side thread: keyed by its row, titled by its readable name, linking back to it. */
-export function positionThread(position: DeskPosition): MpThread {
+/** A position's side thread: keyed by its row, titled by its readable name, linking back to it on
+ *  `accountId`, the account whose desk drew the row. */
+export function positionThread(position: DeskPosition, accountId: string): MpThread {
   return {
     key: positionAnchor(position.symbol),
     title: position.display,
-    path: positionRow(position.symbol),
+    path: positionRow(position.symbol, accountId),
   };
 }
 
@@ -45,11 +50,17 @@ export function useOwnTradingAccount(deskId: string): boolean {
 }
 
 /** The one-line ask, inside the position's opened guidance. */
-export function PositionAsk({ position }: { readonly position: DeskPosition }): ReactElement {
+export function PositionAsk({
+  position,
+  accountId,
+}: {
+  readonly position: DeskPosition;
+  readonly accountId: string;
+}): ReactElement {
   return (
     <section className="story-ask pos-ask" aria-label="Ask about this position">
       <RowAsk
-        thread={positionThread(position)}
+        thread={positionThread(position, accountId)}
         question={(text) => positionQuestion(position, text)}
       />
     </section>

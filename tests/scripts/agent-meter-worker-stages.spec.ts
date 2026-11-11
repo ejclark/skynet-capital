@@ -90,6 +90,38 @@ describe("a stage stopped for a missing tool", () => {
     ).toBe(true);
   });
 
+  // #6692: the five wordings the first pattern missed, each after one Bash call, as a blocked return.
+  const blocked = (summary: string) =>
+    missingToolStop([
+      assistant(tool("Bash")),
+      assistant(tool("StructuredOutput", { status: "blocked", summary })),
+    ]);
+
+  it("counts a stage that says it lacks a tool in any of the common wordings", () => {
+    for (const summary of [
+      "The Skill tool isn't available in this stage",
+      "needs the Skill tool, which is not in my tool list",
+      "Skill is not available to a worker",
+      "the Agent tool is not in this agent's tools",
+      "I can't invoke the Skill tool here",
+      "I can’t use the ReportFindings tool",
+      "mcp__playwright__browser_navigate is unavailable",
+      "cannot call Agent from a worker stage",
+    ])
+      expect(blocked(summary)).toEqual({ stopped: true, triedMissing: false });
+  });
+
+  it("does not read a short blocked return that names a tool in passing as a missing tool", () => {
+    for (const summary of [
+      "the lint tool failed on two files",
+      "ran the Bash tool; the failure is not in my diff",
+      "the review agent is not available until the PR opens",
+      "no tests cover the Skill loader",
+      "blocked: the target file is not in the list I was given",
+    ])
+      expect(blocked(summary).stopped).toBe(false);
+  });
+
   it("believes a stage that says it finished, whatever its summary mentions", () => {
     expect(
       missingToolStop([

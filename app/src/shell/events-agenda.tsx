@@ -11,7 +11,8 @@ import { LaneGlyphIcon } from "./book-lanes";
  * ledger's call when one exists, and the held position it lands on. ONE link per row, and it goes
  * to a PLACE, never a filter: the position's own row on the Overview (`#pos-<symbol>`) — for a
  * market-wide print, the position it is the next event for — or, when it is nobody's next event,
- * that day on R&D (its ledger when the event is researched).
+ * that day on R&D (its ledger when the event is researched). A wait's reopen day (#4608) is on no
+ * position, so it links to the Overview's line about the wait.
  */
 
 const TIER_WORD: Record<BookEvent["tier"], string> = {
@@ -21,6 +22,18 @@ const TIER_WORD: Record<BookEvent["tier"], string> = {
 };
 
 function RowLink({ event }: { readonly event: BookEvent }): ReactElement {
+  // A wait on the whole book (#4608) lands on the Overview, where the wait itself is read.
+  if (event.book)
+    return (
+      <Link
+        to="/accounts"
+        search={(prev) => ({ ...prev, events: undefined, section: undefined })}
+        hash="book-wait"
+        className="agenda-link"
+      >
+        Your wait on the Overview →
+      </Link>
+    );
   const [first, ...more] = event.touches;
   if (first)
     return (

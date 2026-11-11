@@ -1,5 +1,13 @@
 import { spawnSync } from "node:child_process";
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  copyFileSync,
+  mkdirSync,
+  mkdtempSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "@rstest/core";
@@ -9,6 +17,7 @@ import {
   projectFolder,
   // @ts-expect-error plain .mjs script, no declarations
 } from "../../scripts/agent-meter/project.mjs";
+import { hermeticGitEnv } from "../support/hermetic-git.js";
 
 // WHICH TRANSCRIPTS ARE THIS CHECKOUT'S (#6689). The meter fixed its folder name to the laptop's
 // checkout, so in a cloud session (where sessions run by default) it matched nothing and printed
@@ -36,17 +45,71 @@ describe("naming a checkout's transcript folder", () => {
     expect(isProjectFolder("-Users-eric-Developer-skynet-capital", CLOUD_FOLDER)).toBe(false);
   });
 
-  it("is named for the checkout the script sits in, not a fixed machine", () => {
+  it("is named for the main checkout the script sits in, not a fixed machine", () => {
     const before = process.env.AGENT_CHECKOUT_DIR;
     delete process.env.AGENT_CHECKOUT_DIR;
     try {
-      // The suite runs from the repo root, so the derived name is that root's folder.
-      expect(currentProject()).toBe(projectFolder(process.cwd()));
+      // The suite may run from a worktree (#7349), whose own root is not the main checkout. git
+      // lists the main checkout first, so that is the name from either place.
+      expect(currentProject()).toBe(projectFolder(mainCheckout(process.cwd())));
     } finally {
       if (before !== undefined) process.env.AGENT_CHECKOUT_DIR = before;
     }
   });
+
+  it("names the main checkout when the script sits in one of its worktrees", () => {
+    // CI never runs in a worktree, so build one: a throwaway repo holding a copy of the helper,
+    // and a worktree of it. The copy run from the worktree must name the repo, not the worktree.
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "agent-meter-worktree-")));
+    try {
+      const main = join(root, "main");
+      const helper = join("scripts", "agent-meter", "project.mjs");
+      mkdirSync(join(main, "scripts", "agent-meter"), { recursive: true });
+      copyFileSync(join(process.cwd(), helper), join(main, helper));
+      const git = (...args: string[]) => {
+        const res = spawnSync(
+          "git",
+          ["-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", ...args],
+          // Scrubbed, or under a git hook the throwaway init reaches the real repo (hermetic-git.ts).
+          { cwd: main, encoding: "utf8", env: hermeticGitEnv() },
+        );
+        expect(res.status, res.stderr).toBe(0);
+      };
+      git("init", "-q");
+      git("add", ".");
+      git("commit", "-qm", "helper");
+      const worktree = join(root, "wt");
+      git("worktree", "add", "-q", worktree);
+
+      const env = hermeticGitEnv();
+      delete env.AGENT_CHECKOUT_DIR;
+      const res = spawnSync(
+        "node",
+        [
+          "--input-type=module",
+          "-e",
+          `import(${JSON.stringify(join(worktree, helper))}).then((m) => console.log(m.checkoutDir()))`,
+        ],
+        { encoding: "utf8", env },
+      );
+      expect(res.status, res.stderr).toBe(0);
+      expect(res.stdout.trim()).toBe(main);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 });
+
+/** The main checkout of the repo holding `dir`: the first worktree git lists. */
+function mainCheckout(dir: string): string {
+  const res = spawnSync("git", ["worktree", "list", "--porcelain"], {
+    cwd: dir,
+    encoding: "utf8",
+    env: hermeticGitEnv(),
+  });
+  const first = /^worktree (.+)$/m.exec(res.stdout ?? "");
+  return first?.[1] ?? dir;
+}
 
 describe("npm run meter in a checkout that is not the laptop's", () => {
   let dir: string;
