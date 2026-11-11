@@ -135,10 +135,15 @@ function ghWrite(method, path, payload) {
   );
 }
 
-/** Remember the refusals for flip-due.mjs. A failed write is a warning, never a failed run. */
+/**
+ * Remember the refusals for flip-due.mjs. A failed write is a warning, never a failed run — and a
+ * missing token is one more failed write: a run with nothing to post must still exit 0 (#7380
+ * closed red on exactly that, the token lookup sitting outside this try).
+ */
 function recordRefusals(rows) {
   if (!rows.length) return;
   try {
+    ensureGhToken();
     appendLedgerRows(FLIP_REFUSALS_PATH, rows, {
       message: `chore(flip): ${rows.length} refusal(s) to ${FLIP_REFUSALS_PATH}`,
     });
@@ -167,10 +172,7 @@ function main(argv) {
     console.error(`clear-path-post: ${err.message}`);
     return 1;
   }
-  if (!dryRun) {
-    ensureGhToken();
-    recordRefusals(refusals);
-  }
+  if (!dryRun) recordRefusals(refusals);
   if (!plan.length) {
     console.log("clear-path-post: no survivors — nothing to post");
     return 0;
@@ -184,6 +186,7 @@ function main(argv) {
     );
     return 0;
   }
+  ensureGhToken();
   let failed = 0;
   for (const p of plan) {
     try {
