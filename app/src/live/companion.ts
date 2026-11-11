@@ -42,6 +42,9 @@ export async function ackMoneypennyMessage(): Promise<void> {
 export interface CompanionTurnMessage {
   readonly role: "user" | "assistant";
   readonly content: string;
+  /** Ids of the screenshots the member attached to this user turn (#6007) — ids only, never bytes;
+   *  the server loads them from its store and hands them to the model (`companion-screenshots.ts`). */
+  readonly screenshots?: readonly string[];
 }
 
 /** A filing she drafted from the conversation — the rail holds it; the member's reply sends it. */

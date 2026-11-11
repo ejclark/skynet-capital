@@ -30,6 +30,20 @@ member's own reply ("send", or an answer to her one question) is what posts it t
 `/api/feedback`. The scripted lines in
 `app/src/live/moneypenny-script.ts` are the fallback when the key isn't set.
 
+### Screenshots in the chat (#6007)
+
+A member can attach up to 3 screenshots to a message (the **Attach screenshot** button, paste, or
+drop) when the live chat is on. The box (`app/src/shell/mp-composer.tsx`) fits each one in the
+browser to 1568 px on its long edge and re-encodes it as PNG or JPEG under 1.5 MB
+(`app/src/live/mp-screenshots.ts`), shows it as a thumbnail with a remove control, and uploads it
+only on Send; the chat turn and the saved conversation carry ids, never bytes. The server keeps them
+on the volume (`src/server/companion-screenshots-store.ts`, 20 MB a member, 100 MB in all, oldest
+removed first) and hands the model at most 3 as image blocks a request. Any signed-in member may open
+one by id; nothing before sign-in does, and none is ever copied into a filing, since filings land on
+the public repo (a drafted filing says so in one line). A removed one reads `Screenshot no longer
+kept`. The 1568 px edge is the plan's number: the vision limits were not read from the docs in
+slices 2 or 3 (the docs tools were denied in both sessions), so check them before relying on it.
+
 ### Four jobs
 
 Eric, 2026-11-10: "her ability to assess and evaluate the situation to perform research, delegate

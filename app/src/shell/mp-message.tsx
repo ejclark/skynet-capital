@@ -5,6 +5,7 @@ import { type MpMessage, useMoneypenny } from "../live/moneypenny";
 import { linkPieces, pivotOf } from "../live/moneypenny-links";
 import { type Run, readMarkdown } from "../live/moneypenny-markdown";
 import { requestLight } from "./eye-light";
+import { MessageShots } from "./mp-screenshot";
 import { usePhoneWidth } from "./use-media";
 
 /**
@@ -147,6 +148,7 @@ function PivotLine({ text }: { readonly text: string }): ReactElement | null {
 export function Message({ m }: { readonly m: MpMessage }): ReactElement {
   return (
     <div className={`mp-msg mp-${m.role}`}>
+      {m.role === "user" ? <MessageShots ids={m.screenshots} /> : null}
       {m.role === "user" ? linkify(m.text) : <Reply text={m.text} />}
       {m.role === "mp" ? <PivotLine text={m.text} /> : null}
     </div>
