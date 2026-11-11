@@ -192,7 +192,13 @@ export function holderLine(q: PartyQuestion): string {
 // ── Asking in the campaign (POST /api/campaigns/ask) ────────────────────────────────────────────
 
 export type AskReply =
-  | { readonly ok: true; readonly status?: string; readonly tell?: string }
+  | {
+      readonly ok: true;
+      readonly status?: string;
+      readonly tell?: string;
+      /** On a `covered` reply, whose cover it is: the house's (shelf or campaign) or the party's. */
+      readonly cover?: "house" | "party";
+    }
   | { readonly ok: false; readonly error: string };
 
 export function askInCampaign(input: {

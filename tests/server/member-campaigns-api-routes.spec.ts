@@ -405,8 +405,24 @@ describe("a question starts discovery (#6952 slice 2b)", () => {
 
   it("starts nothing for a subject a campaign covers", async () => {
     const answer = await askAbout({ kind: "sector", subject: "Utilities" });
-    expect(answer.body).toMatchObject({ ok: true, status: "covered" });
+    expect(answer.body).toMatchObject({ ok: true, status: "covered", cover: "house" });
     expect(answer.body.tell).toMatch(/energy-for-ai/);
+    expect(queue.load()).toEqual([]);
+  });
+
+  it("marks a name the research shelf already holds as the house's cover, not a campaign's (#7443)", async () => {
+    const answer = await askAbout(
+      { kind: "name", subject: "AAPL" },
+      ada,
+      config({ campaignShelf: (s: string) => s === "AAPL" }),
+    );
+    expect(answer.body).toMatchObject({
+      ok: true,
+      status: "covered",
+      cover: "house",
+      campaign: "the research shelf",
+    });
+    expect(answer.body.tell).toMatch(/in the research shelf/);
     expect(queue.load()).toEqual([]);
   });
 
@@ -908,7 +924,12 @@ describe("campaigns are communal (#6949 slice 6, criteria 8, 10, 11)", () => {
     await save({ ...FORM, title: "EV pumps", symbols: ["XOM", "RIVN"] });
     queue.write([]);
     const answer = await call("/api/campaigns/ask", post({ kind: "name", subject: "RIVN" }), grace);
-    expect(answer.body).toMatchObject({ ok: true, status: "covered", campaign: "ev-pumps" });
+    expect(answer.body).toMatchObject({
+      ok: true,
+      status: "covered",
+      campaign: "ev-pumps",
+      cover: "party",
+    });
     expect(answer.body.tell).toMatch(/"EV pumps", a campaign the party shares/);
     expect(queue.load()).toEqual([]);
   });
