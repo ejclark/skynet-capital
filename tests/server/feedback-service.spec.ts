@@ -27,7 +27,7 @@ describe("feedback-service issue body", () => {
     const body = issueBody({ ...input, submitterName: "Tony" });
 
     expect(body).toContain(
-      `_Submitted from the app by **Tony** (member \`${opaqueMemberId(input.submitterEmail)}\`)._`,
+      `_Submitted from the app by **Tony** (member \`${opaqueMemberId(input.submitterEmail)}\`):`,
     );
   });
 
@@ -35,7 +35,7 @@ describe("feedback-service issue body", () => {
     const body = issueBody(input);
 
     expect(body).toContain(
-      `_Submitted from the app by member \`${opaqueMemberId(input.submitterEmail)}\`._`,
+      `_Submitted from the app by member \`${opaqueMemberId(input.submitterEmail)}\`:`,
     );
   });
 
