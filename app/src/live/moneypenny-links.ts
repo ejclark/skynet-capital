@@ -1,4 +1,5 @@
 import { placeHref } from "../../../src/companion/places";
+import { landingRowAnchor, PIVOT_MAX, pivotHref } from "../../../src/domain/edition-keys";
 
 /**
  * WHAT IN HER LINE IS A LINK (#5238) — the pure half of the rail's rendering. A line splits into
@@ -56,6 +57,24 @@ export function linkPieces(line: string): readonly Piece[] {
   }
   text(line.slice(at));
   return pieces;
+}
+
+/**
+ * The pivot her answer offers (#7167 slice 3), or undefined. When she links two or more of the
+ * landing page's rows (`/#story-…`, `/#event-…`), the answer is a set the page can narrow to:
+ * `pivotHref` builds the address from those same keys, in the order she named them. One row needs
+ * no pivot, her link already lands on it; "N more on the calendar" is the section, never a row.
+ */
+export function pivotOf(
+  text: string,
+): { readonly href: string; readonly count: number } | undefined {
+  const anchors: string[] = [];
+  for (const p of linkPieces(text)) {
+    const anchor = p.kind === "place" ? landingRowAnchor(p.path) : undefined;
+    if (anchor && !anchors.includes(anchor)) anchors.push(anchor);
+  }
+  const rows = anchors.slice(0, PIVOT_MAX);
+  return rows.length >= 2 ? { href: pivotHref(rows), count: rows.length } : undefined;
 }
 
 /** The line as a member reads it, with the link markup gone — for the copied transcript. */
