@@ -280,6 +280,64 @@ describe("the rebuild names what it can't do and keeps going (#6607)", () => {
   });
 });
 
+describe("a state comment behind its page never gets an older round planned over it (#6731)", () => {
+  // The page's own copy says r4; the scratchpad still holds r3, and the comment resolves to r3.
+  const root = join(dir, "lagging");
+  roundFolder(root, 5174, 3);
+  const fetched = join(root, "fetched");
+  mkdirSync(fetched, { recursive: true });
+  writeFileSync(join(fetched, INPUT_FILE), JSON.stringify(roundTp(5174, 4, [])));
+
+  const rebuildFrom = (comments: string[], out: string) =>
+    rebuildRounds(
+      openRounds([
+        { number: 5174, title: "redesign x", comments: comments.map((body) => ({ body })) },
+      ]),
+      { roots: [root], out: join(dir, out), tooling: "abc1234", commits: () => [] },
+    );
+
+  it.each([
+    ["a stale store id on the state line", [state(5174, 3)]],
+    [
+      "a state line with no store id, after an older comment naming r3",
+      [
+        "Round 3 is up: `design-5174-r3`.",
+        `**State** — round 4 up · round page: ${PAGE("page5174")}`,
+      ],
+    ],
+  ])("plans nothing over the page and names both rounds: %s", (_shape, comments) => {
+    const result = rebuildFrom(comments, `lagging-out-${comments.length}`);
+    expect(result.publish).toEqual([]);
+    expect(result.current).toEqual([]);
+    const [failed] = result.failed;
+    expect(failed).toMatchObject({ issue: 5174, id: "design-5174-r3" });
+    expect(failed?.why).toContain("page's own copy says it shows design-5174-r4");
+    expect(reportText(result)).toContain("state comment resolves to design-5174-r3");
+    const plan = JSON.parse(
+      readFileSync(join(dir, `lagging-out-${comments.length}`, "publish.json"), "utf8"),
+    );
+    expect(plan.publish).toEqual([]);
+  });
+
+  it("still rebuilds when the comment agrees with the page's copy", () => {
+    const agrees = join(dir, "agrees");
+    roundFolder(agrees, 5175, 2);
+    mkdirSync(join(agrees, "fetched"), { recursive: true });
+    writeFileSync(
+      join(agrees, "fetched", INPUT_FILE),
+      JSON.stringify(roundTp(5175, 1, [])), // an older read-back of the same page: r2 is newer
+    );
+    mkdirSync(join(agrees, "fetched2"), { recursive: true });
+    writeFileSync(join(agrees, "fetched2", INPUT_FILE), JSON.stringify(roundTp(5175, 2, [])));
+    const result = rebuildRounds(
+      openRounds([{ number: 5175, title: "redesign y", comments: [{ body: state(5175, 2) }] }]),
+      { roots: [agrees], out: join(dir, "agrees-out"), tooling: "abc1234", commits: () => [] },
+    );
+    expect(result.failed).toEqual([]);
+    expect(result.publish.map((p) => p.id)).toEqual(["design-5175-r2"]);
+  });
+});
+
 describe("the build leaves a page able to be rebuilt by any session", () => {
   const root = join(dir, "built");
   const tp = roundFolder(root, 5150, 1);

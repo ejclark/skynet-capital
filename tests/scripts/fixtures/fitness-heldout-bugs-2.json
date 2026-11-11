@@ -265,8 +265,8 @@
     "contract": "bots-running",
     "on": "both",
     "file": "scripts/fitness.mjs",
-    "find": "return primary.state === \"started\" ? pass(\"started\") : fail(`machine is ${primary.state}`);",
-    "replace": "return primary.state !== \"stopped\" ? pass(\"started\") : fail(`machine is ${primary.state}`);",
+    "find": "if (primary.state === \"started\") return pass(\"started\");",
+    "replace": "if (primary.state !== \"stopped\") return pass(\"started\");",
     "why": "a machine that is suspended, replacing or failed passes as running, and nothing starts it"
   }
 ]

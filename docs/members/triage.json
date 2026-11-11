@@ -200,6 +200,11 @@
     "mustBeSeenBy": "account owner; Mission Control and Unclaimed accounts only for the fund owner (shown even when the owner holds no account)"
   },
   {
+    "screen": "/settings ?section=target",
+    "verdict": "keep",
+    "mustBeSeenBy": "member (their own target split, keyed to their sign-in; #4607)"
+  },
+  {
     "screen": "/settings ?section=guests",
     "verdict": "keep",
     "mustBeSeenBy": "fund owner only (the card returns null otherwise)"

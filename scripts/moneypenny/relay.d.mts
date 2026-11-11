@@ -36,7 +36,17 @@ export interface RelayIntent {
   readonly sourceComment: string;
 }
 
+/** #6888: the closing PR built the remainder, so the label comes off instead of being relayed. */
+export interface ClearBuiltIntent {
+  readonly kind: "relay-clear-built";
+  readonly source: number;
+  readonly builtBy: number;
+  readonly clearLabels: string[];
+  readonly sourceComment: string;
+}
+
 export const REMAINDER_LABELS: string[];
+export const RELAY_KINDS: ReadonlySet<string>;
 export const RELAY_FROM: string;
 export const RELAY_CAP: number;
 export const CLOSE_WINDOW_MS: number;
@@ -55,9 +65,10 @@ export function routeRelay(deps?: {
   relayFrom?: string;
   relayCap?: number;
   backfill?: boolean;
-}): RelayIntent[];
+}): (RelayIntent | ClearBuiltIntent)[];
 export function relayBody(issue: ClosedWithRemainder): string;
 export function sourceCommentBody(issue: ClosedWithRemainder): string;
+export function builtCommentBody(issue: ClosedWithRemainder, builtBy: number): string;
 export function gatherRelayDeps(opts?: {
   read?: (path: string) => readonly Record<string, unknown>[];
   labels?: readonly string[];
@@ -67,7 +78,7 @@ export function gatherRelayDeps(opts?: {
   backfill?: boolean;
 }): ClosedWithRemainder[];
 export function executeRelay(
-  intent: RelayIntent,
+  intent: RelayIntent | ClearBuiltIntent,
   opts?: {
     run?: (cmd: string, args: readonly string[]) => string;
     ensure?: (label: { name: string }) => void;

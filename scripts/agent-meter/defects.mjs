@@ -11,11 +11,13 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { ensureGhToken } from "../moneypenny/gh.mjs";
 import {
+  AUDIT_MARKER_PATH,
   appendLedgerRows,
   datesBetween,
   LEDGER_BRANCH,
   parseJsonl,
   receiptPath,
+  writeLedgerFile,
 } from "../pr-review/ledger.mjs";
 
 export const FOUND_BY = /\*\*Found by\*\*\s*\|\s*([^|\n]+)/;
@@ -67,8 +69,14 @@ export function auditedInWindow(receipts, sinceMs, untilMs) {
   return { audits: inWindow.length, prs: prs.size };
 }
 
-/** The audit's receipt row for `--audit-receipt --prs 1,2 --confirmed N`. Throws on a bad flag. */
-export function auditReceiptRow({ prs, confirmed, at = new Date().toISOString() }) {
+const SHA = /^[0-9a-f]{7,40}$/;
+
+/**
+ * The audit's receipt row for `--audit-receipt --prs 1,2 --confirmed N [--through <sha>]`. Throws on
+ * a bad flag. `through` is the main commit scripts/audit-due.mjs listed up to (#7311), and only an
+ * audit that came from that list carries one: a hand-picked batch says nothing about what it skipped.
+ */
+export function auditReceiptRow({ prs, confirmed, through, at = new Date().toISOString() }) {
   const numbers = String(prs ?? "")
     .split(",")
     .map(Number)
@@ -77,8 +85,18 @@ export function auditReceiptRow({ prs, confirmed, at = new Date().toISOString() 
   // A count nobody gave would be read as an audit that found nothing, which is a claim.
   if (!/^\d+$/.test(String(confirmed)))
     throw new Error(`--audit-receipt needs --confirmed N, got "${confirmed}"`);
-  return { at, prs: numbers, confirmed: Number(confirmed) };
+  if (through !== undefined && !SHA.test(String(through)))
+    throw new Error(`--through needs a commit sha, got "${through}"`);
+  return {
+    at,
+    prs: numbers,
+    confirmed: Number(confirmed),
+    ...(through === undefined ? {} : { through: String(through) }),
+  };
 }
+
+/** Pure. The marker a receipt with `through` leaves for the next due-check (#7311). */
+export const auditMarker = (row) => ({ at: row.at, through: row.through, prs: row.prs });
 
 /** Append the receipt to the session's own runs folder; returns what it recorded where. */
 export function writeAuditReceipt(runsDir, input) {
@@ -95,20 +113,28 @@ export function writeAuditReceipt(runsDir, input) {
 /**
  * `--audit-receipt`: the row on this disk and on the ledger branch, the copy a later meter run in any
  * session reads (#6683). `localOnly` skips the branch. A failed branch write goes red and says the
- * local row is kept, since a cloud session's disk goes with its container.
+ * local row is kept, since a cloud session's disk goes with its container. With `through`, the
+ * marker on the branch moves too, after the receipt, so a marker never names an unrecorded audit.
  */
 export function recordAuditReceipt(
-  { prs, confirmed, localOnly = false, runsDir },
-  { append = appendLedgerRows, token = ensureGhToken } = {},
+  { prs, confirmed, through, localOnly = false, runsDir },
+  { append = appendLedgerRows, write = writeLedgerFile, token = ensureGhToken } = {},
 ) {
-  const input = { prs, confirmed, at: new Date().toISOString() };
+  const input = { prs, confirmed, through, at: new Date().toISOString() };
+  const row = auditReceiptRow(input); // a bad flag throws before anything is written anywhere
   const local = writeAuditReceipt(runsDir, input);
   if (localOnly) return local;
   try {
     token();
-    const path = append(receiptPath(input.at.slice(0, 10)), [auditReceiptRow(input)], {
+    const path = append(receiptPath(input.at.slice(0, 10)), [row], {
       message: `chore(pr-review): audit receipt for ${prs}`,
     });
+    if (row.through) {
+      write(AUDIT_MARKER_PATH, `${JSON.stringify(auditMarker(row))}\n`, {
+        message: `chore(pr-review): audit marker through ${row.through.slice(0, 9)}`,
+      });
+      return `${local}, and on ${LEDGER_BRANCH} at ${path}; the marker now reads through ${row.through.slice(0, 9)}`;
+    }
     return `${local}, and on ${LEDGER_BRANCH} at ${path}`;
   } catch (err) {
     const why = String(err?.message ?? err).split("\n")[0];

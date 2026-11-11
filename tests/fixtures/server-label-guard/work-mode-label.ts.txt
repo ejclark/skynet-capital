@@ -1,0 +1,3 @@
+export async function arm(gh: Gh) {
+  await gh("POST", `${base}/labels`, h, { labels: ["work-mode:surge"] });
+}

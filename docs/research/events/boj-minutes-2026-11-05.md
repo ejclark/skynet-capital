@@ -499,3 +499,67 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-11-02
 <!-- probe-ref: {"symbols":{},"vix":18.95,"daysBand":"low:0+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","amd-fq3-2026-results-2026-11-03","boe-decision-2026-11-05","boj-summary-of-opinions-2026-11-10","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","construction-spending-2026-11-02","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","eurostat-hicp-flash-2026-11-04","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","jgb-10y-auction-2026-11-05","jgb-30y-auction-2026-11-10","jgb-climate-transition-5y-auction-2026-11-02","jobs-2026-11-06","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","opec-plus-meeting-2026-11-01","productivity-costs-q3-2026-11-05","sloos-2026-11-02","smci-fq1-2027-results-2026-11-03","sp-global-investment-manager-index-2026-11-10","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","treasury-10y-note-2026-11-10","treasury-3y-note-2026-11-09","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-1mo2y-2026-11-05","treasury-refunding-2026-11-04","uk-gilt-auction-long-2026-11-10","umich-sentiment-prelim-2026-11-06","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","cbrs-lockup-expiry-2026-11-09","cpi-2026-11-10","ism-manufacturing-2026-11-02","jobs-2026-11-06"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out (2026-11-11, D+6).** Macro-print mode runs no `earnings-cycle` / `intraday-edges`
+instrument (`symbols: []` by design); the cache was busted first (`rm -rf
+node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) though nothing here reads it.
+"Re-run instrument data" means re-fetching every cited source direct on 2026-11-11: the BoJ schedule
+page (HTTP 200, 42,437 B), the released **Minutes PDF `g260918.pdf`** (HTTP 200, 360,589 B) and the
+**Oct-MPM Summary PDF `opi261030.pdf`** (HTTP 200, 203,886 B), both decoded locally (inflate + merged
+`/ToUnicode` CMaps, 11,644 tokens / 7,015 words of 4+ letters recovered from the Minutes), plus FRED
+`SP500`, `VIXCLS` and `NIKKEI225` (last bars 2026-11-09 / 11-09 / 11-10).
+
+**The headline verdict: the document did exactly what the structural legs said and nothing else, and
+the one price test was breached by a selloff the tape attributes to something else entirely.** Stand
+aside was right; the lane's own weak US-null prediction (FT-4) is scored a kill, and it is the
+cleanest possible demonstration of leg 5's warning that this cohort lives in a confounded corridor.
+
+- **FT-1 — PASS.** The schedule page's Sept row now reads `['Sept. 17 (Thurs.), 18 (Fri.) [PDF 204KB]',
+  '-', 'Oct. 1 (Thurs.) [PDF 227KB]', 'Nov. 5 (Thurs.) [PDF 353KB]']` — the Minutes cell gained its PDF
+  link on the predicted date (`Nov. 5`), 6 days after the Oct 30 close, and the PDF fetches. The
+  statutory mechanism replicated in the released text: *"The minutes of this meeting were approved by the
+  Policy Board at the Monetary Policy Meeting held on October 29 and 30, 2026, as 'a document
+  describing an outline of the discussion at the meeting' stipulated in Article 20, paragraph 1 of the
+  Bank of Japan Act of 1997"*, and the approval section (numbered **VII** in this document, VI in the
+  2025 analogue) records the Board approving the July Minutes *"for release on September 28"* — the
+  same date the schedule's July row carries. Caveat: the publication day rests on the schedule page's
+  date cell plus the PDF being live; the PDF's own embargo line was not recovered by the decode.
+- **FT-2 — PASS, both halves.** The Oct-MPM Summary's schedule cell reads `Nov. 10 (Tues.) [PDF
+  200KB]` and the PDF fetches. Minutes (11-05) strictly before Summary (11-10), gap exactly **5 days**,
+  the modal value (45/84). The pair rule's first live observation holds: 85/85 with zero inversions.
+- **FT-3 — PASS.** The released Minutes contain **no** Outlook-drafting passage: 0 hits for *"possible
+  descriptions"*, *"requested that the staff"*, *"draft"*, *"drafting"*, or the chairman requesting
+  staff descriptions. "Outlook" appears 5 times, all references to the **July 2026** Outlook Report
+  as the baseline the economy was tracking (a mere reference, which the registration said does not
+  falsify). Honest edge: a footnote records Takata and Tamura opposing the *statement's* description
+  of the price outlook — a vote on the Sept decision statement's wording, not on an Outlook Report,
+  which this meeting did not produce.
+- **FT-4 — KILL, and non-attributable by design.** FRED `SP500` closed **7,688.62 (11-04) → 7,353.73
+  (11-05) = −4.355%**, **5.9×** the 0.736% mean baseline and past the ±1.47% line. Nikkei −1.79% on
+  11-05 and **−5.96% on 11-06**; VIX **16.61 → 28.18**. Press (AP carried on a dozen local sites,
+  MarketWatch, 247wallst) attributes the day to an **AI/chip rout after the Democratic midterm
+  result** — Nvidia −9.3%, semiconductor index −12.3%, Nasdaq-100 −6.4%, the largest one-day market-value
+  loss on record — with the third-largest VIX one-day jump since 1990. No source credits the Minutes.
+  The registration said in advance a breach "says nothing whatever about the BoJ"; it says so now. The
+  hypothesis that the clean-subset base rate (0.35×) was operative for 2026 is **killed** by the
+  calendar, not by Tokyo: leg 4's corridor (midterms two days behind the print) was the dominant term.
+- **Relevance kill fired, and was not a forward test.** The 2026-09-18 decision *acted* — the guideline
+  rose to **1.25%** on a **7-2** vote (Asada and Sato against), per the Minutes' own vote record and
+  the [09-18 ledger](boj-decision-2026-09-18.md)'s close-out. This ledger's D-61 stance spoke of "the
+  minutes of a meeting that held"; the meeting acted. The stance (stand aside, nothing market-relevant
+  that was not public on 09-18) survives; the framing did not. Impact stays `low`: no tape evidence
+  ties this document to any price.
+- **Channel kill did not fire as written.** Tracked names (NVDA among them) moved far more than 2% on
+  11-05, but the kill required the tape to *attribute* the move to the Minutes; it attributes it to
+  the AI/midterm rout. The leg 13 "no channel" claim stands.
+- **Method lesson, durable:** the corridor this cohort lands in is not just loud on average (leg 5),
+  it produced a one-day record loss on the release session. Any future base rate from this venue is
+  uninterpretable without the confound split, and a US-session threshold test keyed to a BoJ document
+  should not be registered again (see the kill list in `multi-symbol-sweep.md`).
+- **Loop stage a person still had to do:** none. The close-out was scored from sources by this lane;
+  the prediction-to-source join (which FRED series, which schedule cell) was already in the fragment.
+
+**Last assessed:** 2026-11-11
+<!-- probe-ref: {"symbols":{},"vix":19.92,"daysBand":"low:0+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","amd-fq3-2026-results-2026-11-03","boe-decision-2026-11-05","boj-summary-of-opinions-2026-11-10","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","intl-trade-full-report-2026-11-04","ism-services-2026-11-04","jgb-10y-auction-2026-11-05","jobs-2026-11-06","jolts-2026-11-03","midterm-elections-2026-11-03","productivity-costs-q3-2026-11-05","treasury-refunding-2026-11-04","umich-sentiment-prelim-2026-11-06","us-china-tariff-truce-expiry-2026-11-10"],"adjacentStrongIds":["cpi-2026-11-10","jobs-2026-11-06"],"screenStreak":0} -->

@@ -110,6 +110,7 @@ describe("behavioral: the dispatcher refuses every order-shaped or adversarial a
       "get_roadmap",
       "get_structures_for_outlook",
       "get_upcoming_events",
+      "get_what_members_ask",
       "get_work_status",
     ]);
   });

@@ -52,6 +52,8 @@ export function scorecard(input: {
   today?: string;
 }): Scorecard;
 export function passRate(c: Counts): number | null;
+export function isThin(c: Counts): boolean;
+export function openRange(c: Counts): { low: number; high: number } | null;
 export function maturedCell(c: Counts): string;
 export function renderMarkdown(card: Scorecard, today: string): string;
 export function readCorpus(root?: string): { tests: ForwardTest[]; links: CallLink[] };

@@ -230,8 +230,8 @@ export function PositionsBlotter({
         onUndo={() => marks.undo(p.symbol)}
         {...(threaded
           ? {
-              ask: <PositionAsk position={p} />,
-              thread: <RowThread thread={positionThread(p)} />,
+              ask: <PositionAsk position={p} accountId={deskId} />,
+              thread: <RowThread thread={positionThread(p, deskId)} />,
             }
           : {})}
       />

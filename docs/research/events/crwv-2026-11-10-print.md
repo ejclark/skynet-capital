@@ -312,3 +312,62 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-11-10
 <!-- probe-ref: {"symbols":{"CRWV":48.98},"vix":19.92,"daysBand":"critical:0+","adjacentIds":["boe-decision-2026-11-05","boj-minutes-2026-11-05","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","eia-steo-2026-11-10","erock-q3-2026-results-2026-11-12","existing-home-sales-2026-11-12","japan-balance-of-payments-2026-11-10","jgb-10y-auction-2026-11-05","jgb-30y-auction-2026-11-10","jgb-5y-auction-2026-11-12","jobs-2026-11-06","mts-october-2026-11-12","nbis-2026-11-12-print","pbls-q3-2026-results-2026-11-12","ppi-2026-11-13","productivity-costs-q3-2026-11-05","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","sp-global-investment-manager-index-2026-11-10","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-3y-note-2026-11-09","treasury-buyback-1mo2y-2026-11-05","treasury-coupon-announcement-2026-11-12","uk-gdp-q3-first-2026-11-12","uk-gilt-auction-long-2026-11-10","umich-sentiment-prelim-2026-11-06","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","jobs-2026-11-06","nbis-2026-11-12-print"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out (2026-11-11, 00:40 UTC, i.e. the evening of D; reaction session not yet traded).** Scope limits first:
+the earnings-cycle study's newest print is still **2026-08-11** (the instruments' price history now runs to the
+**2026-11-10** regular close, 408 sessions, but a print needs follow-through sessions before it enters any cell), so
+**no instrument cell includes this print and the D+1 reaction is unscored**. The after-hours reads below are Yahoo
+5-minute extended-hours bars, thin and indicative, **not** the study's close-D → open-D+1 gap. Hard limit honoured:
+the calendar entry is untouched and stays `estimate`.
+
+**The date held.** CoreWeave released Q3 **after the close on 2026-11-10**, the cadence date the IR notice of 10-27 named.
+Primary: SEC EDGAR Item 2.02 8-K, accession 0001769628-26-000461, filed 2026-11-10 (accepted 21:05 UTC), EX-99.1
+[coreweave3q26earningspress.htm](https://www.sec.gov/Archives/edgar/data/1769628/000176962826000461/coreweave3q26earningspress.htm),
+call 5:00 PM ET. The `estimate` label can now be promoted with an `SEC:` source by whoever owns the calendar entry; this
+lane does not edit it. The 11-10 CPI (confirmed, 08:30 ET) landed before the print as the 10-30 row expected.
+
+**What printed vs the guide (SEC EX-99.1, read direct 2026-11-11).** Revenue **$3,661M** (+168% y/y from $1,365M) against
+the Q3 guide of **$3.45–3.6B** given 08-11: **above the top of the range**. Operating income **$207M** (6% margin);
+adjusted operating income **$379M** (10% margin) against a $200–260M guide: **above**. Net loss **$(709)M**, EPS **$(1.27)**;
+net interest expense **$846M**. Revenue backlog **$132.5B** at 09-30 (vs ~$104B at 06-30 before $25B+ of new commitments).
+Guide raised: FY26 revenue **$13.0–13.3B** (from $12.4–13.2B), FY26 adjusted operating income **$1.275–1.375B** (+26% at
+the midpoint), capex **$37–39B** (low end up from $35B), Q4 interest expense **$1.05–1.15B**, exit run-rate **$20–21B**
+(from $18.5–19.5B). Funding lines in the release: ~$4.2B upsized convert, the 35M-share ATM, the $2.6B DDTL 5.5, and
+~$9B of customer prepayments and deposits expected over the next three months. The operating print beat the guided
+revenue and adjusted-operating-income ranges; the two-sided tail the stance priced is the reaction, not the numbers.
+
+**The tape into the print (Yahoo daily closes, read 2026-11-11).** CRWV closed D at **$48.73** (11-09 $48.98): **−9.32%**
+over D-5 (11-03 $53.74; QQQ −1.54%), **−18.20%** over D-10 (10-27 $59.57; QQQ −6.45%) and **−37.37%** over D-20 (10-13
+$77.81; QQQ −9.25%). Peers over the same windows: NBIS −11.63% / −21.39% / −35.22%, NVDA −18.29% / −22.51% / −26.09%. The
+run-up legs were deeply negative, the opposite of S1's pre-print bid, and the peers fell with it: no CRWV-specific edge in
+either direction (kill-list S1 stays killed; n=6 once this print enters the study). VIX closed D at **19.46** (19.92 on 11-09,
+28.18 on the 11-05 spike).
+
+**Extended-hours read (indicative, not scored).** CRWV **$51.61** at 00:37 UTC against the $48.73 close, about **+5.9%**
+(5-minute bars; the 23:35–00:37 UTC range was $51.32–51.70); NBIS **$142.60** vs $134.00, about **+6.4%**.
+Held unhedged, the overnight read would have been a ~+6% gain, inside the ±10–19% single-night tails S2 priced and well short
+of the +20.35% the 08-11 print gapped. One thin extended-hours print moves nothing against the sweep's kill-list bars (≥3 new
+prints); the regular-session open and close of 11-11 are what `FT-3` and the study score.
+
+**Stance vs outcome.** The stance was *stand aside directionally, flat through the close of 11-10 under S2*, with no pre-print
+entry and no gap bet either way. Nothing was held, so there is no P/L to score and no guard tripped. Neither side of the
+overnight move was a licence: the print beat and raised, and the first read is up, but the name is −46.9% from the 10-06 $91.72
+close and the dilution-and-credit overhang the 10-30 row logged is in the release itself (convert, ATM, a $846M interest line).
+S2 and E1 keep applying to the 11-11 open. Per declared intent `crwv-nvda-prints-2026-11`: `conviction-proposals.mjs
+--event=crwv-2026-11-10-print` printed `[]`; its remaining Check item, `premium-fit.mjs CRWV --refresh` on or after 2026-11-13,
+is already carried by `FT-crwv-2026-11-10-print-4`.
+
+**Forward tests (this fragment).** `FT-1` and `FT-2` were scored **pass** on 2026-11-07 and are untouched. `FT-3` (D+1 → D+6
+closes, **11-11 → 11-18**), `FT-4` (premium re-run on or after 11-13) and `FT-5` (floor band through 2027-01-19) key on data
+that does not exist yet and score after the close-out window (`forwardTestsBeyondWindow`: 11-25, 11-20, 2027-01-20). They stay
+`_open_` on purpose: Moneypenny re-opens this event as `forward-test-due` when each score-by arrives (#2884), and an
+`unscoreable` verdict written now would end that. The print date held, so `FT-3`'s D+1 is the 11-11 session as registered.
+`npm run research:claims` was not run: no row was scored here, so no conviction claim has a new score to read.
+
+**Loop census (what a person still had to do).** Sense and decide ran in the lane. The one stage a person still owns is
+promoting the calendar entry's `estimate` to `confirmed` with the `SEC:` source above, which this lane may not do.
+
+**Last assessed:** 2026-11-11
+<!-- probe-ref: {"symbols":{"CRWV":48.73},"vix":19.46,"daysBand":"critical:0+","adjacentIds":["boe-decision-2026-11-05","boj-minutes-2026-11-05","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","eia-steo-2026-11-10","erock-q3-2026-results-2026-11-12","existing-home-sales-2026-11-12","japan-balance-of-payments-2026-11-10","jgb-10y-auction-2026-11-05","jgb-30y-auction-2026-11-10","jgb-5y-auction-2026-11-12","jobs-2026-11-06","mts-october-2026-11-12","nbis-2026-11-12-print","pbls-q3-2026-results-2026-11-12","ppi-2026-11-13","productivity-costs-q3-2026-11-05","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","sp-global-investment-manager-index-2026-11-10","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-3y-note-2026-11-09","treasury-buyback-1mo2y-2026-11-05","treasury-coupon-announcement-2026-11-12","uk-gdp-q3-first-2026-11-12","uk-gilt-auction-long-2026-11-10","umich-sentiment-prelim-2026-11-06","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","jobs-2026-11-06","nbis-2026-11-12-print"],"screenStreak":0} -->

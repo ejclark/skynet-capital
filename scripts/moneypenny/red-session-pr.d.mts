@@ -33,11 +33,13 @@ export interface RedPrDeps {
 
 export const RED_ATTEMPT_CAP: number;
 export const CAPSULE_SLOT: string;
+export const RED_PR_DISPATCH_HELD: boolean;
 export function markerFor(sha: string, attempted: boolean): string;
 export function capsuleTitle(number: number): string;
 export function routeRedSessionPr(
   ctx: { run?: Record<string, unknown>; defaultBranch?: string; failures?: RedPrFailure[] },
   deps?: RedPrDeps,
+  opts?: { held?: boolean },
 ): RedPrIntent[];
 export function gatherRedSessionPr(
   run: Record<string, unknown>,
