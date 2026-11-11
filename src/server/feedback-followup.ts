@@ -28,7 +28,10 @@
  *  - `claude.yml` starts an unrestricted session on any OWNER comment that does not carry the link
  *    opener `[Claude Code](https://claude` (its gate's exclusion for its own comments). The relay
  *    trailer (`relayTrailer`) carries that link, so the gate skips it; the spec reads the gate's
- *    exclusion out of the workflow file, so a change there fails it.
+ *    exclusion out of the workflow file, so a change there fails it. The same gate fires on an
+ *    `issues` event whose BODY mentions the lane without that link — and cycling `ready` is one
+ *    (#7444). Filings carry the link in their footer since then (feedback-issue.ts); an older one
+ *    whose body still opens the gate gets the comment and no restart (`opensClaudeLane`).
  *  - the plan lane reads an owner comment as a go: any issue carrying `plan` is refused before the
  *    comment posts (`refusedBeforePosting`).
  *  - the reply-resume step reads an owner comment as the answer to a parked question: a filing
@@ -43,7 +46,7 @@ import { notPullableReason, type PullableIssue } from "../../scripts/moneypenny/
 import { hasPlanLabel } from "../../scripts/moneypenny/plan-claim.mjs";
 import { RELAY_TRAILER_OPENER } from "../../scripts/moneypenny/reply-resume.mjs";
 import { fetchJson, type JsonResponse } from "../http/fetch-json.js";
-import { submitterFor } from "./feedback-attribution.js";
+import { CLAUDE_CODE_LINK, submitterFor } from "./feedback-attribution.js";
 import { githubErrorMessage, githubHeaders } from "./github-api.js";
 
 type DoFetch = typeof fetchJson;
@@ -64,8 +67,9 @@ interface FeedbackFollowupInput {
  *  - `closed` — the issue is closed (shipped or not built): nothing picks it up again;
  *  - `stranded` — `ready` came off and would not go back on: the build did NOT restart, and the
  *    server logged the issue number for an operator;
- *  - `unchanged` — the labels could not be read, a label write failed before anything moved, or
- *    the pull rule refused it for a reason not named above: no promise either way. */
+ *  - `unchanged` — the labels could not be read, a label write failed before anything moved, the
+ *    pull rule refused it for a reason not named above, or the filing's body would open
+ *    claude.yml's gate on a re-label (#7444): no promise either way. */
 export type FollowupOutcome =
   | "restarted"
   | "backlog"
@@ -107,6 +111,18 @@ const REFUSED: readonly (readonly [RegExp, FollowupOutcome])[] = [
 const refusedAs = (reason: string): FollowupOutcome =>
   REFUSED.find(([rule]) => rule.test(reason))?.[1] ?? "unchanged";
 
+/** Would `claude.yml`'s gate start a session on an `issues` event for this body? It does when the
+ *  body mentions the lane and lacks the excluded link — GitHub's `contains` ignores case. Filings
+ *  made before #7444 carry no link in their footer, so a member's own mention opens it there. A
+ *  null or missing body mentions nothing. tests/server/feedback-followup-gate.spec.ts reads both
+ *  strings out of the workflow, so a change to the gate fails it. */
+const LANE_MENTION = "@claude";
+function opensClaudeLane(body: unknown): boolean {
+  if (typeof body !== "string") return false;
+  const text = body.toLowerCase();
+  return text.includes(LANE_MENTION) && !text.includes(CLAUDE_CODE_LINK.toLowerCase());
+}
+
 /** A label write that may throw (network) reads as a failed one. */
 async function write(attempt: () => Promise<JsonResponse>): Promise<boolean> {
   try {
@@ -140,6 +156,9 @@ async function restartReadyBuild(
   if (!Array.isArray(issue.labels)) return "unchanged";
   const refused = notPullableReason({ ...issue, number: issueNumber });
   if (refused !== null) return refusedAs(refused);
+  // The re-label is an `issues.labeled` event under the owner's token: on a body that opens
+  // claude.yml's gate, it would start an unrestricted session (header, #7444).
+  if (opensClaudeLane((issue as { body?: unknown }).body)) return "unchanged";
 
   if (!(await write(() => doFetch("DELETE", `${issueUrl}/labels/ready`, headers)))) {
     return "unchanged"; // `ready` is still on and nothing moved
@@ -166,7 +185,7 @@ const WAITS_ON_ERIC =
 /** The line under every relayed follow-up: who it is from, and the link opener `claude.yml`'s gate
  *  excludes, so a member's words never start an unrestricted session (header). */
 export const relayTrailer = (who: string): string =>
-  `---\n${RELAY_TRAILER_OPENER}${who}, relayed by the app: a member's words, not a [Claude Code](https://claude.com/claude-code) instruction._`;
+  `---\n${RELAY_TRAILER_OPENER}${who}, relayed by the app: a member's words, not a ${CLAUDE_CODE_LINK} instruction._`;
 
 /**
  * NEVER ON A PLAN (#7286, named next slice 8). This route's token comments as the owner's login,

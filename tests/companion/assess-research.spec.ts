@@ -47,6 +47,7 @@ const sample: HouseResearch = {
     },
   ],
   more: 0,
+  writeUps: [{ file: "docs/research/discovery/name-nvda.md", opening: "Chips first." }],
   onTheList: { waiting: true, ahead: 2, askedBy: 3 },
   wait: "The house's research does not read the list yet, so no wait can be promised.",
   onYourBook: true,
@@ -179,6 +180,7 @@ describe("the tool's contract with the model", () => {
       ...Object.keys(sample),
       ...Object.keys(sample.campaigns[0] ?? {}),
       ...Object.keys(sample.lessons[0] ?? {}),
+      ...Object.keys(sample.writeUps?.[0] ?? {}),
       ...Object.keys(sample.onTheList),
     ];
     for (const key of keys) expect(RESEARCH_READ_TOOL_DEF.description).toContain(key);
@@ -193,5 +195,7 @@ describe("the tool's contract with the model", () => {
     expect(RESEARCH_READ_RULE).toContain("before you say the house has nothing");
     expect(RESEARCH_READ_RULE).toContain("never turn a lesson into a reason to buy or sell");
     expect(RESEARCH_READ_RULE).toContain("re-check date has passed");
+    // #7441: a subject the research desk wrote up is never relayed as unresearched.
+    expect(RESEARCH_READ_RULE).toContain("never say the house has not researched it");
   });
 });
