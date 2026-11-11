@@ -17,7 +17,7 @@ import {
   castSymbols,
   SYMBOL_RE,
 } from "../domain/campaigns.js";
-import { withoutAnswered } from "../domain/discovery-pass.js";
+import { shelfFileFor, withoutAnswered } from "../domain/discovery-pass.js";
 import {
   type CoveringCandidate,
   cleanQuestion,
@@ -243,15 +243,24 @@ function queueDiscoveries(
   subjects: readonly string[],
   covering: readonly CoveringCandidate[],
   scope: { readonly campaign?: string; readonly question?: string } = {},
-): { readonly status: string; readonly tell: string; readonly campaign?: string } | undefined {
+):
+  | {
+      readonly status: string;
+      readonly tell: string;
+      readonly campaign?: string;
+      readonly writeUp?: string;
+    }
+  | undefined {
   const memberKey = asker.key;
   const store = config.discoveryQueue;
   if (!store || subjects.length === 0) return undefined;
   const isResearched = config.campaignShelf ?? shelfResearched();
   const perPass = config.discoveryPerPass ?? discoveryPerPass();
-  // An ask the lane already answered (its shelf file is on main) has left the queue (discovery-pass.ts).
+  // An ask the lane already answered (its shelf file is on main) has left the queue (discovery-pass.ts),
+  // and asking it again joins that write-up rather than queueing work no pass will take (#7333).
+  const answered = config.campaignShelfAnswered ?? shelfAnswered();
   const loaded: DiscoveryQueue = store.load();
-  const before: DiscoveryQueue = withoutAnswered(loaded, shelfAnswered());
+  const before: DiscoveryQueue = withoutAnswered(loaded, answered);
   let queue = before;
   let last: QueueOutcome | undefined;
   let refused = 0;
@@ -264,6 +273,8 @@ function queueDiscoveries(
       { kind, subject, by: memberKey, ...scope },
       covering,
       isResearched,
+      new Date(),
+      answered,
     );
     queue = outcome.queue;
     asked.push(outcome);
@@ -290,6 +301,8 @@ function queueDiscoveries(
     tell: tellMember(last, perPass) + note,
     // A covered subject names the campaign to ask in.
     ...(last.status === "covered" ? { campaign: last.campaign } : {}),
+    // An answered ask names the write-up it joined.
+    ...(last.status === "answered" ? { writeUp: shelfFileFor(last.ask) } : {}),
   };
 }
 
