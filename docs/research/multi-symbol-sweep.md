@@ -71,6 +71,9 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"The Tokyo open is a null on a Japan Balance of Payments release day: the Nikkei |opening gap| lands below 1.0% (FT-japan-balance-of-payments-2026-11-10-3)"** — added 2026-11-11 from the
+  [japan-balance-of-payments-2026-11-10 close-out](events/japan-balance-of-payments-2026-11-10.md). Nikkei opened **59,372.28** against a 58,775.50 prior close (**+1.02%**, a 0.015-point miss), the first 1-hour bar standing in for a null daily bar. One print after a −5.96% / +2.3% two-session swing and with the BoJ Summary of Opinions in the same minute. Do not register a below-1.0% open prediction for this series in a VIX-20+ regime without a vol-conditioned base rate; this is one marginal kill, not a refutation of the 12-08 ledger's null.
+
 - **"A crude spike carries retail gasoline higher into the next month's collection window, so the pump's October level holds at or above September's" (FT-cpi-2026-11-10-1)** — added 2026-11-11 from the
   [cpi-2026-11-10 close-out](events/cpi-2026-11-10.md). EIA weekly US regular averaged **$4.3095** over the four October Mondays against **$4.3548** over September's (**−1.04%**) while Brent settled at $117.64 on 10-30:
   retail stepped up in September, then fell four Mondays running. Do not register a pump-level hold off a crude run-up without a lag measurement; retail follows crude on a delay that the run's own peak can outlast.
