@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import type { ReactElement } from "react";
-import { editionEventKey } from "../../../src/domain/edition-keys";
+import { editionEventKey, PIVOT_PARAM, parsePivot } from "../../../src/domain/edition-keys";
 import { parseBoardMetric } from "../live/board";
 import { asOfLine, type Edition, type EditionView, fetchEdition, staleLine } from "../live/edition";
 import { useHorizonRange } from "../live/horizon-params";
@@ -35,7 +35,9 @@ import { SectorOverview } from "../shell/sector-overview";
  *
  * Moneypenny points into this page by key (#7167): the page publishes the stories and events it
  * shows with every chat question (`live/page-keys.ts`), and her `/#story-<id>` and `/#event-<key>`
- * links land on those rows (`shell/edition-anchor.ts`).
+ * links land on those rows (`shell/edition-anchor.ts`). When she links two or more, the member can
+ * pivot the calendar to just those rows (slice 3, #7018 round 4 B): `?show=` names them, so the
+ * pivot is a page address, Back retraces it, and the calendar's ✕ drops it.
  *
  * An old bookmark or a shared compare link (`/?by=`, `?a=`, `?b=`) was always a member asking for
  * the board, so it still goes there with its query intact (#2321's promise).
@@ -48,6 +50,14 @@ type BoardAsk = {
   readonly by?: ReturnType<typeof parseBoardMetric>;
   readonly a?: string;
   readonly b?: string;
+  /** The rows a pivot names, comma-joined (`parsePivot`); never part of the board's redirect. */
+  readonly show?: string;
+};
+
+/** A `?show=` value, cleaned to the row anchors it names, or undefined when it names none. */
+const asPivot = (raw: unknown): string | undefined => {
+  const rows = parsePivot(raw);
+  return rows.length > 0 ? rows.join(",") : undefined;
 };
 
 function Masthead({ view }: { readonly view: EditionView }): ReactElement {
@@ -72,18 +82,21 @@ function Masthead({ view }: { readonly view: EditionView }): ReactElement {
  * What this page shows, by key (#7167 slice 1): every story, and the events in the calendar's
  * selected range. The range selector (#7220) filters `edition.next`, so an event outside it has no
  * row to land on; publishing it would let Moneypenny link a row that isn't there. Stepping the range
- * republishes. Her "N more on the calendar" still lands on the section.
+ * republishes. Her "N more on the calendar" still lands on the section. A pivot (slice 3) shows only
+ * the rows it names, so only those are on screen until ✕ or Back brings the rest back.
  */
 function editionKeys(
   edition: Edition | null | undefined,
   today: string | undefined,
   horizon: ReturnType<typeof useHorizonRange>,
+  pivot: readonly string[],
 ): PageKeys | undefined {
   if (!(edition && today)) return undefined;
+  const shows = calendarShows(edition, today, horizon, pivot);
   return {
     edition: edition.date,
-    stories: edition.stories.map((s) => s.id),
-    events: calendarShows(edition, today, horizon).inside.map(editionEventKey),
+    stories: shows.stories.map((s) => s.id),
+    events: shows.inside.map(editionEventKey),
   };
 }
 
@@ -98,7 +111,17 @@ function Landing(): ReactElement {
     refetchOnWindowFocus: false,
   });
   const horizon = useHorizonRange();
-  const keys = editionKeys(view.data?.edition, view.data?.today, horizon);
+  const pivot = parsePivot(Route.useSearch().show);
+  const navigate = useNavigate();
+  // ✕ on the pivot's bar: one more history entry, so Back still returns to the pivot, and the
+  // page keeps its scroll, so the member stays on the calendar as the rest of it comes back.
+  const clearPivot = () =>
+    void navigate({
+      to: "/",
+      search: (prev: BoardAsk) => ({ ...prev, [PIVOT_PARAM]: undefined }),
+      resetScroll: false,
+    });
+  const keys = editionKeys(view.data?.edition, view.data?.today, horizon, pivot);
   // The chat sends these with a question asked from here, and her links land on the same rows.
   usePublishPageKeys(keys);
   useLandOnEdition(keys ? JSON.stringify(keys) : "");
@@ -138,6 +161,8 @@ function Landing(): ReactElement {
               </>
             )}
             eventAsk={(e) => <EventThread event={e} />}
+            pivot={pivot}
+            onClearPivot={clearPivot}
           />
           {answer ? <AccountQuests quests={placed.account} unread={answer.unread} /> : null}
           <footer className="obs-foot">{edition.writtenBy}</footer>
@@ -153,14 +178,20 @@ function Landing(): ReactElement {
 }
 
 export const Route = createFileRoute("/")({
-  validateSearch: (search: Record<string, unknown>): BoardAsk => ({
-    ...(search.by !== undefined ? { by: parseBoardMetric(search.by) } : {}),
-    ...(asId(search.a) ? { a: asId(search.a) } : {}),
-    ...(asId(search.b) ? { b: asId(search.b) } : {}),
-  }),
+  validateSearch: (search: Record<string, unknown>): BoardAsk => {
+    const show = asPivot(search[PIVOT_PARAM]);
+    return {
+      ...(search.by !== undefined ? { by: parseBoardMetric(search.by) } : {}),
+      ...(asId(search.a) ? { a: asId(search.a) } : {}),
+      ...(asId(search.b) ? { b: asId(search.b) } : {}),
+      ...(show ? { show } : {}),
+    };
+  },
   beforeLoad: ({ search }) => {
     if (search.by === undefined && search.a === undefined && search.b === undefined) return;
-    throw redirect({ to: "/leaderboard", search: { ...search, by: search.by ?? "equity" } });
+    // The board's ask goes on; a pivot is the landing page's own and stays behind.
+    const { show: _pivot, ...ask } = search;
+    throw redirect({ to: "/leaderboard", search: { ...ask, by: search.by ?? "equity" } });
   },
   component: Landing,
 });
