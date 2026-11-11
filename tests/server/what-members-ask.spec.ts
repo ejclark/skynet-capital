@@ -211,6 +211,29 @@ describe("whatMembersAsk — counts what the league asked for, and nothing else"
     });
   });
 
+  it("counts a campaign question by its latest re-ask when nothing is on the list (#7445)", () => {
+    // Written up 10 days ago and re-asked yesterday: the re-ask joined the write-up, so the list is
+    // empty and the log's lastAskedAt is the only record of it.
+    const question = logged({
+      kind: "name",
+      subject: "CRWV",
+      campaign: "ai-dip-2026-10",
+      askedAt: ago(10),
+      askers: [
+        { key: "key-a", name: "A" },
+        { key: "key-b", name: "B" },
+      ],
+    });
+    const read = (q: CampaignQuestion) =>
+      whatMembersAsk({ days: 7, now: NOW, queue: [], questions: [q], filings: [] }).researchList;
+    expect(read({ ...question, lastAskedAt: ago(1) })).toMatchObject({
+      questions: 1,
+      askedBy: 2,
+      bySubject: [{ kind: "name", subject: "CRWV", questions: 1, askedBy: 2 }],
+    });
+    expect(read(question)).toMatchObject({ questions: 0 });
+  });
+
   it("leaves out anything older than the window or with a time that does not parse (4)", () => {
     const out = whatMembersAsk({
       days: 7,

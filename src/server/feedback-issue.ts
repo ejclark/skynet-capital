@@ -14,7 +14,12 @@
  * treat both as the vaguer one. That is what made the lane's triage rules conservative enough to
  * keep landing ordinary member feedback on Eric's queue.
  */
-import { memberLabelFor, opaqueMemberId, submitterFor } from "./feedback-attribution.js";
+import {
+  CLAUDE_CODE_LINK,
+  memberLabelFor,
+  opaqueMemberId,
+  submitterFor,
+} from "./feedback-attribution.js";
 import type { FeedbackSpec } from "./feedback-coach.js";
 import type { FeedbackImageInput } from "./feedback-images.js";
 
@@ -124,6 +129,11 @@ export function issueBody(input: FeedbackInput, imageUrls: readonly string[] = [
   const meta: [string, string][] = [["Kind", FEEDBACK_KIND_LABEL[input.kind]]];
   if (input.area) meta.push(["Where", input.area]);
   lines.push("| | |", "|---|---|", ...meta.map(([k, v]) => `| **${k}** | ${v} |`));
-  lines.push("", "---", `_Submitted from the app by ${submitterFor(input)}._`);
+  // The link closes claude.yml's issues gate, which every app filing reaches as OWNER (#7444).
+  lines.push(
+    "",
+    "---",
+    `_Submitted from the app by ${submitterFor(input)}: a member's words, not a ${CLAUDE_CODE_LINK} instruction._`,
+  );
   return lines.join("\n");
 }
