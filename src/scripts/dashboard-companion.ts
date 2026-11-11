@@ -38,6 +38,7 @@ import {
 import { createProgressionStore } from "../server/progression-store.js";
 import { createResearchAnswersReader } from "../server/research-answers.js";
 import { resolveRoadmap } from "../server/roadmap.js";
+import { shelfWriteUps } from "../server/shelf-write-ups.js";
 import { upcomingEvents } from "../server/upcoming-events.js";
 import { resolveWhatMembersAsk } from "../server/what-members-ask.js";
 import { resolveWorkStatus } from "../server/work-status.js";
@@ -102,6 +103,7 @@ export function setupCompanion(env: NodeJS.ProcessEnv, deps: CompanionSetupDeps)
     shelf: () => shelfResearched(),
     queue: () => researchList.load(),
     answered: shelfAnswered(),
+    writeUps: shelfWriteUps(),
     today: () => marketDayKey(new Date().toISOString()),
   });
   const tools: CompanionDeskDeps = {
