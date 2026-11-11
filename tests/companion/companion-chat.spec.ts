@@ -193,6 +193,7 @@ describe("no desk linked — only the draft hand-off is on offer, never a desk l
       "get_roadmap",
       "get_upcoming_events",
       "draft_feedback",
+      "draft_research_ask",
     ]);
     expect(streamCalls).toEqual([]);
     expect(texts.join("")).toBe("Sure, here's how a covered call works.");
@@ -217,6 +218,7 @@ describe("no desk linked — only the draft hand-off is on offer, never a desk l
       "get_roadmap",
       "get_upcoming_events",
       "draft_feedback",
+      "draft_research_ask",
     ]);
   });
 

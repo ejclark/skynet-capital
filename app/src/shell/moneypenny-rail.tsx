@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { myConvictionsKey } from "../live/member-convictions";
 import { formatTranscript, useMoneypenny } from "../live/moneypenny";
 import { CONVICTION_CHIPS } from "../live/moneypenny-conviction";
+import { RESEARCH_ASK_CHIPS } from "../live/moneypenny-research";
 import { chipsFor } from "../live/moneypenny-script";
 import { linesOf } from "../live/moneypenny-threads";
 import { Message } from "./mp-message";
@@ -27,7 +28,8 @@ import { ThreadBar, ThreadIndex } from "./rail-threads";
  * feedback gate (the ladder, the desk's plays, the onboarding milestone, the filings list), after a
  * view is saved from her card it invalidates the member's convictions list (#5482 criterion 9),
  * and the copy control writes the formatted thread to the clipboard. A parked view swaps the
- * chips for its card's three exits (`moneypenny-conviction.ts`).
+ * chips for its card's three exits (`moneypenny-conviction.ts`); a parked research question swaps
+ * them for its two (`moneypenny-research.ts`).
  *
  * Side threads (#7167 criterion 11, `rail-threads.tsx`): the rail shows one conversation at a time.
  * On the main one, the threads a member started on the page's rows sit above it behind one
@@ -37,6 +39,12 @@ import { ThreadBar, ThreadIndex } from "./rail-threads";
  */
 
 const dayOf = (at: number | undefined) => (at ? new Date(at).toDateString() : undefined);
+
+/** A parked card's own exits, or undefined when no view or research question is parked. */
+const parkedChips = (parked: { readonly view: boolean; readonly research: boolean }) => {
+  if (parked.view) return CONVICTION_CHIPS;
+  return parked.research ? RESEARCH_ASK_CHIPS : undefined;
+};
 
 export function MoneypennyRail(): ReactElement | null {
   const open = useMoneypenny((s) => s.open);
@@ -53,6 +61,7 @@ export function MoneypennyRail(): ReactElement | null {
   const parkedHere = useMoneypenny((s) => s.parkedIn === s.thread?.key);
   const draft = useMoneypenny((s) => (parkedHere ? s.draft : undefined));
   const conviction = useMoneypenny((s) => (parkedHere ? s.conviction : undefined));
+  const researchAsk = useMoneypenny((s) => (parkedHere ? s.researchAsk : undefined));
   const convictionSeq = useMoneypenny((s) => s.convictionSeq);
   const connected = useMoneypenny((s) => s.connected);
   const firstTradeDone = useMoneypenny((s) => s.firstTradeDone);
@@ -70,7 +79,11 @@ export function MoneypennyRail(): ReactElement | null {
   const busy = waiting || streaming;
   // A thread shows a parked card's exits, never the main conversation's own chips.
   const chipsShown =
-    !busy && (draft !== undefined || conviction !== undefined || (!thread && flow === "idle"));
+    !busy &&
+    (draft !== undefined ||
+      conviction !== undefined ||
+      researchAsk !== undefined ||
+      (!thread && flow === "idle"));
 
   // Follow the thread: every append scrolls the list to its end.
   // biome-ignore lint/correctness/useExhaustiveDependencies: messages/waiting/thread ARE the trigger
@@ -132,13 +145,12 @@ export function MoneypennyRail(): ReactElement | null {
   };
   const chips = !chipsShown
     ? []
-    : conviction
-      ? CONVICTION_CHIPS
-      : chipsFor({
-          draft: draft !== undefined,
-          connected: connected === true,
-          firstTradeDone: firstTradeDone === true,
-        });
+    : (parkedChips({ view: conviction !== undefined, research: researchAsk !== undefined }) ??
+      chipsFor({
+        draft: draft !== undefined,
+        connected: connected === true,
+        firstTradeDone: firstTradeDone === true,
+      }));
   // Best-effort: a clipboard failure (no permission, no secure context) costs nothing but the
   // "Copied" confirmation — the member's thread was never at risk of being lost by trying.
   const copyThread = () => {

@@ -17,6 +17,7 @@ import {
   TURN_LIMIT_MESSAGE,
 } from "./companion-limits.js";
 import { COMPANION_MODEL, type CompanionModelId } from "./companion-model.js";
+import type { ResearchAskDraft } from "./companion-research-ask.js";
 import {
   ANTHROPIC_URL,
   BUDGET_SPENT_MESSAGE,
@@ -81,6 +82,9 @@ export interface CompanionHandlers {
   /** She drafted a member's view (`draft_conviction`) — the rail shows its card, and only the
    *  member's tap there saves it and hands it over. Optional, like `onHandoff`. */
   readonly onConvictionDraft?: (drafted: ChatConvictionDraft) => void;
+  /** She drafted a research question (`draft_research_ask`) — the rail shows it as a card, and only
+   *  the member's tap there puts it on the research list. Optional, like `onHandoff`. */
+  readonly onResearchAskDraft?: (draft: ResearchAskDraft) => void;
   /** Asked before every billed model call; false means the member's budget for this window is
    *  spent — the turn stops looking things up and answers with what it already has, or reports
    *  the throttle honestly when it has nothing. Optional: no hook, no budget. */

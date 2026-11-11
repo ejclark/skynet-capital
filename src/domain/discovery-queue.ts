@@ -45,11 +45,13 @@
  *
  * Paper only; educational. A discovery never places an order and never sizes one.
  */
+
+import { cleanQuestion, QUESTION_MAX } from "./ask-input.js";
 import type { Campaign } from "./campaigns.js";
 import { castSymbols } from "./campaigns.js";
 import { LANE_READS_QUEUE } from "./discovery-lane.js";
 
-export { LANE_READS_QUEUE };
+export { cleanQuestion, LANE_READS_QUEUE, QUESTION_MAX };
 
 export const DISCOVERY_KINDS = ["sector", "market", "name"] as const;
 export type DiscoveryKind = (typeof DISCOVERY_KINDS)[number];
@@ -60,8 +62,6 @@ export const MAX_QUEUED = 24;
 export const MAX_PER_MEMBER = 5;
 /** The most members one ask remembers; a popular question stops counting, never grows the file. */
 export const MAX_ASKERS = 20;
-/** The longest question a member's words may run to (criterion 9: capped at 200 characters). */
-export const QUESTION_MAX = 200;
 /** The longest campaign scope an ask carries: a member key (10), a separator and a 60-character id. */
 export const CAMPAIGN_SCOPE_MAX = 80;
 
@@ -84,17 +84,6 @@ export interface DiscoveryAsk {
 /** The queue's key for one ask: one per thing asked about, per campaign it was asked in. */
 export function askId(kind: DiscoveryKind, subject: string, campaign?: string): string {
   return campaign ? `${campaign}/${kind}:${subject}` : `${kind}:${subject}`;
-}
-
-/** A member's words as one tidy line of at most `QUESTION_MAX` characters, or undefined when empty. */
-export function cleanQuestion(raw: unknown): string | undefined {
-  if (typeof raw !== "string") return undefined;
-  // Control characters (a NUL, a bell, an escape) become spaces, then runs of space collapse.
-  const spaced = Array.from(raw, (ch) =>
-    ch.charCodeAt(0) < 32 || ch.charCodeAt(0) === 127 ? " " : ch,
-  );
-  const line = spaced.join("").replace(/\s+/g, " ").trim();
-  return line.length > 0 ? line.slice(0, QUESTION_MAX) : undefined;
 }
 
 export type DiscoveryQueue = readonly DiscoveryAsk[];
