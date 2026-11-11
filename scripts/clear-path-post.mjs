@@ -29,7 +29,7 @@
 // the exit status, never through `| tail` (a pipeline reports the last command's status).
 // Token: GH_TOKEN or GITHUB_TOKEN, else `gh auth token`. REST core bucket, curl so HTTPS_PROXY holds.
 import { readFileSync } from "node:fs";
-import { FLIP_REFUSALS_PATH, refusalRows } from "./flip-refusals.mjs";
+import { FLIP_REFUSALS_PATH, readiedRows, refusalRows } from "./flip-refusals.mjs";
 import { isMain } from "./is-main.mjs";
 import { ensureGhToken, ghRest, sh } from "./moneypenny/gh.mjs";
 import { FOOTER } from "./moneypenny/labels.mjs";
@@ -140,17 +140,17 @@ function ghWrite(method, path, payload) {
  * missing token is one more failed write: a run with nothing to post must still exit 0 (#7380
  * closed red on exactly that, the token lookup sitting outside this try).
  */
-function recordRefusals(rows) {
+function recordRefusals(rows, what = "refusal") {
   if (!rows.length) return;
   try {
     ensureGhToken();
     appendLedgerRows(FLIP_REFUSALS_PATH, rows, {
-      message: `chore(flip): ${rows.length} refusal(s) to ${FLIP_REFUSALS_PATH}`,
+      message: `chore(flip): ${rows.length} ${what}(s) to ${FLIP_REFUSALS_PATH}`,
     });
-    console.log(`clear-path-post: recorded ${rows.length} refusal(s)`);
+    console.log(`clear-path-post: recorded ${rows.length} ${what}(s)`);
   } catch (err) {
     console.log(
-      `::warning::could not record ${rows.length} flip refusal(s): ${String(err?.stderr || err?.message).slice(0, 200)}`,
+      `::warning::could not record ${rows.length} flip ${what}(s): ${String(err?.stderr || err?.message).slice(0, 200)}`,
     );
   }
 }
@@ -188,6 +188,7 @@ function main(argv) {
   }
   ensureGhToken();
   let failed = 0;
+  const flipped = [];
   for (const p of plan) {
     try {
       const skip = liveSkip(ghRest(`issues/${p.issue}`));
@@ -198,12 +199,15 @@ function main(argv) {
       // Comment first: a label with no paper trail is the one outcome the flip rule forbids.
       ghWrite("POST", `issues/${p.issue}/comments`, { body: p.body });
       ghWrite("POST", `issues/${p.issue}/labels`, { labels: p.labels });
+      flipped.push(p.issue);
       console.log(`#${p.issue} flipped — ${p.labels.join(" + ")}`);
     } catch (err) {
       failed++;
       console.error(`#${p.issue} FAILED — ${String(err.stderr || err.message).trim()}`);
     }
   }
+  // The yield's numerator (#7311 slice 4): only issues a flip actually readied, bookkeeping like the refusals.
+  recordRefusals(readiedRows(flipped, new Date().toISOString()), "readied");
   return failed ? 1 : 0;
 }
 
