@@ -35,6 +35,15 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### `release · deploy` red on main: Fly's registry refused the image push for longer than the deploy retry waits
+- **SHA:** d6020bf   **DATE:** 2026-11-11   **STATUS:** closed
+- **SIGNAL:** run 42980060977 failed in `Deploy to Fly`; capsule #7106 reopened (same job, different step from its 11-08 flyctl-download cause) within three minutes. The Depot builder finished the image, then every push to `registry.fly.io` died on `dial tcp [fdaa::3]:5000: connect: connection refused` — six pushes across three attempts, 07:32:47–07:33:43Z. `scripts/fly-deploy.mjs` classified it transient and retried as designed; its 15s + 30s of waiting ran out first. Production stayed behind `main` on #7423 (book-wait on overview), and `deploy-bots` was skipped behind it.
+- **ROOT CAUSE:** one retry budget for every transient class. Three attempts over ~45s of waiting was sized for a closed API socket (#4523), which clears in seconds; a registry refusal lasted the whole window. A push failure is the one class where a longer budget costs nothing in safety: no release exists yet and no machine has been touched, and Depot rebuilds from cache in ~2s.
+- **PREVENTION:** script, held for Eric (`scripts/fly-deploy.mjs` is in `envelope.json`, so it boards the platter). `isImagePushFailure` (a transient failure on `failed to push registry.fly.io/…`) gets `FLY_DEPLOY_PUSH_ATTEMPTS` (default 5: waits of 15+30+60+120s ≈ 4 min); every other transient failure keeps 3. `tests/scripts/fly-deploy.spec.ts` replays the real log line: 3 new specs red against the old script, and 2 more that pin the release phase to the short budget and keep a 401 on push un-retried.
+- **SIDE QUESTS:** the capsule matcher reopened #7106 on job name alone, so the issue body still shows the 11-08 `Set up flyctl` evidence for a `Deploy to Fly` fault. If the step differs, a fresh capsule (or a body refresh) would read truer. Not filed yet: watch whether it misleads a second repair.
+
+---
+
 ### `PR #7319 is red` red on main: pin the desk-ideas spec's clock inside the nvda earnings window
 - **SHA:** 9282f4a   **DATE:** 2026-11-10   **STATUS:** closed
 - **COVERS:** 6d9560e
