@@ -1,7 +1,8 @@
 import type { ChatConvictionDraft } from "../../../src/companion/companion-convictions";
+import type { ResearchAskDraft } from "../../../src/companion/companion-research-ask";
 import { pageKeys } from "./page-keys";
 
-export type { ChatConvictionDraft };
+export type { ChatConvictionDraft, ResearchAskDraft };
 
 /**
  * Moneypenny's voice on the wire — the client half of `/api/companion` (server:
@@ -80,7 +81,8 @@ function parseFrame(frame: string): { readonly event: string; readonly data: str
 
 /**
  * Stream one turn: `onText` fires per delta, `onHandoff` once if she drafted a filing,
- * `onConviction` once if she drafted a view (#5482 criterion 9 — its card, for the member's tap); resolves on
+ * `onConviction` once if she drafted a view (#5482 criterion 9 — its card, for the member's tap),
+ * `onResearchAsk` once if she drafted a research question (its card, for the member's tap); resolves on
  * `done`, rejects on an `error` frame (a `CompanionStreamError`), a non-stream answer (the "not switched on" / throttled
  * JSON), or a transport failure.
  */
@@ -89,6 +91,7 @@ export async function streamCompanionTurn(
   onText: (delta: string) => void,
   onHandoff?: (draft: CompanionDraft) => void,
   onConviction?: (drafted: ChatConvictionDraft) => void,
+  onResearchAsk?: (draft: ResearchAskDraft) => void,
 ): Promise<void> {
   const res = await fetch("/api/companion/chat", {
     method: "POST",
@@ -114,6 +117,8 @@ export async function streamCompanionTurn(
       onHandoff?.(JSON.parse(data) as CompanionDraft);
     } else if (event === "conviction") {
       onConviction?.(JSON.parse(data) as ChatConvictionDraft);
+    } else if (event === "research-ask") {
+      onResearchAsk?.(JSON.parse(data) as ResearchAskDraft);
     } else if (event === "error") {
       const frame = JSON.parse(data) as { error?: string; refused?: boolean };
       throw new CompanionStreamError(frame.error ?? "companion error", frame.refused === true);

@@ -30,14 +30,22 @@ import {
   type ConvictionToolName,
   runConvictionTool,
 } from "./companion-convictions.js";
+import {
+  RESEARCH_ASK_TOOL_DEFS,
+  RESEARCH_ASK_TOOL_NAMES,
+  type ResearchAskDraft,
+  runResearchAskTool,
+} from "./companion-research-ask.js";
 
 /**
- * THE COMPANION'S ENTIRE TOOL SURFACE — a CLOSED allow-list of nine read-only lookups plus two
+ * THE COMPANION'S ENTIRE TOOL SURFACE — a CLOSED allow-list of read-only lookups plus draft
  * hand-offs (`draft_feedback`, which files nothing: it hands the rail a draft the member still has
  * to send; `draft_conviction`, which saves nothing: it hands the rail a view's card the member
- * still has to tap — `companion-convictions.ts`), and nothing else. This is the structural half of
+ * still has to tap — `companion-convictions.ts`; `draft_research_ask`, which asks nothing: it hands
+ * the rail a research question the member still has to tap — `companion-research-ask.ts`), and
+ * nothing else. This is the structural half of
  * the "never fires an order" invariant (the other
- * half is the system prompt): `runCompanionTool` is a `switch` over eleven literal string cases
+ * half is the system prompt): `runCompanionTool` is a `switch` over literal string cases
  * with no default fallthrough to anything callable, so there is no code path here — not a typo,
  * not a hallucinated tool name, not a crafted `tool_use` block — that reaches an order-placing
  * function. This file does not import `trade-service.ts`, `option-trade-service.ts`,
@@ -85,6 +93,7 @@ export const COMPANION_TOOL_NAMES = [
   "get_what_members_ask",
   "draft_feedback",
   ...CONVICTION_TOOL_NAMES,
+  ...RESEARCH_ASK_TOOL_NAMES,
 ] as const;
 
 /** What `draft_feedback` carries to the rail — a filing the MEMBER still has to send. */
@@ -164,10 +173,11 @@ const DESKLESS_TOOLS: ReadonlySet<CompanionToolName> = new Set([
   "get_roadmap",
   "get_upcoming_events",
   "draft_feedback",
+  "draft_research_ask",
 ]);
 
 /** The tool names one turn declares: every tool for a member with a linked desk, otherwise only
- *  the deskless four. The request's `tools` array (`companion-tool-rounds.ts`) and the unknown-name
+ *  the deskless ones. The request's `tools` array (`companion-tool-rounds.ts`) and the unknown-name
  *  refusal both read this, so the refusal never names a tool the turn didn't offer. */
 export function declaredToolNames(participantId: string | undefined): readonly CompanionToolName[] {
   return participantId
@@ -293,6 +303,7 @@ export const COMPANION_TOOL_DEFS = [
     },
   },
   ...CONVICTION_TOOL_DEFS,
+  ...RESEARCH_ASK_TOOL_DEFS,
 ] as const;
 
 /** What the tool dispatcher needs to answer honestly — all read accessors, all optional so a
@@ -343,6 +354,8 @@ export interface CompanionDeskDeps {
   readonly convictions?: CompanionConvictions;
   /** Where a drafted view's card goes — the rail's hand-off hook, never a write. */
   readonly onConvictionDraft?: (drafted: ChatConvictionDraft) => void;
+  /** Where a drafted research question goes — the rail's hand-off hook, never a write. */
+  readonly onResearchAskDraft?: (draft: ResearchAskDraft) => void;
 }
 
 export type CompanionToolResult =
@@ -524,14 +537,13 @@ function upcomingEventsResult(
 }
 
 /**
- * Run ONE of the eleven allow-listed tools. Any other name — including anything a compromised or
+ * Run ONE of the allow-listed tools. Any other name — including anything a compromised or
  * confused model might invent, like `place_order` or `submit_trade` — falls through to the
  * refusal below and touches nothing. `participantId` is the SESSION's own linked desk, resolved
  * upstream (`resolveOwnerId`) — never a client-supplied id, so this can never be pointed at
  * another member's account. `participantId` may be absent (no linked desk yet): the desk lanes
- * then refuse honestly, and only `draft_feedback`, `get_work_status`, `get_roadmap` and
- * `get_upcoming_events` — which read no member data, only the public issue queue and the checked-in
- * calendar — still answer.
+ * then refuse honestly, and only the deskless tools (`DESKLESS_TOOLS`) — which read no
+ * member data, only the public issue queue, the checked-in calendar and the catalogs — still answer.
  */
 export async function runCompanionTool(
   name: string,
@@ -604,6 +616,8 @@ export async function runCompanionTool(
             input,
           )
         : { ok: false, error: "no linked desk" };
+    case "draft_research_ask":
+      return runResearchAskTool(input, deps.onResearchAskDraft);
     default:
       // Structural refusal — there is no branch above that reaches a write, so an unrecognized
       // name (a typo, a hallucination, an adversarial member steering the model) lands here and
