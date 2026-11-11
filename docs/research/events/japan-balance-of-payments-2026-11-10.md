@@ -150,5 +150,83 @@ prose in a row is free. Close-out fills `## Outcome` below from re-run instrumen
 first), never from memory. After that the assessment is closed; the doc reopens only to score a
 registered forward test whose `Score by` has arrived (`forward-test-due`).
 
+## Outcome
+
+**Close-out (2026-11-11, D+1).** Macro-print mode runs no `earnings-cycle` / `intraday-edges` instrument
+(`symbols: []` by design; the caches were busted anyway), so "re-run instrument data" means Yahoo bars
+for `^N225`, `JPY=X`, `^VIX` and `^GSPC` pulled this session, and the release figure read from an
+aggregator. Nothing below is scored from memory of the tape. **Source grade:** the figures are
+**secondary** (Trading Economics via WebFetch). MOF's own page returned a JavaScript challenge to plain
+`curl`; read through WebFetch it no longer lists a September row and starts at 2026-12-08, which is
+consistent with the release having come out but does not show it. The date stays `estimate`.
+
+**The verdict: the stand-aside call was right and free; FT-1 and FT-2 passed; FT-3 failed, by a hair
+and for a reason that is not this print.** No tracked name is keyed to this event (`symbols: []`).
+
+### What printed
+
+September 2026 current account **¥2,372.3bn against an aggregator consensus of ¥3,354.4bn** (a miss of
+about 29%), release stamped 2026-11-09 23:50 GMT = **08:50 JST on 2026-11-10**; the article's stated
+drivers were weaker primary income and a wider services deficit. It is the opposite surprise sign from
+August (a ~27% beat, Nikkei gap −0.28%, USD/JPY flat), so the two out-of-sample dress rehearsals now
+cover one beat and one miss, one observation each. One consensus source with inferred column labels
+still cannot condition the 12-08 ledger's surprise leg.
+
+### The tape on 2026-11-10 (Yahoo)
+
+| Line | 11-09 | 11-10 | Read |
+|---|---|---|---|
+| Nikkei 225 open vs prior close | close 58,775.50 | open 59,372.28 | gap **+1.02%** (+1.06% off the 15-minute series' last bar, 58,750.45) |
+| Nikkei 225 close | 58,775.50 | 60,424.22 (last 15-min bar) | **+2.81%** close to close |
+| USD/JPY close | 158.29 | 157.98 | **−0.20%** |
+| VIX close | 19.92 | 19.46 | −2.31% (25.64 on 11-06, 28.18 on 11-05) |
+| S&P 500 close | 7,549.94 | 7,520.93 | −0.38% (+2.35% on 11-09) |
+
+Yahoo's **daily** `^N225` series has no 2026-11-10 bar (it jumps from 11-09 to 11-11, and its 11-11 row is
+a two-session move), so the 11-10 open and close come from the 15-minute series for that day (23 bars,
+first open 59,372.28, last close 60,424.22) and the prior close from the daily bar. The gap clears
+1.0% under either prior-close convention.
+
+### Forward tests
+
+- **FT-1: pass.** The release landed 2026-11-10 08:50 JST per the aggregator's timestamp, and MOF's page
+  has rolled its next row to 2026-12-08. The 6th-Tokyo-trading-day rule held again.
+- **FT-2: pass.** USD/JPY close to close **−0.20%**, below 1.0%. The yen tail did not show up on the
+  second out-of-sample release, even with US CPI later the same day.
+- **FT-3: kill.** The Nikkei opened **+1.02%** above its prior close, at or above the 1.0% line the
+  row called "below". It is one observation against a ~0.29 historical release-day rate and the row
+  said so. **Attribution, from the tape:** the S&P 500 rose **2.35% on 11-09** after Tokyo had closed and
+  VIX fell 22%, so the gap is the US rebound carried into Tokyo's open, not a reaction to a current
+  account 29% under consensus ten minutes earlier. Whether the print contributed cannot be separated from
+  one day.
+- **Also settled:** the 12-08 ledger's "both 10-08 and 11-10 gaps at or above 1.0%" falsifier was already
+  dead after 10-08 (0.28%); 11-10's gap does not revive it. That ledger's next pulse owns retiring the
+  row; this ledger does not edit it.
+
+### Adjacency, read off the ledgers that closed the same day
+
+US CPI (08:30 ET) and the 30-year JGB auction have their own closed-out ledgers
+([CPI](cpi-2026-11-10.md), [JGB 30y](jgb-30y-auction-2026-11-10.md)); neither is re-scored here. The
+BoJ Summary of Opinions at the same 08:50 JST minute and the tariff truce expiry have no outcome yet in
+their ledgers. So the 11-10 Tokyo morning remains a crowded read, as the stance said.
+
+### What this changes
+
+- **Stance unchanged: stand aside.** Nothing tracked moved on this print and none is keyed to it.
+- **For the 12-08 ledger:** one more yen-tail non-event (0.20%) and one gap above 1.0% that the US
+  session explains. Neither moves the 1.13× / p = 0.280 open study; a gap observation on a day with a
+  +2.35% US session the night before is the confounded case that study's controls exist for.
+- **Nothing proposed:** a close-out runs no adjacency sweep. The next series entry is the 12-08 print,
+  already tracked.
+- **Loop census (sense · decide · act · verify · remember):** the one manual stage was *sense*. MOF's
+  page sits behind a JS challenge for plain fetchers and the daily Nikkei bar was missing, so the
+  release figure and the open both needed a second source by hand. The cheapest fix would be a bar
+  fallback to the 15-minute series in the instrument; not built here.
+
+**This document is now closed.** No trade was taken, none is authorized.
+
 **Last assessed:** 2026-11-08
 <!-- probe-ref: {"symbols":{},"vix":25.64,"daysBand":"low:0+","adjacentIds":["boe-decision-2026-11-05","boj-minutes-2026-11-05","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","erock-q3-2026-results-2026-11-12","existing-home-sales-2026-11-12","jgb-10y-auction-2026-11-05","jgb-30y-auction-2026-11-10","jgb-5y-auction-2026-11-12","jobs-2026-11-06","mts-october-2026-11-12","nbis-2026-11-12-print","ppi-2026-11-13","productivity-costs-q3-2026-11-05","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","sp-global-investment-manager-index-2026-11-10","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-3y-note-2026-11-09","treasury-buyback-1mo2y-2026-11-05","treasury-coupon-announcement-2026-11-12","uk-gdp-q3-first-2026-11-12","uk-gilt-auction-long-2026-11-10","umich-sentiment-prelim-2026-11-06","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","jobs-2026-11-06","nbis-2026-11-12-print"],"screenStreak":0,"blocked":[]} -->
+
+**Last assessed:** 2026-11-11
+<!-- probe-ref: {"symbols":{},"vix":19.46,"daysBand":"low:0+","adjacentIds":["boe-decision-2026-11-05","boj-minutes-2026-11-05","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","erock-q3-2026-results-2026-11-12","existing-home-sales-2026-11-12","jgb-10y-auction-2026-11-05","jgb-30y-auction-2026-11-10","jgb-5y-auction-2026-11-12","jobs-2026-11-06","mts-october-2026-11-12","nbis-2026-11-12-print","pbls-q3-2026-results-2026-11-12","ppi-2026-11-13","productivity-costs-q3-2026-11-05","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","sp-global-investment-manager-index-2026-11-10","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-3y-note-2026-11-09","treasury-buyback-1mo2y-2026-11-05","treasury-coupon-announcement-2026-11-12","uk-gdp-q3-first-2026-11-12","uk-gilt-auction-long-2026-11-10","umich-sentiment-prelim-2026-11-06","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","jobs-2026-11-06","nbis-2026-11-12-print"],"screenStreak":0,"blocked":[{"url":"https://www.mof.go.jp/english/policy/international_policy/reference/balance_of_payments/","status":"200 via curl (JS proof-of-work challenge page, no content); WebFetch read it but shows only 2026-12-08 onward","at":"2026-11-11"}]} -->

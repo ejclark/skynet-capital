@@ -71,6 +71,10 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"The Tokyo open is a null on a Japan BoP release, so a 1.0% opening-gap ceiling holds on a day the US session has just rallied 2%+" (FT-japan-balance-of-payments-2026-11-10-3)** — added 2026-11-11 from the
+  [japan-balance-of-payments-2026-11-10 close-out](events/japan-balance-of-payments-2026-11-10.md). The Nikkei opened **+1.02%** over its prior close on 11-10 after the S&P 500 rose **2.35%** on 11-09 (VIX −22%).
+  Do not register a Nikkei opening-gap ceiling on a Tokyo-morning release without conditioning on the prior US session's move; the gap carries the overnight US session, whatever the release says.
+
 - **"A crude spike carries retail gasoline higher into the next month's collection window, so the pump's October level holds at or above September's" (FT-cpi-2026-11-10-1)** — added 2026-11-11 from the
   [cpi-2026-11-10 close-out](events/cpi-2026-11-10.md). EIA weekly US regular averaged **$4.3095** over the four October Mondays against **$4.3548** over September's (**−1.04%**) while Brent settled at $117.64 on 10-30:
   retail stepped up in September, then fell four Mondays running. Do not register a pump-level hold off a crude run-up without a lag measurement; retail follows crude on a delay that the run's own peak can outlast.
