@@ -14,7 +14,8 @@
  *      ticker);
  *   3. the lessons recorded (tested, killed, on watch), each with its date, re-check date and
  *      falsifier as the house wrote them, marked stale once the re-check date has passed;
- *   4. whether a question about it already waits on the research list (`discovery-queue.ts`).
+ *   4. whether a question about it already waits on the research list (`discovery-queue.ts`);
+ *   5. the discovery lane's write-ups on it (`docs/research/discovery/`, `shelf-write-ups.ts`).
  *
  * MEMBER DATA STAYS THE MEMBER'S OWN. The research list holds other members' keys and words; this
  * read returns only counts (asks ahead, members who asked), never a key, a name, a campaign scope or
@@ -32,7 +33,9 @@
  *
  * ANSWERED ASKS ARE OFF THE LIST. The daily lane answers an ask by writing a finding to the shelf and
  * never touches the volume file, so the live reader drops answered asks at read time
- * (`withoutAnswered`), the way every dashboard reader of the list does.
+ * (`withoutAnswered`), the way every dashboard reader of the list does. The finding that answered it
+ * is then named in `writeUps` (#7441): without it, a subject the lane had written up read exactly
+ * like one nobody had touched, and she told members the house had not researched it.
  *
  * HONEST ABOUT THE WAIT. While no lane reads the research list (`LANE_READS_QUEUE`), the wait line
  * says so rather than promising a place in line that nothing honors — the same rule `tellMember`
@@ -72,6 +75,12 @@ export interface ResearchSubject {
   readonly subject: string;
 }
 
+/** One discovery-lane write-up on the shelf, with its first line as written. */
+export interface ShelfWriteUp {
+  readonly file: string;
+  readonly opening?: string;
+}
+
 /** One lesson as the house wrote it. `stale` is set only once its re-check date has passed. */
 export interface HouseLessonRow {
   readonly kind: Lesson["kind"];
@@ -104,6 +113,8 @@ export interface HouseResearch {
   readonly lessons: readonly HouseLessonRow[];
   /** Lessons that matched but are not listed. */
   readonly more: number;
+  /** The discovery lane's write-ups on the subject, the bare one first; absent when there are none. */
+  readonly writeUps?: readonly ShelfWriteUp[];
   /** Counts only — never a member key, name, campaign scope or question text. */
   readonly onTheList: {
     readonly waiting: boolean;
@@ -131,6 +142,8 @@ export interface HouseResearchDeps {
   readonly lessons?: readonly LessonRecord[];
   /** The names the directory files under a sector (`symbolsInSector` by default). */
   readonly namesInSector?: (sector: string) => readonly string[];
+  /** The discovery lane's write-ups on a subject (`shelfWriteUps`); none when not given. */
+  readonly writeUps?: (ask: ResearchSubject) => readonly ShelfWriteUp[];
 }
 
 /** Whether a campaign follows the subject — `coveringCampaign`'s rule, without the ask scope. A
@@ -245,6 +258,7 @@ export function houseResearchOn(ask: ResearchSubject, deps: HouseResearchDeps): 
   );
   const onTheList = listStanding(ask, deps.queue);
   const isName = ask.kind === "name";
+  const writeUps = deps.writeUps?.(ask) ?? [];
   return {
     kind: ask.kind,
     subject: ask.subject,
@@ -254,6 +268,7 @@ export function houseResearchOn(ask: ResearchSubject, deps: HouseResearchDeps): 
       .map((c) => ({ id: c.id, title: c.title, storyline: c.storyline })),
     lessons: lessons.slice(0, LESSON_ROWS).map((l) => lessonRow(l, deps.today)),
     more: Math.max(0, lessons.length - LESSON_ROWS),
+    ...(writeUps.length > 0 ? { writeUps } : {}),
     onTheList,
     wait: waitLine(onTheList, deps.laneReads ?? LANE_READS_QUEUE),
     ...(isName ? { onYourBook: heldNames(deps.held).includes(ask.subject) } : {}),
@@ -276,6 +291,8 @@ export interface HouseResearchSources {
   /** Whether the shelf already answers an ask (`shelfAnswered`); an answered ask is dropped from
    *  the list before it is counted, so a question the house answered never reads as waiting. */
   readonly answered: (ask: DiscoveryAsk) => boolean;
+  /** The write-ups that answered those asks (`shelfWriteUps`), so dropping one never hides it. */
+  readonly writeUps: (ask: ResearchSubject) => readonly ShelfWriteUp[];
   readonly today: () => string;
   readonly laneReads?: boolean;
   readonly campaigns?: readonly Campaign[];
@@ -298,6 +315,7 @@ export function createHouseResearchReader(sources: HouseResearchSources): ReadRe
       queue,
       held,
       today: sources.today(),
+      writeUps: sources.writeUps,
       ...(sources.laneReads === undefined ? {} : { laneReads: sources.laneReads }),
       ...(sources.campaigns ? { campaigns: sources.campaigns } : {}),
       ...(sources.lessons ? { lessons: sources.lessons } : {}),
