@@ -318,6 +318,7 @@ describe("createHouseResearchReader", () => {
         throw new Error("disk gone");
       },
       answered: () => false,
+      writeUps: () => [],
       today: () => TODAY,
       campaigns: [AI],
       lessons: LESSONS,
@@ -339,6 +340,7 @@ describe("createHouseResearchReader", () => {
         ask({ id: "name:PLTR" }),
       ],
       answered: (a) => a.subject === "AAPL",
+      writeUps: () => [],
       today: () => TODAY,
       laneReads: true,
       campaigns: [],
