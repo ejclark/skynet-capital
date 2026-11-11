@@ -4,6 +4,7 @@ import { type ReactElement, useRef } from "react";
 import { MARKET_CLOSURES } from "../../../src/domain/market-calendar";
 import { type BookEvent, bookEventsIn, nextOnBook } from "../live/book-events";
 import { bookLanes, bookLens, countsAround } from "../live/book-lanes";
+import { useBookWaitDays } from "../live/book-wait";
 import { useHorizonRange } from "../live/horizon-params";
 import { ALL_RANGE, type DayRange, inRange, rangeFor, stepAnchor } from "../live/horizon-range";
 import { useRefineSearch } from "../live/refine-search";
@@ -166,6 +167,11 @@ function AgendaFoot({
   );
 }
 
+/** The books whose wait marks its reopen day (#4608) — none on one symbol's view, which is about
+ *  that name alone. */
+const waitingBooks = (desks: readonly SymbolDesk[] | undefined, symbol: string | undefined) =>
+  symbol || !desks ? [] : desks.map((d) => d.desk.id);
+
 export function EventsSection({
   desks,
   desksLoading,
@@ -202,8 +208,9 @@ export function EventsSection({
   const { desks: book, book: one, named } = symbolView(desks, symbol);
   const why = whyFor(one);
 
+  const waits = useBookWaitDays(waitingBooks(desks, symbol));
   const join = (r: DayRange) =>
-    bookEventsIn({ desks: book, events, calls, range: r, lens: horizon.lens });
+    bookEventsIn({ desks: book, events, calls, range: r, lens: horizon.lens, waits });
   const everything = join(ALL_RANGE);
   const inView = join(picked ? { start: picked, end: picked } : range);
   const lanes = bookLanes({
