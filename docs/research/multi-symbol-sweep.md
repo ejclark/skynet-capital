@@ -78,6 +78,12 @@ robust, alpha fragile — is the finding.
   [cpi-2026-11-10 close-out](events/cpi-2026-11-10.md). EIA weekly US regular averaged **$4.3095** over the four October Mondays against **$4.3548** over September's (**−1.04%**) while Brent settled at $117.64 on 10-30:
   retail stepped up in September, then fell four Mondays running. Do not register a pump-level hold off a crude run-up without a lag measurement; retail follows crude on a delay that the run's own peak can outlast.
 
+- **"November revises the winter natural-gas bill up and the heating degree days colder" (FT-eia-steo-2026-11-10-4)** — added 2026-11-11 from the
+  [eia-steo-2026-11-10 close-out](events/eia-steo-2026-11-10.md). Registered at **n=2** (2024-25 and 2025-26 both revised gas up +2.7% / +2.6% and degree days colder +2.5% / +1.3%) and **failed
+  on its first out-of-sample winter**: US total heating degree days went **3,155 → 3,103.6 (−1.6%)**, warmer, in all four regions; gas expenditure moved **+0.04%** ($640 → $640.28), inside the
+  October table's dollar rounding. Do not cite a "November revises colder" direction off two winters; weather revisions follow the month's own forecast, not the calendar. The magnitude claim
+  (FT-3: no fuel moves more than 5%, no year-on-year sign flips) **passed** on the same edition (largest move heating oil **+3.0%**).
+
 - **"An M3-2 update the Atlanta Fed lists as internal-only leaves no observable GDPNow vintage" (FT-m3-full-report-2026-11-03-1)** — added 2026-11-09 from the
   [m3-full-report-2026-11-03 close-out](events/m3-full-report-2026-11-03.md). The workbook's current-quarter tabs carry an **11-03** column ("M3-2 Manufacturing (Full report)", GDPNow 3.7383 to 3.7213),
   and `ContribArchives` already holds vintages on the 2026-06-03, 07-02, 09-02 and 10-02 internal dates. Do not infer "no vintage" from `InternalUpdates`; read the vintage tabs. The registered cell,
