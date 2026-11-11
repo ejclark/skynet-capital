@@ -17,6 +17,10 @@ import type { TradeActivityRecord } from "../observatory/activity-store.js";
 import { rankStructures } from "../options/recommend.js";
 import type { BotControlsStore } from "../server/bot-controls-store.js";
 import { createCompanionMessageLogStore } from "../server/companion-message-log.js";
+import {
+  type CompanionScreenshotStore,
+  createCompanionScreenshotStore,
+} from "../server/companion-screenshots-store.js";
 import { shelfAnswered } from "../server/discovery-answered.js";
 import { createDiscoveryQueueStore } from "../server/discovery-queue-store.js";
 import { opaqueMemberId } from "../server/feedback-issue.js";
@@ -67,6 +71,8 @@ export interface CompanionSetup {
   /** What a member has said to Moneypenny, at all — the ladder gate's own evidence, and
    *  `/api/companion/ack`'s store (wired directly, by the session's own opaque id). */
   readonly companionMessageLog: ReturnType<typeof createCompanionMessageLogStore>;
+  /** Screenshots attached in the chat (#6007) — on the volume under the derived-store root. */
+  readonly companionScreenshots: CompanionScreenshotStore;
 }
 
 /** Resolve the companion turn (and the progression service its curriculum tool reads) for one
@@ -150,5 +156,6 @@ export function setupCompanion(env: NodeJS.ProcessEnv, deps: CompanionSetupDeps)
       "ℹ️  The trading companion is off (no ANTHROPIC_API_KEY) — /api/companion answers 'not switched on yet'.",
     );
   }
-  return { companion, progression, companionMessageLog };
+  const companionScreenshots = createCompanionScreenshotStore(env, (m) => console.error(m));
+  return { companion, progression, companionMessageLog, companionScreenshots };
 }

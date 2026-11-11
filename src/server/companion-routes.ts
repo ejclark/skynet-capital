@@ -15,6 +15,7 @@ import { regularSessionOpen } from "../domain/market-session.js";
 import type { Session } from "./auth/session.js";
 import { companionConvictionsFor } from "./companion-convictions-port.js";
 import { recordFirstMessageSafely } from "./companion-message-log.js";
+import { SCREENSHOTS_PATH, serveCompanionScreenshots } from "./companion-screenshot-routes.js";
 import { resolveCurrentId } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { opaqueMemberId } from "./feedback-issue.js";
@@ -24,7 +25,8 @@ import { parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
 import { openSseStream, sseFrame } from "./sse.js";
 
 /**
- * THE COMPANION'S HTTP SURFACE — three endpoints, all gated on the SAME `Session` every
+ * THE COMPANION'S HTTP SURFACE — three endpoints (plus the chat screenshot pair, served from
+ * `companion-screenshot-routes.ts` behind the same session check, #6007), all gated on the SAME `Session` every
  * other member-only route checks upstream (`gateRequest` in `dashboard-auth-gate.ts`, wired by
  * the caller before this file ever runs):
  *
@@ -279,9 +281,20 @@ export async function serveCompanionApi(
   config: DashboardServerConfig,
   session: Session | undefined,
 ): Promise<boolean> {
-  if (path !== "/api/companion" && path !== "/api/companion/chat" && path !== "/api/companion/ack")
+  const screenshots = path === SCREENSHOTS_PATH || path.startsWith(`${SCREENSHOTS_PATH}/`);
+  if (
+    !screenshots &&
+    path !== "/api/companion" &&
+    path !== "/api/companion/chat" &&
+    path !== "/api/companion/ack"
+  )
     return false;
   if (!session) return false;
+  if (screenshots) {
+    const store = config.companionScreenshots;
+    const member = opaqueMemberId(session.email);
+    return serveCompanionScreenshots(req, res, path, store, member, config.logLine);
+  }
   if (path === "/api/companion" && (req.method ?? "GET") === "GET") {
     serveCompanionIndex(res, config);
     return true;
