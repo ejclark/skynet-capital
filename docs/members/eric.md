@@ -142,9 +142,8 @@ is still open is its step's `known_gap` in `e2e/journeys/eric.journey.json`):
   tooltip he cannot hover on a phone.
 - **Not one of the eight, and the one that matters most to him:** every decision surface is
   per position. The calendar of what he holds is a cockpit section (Events, j1 s3b). Even so, the split of his
-  money (`app/src/shell/money-strip.tsx`) has no target to be measured against, a "wait"
-  (`src/options/position-guidance-rules.ts`, `CALL_WORDS.WAIT`) has no book-level home and no
-  reopen date. (Taking profit is now celebrated beside its explanation when a close of a
+  money (`app/src/shell/money-strip.tsx`) has no target to be measured against. (A "wait" now has
+  a book-level home with its reopen date, #4608. Taking profit is now celebrated beside its explanation when a close of a
   position marked Consider fills at a gain, #4609.)
 
 - **2026-10-08 — his own walk of the profile, in his words.** Kept out of this file until the blind
@@ -247,10 +246,11 @@ Each step: `goto` · what he sees · the EARS acceptance line · the judge line.
    whose call is Wait, with what would change it. **WHEN a lever's call is wait, the app shall say
    so as a first-class call and name what would change it.** Judge: does this reader know they are
    waiting on purpose?
-2. `/app/accounts` — the book; no standing wait, no date that reopens the question. **WHEN the
-   owner has decided to wait, the app shall carry the wait on the book with the date that reopens
-   it.** _known gap — "wait" is per position only; nothing at book level carries a wait or a
-   reopen date._ Judge: does this reader know when to look again?
+2. `/app/accounts` — the book's Overview: with no wait, "Wait until a date…" under the next-date
+   line; once he names a day, "Wait until <day>" and his reason lead the money column, and the
+   reopen day is a ⧗ on Events (#4608). **WHEN the owner has decided to wait, the app shall carry
+   the wait on the book with the date that reopens it.** Judge: does this reader know when to look
+   again?
 
 ### j5 — the phone check (every step at 390×844, touch)
 
@@ -299,6 +299,7 @@ One line each; routed to `docs/IDEAS.md` or a `feedback` issue by the plan's sli
   built._
 - **"Wait" as a first-class call with the date that reopens it** — carried on the book, not only
   in one position's sheet; the reopen date is a day on the calendar. _(src: Eric · while: j4 s2)_
+  _Shipped as #4608 (one wait per account, on Overview and on Events)._
 - **Profit-take celebration with its explanation beside it** — the rung, the number, and the
   sentence that says why it was right, in one frame (BRAND: celebration pairs with explanation;
   positive reinforcement never distorts honesty). _(src: Eric · while: j2 s3)_

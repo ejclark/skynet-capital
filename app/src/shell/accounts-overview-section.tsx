@@ -3,6 +3,7 @@ import type { DeskSnapshot } from "../live/desk";
 import type { AccountNetWorthView, NetWorthStatsView } from "../live/networth";
 import type { OwnedAccount } from "../live/settings";
 import { AccountsPositionsSection } from "./accounts-positions-section";
+import { BookWaitLine, BookWaitStart } from "./book-wait-line";
 import { HeldEventsLine } from "./held-events-line";
 import { MoneyStrip } from "./money-strip";
 import { NetWorthCard } from "./networth-card";
@@ -39,6 +40,11 @@ import { useTowerColumn } from "./use-tower-column";
  * #3807 slice 2·1: under the net-worth card, one line — the events on what this book holds in the
  * market calendar's range (the burning-day joint, docs/IA.md §6; `held-events-line.tsx`). The
  * Eye's glance scope widens to the whole `.cockpit`, so the head's lenses and arrows turn it too.
+ *
+ * #4608: one account's wait on the whole book — "Wait until <day>", the member's reason — leads
+ * the money column when one is recorded, and a quiet "Wait until a date…" sits under the next-date
+ * line when none is (`book-wait-line.tsx`). It sits beside the positions, never over them: every
+ * review badge below still shows.
  *
  * #3977: at the bench width and wider the card leaves this grid for the page's own tower column
  * (`tower-column.tsx`), open and unboxed from just under the navbar; the grid is then one column.
@@ -92,6 +98,7 @@ export function OverviewSection({
       )}
       <div className={`overview-grid${towerColumn ? " overview-grid--solo" : ""}`}>
         <div className="overview-worth">
+          {allAccounts ? null : <BookWaitLine accountId={accountId} desk={singleDesk} />}
           <NetWorthCard
             stats={stats}
             caption={caption}
@@ -107,6 +114,7 @@ export function OverviewSection({
             ) : null}
           </NetWorthCard>
           {desks ? <HeldEventsLine desks={desks} /> : null}
+          {allAccounts ? null : <BookWaitStart accountId={accountId} desk={singleDesk} />}
           {!allAccounts && singleDesk?.allocation ? null : (
             <p className="desk-note">
               {stats.cashKnown ? `cash ${stats.cash} ready to use` : "cash —"} ·{" "}
