@@ -9,6 +9,7 @@ import type { DashboardServerConfig } from "../../src/server/dashboard-server-co
 import { DiscoveryQueueStore } from "../../src/server/discovery-queue-store.js";
 import { MemberCampaignStore } from "../../src/server/member-campaign-store.js";
 import { serveMemberCampaignsApi } from "../../src/server/member-campaigns-api-routes.js";
+import { whatMembersAsk } from "../../src/server/what-members-ask.js";
 
 /**
  * A RE-ASK OF A SUBJECT ALREADY ON THE RESEARCH SHELF (#7333). The research lane wrote up Ada's NVDA
@@ -176,5 +177,49 @@ describe("asking again about a subject already written up (#7333)", () => {
       writeUp: "docs/research/discovery/name-snow.md",
     });
     expect(queue.load()).toEqual([]);
+  });
+
+  it("a re-ask joined to a write-up still counts in the league's read for its week (#7445)", async () => {
+    // Ada asks about AMD in ai-buildout, the lane writes it up, and Grace asks again ten days later.
+    // The reply is "answered", so nothing goes on the list: the question log is the only record left,
+    // and it has to carry the re-ask's date or `get_what_members_ask` reads "nobody asked this week".
+    const ada = { email: "ada@example.com", name: "Ada" } as never;
+    const shelf = new Set<string>();
+    cfg = {
+      ...cfg,
+      campaignShelfAnswered: (a: { kind: string; subject: string; campaign?: string }) =>
+        shelf.has(`${a.campaign}/${a.kind}:${a.subject}`),
+    } as DashboardServerConfig;
+    rstest.useFakeTimers({ toFake: ["Date"] });
+    try {
+      rstest.setSystemTime(new Date("2026-11-01T12:00:00Z"));
+      expect(
+        (await ask({ kind: "name", subject: "AMD", campaign: "ai-buildout" }, ada)).status,
+      ).toBe("queued");
+      shelf.add("ai-buildout/name:AMD");
+      const now = new Date("2026-11-11T12:00:00Z");
+      rstest.setSystemTime(now);
+      expect(
+        (await ask({ kind: "name", subject: "AMD", campaign: "ai-buildout" }, grace)).status,
+      ).toBe("answered");
+      expect(queue.load()).toEqual([]);
+      const week = whatMembersAsk({
+        days: 7,
+        now,
+        queue: queue.load(),
+        questions: questions.load(),
+        filings: [],
+      });
+      expect(week.researchList).toMatchObject({
+        available: true,
+        questions: 1,
+        askedBy: 2,
+        bySubject: [{ kind: "name", subject: "AMD", questions: 1, askedBy: 2 }],
+      });
+      // The campaign's own list still dates the question by its first ask.
+      expect(questions.load()[0]?.askedAt).toBe("2026-11-01T12:00:00.000Z");
+    } finally {
+      rstest.useRealTimers();
+    }
   });
 });
