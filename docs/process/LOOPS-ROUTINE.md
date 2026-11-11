@@ -1,9 +1,10 @@
 # The loops Routine — what one daily session does, and when it does nothing
 
-Plan #7311, slice 5. The Routine's prompt on claude.ai is one line: *"Follow
+Plan #7311, slice 5. The Routine's prompt on claude.ai says little more than *"Follow
 `docs/process/LOOPS-ROUTINE.md` in this repo."* The steps live here, in a reviewable file, so the
-claude.ai side cannot drift from them. The Routine is **not armed until Eric creates it** and its row
-is in [`docs/ROUTINES.md`](../ROUTINES.md) (house rule: arming is his, and the row is part of arming).
+claude.ai side cannot drift from them. **Armed 2026-11-11 on Eric's word in chat** ("Yes, daily"):
+`daily-loops`, `trig_01LowrNbHyLV24CMCqcYSNm3`, no connectors, and its row is in
+[`docs/ROUTINES.md`](../ROUTINES.md) (house rule: arming is his, and the row is part of arming).
 
 ## Why a clock at all
 
@@ -13,8 +14,9 @@ condition: a merge is not a tick for the flip, and a queue draining is not a tic
 daily read of both due-checks is the cheapest honest notice: a quiet day costs two REST reads and ends
 there (ROUTINES.md → *No-op must be free*).
 
-**Predicted run time: daily, after the morning steer** (the open question on #7311; medium
-confidence). The next surge measures whether a weekday-only schedule would have missed a loop.
+**Run time: daily at 10:00 America/Chicago, after the morning steer** (settled 2026-11-11, the
+predicted answer to #7311's open question). The next surge measures whether a weekday-only schedule
+would have missed a loop.
 
 ## The steps, in order
 
