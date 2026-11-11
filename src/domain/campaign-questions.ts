@@ -150,7 +150,7 @@ export interface QuestionView {
   readonly suggestion: boolean;
 }
 
-function findingOf(lesson: Lesson): FindingView {
+export function findingOf(lesson: Lesson): FindingView {
   return {
     kind: lesson.kind,
     idea: lesson.idea,

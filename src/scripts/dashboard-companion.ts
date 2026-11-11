@@ -21,10 +21,14 @@ import {
   type CompanionScreenshotStore,
   createCompanionScreenshotStore,
 } from "../server/companion-screenshots-store.js";
+import { shelfAnswered } from "../server/discovery-answered.js";
+import { createDiscoveryQueueStore } from "../server/discovery-queue-store.js";
 import { opaqueMemberId } from "../server/feedback-issue.js";
 import type { FeedbackLogStore } from "../server/feedback-log.js";
 import { resolveSimilarFeedback } from "../server/feedback-similar.js";
+import { createHouseResearchReader } from "../server/house-research.js";
 import type { LadderEvidenceReader } from "../server/ladder-evidence.js";
+import { shelfResearched } from "../server/member-campaign-store.js";
 import type { ObservatoryHub } from "../server/observatory-hub.js";
 import { logKeyFor } from "../server/owner-link-store.js";
 import {
@@ -32,6 +36,7 @@ import {
   type ProgressionService,
 } from "../server/progression-service.js";
 import { createProgressionStore } from "../server/progression-store.js";
+import { createResearchAnswersReader } from "../server/research-answers.js";
 import { resolveRoadmap } from "../server/roadmap.js";
 import { upcomingEvents } from "../server/upcoming-events.js";
 import { resolveWhatMembersAsk } from "../server/what-members-ask.js";
@@ -82,12 +87,30 @@ export function setupCompanion(env: NodeJS.ProcessEnv, deps: CompanionSetupDeps)
     store: createProgressionStore(env, (m) => console.error(m)),
   });
   const optionsClientFor = deps.optionsClientFor;
+  // #7286 slice: a desk's owner reads their own research questions. An owner email that doesn't
+  // resolve reads nothing — never the desk id as if it were someone's member key.
+  const readResearchQuestions = createResearchAnswersReader(env, (m) => console.error(m));
   const findSimilarFeedback = resolveSimilarFeedback(env);
   const readWorkStatus = resolveWorkStatus(env);
   const readRoadmap = resolveRoadmap(env);
+  // A read-only second handle on the research list's file (the access wiring holds the writing
+  // one, `dashboard-access.ts`); the store reads the file fresh on each load, so a new ask shows
+  // up on the next turn. The shelf is read fresh per call too, the way the ask route reads it, and
+  // an ask the shelf already answers is dropped the way every other reader of the list drops it.
+  const researchList = createDiscoveryQueueStore(env, (m) => console.error(m));
+  const readResearchOn = createHouseResearchReader({
+    shelf: () => shelfResearched(),
+    queue: () => researchList.load(),
+    answered: shelfAnswered(),
+    today: () => marketDayKey(new Date().toISOString()),
+  });
   const tools: CompanionDeskDeps = {
     snapshotFor: (id) => deps.hub.getState().participants.find((p) => p.id === id),
     readTradeActivity: deps.readFills,
+    readMyResearchQuestions: (id) => {
+      const email = deps.ownerEmailFor(id);
+      return readResearchQuestions(email ? opaqueMemberId(email) : undefined);
+    },
     progression,
     // League-wide counts only (#7286 slice 4): the research list and question log on the volume,
     // and the feedback log this boot already holds. Never a name, a key or a member's words.
@@ -103,6 +126,8 @@ export function setupCompanion(env: NodeJS.ProcessEnv, deps: CompanionSetupDeps)
         held,
         ...(underlying ? { underlying } : {}),
       }),
+    // The ledgers, campaigns and lessons are checked in; the research list is on the volume.
+    readResearchOn,
     ...(optionsClientFor
       ? {
           rankFor: async (participantId, outlook) => {

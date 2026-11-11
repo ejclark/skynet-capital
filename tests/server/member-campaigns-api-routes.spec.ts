@@ -410,6 +410,26 @@ describe("a question starts discovery (#6952 slice 2b)", () => {
     expect(queue.load()).toEqual([]);
   });
 
+  it("keeps the member's cleaned words on a bare ask, so a question drafted in the chat reaches the list", async () => {
+    const answer = await askAbout({
+      kind: "name",
+      subject: "PLTR",
+      question: "  Why is it\nmoving   this week?  ",
+    });
+    expect(answer.body).toMatchObject({ ok: true, status: "queued" });
+    expect(queue.load()).toMatchObject([
+      { id: "name:PLTR", question: "Why is it moving this week?", askers: [ADA] },
+    ]);
+    expect(queue.load()[0]?.campaign).toBeUndefined();
+  });
+
+  it("caps a bare ask's words at 200 characters and keeps none when they are blank", async () => {
+    await askAbout({ kind: "name", subject: "PLTR", question: "q".repeat(900) });
+    await askAbout({ kind: "market", subject: "gold", question: "   " });
+    expect(queue.load()[0]?.question).toHaveLength(200);
+    expect(queue.load()[1]?.question).toBeUndefined();
+  });
+
   it("lets a second member join the same question instead of queueing it twice", async () => {
     await askAbout({ kind: "name", subject: "PLTR" });
     const answer = await askAbout({ kind: "name", subject: "PLTR" }, grace);
