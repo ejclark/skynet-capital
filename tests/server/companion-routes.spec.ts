@@ -175,6 +175,64 @@ describe("serveCompanionApi — POST /api/companion/chat", () => {
     expect(out.chunks.some((c) => c.includes("event: done"))).toBe(true);
   });
 
+  // #6007 slice 2: a user turn's screenshot ids reach the turn (ids only, well-formed ones), and the
+  // turn gets the store's `load` — any signed-in member's screenshot loads by id.
+  it("passes a user turn's well-formed screenshot ids and the store's load to the turn", async () => {
+    const good = "0123456789abcdef0123456789abcdef";
+    const captured: { messages: unknown; loadScreenshot?: (id: string) => Promise<unknown> }[] = [];
+    const config = configWith({
+      companionScreenshots: {
+        save: () => Promise.resolve({ id: good }),
+        load: (id: string) =>
+          Promise.resolve(id === good ? { type: "image/png", data: Buffer.from("x") } : undefined),
+      },
+      companion: ((input, handlers: CompanionHandlers) => {
+        captured.push(input as never);
+        handlers.onDone();
+        return Promise.resolve();
+      }) as CompanionTurn,
+    });
+    const { res } = fakeRes();
+    await serveCompanionApi(
+      post({
+        messages: [
+          { role: "user", content: "look", screenshots: [good, "../etc/passwd", 7, "short"] },
+          { role: "assistant", content: "ok", screenshots: [good] },
+        ],
+      }),
+      res,
+      "/api/companion/chat",
+      config,
+      sessionFor(email()),
+    );
+    expect(captured[0]?.messages).toEqual([
+      { role: "user", content: "look", screenshots: [good] },
+      { role: "assistant", content: "ok" },
+    ]);
+    expect(await captured[0]?.loadScreenshot?.(good)).toMatchObject({ type: "image/png" });
+    expect(await captured[0]?.loadScreenshot?.("f".repeat(32))).toBeUndefined();
+  });
+
+  it("binds no loader when no screenshot store is wired", async () => {
+    const captured: { loadScreenshot?: unknown }[] = [];
+    const config = configWith({
+      companion: ((input, handlers: CompanionHandlers) => {
+        captured.push(input as never);
+        handlers.onDone();
+        return Promise.resolve();
+      }) as CompanionTurn,
+    });
+    const { res } = fakeRes();
+    await serveCompanionApi(
+      post({ messages: [{ role: "user", content: "hi" }] }),
+      res,
+      "/api/companion/chat",
+      config,
+      sessionFor(email()),
+    );
+    expect(captured[0]).not.toHaveProperty("loadScreenshot");
+  });
+
   // #5482 criterion 9: the turn gets the session's conviction READS (no save, no hand-over), and a
   // drafted view reaches the rail as its own frame, for the member's tap to act on.
   it("hands the turn read-only conviction tools and relays a drafted view as a conviction frame", async () => {

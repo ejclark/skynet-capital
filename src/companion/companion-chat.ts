@@ -19,6 +19,7 @@ import {
 } from "./companion-limits.js";
 import { COMPANION_MODEL, type CompanionModelId } from "./companion-model.js";
 import type { ResearchAskDraft } from "./companion-research-ask.js";
+import { type LoadScreenshot, withScreenshots } from "./companion-screenshots.js";
 import {
   ANTHROPIC_URL,
   BUDGET_SPENT_MESSAGE,
@@ -51,6 +52,9 @@ type DoStream = typeof streamAnthropicMessage;
 export interface CompanionMessage {
   readonly role: "user" | "assistant";
   readonly content: string;
+  /** Ids of screenshots the member attached to this user turn (#6007) — ids only, never bytes. The
+   *  server loads each from its store and sends it to the model as an image block. */
+  readonly screenshots?: readonly string[];
 }
 
 export interface CompanionTurnInput {
@@ -68,6 +72,9 @@ export interface CompanionTurnInput {
   /** The session's own filings and the card hook for `draft_followup` (#7286 slice 8), bound by
    *  the route for this turn like `convictions`. Absent: the tool answers "not available". */
   readonly followup?: CompanionFollowup;
+  /** The screenshot store's `load`, bound by the route (#6007 slice 2). Absent: a message's
+   *  screenshot ids ride as the "no longer kept" note, and the turn still answers. */
+  readonly loadScreenshot?: LoadScreenshot;
 }
 
 /** What kind of failure an `onError` was (#6214). `refused`: the model declined — any partial
@@ -146,6 +153,9 @@ export function withExhaustedNote(
 ): readonly unknown[] {
   const last = working[working.length - 1] as { role?: unknown; content?: unknown } | undefined;
   if (last?.role !== "user" || !Array.isArray(last.content)) return working;
+  // A member turn that carries screenshots is an array too (#6007) — only a tool round's own user
+  // turn (its tool_result blocks) is the turn the note belongs to.
+  if (!last.content.some((b: { type?: unknown }) => b?.type === "tool_result")) return working;
   if (harnessNoteAsSystem(model)) return [...working, { role: "system", content: EXHAUSTED_NOTE }];
   return [
     ...working.slice(0, -1),
@@ -243,7 +253,7 @@ export function createCompanionChat(
       ? "This member has a linked account — the read-only tools describe their own account."
       : "This member has no linked account yet — the account lookups are not available; answer from general knowledge and the member context, and don't claim to see their positions. draft_feedback, get_work_status, get_roadmap and get_upcoming_events still work.";
     const volatile = input.context ? `${toolsNote}\n\n${input.context}` : toolsNote;
-    const initial = trimHistory(input.messages).map((m) => ({ role: m.role, content: m.content }));
+    const initial = await withScreenshots(trimHistory(input.messages), input.loadScreenshot);
 
     // The draft hand-off is always on offer, so every turn runs the (non-streaming) tool leg;
     // the desk lookups join it only for a linked desk.
