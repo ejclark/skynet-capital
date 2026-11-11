@@ -5,6 +5,7 @@ import { myConvictionsKey } from "../live/member-convictions";
 import { formatTranscript, useMoneypenny } from "../live/moneypenny";
 import { CONVICTION_CHIPS } from "../live/moneypenny-conviction";
 import { FOLLOWUP_CHIPS } from "../live/moneypenny-followup";
+import { RESEARCH_ASK_CHIPS } from "../live/moneypenny-research";
 import { chipsFor } from "../live/moneypenny-script";
 import { linesOf } from "../live/moneypenny-threads";
 import { Message } from "./mp-message";
@@ -29,7 +30,8 @@ import { ThreadBar, ThreadIndex } from "./rail-threads";
  * view is saved from her card it invalidates the member's convictions list (#5482 criterion 9),
  * and the copy control writes the formatted thread to the clipboard. A parked view swaps the
  * chips for its card's three exits (`moneypenny-conviction.ts`); a parked follow-up on the
- * member's own filing swaps them for its two (`moneypenny-followup.ts`, #7286 slice 8).
+ * member's own filing swaps them for its two (`moneypenny-followup.ts`, #7286 slice 8); a parked
+ * research question swaps them for its two (`moneypenny-research.ts`).
  *
  * Side threads (#7167 criterion 11, `rail-threads.tsx`): the rail shows one conversation at a time.
  * On the main one, the threads a member started on the page's rows sit above it behind one
@@ -40,10 +42,15 @@ import { ThreadBar, ThreadIndex } from "./rail-threads";
 
 const dayOf = (at: number | undefined) => (at ? new Date(at).toDateString() : undefined);
 
-/** A parked card's own exits, or undefined when no view or follow-up is parked. */
-const parkedChips = (parked: { readonly view: boolean; readonly followup: boolean }) => {
+/** A parked card's own exits, or undefined when no view, follow-up or research question is parked. */
+const parkedChips = (parked: {
+  readonly view: boolean;
+  readonly followup: boolean;
+  readonly research: boolean;
+}) => {
   if (parked.view) return CONVICTION_CHIPS;
-  return parked.followup ? FOLLOWUP_CHIPS : undefined;
+  if (parked.followup) return FOLLOWUP_CHIPS;
+  return parked.research ? RESEARCH_ASK_CHIPS : undefined;
 };
 
 export function MoneypennyRail(): ReactElement | null {
@@ -62,6 +69,7 @@ export function MoneypennyRail(): ReactElement | null {
   const draft = useMoneypenny((s) => (parkedHere ? s.draft : undefined));
   const conviction = useMoneypenny((s) => (parkedHere ? s.conviction : undefined));
   const followup = useMoneypenny((s) => (parkedHere ? s.followup : undefined));
+  const researchAsk = useMoneypenny((s) => (parkedHere ? s.researchAsk : undefined));
   const convictionSeq = useMoneypenny((s) => s.convictionSeq);
   const connected = useMoneypenny((s) => s.connected);
   const firstTradeDone = useMoneypenny((s) => s.firstTradeDone);
@@ -83,6 +91,7 @@ export function MoneypennyRail(): ReactElement | null {
     (draft !== undefined ||
       conviction !== undefined ||
       followup !== undefined ||
+      researchAsk !== undefined ||
       (!thread && flow === "idle"));
 
   // Follow the thread: every append scrolls the list to its end.
@@ -145,7 +154,11 @@ export function MoneypennyRail(): ReactElement | null {
   };
   const chips = !chipsShown
     ? []
-    : (parkedChips({ view: conviction !== undefined, followup: followup !== undefined }) ??
+    : (parkedChips({
+        view: conviction !== undefined,
+        followup: followup !== undefined,
+        research: researchAsk !== undefined,
+      }) ??
       chipsFor({
         draft: draft !== undefined,
         connected: connected === true,

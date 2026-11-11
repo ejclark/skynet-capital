@@ -10,12 +10,18 @@ import {
 import type { Outlook } from "../options/outlook.js";
 import type { Recommendation } from "../options/recommend.js";
 import type { FindSimilarFeedback } from "../server/feedback-similar.js";
+import type { ReadResearchOn } from "../server/house-research.js";
 import type { ParticipantProgression, ProgressionService } from "../server/progression-service.js";
+import {
+  type ReadDeskResearchQuestions,
+  researchQuestionsResult,
+} from "../server/research-answers.js";
 import type { ReadRoadmap } from "../server/roadmap.js";
 import type { UpcomingEvents } from "../server/upcoming-events.js";
 import { type ReadWhatMembersAsk, whatMembersAskResult } from "../server/what-members-ask.js";
 import { MAX_ISSUES_PER_LOOKUP, type ReadWorkStatus } from "../server/work-status.js";
 import { isOccSymbol, UNDERLYING_PATTERN } from "../trading/option-symbols.js";
+import { RESEARCH_READ_TOOL_DEF, researchReadResult } from "./assess-research.js";
 import {
   type ChatConvictionDraft,
   CONVICTION_TOOL_DEFS,
@@ -30,14 +36,22 @@ import {
   FOLLOWUP_TOOL_NAMES,
   runFollowupTool,
 } from "./companion-followup.js";
+import {
+  RESEARCH_ASK_TOOL_DEFS,
+  RESEARCH_ASK_TOOL_NAMES,
+  type ResearchAskDraft,
+  runResearchAskTool,
+} from "./companion-research-ask.js";
 
 /**
- * THE COMPANION'S ENTIRE TOOL SURFACE — a CLOSED allow-list of nine read-only lookups plus two
+ * THE COMPANION'S ENTIRE TOOL SURFACE — a CLOSED allow-list of read-only lookups plus draft
  * hand-offs (`draft_feedback`, which files nothing: it hands the rail a draft the member still has
  * to send; `draft_conviction`, which saves nothing: it hands the rail a view's card the member
- * still has to tap — `companion-convictions.ts`), and nothing else. This is the structural half of
+ * still has to tap — `companion-convictions.ts`; `draft_research_ask`, which asks nothing: it hands
+ * the rail a research question the member still has to tap — `companion-research-ask.ts`), and
+ * nothing else. This is the structural half of
  * the "never fires an order" invariant (the other
- * half is the system prompt): `runCompanionTool` is a `switch` over eleven literal string cases
+ * half is the system prompt): `runCompanionTool` is a `switch` over literal string cases
  * with no default fallthrough to anything callable, so there is no code path here — not a typo,
  * not a hallucinated tool name, not a crafted `tool_use` block — that reaches an order-placing
  * function. This file does not import `trade-service.ts`, `option-trade-service.ts`,
@@ -67,21 +81,29 @@ import {
  *
  * `draft_followup` (#7286 slice 8, `companion-followup.ts`) posts nothing: it hands the rail a
  * follow-up comment on one of the member's OWN filings, which only their tap posts.
+ *
+ * `get_research_on` (the Moneypenny operator plan, ASSESS — `assess-research.ts`) reads the house's
+ * own research on one company, sector or market: checked-in ledgers, campaigns and lessons, plus
+ * counts off the research list (never another member's key or words). Offered with a linked desk
+ * only, so it can also say whether the member holds the name.
  */
 
 export const COMPANION_TOOL_NAMES = [
   "get_my_positions",
+  "get_my_research_questions",
   "get_my_round_trips",
   "get_my_curriculum_progress",
   "get_play_catalog",
   "get_structures_for_outlook",
   "get_work_status",
   "get_roadmap",
+  "get_research_on",
   "get_upcoming_events",
   "get_what_members_ask",
   "draft_feedback",
   ...FOLLOWUP_TOOL_NAMES,
   ...CONVICTION_TOOL_NAMES,
+  ...RESEARCH_ASK_TOOL_NAMES,
 ] as const;
 
 /** What `draft_feedback` carries to the rail — a filing the MEMBER still has to send. */
@@ -161,10 +183,11 @@ const DESKLESS_TOOLS: ReadonlySet<CompanionToolName> = new Set([
   "get_roadmap",
   "get_upcoming_events",
   "draft_feedback",
+  "draft_research_ask",
 ]);
 
 /** The tool names one turn declares: every tool for a member with a linked desk, otherwise only
- *  the deskless four. The request's `tools` array (`companion-tool-rounds.ts`) and the unknown-name
+ *  the deskless ones. The request's `tools` array (`companion-tool-rounds.ts`) and the unknown-name
  *  refusal both read this, so the refusal never names a tool the turn didn't offer. */
 export function declaredToolNames(participantId: string | undefined): readonly CompanionToolName[] {
   return participantId
@@ -178,6 +201,13 @@ export const COMPANION_TOOL_DEFS = [
     name: "get_my_positions",
     description:
       "The member's own current holdings on their linked paper account: cash, equity, and one row per open position with symbol, kind ('option', quantity in contracts, or 'stock'), side ('long', or 'short' for a written option), quantity (negative when short), avgPrice, marketValue, costBasis and unrealizedPl (dollars). Read each position's gain or loss from unrealizedPl, never from the price pair: on a written option costBasis is the premium collected and marketValue the cost to buy it back, both signed negative. Use it when a question is about what they hold or what a holding is worth now and the MEMBER CONTEXT block doesn't already answer it. Covers only this member's account; returns 'no linked desk' when they have no linked account. Read-only.",
+    input_schema: { type: "object", properties: {} },
+  },
+  {
+    // #7286 named next slice 2 — research answers come back to the chat (`server/research-answers.ts`).
+    name: "get_my_research_questions",
+    description:
+      "What came of the research questions THIS member put on the house's research list — only their own, never anyone else's. Returns questions (newest first, up to 8), more (how many more are not shown), wait (one sentence on when the daily research pass runs, or that nothing reads the list yet) and note. Each question: kind (name, sector or market), subject, question (their own words, only when they asked first), askedAt, askedIn (a house campaign's title, 'your campaign' or 'a party campaign'; absent when asked outside a campaign), state ('answered', 'waiting' or 'no-finding-yet': it left the list and no finding is on the shelf yet), ahead (waiting only: asks ahead of it), passes (waiting only: about how many daily passes until it is taken), othersAsking (a count of other members on the same question, never who), writeUp (the research shelf file that answers it), opening (that file's first line, quoted as written) and findings (house campaign lessons that answer it, each with kind — tested, killed or on-watch — idea, on, recheckOn, falsifier and source). An empty list means they have no questions on record. Takes no input; returns 'no linked desk' without a linked account. Read-only.",
     input_schema: { type: "object", properties: {} },
   },
   {
@@ -238,6 +268,7 @@ export const COMPANION_TOOL_DEFS = [
       "What is coming on the Skynet Capital build queue: openPlans (how many open plans there are), then groups — Now, Next and Later, each with its meaning, its total, and up to 8 of its most recently touched items (number, quoted title, member-facing status, labels, url). Use it for 'what's coming next', 'what's on the roadmap', 'are you building X'. The grouping is SEQUENCING derived from each plan's own labels — never a delivery date, and never a promise that an item ships; say so if the member reads it that way. truncated: true (when present) means the queue outran what one read covers, so every total is a floor, not a count. Returns no issue bodies and no comments. Takes no input; read-only.",
     input_schema: { type: "object", properties: {} },
   },
+  RESEARCH_READ_TOOL_DEF,
   {
     name: "get_upcoming_events",
     description:
@@ -283,6 +314,7 @@ export const COMPANION_TOOL_DEFS = [
   },
   ...FOLLOWUP_TOOL_DEFS,
   ...CONVICTION_TOOL_DEFS,
+  ...RESEARCH_ASK_TOOL_DEFS,
 ] as const;
 
 /** What the tool dispatcher needs to answer honestly — all read accessors, all optional so a
@@ -292,6 +324,9 @@ export interface CompanionDeskDeps {
   /** Where a captured draft goes — the chat engine's own handoff hook, never a write. */
   readonly onDraft?: (draft: FeedbackDraft) => void;
   readonly readTradeActivity?: (participantId: string) => Promise<readonly TradeActivityRecord[]>;
+  /** #7286 named next slice 2: the desk owner's own research questions and what came of them
+   *  (`server/research-answers.ts`). Optional — without it the tool says "not available". */
+  readonly readMyResearchQuestions?: ReadDeskResearchQuestions;
   readonly progression?: ProgressionService;
   /** Rank candidate structures for a stated outlook, through the PARTICIPANT'S OWN linked broker
    *  client — never another member's. Optional, like every other capability here: a deployment
@@ -317,6 +352,10 @@ export interface CompanionDeskDeps {
   /** #7286 slice 8: the session's own filings and the rail's card hook, bound per turn by the chat
    *  route. Absent: `draft_followup` says "not available". */
   readonly followup?: CompanionFollowup;
+  /** The Moneypenny operator plan (ASSESS): what the house's own research holds on one subject
+   *  (`server/house-research.ts`). Optional — without it `get_research_on` says "not available",
+   *  never "the house has nothing". */
+  readonly readResearchOn?: ReadResearchOn;
   /** #7034 slice 3a: the next fortnight's market events, the held names first
    *  (`server/upcoming-events.ts`). Optional — without it `get_upcoming_events` says "not
    *  available", never guesses a date. */
@@ -329,6 +368,8 @@ export interface CompanionDeskDeps {
   readonly convictions?: CompanionConvictions;
   /** Where a drafted view's card goes — the rail's hand-off hook, never a write. */
   readonly onConvictionDraft?: (drafted: ChatConvictionDraft) => void;
+  /** Where a drafted research question goes — the rail's hand-off hook, never a write. */
+  readonly onResearchAskDraft?: (draft: ResearchAskDraft) => void;
 }
 
 export type CompanionToolResult =
@@ -510,14 +551,13 @@ function upcomingEventsResult(
 }
 
 /**
- * Run ONE of the eleven allow-listed tools. Any other name — including anything a compromised or
+ * Run ONE of the allow-listed tools. Any other name — including anything a compromised or
  * confused model might invent, like `place_order` or `submit_trade` — falls through to the
  * refusal below and touches nothing. `participantId` is the SESSION's own linked desk, resolved
  * upstream (`resolveOwnerId`) — never a client-supplied id, so this can never be pointed at
  * another member's account. `participantId` may be absent (no linked desk yet): the desk lanes
- * then refuse honestly, and only `draft_feedback`, `get_work_status`, `get_roadmap` and
- * `get_upcoming_events` — which read no member data, only the public issue queue and the checked-in
- * calendar — still answer.
+ * then refuse honestly, and only the deskless tools (`DESKLESS_TOOLS`) — which read no
+ * member data, only the public issue queue, the checked-in calendar and the catalogs — still answer.
  */
 export async function runCompanionTool(
   name: string,
@@ -547,6 +587,9 @@ export async function runCompanionTool(
     }
     case "get_my_positions":
       return positionsResult(snapshot);
+    case "get_my_research_questions":
+      // The session's own desk only; the model's input is never read.
+      return researchQuestionsResult(deps.readMyResearchQuestions, participantId);
     case "get_my_round_trips":
       return participantId
         ? roundTripsResult(snapshot, deps.readTradeActivity, participantId)
@@ -574,6 +617,10 @@ export async function runCompanionTool(
       return participantId
         ? runFollowupTool(input, deps.followup)
         : { ok: false, error: "no linked desk" };
+    case "get_research_on":
+      return participantId
+        ? researchReadResult(deps.readResearchOn, snapshot, input)
+        : { ok: false, error: "no linked desk" };
     case "get_upcoming_events":
       return upcomingEventsResult(deps.readUpcomingEvents, snapshot, input);
     case "get_my_convictions":
@@ -587,6 +634,8 @@ export async function runCompanionTool(
             input,
           )
         : { ok: false, error: "no linked desk" };
+    case "draft_research_ask":
+      return runResearchAskTool(input, deps.onResearchAskDraft);
     default:
       // Structural refusal — there is no branch above that reaches a write, so an unrecognized
       // name (a typo, a hallucination, an adversarial member steering the model) lands here and

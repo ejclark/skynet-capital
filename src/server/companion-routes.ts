@@ -254,6 +254,10 @@ async function serveChat(
       onConvictionDraft: (drafted) => {
         res.write(sseFrame(JSON.stringify(drafted), "conviction", seq++));
       },
+      // A drafted research question — the member's tap there is what puts it on the research list.
+      onResearchAskDraft: (draft) => {
+        res.write(sseFrame(JSON.stringify(draft), "research-ask", seq++));
+      },
       budget: () => modelCallAllowed(session.email),
     },
   );

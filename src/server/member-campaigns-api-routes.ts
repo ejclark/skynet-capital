@@ -106,6 +106,8 @@ import {
  * subject the campaign already covers still queues, and a second member's identical ask joins the
  * first. A campaign the member cannot read gets the same answer as one that doesn't exist, so the
  * route never confirms another member's private campaign. The words are kept on the volume only.
+ * A bare ask (no `campaign`) keeps its `question` too, so a question drafted in the chat reaches
+ * the list in the member's words.
  *
  * Same auth invariant as the other member APIs: `!session` means the route doesn't exist
  * (`false`), before anything else runs.
@@ -328,7 +330,10 @@ function askRoute(
     sendJson(res, 200, { ok: false, error: "Questions aren't wired in this deployment." });
     return;
   }
-  let scope: { campaign?: string; question?: string } = {};
+  // The member's words travel with every ask, inside a campaign or not (a question drafted in the
+  // chat posts here with no campaign — the Moneypenny operator plan, research slice).
+  const question = cleanQuestion(body?.question);
+  let scope: { campaign?: string; question?: string } = question ? { question } : {};
   let askedIn: Readable | undefined;
   if (body?.campaign !== undefined) {
     const id = boundedString(body.campaign, CAMPAIGN_MAX_ID);
@@ -337,7 +342,6 @@ function askRoute(
       sendJson(res, 200, { ok: false, error: "That campaign isn't one you can ask in." });
       return;
     }
-    const question = cleanQuestion(body.question);
     scope = { campaign: readable.scope, ...(question ? { question } : {}) };
     askedIn = readable;
   }
