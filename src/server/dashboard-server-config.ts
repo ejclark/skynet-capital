@@ -63,6 +63,7 @@ import type { QuoteStreamPort } from "./quote-stream-hub.js";
 import type { SavedPositionsStore } from "./saved-positions-store.js";
 import type { SubscriptionStore } from "./subscription-store.js";
 import type { TakenQuestStore } from "./taken-quest-store.js";
+import type { TargetSplitStore } from "./target-split-store.js";
 import type { SubmitDeskTrade } from "./trade-service.js";
 import type { WireRouteDeps } from "./wire-routes.js";
 
@@ -371,6 +372,12 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * section still renders, with saves/loads answering "not wired in this deployment."
    */
   readonly savedPositions?: SavedPositionsStore;
+  /**
+   * A MEMBER'S TARGET SPLIT (#4607) — shares, options and cash as the member wants them, plus one
+   * tolerance, set on Settings and carried across devices. Omit to disable (offline mode): the
+   * section says it isn't wired and the money row renders as it always has.
+   */
+  readonly targetSplits?: TargetSplitStore;
   /**
    * THE EXIT PLANS MEMBERS CARRIED (#5709 slice 3) — the house's long-call plan, recorded against a
    * contract when a member taps Carry in the options ticket's review step. Omit to disable (offline

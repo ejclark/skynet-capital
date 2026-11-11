@@ -12,8 +12,9 @@
 //
 //   npm run meter -- [--json] [--hours N | --days N | --since ISO [--until ISO]] [--max-rest N]
 //   npm run meter -- --row "<loop>" --before N --after N --tokens N [--usd N] [--minutes N]
-//   npm run meter -- --audit-receipt --prs 6307,6323 --confirmed N [--local-only]
-//     (also appends the row to the data/pr-review branch, which later meter runs read: #6683)
+//   npm run meter -- --audit-receipt --prs 6307,6323 --confirmed N [--through <sha>] [--local-only]
+//     (also appends the row to the data/pr-review branch, which later meter runs read: #6683;
+//     --through, from scripts/audit-due.mjs, moves the marker the next due-check reads: #7311)
 //   npm run meter -- --failure-to-fix [--json] [--days N | ...] [--write-ledger [--date D] [--ledger DIR]]
 //   npm run meter:workers -- [--json] [--days N | ...]   # exits 1 if the worker's oracle fails
 //   npm run meter:flow -- [--json] [--days N | ...]      # the same as npm run meter -- --flow
@@ -453,6 +454,7 @@ async function main(args) {
     return recordAuditReceipt({
       prs: flag(args, "--prs"),
       confirmed: flag(args, "--confirmed"),
+      through: flag(args, "--through"),
       localOnly: args.includes("--local-only"),
       runsDir: process.env.AGENT_RUNS_DIR ?? join(homedir(), ".claude", "runs"),
     });
