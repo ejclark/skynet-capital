@@ -34,6 +34,7 @@ import {
 } from "./moneypenny-script";
 import { EMPTY, forgetOthers, keyFor, load, type Persisted, persist } from "./moneypenny-storage";
 import { linesOf, type MpThread, withThread } from "./moneypenny-threads";
+import { isScreenshotId, SCREENSHOTS_STAY_LINE } from "./mp-screenshots";
 import { fetchOnboarding, type Onboarding } from "./onboarding";
 
 /**
@@ -74,6 +75,9 @@ export interface MpMessage {
   readonly at?: number;
   /** The side thread it belongs to, by its row's key (#7167 criterion 11); none = the main one. */
   readonly thread?: string;
+  /** Ids of the screenshots a member attached to this line (#6007) — ids only, never bytes, so the
+   *  saved conversation stays small; the picture is read back by id (`mp-screenshots.ts`). */
+  readonly screenshots?: readonly string[];
 }
 
 /** Plain-text rendering of the thread — the copy-to-clipboard affordance the rail offers before a
@@ -84,7 +88,11 @@ export interface MpMessage {
  *  words she linked (`[open Trade](/trade)` → "open Trade"), the way the rail shows them. */
 export function formatTranscript(messages: readonly MpMessage[]): string {
   return messages
-    .map((m) => (m.role === "user" ? `You: ${m.text}` : plainReply(m.text)))
+    .map((m) =>
+      m.role === "user"
+        ? `You: ${m.text}${m.screenshots?.length ? ` [${m.screenshots.length} screenshot${m.screenshots.length === 1 ? "" : "s"} attached]` : ""}`
+        : plainReply(m.text),
+    )
     .join("\n\n");
 }
 
@@ -149,7 +157,7 @@ export interface MoneypennyState extends Persisted {
   readonly newConversation: () => Promise<void>;
   /** The member's turn — a typed message or a chip's canned one. False when not accepted (a
    *  reply is still arriving), so the composer keeps the text. */
-  readonly send: (text: string) => Promise<boolean>;
+  readonly send: (text: string, screenshots?: readonly string[]) => Promise<boolean>;
   /** A question from outside the rail (the landing page's ask box): open the rail and show it at
    *  once, then send it once the thread is bound — or after `bindWaitMs`, whichever comes first.
    *  True when accepted, false when a turn is still under way (the caller keeps the text). With
@@ -176,14 +184,25 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
   /** Lines land in the conversation on screen: the side thread the rail shows, else the main one.
    *  A thread is remembered by name the first time a line lands in it, whoever's thread it was
    *  bound under (a question asked before the member was known keeps its row). */
-  const append = (role: MpRole, texts: readonly string[], to: Conversation = ON_SCREEN) => {
+  const append = (
+    role: MpRole,
+    texts: readonly string[],
+    to: Conversation = ON_SCREEN,
+    screenshots: readonly string[] = [],
+  ) => {
     const { threads } = get();
     const thread = to === ON_SCREEN ? get().thread : undefined;
     const key = thread?.key;
     save({
       messages: [
         ...get().messages,
-        ...texts.map((text) => ({ role, text, at: Date.now(), ...(key ? { thread: key } : {}) })),
+        ...texts.map((text) => ({
+          role,
+          text,
+          at: Date.now(),
+          ...(key ? { thread: key } : {}),
+          ...(screenshots.length > 0 ? { screenshots } : {}),
+        })),
       ],
       ...(thread && !threads.some((t) => t.key === thread.key)
         ? { threads: withThread(threads, thread) }
@@ -339,7 +358,14 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
       .slice(-10)
       .map((m) =>
         m.role === "user"
-          ? { role: "user" as const, content: m.text }
+          ? {
+              role: "user" as const,
+              content: m.text,
+              // Ids only; the saved line is checked again, since browser storage is the member's own.
+              ...(m.screenshots?.some(isScreenshotId)
+                ? { screenshots: m.screenshots.filter(isScreenshotId) }
+                : {}),
+            }
           : { role: "assistant" as const, content: m.text.replace(/^Moneypenny · /, "") },
       );
 
@@ -387,6 +413,10 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
             parkedIn: key,
           });
           append("draft", [draftCard(draft)]);
+          // A filing lands on the public repo, outside the invite gate: it carries words only
+          // (#6007 criterion 10), and a member who attached a picture is told so.
+          if (linesOf(get().messages, key).some((m) => m.screenshots?.length))
+            append("sys", [SCREENSHOTS_STAY_LINE]);
         },
         (conviction) => {
           set({
@@ -598,10 +628,10 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
       return true;
     },
 
-    send: async (text) => {
+    send: async (text, screenshots = []) => {
       const note = text.trim();
       if (!note || get().typing || get().streaming || get().pending !== undefined) return false;
-      append("user", [note]);
+      append("user", [note], ON_SCREEN, screenshots);
       // The ladder gate's whole bar: a real message, said once, regardless of how it routes —
       // ack the server (it records the evidence) and celebrate locally the first time this
       // member's own onboarding hasn't already marked it done.

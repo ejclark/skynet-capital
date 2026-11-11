@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import type { KeyboardEvent, ReactElement } from "react";
+import type { ReactElement } from "react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { myConvictionsKey } from "../live/member-convictions";
 import { formatTranscript, useMoneypenny } from "../live/moneypenny";
@@ -8,6 +8,7 @@ import { FOLLOWUP_CHIPS } from "../live/moneypenny-followup";
 import { RESEARCH_ASK_CHIPS } from "../live/moneypenny-research";
 import { chipsFor } from "../live/moneypenny-script";
 import { linesOf } from "../live/moneypenny-threads";
+import { MpComposer } from "./mp-composer";
 import { Message } from "./mp-message";
 import { ThreadBar, ThreadIndex } from "./rail-threads";
 
@@ -74,11 +75,11 @@ export function MoneypennyRail(): ReactElement | null {
   const connected = useMoneypenny((s) => s.connected);
   const firstTradeDone = useMoneypenny((s) => s.firstTradeDone);
   const disclosure = useMoneypenny((s) => s.disclosure);
+  const companionEnabled = useMoneypenny((s) => s.companionEnabled);
   const filedSeq = useMoneypenny((s) => s.filedSeq);
   const send = useMoneypenny((s) => s.send);
   const closeRail = useMoneypenny((s) => s.closeRail);
   const newConversation = useMoneypenny((s) => s.newConversation);
-  const [text, setText] = useState("");
   const [copied, setCopied] = useState(false);
   const list = useRef<HTMLDivElement>(null);
   const atEnd = useRef(true);
@@ -139,19 +140,6 @@ export function MoneypennyRail(): ReactElement | null {
 
   if (!open) return null;
 
-  const submit = () => {
-    const note = text.trim();
-    if (!note || busy) return;
-    void send(note).then((accepted) => {
-      if (accepted) setText("");
-    });
-  };
-  const onKey = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      submit();
-    }
-  };
   const chips = !chipsShown
     ? []
     : (parkedChips({
@@ -246,28 +234,13 @@ export function MoneypennyRail(): ReactElement | null {
           ))}
         </div>
       ) : null}
-      <div className="mp-composer">
-        <textarea
-          rows={2}
-          value={text}
-          placeholder={thread ? "Reply in this thread…" : "Message Moneypenny…"}
-          aria-label="Message Moneypenny"
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={onKey}
-        />
-        <div className="mp-composer-row">
-          <button
-            type="button"
-            className="btn btn-primary mp-send"
-            disabled={busy || text.trim() === ""}
-            onClick={submit}
-          >
-            Send
-          </button>
-          <span className="mp-hint num">every filing gets a real answer</span>
-        </div>
-        {disclosure ? <p className="mp-disclosure">{disclosure}</p> : null}
-      </div>
+      <MpComposer
+        placeholder={thread ? "Reply in this thread…" : "Message Moneypenny…"}
+        busy={busy}
+        attachable={companionEnabled === true && (thread !== undefined || flow === "idle")}
+        disclosure={disclosure}
+        send={send}
+      />
     </aside>
   );
 }

@@ -5,6 +5,7 @@ import { type MpMessage, useMoneypenny } from "../live/moneypenny";
 import { linkPieces } from "../live/moneypenny-links";
 import { type Run, readMarkdown } from "../live/moneypenny-markdown";
 import { requestLight } from "./eye-light";
+import { MessageShots } from "./mp-screenshot";
 import { usePhoneWidth } from "./use-media";
 
 /**
@@ -131,6 +132,7 @@ function Reply({ text }: { readonly text: string }): ReactElement {
 export function Message({ m }: { readonly m: MpMessage }): ReactElement {
   return (
     <div className={`mp-msg mp-${m.role}`}>
+      {m.role === "user" ? <MessageShots ids={m.screenshots} /> : null}
       {m.role === "user" ? linkify(m.text) : <Reply text={m.text} />}
     </div>
   );
