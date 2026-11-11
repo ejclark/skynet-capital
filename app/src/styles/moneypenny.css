@@ -193,6 +193,14 @@
   padding-block: 6px;
   text-decoration-thickness: 1px;
 }
+/* The pivot under her answer (#7167 slice 3): its own line, ruled off above, so it reads as an
+   action on the whole answer rather than one more link inside it — a rule and an arrow, not a hue. */
+.mp-msg .mp-pivot {
+  margin: 8px 0 0;
+  padding-top: 6px;
+  border-top: 1px dashed var(--border);
+  font-weight: 600;
+}
 .mp-typing {
   font-size: 10.5px;
   color: var(--muted);

@@ -2,7 +2,7 @@ import { useRouter } from "@tanstack/react-router";
 import type { MouseEvent, ReactElement, ReactNode } from "react";
 import { Fragment } from "react";
 import { type MpMessage, useMoneypenny } from "../live/moneypenny";
-import { linkPieces } from "../live/moneypenny-links";
+import { linkPieces, pivotOf } from "../live/moneypenny-links";
 import { type Run, readMarkdown } from "../live/moneypenny-markdown";
 import { requestLight } from "./eye-light";
 import { MessageShots } from "./mp-screenshot";
@@ -128,12 +128,29 @@ function Reply({ text }: { readonly text: string }): ReactElement {
   );
 }
 
+/**
+ * The page pivots to her answer (#7167 slice 3, #7018 round 4 B): when she links two or more of
+ * the landing page's rows, one line under her answer narrows the calendar to just those rows. It is
+ * a link, so the member's tap is the only thing that changes the page, and Back or the calendar's
+ * ✕ undoes it. Drawn after her answer, never inside it, so her words stay hers.
+ */
+function PivotLine({ text }: { readonly text: string }): ReactElement | null {
+  const pivot = pivotOf(text);
+  if (!pivot) return null;
+  return (
+    <p className="mp-pivot">
+      <PlaceLink path={pivot.href} text={`Show just these ${String(pivot.count)} on the page ›`} />
+    </p>
+  );
+}
+
 /** The member's own words stay exactly as typed; hers (and system notes) get her formatting. */
 export function Message({ m }: { readonly m: MpMessage }): ReactElement {
   return (
     <div className={`mp-msg mp-${m.role}`}>
       {m.role === "user" ? <MessageShots ids={m.screenshots} /> : null}
       {m.role === "user" ? linkify(m.text) : <Reply text={m.text} />}
+      {m.role === "mp" ? <PivotLine text={m.text} /> : null}
     </div>
   );
 }

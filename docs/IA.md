@@ -876,6 +876,12 @@ server checks each key against its own edition and hands her each row's link
 (`src/companion/companion-on-screen.ts`), and her `/#story-<id>` and `/#event-<key>` links land on
 those rows (`src/domain/edition-keys.ts`). The same slice found that the Page line had never matched
 a real request: the browser sends `/app/trade`, and the server knew only `/trade`.
+**What the chat may change in the view (#7167 slice 3, settled from #7018 round 4 B).** Only which
+of the page's own rows show, and only on the member's tap. When her answer links two or more rows,
+a line under it offers the pivot, `/?show=<anchor>,…#calendar`, built from the same keys. The
+landing calendar then draws only those rows under a bar with ✕, so ✕ or Back undoes it and the
+history is the map. The chat never changes a figure, a date or the page unasked. A pivot's rows are
+what the page publishes while it holds, so her next answer points only at what is drawn.
 
 ## 7. Missing entities — what the scenarios reached for and no type or endpoint holds
 
