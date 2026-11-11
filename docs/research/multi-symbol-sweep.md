@@ -71,6 +71,10 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"A crude spike carries retail gasoline higher into the next month's collection window, so the pump's October level holds at or above September's" (FT-cpi-2026-11-10-1)** — added 2026-11-11 from the
+  [cpi-2026-11-10 close-out](events/cpi-2026-11-10.md). EIA weekly US regular averaged **$4.3095** over the four October Mondays against **$4.3548** over September's (**−1.04%**) while Brent settled at $117.64 on 10-30:
+  retail stepped up in September, then fell four Mondays running. Do not register a pump-level hold off a crude run-up without a lag measurement; retail follows crude on a delay that the run's own peak can outlast.
+
 - **"November revises the winter natural-gas bill up and the heating degree days colder" (FT-eia-steo-2026-11-10-4)** — added 2026-11-11 from the
   [eia-steo-2026-11-10 close-out](events/eia-steo-2026-11-10.md). Registered at **n=2** (2024-25 and 2025-26 both revised gas up +2.7% / +2.6% and degree days colder +2.5% / +1.3%) and **failed
   on its first out-of-sample winter**: US total heating degree days went **3,155 → 3,103.6 (−1.6%)**, warmer, in all four regions; gas expenditure moved **+0.04%** ($640 → $640.28), inside the
