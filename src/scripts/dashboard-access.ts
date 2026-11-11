@@ -12,6 +12,7 @@ import { createDefaultPersonas } from "../personas/registry.js";
 import { createAllowlistStore } from "../server/auth/allowlist-store.js";
 import { resolveAuth } from "../server/auth/resolve-auth.js";
 import { createAuthoredPlayStore } from "../server/authored-play-store.js";
+import { createBookWaitStore } from "../server/book-wait-store.js";
 import { createBotControlsStore } from "../server/bot-controls-store.js";
 import { createCampaignQuestionsStore } from "../server/campaign-questions-store.js";
 import { createCouncilRepliesStore } from "../server/council-replies-store.js";
@@ -46,6 +47,7 @@ export interface AccessSetup {
   targetSplits: ReturnType<typeof createTargetSplitStore>;
   exitPlans: ReturnType<typeof createExitPlanStore>;
   takenQuests: ReturnType<typeof createTakenQuestStore>;
+  bookWaits: ReturnType<typeof createBookWaitStore>;
   authoredPlays: ReturnType<typeof createAuthoredPlayStore>;
   memberCampaigns: ReturnType<typeof createMemberCampaignStore>;
   memberChains: ReturnType<typeof createMemberChainStore>;
@@ -115,6 +117,9 @@ export function setupAccess(
   // Quests members took (#7028 slice 6) — a quest id, an order id and the rate it carried, a
   // sibling of the subscriptions file (no new env var).
   const takenQuests = createTakenQuestStore(env, (m) => console.error(m));
+  // Waits on a book (#4608) — the day the question reopens and the member's reason, one per
+  // account, a sibling of the subscriptions file (no new env var).
+  const bookWaits = createBookWaitStore(env, (m) => console.error(m));
   // Authored plays (#5457) — a member's draft playbooks, a sibling of the subscriptions file on the
   // same volume (no new env var). Plain JSON: a name, a ticker, a thesis and some numbers.
   const authoredPlays = createAuthoredPlayStore(env, (m) => console.error(m));
@@ -173,6 +178,7 @@ export function setupAccess(
     targetSplits,
     exitPlans,
     takenQuests,
+    bookWaits,
     authoredPlays,
     memberCampaigns,
     memberChains,
