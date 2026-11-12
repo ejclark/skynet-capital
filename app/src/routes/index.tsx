@@ -19,11 +19,12 @@ import {
   waitingOn,
 } from "../live/edition";
 import { sinceLine } from "../live/edition-sectors";
+import { noticeCandidates } from "../live/eye-notice";
 import { useHorizonRange } from "../live/horizon-params";
 import { DEFAULT_WINDOW, type MissionWindow, parseWindow } from "../live/mission";
 import { type PageKeys, usePublishPageKeys } from "../live/page-keys";
 import { signedMoney } from "../live/position-act";
-import { fetchQuests, placeQuests, type QuestsAnswer } from "../live/quests";
+import { fetchQuests, placeQuests, QUESTS_SHOWN, type QuestsAnswer } from "../live/quests";
 import { targetedEditionAnchor, useLandOnEdition } from "../shell/edition-anchor";
 import { PageFrame } from "../shell/frame";
 import { AskBox, EventThread, StoryAsk } from "../shell/landing-ask";
@@ -47,6 +48,7 @@ import {
 } from "../shell/mission-windows";
 import { SectorOverview } from "../shell/sector-overview";
 import { TagMark } from "../shell/tag-mark";
+import { useEyeNotice } from "../shell/use-eye-notice";
 
 /**
  * CAMPAIGN MISSION CONTROL (#7487 slice 1, the Claude Design handoff of 2026-11-11): the landing
@@ -81,6 +83,11 @@ import { TagMark } from "../shell/tag-mark";
  * links land on those rows (`shell/edition-anchor.ts`). When she links two or more, the member can
  * pivot the calendar to just those rows (slice 3, #7018 round 4 B): `?show=` names them, so the
  * pivot is a page address, Back retraces it, and the calendar's ✕ drops it.
+ *
+ * The Eye notices (#7487 slice 5, `shell/use-eye-notice.ts`): once the page has its data, the Eye
+ * may point at one thing worth a look — an event a story waits on, a new quest, a sector that just
+ * left its usual range — sliding to its window and lighting its row while Moneypenny says what it
+ * saw. Never on a visit that arrived on an address naming a window or a row.
  *
  * An old bookmark or a shared compare link (`/?by=`, `?a=`, `?b=`) was always a member asking for
  * the board, so it still goes there with its query intact (#2321's promise).
@@ -370,6 +377,27 @@ function Landing(): ReactElement {
   // calendar opens its window first, `openWindow`), so her pointing at one is never a dead end.
   usePublishPageKeys(keys);
   useLandOnEdition(keys ? `${cur}:${JSON.stringify(keys)}` : "");
+  const shownQuests = (q: QuestsAnswer | null | undefined) =>
+    q?.available
+      ? placeQuests(q.quests, view.data?.edition?.stories ?? []).account.slice(0, QUESTS_SHOWN)
+      : undefined;
+  useEyeNotice({
+    ready: view.isSuccess && !quests.isPending,
+    deepLink: Boolean(search.w) || pivot.length > 0 || hash.length > 0,
+    cur,
+    candidates: (seenQuests) => {
+      const edition = view.data?.edition ?? null;
+      const today = view.data?.today ?? "";
+      return noticeCandidates({
+        edition,
+        today,
+        inside: edition && today ? calendarShows(edition, today, horizon, pivot).inside : [],
+        quests: shownQuests(quests.data),
+        seenQuests,
+      });
+    },
+    questIds: shownQuests(quests.data)?.map((q) => q.id),
+  });
   if (view.isPending)
     return (
       <PageFrame>

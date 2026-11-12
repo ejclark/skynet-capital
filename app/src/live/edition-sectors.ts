@@ -113,6 +113,10 @@ export function rangeMark(range: SectorRow["range"]): RangeMark {
   };
 }
 
+/** A sector row's anchor on the page, by its fund (`sector-XLE`): the Eye lands on it when it
+ *  notices a sector leave its usual range (#7487 slice 5, `live/eye-notice.ts`). */
+export const sectorAnchor = (fund: string): string => `sector-${fund}`;
+
 /** The figure beside a row: "+4.9%", "−12.0%", "0.0%". */
 export const moveFigure = (percent: number): string => signedPercent(percent, DIGITS);
 

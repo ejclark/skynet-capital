@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useRouter, useRouterState } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { noticeMovesFor, useNoticeMoves } from "../live/eye-notice";
 import { myConvictionsKey } from "../live/member-convictions";
 import { formatTranscript, type MpMessage, useMoneypenny } from "../live/moneypenny";
 import { dockText, latestLine, type Move, movesFor } from "../live/moneypenny-moves";
@@ -178,6 +179,12 @@ export function MoneypennyDock(): ReactElement {
   const waiting = typing || pending !== undefined;
   const busy = waiting || streaming;
   const latest = latestLine(messages);
+  // Her line about what the Eye noticed offers its own moves while it is still her latest (#7487
+  // slice 5, `live/eye-notice.ts`).
+  const notice = noticeMovesFor(
+    latest,
+    useNoticeMoves((s) => s),
+  );
   const moves = movesFor({
     busy,
     inThread: thread !== undefined,
@@ -186,6 +193,7 @@ export function MoneypennyDock(): ReactElement {
     connected,
     firstTradeDone,
     latest,
+    ...(notice ? { notice } : {}),
   });
 
   // On every page from the first: load the member so her moves read their own facts. `hydrate`, not

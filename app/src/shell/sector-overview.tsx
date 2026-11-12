@@ -13,6 +13,7 @@ import {
   type SectorPeriod,
   type SectorRow,
   type SectorsView,
+  sectorAnchor,
   sinceLine,
   storedLook,
   trailChart,
@@ -152,7 +153,7 @@ function LineRow({
   readonly wide: boolean;
 }): ReactElement {
   return (
-    <li className={rowClass(row, "sector-line-row")}>
+    <li id={sectorAnchor(row.fund)} className={rowClass(row, "sector-line-row")}>
       <span className="sector-label">
         <span className="sector-title">
           <span className="sector-name">{row.name}</span>
@@ -175,7 +176,10 @@ function Tile({
 }): ReactElement {
   const shape = moveShape(row.moves[period]);
   return (
-    <li className={`${rowClass(row, "sector-tile")} sector-tile--${shape.word}`}>
+    <li
+      id={sectorAnchor(row.fund)}
+      className={`${rowClass(row, "sector-tile")} sector-tile--${shape.word}`}
+    >
       <span className="sector-label">
         <span className="sector-name">{row.name}</span>
         <RangeWord row={row} />
