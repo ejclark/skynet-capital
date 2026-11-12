@@ -18,6 +18,9 @@
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 .mp-dock-inner {
+  /* History is measured from here, the capped and centred content box, so on a window wider than
+     --shell-max it still lines up with the stage rather than with the window's edges */
+  position: relative;
   max-width: var(--shell-max);
   margin: 0 auto;
   padding: 10px var(--gutter) 12px;
