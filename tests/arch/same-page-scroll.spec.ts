@@ -31,6 +31,10 @@ const RESETS: Record<string, ReadonlyArray<readonly [snippet: string, why: strin
     ['next === "board"', "section switch (held by #4943)"],
     ["section: undefined, q: next", "a Coverage sector tap opens the Board filtered to it (#3811)"],
   ],
+  // Campaign's windows (#7487): opening another window is a new view, so it opens at its top.
+  "app/src/shell/mission-window.tsx": [
+    ["w: parseWindow(next)", "opens another Campaign window (#7487)"],
+  ],
   "app/src/routes/settings.tsx": [['next === "preferences"', "section switch (held by #4943)"]],
   "app/src/routes/trade.tsx": [
     ['next === "ticket"', "section switch (held by #4943)"],
