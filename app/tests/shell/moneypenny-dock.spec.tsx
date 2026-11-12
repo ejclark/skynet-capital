@@ -1,11 +1,18 @@
 import { act, fireEvent, screen } from "@testing-library/react";
 import { timing, useMoneypenny } from "../../src/live/moneypenny";
-import { flush, mount, onboarding, stubFetch } from "./moneypenny-rail-harness";
+import {
+  flush,
+  inHistory,
+  mount,
+  onboarding,
+  showHistory,
+  stubFetch,
+} from "./moneypenny-dock-harness";
 
 // The Moneypenny rail (handoff 2026-09-03 §6) — the feedback modal's replacement. The lane behind
 // it is the real one, so fetch is stubbed per route: onboarding for the intro steer, the feedback
 // index for what's wired, the coach for its question, and the submit that files.
-describe("MoneypennyRail", () => {
+describe("MoneypennyDock", () => {
   let realFetch: typeof globalThis.fetch;
   let calls: { url: string; body: unknown }[];
   beforeEach(() => {
@@ -20,39 +27,45 @@ describe("MoneypennyRail", () => {
     globalThis.fetch = realFetch;
   });
 
-  it("renders nothing until opened", () => {
+  it("is always on screen, its History closed until opened", () => {
     mount();
-    expect(screen.queryByRole("complementary", { name: "Moneypenny" })).not.toBeInTheDocument();
+    expect(screen.getByRole("complementary", { name: "Moneypenny" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Message Moneypenny")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("region", { name: "Conversation with Moneypenny" }),
+    ).not.toBeInTheDocument();
   });
 
   it("plays the intro once, steering an unconnected member toward setup", async () => {
     stubFetch({ "/api/onboarding": () => onboarding(false) }, calls);
     mount();
-    await act(() => useMoneypenny.getState().openRail({ intro: true }));
+    await showHistory({ intro: true });
     await flush();
-    expect(await screen.findByText(/^Moneypenny · hi, I'm Moneypenny/)).toBeInTheDocument();
-    expect(await screen.findByText(/isn't connected yet/)).toBeInTheDocument();
+    expect(await inHistory().findByText(/^Moneypenny · hi, I'm Moneypenny/)).toBeInTheDocument();
+    expect(await inHistory().findByText(/isn't connected yet/)).toBeInTheDocument();
     // the setup offer is a flow — no chips while she waits on the yes/no
     expect(screen.queryByRole("button", { name: "File feedback" })).not.toBeInTheDocument();
 
-    await act(() => useMoneypenny.getState().closeRail());
-    await act(() => useMoneypenny.getState().openRail({ intro: true }));
+    await act(() => useMoneypenny.getState().closeHistory());
+    await showHistory({ intro: true });
     await flush();
-    expect(screen.getAllByText(/^Moneypenny · hi, I'm Moneypenny/)).toHaveLength(1);
+    expect(inHistory().getAllByText(/^Moneypenny · hi, I'm Moneypenny/)).toHaveLength(1);
   });
 
   it("a yes walks the five-step path; Enter sends, the composer clears", async () => {
     stubFetch({ "/api/onboarding": () => onboarding(false) }, calls);
     mount();
-    await act(() => useMoneypenny.getState().openRail({ intro: true }));
+    await showHistory({ intro: true });
     await flush();
     const box = screen.getByLabelText("Message Moneypenny");
     fireEvent.change(box, { target: { value: "yes" } });
     fireEvent.keyDown(box, { key: "Enter" });
     await flush();
     expect(box).toHaveValue("");
-    expect(screen.getByText("yes")).toHaveClass("mp-user");
-    expect(await screen.findByText(/the short path: create a free account/)).toBeInTheDocument();
+    expect(inHistory().getByText("yes")).toHaveClass("mp-user");
+    expect(
+      await inHistory().findByText(/the short path: create a free account/),
+    ).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: "Help me get set up" })).toBeInTheDocument();
   });
 
@@ -81,14 +94,16 @@ describe("MoneypennyRail", () => {
       calls,
     );
     mount();
-    await act(() => useMoneypenny.getState().openRail());
+    await showHistory();
     fireEvent.click(screen.getByRole("button", { name: "File feedback" }));
     await flush();
     // the FIRST message to her lifts the ladder gate — independent of it becoming a filing
-    expect(await screen.findByText(/^sauron·ops · logged: trading milestone M·02/)).toHaveClass(
-      "mp-sys",
-    );
-    expect(await screen.findByText(/what's confusing, broken, or missing/)).toBeInTheDocument();
+    expect(
+      await inHistory().findByText(/^sauron·ops · logged: trading milestone M·02/),
+    ).toHaveClass("mp-sys");
+    expect(
+      await inHistory().findByText(/what's confusing, broken, or missing/),
+    ).toBeInTheDocument();
 
     const box = screen.getByLabelText("Message Moneypenny");
     fireEvent.change(box, {
@@ -97,16 +112,16 @@ describe("MoneypennyRail", () => {
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
     await flush();
     expect(
-      await screen.findByText("Moneypenny · on the board, or on a player page?"),
+      await inHistory().findByText("Moneypenny · on the board, or on a player page?"),
     ).toBeInTheDocument();
 
     fireEvent.change(box, { target: { value: "on the board" } });
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
     await flush();
     expect(
-      await screen.findByText(/filed as issue #1042 — “Fix the equity column”/),
+      await inHistory().findByText(/filed as issue #1042 — “Fix the equity column”/),
     ).toBeInTheDocument();
-    expect(await screen.findByText(/^sauron·ops · filed · waiting to be picked/)).toHaveClass(
+    expect(await inHistory().findByText(/^sauron·ops · filed · waiting to be picked/)).toHaveClass(
       "mp-sys",
     );
     const submit = calls.find((c) => c.url === "/api/feedback" && c.body);
@@ -132,18 +147,18 @@ describe("MoneypennyRail", () => {
       calls,
     );
     mount();
-    await act(() => useMoneypenny.getState().openRail());
+    await showHistory();
     const box = screen.getByLabelText("Message Moneypenny");
     fireEvent.change(box, { target: { value: "idea: show my rank in the rail header please" } });
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
     await flush();
-    expect(await screen.findByText(/where in the app does this bite you/)).toBeInTheDocument();
+    expect(await inHistory().findByText(/where in the app does this bite you/)).toBeInTheDocument();
     fireEvent.change(box, { target: { value: "the rail" } });
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
     await flush();
-    expect(await screen.findByText(/filed as issue #7/)).toBeInTheDocument();
+    expect(await inHistory().findByText(/filed as issue #7/)).toBeInTheDocument();
     expect(
-      await screen.findByText(/^sauron·ops · filed · waiting to be picked/),
+      await inHistory().findByText(/^sauron·ops · filed · waiting to be picked/),
     ).toBeInTheDocument();
     expect(calls.filter((c) => c.url === "/feedback/coach")).toHaveLength(0);
     const submit = calls.find((c) => c.url === "/api/feedback" && c.body);
@@ -168,7 +183,7 @@ describe("MoneypennyRail", () => {
       calls,
     );
     mount();
-    await act(() => useMoneypenny.getState().openRail());
+    await showHistory();
     const box = screen.getByLabelText("Message Moneypenny");
     fireEvent.change(box, { target: { value: "bug: the wire never loads for me today" } });
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
@@ -176,36 +191,38 @@ describe("MoneypennyRail", () => {
     fireEvent.change(box, { target: { value: "the wire" } });
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
     await flush();
-    expect(await screen.findByText(/feedback isn't switched on/)).toBeInTheDocument();
+    expect(await inHistory().findByText(/feedback isn't switched on/)).toBeInTheDocument();
     expect(calls.filter((c) => c.url === "/api/feedback" && c.body)).toHaveLength(0);
   });
 
   it("unlocks the ladder the moment she hears anything, and never repeats the line", async () => {
     stubFetch({ "/api/onboarding": () => onboarding(true) }, calls);
     mount();
-    await act(() => useMoneypenny.getState().openRail());
+    await showHistory();
     const box = screen.getByLabelText("Message Moneypenny");
     fireEvent.change(box, { target: { value: "how am I doing?" } });
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
     await flush();
     expect(
-      await screen.findByText(/^sauron·ops · logged: trading milestone M·02/),
+      await inHistory().findByText(/^sauron·ops · logged: trading milestone M·02/),
     ).toBeInTheDocument();
 
     fireEvent.change(box, { target: { value: "another question" } });
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
     await flush();
-    expect(screen.getAllByText(/^sauron·ops · logged: trading milestone M·02/)).toHaveLength(1);
+    expect(inHistory().getAllByText(/^sauron·ops · logged: trading milestone M·02/)).toHaveLength(
+      1,
+    );
     // the ack always fires, independent of routing — the gate's evidence isn't tied to the coach
     expect(calls.filter((c) => c.url === "/api/companion/ack")).toHaveLength(2);
   });
 
-  it("the copy control is disabled on an empty thread", () => {
+  it("the copy control is disabled on an empty conversation", () => {
     mount();
-    // No need to run the full async openRail() — the control's disabled state depends only on
-    // the message count, which is already empty from a fresh store.
-    act(() => useMoneypenny.setState({ open: true }));
-    expect(screen.getByRole("button", { name: "Copy conversation" })).toBeDisabled();
+    // No need to wake the store — the control's disabled state depends only on the message
+    // count, which is already empty from a fresh store.
+    act(() => useMoneypenny.setState({ history: true }));
+    expect(inHistory().getByRole("button", { name: "Copy" })).toBeDisabled();
   });
 
   it("the copy control writes the thread to the clipboard and confirms, briefly", async () => {
@@ -221,23 +238,23 @@ describe("MoneypennyRail", () => {
     });
     stubFetch({ "/api/onboarding": () => onboarding(false) }, calls);
     mount();
-    await act(() => useMoneypenny.getState().openRail({ intro: true }));
+    await showHistory({ intro: true });
     await flush();
-    const copy = screen.getByRole("button", { name: "Copy conversation" });
+    const copy = inHistory().getByRole("button", { name: "Copy" });
     await act(async () => {
       fireEvent.click(copy);
       await Promise.resolve();
     });
     expect(written).toHaveLength(1);
     expect(written[0]).toContain("Moneypenny · hi, I'm Moneypenny");
-    expect(await screen.findByText("Copied")).toBeInTheDocument();
+    expect(await inHistory().findByText("Copied")).toBeInTheDocument();
   });
 });
 
 // Eric, 2026-09-03: "she can look up information on the fly and be a self service tool" — a
 // general question goes to the companion chat (Claude, on the coach's key) and streams into the
 // thread; the scripted line stands in only when the chat isn't switched on.
-describe("MoneypennyRail — live answers", () => {
+describe("MoneypennyDock — live answers", () => {
   let realFetch: typeof globalThis.fetch;
   beforeEach(() => {
     realFetch = globalThis.fetch;
@@ -278,12 +295,12 @@ describe("MoneypennyRail — live answers", () => {
     }) as typeof globalThis.fetch;
     window.history.replaceState(null, "", "/trade?symbol=NVDA");
     mount();
-    await act(() => useMoneypenny.getState().openRail());
+    await showHistory();
     const box = screen.getByLabelText("Message Moneypenny");
     fireEvent.change(box, { target: { value: "what's a covered call?" } });
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
     expect(
-      await screen.findByText(
+      await inHistory().findByText(
         "Moneypenny · a covered call is a call you sell against shares you own.",
       ),
     ).toHaveClass("mp-mp");
@@ -304,11 +321,11 @@ describe("MoneypennyRail — live answers", () => {
           : new Response("{}", { status: 404 }),
       )) as typeof globalThis.fetch;
     mount();
-    await act(() => useMoneypenny.getState().openRail());
+    await showHistory();
     const box = screen.getByLabelText("Message Moneypenny");
     fireEvent.change(box, { target: { value: "what's a covered call?" } });
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
-    expect(await screen.findByText(/i can help you get set up/)).toBeInTheDocument();
+    expect(await inHistory().findByText(/i can help you get set up/)).toBeInTheDocument();
   });
 });
 

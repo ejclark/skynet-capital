@@ -1,4 +1,4 @@
-import type { ClipboardEvent, DragEvent, KeyboardEvent, ReactElement } from "react";
+import type { ClipboardEvent, DragEvent, KeyboardEvent, ReactElement, Ref } from "react";
 import { useRef, useState } from "react";
 import {
   MAX_ATTACHED,
@@ -11,18 +11,12 @@ import {
 } from "../live/mp-screenshots";
 
 /**
- * THE MONEYPENNY RAIL'S MESSAGE BOX (#6007 slice 3), split from `moneypenny-rail.tsx`: the text,
- * the screenshots waiting to go, and Send. Enter sends, Shift+Enter breaks a line.
- *
- * Attaching (criteria 1–4, 19): a picked, pasted or dropped image is fitted in the browser
- * (`mp-screenshots.ts`) and shown as a thumbnail with a remove control above the text; at most 3.
- * Nothing leaves the browser until Send, which uploads each one first and then sends the turn with
- * their ids. A refusal is one plain line that names the limit and never touches the typed text; an
- * upload that fails still sends the words, and says the picture did not go. The control exists only
- * where a screenshot would be read (`attachable`): the live chat is on and the turn is not a
- * scripted beat's answer (criterion 6). Mobile-first: at 390 the thumbnails sit above the text,
- * Send and the attach control share the row beneath it.
- * @category feedback
+ * THE DOCK'S BOX (#7487 slice 2, D5): one line, 46px, the only place a member types to Moneypenny
+ * on the page around it. Enter sends; the text clears as the message lands and comes back if she
+ * refuses it (a reply still arriving). Attach a screenshot (#6007) stays, as a 46px button beside
+ * the box: pick, paste or drop up to three, each a thumbnail with its own remove, uploaded only on
+ * Send, ids not bytes. The thumbnails and any notice sit above the box, so the box itself never
+ * changes width or position. Shift+Enter's second line went with the rail's textarea.
  */
 
 interface Waiting {
@@ -31,17 +25,17 @@ interface Waiting {
   readonly shot: PreparedScreenshot;
 }
 
-export function MpComposer({
+export function DockBox({
+  ref,
   placeholder,
   busy,
   attachable,
-  disclosure,
   send,
 }: {
+  readonly ref?: Ref<HTMLInputElement>;
   readonly placeholder: string;
   readonly busy: boolean;
   readonly attachable: boolean;
-  readonly disclosure: string | undefined;
   readonly send: (text: string, screenshots?: readonly string[]) => Promise<boolean>;
 }): ReactElement {
   const [text, setText] = useState("");
@@ -88,13 +82,13 @@ export function MpComposer({
       setShots((now) => (now.length === 0 ? waiting : now));
     }
   };
-  const onKey = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+  const onKey = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
       e.preventDefault();
       void submit();
     }
   };
-  const onPaste = (e: ClipboardEvent<HTMLTextAreaElement>) => {
+  const onPaste = (e: ClipboardEvent<HTMLInputElement>) => {
     const pasted = images(e.clipboardData?.files);
     if (!attachable || pasted.length === 0) return; // plain text pastes as it always did
     e.preventDefault();
@@ -109,7 +103,7 @@ export function MpComposer({
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: a drop target only; every action here also has a button or key
     <div
-      className="mp-composer"
+      className="mp-box"
       onDragOver={attachable ? (e) => e.preventDefault() : undefined}
       onDrop={onDrop}
     >
@@ -131,59 +125,67 @@ export function MpComposer({
           ))}
         </ul>
       ) : null}
-      <textarea
-        rows={2}
-        value={text}
-        placeholder={placeholder}
-        aria-label="Message Moneypenny"
-        onChange={(e) => setText(e.target.value)}
-        onKeyDown={onKey}
-        onPaste={onPaste}
-      />
       {notice ? (
         <p className="mp-notice" role="status">
           {notice}
         </p>
       ) : null}
-      <div className="mp-composer-row">
+      <form
+        className="mp-box-row"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void submit();
+        }}
+      >
+        {/* Always in its slot, so the box never changes width or position (D5); disabled when the
+            chat cannot take a picture here. */}
         <button
           type="button"
-          className="btn btn-primary mp-send"
-          disabled={busy || sending || text.trim() === ""}
-          onClick={() => void submit()}
+          className="mp-box-attach"
+          aria-label="Attach screenshot"
+          title={attachable ? "Attach screenshot" : "Screenshots attach in a conversation with her"}
+          disabled={!attachable || busy || sending || shots.length >= MAX_ATTACHED}
+          onClick={() => picker.current?.click()}
         >
-          Send
+          <span aria-hidden="true">▣</span>
         </button>
         {attachable ? (
-          <>
-            <button
-              type="button"
-              className="btn mp-attach"
-              aria-label="Attach screenshot"
-              title="Attach screenshot"
-              disabled={busy || sending || shots.length >= MAX_ATTACHED}
-              onClick={() => picker.current?.click()}
-            >
-              <span aria-hidden="true">▣ </span>Attach screenshot
-            </button>
-            <input
-              ref={picker}
-              type="file"
-              accept="image/png,image/jpeg,image/*"
-              multiple
-              hidden
-              tabIndex={-1}
-              aria-hidden="true"
-              onChange={(e) => {
-                void attach(Array.from(e.target.files ?? []));
-                e.target.value = "";
-              }}
-            />
-          </>
+          <input
+            ref={picker}
+            type="file"
+            accept="image/png,image/jpeg,image/*"
+            multiple
+            hidden
+            tabIndex={-1}
+            aria-hidden="true"
+            onChange={(e) => {
+              void attach(Array.from(e.target.files ?? []));
+              e.target.value = "";
+            }}
+          />
         ) : null}
-        <span className="mp-hint num">every filing gets a real answer</span>
-      </div>
-      {disclosure ? <p className="mp-disclosure">{disclosure}</p> : null}
+        <input
+          ref={ref}
+          className="mp-box-input"
+          type="text"
+          value={text}
+          placeholder={placeholder}
+          aria-label="Message Moneypenny"
+          autoComplete="off"
+          enterKeyHint="send"
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={onKey}
+          onPaste={onPaste}
+        />
+        <button
+          type="submit"
+          className="mp-box-send"
+          aria-label="Send"
+          disabled={busy || sending || text.trim() === ""}
+        >
+          <span aria-hidden="true">↑</span>
+        </button>
+      </form>
     </div>
   );
 }

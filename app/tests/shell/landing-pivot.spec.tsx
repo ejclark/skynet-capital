@@ -9,7 +9,7 @@ import {
   useNavigate,
   useSearch,
 } from "@tanstack/react-router";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import {
   editionEventKey,
   isRowAnchor,
@@ -23,14 +23,15 @@ import { horizonSearch } from "../../src/live/horizon-params";
 import { useMoneypenny } from "../../src/live/moneypenny";
 import { pivotOf } from "../../src/live/moneypenny-links";
 import { calendarShows, LandingCalendar } from "../../src/shell/landing-calendar";
-import { MoneypennyRail } from "../../src/shell/moneypenny-rail";
+import { MoneypennyDock } from "../../src/shell/moneypenny-dock";
 
 /**
  * THE PAGE PIVOTS TO HER ANSWER (#7167 slice 3; #7018 round 4, Eric's "More of B": "pivots the
  * calendar to the three reports she named, and ✕ or Back returns"). When her answer links two or
- * more of the landing page's rows, one line under it narrows the calendar to just those rows. The
- * pivot is a page address (`/?show=…#calendar`), so the member's tap is the only thing that changes
- * the page, and Back or ✕ undoes it.
+ * more of the landing page's rows, one move narrows the calendar to just those rows — a move in the
+ * dock since #7487 slice 2, where choices are never drawn inside a message. The pivot is a page
+ * address (`/?show=…#calendar`), so the member's tap is the only thing that changes the page, and
+ * Back or ✕ undoes it.
  */
 
 const coreweave: EditionDate = {
@@ -152,14 +153,14 @@ describe("what a pivot shows (calendarShows)", () => {
 });
 
 /** The landing page in miniature: the calendar on `/`, reading and clearing `?show=` the way
- *  `routes/index.tsx` does, with the rail beside it. */
+ *  `routes/index.tsx` does, with the dock under it. */
 async function mount(path: string) {
   const root = createRootRoute({
     validateSearch: horizonSearch,
     component: () => (
       <>
         <Outlet />
-        <MoneypennyRail />
+        <MoneypennyDock />
       </>
     ),
   });
@@ -236,12 +237,11 @@ describe("the landing page pivots to her answer", () => {
     expect(screen.queryByText(/Moneypenny's answer/)).not.toBeInTheDocument();
   });
 
-  it("her answer's line pivots the page on a tap, and Back undoes it", async () => {
+  it("her answer's move pivots the page on a tap, and Back undoes it", async () => {
     const router = await mount("/app/");
     expect(rowShown("story-rates")).toBe(true);
     await act(() =>
       useMoneypenny.setState({
-        open: true,
         messages: [
           {
             role: "mp",
@@ -252,10 +252,13 @@ describe("the landing page pivots to her answer", () => {
     );
     // The chat never changes the page on its own: her answer alone leaves every row in place.
     expect(rowShown("story-rates")).toBe(true);
-    const line = screen.getByRole("link", { name: "Show just these 2 on the page ›" });
-    expect(line).toHaveAttribute("href", `/app/?show=${ev(coreweave)},${ev(cpi)}#calendar`);
-    fireEvent.click(line);
+    // The pivot is her first move, ahead of the canned ones, in the dock's moves row.
+    const moves = within(screen.getByRole("list", { name: "Your moves" })).getAllByRole("button");
+    expect(moves[0]).toHaveTextContent("Show just these 2 on the page");
+    fireEvent.click(moves[0] as HTMLElement);
     await waitFor(() => expect(rowShown("story-rates")).toBe(false));
+    expect(router.state.location.search).toEqual({ show: `${ev(coreweave)},${ev(cpi)}` });
+    expect(router.state.location.hash).toBe("calendar");
     expect(rowShown(ev(coreweave))).toBe(true);
     expect(rowShown(ev(cpi))).toBe(true);
     act(() => {

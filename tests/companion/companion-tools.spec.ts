@@ -405,7 +405,7 @@ describe("runCompanionTool — the closed allow-list (the structural half of 'ne
       ok: true,
       result: {
         captured: true,
-        status: "held in the rail, not sent — the member's own reply 'send' files it",
+        status: "held in the chat, not sent — the member's own reply 'send' files it",
       },
     });
   });

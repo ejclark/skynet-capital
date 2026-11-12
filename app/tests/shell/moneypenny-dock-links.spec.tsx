@@ -9,10 +9,12 @@ import {
 } from "@tanstack/react-router";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useMoneypenny } from "../../src/live/moneypenny";
-import { MoneypennyRail } from "../../src/shell/moneypenny-rail";
+import { MoneypennyDock } from "../../src/shell/moneypenny-dock";
+import { inHistory } from "./moneypenny-dock-harness";
 
-// #5238 — a place she names is a link that takes you there: on a phone the rail closes so the
-// place shows; wider, the rail stays open beside it.
+// #5238 — a place she names is a link that takes you there. In the dock (#7487 slice 2) her links
+// live in History, and History folds away on the tap at every width so the place shows; the dock
+// itself stays under the page.
 
 /** happy-dom has no `matchMedia` — the ≥861 default. A phone installs one that matches. */
 function phone(): () => void {
@@ -33,7 +35,7 @@ async function mountAt(path: string) {
     component: () => (
       <>
         <Outlet />
-        <MoneypennyRail />
+        <MoneypennyDock />
       </>
     ),
   });
@@ -58,9 +60,9 @@ async function mountAt(path: string) {
 }
 
 const say = (text: string) =>
-  act(() => useMoneypenny.setState({ open: true, messages: [{ role: "mp", text }] }));
+  act(() => useMoneypenny.setState({ history: true, messages: [{ role: "mp", text }] }));
 
-describe("MoneypennyRail · places she names", () => {
+describe("MoneypennyDock · places she names", () => {
   let restore: (() => void) | undefined;
   beforeEach(() => {
     localStorage.clear();
@@ -74,39 +76,43 @@ describe("MoneypennyRail · places she names", () => {
   it("renders the place as an underlined link to its real URL", async () => {
     await mountAt("/app/");
     await say("Moneypenny · [open Trade](/trade) and buy a stock (rung 101).");
-    const link = screen.getByRole("link", { name: "open Trade" });
+    const link = inHistory().getByRole("link", { name: "open Trade" });
     expect(link).toHaveAttribute("href", "/app/trade");
     expect(link).toHaveClass("mp-place");
     expect(screen.queryByText(/\[open Trade\]/)).not.toBeInTheDocument();
   });
 
-  it("at desktop width, takes you there and keeps the rail open beside it", async () => {
+  const historyShown = () => screen.queryByRole("region", { name: "Conversation with Moneypenny" });
+
+  it("at desktop width, takes you there, folds History away and keeps the dock", async () => {
     const router = await mountAt("/app/");
     await say("Moneypenny · [open Trade](/trade) now");
-    fireEvent.click(screen.getByRole("link", { name: "open Trade" }));
+    fireEvent.click(inHistory().getByRole("link", { name: "open Trade" }));
     expect(await screen.findByText("the ticket")).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/trade");
+    expect(historyShown()).not.toBeInTheDocument();
     expect(screen.getByRole("complementary", { name: "Moneypenny" })).toBeInTheDocument();
   });
 
-  it("on a phone, closes the rail so the place shows", async () => {
+  it("on a phone, the same: History folds away so the place shows, the dock stays", async () => {
     restore = phone();
     await mountAt("/app/");
     await say("Moneypenny · [open Trade](/trade) now");
-    fireEvent.click(screen.getByRole("link", { name: "open Trade" }));
+    fireEvent.click(inHistory().getByRole("link", { name: "open Trade" }));
     expect(await screen.findByText("the ticket")).toBeInTheDocument();
-    expect(screen.queryByRole("complementary", { name: "Moneypenny" })).not.toBeInTheDocument();
+    expect(historyShown()).not.toBeInTheDocument();
+    expect(screen.getByRole("complementary", { name: "Moneypenny" })).toBeInTheDocument();
   });
 
   // #7167: a row she points at on the page already open. The router's pushState fires no
-  // `hashchange`, and the page's landing listens for exactly that, so the rail announces it.
+  // `hashchange`, and the page's landing listens for exactly that, so the link announces it.
   it("re-lands a row on the page already open by announcing the hash change", async () => {
     const router = await mountAt("/app/accounts");
     const heard = rstest.fn();
     window.addEventListener("hashchange", heard);
     try {
       await say("Moneypenny · look at [your NVDA shares](/accounts#pos-NVDA)");
-      const link = screen.getByRole("link", { name: "your NVDA shares" });
+      const link = inHistory().getByRole("link", { name: "your NVDA shares" });
       expect(link).toHaveAttribute("href", "/app/accounts#pos-NVDA");
       fireEvent.click(link);
       await waitFor(() => expect(heard).toHaveBeenCalledTimes(1));
@@ -120,7 +126,7 @@ describe("MoneypennyRail · places she names", () => {
   it("leaves a place off the allow-list as plain words", async () => {
     await mountAt("/app/");
     await say("Moneypenny · try [the vault](/vault)");
-    expect(screen.queryByRole("link")).not.toBeInTheDocument();
-    expect(screen.getByText("Moneypenny · try the vault")).toBeInTheDocument();
+    expect(inHistory().queryByRole("link")).not.toBeInTheDocument();
+    expect(inHistory().getByText("Moneypenny · try the vault")).toBeInTheDocument();
   });
 });

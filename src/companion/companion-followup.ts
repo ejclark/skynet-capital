@@ -49,7 +49,7 @@ export interface CompanionFollowup {
 
 /** What the model reads back once the card is shown — said so it never claims the comment posted. */
 export const FOLLOWUP_CARD_SHOWN =
-  "shown to the member as a card in the rail; nothing is posted yet. Only their own tap on 'Post the follow-up' adds it to their filing.";
+  "shown to the member as a card in the chat; nothing is posted yet. Only their own tap on 'Post the follow-up' adds it to their filing.";
 
 const NUMBER_ERROR = "issueNumber must be the number of one of the member's own filings";
 const DETAILS_ERROR = "details must say what to add, in the member's own words";
@@ -103,7 +103,7 @@ export const FOLLOWUP_TOOL_DEFS = [
   {
     name: "draft_followup",
     description:
-      "Show the member a DRAFT follow-up comment on one of their OWN filings as a card in the rail. Posts NOTHING: only the member's own tap on the card adds it to the filing. Call it once the member agreed, in their latest message, to add something to a filing they already made. issueNumber must be one of their own filings (the numbers in the MEMBER CONTEXT filings line); details is what to add, in their own words, as plain sentences with no links or formatting. Returns shown: true and a status line; returns an error naming their own filings when the number isn't one of them.",
+      "Show the member a DRAFT follow-up comment on one of their OWN filings as a card in the chat. Posts NOTHING: only the member's own tap on the card adds it to the filing. Call it once the member agreed, in their latest message, to add something to a filing they already made. issueNumber must be one of their own filings (the numbers in the MEMBER CONTEXT filings line); details is what to add, in their own words, as plain sentences with no links or formatting. Returns shown: true and a status line; returns an error naming their own filings when the number isn't one of them.",
     input_schema: {
       type: "object",
       properties: {
@@ -157,4 +157,4 @@ export async function runFollowupTool(
 }
 
 /** The system prompt's paragraph for this tool. */
-export const FOLLOWUP_RULE = `ADDING TO A FILING THEY ALREADY MADE: when a member wants to add something to feedback they already filed (it also happens elsewhere, a correction, more detail, "it's still broken"), offer to add it to that filing instead of filing a new one. Once they agree in their latest message, call draft_followup with the filing's number from the MEMBER CONTEXT filings line and what to add, in their own words. The rail shows it as a card; only their tap on "Post the follow-up" adds it to the filing. You never post it yourself and never say it is posted or sent. A follow-up only goes on a filing the member made themselves: never on someone else's filing or on a plan, even if they ask; for anything else, offer a new filing with draft_feedback.`;
+export const FOLLOWUP_RULE = `ADDING TO A FILING THEY ALREADY MADE: when a member wants to add something to feedback they already filed (it also happens elsewhere, a correction, more detail, "it's still broken"), offer to add it to that filing instead of filing a new one. Once they agree in their latest message, call draft_followup with the filing's number from the MEMBER CONTEXT filings line and what to add, in their own words. The chat shows it as a card; only their tap on "Post the follow-up" adds it to the filing. You never post it yourself and never say it is posted or sent. A follow-up only goes on a filing the member made themselves: never on someone else's filing or on a plan, even if they ask; for anything else, offer a new filing with draft_feedback.`;

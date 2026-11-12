@@ -1,8 +1,8 @@
 // Pictures for #7216 slice 1: the tower's column moves to the stage's LEFT on every page that has
 // it (Eric's #7018 round 9 B pick, 2026-11-09). The landing page (`/app/`) and the Profile page
 // (`/accounts`), chat closed at 1280 (the bench width, where the column starts) and chat open at
-// 1760 (the window that still leaves the page the bench width beside Moneypenny's 440px rail,
-// `use-tower-column.ts`) — the tower must stay put and the stage narrow from the right.
+// 1760 — Moneypenny's History risen from her dock under the page (#7487 slice 2; the right rail is
+// gone, so `use-tower-column.ts` is just the bench query). The tower must stay put with History open.
 //
 // `TOWER_BEFORE=1` lays the pre-#7216 grid (column on the right) over the same build, so one build shoots
 // both sides of the PR's before/after pair.
@@ -58,11 +58,11 @@ for (const [path, name] of [
 
   await page.setViewportSize({ width: 1760, height: 900 });
   await visit(path, `${name}-open`);
-  await page.locator(".mp-toggle").first().click();
-  await page.locator(".mp-rail").waitFor();
+  await page.locator(".mp-dock-history").click();
+  await page.locator(".mp-history").waitFor();
   await page.waitForTimeout(800);
   await shoot(`${side}-${name}-1760-chat-open`);
-  await page.locator(".mp-toggle").first().click();
+  await page.locator(".mp-dock-history").click();
 }
 
 await close();

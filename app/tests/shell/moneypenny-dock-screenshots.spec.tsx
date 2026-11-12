@@ -2,14 +2,14 @@ import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { timing, useMoneypenny } from "../../src/live/moneypenny";
 import { keyFor } from "../../src/live/moneypenny-storage";
 import { codec, SCREENSHOT_LIMIT_LINE } from "../../src/live/mp-screenshots";
-import { flush, json, mount } from "./moneypenny-rail-harness";
+import { flush, json, mount, showHistory } from "./moneypenny-dock-harness";
 
 // #6007 slice 3 — attaching a screenshot in Moneypenny's chat. The real store and composer run;
 // only fetch (per route) and the browser's image codec are stubbed.
 const ID = "ab".repeat(16);
 const PIC = "data:image/png;base64,QUJD";
 
-describe("MoneypennyRail — screenshots", () => {
+describe("MoneypennyDock — screenshots", () => {
   let realFetch: typeof globalThis.fetch;
   const realEncode = codec.encode;
   let sent: { url: string; body: unknown }[];
@@ -61,9 +61,9 @@ describe("MoneypennyRail — screenshots", () => {
   const png = (name = "shot.png") => new File(["x"], name, { type: "image/png" });
   const type = (text: string) =>
     fireEvent.change(screen.getByLabelText("Message Moneypenny"), { target: { value: text } });
-  const openRail = async () => {
+  const openDock = async () => {
     mount();
-    await act(() => useMoneypenny.getState().openRail());
+    await showHistory();
     await flush();
   };
   const sendIt = async () => {
@@ -77,13 +77,14 @@ describe("MoneypennyRail — screenshots", () => {
 
   it("offers the attach control only when the live chat is on (criterion 6)", async () => {
     enabled = false;
-    await openRail();
-    expect(screen.queryByRole("button", { name: "Attach screenshot" })).not.toBeInTheDocument();
+    await openDock();
+    // It keeps its slot so the box never moves (D5), but nothing can be attached.
+    expect(screen.getByRole("button", { name: "Attach screenshot" })).toBeDisabled();
     expect(picker()).toBeNull();
   });
 
   it("shows a thumbnail with a remove control before anything is sent (criterion 1)", async () => {
-    await openRail();
+    await openDock();
     expect(screen.getByRole("button", { name: "Attach screenshot" })).toBeInTheDocument();
     await pick(png());
     expect(screen.getByAltText("Screenshot you attached")).toHaveAttribute("src", PIC);
@@ -93,7 +94,7 @@ describe("MoneypennyRail — screenshots", () => {
   });
 
   it("holds at most three, and says so (criterion 1)", async () => {
-    await openRail();
+    await openDock();
     await pick(png("a.png"), png("b.png"), png("c.png"), png("d.png"));
     expect(screen.getAllByAltText("Screenshot you attached")).toHaveLength(3);
     expect(screen.getByRole("status")).toHaveTextContent("up to 3 screenshots");
@@ -101,7 +102,7 @@ describe("MoneypennyRail — screenshots", () => {
   });
 
   it("refuses a file that is not a usable image in one line and keeps the typed text (criterion 3)", async () => {
-    await openRail();
+    await openDock();
     type("here is the position");
     codec.encode = () => Promise.resolve(undefined);
     await pick(png("big.png"));
@@ -111,7 +112,7 @@ describe("MoneypennyRail — screenshots", () => {
   });
 
   it("uploads at send, then sends the turn with ids only — never bytes (criteria 4, 5)", async () => {
-    await openRail();
+    await openDock();
     await pick(png());
     type("what is this P/L?");
     await sendIt();
@@ -140,7 +141,7 @@ describe("MoneypennyRail — screenshots", () => {
 
   it("still sends the words when the upload fails, and says the picture did not go (criterion 19)", async () => {
     uploadStatus = 507;
-    await openRail();
+    await openDock();
     await pick(png());
     type("see this?");
     await sendIt();
@@ -149,7 +150,7 @@ describe("MoneypennyRail — screenshots", () => {
   });
 
   it("takes a pasted image, and lets plain text paste as it always did (criterion 1)", async () => {
-    await openRail();
+    await openDock();
     const box = screen.getByLabelText("Message Moneypenny");
     fireEvent.paste(box, { clipboardData: { files: [] } });
     expect(screen.queryByAltText("Screenshot you attached")).not.toBeInTheDocument();
@@ -161,7 +162,7 @@ describe("MoneypennyRail — screenshots", () => {
   });
 
   it("takes a dropped image (criterion 1)", async () => {
-    await openRail();
+    await openDock();
     await act(() => {
       fireEvent.drop(screen.getByLabelText("Message Moneypenny"), {
         dataTransfer: { files: [png("dropped.png")] },
@@ -172,7 +173,7 @@ describe("MoneypennyRail — screenshots", () => {
   });
 
   it("shows the words, not a broken image, for a screenshot the store removed (criterion 20)", async () => {
-    await openRail();
+    await openDock();
     act(() => {
       useMoneypenny.setState({
         messages: [{ role: "user", text: "look", at: Date.now(), screenshots: [ID, "../evil"] }],
@@ -191,7 +192,7 @@ describe("MoneypennyRail — screenshots", () => {
       'event: delta\ndata: {"text":"drafted it."}\n\n',
       "event: done\ndata: {}\n\n",
     ].join("");
-    await openRail();
+    await openDock();
     await pick(png());
     type("the P/L here looks wrong");
     await sendIt();
@@ -203,7 +204,7 @@ describe("MoneypennyRail — screenshots", () => {
       `event: handoff\ndata: ${JSON.stringify({ kind: "bug", title: "P/L is off", details: "x" })}\n\n`,
       "event: done\ndata: {}\n\n",
     ].join("");
-    await openRail();
+    await openDock();
     type("the P/L here looks wrong");
     await sendIt();
     await screen.findByText(/P\/L is off/);

@@ -5,7 +5,7 @@ import { CALENDAR_ANCHOR, landingRow } from "../domain/edition-keys.js";
  * a link"). One allow-list, read by both halves of what she says: her scripted lines
  * (`app/src/live/moneypenny-script.ts`) write a place as `[words](/path)`, and the live chat's
  * prompt (`companion-system-prompt.ts`) is told the same form and handed this same list, so the
- * panel (`app/src/shell/moneypenny-rail.tsx`) has one grammar to render and one check to run.
+ * panel (`app/src/shell/mp-message.tsx`, inside the dock's History) has one grammar to render and one check to run.
  *
  * The check is the safety half: a path not on this list never becomes a link — her words stay,
  * plain — so a route the model invents (or one a member's own text smuggles into her reply) has
@@ -99,4 +99,4 @@ export const LANDING_ROW_RULE = `POINT AT THE NEWS, DON'T RETELL IT. When the ME
 
 /** The prompt's half: the form, the list, and the honesty rule, built from the same data the
  *  panel checks against so the two can't drift. */
-export const PLACE_LINK_RULE = `LINKING A PLACE: when you name a place in the app, write it as a link the rail renders — [your words](/path) — so the member can tap straight to it: "[open Trade](/trade)", "rank by [Open-position return](/leaderboard?by=return)". Use ONLY these paths, never one you make up (anything else shows as plain text): ${PLACES.map((p) => `${p.path} (${p.name} — ${p.what})`).join("; ")}. The Leaderboard's rankings are ?by=${BOARD_RANKINGS.map((r) => `${r.by} (${r.label})`).join(", ")}. A ticket link (/trade?…) lands on the review screen, never an order. A link takes the member somewhere; never word it as if tapping it did anything.`;
+export const PLACE_LINK_RULE = `LINKING A PLACE: when you name a place in the app, write it as a link the chat renders — [your words](/path) — so the member can tap straight to it: "[open Trade](/trade)", "rank by [Open-position return](/leaderboard?by=return)". Use ONLY these paths, never one you make up (anything else shows as plain text): ${PLACES.map((p) => `${p.path} (${p.name} — ${p.what})`).join("; ")}. The Leaderboard's rankings are ?by=${BOARD_RANKINGS.map((r) => `${r.by} (${r.label})`).join(", ")}. A ticket link (/trade?…) lands on the review screen, never an order. A link takes the member somewhere; never word it as if tapping it did anything.`;

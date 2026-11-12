@@ -1,8 +1,8 @@
-// Visual harness for the Moneypenny rail's header controls — from the REAL built shell (app/dist)
-// over a stub API. One frame: the rail open on a mid-thread member, header showing the `+`
-// new-conversation control and the "⧉ Copy conversation" control (#1672 slice 2 — the ↺ glyph read
-// as "retry" against every mainstream chat app's own `+` convention, and the copy control is the
-// save-before-wipe affordance NN/g's baseline chatbot guideline calls for).
+// Visual harness for the header controls of Moneypenny's History — from the REAL built shell
+// (app/dist) over a stub API. One frame: "Meet Moneypenny ›" opens History over her dock (#7487
+// slice 2; the right rail is gone) on a mid-thread member, the header showing Copy, New
+// conversation and Close (#1672 slice 2 — the copy control is the save-before-wipe affordance
+// NN/g's baseline chatbot guideline calls for), the member's line typed in the dock's box.
 // Usage: npm run build --prefix app && npm run shoot:moneypenny [outdir]
 import { profileStubs } from "./profile-fixture.mjs";
 import { openShell } from "./shell.mjs";
@@ -88,11 +88,13 @@ const { page, origin, shoot, close } = await openShell({
 
 await page.goto(`${origin}/app/accounts?section=milestones&chapter=onboarding`);
 await page.getByRole("button", { name: "Meet Moneypenny ›" }).click();
-await page.getByText(/^Moneypenny · hi, I'm Moneypenny/).waitFor();
-await page.getByLabel("Message Moneypenny").fill("How am I doing on my account?");
+const history = page.locator(".mp-history");
+await history.getByText(/^Moneypenny · hi, I'm Moneypenny/).waitFor();
+await page.locator(".mp-dock .mp-box-input").fill("How am I doing on my account?");
 await page.keyboard.press("Enter");
-await page.locator(".mp-msg.mp-user").getByText("How am I doing on my account?").waitFor();
-await page.getByRole("button", { name: "Copy conversation" }).waitFor();
-await shoot("moneypenny-rail-header");
+await history.locator(".mp-msg.mp-user").getByText("How am I doing on my account?").waitFor();
+await history.getByRole("button", { name: "Copy", exact: true }).waitFor();
+await history.getByRole("button", { name: "New conversation" }).waitFor();
+await shoot("moneypenny-history-header");
 
 await close();

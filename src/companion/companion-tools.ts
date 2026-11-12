@@ -297,7 +297,7 @@ export const COMPANION_TOOL_DEFS = [
   {
     name: "draft_feedback",
     description:
-      "Hand the member a DRAFT feedback filing (bug, feature, or idea) distilled from this whole conversation. Files NOTHING: the rail shows the draft and only the member's own reply sends it. Call it once the member has agreed, in their latest message, to report something. Returns captured: true and a status line, plus `similar` open feedback issues when any look like duplicates; returns an error when title or details is missing (a missing or unrecognized kind is drafted as an idea).",
+      "Hand the member a DRAFT feedback filing (bug, feature, or idea) distilled from this whole conversation. Files NOTHING: the chat shows the draft and only the member's own reply sends it. Call it once the member has agreed, in their latest message, to report something. Returns captured: true and a status line, plus `similar` open feedback issues when any look like duplicates; returns an error when title or details is missing (a missing or unrecognized kind is drafted as an idea).",
     input_schema: {
       type: "object",
       properties: {
@@ -580,7 +580,7 @@ export async function runCompanionTool(
         ok: true,
         result: {
           captured: true,
-          status: "held in the rail, not sent — the member's own reply 'send' files it",
+          status: "held in the chat, not sent — the member's own reply 'send' files it",
           ...(similar.length > 0 ? { similar } : {}),
         },
       };

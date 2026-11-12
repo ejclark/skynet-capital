@@ -66,9 +66,10 @@ const rectOf = (el: Element): Rect => {
 const topbarBottom = (): number =>
   document.querySelector(".topbar")?.getBoundingClientRect().bottom ?? 0;
 
-/** The chat panel's box while it is open, else null. */
+/** Moneypenny's dock (and her History over it) across the bottom of the page, else null: the light
+ *  never lands an item under it (#7487 slice 2; a full-width bar, so `viewArea` clips the bottom). */
 function chatBox(): Rect | null {
-  const chat = document.querySelector(".mp-rail");
+  const chat = document.querySelector(".mp-dock");
   return chat && chat.getClientRects().length > 0 ? rectOf(chat) : null;
 }
 
