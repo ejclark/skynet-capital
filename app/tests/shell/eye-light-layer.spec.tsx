@@ -12,6 +12,7 @@ import { CALENDAR_ANCHOR } from "../../../src/domain/edition-keys";
 import { requestLight, useEyeLight } from "../../src/shell/eye-light";
 import { EyeLight } from "../../src/shell/eye-light-layer";
 import { setVantageFrame } from "../../src/shell/tower-bus";
+import css from "../../src/styles/eye-light.css?raw";
 
 // #7216 slice 2 — the ring and its label stay on the item her link names. happy-dom draws no Eye
 // (no tower frame, no laid-out brand Eye), so these exercise the ring alone: the reduced-motion
@@ -81,6 +82,9 @@ function layOut(): () => void {
   };
 }
 
+/** The ring still held, not one fading out after it was let go. */
+const heldRing = () => document.querySelector("[data-eye-ring]:not([data-eye-ring-leaving])");
+
 describe("EyeLight · the ring on the item her link names", () => {
   let restore: () => void;
   beforeEach(() => {
@@ -110,7 +114,10 @@ describe("EyeLight · the ring on the item her link names", () => {
     fireEvent.pointerDown(screen.getByRole("button", { name: "AAPL" }));
     expect(document.querySelector("[data-eye-ring]")).not.toBeNull();
     fireEvent.pointerDown(screen.getByText("NVDA"));
-    expect(document.querySelector("[data-eye-ring]")).toBeNull();
+    // Let go, it fades from where it is on --dur-quick (never pops), then goes.
+    expect(heldRing()).toBeNull();
+    expect(document.querySelector("[data-eye-ring-leaving]")).not.toBeNull();
+    await waitFor(() => expect(document.querySelector("[data-eye-ring]")).toBeNull());
   });
 
   it("lets the ring go when the member leaves the page", async () => {
@@ -276,5 +283,84 @@ describe("EyeLight · the beam from the tower's Eye", () => {
     } finally {
       window.matchMedia = matchMedia;
     }
+  });
+});
+
+// #7487 slice 5 review — the beam is composite-only, lets go when the page moves under it, and a
+// newer light fades the older beam out from where it is instead of cutting it off.
+describe("EyeLight · the beam, reviewed", () => {
+  let restore: () => void;
+  let frame: HTMLIFrameElement;
+  beforeEach(() => {
+    useEyeLight.setState({ request: undefined });
+    restore = layOut();
+    frame = document.createElement("iframe");
+    frame.setAttribute("data-shown", "true");
+    Object.defineProperty(frame, "contentWindow", { value: { postMessage: () => undefined } });
+    document.body.append(frame);
+    setVantageFrame(frame);
+  });
+  afterEach(() => {
+    setVantageFrame(null);
+    frame.remove();
+    restore();
+  });
+
+  const beamUp = () =>
+    waitFor(() => {
+      const el = document.querySelector<HTMLElement>("[data-eye-beam]:not([data-leaving])");
+      expect(el).not.toBeNull();
+      return el as HTMLElement;
+    });
+
+  it("moves only HTML boxes; the SVG it draws (blurs, masks, clips) never animates", async () => {
+    await mount();
+    act(() => requestLight("/accounts#pos-NVDA"));
+    const beam = await beamUp();
+    expect(beam).toBeInstanceOf(HTMLDivElement);
+    for (const cls of ["eye-beam-window", "eye-beam-unslide", "eye-beam-pass", "eye-beam-back"])
+      expect(beam.querySelector(`.${cls}`)).toBeInstanceOf(HTMLDivElement);
+    // No animated class sits on an SVG element.
+    for (const el of beam.querySelectorAll("svg, svg *"))
+      expect(el.getAttribute("class") ?? "").not.toMatch(/eye-beam/);
+    // Every blur's region is bounded in user space, never a share of a long line's box.
+    const filters = [...beam.querySelectorAll("filter")];
+    expect(filters.length).toBeGreaterThan(0);
+    for (const f of filters) expect(f.getAttribute("filterUnits")).toBe("userSpaceOnUse");
+  });
+
+  it("animates only transform and opacity (eye-light.css), with no blend mode", () => {
+    const keyframes = [...css.matchAll(/@keyframes\s+([\w-]+)\s*\{([\s\S]*?)\n\}/g)];
+    expect(keyframes.length).toBeGreaterThan(0);
+    for (const [, , body] of keyframes) {
+      const props = [...(body ?? "").matchAll(/([\w-]+)\s*:/g)].map((m) => m[1]);
+      for (const p of props) expect(["transform", "opacity"]).toContain(p);
+    }
+    // The layer is its own stacking context: a blend has nothing of the page behind it.
+    expect(css).not.toMatch(/mix-blend-mode/);
+  });
+
+  it("lets the beam go when the page scrolls under it, and keeps the ring", async () => {
+    await mount();
+    act(() => requestLight("/accounts#pos-NVDA"));
+    const beam = await beamUp();
+    act(() => {
+      window.dispatchEvent(new Event("scroll"));
+    });
+    expect(beam).toHaveAttribute("data-leaving");
+    await waitFor(() => expect(document.querySelector("[data-eye-beam]")).toBeNull());
+    await waitFor(() => expect(heldRing()).not.toBeNull());
+  });
+
+  it("fades an older beam from where it is when a newer light arrives", async () => {
+    await mount();
+    act(() => requestLight("/accounts#pos-NVDA"));
+    const first = await beamUp();
+    act(() => requestLight("/accounts#pos-AAPL"));
+    // Still on screen, now leaving, its fade starting from the opacity it had.
+    expect(first.isConnected).toBe(true);
+    expect(first).toHaveAttribute("data-leaving");
+    expect(first.style.opacity).not.toBe("");
+    await waitFor(() => expect(first.isConnected).toBe(false));
   });
 });

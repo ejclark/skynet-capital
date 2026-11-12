@@ -66,6 +66,8 @@ describe("useEyeNotice", () => {
     useEyeLight.setState({ request: undefined });
     useNoticeMoves.setState({ line: undefined, moves: [] });
     useMoneypenny.getState().reset();
+    // The dock's `hydrate` has bound the thread to its member (the notice waits for that).
+    useMoneypenny.setState({ member: "member-1" });
   });
 
   it("on the first look only records the quests already there", async () => {
@@ -112,20 +114,91 @@ describe("useEyeNotice", () => {
     expect(useEyeLight.getState().request).toBeUndefined();
   });
 
-  it("waits while the member is typing, and looks once they stop", async () => {
+  // #7487 slice 5 review: a notice held back used to fire the moment the member paused, long after
+  // they had started using the page. Any sign they came for something now drops it for the visit.
+  /** Long past every retry: the notice would have played by now if it were going to. */
+  const longPast = () => act(() => new Promise((r) => setTimeout(r, 2500)));
+  /** What the Eye has done so far: the light it asked for and the lines she said. */
+  const said = () => ({
+    light: useEyeLight.getState().request,
+    lines: useMoneypenny.getState().messages.length,
+  });
+  const nothing = { light: undefined, lines: 0 };
+
+  it("drops the notice once the member presses a key, even after they stop", async () => {
     rememberQuests([]);
     await mount();
-    const box = screen.getByLabelText("box") as HTMLInputElement;
     act(() => {
-      box.focus();
-      box.value = "what moved";
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "w" }));
     });
-    await past();
+    await longPast();
+    expect(said()).toEqual(nothing);
+  });
+
+  it("drops the notice once the member taps anywhere on the page", async () => {
+    rememberQuests([]);
+    await mount();
+    act(() => {
+      window.dispatchEvent(new Event("pointerdown"));
+    });
+    await longPast();
+    expect(said()).toEqual(nothing);
+  });
+
+  it("drops the notice once focus moves (a screen reader in focus mode, a tab)", async () => {
+    rememberQuests([]);
+    await mount();
+    act(() => screen.getByLabelText("box").focus());
+    await longPast();
+    expect(said()).toEqual(nothing);
+  });
+
+  it("drops the notice once the member has moved to another window", async () => {
+    rememberQuests([]);
+    const router = await mount();
+    await act(() => router.navigate({ href: "/?w=calendar" }));
+    await longPast();
+    expect(said()).toEqual(nothing);
+    expect(router.state.location.search).toEqual({ w: "calendar" });
+  });
+
+  it("never lands after an answer: a turn with Moneypenny drops it, even once she is done", async () => {
+    rememberQuests([]);
+    await mount();
+    act(() => useMoneypenny.setState({ streaming: true }));
+    act(() => useMoneypenny.setState({ streaming: false }));
+    await longPast();
     expect(useEyeLight.getState().request).toBeUndefined();
-    act(() => {
-      box.value = "";
-      box.blur();
+  });
+
+  it("waits until her thread is bound to its member, then says it under that member", async () => {
+    rememberQuests([]);
+    useMoneypenny.setState({ member: undefined });
+    await mount();
+    await past();
+    expect(said()).toEqual(nothing);
+    act(() => useMoneypenny.setState({ member: "member-1" }));
+    await waitFor(() => expect(useEyeLight.getState().request?.anchor).toBe("sector-XLE"), {
+      timeout: 3000,
     });
+    expect(useMoneypenny.getState().messages.at(-1)?.text).toBe(NOTICE.line);
+  });
+
+  it("waits while the page is scrolling, and looks once it settles", async () => {
+    rememberQuests([]);
+    await mount();
+    let scrolls = 0;
+    const tick = setInterval(() => {
+      scrolls += 1;
+      window.dispatchEvent(new Event("scroll"));
+    }, 100);
+    try {
+      await act(() => new Promise((r) => setTimeout(r, 1800)));
+      expect(scrolls).toBeGreaterThan(10);
+      expect(useEyeLight.getState().request).toBeUndefined();
+    } finally {
+      clearInterval(tick);
+    }
     await waitFor(() => expect(useEyeLight.getState().request?.anchor).toBe("sector-XLE"), {
       timeout: 3000,
     });

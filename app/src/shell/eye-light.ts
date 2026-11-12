@@ -48,6 +48,9 @@ export const BEAM_HOLD_MS = 200;
 /** `--dur-spatial` when the stylesheet cannot be read (a spec's DOM): `theme.css`'s value. */
 export const SPATIAL_FALLBACK_MS = 260;
 
+/** `--dur-quick` when the stylesheet cannot be read (a spec's DOM): `theme.css`'s value. */
+export const QUICK_FALLBACK_MS = 140;
+
 /** A motion token's value in ms: "260ms" → 260, "0.26s" → 260; anything unreadable → `fallback`. */
 export function tokenMs(raw: string, fallback: number): number {
   const m = /^\s*(-?[\d.]+)\s*(ms|s)\s*$/.exec(raw);

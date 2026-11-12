@@ -75,7 +75,7 @@ await link.click();
 let t0 = 0;
 for (let i = 0; i < 400; i++) {
   await page.clock.runFor(16);
-  if (await page.locator("svg.eye-beam").count()) break;
+  if (await page.locator(".eye-beam").count()) break;
   t0 += 16;
 }
 console.log(`light began after ~${t0} ms of page time`);

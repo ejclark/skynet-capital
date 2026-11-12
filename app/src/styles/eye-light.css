@@ -7,74 +7,123 @@
  * The motion, built with the vendored `/animate` and `/choreograph` skills on the house's tokens
  * (docs/vendor/emil-kowalski-skills.md → House rules): one gesture, led by the beam.
  *
- *   the reach     0 → --dur-spatial               transform: scaleX 0 → 1 along the line, --ease-spatial
+ *   the reach     0 → --dur-spatial               a slide-reveal along the line, --ease-spatial:
+ *                                                 the window's transform out, its content's back
  *   each pass     at the tip's arrival, --dur-quick  opacity, the moment the eased tip enters its card
  *   the back glow at --dur-spatial, --dur-quick   opacity, with the ring, as the tip lands
  *   the hold      200 ms (BEAM_HOLD_MS)
  *   the fade      --dur-spatial                    opacity of the whole beam; the ring stays
+ *   let go early  --dur-quick                      opacity, from where it was (a newer light, a scroll)
+ *
+ * COMPOSITE-ONLY (the vendored /animation-performance skill: no blur on an animated area). Every
+ * animated selector here is an HTML box, and each keyframe touches `transform` or `opacity` alone;
+ * the SVG inside them (the blurs, the gaps mask, the clips) never animates, so it is rasterised once
+ * and each frame only moves layers (`tests/shell/eye-light-layer.spec.tsx` holds this). The layer is
+ * its own stacking context, so no blend mode: there is nothing of the page behind it to blend with.
  *
  * Reduced motion zeroes the tokens, and the layer never mounts then: the ring shows at once. */
 
 .eye-beam {
   position: fixed;
-  top: 0;
-  left: 0;
+  inset: 0;
   z-index: 6;
   pointer-events: none;
+  overflow: hidden;
+  animation: eye-beam-fade var(--dur-spatial) var(--ease-spatial) calc(var(--dur-spatial) + 200ms)
+    both;
+}
+/* Let go early: it holds where it is and fades from its present opacity (set inline). */
+.eye-beam[data-leaving] {
+  animation: eye-beam-leave var(--dur-quick) var(--ease-spatial) both;
+}
+.eye-beam[data-leaving] * {
+  animation-play-state: paused;
+}
+.eye-beam svg {
+  position: absolute;
+  top: 0;
+  left: 0;
   overflow: visible;
 }
-
-/* The line's own transform, on the element that moves: from the Eye, turned toward the item, and
- * reaching out to its full length. */
-.eye-beam-reach {
-  transform-box: view-box;
-  transform-origin: 0 0;
-  transform: translate(var(--beam-x), var(--beam-y)) rotate(var(--beam-a));
-  animation: eye-beam-reach var(--dur-spatial) var(--ease-spatial) both;
-}
-@keyframes eye-beam-reach {
-  from {
-    transform: translate(var(--beam-x), var(--beam-y)) rotate(var(--beam-a)) scaleX(0);
-  }
-  to {
-    transform: translate(var(--beam-x), var(--beam-y)) rotate(var(--beam-a)) scaleX(1);
-  }
-}
-
-/* Through a card, the beam is a glow behind its face, never a line over its text: screened, dim,
- * and only from the moment the tip gets there (its delay is set per card). */
-.eye-beam-pass {
-  mix-blend-mode: screen;
-  animation: eye-beam-glow var(--dur-quick) var(--ease-spatial) both;
-}
-/* On the light palette a screen over a white card shows nothing: the glow darkens into it instead,
- * a warm tint where the beam passes behind. */
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) .eye-beam-pass {
-    mix-blend-mode: multiply;
-  }
-}
-:root[data-theme="light"] .eye-beam-pass {
-  mix-blend-mode: multiply;
-}
-.eye-beam-pool {
-  animation: eye-beam-glow var(--dur-quick) var(--ease-spatial) both;
+.eye-beam-back,
+.eye-beam-page {
+  position: absolute;
+  top: 0;
+  left: 0;
 }
 .eye-beam-back {
+  inset: 0;
   animation: eye-beam-glow var(--dur-quick) var(--ease-spatial) var(--dur-spatial) both;
+}
+/* The Eye's pool: a plain gradient, no filter. */
+.eye-beam-pool {
+  position: absolute;
+  width: 56px;
+  height: 56px;
+  margin: -28px 0 0 -28px;
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    rgb(255 243 214 / 0.9),
+    rgb(255 194 77 / 0.5) 40%,
+    rgb(255 122 46 / 0)
+  );
+  animation: eye-beam-glow var(--dur-quick) var(--ease-spatial) both;
+}
+/* The line's frame: at the Eye, turned toward the item. Static. */
+.eye-beam-rotor {
+  position: absolute;
+  width: 0;
+  height: 0;
+  transform-origin: 0 0;
+}
+/* The reveal: the window slides out from the Eye while its content slides back by the same amount,
+ * so the drawing holds still and only the window's soft leading edge travels to the tip. */
+.eye-beam-window {
+  position: absolute;
+  left: 0;
+  overflow: hidden;
+  mask-image: linear-gradient(to left, transparent, #000 24px);
+  animation: eye-beam-slide-out var(--dur-spatial) var(--ease-spatial) both;
+}
+.eye-beam-unslide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  animation: eye-beam-slide-back var(--dur-spatial) var(--ease-spatial) both;
+}
+.eye-beam-page {
+  transform-origin: 0 0;
+}
+@keyframes eye-beam-slide-out {
+  from {
+    transform: translateX(-100%);
+  }
+}
+@keyframes eye-beam-slide-back {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+/* Through a card, the beam is a glow behind its face, never a line over its text: clipped to the
+ * card, dim, and only from the moment the tip gets there (its delay is set per card). */
+.eye-beam-pass {
+  position: absolute;
+  overflow: hidden;
+  animation: eye-beam-glow var(--dur-quick) var(--ease-spatial) both;
 }
 @keyframes eye-beam-glow {
   from {
     opacity: 0;
   }
 }
-
-/* Held, then let go: all of it fades together while the ring stays. */
-.eye-beam-all {
-  animation: eye-beam-fade var(--dur-spatial) var(--ease-spatial) calc(var(--dur-spatial) + 200ms)
-    both;
-}
 @keyframes eye-beam-fade {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes eye-beam-leave {
   to {
     opacity: 0;
   }
@@ -94,6 +143,10 @@
     0 0 0 4px #ffc24d,
     0 0 22px 6px rgb(255 122 46 / 0.32);
   animation: eye-beam-glow var(--dur-quick) var(--ease-spatial) both;
+}
+/* Let go: it fades from where it is rather than vanishing. */
+.eye-ring[data-eye-ring-leaving] {
+  animation: eye-beam-leave var(--dur-quick) var(--ease-spatial) both;
 }
 .eye-ring-label {
   position: absolute;

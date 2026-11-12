@@ -159,6 +159,22 @@ export interface WindowLink {
   readonly to: MissionWindow;
 }
 
+/** The window the Eye is about to open on its own, whose frame must not take focus. */
+let quietWindow: MissionWindow | undefined;
+
+/** The next opening of `w` is the Eye's, not the member's: its frame leaves focus where it is. */
+export function quietNextWindow(w: MissionWindow): void {
+  quietWindow = w;
+}
+
+/** Whether this frame's opening was the Eye's; any frame's mount spends the mark either way, so a
+ *  stale one never quiets a later switch the member made. */
+function takeQuiet(id: MissionWindow): boolean {
+  const quiet = quietWindow === id;
+  quietWindow = undefined;
+  return quiet;
+}
+
 /** The window on the stage. Keyed by its id at the call site, so each opening slides in fresh. */
 export function MissionWindowFrame({
   id,
@@ -182,11 +198,14 @@ export function MissionWindowFrame({
 }): ReactElement {
   // A window the member switched to takes focus at its heading, so keyboard and screen-reader focus
   // never falls to <body> when the control they used (a row, a Linked pill) unmounts with the old
-  // one. Arriving at the page (side 0) leaves focus where the browser put it.
+  // one. Arriving at the page (side 0) leaves focus where the browser put it, and so does a switch
+  // the Eye made on its own (`quietNextWindow`): the member asked for nothing, so focus is not moved
+  // from under them (WCAG 3.2.1) — Moneypenny's line in the dock's live region says what changed.
   const heading = useRef<HTMLHeadingElement>(null);
   // biome-ignore lint/correctness/useExhaustiveDependencies: on mount only; the frame is keyed by id
   useEffect(() => {
-    if (side !== 0) heading.current?.focus({ preventScroll: true });
+    const quiet = takeQuiet(id);
+    if (side !== 0 && !quiet) heading.current?.focus({ preventScroll: true });
   }, []);
   const from = useTrail((s) => s.trail.from[id]);
   return (
