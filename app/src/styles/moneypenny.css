@@ -142,7 +142,7 @@
 
 /* ✎ tags (#7487 slice 3) — what the member points at, leading the moves row. Amber dashed, the
    Eye's own colour for "this thing is in view", with the ✎ and the words carrying the meaning; the
-   label truncates at 200px, the whole subject in its title. */
+   label truncates at about 200px (32ch), the whole subject in its title. */
 .mp-tag {
   flex: none;
   display: inline-flex;
@@ -158,7 +158,7 @@
   white-space: nowrap;
 }
 .mp-tag-label {
-  max-width: 200px;
+  max-width: 32ch; /* ~200px of 10.5px mono: a text measure, not a panel cap */
   overflow: hidden;
   text-overflow: ellipsis;
 }
