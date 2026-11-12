@@ -4,10 +4,8 @@ import { editionEventKey, eventAnchor } from "../../../src/domain/edition-keys";
 import { type BoardSnapshot, fetchBoard } from "../live/board";
 import { dayLabel } from "../live/book-events";
 import { type EditionView, fetchEdition, waitingOn } from "../live/edition";
-import { moveFigure } from "../live/edition-sectors";
+import { moveFigure, sectorAnchor } from "../live/edition-sectors";
 import {
-  questAnchor,
-  sectorAnchor,
   TOUR_END,
   TOUR_WINDOWS,
   type TourFacts,
@@ -18,11 +16,11 @@ import {
 } from "../live/first-visit";
 import { parseWindow } from "../live/mission";
 import { useMoneypenny } from "../live/moneypenny";
-import { fetchQuests, placeQuests, type QuestsAnswer } from "../live/quests";
+import { fetchQuests, placeQuests, type QuestsAnswer, questAnchor } from "../live/quests";
 import { DEFAULT_LENS } from "../live/research";
 import { requestLight } from "./eye-light";
 import { calendarShows } from "./landing-calendar";
-import { openQuietly } from "./mission-window";
+import { quietNextWindow } from "./mission-window";
 import { partyRows } from "./mission-windows";
 
 /**
@@ -128,13 +126,13 @@ export function useRunVisit(): (to: VisitStep) => Promise<void> {
     const stop = tourStop(window, tourFacts(view, quests, board, mp.connected === true));
     // The tour is driven from the dock, so the window it opens leaves focus there (the dock puts it
     // on the next move) instead of taking it at its heading.
-    openQuietly(stop.window);
+    quietNextWindow(stop.window);
     void router.navigate({ to: "/", search: { w: parseWindow(stop.window) } });
     if (stop.anchor) requestLight(`/#${stop.anchor}`, stop.reason);
     try {
       await useMoneypenny.getState().stepVisit(visitAfter(to), stop.line);
     } finally {
-      openQuietly(undefined);
+      quietNextWindow(undefined);
     }
   };
 }

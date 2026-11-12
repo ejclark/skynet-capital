@@ -25,6 +25,19 @@ import { type Chip, chipsFor, type Flow } from "./moneypenny-script";
  * second one: while it runs, its moves (the welcome's three, a tour stop's "Next ›" and "That's
  * enough", the goal's picks) stand where the canned moves would — below a parked card's exits and a
  * scripted beat, so it never talks over either.
+ *
+ * The whole order, best first, in this one place (`movesFor`):
+ *   1. a turn under way — nothing;
+ *   2. a parked card's exits (the member's own unfinished business outranks anything she offers);
+ *   3. a side thread — its way back to the main conversation;
+ *   4. a scripted beat waiting on an answer — nothing but the box;
+ *   5. the FIRST VISIT (slice 7) — the welcome's, a tour stop's or the goal's moves;
+ *   6. a live EYE NOTICE (slice 5, `eye-notice.ts`) — its question and "Back to where I was";
+ *   7. the canned moves: a pivot, the places her line names, the chips for where the member is.
+ * The visit sits above the notice because the member asked for the tour and the Eye's notice is
+ * unprompted. They should never meet: the Eye never notices during a first visit or the tour
+ * (`shell/use-eye-notice.ts` lets go while one is due or running), and a visit line replaces her
+ * latest, which ends a notice's moves on its own. The order only settles it if they ever do.
  */
 
 /** A move: a canned message sent as the member's own, or a page address the member goes to. */
@@ -55,8 +68,11 @@ export interface MoveState {
   readonly firstTradeDone: boolean;
   /** Her latest line on screen, for the pivot it may offer. */
   readonly latest: MpMessage | undefined;
-  /** Where the member is in their first visit, if they are in it. */
+  /** Where the member is in their first visit, if they are in it (#7487 slice 7). */
   readonly visit?: Visit;
+  /** The moves her line about what the Eye noticed offers, while that line is still her latest
+   *  (#7487 slice 5, `eye-notice.ts`): "Back to where I was" and one question about it. */
+  readonly notice?: readonly Move[];
 }
 
 const say = (c: Chip): Move => ({ kind: "say", label: c.label, msg: c.msg });
@@ -78,6 +94,7 @@ export function movesFor(s: MoveState): readonly Move[] {
   if (s.inThread) return [BACK_TO_MAIN];
   if (s.flow !== "idle") return [];
   if (s.visit) return visitMoves(s.visit);
+  if (s.notice && s.notice.length > 0) return s.notice;
   const pivot = s.latest?.role === "mp" ? pivotOf(s.latest.text) : undefined;
   // Her latest line is plain text in the dock (D4), so a place she names there would be dead: the
   // first one or two become moves. A pivot already covers the rows it names, so it wins.

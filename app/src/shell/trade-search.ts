@@ -15,6 +15,9 @@ export interface TradeSearch {
   desk?: string;
   play?: PlayInfo["code"];
   symbol?: string;
+  /** A draft from Campaign's Trade window (#7487 slice 6): `?shares=` and `?type=`. */
+  shares?: number;
+  type?: "market" | "limit";
   strike?: string;
   exp?: string;
   manage?: string;

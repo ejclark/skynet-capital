@@ -18,11 +18,16 @@ import { MessageShots } from "./mp-screenshot";
 /**
  * Go where she points (a link in her line, or a move in the dock that carries one): the Eye lights
  * the item it names, and a row on the page already open lands in place instead of jumping to the top.
+ * `reason` is why the Eye looks, for its ring's label (the Eye's own notices, #7487 slice 5).
  */
-export function goToPlace(router: ReturnType<typeof useRouter>, path: string): void {
+export function goToPlace(
+  router: ReturnType<typeof useRouter>,
+  path: string,
+  reason?: string,
+): void {
   // A link that names an item on a page (`#pos-NVDA`) also asks for the Eye's light onto it
   // (#7216 slice 2, `eye-light-layer.tsx`), which waits for the item to land wherever it renders.
-  requestLight(path);
+  requestLight(path, reason);
   // "Open-position return" while the board is already showing re-ranks it in place — the member keeps
   // their spot; any other page opens at its top, as a new view should.
   const samePage = router.state.location.pathname === path.split(/[?#]/)[0];

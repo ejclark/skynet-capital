@@ -8,7 +8,7 @@ import { GOAL_ASK, TOUR_END, VISIT_STOPPED, WELCOME } from "../../src/live/first
 import { timing, useMoneypenny } from "../../src/live/moneypenny";
 import { useEyeLight } from "../../src/shell/eye-light";
 import { tourFacts } from "../../src/shell/first-visit-run";
-import { MissionWindowFrame, openQuietly } from "../../src/shell/mission-window";
+import { MissionWindowFrame, quietNextWindow } from "../../src/shell/mission-window";
 import { QuestGoal } from "../../src/shell/quest-goal";
 import { flush, json, mount } from "./moneypenny-dock-harness";
 
@@ -260,7 +260,7 @@ describe("the first visit in the dock", () => {
         <p>rows</p>
       </MissionWindowFrame>
     );
-    openQuietly("market");
+    quietNextWindow("market");
     render(frame());
     expect(screen.getByRole("heading", { name: "Market" })).not.toHaveFocus();
     cleanup();

@@ -233,8 +233,8 @@ export interface TourFacts {
 export const CONNECT_ANCHOR = "quest-connect";
 export const GOAL_ANCHOR = "quest-goal";
 export const TOWER_ANCHOR = "party-tower";
-export const sectorAnchor = (fund: string): string => `sector-${fund}`;
-export const questAnchor = (id: string): string => `quest-${id}`;
+// A sector's and a quest's rows use slice 5's ids, defined once beside their data: `sectorAnchor`
+// (`edition-sectors.ts`) and `questAnchor` (`quests.ts`). The tour lights the same rows the Eye notices.
 
 const marketStop = (f: TourFacts): TourStop => {
   const count = f.sectorCount ? `${String(f.sectorCount)} sectors` : "its sectors";

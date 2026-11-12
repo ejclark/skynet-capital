@@ -9,7 +9,9 @@ import { FRESH_TRAIL, parseWindow, slideSide, stepTrail, type Trail } from "../.
 
 describe("parseWindow", () => {
   it("accepts every non-default window", () => {
-    for (const w of ["market", "calendar", "quests", "party"]) expect(parseWindow(w)).toBe(w);
+    // Trade is the workbench window (slice 6), addressable like the waypoints.
+    for (const w of ["market", "calendar", "quests", "party", "trade"])
+      expect(parseWindow(w)).toBe(w);
   });
 
   it("returns undefined for the default window, so overview is never written to the URL", () => {
@@ -17,7 +19,7 @@ describe("parseWindow", () => {
   });
 
   it("rejects unknown and non-string values", () => {
-    expect(parseWindow("trade")).toBeUndefined();
+    expect(parseWindow("ticket")).toBeUndefined();
     expect(parseWindow("")).toBeUndefined();
     expect(parseWindow("Market")).toBeUndefined();
     expect(parseWindow(undefined)).toBeUndefined();

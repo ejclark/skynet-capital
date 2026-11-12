@@ -167,6 +167,13 @@ export interface MoneypennyState extends Persisted {
   /** The member moved to another page or window: close History, and leave a side thread for the
    *  main conversation when no answer is under way. */
   readonly leavePage: () => void;
+  /** Her line about something the Eye noticed (#7487 slice 5, `eye-notice.ts`), landed at once in
+   *  the main conversation: undefined, and nothing said, while a turn is under way or before the
+   *  thread is bound to its member — a first line in an unbound store would be saved under "anon"
+   *  and stop `hydrate` from ever loading the member's own conversation (#7487 slice 5 review), so
+   *  the caller waits for `member` and tries again. Returns the line, so the dock can tell whether
+   *  it is still her latest. */
+  readonly remark: (text: string) => MpMessage | undefined;
   readonly toggleHistory: () => void;
   /** Load the member's saved conversation, so a row's thread shows on page load (#7308) and the
    *  dock's moves read the member's facts; also checks the chat is switched on. Binds only a store nothing else has touched yet, and only to a member the
@@ -640,6 +647,13 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
       const s = get();
       const busy = s.typing || s.streaming || s.pending !== undefined;
       set({ history: false, ...(busy ? {} : { thread: undefined }) });
+    },
+    remark: (text) => {
+      const s = get();
+      if (s.member === undefined || s.typing || s.streaming || s.pending !== undefined)
+        return undefined;
+      append("mp", [text], "main");
+      return get().messages.at(-1);
     },
     openThread: (thread) => {
       // Never mid-answer: her reply lands in the thread it was asked in, so the view waits for it.
