@@ -38,6 +38,7 @@ interface Fixture {
   suites: object[];
   body?: string;
   createdHoursAgo?: number;
+  base?: string;
 }
 
 const prs: Fixture[] = [
@@ -98,6 +99,17 @@ const prs: Fixture[] = [
     body: "| 1 | `feedback/40` | green | abc |\n| 2 | `feedback/50` | green | def |",
     createdHoursAgo: 0.1,
   },
+  // A stacked child based on its parent's branch: headless by its checks, but pipeline.yml never
+  // runs on a PR into a non-main base, so it is not stuck. It waits for its parent to merge.
+  {
+    number: 7,
+    ref: "feat/child",
+    base: "feat/parent",
+    files: ["docs/z.md"],
+    state: "blocked",
+    runs: [],
+    suites: [ghost],
+  },
 ];
 
 function routes() {
@@ -107,6 +119,7 @@ function routes() {
     draft: false,
     created_at: ago(p.createdHoursAgo ?? 100),
     head: { sha: `sha${p.number}`, ref: p.ref },
+    base: { ref: p.base ?? "main" },
     body: p.body ?? "",
     labels: [],
   }));
@@ -187,5 +200,9 @@ describe("stuck-pr-scan — a protected or boarded PR is skipped only while it w
     expect(named(3)).toBeUndefined();
     expect(named(5)).toBeUndefined();
     expect(stuck?.map((s) => s.number).sort()).toEqual([1, 2, 4]);
+  });
+
+  it("WHEN a stacked child's base is not main, THEN the scan skips it, as headless-pr.mjs does", () => {
+    expect(named(7)).toBeUndefined();
   });
 });

@@ -11,7 +11,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "@rstest/core";
 // @ts-expect-error plain .mjs script, no declarations
-import { classifyConflicts, parseArgs } from "../../scripts/stack-sync.mjs";
+import { classifyConflicts, explainDiffer, parseArgs } from "../../scripts/stack-sync.mjs";
 import { hermeticGitEnv } from "../support/hermetic-git.js";
 
 // A stacked child PR still carries its parent's original commits after the parent squash-merges,
@@ -29,11 +29,17 @@ describe("what each conflicting path resolves to", () => {
       blobs({ a: "1", b: "2" }),
       blobs({ a: "1", b: "3" }),
     );
-    expect(r.resolve).toEqual([
-      { path: "a", how: "ours" },
-      { path: "gone", how: "ours" },
+    expect(r.resolve).toEqual([{ path: "a", how: "ours" }]);
+    expect(r.differ).toEqual([
+      { path: "b", main: "2", parent: "3" },
+      { path: "gone", main: null, parent: null },
     ]);
-    expect(r.differ).toEqual([{ path: "b", main: "2", parent: "3" }]);
+  });
+
+  it("never treats a path absent from both main and the parent as equal", () => {
+    const r = classifyConflicts(["x"], blobs({}), blobs({}));
+    expect(r.resolve).toEqual([]);
+    expect(explainDiffer(r.differ[0])).toContain("neither main nor the parent's head");
   });
 
   it("keeps the child's deletion when the child no longer has the path", () => {
@@ -67,6 +73,8 @@ function fixture(o: {
   mainAfter?: Edit;
   merged?: boolean;
   rename?: [string, string];
+  /** A commit on the parent AFTER the child was cut, e.g. a review fix. It is in the squash. */
+  parentAfter?: Edit;
 }) {
   const root = mkdtempSync(join(tmpdir(), "stack-sync-"));
   const origin = join(root, "origin.git");
@@ -86,14 +94,19 @@ function fixture(o: {
     git(seed, "add", "-A");
     git(seed, "commit", "-q", "-m", msg);
   };
-  apply({ "a.txt": "a0", "b.txt": "b0", "c.txt": "c0" }, "base");
+  mkdirSync(join(seed, "sub"));
+  apply({ "a.txt": "a0", "b.txt": "b0", "c.txt": "c0", "sub/s.txt": "s0" }, "base");
   const base = git(seed, "rev-parse", "HEAD");
   git(seed, "checkout", "-q", "-b", "parent");
   apply(o.parent, "parent work");
-  const parentHead = git(seed, "rev-parse", "HEAD");
   git(seed, "checkout", "-q", "-b", "child");
   if (o.rename) git(seed, "mv", o.rename[0], o.rename[1]);
   apply(o.child, "child work");
+  if (o.parentAfter) {
+    git(seed, "checkout", "-q", "parent");
+    apply(o.parentAfter, "parent review fix");
+  }
+  const parentHead = git(seed, "rev-parse", "parent");
   // The squash: main gets the parent's final tree as one commit on top of base.
   git(seed, "checkout", "-q", "main");
   git(seed, "read-tree", "-u", "--reset", parentHead);
@@ -122,9 +135,9 @@ function fixture(o: {
   return { root, clone, origin, stub, base };
 }
 
-function run(f: { clone: string; stub: string }, ...args: string[]) {
+function run(f: { clone: string; stub: string; cwd?: string }, ...args: string[]) {
   return spawnSync("node", [SCRIPT, "1", ...args], {
-    cwd: f.clone,
+    cwd: f.cwd ?? f.clone,
     encoding: "utf8",
     env: hermeticGitEnv({ GH_BIN: join(f.stub, "gh") }),
   });
@@ -241,5 +254,59 @@ describe("syncing a stacked child after its parent squash-merged", () => {
     const r = run(f);
     expect(r.status).toBe(1);
     expect(r.stderr).toContain("on main");
+  });
+});
+
+describe("the review findings on 652286a (2026-11-12)", () => {
+  it("refuses, names the missing commit, and merges nothing when the parent moved after the child was cut", () => {
+    const f = fixture({
+      parent: { "a.txt": "a1" },
+      child: { "a.txt": "a2" },
+      parentAfter: { "a.txt": "a1-reviewfix" },
+    });
+    const before = git(f.clone, "rev-parse", "HEAD");
+    const r = run(f);
+    expect(r.status).toBe(1);
+    expect(r.stdout).toContain("does not contain #1's final head");
+    expect(r.stdout).toContain("parent review fix");
+    expect(r.stdout).toContain("refs/pull/1/head");
+    expect(r.stdout).toContain("never rebase");
+    expect(git(f.clone, "rev-parse", "HEAD")).toBe(before);
+    expect(mergeInProgress(f.clone)).toBe(false);
+  });
+
+  it("from a subdirectory, still names a path main changed after the parent's head", () => {
+    const f = fixture({
+      parent: { "sub/s.txt": "s1" },
+      child: { "sub/s.txt": "s2" },
+      mainAfter: { "sub/s.txt": "s-other" },
+    });
+    const r = run({ ...f, cwd: join(f.clone, "sub") });
+    expect(r.status).toBe(1);
+    expect(r.stdout).toContain("sub/s.txt: main's copy");
+    expect(mergeInProgress(f.clone)).toBe(false);
+  });
+
+  it("from a subdirectory, resolves a mechanical conflict by its root-relative path", () => {
+    const f = fixture({ parent: { "sub/s.txt": "s1" }, child: { "sub/s.txt": "s2" } });
+    const r = run({ ...f, cwd: join(f.clone, "sub") });
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("keep ours: sub/s.txt");
+    expect(read(f.clone, "sub/s.txt")).toBe("s2");
+    expect(git(f.clone, "status", "--porcelain")).toBe("");
+  });
+
+  it("aborts the merge when a step fails after it started, leaving no half-resolved merge", () => {
+    const f = fixture({ parent: { "a.txt": "a1" }, child: { "a.txt": "a2" } });
+    writeFileSync(join(f.clone, ".git", "hooks", "pre-commit"), "#!/bin/sh\nexit 1\n", {
+      mode: 0o755,
+    });
+    const before = git(f.clone, "rev-parse", "HEAD");
+    const r = run(f);
+    expect(r.status).toBe(2);
+    expect(r.stderr).toContain("committing the merge");
+    expect(mergeInProgress(f.clone)).toBe(false);
+    expect(git(f.clone, "rev-parse", "HEAD")).toBe(before);
+    expect(git(f.clone, "status", "--porcelain")).toBe("");
   });
 });

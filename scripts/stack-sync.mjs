@@ -13,7 +13,10 @@
 // is that proof plus that resolution.
 //
 // THE RULE. A conflicting path resolves to the child's side only when `main:<path>` and
-// `<parent head>:<path>` are the same blob (absent from both counts as equal). Then main's side
+// `<parent head>:<path>` are the same blob (a path absent from both is never mechanical), and only
+// once the child already contains the parent's final head: a review fix pushed to the parent after
+// the child was cut would otherwise be reverted, so the script refuses and names the missing
+// commits (merge refs/pull/<n>/head into the child, never rebase). Then main's side
 // carries nothing the child has not already built on. Where the child deleted or renamed the path
 // and main's copy equals the parent's, the child's deletion stands (`git rm`). Any other path means
 // `main` changed it after the parent's head (another PR landed on it), which is a real merge for a
@@ -62,7 +65,9 @@ export function classifyConflicts(paths, mainBlob, parentBlob, oursPresent = () 
   for (const path of paths) {
     const main = mainBlob(path);
     const parent = parentBlob(path);
-    if (main === parent) resolve.push({ path, how: oursPresent(path) ? "ours" : "rm" });
+    // Absent from both is never "equal": an unmerged path the squash cannot explain.
+    if (main !== null && main === parent)
+      resolve.push({ path, how: oursPresent(path) ? "ours" : "rm" });
     else differ.push({ path, main, parent });
   }
   return { resolve, differ };
@@ -70,13 +75,20 @@ export function classifyConflicts(paths, mainBlob, parentBlob, oursPresent = () 
 
 /** Pure: why a differing path is not mechanical, in words. */
 export function explainDiffer({ path, main, parent }) {
+  if (main === null && parent === null)
+    return `${path}: neither main nor the parent's head has it, so the squash does not explain it`;
   if (main === null) return `${path}: main deleted it, but the parent's head still has it`;
   if (parent === null) return `${path}: main has it, but the parent's head never did`;
   return `${path}: main's copy (${main.slice(0, 7)}) is not the parent's final copy (${parent.slice(0, 7)})`;
 }
 
+// Every git call runs at the repo's top level. `ls-files` prints paths relative to the cwd while
+// `<rev>:<path>` is root-relative, so from a subdirectory every blob read null and every conflict
+// looked mechanical (review of 652286a, 2026-11-12). `sync` sets this before its first call.
+let ROOT;
+
 function git(args, opts = {}) {
-  return spawnSync("git", args, { encoding: "utf8", ...opts });
+  return spawnSync("git", args, { encoding: "utf8", cwd: ROOT, ...opts });
 }
 
 /** Blob id of `<rev>:<path>`, or null when the path is absent at that rev. */
@@ -139,6 +151,9 @@ function unmergedPaths() {
 }
 
 export function sync(opts, log = console.log) {
+  const top = spawnSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" });
+  if (top.status !== 0) throw new Stop(2, "not inside a git work tree");
+  ROOT = top.stdout.trim();
   const branch = preflight();
   const parent = readParent(opts.parent);
   must(
@@ -150,6 +165,19 @@ export function sync(opts, log = console.log) {
       2,
       `the parent's head ${parent.head} is not here even after fetching refs/pull/${opts.parent}/head`,
     );
+  // The child must already hold the parent's FINAL head. A review fix pushed to the parent after the
+  // child was cut is in main's squash but not in the child, so keeping "ours" would revert it.
+  if (git(["merge-base", "--is-ancestor", parent.head, "HEAD"]).status !== 0) {
+    const missing = must(["log", "--oneline", `HEAD..${parent.head}`], "listing missing commits");
+    log(
+      `stack-sync: ${branch} does not contain #${opts.parent}'s final head (${parent.head.slice(0, 7)}). Missing parent commits:`,
+    );
+    for (const line of missing.split("\n").filter(Boolean)) log(`  ${line}`);
+    log(
+      `Merge them in first, never rebase: git fetch origin refs/pull/${opts.parent}/head && git merge FETCH_HEAD, then re-run.`,
+    );
+    return 1;
+  }
   must(["fetch", "--quiet", "origin", "main"], "fetching main");
   const main = must(["rev-parse", "FETCH_HEAD"], "reading main");
   if (git(["merge-base", "--is-ancestor", parent.squash, main]).status !== 0)
@@ -163,9 +191,19 @@ export function sync(opts, log = console.log) {
   }
 
   const merge = git(["merge", "--no-commit", "--no-ff", "-X", "no-renames", main]);
+  // From here a merge may be in progress: any failure aborts it, so no half-resolved merge is left.
+  try {
+    return finish({ opts, log, branch, main, parent, merge });
+  } catch (e) {
+    if (git(["rev-parse", "--verify", "--quiet", "MERGE_HEAD"]).status === 0)
+      git(["merge", "--abort"]);
+    throw e;
+  }
+}
+
+function finish({ opts, log, branch, main, parent, merge }) {
   const conflicts = unmergedPaths();
   if (merge.status !== 0 && conflicts.size === 0) {
-    git(["merge", "--abort"]);
     throw new Stop(2, `git merge failed: ${(merge.stderr || merge.stdout).trim()}`);
   }
 

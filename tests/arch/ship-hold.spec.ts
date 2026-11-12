@@ -198,13 +198,13 @@ case "$url" in
   *check_name=integration*) out='{"check_runs":[{"conclusion":"success","started_at":"2026-11-01T00:00:00Z"}]}' ;;
   *graphql*) printf '{"data":{}}'; exit 0 ;;
   */files*) out='[{"filename":"docs/IDEAS.md"}]' ;;
-  */pulls/9) out='{"node_id":"N","base":{"ref":"main"},"head":{"sha":"abc"},"auto_merge":{"merge_method":"squash"}}' ;;
+  */pulls/9) out='{"node_id":"N","base":{"ref":"'"\${BASE:-main}"'"},"head":{"sha":"abc"},"auto_merge":{"merge_method":"squash"}}' ;;
   *) out='{}' ;;
 esac
 printf '%s\\n__SHIP_HTTP__200' "$out"
 `;
 
-  const arm = (stabilityRuns: string) => {
+  const arm = (stabilityRuns: string, base = "main") => {
     const root = mkdtempSync(join(tmpdir(), "ship-automerge-"));
     try {
       const bin = join(root, "bin");
@@ -214,6 +214,7 @@ printf '%s\\n__SHIP_HTTP__200' "$out"
         GH_TOKEN: "test-token-never-used",
         PATH: `${bin}:${process.env.PATH ?? ""}`,
         STABILITY: stabilityRuns,
+        BASE: base,
       });
       const work = join(root, "work");
       mkdirSync(work);
@@ -256,6 +257,15 @@ printf '%s\\n__SHIP_HTTP__200' "$out"
 
   it("arms a head that never ran it, as every head before the job did", () => {
     expect(arm(JSON.stringify({ check_runs: [] })).code).toBe(0);
+  });
+
+  // A stacked child is based on its parent's branch and gets no CI there (2026-11-12): it is never
+  // armed by hand, even with every check green. It arms itself once its base is main.
+  it("refuses to arm a stacked child whose base is not main", () => {
+    const r = arm(runs("success"), "feat/parent");
+    expect(r.code).toBe(7);
+    expect(r.out).toContain("feat/parent");
+    expect(r.out).toContain("stacked child is never armed");
   });
 });
 
