@@ -3,7 +3,7 @@
 // light, (2) a spark arcs over the page with a trail under a moving spotlight, (3) it lands as the
 // page dims around the row, (4) the dim lifts and a ring and a label naming the Eye stay.
 //
-// 1760, the tower's column beside the page; the question goes in through her dock's box and the
+// 1760, the tower's column on the page's right (#7487 slice 4a), so the spark arcs leftward to the row; the question goes in through her dock's box and the
 // linked line is tapped in History, which rises from the dock (#7487 slice 2: her links live there,
 // never in the dock's plain latest line; the tap navigates, so History closes as the light plays). The page's clock is held after the tower is ready, so each step is shot at
 // an exact moment of the light rather than wherever a screenshot happened to fall.

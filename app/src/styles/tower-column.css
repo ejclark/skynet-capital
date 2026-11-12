@@ -3,19 +3,19 @@
  * column from just under the topbar, and the stage. The column holds the art box the shell's one
  * tower frame is laid over (`vantage.css`), then whatever the page stands under the tower.
  *
- * ON THE LEFT (#7216, Eric's round 9 B pick on #7018, 2026-11-09: "This feels like better placement
- * which elevates what we can visually do with animations"). The column is the frame's first track
- * on every page that has it, so the stage's left edge and width stay identical across pages. The
- * DOM keeps `<main>` first (skip link, reading order) and the grid places the column. The tower
- * keeps this column; Moneypenny is now a dock under the stage (#7487 slice 2), not a rail on the
- * right, and moving the tower to the right margin is slice 4's call. */
+ * ON THE RIGHT (#7487 slice 4a; Eric, 2026-11-12, on the Campaign mission control design: "Move it
+ * right"). The tower stands in the right margin with the Eye at its top, the way the design draws
+ * it. It sat on the left from #7216 (2026-11-09) because Moneypenny's rail opened on the right; the
+ * rail became the dock under the stage (#7487 slice 2), so that reason went with it. The column is
+ * the frame's last track on every page that has it, so the stage's left edge and width stay
+ * identical across pages; the DOM keeps `<main>` first (skip link, reading order). */
 
 .frame.frame--tower {
-  grid-template-columns: 384px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 384px;
   column-gap: 24px;
 }
 .frame.frame--tower > .stage {
-  grid-column: 2;
+  grid-column: 1;
   grid-row: 1;
 }
 .tower-column {
@@ -25,7 +25,7 @@
   min-width: 0;
 }
 .frame.frame--tower > .tower-column {
-  grid-column: 1;
+  grid-column: 2;
   grid-row: 1;
 }
 
