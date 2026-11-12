@@ -553,7 +553,7 @@
 .mctl-seg-btn {
   cursor: pointer;
 }
-.mctl-seg-btn:hover:not(:disabled) {
+.mctl-seg-btn:hover:not(:disabled, [aria-disabled="true"]) {
   background: var(--surface-2);
   color: var(--text);
 }
@@ -563,9 +563,18 @@
   font-weight: 700;
   box-shadow: inset 0 0 0 2px var(--accent);
 }
-.mctl-seg-btn:disabled {
+.mctl-seg-btn:disabled,
+.mctl-seg-btn[aria-disabled="true"] {
   cursor: not-allowed;
   opacity: 0.55;
+}
+/* Focus draws INSIDE the button: `.mctl-seg` clips its children to its rounded corners, and
+   would clip the page's 2px-offset ring to a sliver. The ring sits 4px in, a clear gap inside the
+   pressed state's edge ring, so a pressed segment with focus shows two rings and one without shows
+   one: focus and "selected" differ by shape, not by colour (#7487 slice 6 review). */
+.mctl-seg-btn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -6px;
 }
 .mctl-seg-count {
   color: var(--text);

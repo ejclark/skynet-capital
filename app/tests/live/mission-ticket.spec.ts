@@ -1,6 +1,7 @@
 import type { EditionDate } from "../../src/live/edition";
 import {
   clampShares,
+  draftStatus,
   FRESH_TICKET,
   MAX_SHARES,
   parseOrderType,
@@ -165,7 +166,7 @@ describe("symbolGroups", () => {
 });
 
 describe("useCampaignTicket", () => {
-  beforeEach(() => useCampaignTicket.setState({ ticket: FRESH_TICKET }));
+  beforeEach(() => useCampaignTicket.setState({ ticket: FRESH_TICKET, handedOff: false }));
 
   it("starts at one share, market, no company", () => {
     expect(useCampaignTicket.getState().ticket).toEqual({ shares: 1, orderType: "market" });
@@ -181,5 +182,32 @@ describe("useCampaignTicket", () => {
       shares: 1,
       orderType: "limit",
     });
+  });
+
+  it("marks the draft handed off on Review, and any change makes it a new draft", () => {
+    const { patch, handOff } = useCampaignTicket.getState();
+    patch({ symbol: "NVDA" });
+    handOff();
+    expect(useCampaignTicket.getState().handedOff).toBe(true);
+    patch({ shares: 3 });
+    expect(useCampaignTicket.getState().handedOff).toBe(false);
+  });
+});
+
+describe("draftStatus (Overview's Trade row)", () => {
+  it("says nothing before a company is picked", () => {
+    expect(draftStatus(FRESH_TICKET, false)).toBeUndefined();
+  });
+
+  it("says paper, not sent, until Review hands the draft to /trade", () => {
+    const t = { ...FRESH_TICKET, symbol: "NVDA", shares: 5 };
+    expect(draftStatus(t, false)).toBe("Buy 5 NVDA · market · day · paper, not sent");
+  });
+
+  it("never claims not sent once the draft was opened on Trade", () => {
+    const t = { ...FRESH_TICKET, symbol: "NVDA", shares: 5 };
+    const line = draftStatus(t, true);
+    expect(line).toBe("Buy 5 NVDA · market · day · opened on Trade for review");
+    expect(line).not.toMatch(/not sent/);
   });
 });

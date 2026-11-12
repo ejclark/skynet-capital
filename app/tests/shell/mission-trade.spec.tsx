@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import { FRESH_TICKET, useCampaignTicket } from "../../src/live/mission-ticket";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { FRESH_TICKET, MAX_SHARES, useCampaignTicket } from "../../src/live/mission-ticket";
 import { TradeWindow } from "../../src/shell/mission-trade";
 
 /**
@@ -20,7 +20,7 @@ const realFetch = globalThis.fetch;
 const json = (body: unknown) => Promise.resolve(new Response(JSON.stringify(body)));
 beforeEach(() => {
   navigate.mockClear();
-  useCampaignTicket.setState({ ticket: FRESH_TICKET });
+  useCampaignTicket.setState({ ticket: FRESH_TICKET, handedOff: false });
   quote = { quoteNote: "No quote right now." };
   accounts = [{ id: "desk-1", name: "Paper" }];
   globalThis.fetch = ((url: string) => {
@@ -83,16 +83,45 @@ describe("TradeWindow", () => {
     expect(screen.getByRole("button", { name: "Limit" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("Buy 2 NVDA · limit · GTC")).toBeInTheDocument();
     expect(screen.getByText(/The limit price is set there/)).toBeInTheDocument();
+    expect(useCampaignTicket.getState().handedOff).toBe(false);
     fireEvent.click(review);
     expect(navigate).toHaveBeenCalledWith({
       to: "/trade",
       search: { play: "101", symbol: "NVDA", shares: 2, type: "limit" },
     });
+    // Overview stops saying "not sent": Campaign cannot know what the gate did with it.
+    expect(useCampaignTicket.getState().handedOff).toBe(true);
   });
 
   it("never steps below one share", () => {
     mount();
-    expect(screen.getByRole("button", { name: "One share fewer" })).toBeDisabled();
+    const fewer = screen.getByRole("button", { name: "One share fewer" });
+    expect(fewer).toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(fewer);
+    expect(screen.getByRole("status", { name: "Shares" })).toHaveTextContent("1");
+  });
+
+  it("keeps focus on a stepper button when its press reaches the bound", () => {
+    mount();
+    const more = screen.getByRole("button", { name: "One share more" });
+    const fewer = screen.getByRole("button", { name: "One share fewer" });
+    fireEvent.click(more);
+    fewer.focus();
+    fireEvent.click(fewer);
+    expect(screen.getByRole("status", { name: "Shares" })).toHaveTextContent("1");
+    // A native `disabled` here would drop focus to <body> and lose a screen reader's place.
+    expect(fewer).not.toBeDisabled();
+    expect(fewer).toHaveAttribute("aria-disabled", "true");
+    expect(document.activeElement).toBe(fewer);
+
+    act(() => useCampaignTicket.setState({ ticket: { ...FRESH_TICKET, shares: MAX_SHARES - 1 } }));
+    more.focus();
+    fireEvent.click(more);
+    expect(screen.getByRole("status", { name: "Shares" })).toHaveTextContent(String(MAX_SHARES));
+    expect(more).toHaveAttribute("aria-disabled", "true");
+    expect(document.activeElement).toBe(more);
+    fireEvent.click(more);
+    expect(useCampaignTicket.getState().ticket.shares).toBe(MAX_SHARES);
   });
 
   it("keeps the draft when the window unmounts and comes back", async () => {

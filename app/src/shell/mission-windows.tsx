@@ -93,7 +93,7 @@ export function OverviewWindow({
   readonly waited: number;
   /** The member's quests; undefined when the session owns no account to read. */
   readonly quests: readonly Quest[] | undefined;
-  /** The draft ticket's summary line, once it names a company (#7487 slice 6). */
+  /** The draft ticket's line and where it stands (`draftStatus`), once it names a company. */
   readonly draft?: string | undefined;
   readonly open: (w: MissionWindow) => void;
 }): ReactElement {
@@ -183,7 +183,7 @@ export function OverviewWindow({
             mark="⇄"
             title="Your draft ticket"
             about={{ label: "Trade" }}
-            sub={`${draft} · paper, not sent`}
+            sub={draft}
             tag="draft"
             onOpen={() => open("trade")}
           />

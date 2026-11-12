@@ -160,16 +160,31 @@ export function symbolGroups(lists: {
     : groups;
 }
 
+/**
+ * Overview's line for the draft, or undefined before a company is picked. Once "Review order" has
+ * handed the draft to `/trade`, Campaign cannot know whether the gate placed it, so the line stops
+ * saying "not sent" and says only what it knows: the draft was opened on Trade.
+ */
+export function draftStatus(t: CampaignTicket, handedOff: boolean): string | undefined {
+  if (!t.symbol) return undefined;
+  return `${ticketLine(t)} · ${handedOff ? "opened on Trade for review" : "paper, not sent"}`;
+}
+
 interface TicketStore {
   readonly ticket: CampaignTicket;
+  /** True once "Review order" opened this draft on `/trade`; any change makes it a new draft. */
+  readonly handedOff: boolean;
   readonly patch: (next: Partial<CampaignTicket>) => void;
+  readonly handOff: () => void;
 }
 
 /** This session's draft. In memory only: a reload starts a fresh ticket, as it starts a fresh trail. */
 export const useCampaignTicket = create<TicketStore>((set, get) => ({
   ticket: FRESH_TICKET,
+  handedOff: false,
   patch: (next) => {
     const merged = { ...get().ticket, ...next };
-    set({ ticket: { ...merged, shares: clampShares(merged.shares) } });
+    set({ ticket: { ...merged, shares: clampShares(merged.shares) }, handedOff: false });
   },
+  handOff: () => set({ handedOff: true }),
 }));

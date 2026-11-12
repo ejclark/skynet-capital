@@ -28,6 +28,9 @@ import { MissionRow } from "./mission-window";
  * names come from the member's held shares, their watchlist and the calendar's dated results, each
  * group saying which. A quote is shown only when the server has one; no price is ever made up.
  *
+ * The stepper's ends use `aria-disabled`, not `disabled`: a native disabled button drops focus to
+ * the page when the press that reached the bound disables it, and a screen reader loses its place.
+ *
  * Motion (`/animate`, 2026-11-12): none. The picks and the stepper are form controls changed many
  * times a visit and hold what the member acts on, so they change state at once; the window's own
  * slide is the only movement. Every pressed state is a weight and a ring as well as a tint.
@@ -88,6 +91,7 @@ export function TradeWindow({
   const navigate = useNavigate();
   const ticket = useCampaignTicket((s) => s.ticket);
   const patch = useCampaignTicket((s) => s.patch);
+  const handOff = useCampaignTicket((s) => s.handOff);
   const { held, hasAccount } = useHeld();
   const watch = useQuery(watchlistQuery);
   const watching = watch.data?.available ? watch.data.watching.map((w) => w.symbol) : [];
@@ -100,6 +104,7 @@ export function TradeWindow({
   const { symbol } = ticket;
   const review = () => {
     if (!symbol) return;
+    handOff();
     void navigate({ to: "/trade", search: tradeSearch({ ...ticket, symbol }) });
   };
   const seg = (on: boolean, label: string, onClick: () => void, key = label): ReactElement => (
@@ -134,8 +139,10 @@ export function TradeWindow({
               type="button"
               className="mctl-seg-btn"
               aria-label="One share fewer"
-              disabled={ticket.shares <= 1}
-              onClick={() => patch({ shares: ticket.shares - 1 })}
+              aria-disabled={ticket.shares <= 1}
+              onClick={() => {
+                if (ticket.shares > 1) patch({ shares: ticket.shares - 1 });
+              }}
             >
               −
             </button>
@@ -146,8 +153,10 @@ export function TradeWindow({
               type="button"
               className="mctl-seg-btn"
               aria-label="One share more"
-              disabled={ticket.shares >= MAX_SHARES}
-              onClick={() => patch({ shares: ticket.shares + 1 })}
+              aria-disabled={ticket.shares >= MAX_SHARES}
+              onClick={() => {
+                if (ticket.shares < MAX_SHARES) patch({ shares: ticket.shares + 1 });
+              }}
             >
               +
             </button>

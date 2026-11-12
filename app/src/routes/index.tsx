@@ -23,10 +23,10 @@ import { useHorizonRange } from "../live/horizon-params";
 import { DEFAULT_WINDOW, type MissionWindow, parseWindow } from "../live/mission";
 import {
   type DueReport,
+  draftStatus,
   reportFor,
   reportLabel,
   reportsDue,
-  ticketLine,
   useCampaignTicket,
 } from "../live/mission-ticket";
 import { type PageKeys, usePublishPageKeys } from "../live/page-keys";
@@ -277,7 +277,7 @@ type WindowBodyProps = {
   readonly onConnect: () => void;
   /** Tickers with results dated on this edition's calendar, soonest first (the Trade window). */
   readonly reporting: readonly string[];
-  /** The draft ticket's summary line once a symbol is picked (Overview's Trade row). */
+  /** The draft ticket's line and where it stands, once a symbol is picked (Overview's Trade row). */
   readonly draft: string | undefined;
 };
 
@@ -400,6 +400,7 @@ function Landing(): ReactElement {
   const navigate = useNavigate();
   const ticket = useCampaignTicket((s) => s.ticket);
   const pick = useCampaignTicket((s) => s.patch);
+  const handedOff = useCampaignTicket((s) => s.handedOff);
   // ✕ on the pivot's bar: one more history entry, so Back still returns to the pivot, and the
   // page keeps its scroll, so the member stays on the calendar as the rest of it comes back.
   const clearPivot = () =>
@@ -504,7 +505,7 @@ function Landing(): ReactElement {
               onClearPivot={clearPivot}
               onConnect={() => void navigate({ to: "/accounts" })}
               reporting={reports.map((r) => r.symbol)}
-              draft={ticket.symbol ? ticketLine(ticket) : undefined}
+              draft={draftStatus(ticket, handedOff)}
             />
           </MissionWindowFrame>
           {edition ? <footer className="obs-foot">{edition.writtenBy}</footer> : null}
