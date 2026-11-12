@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate, useRouterState } from "@tanstack/react-router";
-import type { ReactElement } from "react";
+import { type ReactElement, useEffect } from "react";
 import { editionEventKey, PIVOT_PARAM, parsePivot } from "../../../src/domain/edition-keys";
 import { parseBoardMetric } from "../live/board";
 import {
@@ -11,11 +11,12 @@ import {
   staleLine,
   waitingOn,
 } from "../live/edition";
+import { sinceLine } from "../live/edition-sectors";
 import { useHorizonRange } from "../live/horizon-params";
 import { DEFAULT_WINDOW, type MissionWindow, parseWindow } from "../live/mission";
 import { type PageKeys, usePublishPageKeys } from "../live/page-keys";
 import { signedMoney } from "../live/position-act";
-import { fetchQuests, placeQuests } from "../live/quests";
+import { fetchQuests, placeQuests, type QuestsAnswer } from "../live/quests";
 import { targetedEditionAnchor, useLandOnEdition } from "../shell/edition-anchor";
 import { PageFrame } from "../shell/frame";
 import { AskBox, EventThread, StoryAsk } from "../shell/landing-ask";
@@ -26,6 +27,7 @@ import {
   MissionWindowFrame,
   Trail,
   useOpenWindow,
+  useSlideSide,
   Waypoints,
   type WindowLink,
 } from "../shell/mission-window";
@@ -111,7 +113,10 @@ function windowSpec(
     case "market":
       return {
         title: "The whole market",
-        sub: "The S&P 500 and its 11 sectors, close to close",
+        // The header's figure is the week's move, so the sub line names that period and its base.
+        sub: edition?.sectors
+          ? `Week · ${sinceLine(edition.sectors, "week")}`
+          : "The S&P 500 and its 11 sectors",
         ...fig("market"),
         links: [{ label: "Calendar: the dates that move these", to: "calendar" }],
       };
@@ -194,6 +199,105 @@ function openWindow(
   return DEFAULT_WINDOW;
 }
 
+/** What the window body needs from the page: the edition, the member's quests and the pivot. */
+type WindowBodyProps = {
+  readonly cur: MissionWindow;
+  readonly edition: Edition | null;
+  readonly today: string;
+  readonly inside: readonly EditionDate[];
+  readonly waited: number;
+  /** The member's quests answer, only when it is available (no account = undefined). */
+  readonly answer: Extract<QuestsAnswer, { available: true }> | undefined;
+  readonly placed: ReturnType<typeof placeQuests>;
+  readonly pivot: readonly string[];
+  readonly open: ReturnType<typeof useOpenWindow>;
+  readonly onClearPivot: () => void;
+  readonly onConnect: () => void;
+};
+
+/** The Calendar window's body: R&D's calendar with each story's asks and quests, or a note when no
+ *  edition has been written yet. */
+function CalendarBody({
+  edition,
+  today,
+  placed,
+  pivot,
+  onClearPivot,
+}: Pick<WindowBodyProps, "edition" | "today" | "placed" | "pivot" | "onClearPivot">): ReactElement {
+  if (!edition) return <p className="note">No edition has been written yet.</p>;
+  return (
+    <LandingCalendar
+      edition={edition}
+      today={today}
+      storyAsk={(s) => (
+        <>
+          <StoryAsk story={s} campaign={edition.campaign} campaignTitle={edition.campaignTitle} />
+          <StoryQuests quests={placed.byStory.get(s.id)} />
+        </>
+      )}
+      eventAsk={(e) => <EventThread event={e} />}
+      pivot={pivot}
+      onClearPivot={onClearPivot}
+    />
+  );
+}
+
+/** The Quests window's body: the member's own quests, or the one step that gets them (connect a
+ *  paper account) for a viewer with no account. */
+function QuestsBody({
+  answer,
+  placed,
+  onConnect,
+}: Pick<WindowBodyProps, "answer" | "placed" | "onConnect">): ReactElement {
+  if (answer) return <AccountQuests quests={placed.account} unread={answer.unread} />;
+  return (
+    <ul className="mctl-rows">
+      <MissionRow
+        mark="◆"
+        title="Connect your paper account"
+        sub="Your quests are read from your own positions and cash · play money only"
+        tag="step 1"
+        onOpen={onConnect}
+      />
+    </ul>
+  );
+}
+
+/** The open window's body (#7487): Overview leads with the ask box, Market/Calendar/Quests reuse
+ *  their landing components unchanged, Party is new. */
+function WindowBody(props: WindowBodyProps): ReactElement | null {
+  const { cur, edition, answer, placed } = props;
+  switch (cur) {
+    case "overview":
+      return (
+        <>
+          <AskBox />
+          <OverviewWindow
+            edition={edition}
+            inside={props.inside}
+            waited={props.waited}
+            quests={answer ? placed.account : undefined}
+            open={props.open}
+          />
+        </>
+      );
+    case "market":
+      return edition?.sectors ? (
+        <SectorOverview view={edition.sectors} />
+      ) : (
+        <p className="note">This edition carries no market closes.</p>
+      );
+    case "calendar":
+      return <CalendarBody {...props} />;
+    case "quests":
+      return <QuestsBody {...props} />;
+    case "party":
+      return <PartyWindow />;
+    default:
+      return null;
+  }
+}
+
 function Landing(): ReactElement {
   const view = useQuery({ queryKey: ["edition"], queryFn: fetchEdition, staleTime: 60_000 });
   // The member's quests load beside the news and never hold it up; one that fails shows nothing.
@@ -211,18 +315,39 @@ function Landing(): ReactElement {
   const hash = useRouterState({ select: (s) => s.location.hash });
   const cur = openWindow(search.w, pivot, hash);
   const open = useOpenWindow(cur);
+  const side = useSlideSide(cur);
   const navigate = useNavigate();
   // ✕ on the pivot's bar: one more history entry, so Back still returns to the pivot, and the
   // page keeps its scroll, so the member stays on the calendar as the rest of it comes back.
   const clearPivot = () =>
     void navigate({
       to: "/",
-      search: (prev: BoardAsk) => ({ ...prev, [PIVOT_PARAM]: undefined }),
+      search: (prev: BoardAsk) => ({
+        ...prev,
+        [PIVOT_PARAM]: undefined,
+        w: prev.w ?? parseWindow(cur),
+      }),
       resetScroll: false,
     });
+  // A window inferred from the address (a `#event-` link, a `?show=` pivot) is written into it at
+  // once, replacing the entry and keeping the hash, so stepping the calendar's range or clearing
+  // the pivot — each drops the hash or the pivot — never snaps the member back to Overview.
+  const inferred = !search.w && cur !== DEFAULT_WINDOW;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs only when the inference appears
+  useEffect(() => {
+    if (!inferred) return;
+    void navigate({
+      to: "/",
+      search: (prev: BoardAsk) => ({ ...prev, w: parseWindow(cur) }),
+      hash: true,
+      replace: true,
+      resetScroll: false,
+    });
+  }, [inferred]);
   const keys = editionKeys(view.data?.edition, view.data?.today, horizon, pivot);
-  // The chat sends these with a question asked from here, and her links land on the same rows —
-  // a link into the calendar opens its window first (`openWindow`), so the row is there to land on.
+  // The chat sends these with a question asked from here, and her links land on the same rows. They
+  // are published from every window, not only the Calendar's: each is one tap away (a link into the
+  // calendar opens its window first, `openWindow`), so her pointing at one is never a dead end.
   usePublishPageKeys(keys);
   useLandOnEdition(keys ? `${cur}:${JSON.stringify(keys)}` : "");
   if (view.isPending)
@@ -265,70 +390,26 @@ function Landing(): ReactElement {
           <MissionWindowFrame
             key={cur}
             id={cur}
+            side={side}
             title={spec.title}
             sub={spec.sub}
             {...(spec.figure ? { figure: spec.figure } : {})}
             links={spec.links}
             open={open}
           >
-            {cur === "overview" ? (
-              <>
-                <AskBox />
-                <OverviewWindow
-                  edition={edition}
-                  inside={inside}
-                  waited={waited}
-                  quests={answer ? placed.account : undefined}
-                  open={open}
-                />
-              </>
-            ) : null}
-            {cur === "market" ? (
-              edition?.sectors ? (
-                <SectorOverview view={edition.sectors} />
-              ) : (
-                <p className="note">This edition carries no market closes.</p>
-              )
-            ) : null}
-            {cur === "calendar" ? (
-              edition ? (
-                <LandingCalendar
-                  edition={edition}
-                  today={today}
-                  storyAsk={(s) => (
-                    <>
-                      <StoryAsk
-                        story={s}
-                        campaign={edition.campaign}
-                        campaignTitle={edition.campaignTitle}
-                      />
-                      <StoryQuests quests={placed.byStory.get(s.id)} />
-                    </>
-                  )}
-                  eventAsk={(e) => <EventThread event={e} />}
-                  pivot={pivot}
-                  onClearPivot={clearPivot}
-                />
-              ) : (
-                <p className="note">No edition has been written yet.</p>
-              )
-            ) : null}
-            {cur === "quests" ? (
-              answer ? (
-                <AccountQuests quests={placed.account} unread={answer.unread} />
-              ) : (
-                <ul className="mctl-rows">
-                  <MissionRow
-                    mark="◆"
-                    title="Connect your paper account"
-                    sub="Your quests are read from your own positions and cash · play money only"
-                    tag="step 1"
-                    onOpen={() => void navigate({ to: "/accounts" })}
-                  />
-                </ul>
-              )
-            ) : null}
-            {cur === "party" ? <PartyWindow /> : null}
+            <WindowBody
+              cur={cur}
+              edition={edition}
+              today={today}
+              inside={inside}
+              waited={waited}
+              answer={answer}
+              placed={placed}
+              pivot={pivot}
+              open={open}
+              onClearPivot={clearPivot}
+              onConnect={() => void navigate({ to: "/accounts" })}
+            />
           </MissionWindowFrame>
           {edition ? <footer className="obs-foot">{edition.writtenBy}</footer> : null}
         </div>

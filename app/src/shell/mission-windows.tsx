@@ -50,7 +50,12 @@ export function calendarGlance(inside: readonly EditionDate[]): string {
   return `${shown.join(" · ")}${more > 0 ? ` · ${String(more)} more` : ""}`;
 }
 
-/** Humans book for the party; The Tower is who the party plays against. */
+/** The board key of The Tower, the house bot the party plays against (`src/personas/sauron-hardcore.ts`
+ *  carries the franchise name in code; member-facing copy says "The Tower", per the handoff). */
+export const TOWER_KEY = "sauron";
+
+/** Humans book for the party; The Tower is who it plays against. Other bots are neither — they are
+ *  not members and not the opponent — so the Party window leaves them out on purpose. */
 export function partyRows(rows: readonly BoardRow[]): {
   readonly members: readonly BoardRow[];
   readonly against: readonly BoardRow[];
@@ -60,7 +65,8 @@ export function partyRows(rows: readonly BoardRow[]): {
     .filter((r) => r.kind === "human")
     .sort((a, b) => a.name.localeCompare(b.name));
   const total = members.reduce((sum, r) => sum + (isUnranked(r) ? 0 : r.sortValue), 0);
-  return { members, against: rows.filter((r) => r.kind === "bot"), total };
+  const tower = rows.filter((r) => r.kind === "bot" && r.key.toLowerCase() === TOWER_KEY);
+  return { members, against: tower.map((r) => ({ ...r, name: "The Tower" })), total };
 }
 
 /** The booked P&L board — the party's own total. One read shared by the window and its waypoint. */

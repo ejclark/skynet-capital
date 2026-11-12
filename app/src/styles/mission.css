@@ -54,7 +54,8 @@
     padding: 8px;
     border: 1px solid var(--border);
     border-radius: 14px;
-    background: var(--surface-2);
+    /* --surface, not --surface-2: the accent ring and ⤳ mark hold 3:1 on it in the light palette too. */
+    background: var(--surface);
   }
   .mctl-rail .mctl-eyebrow {
     margin: 4px 6px 4px;
@@ -86,7 +87,7 @@
   cursor: pointer;
 }
 .mctl-way:hover {
-  background: var(--surface);
+  background: var(--surface-2);
 }
 .mctl-way[aria-current="page"] {
   background: color-mix(in srgb, var(--accent) 14%, var(--surface));
@@ -125,8 +126,9 @@
   display: flex;
   align-items: center;
   min-height: 44px;
-  margin: 0;
-  padding: 0;
+  margin: 0 -4px;
+  /* room for the focus ring of the first and last pill inside the scroll box */
+  padding: 0 4px;
   list-style: none;
 }
 .mctl-trail li {
@@ -139,6 +141,18 @@
   width: 22px;
   height: 1px;
   background: var(--muted);
+}
+/* The pills are drawn 32px tall (the handoff) but their hit area is 44px: an invisible extension
+   above and below, inside the 44px row they sit in (BRAND.md, the spec's "44px or more"). */
+.mctl-trail-pill,
+.mctl-link-pill {
+  position: relative;
+}
+.mctl-trail-pill::after,
+.mctl-link-pill::after {
+  content: "";
+  position: absolute;
+  inset: -6px 0;
 }
 .mctl-trail-pill {
   display: inline-flex;
@@ -179,8 +193,11 @@
   border: 1px solid var(--border);
   border-radius: 14px;
   background: color-mix(in srgb, var(--surface) 96%, transparent);
-  /* Spatial consistency (`/animate`): it comes from its side of the trail, on the house tokens,
-     which prefers-reduced-motion sets to 0ms — then it is simply there. */
+}
+/* Spatial consistency (`/animate`): a window the member switched to comes from its side of the
+   trail, on the house tokens, which prefers-reduced-motion sets to 0ms — then it is simply there.
+   No data-side = arriving at the page, where the stage's own rise (motion.css) is the one entrance. */
+.mctl-window[data-side] {
   animation: mctl-window-in var(--dur-spatial) var(--ease-spatial) both;
 }
 .mctl-window[data-side="left"] {
@@ -227,7 +244,9 @@
   scrollbar-width: none;
   align-items: center;
   gap: 6px;
-  padding: 8px 0;
+  margin: 0 -4px;
+  padding: 6px 4px;
+  min-height: 44px;
   border-bottom: 1px solid var(--border);
 }
 .mctl-linked > * {
@@ -365,4 +384,10 @@
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+/* The heading takes focus when the member switches windows (so focus never falls to <body>); it is
+   not a control, so it draws no ring. */
+.mctl-window-title:focus {
+  outline: none;
 }

@@ -72,17 +72,13 @@ export function slideSide(trail: Trail, cur: MissionWindow, next: MissionWindow)
 
 interface TrailStore {
   readonly trail: Trail;
-  /** The side the window on screen came in from — read once by the window as it mounts. */
-  readonly side: 1 | -1;
   readonly step: (cur: MissionWindow, next: MissionWindow) => void;
 }
 
-/** This session's trail. In memory only: a reload starts a new session at the window it names. */
+/** This session's trail. In memory only: a reload starts a new session at the window it names.
+ *  The slide's side is not kept here: it is worked out from the window that was on screen before,
+ *  on every change of window however it came (a tap, Back, a link), in `useSlideSide`. */
 export const useTrail = create<TrailStore>((set, get) => ({
   trail: FRESH_TRAIL,
-  side: 1,
-  step: (cur, next) => {
-    const trail = stepTrail(get().trail, cur, next);
-    set({ trail, side: slideSide(trail, cur, next) });
-  },
+  step: (cur, next) => set({ trail: stepTrail(get().trail, cur, next) }),
 }));

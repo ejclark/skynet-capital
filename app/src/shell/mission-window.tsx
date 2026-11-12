@@ -1,7 +1,15 @@
 import { useNavigate } from "@tanstack/react-router";
 import type { ReactElement, ReactNode } from "react";
-import { useState } from "react";
-import { type MissionWindow, parseWindow, useTrail, WINDOW_LABEL, WINDOWS } from "../live/mission";
+import { useEffect, useRef, useState } from "react";
+import {
+  type MissionWindow,
+  parseWindow,
+  slideSide,
+  stepTrail,
+  useTrail,
+  WINDOW_LABEL,
+  WINDOWS,
+} from "../live/mission";
 
 /**
  * MISSION CONTROL'S CHROME (#7487 slice 1). The pieces every Campaign window shares, drawn from the
@@ -31,9 +39,38 @@ export function useOpenWindow(cur: MissionWindow): (next: MissionWindow) => void
     step(cur, next);
     void navigate({
       to: "/",
-      search: (prev: Record<string, unknown>) => ({ ...prev, w: parseWindow(next) }),
+      // A pivot (`?show=`) belongs to the calendar; leaving it leaves the pivot behind, so the
+      // address never names a window and a pivot that would open a different one.
+      search: (prev: { readonly show?: string }) => ({
+        ...prev,
+        w: parseWindow(next),
+        show: next === "calendar" ? prev.show : undefined,
+      }),
     });
   };
+}
+
+/** The side the window on screen slid in from: 0 on arriving at the page (the page's own rise is
+ *  its entrance, so the window does not slide on top of it), else +1 from the right or −1 from the
+ *  left, worked out from the window that was on screen before. Any change of window counts — a tap,
+ *  Back and Forward, a link — and one the trail has not seen joins it after the one it left. */
+export function useSlideSide(cur: MissionWindow): 0 | 1 | -1 {
+  const trail = useTrail((s) => s.trail);
+  const step = useTrail((s) => s.step);
+  const [prev, setPrev] = useState(cur);
+  const [side, setSide] = useState<0 | 1 | -1>(0);
+  if (prev !== cur) {
+    // React's "adjust state while rendering" pattern: the new window reads its side on this render.
+    setPrev(cur);
+    setSide(slideSide(stepTrail(trail, prev, cur), prev, cur));
+  }
+  const last = useRef(cur);
+  useEffect(() => {
+    if (last.current === cur) return;
+    step(last.current, cur);
+    last.current = cur;
+  }, [cur, step]);
+  return side;
 }
 
 /** One pill per window reached this session, joined by hairlines; the current one outlined. */
@@ -120,6 +157,7 @@ export interface WindowLink {
 /** The window on the stage. Keyed by its id at the call site, so each opening slides in fresh. */
 export function MissionWindowFrame({
   id,
+  side,
   title,
   sub,
   figure,
@@ -128,6 +166,8 @@ export function MissionWindowFrame({
   children,
 }: {
   readonly id: MissionWindow;
+  /** From `useSlideSide`: 0 = no slide (arriving at the page), else the side it comes in from. */
+  readonly side: 0 | 1 | -1;
   readonly title: string;
   readonly sub: string;
   readonly figure?: string;
@@ -135,13 +175,19 @@ export function MissionWindowFrame({
   readonly open: (w: MissionWindow) => void;
   readonly children: ReactNode;
 }): ReactElement {
-  // Read once at mount: the side this window came in from. Later trail steps belong to the next one.
-  const [side] = useState(() => useTrail.getState().side);
+  // A window the member switched to takes focus at its heading, so keyboard and screen-reader focus
+  // never falls to <body> when the control they used (a row, a Linked pill) unmounts with the old
+  // one. Arriving at the page (side 0) leaves focus where the browser put it.
+  const heading = useRef<HTMLHeadingElement>(null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: on mount only; the frame is keyed by id
+  useEffect(() => {
+    if (side !== 0) heading.current?.focus({ preventScroll: true });
+  }, []);
   const from = useTrail((s) => s.trail.from[id]);
   return (
     <section
       className="mctl-window"
-      data-side={side === 1 ? "right" : "left"}
+      data-side={side === 0 ? undefined : side === 1 ? "right" : "left"}
       aria-labelledby={`mctl-title-${id}`}
     >
       <header className="mctl-window-head">
@@ -149,7 +195,7 @@ export function MissionWindowFrame({
           {WINDOW_LABEL[id].glyph}
         </span>
         <div className="mctl-window-names">
-          <h1 id={`mctl-title-${id}`} className="mctl-window-title">
+          <h1 id={`mctl-title-${id}`} className="mctl-window-title" ref={heading} tabIndex={-1}>
             {title}
           </h1>
           <p className="mctl-window-sub">{sub}</p>
