@@ -448,7 +448,8 @@ test.describe("campaign mission control", () => {
     await page.goto("/app/");
     const rail = page.getByRole("navigation", { name: "Waypoints" });
     await expect(rail).toBeVisible();
-    await expect(rail.locator(".mctl-way")).toHaveCount(5);
+    // The five waypoints and the workbench's Trade (slice 6).
+    await expect(rail.locator(".mctl-way")).toHaveCount(6);
     await expect(rail.locator(".mctl-way[aria-current='page']")).toContainText("Overview");
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(rail).toBeHidden();
@@ -481,5 +482,94 @@ test.describe("campaign mission control", () => {
     await expect(tags.nth(1)).toContainText("Calendar · ");
     await box.press("Escape");
     await expect(tags).toHaveCount(0);
+  });
+
+  // Slice 6: the Trade window drafts a paper ticket from real lists and places nothing; "Review
+  // order" opens /trade with the draft, where the gate reviews it. The draft outlives the window.
+  test("drafts a paper ticket in the Trade window and hands it to the gate on /trade", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/app/");
+    await page
+      .getByRole("navigation", { name: "Linked windows" })
+      .getByRole("button", { name: /Trade/ })
+      .click();
+    await expect(page).toHaveURL(/\/app\/\?w=trade$/);
+    const win = page.locator("section.mctl-window");
+    await expect(win.locator("h1.mctl-window-title")).toHaveText("Trade");
+    await expect(win.getByText("PAPER · DRAFT", { exact: true })).toBeVisible();
+    // The dock's box stays the page's only text box: names are picked, never typed.
+    await expect(win.locator("input, textarea")).toHaveCount(0);
+    const review = win.getByRole("button", { name: "Review order" });
+    await expect(review).toBeDisabled();
+    await expect(win.locator(".mctl-trade-line")).toHaveText("Buy 1 — · market · day");
+    const name = win.getByRole("group", { name: "Symbol" }).locator(".mctl-seg-btn").first();
+    await expect(name).toBeVisible();
+    const symbol = (await name.textContent())?.trim() ?? "";
+    expect(symbol).toMatch(/^[A-Z.]{1,6}$/);
+    await name.click();
+    await expect(name).toHaveAttribute("aria-pressed", "true");
+    await win.getByRole("button", { name: "One share more" }).click();
+    await win.getByRole("button", { name: "Limit" }).click();
+    await expect(win.locator(".mctl-trade-line")).toHaveText(`Buy 2 ${symbol} · limit · GTC`);
+    // Every segment is a whole 44px target at 390.
+    for (const seg of await win.locator(".mctl-seg-btn").all())
+      expect((await seg.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+    // The draft survives a trip to another window, and Overview offers the way back to it.
+    await page
+      .getByRole("navigation", { name: "Windows opened this session" })
+      .getByRole("button", { name: /Overview/ })
+      .click();
+    const back = page.locator("section.mctl-window button.mctl-row", {
+      hasText: "Your draft ticket",
+    });
+    await expect(back).toContainText(`Buy 2 ${symbol} · limit · GTC`);
+    await back.click();
+    await expect(page.locator(".mctl-trade-line")).toHaveText(`Buy 2 ${symbol} · limit · GTC`);
+    await page.getByRole("button", { name: "Review order" }).click();
+    await expect(page).toHaveURL(/\/app\/trade\?/);
+    const url = new URL(page.url());
+    expect(url.searchParams.get("play")).toBe("101");
+    expect(url.searchParams.get("symbol")).toBe(symbol);
+    expect(url.searchParams.get("shares")).toBe("2");
+    expect(url.searchParams.get("type")).toBe("limit");
+    // The Trade page's gate does the reviewing (the offline server links no account, so it says
+    // how to connect one; `tests/shell/gate-campaign-draft.spec.tsx` pins the ticket seeding).
+    await expect(page.getByRole("heading", { name: "Trade", level: 1 })).toBeVisible();
+  });
+
+  test("puts a dated report's company on the ticket from the Calendar's Trade pill", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/app/?w=calendar");
+    const pill = page
+      .getByRole("navigation", { name: "Linked windows" })
+      .getByRole("button", { name: /Trade: [A-Z.]+ reports / });
+    const label = (await pill.textContent()) ?? "";
+    const symbol = /Trade: ([A-Z.]+) reports/.exec(label)?.[1] ?? "";
+    await pill.click();
+    await expect(page).toHaveURL(/\/app\/\?w=trade$/);
+    await expect(page.locator(".mctl-trade-line")).toHaveText(`Buy 1 ${symbol} · market · day`);
+    await expect(page.getByRole("button", { name: symbol, exact: true })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    // The Trade window links back to that report on the calendar.
+    await expect(
+      page
+        .getByRole("navigation", { name: "Linked windows" })
+        .getByRole("button", { name: new RegExp(`Calendar: ${symbol} reports `) }),
+    ).toBeVisible();
+  });
+
+  test("lists Trade under its own Workbench head on the rail at 1280", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("/app/");
+    const rail = page.getByRole("navigation", { name: "Waypoints" });
+    await expect(rail.locator(".mctl-eyebrow")).toHaveText(["Waypoints", "Workbench"]);
+    await expect(rail.locator(".mctl-way").last()).toContainText("Trade");
+    await expect(rail.locator(".mctl-way").last()).toContainText("draft");
   });
 });

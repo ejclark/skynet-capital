@@ -84,6 +84,7 @@ export function OverviewWindow({
   inside,
   waited,
   quests,
+  draft,
   open,
 }: {
   readonly edition: Edition | null;
@@ -92,6 +93,8 @@ export function OverviewWindow({
   readonly waited: number;
   /** The member's quests; undefined when the session owns no account to read. */
   readonly quests: readonly Quest[] | undefined;
+  /** The draft ticket's summary line, once it names a company (#7487 slice 6). */
+  readonly draft?: string | undefined;
   readonly open: (w: MissionWindow) => void;
 }): ReactElement {
   const navigate = useNavigate();
@@ -172,6 +175,19 @@ export function OverviewWindow({
           {...(split ? { figure: signedMoney(split.total) } : {})}
           onOpen={() => open("party")}
         />
+        {/* The Trade row earns its place only once there is a draft to return to: an empty ticket
+            is already one tap away on the rail and the Linked row, and a row saying "nothing here"
+            would cost every visit a line (#7487 slice 6). */}
+        {draft ? (
+          <MissionRow
+            mark="⇄"
+            title="Your draft ticket"
+            about={{ label: "Trade" }}
+            sub={`${draft} · paper, not sent`}
+            tag="draft"
+            onOpen={() => open("trade")}
+          />
+        ) : null}
       </ul>
     </>
   );

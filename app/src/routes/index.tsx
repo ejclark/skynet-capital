@@ -21,6 +21,14 @@ import {
 import { sinceLine } from "../live/edition-sectors";
 import { useHorizonRange } from "../live/horizon-params";
 import { DEFAULT_WINDOW, type MissionWindow, parseWindow } from "../live/mission";
+import {
+  type DueReport,
+  reportFor,
+  reportLabel,
+  reportsDue,
+  ticketLine,
+  useCampaignTicket,
+} from "../live/mission-ticket";
 import { type PageKeys, usePublishPageKeys } from "../live/page-keys";
 import { signedMoney } from "../live/position-act";
 import { fetchQuests, placeQuests, type QuestsAnswer } from "../live/quests";
@@ -29,6 +37,7 @@ import { PageFrame } from "../shell/frame";
 import { AskBox, EventThread, StoryAsk } from "../shell/landing-ask";
 import { calendarShows, LandingCalendar } from "../shell/landing-calendar";
 import { AccountQuests, StoryQuests } from "../shell/landing-quests";
+import { TradeWindow } from "../shell/mission-trade";
 import {
   MissionRow,
   MissionWindowFrame,
@@ -52,7 +61,9 @@ import { TagMark } from "../shell/tag-mark";
  * CAMPAIGN MISSION CONTROL (#7487 slice 1, the Claude Design handoff of 2026-11-11): the landing
  * page is now ONE WINDOW AT A TIME — Overview, Market, Calendar, Quests, Party — with the trail of
  * windows reached this session above it and the waypoints beside it from the tablet width
- * (`shell/mission-window.tsx`, `live/mission.ts`). The open window is `?w=`; Overview is the
+ * (`shell/mission-window.tsx`, `live/mission.ts`). Slice 6 adds Trade, the workbench: a draft paper
+ * ticket that "Review order" hands to `/trade`'s gate (`shell/mission-trade.tsx`,
+ * `live/mission-ticket.ts`); nothing is placed from here. The open window is `?w=`; Overview is the
  * default; a `#event-`/`#story-` link or a `?show=` pivot opens the Calendar. Market, Calendar and
  * Quests are the components below, unchanged inside the window; Overview and Party are new
  * (`shell/mission-windows.tsx`). The ask box leads Overview until the dock replaces it (slice 2).
@@ -113,6 +124,14 @@ function windowSpec(
     readonly inside: readonly EditionDate[];
     readonly figures: Partial<Record<MissionWindow, string>>;
     readonly hasAccount: boolean;
+    /** Results dated inside the calendar's range, soonest first: the Calendar's Trade pill. */
+    readonly shownReports: readonly DueReport[];
+    /** Results dated anywhere on this edition's calendar: the Trade window's Calendar pill. */
+    readonly reports: readonly DueReport[];
+    /** The draft ticket's symbol, if one is picked. */
+    readonly ticketSymbol: string | undefined;
+    /** Puts a symbol on the draft ticket — a pill's pre-fill. */
+    readonly pick: (symbol: string) => void;
   },
 ): { title: string; sub: string; figure?: string; links: readonly WindowLink[] } {
   const { edition, figures } = ctx;
@@ -136,6 +155,9 @@ function windowSpec(
           : "Company results and reports",
         ...fig("calendar"),
         links: [
+          // Only when a company's results are really dated in the range on screen (#7487 slice 6):
+          // the pill names that report and puts its ticker on the ticket.
+          ...calendarTrade(ctx.shownReports, ctx.ticketSymbol, ctx.pick),
           { label: "Market: the sectors", to: "market" },
           { label: "Quests: moves from these stories", to: "quests" },
         ],
@@ -150,6 +172,7 @@ function windowSpec(
         links: [
           { label: "Calendar: the stories behind them", to: "calendar" },
           { label: "Party: what you book adds up", to: "party" },
+          { label: "Trade: the paper ticket", to: "trade" },
         ],
       };
     case "party":
@@ -159,6 +182,23 @@ function windowSpec(
         ...fig("party"),
         links: [{ label: "Quests: how you add to it", to: "quests" }],
       };
+    case "trade": {
+      const r = ctx.ticketSymbol
+        ? ctx.reports.find((d) => d.symbol === ctx.ticketSymbol)
+        : undefined;
+      return {
+        title: "Trade",
+        sub: "Paper · draft ticket · the gate reviews before anything is sent",
+        ...fig("trade"),
+        links: [
+          {
+            label: r ? `Calendar: ${reportLabel(r)}` : "Calendar: the dates ahead",
+            to: "calendar",
+          },
+          { label: "Quests: your next steps", to: "quests" },
+        ],
+      };
+    }
     default:
       return {
         title: "Where things stand",
@@ -168,9 +208,23 @@ function windowSpec(
           { label: "Calendar", to: "calendar" },
           { label: "Quests", to: "quests" },
           { label: "Party", to: "party" },
+          { label: "Trade", to: "trade" },
         ],
       };
   }
+}
+
+/** The Calendar's Trade pill: the ticket's own symbol's report when it is in range, else the
+ *  soonest; none when nothing in range is a dated company report. */
+function calendarTrade(
+  reports: readonly DueReport[],
+  symbol: string | undefined,
+  pick: (symbol: string) => void,
+): readonly WindowLink[] {
+  const r = reportFor(reports, symbol);
+  return r
+    ? [{ label: `Trade: ${reportLabel(r)}`, to: "trade", prefill: () => pick(r.symbol) }]
+    : [];
 }
 
 /**
@@ -221,6 +275,10 @@ type WindowBodyProps = {
   readonly open: ReturnType<typeof useOpenWindow>;
   readonly onClearPivot: () => void;
   readonly onConnect: () => void;
+  /** Tickers with results dated on this edition's calendar, soonest first (the Trade window). */
+  readonly reporting: readonly string[];
+  /** The draft ticket's summary line once a symbol is picked (Overview's Trade row). */
+  readonly draft: string | undefined;
 };
 
 /** The Calendar window's body: R&D's calendar with each story's asks and quests, or a note when no
@@ -297,6 +355,7 @@ function WindowBody(props: WindowBodyProps): ReactElement | null {
             inside={props.inside}
             waited={props.waited}
             quests={answer ? placed.account : undefined}
+            draft={props.draft}
             open={props.open}
           />
         </>
@@ -313,6 +372,8 @@ function WindowBody(props: WindowBodyProps): ReactElement | null {
       return <QuestsBody {...props} />;
     case "party":
       return <PartyWindow />;
+    case "trade":
+      return <TradeWindow reporting={props.reporting} />;
     default:
       return null;
   }
@@ -337,6 +398,8 @@ function Landing(): ReactElement {
   const open = useOpenWindow(cur);
   const side = useSlideSide(cur);
   const navigate = useNavigate();
+  const ticket = useCampaignTicket((s) => s.ticket);
+  const pick = useCampaignTicket((s) => s.patch);
   // ✕ on the pivot's bar: one more history entry, so Back still returns to the pivot, and the
   // page keeps its scroll, so the member stays on the calendar as the rest of it comes back.
   const clearPivot = () =>
@@ -396,8 +459,19 @@ function Landing(): ReactElement {
     calendar: `◆ ${String(waited)}`,
     ...(answer ? { quests: String(placed.account.length) } : {}),
     ...(total !== undefined ? { party: signedMoney(total) } : {}),
+    trade: ticket.symbol ?? "draft",
   };
-  const spec = windowSpec(cur, { edition, inside, figures, hasAccount: Boolean(answer) });
+  const reports = edition ? reportsDue(edition.next, today) : [];
+  const spec = windowSpec(cur, {
+    edition,
+    inside,
+    figures,
+    hasAccount: Boolean(answer),
+    shownReports: reportsDue(inside, today),
+    reports,
+    ticketSymbol: ticket.symbol,
+    pick: (symbol) => pick({ symbol }),
+  });
   return (
     <PageFrame>
       <div className="mctl">
@@ -429,6 +503,8 @@ function Landing(): ReactElement {
               open={open}
               onClearPivot={clearPivot}
               onConnect={() => void navigate({ to: "/accounts" })}
+              reporting={reports.map((r) => r.symbol)}
+              draft={ticket.symbol ? ticketLine(ticket) : undefined}
             />
           </MissionWindowFrame>
           {edition ? <footer className="obs-foot">{edition.writtenBy}</footer> : null}

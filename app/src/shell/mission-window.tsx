@@ -7,8 +7,9 @@ import {
   slideSide,
   stepTrail,
   useTrail,
+  WAYPOINTS,
   WINDOW_LABEL,
-  WINDOWS,
+  WORKBENCH,
 } from "../live/mission";
 import type { PromptTag } from "../live/prompt-tags";
 import { TagMark } from "./tag-mark";
@@ -108,7 +109,9 @@ export function Trail({
   );
 }
 
-/** The waypoints: every window, its one figure, and ⤳ where the open window links to it. */
+/** The waypoints: every window, its one figure, and ⤳ where the open window links to it. The
+ *  journeys come first under "Waypoints"; the draft ticket sits under its own "Workbench" head
+ *  (#7487 slice 6, spec § 1), since it is a tool the member works at, not a place they visit. */
 export function Waypoints({
   cur,
   open,
@@ -120,33 +123,34 @@ export function Waypoints({
   readonly figures: Readonly<Partial<Record<MissionWindow, string>>>;
   readonly linked: readonly MissionWindow[];
 }): ReactElement {
+  const item = (w: MissionWindow) => (
+    <li key={w}>
+      <button
+        type="button"
+        className="mctl-way"
+        aria-current={w === cur ? "page" : undefined}
+        onClick={() => open(w)}
+      >
+        <span className="mctl-glyph" aria-hidden="true">
+          {WINDOW_LABEL[w].glyph}
+        </span>
+        <span className="mctl-way-label">{WINDOW_LABEL[w].label}</span>
+        {figures[w] ? <span className="mctl-fig">{figures[w]}</span> : null}
+        {linked.includes(w) && w !== cur ? (
+          <span className="mctl-linked-mark" title="Linked to the open window">
+            <span aria-hidden="true">⤳</span>
+            <span className="visually-hidden">linked</span>
+          </span>
+        ) : null}
+      </button>
+    </li>
+  );
   return (
     <nav className="mctl-rail" aria-label="Waypoints">
       <p className="mctl-eyebrow">Waypoints</p>
-      <ul>
-        {WINDOWS.map((w) => (
-          <li key={w}>
-            <button
-              type="button"
-              className="mctl-way"
-              aria-current={w === cur ? "page" : undefined}
-              onClick={() => open(w)}
-            >
-              <span className="mctl-glyph" aria-hidden="true">
-                {WINDOW_LABEL[w].glyph}
-              </span>
-              <span className="mctl-way-label">{WINDOW_LABEL[w].label}</span>
-              {figures[w] ? <span className="mctl-fig">{figures[w]}</span> : null}
-              {linked.includes(w) && w !== cur ? (
-                <span className="mctl-linked-mark" title="Linked to the open window">
-                  <span aria-hidden="true">⤳</span>
-                  <span className="visually-hidden">linked</span>
-                </span>
-              ) : null}
-            </button>
-          </li>
-        ))}
-      </ul>
+      <ul>{WAYPOINTS.map(item)}</ul>
+      <p className="mctl-eyebrow">Workbench</p>
+      <ul>{WORKBENCH.map(item)}</ul>
     </nav>
   );
 }
@@ -154,6 +158,9 @@ export function Waypoints({
 export interface WindowLink {
   readonly label: string;
   readonly to: MissionWindow;
+  /** Runs before the window opens: a pill that pre-fills it ("Trade: NVDA reports Tue, Nov 17"
+   *  puts NVDA on the ticket, #7487 slice 6). */
+  readonly prefill?: () => void;
 }
 
 /** The window on the stage. Keyed by its id at the call site, so each opening slides in fresh. */
@@ -215,7 +222,10 @@ export function MissionWindowFrame({
               key={k.label}
               type="button"
               className="mctl-link-pill"
-              onClick={() => open(k.to)}
+              onClick={() => {
+                k.prefill?.();
+                open(k.to);
+              }}
             >
               <span className="mctl-link-mark" aria-hidden="true">
                 ⤳
