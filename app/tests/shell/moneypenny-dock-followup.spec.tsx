@@ -1,6 +1,6 @@
-import { act, fireEvent, screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import { timing, useMoneypenny } from "../../src/live/moneypenny";
-import { flush, json, mount } from "./moneypenny-rail-harness";
+import { flush, inHistory, json, mount, showHistory } from "./moneypenny-dock-harness";
 
 /**
  * A follow-up card on the member's OWN filing (#7286, named next slice 8). EARS:
@@ -12,7 +12,7 @@ import { flush, json, mount } from "./moneypenny-rail-harness";
  *    server's own words and keep the card for another tap.
  *  - Any other message SHALL be a normal message, and the card SHALL stay parked.
  */
-describe("MoneypennyRail — a drafted follow-up on the member's own filing", () => {
+describe("MoneypennyDock — a drafted follow-up on the member's own filing", () => {
   let realFetch: typeof globalThis.fetch;
   beforeEach(() => {
     realFetch = globalThis.fetch;
@@ -72,9 +72,9 @@ describe("MoneypennyRail — a drafted follow-up on the member's own filing", ()
 
   async function cardShown(): Promise<void> {
     mount();
-    await act(() => useMoneypenny.getState().openRail());
+    await showHistory();
     await say("add to my chart bug that it freezes on the iPad too");
-    await screen.findByText("Moneypenny · here it is — tap to add it.");
+    await inHistory().findByText("Moneypenny · here it is — tap to add it.");
   }
 
   it("shows the card and its two exits, and posts nothing yet", async () => {
@@ -95,7 +95,7 @@ describe("MoneypennyRail — a drafted follow-up on the member's own filing", ()
     fireEvent.click(screen.getByRole("button", { name: "Post the follow-up" }));
     expect(useMoneypenny.getState().streaming).toBe(true);
     expect(
-      await screen.findByText(
+      await inHistory().findByText(
         "Moneypenny · Sent — it's on your issue; it builds once it's picked from the queue.",
       ),
     ).toBeInTheDocument();
@@ -114,7 +114,7 @@ describe("MoneypennyRail — a drafted follow-up on the member's own filing", ()
     await cardShown();
     fireEvent.click(screen.getByRole("button", { name: "Not now" }));
     expect(
-      await screen.findByText("Moneypenny · set aside — nothing was posted."),
+      await inHistory().findByText("Moneypenny · set aside — nothing was posted."),
     ).toBeInTheDocument();
     expect(posts(sent)).toEqual([]);
     expect(useMoneypenny.getState().followup).toBeUndefined();
@@ -124,7 +124,9 @@ describe("MoneypennyRail — a drafted follow-up on the member's own filing", ()
     const sent = stub();
     await cardShown();
     await say("what will that add?");
-    expect(await screen.findByText("Moneypenny · it adds the iPad to #6007.")).toBeInTheDocument();
+    expect(
+      await inHistory().findByText("Moneypenny · it adds the iPad to #6007."),
+    ).toBeInTheDocument();
     expect(posts(sent)).toEqual([]);
     expect(useMoneypenny.getState().followup).toEqual(DRAFT);
   });
@@ -140,7 +142,7 @@ describe("MoneypennyRail — a drafted follow-up on the member's own filing", ()
     await cardShown();
     fireEvent.click(screen.getByRole("button", { name: "Post the follow-up" }));
     expect(
-      await screen.findByText(
+      await inHistory().findByText(
         "Moneypenny · That filing has become a plan, and follow-ups aren't taken on plans here, so nothing was posted.",
       ),
     ).toBeInTheDocument();
@@ -154,7 +156,7 @@ describe("MoneypennyRail — a drafted follow-up on the member's own filing", ()
     await cardShown();
     fireEvent.click(screen.getByRole("button", { name: "Post the follow-up" }));
     expect(
-      await screen.findByText(
+      await inHistory().findByText(
         "Moneypenny · That doesn't look like one of your own filings. nothing was posted.",
       ),
     ).toBeInTheDocument();

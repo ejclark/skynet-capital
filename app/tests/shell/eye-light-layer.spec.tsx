@@ -174,7 +174,8 @@ describe("EyeLight · her link to the whole calendar", () => {
 });
 
 // #7227 — the item the Eye lands on lifts its own edge, and is wholly in view first: with the
-// phone's chat over the whole page nothing is, so the light waits for the chat to close.
+// chat over the whole page (the dock with its History open, on a phone) nothing is, so the light
+// waits for the chat to close.
 describe("EyeLight · the landing, articulated, on an item in view", () => {
   let restore: () => void;
   let chat: HTMLElement | undefined;
@@ -183,7 +184,7 @@ describe("EyeLight · the landing, articulated, on an item in view", () => {
     restore = layOut();
     const box = Element.prototype.getBoundingClientRect;
     Element.prototype.getBoundingClientRect = function (this: Element) {
-      if (!this.classList.contains("mp-rail")) return box.call(this);
+      if (!this.classList.contains("mp-dock")) return box.call(this);
       const w = window.innerWidth;
       const h = window.innerHeight;
       return { top: 0, left: 0, width: w, height: h, bottom: h, right: w } as DOMRect;
@@ -209,8 +210,8 @@ describe("EyeLight · the landing, articulated, on an item in view", () => {
 
   it("waits while the chat covers the whole page, and lands once it closes", async () => {
     await mount();
-    chat = document.createElement("aside");
-    chat.className = "mp-rail";
+    chat = document.createElement("div");
+    chat.className = "mp-dock";
     document.body.append(chat);
     act(() => requestLight("/accounts#pos-NVDA"));
     await settle();

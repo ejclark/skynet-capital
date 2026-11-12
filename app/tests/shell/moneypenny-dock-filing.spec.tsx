@@ -1,10 +1,10 @@
-import { act, fireEvent, screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import { timing, useMoneypenny } from "../../src/live/moneypenny";
-import { flush, mount, onboarding } from "./moneypenny-rail-harness";
+import { flush, inHistory, mount, onboarding, showHistory } from "./moneypenny-dock-harness";
 
 // The rail's filing side (handoff 2026-09-03 §6; P0 of docs/research/moneypenny-chat-ux.md):
 // she drafts from the whole thread, the member sees the draft, and only their "send" files it.
-describe("MoneypennyRail — the drafted filing", () => {
+describe("MoneypennyDock — the drafted filing", () => {
   let realFetch: typeof globalThis.fetch;
   beforeEach(() => {
     realFetch = globalThis.fetch;
@@ -67,12 +67,12 @@ describe("MoneypennyRail — the drafted filing", () => {
       return Promise.resolve(new Response("{}", { status: 404 }));
     }) as typeof globalThis.fetch;
     mount();
-    await act(() => useMoneypenny.getState().openRail());
+    await showHistory();
     const box = screen.getByLabelText("Message Moneypenny");
     fireEvent.change(box, { target: { value: "yes, report it" } });
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
     expect(
-      await screen.findByText("Moneypenny · drafted — reply send to file it."),
+      await inHistory().findByText("Moneypenny · drafted — reply send to file it."),
     ).toBeInTheDocument();
 
     fireEvent.change(box, { target: { value: "send" } });
@@ -126,15 +126,15 @@ describe("MoneypennyRail — the drafted filing", () => {
       return Promise.resolve(new Response("{}", { status: 404 }));
     }) as typeof globalThis.fetch;
     mount();
-    await act(() => useMoneypenny.getState().openRail());
+    await showHistory();
     const box = screen.getByLabelText("Message Moneypenny");
     fireEvent.change(box, { target: { value: "report it" } });
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
-    expect(await screen.findByText("Moneypenny · drafted.")).toBeInTheDocument();
+    expect(await inHistory().findByText("Moneypenny · drafted.")).toBeInTheDocument();
     // the draft is shown before anything files
-    expect(screen.getByText(/\[idea\] Show my rank in the rail/)).toHaveClass("mp-draft");
+    expect(inHistory().getByText(/\[idea\] Show my rank in the rail/)).toHaveClass("mp-draft");
     fireEvent.click(screen.getByRole("button", { name: "Send it" }));
-    expect(await screen.findByText(/filed as issue #8/)).toBeInTheDocument();
+    expect(await inHistory().findByText(/filed as issue #8/)).toBeInTheDocument();
     expect(sent.filter((c) => c.url === "/feedback/coach")).toHaveLength(0);
     expect(sent.find((c) => c.url === "/api/feedback" && c.body)?.body).toMatchObject({
       kind: "idea",
@@ -185,13 +185,13 @@ describe("MoneypennyRail — the drafted filing", () => {
       return Promise.resolve(new Response("{}", { status: 404 }));
     }) as typeof globalThis.fetch;
     mount();
-    await act(() => useMoneypenny.getState().openRail());
+    await showHistory();
     const box = screen.getByLabelText("Message Moneypenny");
     fireEvent.change(box, { target: { value: "report it" } });
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
-    expect(await screen.findByText("Moneypenny · drafted.")).toBeInTheDocument();
+    expect(await inHistory().findByText("Moneypenny · drafted.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Send it" }));
-    expect(await screen.findByText(/filed as issue #9/)).toBeInTheDocument();
+    expect(await inHistory().findByText(/filed as issue #9/)).toBeInTheDocument();
     expect(sent.find((c) => c.url === "/api/feedback" && c.body)?.body).toMatchObject({
       kind: "feature",
       title: "Attach screenshots in chat",
@@ -207,14 +207,14 @@ describe("MoneypennyRail — the drafted filing", () => {
       return Promise.resolve(new Response("{}", { status: 404 }));
     }) as typeof globalThis.fetch;
     mount();
-    await act(() => useMoneypenny.getState().openRail());
+    await showHistory();
     const box = screen.getByLabelText("Message Moneypenny");
     fireEvent.change(box, { target: { value: "what time is it" } });
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
     expect(
-      await screen.findByText(/couldn't answer that just now: Lots of chatting just now/),
+      await inHistory().findByText(/couldn't answer that just now: Lots of chatting just now/),
     ).toBeInTheDocument();
-    expect(screen.queryByText(/i can help you get set up/)).not.toBeInTheDocument();
+    expect(inHistory().queryByText(/i can help you get set up/)).not.toBeInTheDocument();
   });
 
   it("re-greets instead of re-introducing when the intro fires mid-thread", async () => {
@@ -223,15 +223,15 @@ describe("MoneypennyRail — the drafted filing", () => {
         url === "/api/onboarding" ? json(onboarding(true)) : new Response("{}", { status: 404 }),
       )) as typeof globalThis.fetch;
     mount();
-    await act(() => useMoneypenny.getState().openRail());
+    await showHistory();
     const box = screen.getByLabelText("Message Moneypenny");
     fireEvent.change(box, { target: { value: "what time is it" } });
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
     await flush();
-    await act(() => useMoneypenny.getState().openRail({ intro: true }));
-    expect(await screen.findByText("Moneypenny · hi again.")).toBeInTheDocument();
-    expect(screen.queryByText(/^Moneypenny · hi, I'm Moneypenny/)).not.toBeInTheDocument();
-    expect(screen.getByText(/the last step is your first trade/)).toBeInTheDocument();
+    await showHistory({ intro: true });
+    expect(await inHistory().findByText("Moneypenny · hi again.")).toBeInTheDocument();
+    expect(inHistory().queryByText(/^Moneypenny · hi, I'm Moneypenny/)).not.toBeInTheDocument();
+    expect(inHistory().getByText(/the last step is your first trade/)).toBeInTheDocument();
   });
 });
 

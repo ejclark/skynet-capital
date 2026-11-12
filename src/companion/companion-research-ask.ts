@@ -37,7 +37,7 @@ export interface ResearchAskDraft {
 
 /** What the model reads back once the card is shown — said so it never claims the ask is made. */
 export const ASK_CARD_SHOWN =
-  "shown to the member as a card in the rail; nothing is asked yet. Only their own tap on 'Ask the research desk' puts the question on the house's research list.";
+  "shown to the member as a card in the chat; nothing is asked yet. Only their own tap on 'Ask the research desk' puts the question on the house's research list.";
 
 const WAIT_UNREAD =
   "The house's research does not read this list yet, so there is no wait to promise.";
@@ -93,7 +93,7 @@ export const RESEARCH_ASK_TOOL_DEFS = [
   {
     name: "draft_research_ask",
     description:
-      "Show the member a DRAFT research question as a card in the rail: the company, sector or market it is about and their question. Asks NOTHING: only the member's own tap on the card puts it on the house's research list. Call it once the member agreed, in their latest message, to put an open question to the research desk. kind is name (a stock ticker), sector (a sector name, e.g. Technology or Healthcare) or market (a market id, e.g. gold, japan, us-small-caps). Returns shown: true, a status line and a wait line to pass on; returns an error naming the valid choices when the subject isn't one.",
+      "Show the member a DRAFT research question as a card in the chat: the company, sector or market it is about and their question. Asks NOTHING: only the member's own tap on the card puts it on the house's research list. Call it once the member agreed, in their latest message, to put an open question to the research desk. kind is name (a stock ticker), sector (a sector name, e.g. Technology or Healthcare) or market (a market id, e.g. gold, japan, us-small-caps). Returns shown: true, a status line and a wait line to pass on; returns an error naming the valid choices when the subject isn't one.",
     input_schema: {
       type: "object",
       properties: {
@@ -135,4 +135,4 @@ export function runResearchAskTool(
 }
 
 /** The system prompt's paragraph for this tool. */
-export const RESEARCH_ASK_RULE = `ASKING THE RESEARCH DESK: when a member asks an open question about a company, a sector or a market that your tools and the help desk do not answer (why something is moving, what to know about a sector, whether a name is worth a look), do not stop at "I don't have that". Say in one sentence what you do not hold, then offer to put the question to the house's research desk. Once they agree in their latest message, call draft_research_ask with kind (name, sector or market), the subject exactly as the tool lists it, and their question in their own words, at most 200 characters. The rail shows the question as a card; only their tap on "Ask the research desk" puts it on the list. You never put a question on the list yourself and never say it is asked, queued or being researched. After the card shows, pass on the tool's wait line: when it says research does not read the list yet, say exactly that and promise no time; otherwise any time comes only from the reply to their tap, never from you. News and lawsuits are still not covered. Research answers what is true; it never tells anyone to buy or sell.`;
+export const RESEARCH_ASK_RULE = `ASKING THE RESEARCH DESK: when a member asks an open question about a company, a sector or a market that your tools and the help desk do not answer (why something is moving, what to know about a sector, whether a name is worth a look), do not stop at "I don't have that". Say in one sentence what you do not hold, then offer to put the question to the house's research desk. Once they agree in their latest message, call draft_research_ask with kind (name, sector or market), the subject exactly as the tool lists it, and their question in their own words, at most 200 characters. The chat shows the question as a card; only their tap on "Ask the research desk" puts it on the list. You never put a question on the list yourself and never say it is asked, queued or being researched. After the card shows, pass on the tool's wait line: when it says research does not read the list yet, say exactly that and promise no time; otherwise any time comes only from the reply to their tap, never from you. News and lawsuits are still not covered. Research answers what is true; it never tells anyone to buy or sell.`;

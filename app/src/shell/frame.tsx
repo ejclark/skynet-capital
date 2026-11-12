@@ -87,8 +87,8 @@ import { useTowerColumn } from "./use-tower-column";
  * only what a page stands under it (the league on the Profile page). Below the bench width the
  * frame is one column again. ON THE LEFT since #7216 (Eric's #7018 round 9 B pick, 2026-11-09:
  * "This feels like better placement which elevates what we can visually do with animations";
- * docs/IA.md §5.9): Moneypenny's rail opens on the right, so the page always sits between the Eye
- * and the chat, and the tower never moves when she opens — the stage narrows from the right. The
+ * docs/IA.md §5.9), and it keeps that column: Moneypenny is now a dock under the stage (#7487
+ * slice 2), not a rail on the right, and moving the tower to the right margin is slice 4's call. The
  * DOM keeps `<main>` first for the skip link and reading order; `tower-column.css` places it.
  *
  * `docs/PATTERNS.md` keeps the ledger these words live in, one row per named pattern.

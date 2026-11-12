@@ -1,18 +1,22 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, screen } from "@testing-library/react";
+import { FAST_TRACK_QUESTION, QUICK_QUESTIONS } from "../../src/live/landing-ask";
 import { timing, useMoneypenny } from "../../src/live/moneypenny";
 import { keyFor } from "../../src/live/moneypenny-storage";
 import { AskBox } from "../../src/shell/landing-ask";
-import { MoneypennyRail } from "../../src/shell/moneypenny-rail";
-import { flush, json, onboarding } from "./moneypenny-rail-harness";
+import { flush, inHistory, json, mount as mountDock, onboarding } from "./moneypenny-dock-harness";
 
 /**
  * A question asked from the landing page's ask box (#7165). Eric, live on /app/: "it took 30
  * seconds for the text to render" — the box awaited the rail's onboarding read (no timeout)
  * before the question was sent, so a slow link showed an empty panel with his question still in
  * the box. Every case here holds that read open on purpose.
+ *
+ * The dock (#7487 slice 2): the landing page keeps only its quick questions (D6), and asking
+ * opens nothing — the question waits in History while the dock's latest line says she is typing.
  */
-describe("asking from outside the rail", () => {
+const QUICK = QUICK_QUESTIONS.find((q) => q !== FAST_TRACK_QUESTION) ?? "";
+
+describe("asking from outside the dock", () => {
   let realFetch: typeof globalThis.fetch;
   let answerOnboarding: (viewerId: string) => void;
   beforeEach(() => {
@@ -22,7 +26,7 @@ describe("asking from outside the rail", () => {
     timing.bindWaitMs = 5000;
     localStorage.clear();
     useMoneypenny.getState().reset();
-    useMoneypenny.setState({ member: undefined, open: false });
+    useMoneypenny.setState({ member: undefined, history: false });
     // The onboarding read hangs until a case answers it; every other route is unwired (404),
     // so the live chat is off and she answers from her script.
     let release: (r: Response) => void = () => undefined;
@@ -40,24 +44,22 @@ describe("asking from outside the rail", () => {
     timing.bindWaitMs = 5000;
   });
 
-  const mount = () =>
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <AskBox />
-        <MoneypennyRail />
-      </QueryClientProvider>,
-    );
+  const mount = () => mountDock(<AskBox />);
   const userLines = () => useMoneypenny.getState().messages.filter((m) => m.role === "user");
 
-  it("shows the question and her typing line at once, and clears the box", () => {
+  it("shows her typing line at once and keeps the question, opening nothing", () => {
     mount();
-    const box = screen.getByRole("textbox", { name: "What do you want to do today?" });
-    fireEvent.change(box, { target: { value: "what's moving today?" } });
-    fireEvent.click(screen.getByRole("button", { name: "Ask" }));
+    fireEvent.click(screen.getByRole("button", { name: QUICK }));
     // no awaits: the onboarding read has not answered
-    expect(screen.getByText("what's moving today?")).toHaveClass("mp-user");
-    expect(screen.getByText("Moneypenny · typing ···")).toBeInTheDocument();
-    expect(box).toHaveValue("");
+    expect(screen.getByRole("button", { name: /^Moneypenny: typing ···/ })).toBeInTheDocument();
+    expect(useMoneypenny.getState().pending).toBe(QUICK);
+    expect(
+      screen.queryByRole("region", { name: "Conversation with Moneypenny" }),
+    ).not.toBeInTheDocument();
+    // the question is already in the conversation, drawn as the member's own line
+    act(() => useMoneypenny.getState().openHistory());
+    expect(inHistory().getByText(QUICK)).toHaveClass("mp-user");
+    expect(inHistory().getByText("Moneypenny · typing ···")).toBeInTheDocument();
   });
 
   it("lands the question in the signed-in member's own thread, never anon's", async () => {
@@ -71,7 +73,8 @@ describe("asking from outside the rail", () => {
     expect(userLines().map((m) => m.text)).toEqual(["what's moving today?"]);
     expect(localStorage.getItem(keyFor("member-1"))).toContain("what's moving today?");
     expect(localStorage.getItem(keyFor("anon"))).toBeNull();
-    expect(screen.getAllByText("what's moving today?")).toHaveLength(1);
+    act(() => useMoneypenny.setState({ history: true }));
+    expect(inHistory().getAllByText("what's moving today?")).toHaveLength(1);
   });
 
   it("sends anyway when the read never answers, and carries it to the member when it does", async () => {
@@ -100,12 +103,15 @@ describe("asking from outside the rail", () => {
     act(() => {
       useMoneypenny.getState().ask("first question");
     });
-    const box = screen.getByRole("textbox", { name: "What do you want to do today?" });
+    // a quick question tapped now is refused: the first question stays the one waiting
+    fireEvent.click(screen.getByRole("button", { name: QUICK }));
+    expect(useMoneypenny.getState().pending).toBe("first question");
+    // the dock's own box waits too, and keeps what the member typed
+    const box = screen.getByLabelText("Message Moneypenny");
     fireEvent.change(box, { target: { value: "second question" } });
-    fireEvent.click(screen.getByRole("button", { name: "Ask" }));
+    fireEvent.keyDown(box, { key: "Enter" });
     expect(box).toHaveValue("second question");
     expect(screen.queryByText("second question", { selector: ".mp-user" })).toBeNull();
-    // the rail's own composer waits too
     expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
   });
 });

@@ -137,32 +137,32 @@ export function DockBox({
           void submit();
         }}
       >
+        {/* Always in its slot, so the box never changes width or position (D5); disabled when the
+            chat cannot take a picture here. */}
+        <button
+          type="button"
+          className="mp-box-attach"
+          aria-label="Attach screenshot"
+          title={attachable ? "Attach screenshot" : "Screenshots attach in a conversation with her"}
+          disabled={!attachable || busy || sending || shots.length >= MAX_ATTACHED}
+          onClick={() => picker.current?.click()}
+        >
+          <span aria-hidden="true">▣</span>
+        </button>
         {attachable ? (
-          <>
-            <button
-              type="button"
-              className="mp-box-attach"
-              aria-label="Attach screenshot"
-              title="Attach screenshot"
-              disabled={busy || sending || shots.length >= MAX_ATTACHED}
-              onClick={() => picker.current?.click()}
-            >
-              <span aria-hidden="true">▣</span>
-            </button>
-            <input
-              ref={picker}
-              type="file"
-              accept="image/png,image/jpeg,image/*"
-              multiple
-              hidden
-              tabIndex={-1}
-              aria-hidden="true"
-              onChange={(e) => {
-                void attach(Array.from(e.target.files ?? []));
-                e.target.value = "";
-              }}
-            />
-          </>
+          <input
+            ref={picker}
+            type="file"
+            accept="image/png,image/jpeg,image/*"
+            multiple
+            hidden
+            tabIndex={-1}
+            aria-hidden="true"
+            onChange={(e) => {
+              void attach(Array.from(e.target.files ?? []));
+              e.target.value = "";
+            }}
+          />
         ) : null}
         <input
           ref={ref}

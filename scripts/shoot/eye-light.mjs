@@ -3,8 +3,9 @@
 // light, (2) a spark arcs over the page with a trail under a moving spotlight, (3) it lands as the
 // page dims around the row, (4) the dim lifts and a ring and a label naming the Eye stay.
 //
-// 1760 with the chat open, the window that keeps the tower's column beside her rail
-// (`use-tower-column.ts`). The page's clock is held after the tower is ready, so each step is shot at
+// 1760, the tower's column beside the page; the question goes in through her dock's box and the
+// linked line is tapped in History, which rises from the dock (#7487 slice 2: her links live there,
+// never in the dock's plain latest line; the tap navigates, so History closes as the light plays). The page's clock is held after the tower is ready, so each step is shot at
 // an exact moment of the light rather than wherever a screenshot happened to fall.
 //
 //   npm run build --prefix app && npm run build:scene && node scripts/shoot/eye-light.mjs [outdir]
@@ -55,11 +56,11 @@ try {
 } catch {
   console.log("the tower never reported ready — shot without it");
 }
-await page.locator(".mp-toggle").first().click();
-await page.locator(".mp-rail").waitFor();
-await page.getByLabel("Message Moneypenny").fill("How are my positions doing?");
-await page.getByRole("button", { name: "Send" }).click();
-const link = page.locator(".mp-place").first();
+const dock = page.locator(".mp-dock");
+await dock.locator(".mp-box-input").fill("How are my positions doing?");
+await dock.getByRole("button", { name: "Send", exact: true }).click();
+await dock.locator(".mp-dock-history").click();
+const link = page.locator(".mp-history .mp-place").first();
 await link.waitFor();
 await page.mouse.move(0, 0);
 await page.waitForTimeout(1200);

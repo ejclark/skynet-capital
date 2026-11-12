@@ -41,25 +41,35 @@ function History({
   waiting,
   busy,
   pending,
+  onClose,
 }: {
   readonly messages: readonly MpMessage[];
   readonly waiting: boolean;
   readonly busy: boolean;
   readonly pending: string | undefined;
+  /** Close History from inside it, returning focus to the line that opened it. */
+  readonly onClose: () => void;
 }): ReactElement {
   const thread = useMoneypenny((s) => s.thread);
   const disclosure = useMoneypenny((s) => s.disclosure);
-  const closeHistory = useMoneypenny((s) => s.closeHistory);
   const newConversation = useMoneypenny((s) => s.newConversation);
   const [copied, setCopied] = useState(false);
   const list = useRef<HTMLDivElement>(null);
+  const atEnd = useRef(true);
+  const last = messages.at(-1);
 
-  // Follow the conversation: every append scrolls the list to its end.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: messages/waiting ARE the trigger
+  // Follow the conversation when a line lands or grows — but a member who scrolled up to read stays
+  // where they were (#5182). Keyed by the last line's length, not the array, which is new each render.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: these ARE the trigger
   useLayoutEffect(() => {
     const el = list.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [messages, waiting]);
+    if (el && atEnd.current) el.scrollTop = el.scrollHeight;
+  }, [messages.length, last?.text.length, waiting, pending]);
+  const onScroll = () => {
+    const el = list.current;
+    // a couple of px of slack: fractional layouts rarely land the end on an exact zero
+    if (el) atEnd.current = el.scrollHeight - el.scrollTop - el.clientHeight <= 2;
+  };
 
   // Best-effort: a clipboard failure costs nothing but the "Copied" confirmation.
   const copy = () => {
@@ -97,12 +107,12 @@ function History({
         >
           New conversation
         </button>
-        <button type="button" className="mp-history-act" onClick={closeHistory}>
+        <button type="button" className="mp-history-act" onClick={onClose}>
           Close <span aria-hidden="true">⌄</span>
         </button>
       </header>
       {thread ? <ThreadBar thread={thread} disabled={busy} /> : <ThreadIndex disabled={busy} />}
-      <div className="mp-list" ref={list} aria-live="polite">
+      <div className="mp-list" ref={list} aria-live="polite" onScroll={onScroll}>
         {messages.map((m, i) => {
           const day = dayOf(m.at);
           const prev = i > 0 ? dayOf(messages[i - 1]?.at) : undefined;
@@ -147,13 +157,17 @@ export function MoneypennyDock(): ReactElement {
   const convictionSeq = useMoneypenny((s) => s.convictionSeq);
   const focusSeq = useMoneypenny((s) => s.focusSeq);
   const send = useMoneypenny((s) => s.send);
-  const wake = useMoneypenny((s) => s.wake);
+  const hydrate = useMoneypenny((s) => s.hydrate);
   const toggleHistory = useMoneypenny((s) => s.toggleHistory);
   const closeHistory = useMoneypenny((s) => s.closeHistory);
+  const leavePage = useMoneypenny((s) => s.leavePage);
+  const closeThread = useMoneypenny((s) => s.closeThread);
   const router = useRouter();
   const href = useRouterState({ select: (s) => s.location.href });
   const queryClient = useQueryClient();
   const box = useRef<HTMLInputElement>(null);
+  const opener = useRef<HTMLButtonElement>(null);
+  const dock = useRef<HTMLDivElement>(null);
   const waiting = typing || pending !== undefined;
   const busy = waiting || streaming;
   const latest = latestLine(messages);
@@ -167,16 +181,41 @@ export function MoneypennyDock(): ReactElement {
     latest,
   });
 
-  // On every page from the first: bind the member so her moves read their own facts.
+  // On every page from the first: load the member so her moves read their own facts. `hydrate`, not
+  // `wake`: it binds only a store nothing else has touched and never binds "anon" on a failed read,
+  // so a question already on its way (#7165) and a row's saved thread (#7308) are never lost to it.
   useEffect(() => {
-    void wake();
-  }, [wake]);
+    void hydrate();
+  }, [hydrate]);
 
-  // History closes on every navigation — a new page, a new window (`?w=`), a link of hers.
+  // Every navigation — a new page, a new window (`?w=`), a link of hers — folds History away and
+  // hands a side thread back to the main conversation.
   // biome-ignore lint/correctness/useExhaustiveDependencies: `href` IS the trigger
   useEffect(() => {
-    closeHistory();
+    leavePage();
   }, [href]);
+
+  // The dock's height, published as --dock-h, so what else sticks to the bottom of the window (the
+  // compare pick bar, the deep-dive panel) stands above it instead of under it.
+  useEffect(() => {
+    const el = dock.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const root = document.documentElement;
+    const publish = () => root.style.setProperty("--dock-h", `${String(el.offsetHeight)}px`);
+    publish();
+    const watch = new ResizeObserver(publish);
+    watch.observe(el);
+    return () => {
+      watch.disconnect();
+      root.style.removeProperty("--dock-h");
+    };
+  }, []);
+
+  /** Close History from the dock and give focus back to the line that opens it. */
+  const close = () => {
+    closeHistory();
+    opener.current?.focus();
+  };
 
   // "Talk to Moneypenny" from a page: the box takes focus (`meetMoneypenny`).
   useEffect(() => {
@@ -200,6 +239,10 @@ export function MoneypennyDock(): ReactElement {
       void send(m.msg);
       return;
     }
+    if (m.kind === "main") {
+      closeThread();
+      return;
+    }
     requestLight(m.href);
     void router.navigate({ href: m.href });
   };
@@ -217,23 +260,23 @@ export function MoneypennyDock(): ReactElement {
       onKeyDown={(e) => {
         if (e.key === "Escape" && history) {
           e.stopPropagation();
-          closeHistory();
+          close();
         }
       }}
+      ref={dock}
     >
-      {history ? (
-        <History messages={messages} waiting={waiting} busy={busy} pending={pending} />
-      ) : null}
       <aside className="mp-dock-inner" aria-label="Moneypenny">
         <div className="mp-dock-line">
           <span className="mp-dock-disc" aria-hidden="true">
             ✦
           </span>
           <button
+            ref={opener}
             type="button"
             className="mp-dock-latest"
             aria-expanded={history}
-            aria-label={`Moneypenny: ${line}. Open the conversation`}
+            // aria-expanded says open or closed; the name is her words and what the line is for.
+            aria-label={`Moneypenny: ${line.replace(/[.\s]+$/, "")} — the conversation`}
             onClick={toggleHistory}
           >
             {line}
@@ -247,6 +290,20 @@ export function MoneypennyDock(): ReactElement {
             History {String(messages.length)} <span aria-hidden="true">{history ? "⌄" : "⌃"}</span>
           </button>
         </div>
+        {/* After its triggers in the DOM, so Tab from them reaches it; drawn above the dock by CSS. */}
+        {history ? (
+          <History
+            messages={messages}
+            waiting={waiting}
+            busy={busy}
+            pending={pending}
+            onClose={close}
+          />
+        ) : null}
+        {/* Her answer, said aloud while History is closed (History's list is its own live region). */}
+        <p className="visually-hidden" aria-live="polite">
+          {history || waiting || !latest ? "" : line}
+        </p>
         {moves.length > 0 ? (
           <ul className="mp-moves" aria-label="Your moves">
             {moves.map((m) => (

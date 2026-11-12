@@ -154,9 +154,12 @@ export interface MoneypennyState extends Persisted {
   readonly wake: (opts?: { readonly intro?: boolean }) => Promise<void>;
   readonly openHistory: () => void;
   readonly closeHistory: () => void;
+  /** The member moved to another page or window: close History, and leave a side thread for the
+   *  main conversation when no answer is under way. */
+  readonly leavePage: () => void;
   readonly toggleHistory: () => void;
-  /** Load the member's saved conversation without opening the rail, so a row's thread shows on
-   *  page load (#7308). Binds only a store nothing else has touched yet, and only to a member the
+  /** Load the member's saved conversation, so a row's thread shows on page load (#7308) and the
+   *  dock's moves read the member's facts; also checks the chat is switched on. Binds only a store nothing else has touched yet, and only to a member the
    *  read named: a failed read must never bind "anon", which would forget the member's own blob. */
   readonly hydrate: () => Promise<void>;
   /** Forget this thread and start over — she introduces herself again. */
@@ -587,6 +590,13 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
       void get().wake({ intro: true });
     },
     closeHistory: () => set({ history: false }),
+    leavePage: () => {
+      // A new page or window: History folds away, and a side thread hands the dock back to the
+      // main conversation — unless an answer is still landing in it, which it is left to finish.
+      const s = get();
+      const busy = s.typing || s.streaming || s.pending !== undefined;
+      set({ history: false, ...(busy ? {} : { thread: undefined }) });
+    },
     openThread: (thread) => {
       // Never mid-answer: her reply lands in the thread it was asked in, so the view waits for it.
       if (get().typing || get().streaming || get().pending !== undefined) return;
@@ -604,6 +614,8 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
       else get().openHistory();
     },
     hydrate: () => {
+      // The dock mounts on every page and reads whether the chat is switched on for its box.
+      void companionOn();
       if (!untouched()) return Promise.resolve();
       hydrating ??= fetchOnboarding()
         .then((ob) => {
@@ -626,8 +638,8 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
       const s = get();
       if (!note || s.typing || s.streaming || s.pending !== undefined) return false;
       // The dock is always on screen, so asking shows the question there and opens nothing. A row's
-      // ask names its thread; an ask without one keeps whichever conversation is on screen.
-      set({ pending: note, ...(thread ? { thread } : {}) });
+      // ask names its thread; an ask without one (a quick question) is the main conversation's.
+      set({ pending: note, thread });
       if (thread) renamed(thread);
       void companionOn();
       void sendPending(note);

@@ -6,9 +6,9 @@ import { TowerSlot } from "./vantage";
  * top-right, from just under the navbar — "I never intended to have 2 towers… show the big tower
  * across all screens, and adjust the two sections/rows above the tower to the left to bring the
  * tower up so it sits below the navbar." It moved to the stage's LEFT on every page (#7216, his
- * #7018 round 9 B pick, 2026-11-09), so the chat opening on the right never moves it and the Eye
- * looks across the page. With the room of the bench width (`use-tower-column.ts`:
- * the window, less Moneypenny's rail while it is open) the page frame
+ * #7018 round 9 B pick, 2026-11-09), and keeps it: the chat is now a dock under the stage (#7487
+ * slice 2), not a rail that opens on the right, and whether the tower moves to the right margin is
+ * slice 4's call. From the bench width (`use-tower-column.ts`, the bench media query) the page frame
  * (`frame.tsx`) is two columns on every page but Settings: this column, and the stage. The column
  * holds the art box the shell's one tower frame is laid over (`vantage.tsx` — the same frame on
  * every page, so moving between pages never reloads the tower), then whatever the page stands under

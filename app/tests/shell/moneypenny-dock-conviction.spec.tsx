@@ -1,10 +1,10 @@
-import { act, fireEvent, screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import { timing, useMoneypenny } from "../../src/live/moneypenny";
-import { flush, json, mount } from "./moneypenny-rail-harness";
+import { flush, inHistory, json, mount, showHistory } from "./moneypenny-dock-harness";
 
 // #5482 criterion 9: she drafts the member's view and the rail shows its card; only the member's
 // tap (or the same words typed) saves it and hands it over — through the form's own two routes.
-describe("MoneypennyRail — a drafted view", () => {
+describe("MoneypennyDock — a drafted view", () => {
   let realFetch: typeof globalThis.fetch;
   beforeEach(() => {
     realFetch = globalThis.fetch;
@@ -112,9 +112,9 @@ describe("MoneypennyRail — a drafted view", () => {
 
   async function draftShown(): Promise<void> {
     mount();
-    await act(() => useMoneypenny.getState().openRail());
+    await showHistory();
     await say("I think CRWV is underrated, cap my wheel at one contract");
-    await screen.findByText("Moneypenny · here it is — tap to hand it over.");
+    await inHistory().findByText("Moneypenny · here it is — tap to hand it over.");
   }
 
   it("shows the card: each change before → after, what it takes over, and its three exits", async () => {
@@ -137,7 +137,9 @@ describe("MoneypennyRail — a drafted view", () => {
     // the rail is busy while the posts run, so no other turn can start beside them
     expect(useMoneypenny.getState().streaming).toBe(true);
     expect(
-      await screen.findByText(/handed to your bots: the wheel on CRWV\. Take it back any time\./),
+      await inHistory().findByText(
+        /handed to your bots: the wheel on CRWV\. Take it back any time\./,
+      ),
     ).toBeInTheDocument();
     const posts = sent.filter((c) => c.url.startsWith("/api/convictions/"));
     expect(posts).toEqual([
@@ -154,7 +156,7 @@ describe("MoneypennyRail — a drafted view", () => {
     await draftShown();
     await say("what does that change exactly?");
     expect(
-      await screen.findByText("Moneypenny · it narrows contracts to one."),
+      await inHistory().findByText("Moneypenny · it narrows contracts to one."),
     ).toBeInTheDocument();
     expect(sent.some((c) => c.url.startsWith("/api/convictions/"))).toBe(false);
     expect(useMoneypenny.getState().conviction).toBeDefined();
@@ -165,7 +167,7 @@ describe("MoneypennyRail — a drafted view", () => {
     await draftShown();
     fireEvent.click(screen.getByRole("button", { name: "Not now" }));
     expect(
-      await screen.findByText("Moneypenny · set aside — nothing was saved."),
+      await inHistory().findByText("Moneypenny · set aside — nothing was saved."),
     ).toBeInTheDocument();
     expect(sent.some((c) => c.url.startsWith("/api/convictions/"))).toBe(false);
     expect(useMoneypenny.getState().conviction).toBeUndefined();
@@ -176,7 +178,7 @@ describe("MoneypennyRail — a drafted view", () => {
     await draftShown();
     fireEvent.click(screen.getByRole("button", { name: "Hand it to my bots" }));
     expect(
-      await screen.findByText(/i couldn't save it: the name is taken\. nothing was saved\./),
+      await inHistory().findByText(/i couldn't save it: the name is taken\. nothing was saved\./),
     ).toBeInTheDocument();
     expect(sent.some((c) => c.url === "/api/convictions/hand-over")).toBe(false);
   });
@@ -186,7 +188,7 @@ describe("MoneypennyRail — a drafted view", () => {
     await draftShown();
     fireEvent.click(screen.getByRole("button", { name: "Hand it to my bots" }));
     expect(
-      await screen.findByText(
+      await inHistory().findByText(
         /saved as a draft, but not handed to your bots: none of your bots runs it/,
       ),
     ).toBeInTheDocument();

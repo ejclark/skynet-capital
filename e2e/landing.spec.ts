@@ -7,32 +7,38 @@ import { expect, test } from "@playwright/test";
 // Behavioural only: the edition is the latest one checked in, and the server cuts its dated items
 // against the real date, so the words change by design; the shape is what's held here.
 // #7487 slice 1 (Campaign mission control): the page is now one window at a time, chosen by `?w=`
-// (Overview the default, never written). The ask box leads Overview at /app/; the sectors are the
+// (Overview the default, never written). The quick questions lead Overview at /app/; the sectors are the
 // Market window (`?w=market`), the calendar the Calendar window (`?w=calendar`) and the account's
 // quests the Quests window (`?w=quests`). Each test opens the window its part now lives in.
 test.describe("landing page", () => {
-  // AT9 as revised (#7018 round 5): the question box and its two canned paths lead the Overview
-  // window at /app/, one line, its canned paths on one row, ahead of "Your next step".
-  test("opens on the question box, one line, its canned paths on one row (AT9)", async ({
+  // AT9 as revised (#7018 round 5), then #7487 slice 2 (D6): the member's own question moved to the
+  // dock's box, the one text box Moneypenny reads, so Overview at /app/ leads with the canned paths
+  // alone, on one row, ahead of "Your next step", and the dock's one-line box sits under the page.
+  test("opens on the quick questions, one row, with the dock's box under the page (AT9)", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/app/");
     await expect(page).toHaveURL(/\/app\/$/);
-    const ask = page.getByLabel("What do you want to do today?");
+    const quick = page.locator(".mctl-window .ask-quick");
+    await expect(quick).toBeVisible();
     const before = await page
       .locator(".mctl-window .mctl-rows")
       .first()
       .evaluate(
         (r, a) => Boolean(a && r.compareDocumentPosition(a) & Node.DOCUMENT_POSITION_PRECEDING),
-        await ask.elementHandle(),
+        await quick.elementHandle(),
       );
     expect(before).toBe(true);
-    const form = await page.locator(".ask-form").boundingBox();
-    expect(form?.height ?? 0).toBeLessThanOrEqual(52);
-    const chips = await page.locator(".ask-quick .ask-chip").all();
+    // No text box on Overview any more: the member types in the dock.
+    await expect(page.locator(".mctl-window input, .mctl-window textarea")).toHaveCount(0);
+    const chips = await quick.locator(".ask-chip").all();
+    expect(chips.length).toBeGreaterThan(0);
     const tops = await Promise.all(chips.map(async (c) => (await c.boundingBox())?.y ?? -1));
     expect(new Set(tops).size).toBe(1);
+    const box = page.locator(".mp-dock").getByRole("textbox", { name: "Message Moneypenny" });
+    await expect(box).toBeVisible();
+    expect((await box.boundingBox())?.height ?? 0).toBeLessThanOrEqual(52);
   });
 
   // AT1 and AT8: all 11 sectors and the S&P 500 still end within an 844px screen of the Market
@@ -431,7 +437,9 @@ test.describe("campaign mission control", () => {
     await page.goto(`/app/#${id}`);
     await expect(page.locator("h1.mctl-window-title")).toHaveText("The calendar");
     await expect(page.locator(`[id="${id}"]`)).toBeAttached();
-    await expect(page).not.toHaveURL(/[?&]w=/);
+    // 6d73347b0: a window inferred from a `#event-` link is written into the address at once
+    // (replacing the entry, keeping the hash), so stepping the range never snaps back to Overview.
+    await expect(page).toHaveURL(new RegExp(`[?&]w=calendar#${id}$`));
   });
 
   test("shows the Waypoints rail at 1280 and hides it at 390", async ({ page }) => {

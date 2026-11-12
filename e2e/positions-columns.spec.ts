@@ -5,9 +5,9 @@ import { OWNED, ownTheDayTrader } from "./own-account";
  * The desk table's ranked columns (#5071; round 2 of #5037, Q2 R2 — Eric's Build A: "ranked
  * columns, the rest opens in the row, no sideways scroll"). Which columns show is a container
  * query on the table's own scroll box, so only a real browser at real widths can prove it: at
- * 390 (the phone's cards), 860, 1100, 1280 beside the tower, and 1280 with Moneypenny's rail open
- * (the tower steps aside and the rail takes 440px the window's width knows nothing about), neither
- * the page nor the table scrolls sideways — closed, and with every row opened.
+ * 390 (the phone's cards), 860, 1100, 1280 beside the tower, and 1280 with Moneypenny's History
+ * open over her dock (#7487 slice 2: the tower stays, nothing narrows), neither the page nor the
+ * table scrolls sideways — closed, and with every row opened.
  *
  * The book is the offline Day Trader's, owned (so the widest rows, with Close, render), plus the
  * two longest rows a book draws: a sold put and a bought call with its buys. Everything else is
@@ -101,7 +101,7 @@ const measure = (page: Page) =>
         .filter(shown)
         .map((th) => (th.className.match(/pos-col-(\w+)/) ?? [])[1]),
       tower: [...document.querySelectorAll(".tower-column")].some(laidOut),
-      rail: [...document.querySelectorAll(".mp-rail")].some(laidOut),
+      history: [...document.querySelectorAll(".mp-history")].some(laidOut),
     };
   });
 
@@ -221,35 +221,29 @@ test.describe("the positions table at 1280px", () => {
     });
   }
 
-  // The rail takes the room the tower needed, so the tower steps aside (#3977). The Profile page's
-  // book keeps the stage's width: ~774px under overlay scrollbars (macOS), ~759px under a classic
-  // 15px scrollbar (Linux CI) — the five either way. The table stands what its own width ranks. An account's page splits the
-  // stage with the character card, leaving its book ~374px — too narrow for any table, so it reads
-  // as cards.
-  const RAIL = [
-    { route: "/app/accounts", reads: "a table" },
-    { route: `/app/u/${OWNED.id}`, reads: "cards" },
-  ] as const;
-  for (const { route, reads } of RAIL) {
-    test(`reads as ${reads} with Moneypenny's rail open on ${route}, never scrolling sideways`, async ({
+  // Before #7487 slice 2 Moneypenny's rail took 440px here, so the tower stepped aside (#3977) and
+  // the book read as a table or as cards by what was left. The rail is now a dock under the page
+  // and her History overlays from its top edge, so the premise inverts: opening it moves nothing.
+  // The tower keeps its column and the book keeps the same five columns, never scrolling sideways.
+  for (const route of ROUTES) {
+    test(`keeps the tower and the five columns with Moneypenny's History open on ${route}`, async ({
       page,
     }) => {
       await stage(page);
       await page.goto(route);
       await expect(page.locator("table.pos-table").first()).toBeVisible();
-      await page.getByRole("button", { name: "Moneypenny — learning & feedback" }).click();
-      await expect(page.locator(".mp-rail")).toBeVisible();
-      await expect(page.locator(".tower-column")).toHaveCount(0);
-      const closed = await measure(page);
-      expect(closed.rail).toBe(true);
-      expectNoSidewaysScroll(closed, "with the rail open");
-      if (reads === "cards") {
-        expect(closed.boxes, "no table squeezed under its own minimum").toHaveLength(0);
-        expect(closed.cards.length).toBeGreaterThan(0);
-        return;
-      }
-      expectRanked(closed, "with the rail open");
-      expectNoSidewaysScroll(await openEveryRow(page), "with the rail open, every row opened");
+      await page
+        .locator(".mp-dock")
+        .getByRole("button", { name: /^History/ })
+        .click();
+      await expect(
+        page.getByRole("region", { name: "Conversation with Moneypenny" }),
+      ).toBeVisible();
+      const open = await measure(page);
+      expect(open.history).toBe(true);
+      expect(open.tower, "the tower keeps its column").toBe(true);
+      expect(open.columns).toEqual(FIVE);
+      expectNoSidewaysScroll(open, "with History open");
     });
   }
 });

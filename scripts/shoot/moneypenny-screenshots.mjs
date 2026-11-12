@@ -1,8 +1,8 @@
 // Visual harness for screenshots in Moneypenny's chat (#6007 slice 3) — the REAL built shell over
 // stub APIs, at the phone's 390 px (the frame the plan's first picture is).
-// Two frames: the box with a screenshot waiting above the text (thumbnail, remove control, the
-// attach control beside Send), then the conversation after it was sent (the picture above the
-// words, read back from the server by id).
+// Two frames: the dock's one-line box with a screenshot waiting above it (thumbnail, remove control,
+// the attach control beside Send — #7487 slice 2, the dock under every page), then History opened
+// from the dock after it was sent (the picture above the words, read back from the server by id).
 // Usage: npm run build --prefix app && npm run shoot:moneypenny-screenshots [outdir]
 import { profileStubs } from "./profile-fixture.mjs";
 import { openShell } from "./shell.mjs";
@@ -76,11 +76,8 @@ await page.route("**/api/companion/chat", (route) =>
 );
 
 await page.goto(`${origin}/app/accounts`);
-await page
-  .getByRole("button", { name: /Moneypenny/ })
-  .first()
-  .click();
-const box = page.getByLabel("Message Moneypenny");
+const dock = page.locator(".mp-dock");
+const box = dock.locator(".mp-box-input");
 await box.waitFor();
 await page.locator('input[type="file"]').setInputFiles({
   name: "nvda-position.png",
@@ -91,8 +88,12 @@ await page.getByAltText("Screenshot you attached").waitFor();
 await box.fill("Why is this position red?");
 await shoot("moneypenny-screenshot-waiting");
 
-await page.getByRole("button", { name: "Send" }).click();
-await page.getByText(/^Moneypenny · I can see the NVDA put/).waitFor();
+await dock.getByRole("button", { name: "Send", exact: true }).click();
+await dock.locator(".mp-dock-history").click();
+await page
+  .locator(".mp-history")
+  .getByText(/^Moneypenny · I can see the NVDA put/)
+  .waitFor();
 await shoot("moneypenny-screenshot-sent");
 
 await close();

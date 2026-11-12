@@ -1,10 +1,10 @@
-import { act, fireEvent, screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import { timing, useMoneypenny } from "../../src/live/moneypenny";
-import { flush, json, mount } from "./moneypenny-rail-harness";
+import { flush, inHistory, json, mount, showHistory } from "./moneypenny-dock-harness";
 
 // The Moneypenny operator plan, research slice: she drafts an open question as a card, and only the
 // member's tap (or the same words typed) puts it on the house's research list.
-describe("MoneypennyRail — a drafted research question", () => {
+describe("MoneypennyDock — a drafted research question", () => {
   let realFetch: typeof globalThis.fetch;
   beforeEach(() => {
     realFetch = globalThis.fetch;
@@ -62,9 +62,9 @@ describe("MoneypennyRail — a drafted research question", () => {
 
   async function cardShown(): Promise<void> {
     mount();
-    await act(() => useMoneypenny.getState().openRail());
+    await showHistory();
     await say("why is PLTR moving this week?");
-    await screen.findByText("Moneypenny · here is the question — tap to ask.");
+    await inHistory().findByText("Moneypenny · here is the question — tap to ask.");
   }
 
   it("shows the card and its two exits, and asks nothing yet", async () => {
@@ -84,7 +84,7 @@ describe("MoneypennyRail — a drafted research question", () => {
     await cardShown();
     fireEvent.click(screen.getByRole("button", { name: "Ask the research desk" }));
     expect(useMoneypenny.getState().streaming).toBe(true);
-    expect(await screen.findByText(`Moneypenny · ${TELL}`)).toBeInTheDocument();
+    expect(await inHistory().findByText(`Moneypenny · ${TELL}`)).toBeInTheDocument();
     expect(asks(sent)).toEqual([
       {
         url: "/api/campaigns/ask",
@@ -100,7 +100,7 @@ describe("MoneypennyRail — a drafted research question", () => {
     await cardShown();
     fireEvent.click(screen.getByRole("button", { name: "Not now" }));
     expect(
-      await screen.findByText("Moneypenny · set aside — nothing was asked."),
+      await inHistory().findByText("Moneypenny · set aside — nothing was asked."),
     ).toBeInTheDocument();
     expect(asks(sent)).toEqual([]);
     expect(useMoneypenny.getState().researchAsk).toBeUndefined();
@@ -110,7 +110,9 @@ describe("MoneypennyRail — a drafted research question", () => {
     const sent = stub();
     await cardShown();
     await say("what would that question cover?");
-    expect(await screen.findByText("Moneypenny · it asks why PLTR is moving.")).toBeInTheDocument();
+    expect(
+      await inHistory().findByText("Moneypenny · it asks why PLTR is moving."),
+    ).toBeInTheDocument();
     expect(asks(sent)).toEqual([]);
     expect(useMoneypenny.getState().researchAsk).toEqual(DRAFT);
   });
@@ -122,7 +124,9 @@ describe("MoneypennyRail — a drafted research question", () => {
     await cardShown();
     fireEvent.click(screen.getByRole("button", { name: "Ask the research desk" }));
     expect(
-      await screen.findByText(/Questions aren't wired in this deployment\. nothing was asked\./),
+      await inHistory().findByText(
+        /Questions aren't wired in this deployment\. nothing was asked\./,
+      ),
     ).toBeInTheDocument();
     expect(asks(sent)).toHaveLength(1);
     expect(useMoneypenny.getState().researchAsk).toEqual(DRAFT);

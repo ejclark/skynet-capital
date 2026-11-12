@@ -6,8 +6,9 @@
  * ON THE LEFT (#7216, Eric's round 9 B pick on #7018, 2026-11-09: "This feels like better placement
  * which elevates what we can visually do with animations"). The column is the frame's first track
  * on every page that has it, so the stage's left edge and width stay identical across pages. The
- * DOM keeps `<main>` first (skip link, reading order) and the grid places the column; Moneypenny's
- * rail opens on the right, so the tower stays put and the stage narrows from the right. */
+ * DOM keeps `<main>` first (skip link, reading order) and the grid places the column. The tower
+ * keeps this column; Moneypenny is now a dock under the stage (#7487 slice 2), not a rail on the
+ * right, and moving the tower to the right margin is slice 4's call. */
 
 .frame.frame--tower {
   grid-template-columns: 384px minmax(0, 1fr);

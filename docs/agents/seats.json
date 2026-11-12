@@ -157,7 +157,7 @@
   "friction": [
     {
       "edge": "Members → front desk → builders",
-      "channel": "the in-app rail and coach, filed as a GitHub issue",
+      "channel": "the in-app chat (the dock under every page) and coach, filed as a GitHub issue",
       "what": "Members almost never file from the app. One untested reading (Conway): the intake is shaped like the build team's issue capsule (app/src/live/moneypenny-filing.ts:30-34), not like play.",
       "number": "2 in-app filings since 2026-10-01 (#4861, #6007), both Eric's; the last other member filing is #716 (2026-08-28). Nearly all of the 238 feedback issues since 10-01 were filed by sessions under Eric's account",
       "cite": "#7031",
@@ -290,7 +290,7 @@
       "name": "League members",
       "kind": "human",
       "job": "Invite-only friends and family who sign in, trade their own paper account, chat with Moneypenny, give views to their own bots and file feedback",
-      "wakesOn": "the in-app rail, feedback status badges, the follow-up form when an issue goes needs-info",
+      "wakesOn": "the in-app chat (the dock under every page), feedback status badges, the follow-up form when an issue goes needs-info",
       "speaksOn": "orders on their own desk, rail messages, feedback filings, conviction card taps, follow-up answers",
       "cadence": "whenever they open the app; async",
       "invoker": "self",
@@ -299,7 +299,7 @@
         "src/server/auth",
         "src/server/trade-orders-routes.ts",
         "src/server/feedback-service.ts",
-        "app/src/shell/moneypenny-rail.tsx"
+        "app/src/shell/moneypenny-dock.tsx"
       ],
       "cite": "docs/architecture/README.md:21 \"Invited friend or family on the allowlist... trades a paper account, chats with Moneypenny, files feedback\"; src/server/trade-orders-routes.ts:171 ownsAccount check; docs/MONEYPENNY.md:28-30 (member's own reply posts through /api/feedback); .github/workflows/moneypenny-events.yml:511-516 (authorized reply resumes a needs-info build)"
     },
@@ -338,8 +338,8 @@
       "name": "Companion chat (Moneypenny in the app)",
       "kind": "service",
       "job": "Answers member questions with Claude using a closed list of nine read-only lookups and two draft hand-offs; has no code path that places an order",
-      "wakesOn": "POST /api/companion/chat from the rail",
-      "speaksOn": "streamed SSE reply; draft_feedback and draft_conviction cards for the rail",
+      "wakesOn": "POST /api/companion/chat from the dock under every page",
+      "speaksOn": "streamed SSE reply; draft_feedback and draft_conviction cards for the chat",
       "cadence": "per turn, throttled",
       "invoker": "member",
       "status": "hired",
@@ -348,7 +348,7 @@
         "src/companion/companion-tools.ts",
         "src/companion/companion-convictions.ts",
         "src/companion",
-        "app/src/shell/moneypenny-rail.tsx",
+        "app/src/shell/moneypenny-dock.tsx",
         "app/src/live/moneypenny.ts",
         "app/src/live/moneypenny-script.ts"
       ],
