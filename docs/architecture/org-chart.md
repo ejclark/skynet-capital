@@ -14,7 +14,7 @@ It is two things at once:
 flowchart TD
   members(["Members"])
   front_desk["Front desk (in the app) · 7 seats"]
-  build["Builders · 13 seats"]
+  build["Builders · 14 seats"]
   staff["Chief of staff · 16 seats"]
   quality["Quality · 18 seats"]
   owner(["Eric · owner and game master"])
@@ -114,7 +114,7 @@ feels them only as honest timing on their own ask ("queued behind 2 builds"), ne
 | The trading floor: your bots, each a character with a strategy | Bot runtime (paper) |
 | The research desk: what is coming up, and what the house has written about it | Market-event calendar |
 
-Below decks: 59 seats, every one in Builders, Quality, Chief of staff and Platform. A
+Below decks: 60 seats, every one in Builders, Quality, Chief of staff and Platform. A
 member sees their own ask's status in plain words, never the lanes.
 
 ## The board's Role lanes
@@ -209,6 +209,7 @@ Turn ready issues and plans into merged pull requests.
 | Render-note translator (telestrator) | Turns 'this looks terrible / a 30/100' into a named technical cause and fix | any reaction to a rendered frame | cause -> fix table in session | hired | `.claude/skills/telestrator/SKILL.md` |
 | Art direction writer (vision) | Writes forged-epic art direction and compiles it into buildable contracts and generator prompts | 'make it feel alive', a new 3D piece brief | prose -> mechanics table, bounded prompts (e.g. docs/art/EYE.md) | hired | `.claude/skills/vision/SKILL.md` `docs/art/` |
 | Diagram expert (mermaid) | Picks the Mermaid type by story and proves it renders on GitHub; loads one reference card on demand | any mermaid block being written or reviewed | diagrams in PRs, issues, architecture pages | hired | `.claude/skills/mermaid/` `scripts/mermaid-skill-scan.mjs` |
+| Motion skills (vendored from Emil Kowalski) | Nine DOM and CSS motion skills: build one animation (animate), several together (choreograph), find, remove, audit and speed up motion, and name an effect; house tokens and rules win where they meet | motion work on a member surface; a named motion effect; Eric running review-animations | the animation in the diff; a plan as a GitHub issue | hired | `.claude/skills/animate/` `.claude/skills/choreograph/` `.claude/skills/review-animations/` `.claude/skills/improve-animations/` `.claude/skills/find-animation-opportunities/` `.claude/skills/remove-animations/` `.claude/skills/animation-performance/` `.claude/skills/animation-vocabulary/` `.claude/skills/emil-design-eng/` `docs/vendor/emil-kowalski-skills.md` |
 
 ### Quality
 

@@ -6,9 +6,8 @@ import { myConvictionsKey } from "../live/member-convictions";
 import { formatTranscript, type MpMessage, useMoneypenny } from "../live/moneypenny";
 import { dockText, latestLine, type Move, movesFor } from "../live/moneypenny-moves";
 import { linesOf } from "../live/moneypenny-threads";
-import { requestLight } from "./eye-light";
 import { DockBox } from "./mp-composer";
-import { Message } from "./mp-message";
+import { goToPlace, Message } from "./mp-message";
 import { ThreadBar, ThreadIndex } from "./rail-threads";
 
 /**
@@ -243,8 +242,7 @@ export function MoneypennyDock(): ReactElement {
       closeThread();
       return;
     }
-    requestLight(m.href);
-    void router.navigate({ href: m.href });
+    goToPlace(router, m.href);
   };
 
   const line = waiting

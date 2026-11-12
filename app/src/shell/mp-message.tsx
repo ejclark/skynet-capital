@@ -15,6 +15,29 @@ import { MessageShots } from "./mp-screenshot";
  * @category feedback
  */
 
+/**
+ * Go where she points (a link in her line, or a move in the dock that carries one): the Eye lights
+ * the item it names, and a row on the page already open lands in place instead of jumping to the top.
+ */
+export function goToPlace(router: ReturnType<typeof useRouter>, path: string): void {
+  // A link that names an item on a page (`#pos-NVDA`) also asks for the Eye's light onto it
+  // (#7216 slice 2, `eye-light-layer.tsx`), which waits for the item to land wherever it renders.
+  requestLight(path);
+  // "Open-position return" while the board is already showing re-ranks it in place — the member keeps
+  // their spot; any other page opens at its top, as a new view should.
+  const samePage = router.state.location.pathname === path.split(/[?#]/)[0];
+  if (!samePage) {
+    void router.navigate({ href: path });
+    return;
+  }
+  // A row she points at on the page already open (#7167, `/accounts#pos-NVDA`): the router's
+  // pushState fires no `hashchange`, and the page's landing (`landing.ts`) listens for exactly
+  // that, so it is announced here. Re-tapping the same link lands again rather than doing nothing.
+  void router.navigate({ href: path, resetScroll: false }).then(() => {
+    if (path.includes("#")) window.dispatchEvent(new HashChangeEvent("hashchange"));
+  });
+}
+
 /** A place she names, as a link (#5238): an in-app navigation, so the thread survives the move.
  *  At ≤860 the rail covers the page, so the tap closes it and the place shows; wider, the rail
  *  stays open beside it. A modified click (new tab, new window) keeps the browser's own handling
@@ -35,22 +58,7 @@ export function PlaceLink({
     closeHistory();
     if (!router) return;
     e.preventDefault();
-    // A link that names an item on a page (`#pos-NVDA`) also asks for the Eye's light onto it
-    // (#7216 slice 2, `eye-light-layer.tsx`), which waits for the item to land wherever it renders.
-    requestLight(path);
-    // "Open-position return" while the board is already showing re-ranks it in place — the member keeps
-    // their spot; any other page opens at its top, as a new view should.
-    const samePage = router.state.location.pathname === path.split(/[?#]/)[0];
-    if (!samePage) {
-      void router.navigate({ href: path });
-      return;
-    }
-    // A row she points at on the page already open (#7167, `/accounts#pos-NVDA`): the router's
-    // pushState fires no `hashchange`, and the page's landing (`landing.ts`) listens for exactly
-    // that, so it is announced here. Re-tapping the same link lands again rather than doing nothing.
-    void router.navigate({ href: path, resetScroll: false }).then(() => {
-      if (path.includes("#")) window.dispatchEvent(new HashChangeEvent("hashchange"));
-    });
+    goToPlace(router, path);
   };
   return (
     <a className="mp-place" href={`/app${path}`} onClick={onClick}>

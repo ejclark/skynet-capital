@@ -912,6 +912,31 @@
       "cite": "CLAUDE.md:441-444; scripts/ship.sh:256"
     },
     {
+      "id": "motion",
+      "department": "build",
+      "name": "Motion skills (vendored from Emil Kowalski)",
+      "kind": "skill",
+      "job": "Nine DOM and CSS motion skills: build one animation (animate), several together (choreograph), find, remove, audit and speed up motion, and name an effect; house tokens and rules win where they meet",
+      "wakesOn": "motion work on a member surface; a named motion effect; Eric running review-animations",
+      "speaksOn": "the animation in the diff; a plan as a GitHub issue",
+      "cadence": "on demand",
+      "invoker": "session",
+      "status": "hired",
+      "codeRoots": [
+        ".claude/skills/animate/",
+        ".claude/skills/choreograph/",
+        ".claude/skills/review-animations/",
+        ".claude/skills/improve-animations/",
+        ".claude/skills/find-animation-opportunities/",
+        ".claude/skills/remove-animations/",
+        ".claude/skills/animation-performance/",
+        ".claude/skills/animation-vocabulary/",
+        ".claude/skills/emil-design-eng/",
+        "docs/vendor/emil-kowalski-skills.md"
+      ],
+      "cite": ".claude/rules/member-surfaces.md (motion routing line); docs/vendor/emil-kowalski-skills.md"
+    },
+    {
       "id": "pipeline",
       "department": "quality",
       "name": "Pipeline checks: verify, integration tests, stability budget",
