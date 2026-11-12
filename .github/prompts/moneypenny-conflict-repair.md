@@ -36,6 +36,17 @@ once it is `ready`. The label on the PR keeps Eric's `needs-eric` queue honest. 
 attribution footer.
 
 HOW TO WORK IT:
+0. **A stacked child first** (#7487, 2026-11-12: stacked PRs build ahead of their parents). If the PR
+   body has a line `Stacked on #<n>` above the fold, read #<n> (`gh api repos/{owner}/{repo}/pulls/<n>`).
+   If #<n> is merged and this PR's base is now main, run `node scripts/stack-sync.mjs <n> --push` on
+   this PR's branch before anything else:
+   - Exit 0: done. The conflict was the parent's squash; stop here.
+   - Exit 1 naming missing parent commits: merge `refs/pull/<n>/head` into the branch (never rebase),
+     push, and re-run stack-sync once.
+   - Exit 1 naming paths main changed after the parent's head: those are real conflicts. Resolve only
+     those paths with the steps below.
+   - Exit 2: fall through to the steps below.
+   If #<n> is not merged, leave this PR alone: a stacked child waits for its parent.
 1. `git fetch origin <pr-branch> main`, check out the PR's branch (never a new one — this fix lands
    on the PR's existing branch), and `git merge origin/main` to surface the actual conflict markers.
 2. Read every conflicted file. For each conflict, judge — the same way a human reviewer would —
