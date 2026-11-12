@@ -10,6 +10,8 @@ import {
   WINDOW_LABEL,
   WINDOWS,
 } from "../live/mission";
+import type { PromptTag } from "../live/prompt-tags";
+import { TagMark } from "./tag-mark";
 
 /**
  * MISSION CONTROL'S CHROME (#7487 slice 1). The pieces every Campaign window shares, drawn from the
@@ -201,6 +203,7 @@ export function MissionWindowFrame({
           <p className="mctl-window-sub">{sub}</p>
         </div>
         {figure ? <span className="mctl-window-fig">{figure}</span> : null}
+        <TagMark tag={{ label: WINDOW_LABEL[id].label }} size="window" />
       </header>
       {links.length > 0 ? (
         <nav className="mctl-linked" aria-label="Linked windows">
@@ -240,6 +243,7 @@ export function MissionRow({
   tag,
   figure,
   onOpen,
+  about,
 }: {
   readonly mark?: string;
   readonly title: string;
@@ -247,6 +251,8 @@ export function MissionRow({
   readonly tag?: string;
   readonly figure?: string;
   readonly onOpen?: () => void;
+  /** The row as a ✎ tag ("Party · Tony"), when it can be talked about (#7487 slice 3). */
+  readonly about?: PromptTag;
 }): ReactElement {
   const body = (
     <>
@@ -266,17 +272,22 @@ export function MissionRow({
       ) : null}
     </>
   );
+  // ✎ sits beside the row, never inside it: a button in a button is no control at all, and its tap
+  // must never open what the row opens.
+  const mark_ = about ? <TagMark tag={about} /> : null;
   if (onOpen)
     return (
-      <li>
+      <li className="mctl-row-item">
         <button type="button" className="mctl-row mctl-row--go" onClick={onOpen}>
           {body}
         </button>
+        {mark_}
       </li>
     );
   return (
-    <li>
+    <li className="mctl-row-item">
       <div className="mctl-row">{body}</div>
+      {mark_}
     </li>
   );
 }

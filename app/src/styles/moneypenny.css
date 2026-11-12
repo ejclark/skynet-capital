@@ -140,6 +140,42 @@
   color: var(--accent-contrast);
 }
 
+/* ✎ tags (#7487 slice 3) — what the member points at, leading the moves row. Amber dashed, the
+   Eye's own colour for "this thing is in view", with the ✎ and the words carrying the meaning; the
+   label truncates at about 200px (32ch), the whole subject in its title. */
+.mp-tag {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  height: 44px;
+  padding-left: 10px;
+  border: 1px dashed var(--tag-ink);
+  border-radius: 10px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: var(--tag-ink);
+  white-space: nowrap;
+}
+.mp-tag-label {
+  max-width: 32ch; /* ~200px of 10.5px mono: a text measure, not a panel cap */
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mp-tag-x {
+  flex: none;
+  width: 40px;
+  height: 44px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 15px;
+  cursor: pointer;
+}
+.mp-tag-x:hover {
+  color: var(--text);
+}
+
 /* 3 · the box — never changes width or position */
 .mp-box {
   display: flex;

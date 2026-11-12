@@ -6,6 +6,8 @@ import { myConvictionsKey } from "../live/member-convictions";
 import { formatTranscript, type MpMessage, useMoneypenny } from "../live/moneypenny";
 import { dockText, latestLine, type Move, movesFor } from "../live/moneypenny-moves";
 import { linesOf } from "../live/moneypenny-threads";
+import { stampTagged } from "../live/page-keys";
+import { taggedKeys, taggedLine, usePromptTags } from "../live/prompt-tags";
 import { DockBox } from "./mp-composer";
 import { goToPlace, Message } from "./mp-message";
 import { ThreadBar, ThreadIndex } from "./rail-threads";
@@ -156,6 +158,12 @@ export function MoneypennyDock(): ReactElement {
   const convictionSeq = useMoneypenny((s) => s.convictionSeq);
   const focusSeq = useMoneypenny((s) => s.focusSeq);
   const send = useMoneypenny((s) => s.send);
+  const tags = usePromptTags((s) => s.tags);
+  const tagSeq = usePromptTags((s) => s.seq);
+  const dropTag = usePromptTags((s) => s.drop);
+  const clearTags = usePromptTags((s) => s.clear);
+  // What the last ✎ did, said aloud: focus lands in the box, whose name stays "Message Moneypenny".
+  const [tagNews, setTagNews] = useState("");
   const hydrate = useMoneypenny((s) => s.hydrate);
   const toggleHistory = useMoneypenny((s) => s.toggleHistory);
   const closeHistory = useMoneypenny((s) => s.closeHistory);
@@ -221,6 +229,30 @@ export function MoneypennyDock(): ReactElement {
     if (focusSeq > 0) box.current?.focus();
   }, [focusSeq]);
 
+  // ✎ on a window or a row: the box takes focus with that subject tagged above it (#7487 slice 3).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `tagSeq` IS the trigger; tags are read as of it
+  useEffect(() => {
+    if (tagSeq === 0) return;
+    box.current?.focus();
+    const newest = tags.at(-1);
+    if (newest) setTagNews(`Tagged ${newest.label}, ${String(tags.length)} of 3`);
+  }, [tagSeq]);
+
+  /** The member's message with its ✎ tags: the subjects in words at the start of their line, and
+   *  the calendar ones as keys her request carries for the server's check. They clear once it lands. */
+  const sendTagged = async (text: string, screenshots?: readonly string[]): Promise<boolean> => {
+    // A parked card or a scripted question waits on an exact answer ("send", "never mind", "yes"),
+    // so while one does, the line goes as typed and the tags wait for the next message.
+    const exact = draft || view || followup || research || (!thread && flow !== "idle");
+    if (tags.length === 0 || exact) return send(text, screenshots);
+    stampTagged(taggedKeys(tags));
+    // `send` resolves once her answer is in, so whatever the request did not read is spent here:
+    // a stamp never rides a later, unrelated question.
+    const accepted = await send(taggedLine(tags, text), screenshots).finally(() => stampTagged([]));
+    if (accepted) clearTags();
+    return accepted;
+  };
+
   useEffect(() => {
     if (filedSeq === 0) return;
     for (const key of ["feedback", "learn", "plays", "onboarding"])
@@ -256,9 +288,16 @@ export function MoneypennyDock(): ReactElement {
     <div
       className="mp-dock"
       onKeyDown={(e) => {
-        if (e.key === "Escape" && history) {
+        if (e.key !== "Escape") return;
+        // Escape folds History first; with History closed, it drops every ✎ tag.
+        if (history) {
           e.stopPropagation();
           close();
+        } else if (tags.length > 0) {
+          e.stopPropagation();
+          clearTags();
+          box.current?.focus();
+          setTagNews("Tags cleared");
         }
       }}
       ref={dock}
@@ -298,12 +337,37 @@ export function MoneypennyDock(): ReactElement {
             onClose={close}
           />
         ) : null}
+        <p className="visually-hidden" aria-live="polite">
+          {tagNews}
+        </p>
         {/* Her answer, said aloud while History is closed (History's list is its own live region). */}
         <p className="visually-hidden" aria-live="polite">
           {history || waiting || !latest ? "" : line}
         </p>
-        {moves.length > 0 ? (
+        {moves.length > 0 || tags.length > 0 ? (
           <ul className="mp-moves" aria-label="Your moves">
+            {/* The tags lead the row, then her moves; the box below never moves for either. */}
+            {tags.map((t) => (
+              <li key={`tag:${t.label}`} className="mp-tag">
+                <span className="mp-tag-label" title={t.label}>
+                  <span aria-hidden="true">✎ </span>
+                  {t.label}
+                </span>
+                <button
+                  type="button"
+                  className="mp-tag-x"
+                  aria-label={`Remove the tag ${t.label}`}
+                  onClick={() => {
+                    dropTag(t.label);
+                    // its own chip leaves with it, so focus goes back to the box, not to <body>
+                    box.current?.focus();
+                    setTagNews(`Removed ${t.label}`);
+                  }}
+                >
+                  ×
+                </button>
+              </li>
+            ))}
             {moves.map((m) => (
               <li key={m.label}>
                 <button type="button" className="mp-move" onClick={() => run(m)}>
@@ -316,11 +380,15 @@ export function MoneypennyDock(): ReactElement {
         <DockBox
           ref={box}
           placeholder={
-            thread ? `Reply in the thread on ${thread.title}` : "Ask, or say where to go"
+            tags.length > 0
+              ? "Ask about what you tagged"
+              : thread
+                ? `Reply in the thread on ${thread.title}`
+                : "Ask, or say where to go"
           }
           busy={busy}
           attachable={companionEnabled && (thread !== undefined || flow === "idle")}
-          send={send}
+          send={sendTagged}
         />
       </aside>
     </div>

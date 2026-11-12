@@ -20,13 +20,39 @@ export interface PageKeys {
   readonly stories: readonly string[];
   /** The keys of the calendar events on screen (`editionEventKey`). */
   readonly events: readonly string[];
+  /** What the member tagged with ✎ onto the message being sent (#7487 slice 3). */
+  readonly tagged?: { readonly stories: readonly string[]; readonly events: readonly string[] };
 }
 
 let current: PageKeys | undefined;
+/** The edition the landing page last published: a tag made there names its rows in that edition,
+ *  and the member may send it from another page, where nothing is published. */
+let lastEdition: string | undefined;
 
-/** The keys the page on screen published, if any. */
+/** A message's ✎ tags, held from the tap of Send until her answer's request reads them once. The
+ *  tags themselves clear as the message lands, before the request leaves; a stale one (the chat
+ *  never asked, e.g. a scripted reply) expires rather than riding a later question. */
+let tagged:
+  | { readonly stories: string[]; readonly events: string[]; readonly at: number }
+  | undefined;
+const TAGGED_TTL_MS = 30_000;
+
+/** Hold the anchors (`story-…`, `event-…`) the member tagged onto the message they just sent. */
+export function stampTagged(anchors: readonly string[]): void {
+  const stories = anchors.flatMap((a) => (a.startsWith("story-") ? [a.slice(6)] : []));
+  const events = anchors.flatMap((a) => (a.startsWith("event-") ? [a.slice(6)] : []));
+  tagged = stories.length + events.length > 0 ? { stories, events, at: Date.now() } : undefined;
+}
+
+/** The keys the page on screen published, if any, with a just-sent message's tags read once. */
 export function pageKeys(): PageKeys | undefined {
-  return current;
+  const held = tagged && Date.now() - tagged.at < TAGGED_TTL_MS ? tagged : undefined;
+  tagged = undefined;
+  const tags = held ? { tagged: { stories: held.stories, events: held.events } } : {};
+  if (current) return { ...current, ...tags };
+  return held && lastEdition
+    ? { edition: lastEdition, stories: [], events: [], ...tags }
+    : undefined;
 }
 
 /** Publish `keys` while the calling page is mounted; withdraw them when it unmounts. */
@@ -36,6 +62,7 @@ export function usePublishPageKeys(keys: PageKeys | undefined): void {
   useEffect(() => {
     if (!keys) return;
     current = keys;
+    lastEdition = keys.edition;
     return () => {
       if (current === keys) current = undefined;
     };

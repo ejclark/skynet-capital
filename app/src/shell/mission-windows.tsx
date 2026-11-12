@@ -107,6 +107,7 @@ export function OverviewWindow({
           <MissionRow
             mark="◆"
             title={next.move.label}
+            about={{ label: `Quests · ${next.move.label}` }}
             sub="Your best quest right now · paper only"
             tag="start here"
             onOpen={() => open("quests")}
@@ -134,6 +135,7 @@ export function OverviewWindow({
         <MissionRow
           mark="▦"
           title="The whole market"
+          about={{ label: "Market" }}
           sub={market.line}
           {...(market.figure ? { figure: market.figure } : {})}
           onOpen={() => open("market")}
@@ -141,6 +143,7 @@ export function OverviewWindow({
         <MissionRow
           mark="◷"
           title="The calendar"
+          about={{ label: "Calendar" }}
           sub={calendarGlance(inside)}
           figure={`◆ ${String(waited)}`}
           onOpen={() => open("calendar")}
@@ -148,6 +151,7 @@ export function OverviewWindow({
         <MissionRow
           mark="◆"
           title="Quests"
+          about={{ label: "Quests" }}
           sub={
             quests
               ? `${String(quests.length)} for your account, best first`
@@ -159,6 +163,7 @@ export function OverviewWindow({
         <MissionRow
           mark="◉"
           title="The party"
+          about={{ label: "Party" }}
           sub={
             split
               ? `${String(split.members.length)} members, together against The Tower`
@@ -184,7 +189,13 @@ export function PartyWindow(): ReactElement {
       <ul className="mctl-rows">
         {members.length > 0 ? (
           members.map((r) => (
-            <MissionRow key={r.key} title={r.name} sub="member" figure={r.value} />
+            <MissionRow
+              key={r.key}
+              title={r.name}
+              sub="member"
+              figure={r.value}
+              about={{ label: `Party · ${r.name}` }}
+            />
           ))
         ) : (
           <MissionRow title="No member has booked a trade yet" />
@@ -195,7 +206,13 @@ export function PartyWindow(): ReactElement {
           <MissionHead>Against</MissionHead>
           <ul className="mctl-rows">
             {against.map((r) => (
-              <MissionRow key={r.key} title={r.name} sub="bot" figure={r.value} />
+              <MissionRow
+                key={r.key}
+                title={r.name}
+                sub="bot"
+                figure={r.value}
+                about={{ label: `Party · ${r.name}` }}
+              />
             ))}
           </ul>
         </>
