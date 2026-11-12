@@ -46,6 +46,9 @@ export interface MoveState {
   readonly firstTradeDone: boolean;
   /** Her latest line on screen, for the pivot it may offer. */
   readonly latest: MpMessage | undefined;
+  /** The moves her line about what the Eye noticed offers, while that line is still her latest
+   *  (#7487 slice 5, `eye-notice.ts`): "Back to where I was" and one question about it. */
+  readonly notice?: readonly Move[];
 }
 
 const say = (c: Chip): Move => ({ kind: "say", label: c.label, msg: c.msg });
@@ -66,6 +69,7 @@ export function movesFor(s: MoveState): readonly Move[] {
     return chipsFor({ draft: true, connected: false, firstTradeDone: false }).map(say);
   if (s.inThread) return [BACK_TO_MAIN];
   if (s.flow !== "idle") return [];
+  if (s.notice && s.notice.length > 0) return s.notice;
   const pivot = s.latest?.role === "mp" ? pivotOf(s.latest.text) : undefined;
   // Her latest line is plain text in the dock (D4), so a place she names there would be dead: the
   // first one or two become moves. A pivot already covers the rows it names, so it wins.

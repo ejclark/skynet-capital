@@ -1,9 +1,9 @@
-// Pictures for #7216 slice 2: the Eye's light. Moneypenny's answer links a position on the Profile
-// page; the tap sends a spark from the tower's Eye to the row: (1) the Eye focuses under a pool of
-// light, (2) a spark arcs over the page with a trail under a moving spotlight, (3) it lands as the
-// page dims around the row, (4) the dim lifts and a ring and a label naming the Eye stay.
+// Pictures for the Eye's light (#7216 slice 2; the beam since #7487 slice 5). Moneypenny's answer
+// links a position on the Profile page; the tap sends a straight beam from the tower's Eye to the
+// row, behind the cards: (1) the beam reaching out, glowing through the cards it crosses, (2) landed,
+// the row's card lit from behind and the ring on, (3) held, (4) faded, the ring and its label stay.
 //
-// 1760, the tower's column on the page's right (#7487 slice 4a), so the spark arcs leftward to the row; the question goes in through her dock's box and the
+// 1760, the tower's column on the page's right (#7487 slice 4a), so the beam runs leftward to the row; the question goes in through her dock's box and the
 // linked line is tapped in History, which rises from the dock (#7487 slice 2: her links live there,
 // never in the dock's plain latest line; the tap navigates, so History closes as the light plays). The page's clock is held after the tower is ready, so each step is shot at
 // an exact moment of the light rather than wherever a screenshot happened to fall.
@@ -75,20 +75,20 @@ await link.click();
 let t0 = 0;
 for (let i = 0; i < 400; i++) {
   await page.clock.runFor(16);
-  if (await page.locator("svg.eye-light").count()) break;
+  if (await page.locator(".eye-beam").count()) break;
   t0 += 16;
 }
 console.log(`light began after ~${t0} ms of page time`);
-// Each step at its own moment after the light began (`eye-light.ts`: focus 0–200 ms, arc to 720,
-// land to 1000, lift to 1320).
+// Each step at its own moment after the beam began (`eye-light.css`: the reach on --dur-spatial,
+// 260 ms; held 200 ms; faded over another 260 ms).
 let now = 0;
 const at = async (tag, ms) => {
   await page.clock.runFor(ms - now);
   now = ms;
   await shoot(tag);
 };
-await at("1-focus", 140);
-await at("2-arc", 520);
-await at("3-land", 960);
-await at("4-ring", 2400);
+await at("1-reach", 130);
+await at("2-land", 300);
+await at("3-hold", 420);
+await at("4-ring", 1600);
 await close();

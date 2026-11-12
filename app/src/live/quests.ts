@@ -35,6 +35,9 @@ export async function fetchQuests(): Promise<QuestsAnswer | null> {
   return (await res.json()) as QuestsAnswer;
 }
 
+/** A quest's row on the page (`quest-<id>`): the Eye lands on a new one (#7487 slice 5). */
+export const questAnchor = (id: string): string => `quest-${id}`;
+
 /** At 390 the ranking is the product (#7028 objection 3): this many show, the rest fold. */
 export const QUESTS_SHOWN = 3;
 

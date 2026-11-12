@@ -31,6 +31,9 @@ import { TagMark } from "./tag-mark";
  * `--dur-spatial` / `--ease-spatial` tokens, which `prefers-reduced-motion` collapses to 0ms — the
  * window then appears at once, as the handoff asks. A keyframe, not a transition, is right here:
  * each window is a fresh element keyed by its id, so there is nothing to retarget from.
+ *
+ * The window and the waypoints are the stage's CARDS for the Eye's beam (`data-eye-card`, #7487
+ * slice 5): it runs behind them, shows in the gaps, and glows through each one it crosses.
  */
 
 /** Open `next` from `cur`: step the trail, then make it the page's address. */
@@ -146,7 +149,7 @@ export function Waypoints({
     </li>
   );
   return (
-    <nav className="mctl-rail" aria-label="Waypoints">
+    <nav className="mctl-rail" aria-label="Waypoints" data-eye-card="">
       <p className="mctl-eyebrow">Waypoints</p>
       <ul>{WAYPOINTS.map(item)}</ul>
       <p className="mctl-eyebrow">Workbench</p>
@@ -161,6 +164,22 @@ export interface WindowLink {
   /** Runs before the window opens: a pill that pre-fills it ("Trade: NVDA reports Tue, Nov 17"
    *  puts NVDA on the ticket, #7487 slice 6). */
   readonly prefill?: () => void;
+}
+
+/** The window the Eye is about to open on its own, whose frame must not take focus. */
+let quietWindow: MissionWindow | undefined;
+
+/** The next opening of `w` is the Eye's, not the member's: its frame leaves focus where it is. */
+export function quietNextWindow(w: MissionWindow): void {
+  quietWindow = w;
+}
+
+/** Whether this frame's opening was the Eye's; any frame's mount spends the mark either way, so a
+ *  stale one never quiets a later switch the member made. */
+function takeQuiet(id: MissionWindow): boolean {
+  const quiet = quietWindow === id;
+  quietWindow = undefined;
+  return quiet;
 }
 
 /** The window on the stage. Keyed by its id at the call site, so each opening slides in fresh. */
@@ -186,16 +205,20 @@ export function MissionWindowFrame({
 }): ReactElement {
   // A window the member switched to takes focus at its heading, so keyboard and screen-reader focus
   // never falls to <body> when the control they used (a row, a Linked pill) unmounts with the old
-  // one. Arriving at the page (side 0) leaves focus where the browser put it.
+  // one. Arriving at the page (side 0) leaves focus where the browser put it, and so does a switch
+  // the Eye made on its own (`quietNextWindow`): the member asked for nothing, so focus is not moved
+  // from under them (WCAG 3.2.1) — Moneypenny's line in the dock's live region says what changed.
   const heading = useRef<HTMLHeadingElement>(null);
   // biome-ignore lint/correctness/useExhaustiveDependencies: on mount only; the frame is keyed by id
   useEffect(() => {
-    if (side !== 0) heading.current?.focus({ preventScroll: true });
+    const quiet = takeQuiet(id);
+    if (side !== 0 && !quiet) heading.current?.focus({ preventScroll: true });
   }, []);
   const from = useTrail((s) => s.trail.from[id]);
   return (
     <section
       className="mctl-window"
+      data-eye-card=""
       data-side={side === 0 ? undefined : side === 1 ? "right" : "left"}
       aria-labelledby={`mctl-title-${id}`}
     >
