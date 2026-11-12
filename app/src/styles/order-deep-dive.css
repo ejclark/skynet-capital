@@ -60,14 +60,14 @@ tr[data-detail] > td:first-child {
   background: var(--surface);
   box-shadow: var(--elev-raised);
 }
-/* Where the frame keeps a 384px column beside the stage (the tower's, tower-column.css, on the left
-   since #7216): the panel docks over it, under the topbar, and the list keeps its full width. The
-   app column starts at the viewport's left edge, so the left anchor holds. */
+/* Where the frame keeps a 384px column beside the stage (the tower's, tower-column.css, on the right
+   since #7487 slice 4a): the panel docks over it, under the topbar, and the list keeps its full
+   width. Anchored to the frame's right edge, which the shell caps at --shell-max and centres. */
 [data-docked] > .act-deep-panel {
   position: fixed;
   z-index: 5;
   top: calc(var(--topbar-h, 52px) + var(--stage-gap, 22px));
-  left: max(var(--gutter), calc((100vw - var(--shell-max)) / 2 + var(--gutter)));
+  right: max(var(--gutter), calc((100vw - var(--shell-max)) / 2 + var(--gutter)));
   /* clear of Moneypenny's dock along the window's bottom (--dock-h, #7487 slice 2) */
   bottom: calc(var(--dock-h, 0px) + 16px);
   width: 384px;

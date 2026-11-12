@@ -25,14 +25,15 @@
   flex-direction: column;
   gap: 8px;
 }
-/* From the bench width the frame gives the tower its own column (tower-column.css): the dock's
-   contents start where the stage does, so the box sits under the page it talks about. */
+/* From the bench width the frame gives the tower its own column on the right (tower-column.css,
+   #7487 slice 4a): the dock's contents end where the stage does, so the box sits under the page it
+   talks about and the tower keeps the right margin to itself. */
 @media (min-width: 1280px) {
   .shell-app:has(.frame--tower) .mp-dock-inner {
-    padding-left: calc(var(--gutter) + 384px + 24px);
+    padding-right: calc(var(--gutter) + 384px + 24px);
   }
   .shell-app:has(.frame--tower) .mp-history {
-    left: calc(var(--gutter) + 384px + 24px);
+    right: calc(var(--gutter) + 384px + 24px);
   }
 }
 
