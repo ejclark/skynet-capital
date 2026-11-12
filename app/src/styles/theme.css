@@ -38,6 +38,8 @@
   /* Moneypenny's voice as TEXT (#7487 slice 2, her line in the dock): the accent where it reads at
      AA, a deeper ink where it does not. Dark: --accent on --bg is ~10:1. */
   --voice: #35d0ba;
+  /* ✎ tags (#7487 slice 3): the Eye's amber as text. Dark: #ffc24d on --bg is ~11:1. */
+  --tag-ink: #ffc24d;
 
   --accent-contrast: #04302b;
   --pos-contrast: #05170d;
@@ -143,6 +145,9 @@
        --surface-2, the same emphasis role in the only direction that shows up */
     --charged: #0a5f54;
     --voice: #0a5f54;
+    --tag-ink: #8a5300;
+    /* amber vanishes on white: a deep amber ink, 5.9:1 on the page */
+    --tag-ink: #8a5300;
     /* the light accent is 3.1:1 on the page, a mark not a text colour: her words take the ink */
     --voice: #0a5f54;
     --accent-contrast: #032420; /* on --accent #0e9f8c: 4.98:1 (white was 3.30, under AA) */

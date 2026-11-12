@@ -1,7 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate, useRouterState } from "@tanstack/react-router";
 import { type ReactElement, useEffect } from "react";
-import { editionEventKey, PIVOT_PARAM, parsePivot } from "../../../src/domain/edition-keys";
+import {
+  editionEventKey,
+  eventAnchor,
+  PIVOT_PARAM,
+  parsePivot,
+  storyAnchor,
+} from "../../../src/domain/edition-keys";
 import { parseBoardMetric } from "../live/board";
 import {
   asOfLine,
@@ -39,6 +45,7 @@ import {
   useParty,
 } from "../shell/mission-windows";
 import { SectorOverview } from "../shell/sector-overview";
+import { TagMark } from "../shell/tag-mark";
 
 /**
  * CAMPAIGN MISSION CONTROL (#7487 slice 1, the Claude Design handoff of 2026-11-11): the landing
@@ -231,11 +238,20 @@ function CalendarBody({
       today={today}
       storyAsk={(s) => (
         <>
+          <TagMark tag={{ label: `Calendar · ${s.line}`, key: storyAnchor(s.id) }} size="inline" />
           <StoryAsk story={s} campaign={edition.campaign} campaignTitle={edition.campaignTitle} />
           <StoryQuests quests={placed.byStory.get(s.id)} />
         </>
       )}
-      eventAsk={(e) => <EventThread event={e} />}
+      eventAsk={(e) => (
+        <>
+          <TagMark
+            tag={{ label: `Calendar · ${e.what}`, key: eventAnchor(editionEventKey(e)) }}
+            size="inline"
+          />
+          <EventThread event={e} />
+        </>
+      )}
       pivot={pivot}
       onClearPivot={onClearPivot}
     />

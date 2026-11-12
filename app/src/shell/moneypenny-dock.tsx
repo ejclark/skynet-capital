@@ -6,6 +6,8 @@ import { myConvictionsKey } from "../live/member-convictions";
 import { formatTranscript, type MpMessage, useMoneypenny } from "../live/moneypenny";
 import { dockText, latestLine, type Move, movesFor } from "../live/moneypenny-moves";
 import { linesOf } from "../live/moneypenny-threads";
+import { stampTagged } from "../live/page-keys";
+import { taggedKeys, taggedLine, usePromptTags } from "../live/prompt-tags";
 import { DockBox } from "./mp-composer";
 import { goToPlace, Message } from "./mp-message";
 import { ThreadBar, ThreadIndex } from "./rail-threads";
@@ -156,6 +158,10 @@ export function MoneypennyDock(): ReactElement {
   const convictionSeq = useMoneypenny((s) => s.convictionSeq);
   const focusSeq = useMoneypenny((s) => s.focusSeq);
   const send = useMoneypenny((s) => s.send);
+  const tags = usePromptTags((s) => s.tags);
+  const tagSeq = usePromptTags((s) => s.seq);
+  const dropTag = usePromptTags((s) => s.drop);
+  const clearTags = usePromptTags((s) => s.clear);
   const hydrate = useMoneypenny((s) => s.hydrate);
   const toggleHistory = useMoneypenny((s) => s.toggleHistory);
   const closeHistory = useMoneypenny((s) => s.closeHistory);
@@ -221,6 +227,22 @@ export function MoneypennyDock(): ReactElement {
     if (focusSeq > 0) box.current?.focus();
   }, [focusSeq]);
 
+  // ✎ on a window or a row: the box takes focus with that subject tagged above it (#7487 slice 3).
+  useEffect(() => {
+    if (tagSeq > 0) box.current?.focus();
+  }, [tagSeq]);
+
+  /** The member's message with its ✎ tags: the subjects in words at the start of their line, and
+   *  the calendar ones as keys her request carries for the server's check. They clear once it lands. */
+  const sendTagged = async (text: string, screenshots?: readonly string[]): Promise<boolean> => {
+    if (tags.length === 0) return send(text, screenshots);
+    stampTagged(taggedKeys(tags));
+    const accepted = await send(taggedLine(tags, text), screenshots);
+    if (accepted) clearTags();
+    else stampTagged([]);
+    return accepted;
+  };
+
   useEffect(() => {
     if (filedSeq === 0) return;
     for (const key of ["feedback", "learn", "plays", "onboarding"])
@@ -256,9 +278,14 @@ export function MoneypennyDock(): ReactElement {
     <div
       className="mp-dock"
       onKeyDown={(e) => {
-        if (e.key === "Escape" && history) {
+        if (e.key !== "Escape") return;
+        // Escape folds History first; with History closed, it drops every ✎ tag.
+        if (history) {
           e.stopPropagation();
           close();
+        } else if (tags.length > 0) {
+          e.stopPropagation();
+          clearTags();
         }
       }}
       ref={dock}
@@ -302,8 +329,25 @@ export function MoneypennyDock(): ReactElement {
         <p className="visually-hidden" aria-live="polite">
           {history || waiting || !latest ? "" : line}
         </p>
-        {moves.length > 0 ? (
+        {moves.length > 0 || tags.length > 0 ? (
           <ul className="mp-moves" aria-label="Your moves">
+            {/* The tags lead the row, then her moves; the box below never moves for either. */}
+            {tags.map((t) => (
+              <li key={`tag:${t.label}`} className="mp-tag">
+                <span className="mp-tag-label" title={t.label}>
+                  <span aria-hidden="true">✎ </span>
+                  {t.label}
+                </span>
+                <button
+                  type="button"
+                  className="mp-tag-x"
+                  aria-label={`Remove the tag ${t.label}`}
+                  onClick={() => dropTag(t.label)}
+                >
+                  ×
+                </button>
+              </li>
+            ))}
             {moves.map((m) => (
               <li key={m.label}>
                 <button type="button" className="mp-move" onClick={() => run(m)}>
@@ -316,11 +360,15 @@ export function MoneypennyDock(): ReactElement {
         <DockBox
           ref={box}
           placeholder={
-            thread ? `Reply in the thread on ${thread.title}` : "Ask, or say where to go"
+            tags.length > 0
+              ? "Ask or say something about what you tagged"
+              : thread
+                ? `Reply in the thread on ${thread.title}`
+                : "Ask, or say where to go"
           }
           busy={busy}
           attachable={companionEnabled && (thread !== undefined || flow === "idle")}
-          send={send}
+          send={sendTagged}
         />
       </aside>
     </div>
