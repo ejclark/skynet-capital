@@ -8,6 +8,16 @@ import {
   type ResearchAskDraft,
   streamCompanionTurn,
 } from "./companion";
+import {
+  GOAL_ASK,
+  GOAL_CLEARED,
+  GOAL_SET,
+  goalOf,
+  isFirstVisit,
+  isGoalAnswer,
+  type Visit,
+  WELCOME,
+} from "./first-visit";
 import { marketIsOpen } from "./market-hours";
 import { answerFor, convictionCardText, createConvictionLane } from "./moneypenny-conviction";
 import { createFilingLane, NEVER_MIND, SEND_AS_IS } from "./moneypenny-filing";
@@ -174,6 +184,18 @@ export interface MoneypennyState extends Persisted {
   readonly ask: (text: string, thread?: MpThread) => boolean;
   /** Forget everything for this member — for specs and the new-conversation control. */
   readonly reset: () => void;
+  /** Mission Control's first-visit line (#7487 slice 7, `first-visit.ts`): on a member's first
+   *  visit only, her latest line becomes the welcome and the first visit begins. It stands in for
+   *  her intro script (it marks `introDone`), so the two never both play; a returning member — or a
+   *  signed-out viewer, who has no member to remember it for — never sees it. */
+  readonly welcome: () => Promise<void>;
+  /** A first-visit step's line (a tour stop, the tour's end, "That's enough"), and where the member
+   *  stands after it. Ignored while a turn is under way. */
+  readonly stepVisit: (next: Visit | undefined, line: string) => Promise<void>;
+  /** Ask for the member's goal: the box collects it next (its placeholder says so), focused. */
+  readonly askGoal: () => Promise<void>;
+  /** Forget the member's goal, and say so. */
+  readonly clearGoal: () => Promise<void>;
 }
 
 export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
@@ -188,6 +210,8 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
       coach: s.coach,
       kind: s.kind,
       threads: s.threads,
+      visit: s.visit,
+      goal: s.goal,
     });
   };
   /** Lines land in the conversation on screen: the side thread the rail shows, else the main one.
@@ -534,6 +558,22 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
     return true;
   };
 
+  /** The first visit (#7487 slice 7) lives in the main conversation. While the box collects a goal,
+   *  a typed line (or a picked one) is the goal (true); a question is a question, and anything typed
+   *  at another stage means the member went their own way — the visit ends, and the line routes as
+   *  it always would (false). */
+  const answeredVisit = async (note: string): Promise<boolean> => {
+    const { visit, thread } = get();
+    if (!visit || thread) return false;
+    if (visit.kind === "goal" && isGoalAnswer(note)) {
+      save({ goal: goalOf(note, Date.now()), visit: undefined });
+      await say([GOAL_SET], "main");
+      return true;
+    }
+    save({ visit: undefined });
+    return false;
+  };
+
   /** A parked card's exits. A view: one of its three exact answers acts on it. A follow-up:
    *  "Post the follow-up" or "Not now", exactly. A research question: "Ask the research desk" or
    *  "Not now", exactly; a failed post parks either again. A filing draft:
@@ -628,7 +668,10 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
       return hydrating;
     },
     newConversation: async () => {
+      // The goal is a Quests row, not part of the conversation: a fresh conversation keeps it.
+      const { goal } = get();
       get().reset();
+      if (goal) save({ goal });
       const ob = await bind();
       await playIntro(ob);
     },
@@ -659,6 +702,7 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
         append("sys", [MESSAGE_OPS_LINE], "main");
       }
       if (await answeredParked(note)) return true;
+      if (await answeredVisit(note)) return true;
       // A side thread is a question about its row: never the answer to a scripted beat (the setup
       // offer, the feedback prompt) waiting in the main conversation.
       let flow = get().thread ? "idle" : get().flow;
@@ -676,6 +720,36 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
       }
       await lane.scripted(routeNote(note, flow));
       return true;
+    },
+
+    welcome: async () => {
+      await get().hydrate();
+      const s = get();
+      if (s.typing || s.streaming || s.pending !== undefined) return;
+      if (!isFirstVisit(s)) return;
+      // Marked before the beat, as the intro does, so a History opened meanwhile never plays both.
+      save({ introDone: true, flow: "idle", visit: { kind: "welcome" } });
+      await say([WELCOME], "main");
+    },
+    stepVisit: async (next, line) => {
+      const s = get();
+      if (s.typing || s.streaming || s.pending !== undefined) return;
+      save({ visit: next });
+      await say([line], "main");
+    },
+    askGoal: async () => {
+      const s = get();
+      if (s.typing || s.streaming || s.pending !== undefined) return;
+      // The goal is said in the main conversation, and the box takes focus to collect it.
+      set({ thread: undefined, focusSeq: s.focusSeq + 1 });
+      save({ visit: { kind: "goal" } });
+      await say([GOAL_ASK], "main");
+    },
+    clearGoal: async () => {
+      const s = get();
+      save({ goal: undefined, ...(s.visit?.kind === "goal" ? { visit: undefined } : {}) });
+      if (s.typing || s.streaming || s.pending !== undefined) return;
+      await say([GOAL_CLEARED], "main");
     },
 
     reset: () => {

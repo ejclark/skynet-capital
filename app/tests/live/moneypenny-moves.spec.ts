@@ -168,3 +168,28 @@ describe("dockText — a line as the dock shows it", () => {
     expect(text("Moneypenny · one\n\n- two   three\t\n")).toBe("one - two three");
   });
 });
+
+describe("movesFor — the first visit (#7487 slice 7) is one more stage of the same model", () => {
+  const welcome = at({ visit: { kind: "welcome" }, connected: false, firstTradeDone: false });
+
+  it("offers the visit's moves where the canned moves would stand", () => {
+    expect(labels(welcome)).toEqual(["Walk me through it", "First step", "I have a goal"]);
+    expect(labels(at({ visit: { kind: "tour", step: 1 } }))).toEqual(["Next ›", "That's enough"]);
+  });
+
+  it("waits under a turn, a parked card, a side thread and a scripted beat", () => {
+    expect(movesFor({ ...welcome, busy: true })).toEqual([]);
+    expect(labels({ ...welcome, parked: { ...base.parked, view: true } })).toEqual(
+      chipLabels(CONVICTION_CHIPS),
+    );
+    expect(movesFor({ ...welcome, inThread: true })).toEqual([BACK_TO_MAIN]);
+    expect(movesFor({ ...welcome, flow: "setup" })).toEqual([]);
+  });
+
+  it("gives the canned moves back once the visit is over", () => {
+    expect(labels(at({ connected: false, firstTradeDone: false }))).toEqual([
+      "Help me get set up",
+      "File feedback",
+    ]);
+  });
+});

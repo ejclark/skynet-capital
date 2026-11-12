@@ -1,4 +1,5 @@
 import type { CoachMessage, FeedbackKind } from "./feedback";
+import { type Goal, parseGoal, parseVisit, type Visit } from "./first-visit";
 import type { MpMessage } from "./moneypenny";
 import type { Flow } from "./moneypenny-script";
 import { isThread, type MpThread } from "./moneypenny-threads";
@@ -24,6 +25,11 @@ export interface Persisted {
   /** The side threads this member started on a page's rows (#7167 criterion 11) — their names
    *  and places; their lines are in `messages`, tagged with the thread's key. */
   readonly threads: readonly MpThread[];
+  /** Where the member is in their first visit (#7487 slice 7, `first-visit.ts`); absent = not in it. */
+  readonly visit: Visit | undefined;
+  /** The member's goal, pinned as the first row of Quests (slice 7). Kept in this blob, beside the
+   *  conversation it was set in: client persistence, so it lives on this device only. */
+  readonly goal: Goal | undefined;
 }
 
 export const EMPTY: Persisted = {
@@ -34,6 +40,8 @@ export const EMPTY: Persisted = {
   note: "",
   coach: [],
   kind: "idea",
+  visit: undefined,
+  goal: undefined,
 };
 
 export function load(member: string): Persisted {
@@ -41,9 +49,14 @@ export function load(member: string): Persisted {
     const raw = localStorage.getItem(keyFor(member));
     if (!raw) return EMPTY;
     const parsed = JSON.parse(raw) as Partial<Persisted>;
+    const { visit: savedVisit, goal: savedGoal, ...rest } = parsed;
     return {
       ...EMPTY,
-      ...parsed,
+      ...rest,
+      // Read back from the member's own storage: kept only when well-formed. Always present as
+      // keys, so binding to another member never leaves the last one's visit or goal behind.
+      visit: parseVisit(savedVisit),
+      goal: parseGoal(savedGoal),
       messages: Array.isArray(parsed.messages) ? parsed.messages : [],
       // A blob saved before threads existed has none.
       threads: Array.isArray(parsed.threads) ? parsed.threads.filter(isThread) : [],
