@@ -99,7 +99,11 @@ export function formatTranscript(messages: readonly MpMessage[]): string {
 const sleep = (ms: number) => new Promise<void>((ok) => setTimeout(ok, ms));
 
 export interface MoneypennyState extends Persisted {
-  readonly open: boolean;
+  /** The History sheet over the dock (#7487 slice 2): closed by default, closed on every
+   *  navigation. Asking her never opens it — the dock's latest line shows her answer. */
+  readonly history: boolean;
+  /** Bumps when something outside the dock asks for its box (`meetMoneypenny`) — the dock focuses it. */
+  readonly focusSeq: number;
   /** Her typing beat — the indicator before a line lands. */
   readonly typing: boolean;
   /** A live answer is arriving — the composer waits (a send now would collide with the stream). */
@@ -141,14 +145,16 @@ export interface MoneypennyState extends Persisted {
    *  undefined for the main one. Its exits answer only there, so a "send" typed elsewhere never
    *  files a card the member cannot see. */
   readonly parkedIn?: string;
-  /** Show `thread` in the rail, opening it — the row's "Continue in the chat". */
+  /** Show `thread` in the dock and its History — the row's "Continue in the chat". */
   readonly openThread: (thread: MpThread) => void;
   /** Back to the main conversation. */
   readonly closeThread: () => void;
-  /** Open the rail; with `intro`, play her intro script once per member (the `introDone` flag). */
-  readonly openRail: (opts?: { readonly intro?: boolean }) => Promise<void>;
-  readonly closeRail: () => void;
-  readonly toggleRail: () => void;
+  /** Wake the dock: switch the chat on and bind the member, so her moves read the member's own
+   *  facts; with `intro`, play her intro script once per member (the `introDone` flag). */
+  readonly wake: (opts?: { readonly intro?: boolean }) => Promise<void>;
+  readonly openHistory: () => void;
+  readonly closeHistory: () => void;
+  readonly toggleHistory: () => void;
   /** Load the member's saved conversation without opening the rail, so a row's thread shows on
    *  page load (#7308). Binds only a store nothing else has touched yet, and only to a member the
    *  read named: a failed read must never bind "anon", which would forget the member's own blob. */
@@ -158,8 +164,8 @@ export interface MoneypennyState extends Persisted {
   /** The member's turn — a typed message or a chip's canned one. False when not accepted (a
    *  reply is still arriving), so the composer keeps the text. */
   readonly send: (text: string, screenshots?: readonly string[]) => Promise<boolean>;
-  /** A question from outside the rail (the landing page's ask box): open the rail and show it at
-   *  once, then send it once the thread is bound — or after `bindWaitMs`, whichever comes first.
+  /** A question from outside the dock (a quick question, a row's ask): show it at once in the
+   *  dock, then send it once the thread is bound — or after `bindWaitMs`, whichever comes first.
    *  True when accepted, false when a turn is still under way (the caller keeps the text). With
    *  `thread`, the question opens (or continues) that row's side thread instead of the main one. */
   readonly ask: (text: string, thread?: MpThread) => boolean;
@@ -564,23 +570,27 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
 
   return {
     ...EMPTY,
-    open: false,
+    history: false,
+    focusSeq: 0,
     typing: false,
     streaming: false,
     filedSeq: 0,
     convictionSeq: 0,
 
-    openRail: async (opts) => {
-      set({ open: true });
+    wake: async (opts) => {
       void companionOn();
       const ob = await bind();
       if (opts?.intro && !get().introDone) await playIntro(ob);
     },
-    closeRail: () => set({ open: false }),
+    openHistory: () => {
+      set({ history: true });
+      void get().wake({ intro: true });
+    },
+    closeHistory: () => set({ history: false }),
     openThread: (thread) => {
       // Never mid-answer: her reply lands in the thread it was asked in, so the view waits for it.
       if (get().typing || get().streaming || get().pending !== undefined) return;
-      set({ thread, open: true });
+      set({ thread, history: true });
       renamed(thread);
       void companionOn();
       void bind();
@@ -589,15 +599,9 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
       if (get().typing || get().streaming || get().pending !== undefined) return;
       set({ thread: undefined });
     },
-    toggleRail: () => {
-      if (get().open) set({ open: false });
-      else {
-        // ✦ is Moneypenny herself: it opens on the main conversation, its threads indexed atop it.
-        // Mid-answer the view stays put, so her reply is seen landing where it was asked.
-        if (!(get().typing || get().streaming || get().pending !== undefined))
-          set({ thread: undefined });
-        void get().openRail({ intro: true });
-      }
+    toggleHistory: () => {
+      if (get().history) set({ history: false });
+      else get().openHistory();
     },
     hydrate: () => {
       if (!untouched()) return Promise.resolve();
@@ -621,7 +625,9 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
       const note = text.trim();
       const s = get();
       if (!note || s.typing || s.streaming || s.pending !== undefined) return false;
-      set({ open: true, pending: note, thread });
+      // The dock is always on screen, so asking shows the question there and opens nothing. A row's
+      // ask names its thread; an ask without one keeps whichever conversation is on screen.
+      set({ pending: note, ...(thread ? { thread } : {}) });
       if (thread) renamed(thread);
       void companionOn();
       void sendPending(note);
@@ -685,5 +691,10 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
 });
 
 /** Open the rail with her intro — the entry points other than the ✦ toggle all use this. */
-export const meetMoneypenny = (): Promise<void> =>
-  useMoneypenny.getState().openRail({ intro: true });
+export const meetMoneypenny = (): Promise<void> => {
+  // "Talk to Moneypenny" from a page (onboarding, the ladder, feedback): her conversation opens over
+  // the dock and the box takes focus, so the member can answer her at once.
+  const mp = useMoneypenny.getState();
+  useMoneypenny.setState({ history: true, focusSeq: mp.focusSeq + 1 });
+  return mp.wake({ intro: true });
+};

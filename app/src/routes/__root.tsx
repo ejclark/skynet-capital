@@ -7,13 +7,12 @@ import {
 } from "@tanstack/react-router";
 import { type ReactElement, useRef } from "react";
 import { horizonSearch } from "../live/horizon-params";
-import { useMoneypenny } from "../live/moneypenny";
 import { BrandEye } from "../shell/brand-eye";
 import { EyeLight } from "../shell/eye-light-layer";
 import { KeyboardChords } from "../shell/keyboard";
 import { LockInMoments } from "../shell/lock-in-ceremony";
 import { MemberMenu } from "../shell/member-menu";
-import { MoneypennyRail } from "../shell/moneypenny-rail";
+import { MoneypennyDock } from "../shell/moneypenny-dock";
 import { ShellError } from "../shell/route-error";
 import { SessionStatus } from "../shell/session-status";
 import { publishTopbarHeight } from "../shell/topbar-height";
@@ -33,9 +32,9 @@ import { Vantage } from "../shell/vantage";
  *   28m left"), with fleet health folded in — said on the line only when degraded. A tap opens the
  *   full clock (#3689), the next open and the fleet's rows (#1296) in place. The time left to trade
  *   is shell-level information, not an Accounts feature, so it rides every route.
- * - MONEYPENNY'S ✦: there is no Feedback tab (handoff 2026-09-03); the ✦ toggles her rail — a
- *   sibling of the whole app column, so it pushes everything left rather than covering the stage
- *   (`shell.css`, `.shell` / `.shell-app`).
+ * - MONEYPENNY lives in the DOCK under every page (#7487 slice 2, `moneypenny-dock.tsx`): her latest
+ *   line, her moves and the box. The ✦ toggle and the right rail it opened are gone; the dock's own
+ *   ✦ disc and "History" open her conversation.
  * - THE MEMBER MENU (`member-menu.tsx`): Settings and Sign out are actions on your own session, not
  *   views, so they sit behind one button wearing your initial instead of two icons of their own.
  *   Preferences (theme, density) live on /settings — per-viewer display state, not a destination.
@@ -89,24 +88,6 @@ function ProfileTab(): ReactElement {
     >
       Profile
     </Link>
-  );
-}
-
-/** The ✦ toggle — accent-tinted while the rail is open. */
-function MoneypennyToggle(): ReactElement {
-  const open = useMoneypenny((s) => s.open);
-  const toggleRail = useMoneypenny((s) => s.toggleRail);
-  return (
-    <button
-      type="button"
-      className="mp-toggle"
-      aria-pressed={open}
-      aria-label="Moneypenny — learning & feedback"
-      title="Moneypenny — learning & feedback"
-      onClick={toggleRail}
-    >
-      ✦
-    </button>
   );
 }
 
@@ -165,7 +146,6 @@ function RootShell(): ReactElement {
           </nav>
           <StatusLine />
           <div className="topbar-actions">
-            <MoneypennyToggle />
             <MemberMenu />
           </div>
         </header>
@@ -174,8 +154,8 @@ function RootShell(): ReactElement {
         <EyeLight root={app} />
         <KeyboardChords />
         <LockInMoments />
+        <MoneypennyDock />
       </div>
-      <MoneypennyRail />
     </div>
   );
 }

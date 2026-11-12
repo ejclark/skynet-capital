@@ -53,38 +53,13 @@ import { RowAsk, RowThread } from "./row-thread";
 export const askChat = (text: string, thread?: MpThread): boolean =>
   useMoneypenny.getState().ask(text, thread);
 
-/** Atop the page: the member's own question first, two quick questions as fallbacks. */
+/** Atop Overview: two quick questions. The member's own question is typed in the dock's box (#7487
+ *  slice 2, D6), the one text box Moneypenny reads, so this row holds only the canned paths. */
 export function AskBox(): ReactElement {
-  const [text, setText] = useState("");
   const [walking, setWalking] = useState(false);
-  const inputId = useId();
   const walkId = useId();
-  const submit = (e: FormEvent): void => {
-    e.preventDefault();
-    if (text.trim() && askChat(text)) setText("");
-  };
   return (
-    <section className="ask-box" aria-label="Ask">
-      <form className="ask-form" onSubmit={submit}>
-        <label className="visually-hidden" htmlFor={inputId}>
-          What do you want to do today?
-        </label>
-        <div className="ask-row">
-          <input
-            id={inputId}
-            className="ask-input"
-            type="text"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="What do you want to do today?"
-            autoComplete="off"
-            enterKeyHint="send"
-          />
-          <button type="submit" className="btn btn-primary ask-send" disabled={!text.trim()}>
-            Ask
-          </button>
-        </div>
-      </form>
+    <section className="ask-box" aria-label="Quick questions">
       <ul className="ask-quick" aria-label="Quick questions">
         {QUICK_QUESTIONS.map((q) =>
           q === FAST_TRACK_QUESTION ? (

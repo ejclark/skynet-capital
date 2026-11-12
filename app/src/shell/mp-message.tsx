@@ -6,7 +6,6 @@ import { linkPieces, pivotOf } from "../live/moneypenny-links";
 import { type Run, readMarkdown } from "../live/moneypenny-markdown";
 import { requestLight } from "./eye-light";
 import { MessageShots } from "./mp-screenshot";
-import { usePhoneWidth } from "./use-media";
 
 /**
  * ONE LINE OF A MONEYPENNY CONVERSATION, DRAWN — split from `moneypenny-rail.tsx` so a page's row
@@ -28,11 +27,12 @@ export function PlaceLink({
   readonly text: string;
 }): ReactElement {
   const router = useRouter({ warn: false });
-  const closeRail = useMoneypenny((s) => s.closeRail);
-  const phone = usePhoneWidth();
+  const closeHistory = useMoneypenny((s) => s.closeHistory);
   const onClick = (e: MouseEvent<HTMLAnchorElement>) => {
     if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-    if (phone) closeRail();
+    // Her conversation folds away so the page she points at is in view (the dock also closes it on
+    // every navigation; a same-page landing fires none, so it closes here too).
+    closeHistory();
     if (!router) return;
     e.preventDefault();
     // A link that names an item on a page (`#pos-NVDA`) also asks for the Eye's light onto it
