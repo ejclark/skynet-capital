@@ -162,6 +162,8 @@ export function MoneypennyDock(): ReactElement {
   const tagSeq = usePromptTags((s) => s.seq);
   const dropTag = usePromptTags((s) => s.drop);
   const clearTags = usePromptTags((s) => s.clear);
+  // What the last ✎ did, said aloud: focus lands in the box, whose name stays "Message Moneypenny".
+  const [tagNews, setTagNews] = useState("");
   const hydrate = useMoneypenny((s) => s.hydrate);
   const toggleHistory = useMoneypenny((s) => s.toggleHistory);
   const closeHistory = useMoneypenny((s) => s.closeHistory);
@@ -228,18 +230,26 @@ export function MoneypennyDock(): ReactElement {
   }, [focusSeq]);
 
   // ✎ on a window or a row: the box takes focus with that subject tagged above it (#7487 slice 3).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `tagSeq` IS the trigger; tags are read as of it
   useEffect(() => {
-    if (tagSeq > 0) box.current?.focus();
+    if (tagSeq === 0) return;
+    box.current?.focus();
+    const newest = tags.at(-1);
+    if (newest) setTagNews(`Tagged ${newest.label}, ${String(tags.length)} of 3`);
   }, [tagSeq]);
 
   /** The member's message with its ✎ tags: the subjects in words at the start of their line, and
    *  the calendar ones as keys her request carries for the server's check. They clear once it lands. */
   const sendTagged = async (text: string, screenshots?: readonly string[]): Promise<boolean> => {
-    if (tags.length === 0) return send(text, screenshots);
+    // A parked card or a scripted question waits on an exact answer ("send", "never mind", "yes"),
+    // so while one does, the line goes as typed and the tags wait for the next message.
+    const exact = draft || view || followup || research || (!thread && flow !== "idle");
+    if (tags.length === 0 || exact) return send(text, screenshots);
     stampTagged(taggedKeys(tags));
-    const accepted = await send(taggedLine(tags, text), screenshots);
+    // `send` resolves once her answer is in, so whatever the request did not read is spent here:
+    // a stamp never rides a later, unrelated question.
+    const accepted = await send(taggedLine(tags, text), screenshots).finally(() => stampTagged([]));
     if (accepted) clearTags();
-    else stampTagged([]);
     return accepted;
   };
 
@@ -286,6 +296,8 @@ export function MoneypennyDock(): ReactElement {
         } else if (tags.length > 0) {
           e.stopPropagation();
           clearTags();
+          box.current?.focus();
+          setTagNews("Tags cleared");
         }
       }}
       ref={dock}
@@ -325,6 +337,9 @@ export function MoneypennyDock(): ReactElement {
             onClose={close}
           />
         ) : null}
+        <p className="visually-hidden" aria-live="polite">
+          {tagNews}
+        </p>
         {/* Her answer, said aloud while History is closed (History's list is its own live region). */}
         <p className="visually-hidden" aria-live="polite">
           {history || waiting || !latest ? "" : line}
@@ -342,7 +357,12 @@ export function MoneypennyDock(): ReactElement {
                   type="button"
                   className="mp-tag-x"
                   aria-label={`Remove the tag ${t.label}`}
-                  onClick={() => dropTag(t.label)}
+                  onClick={() => {
+                    dropTag(t.label);
+                    // its own chip leaves with it, so focus goes back to the box, not to <body>
+                    box.current?.focus();
+                    setTagNews(`Removed ${t.label}`);
+                  }}
                 >
                   ×
                 </button>

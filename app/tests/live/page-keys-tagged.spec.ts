@@ -71,10 +71,19 @@ describe("pageKeys with ✎ tags", () => {
     expect(pageKeys()).toEqual(PAGE);
   });
 
-  it("returns undefined with no published page even when stamped, and the stamp is spent", () => {
-    stampTagged(["story-abc"]);
-    expect(pageKeys()).toBeUndefined();
+  it("sends a stamp from a page with no keys under the last edition published, once", () => {
+    // Tags survive moving between pages; the edition they name is the one the landing page last
+    // published, so the server can still check them.
     publish();
-    expect(pageKeys()).toEqual(PAGE);
+    unpublish();
+    unpublish = () => undefined;
+    stampTagged(["story-abc"]);
+    expect(pageKeys()).toEqual({
+      edition: PAGE.edition,
+      stories: [],
+      events: [],
+      tagged: { stories: ["abc"], events: [] },
+    });
+    expect(pageKeys()).toBeUndefined();
   });
 });

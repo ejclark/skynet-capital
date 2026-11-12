@@ -29,7 +29,12 @@ export function TagMark({
     <button
       type="button"
       className={`tag-mark tag-mark--${size}`}
-      aria-label={`Ask or say something about ${tag.label}`}
+      aria-label={
+        // the visible words stay in the name (label-in-name), the subject after them
+        size === "inline"
+          ? `Ask or say something about this: ${tag.label}`
+          : `Ask or say something about ${tag.label}`
+      }
       title="Ask or say something about this"
       onClick={onClick}
     >

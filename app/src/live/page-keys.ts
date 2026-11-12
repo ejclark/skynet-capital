@@ -25,6 +25,9 @@ export interface PageKeys {
 }
 
 let current: PageKeys | undefined;
+/** The edition the landing page last published: a tag made there names its rows in that edition,
+ *  and the member may send it from another page, where nothing is published. */
+let lastEdition: string | undefined;
 
 /** A message's ✎ tags, held from the tap of Send until her answer's request reads them once. The
  *  tags themselves clear as the message lands, before the request leaves; a stale one (the chat
@@ -45,8 +48,11 @@ export function stampTagged(anchors: readonly string[]): void {
 export function pageKeys(): PageKeys | undefined {
   const held = tagged && Date.now() - tagged.at < TAGGED_TTL_MS ? tagged : undefined;
   tagged = undefined;
-  if (!current) return undefined;
-  return held ? { ...current, tagged: { stories: held.stories, events: held.events } } : current;
+  const tags = held ? { tagged: { stories: held.stories, events: held.events } } : {};
+  if (current) return { ...current, ...tags };
+  return held && lastEdition
+    ? { edition: lastEdition, stories: [], events: [], ...tags }
+    : undefined;
 }
 
 /** Publish `keys` while the calling page is mounted; withdraw them when it unmounts. */
@@ -56,6 +62,7 @@ export function usePublishPageKeys(keys: PageKeys | undefined): void {
   useEffect(() => {
     if (!keys) return;
     current = keys;
+    lastEdition = keys.edition;
     return () => {
       if (current === keys) current = undefined;
     };

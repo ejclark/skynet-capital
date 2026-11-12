@@ -36,9 +36,13 @@ interface TagStore {
   readonly clear: () => void;
 }
 
+/** One subject is one tag: the same key (two events can share a name) or, keyless, the same words. */
+const same = (a: PromptTag, b: PromptTag): boolean =>
+  a.key !== undefined || b.key !== undefined ? a.key === b.key : a.label === b.label;
+
 /** The tags after tapping ✎ on `tag`: added at the end, the oldest dropped past three. */
 export function withTag(tags: readonly PromptTag[], tag: PromptTag): readonly PromptTag[] {
-  if (tags.some((t) => t.label === tag.label)) return tags;
+  if (tags.some((t) => same(t, tag))) return tags;
   return [...tags, tag].slice(-MAX_TAGS);
 }
 

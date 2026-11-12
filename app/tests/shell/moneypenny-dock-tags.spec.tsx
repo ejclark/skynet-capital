@@ -30,7 +30,11 @@ const STORY: PromptTag = { label: "Story · Fed holds", key: "story-fed" };
 const PAGE: PageKeys = { edition: "2026-11-11", stories: ["fed"], events: ["cpi"] };
 
 const markFor = (t: PromptTag) =>
-  screen.getByRole("button", { name: `Ask or say something about ${t.label}` });
+  screen.getByRole("button", {
+    name: new RegExp(
+      `^Ask or say something about (this: )?${t.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`,
+    ),
+  });
 const box = () => screen.getByLabelText("Message Moneypenny");
 const chips = () => Array.from(document.querySelectorAll("li.mp-tag")).map((li) => li.textContent);
 const historyShown = () => screen.queryByRole("region", { name: "Conversation with Moneypenny" });
@@ -219,6 +223,28 @@ describe("MoneypennyDock — ✎ tags", () => {
     fireEvent.keyDown(box(), { key: "Enter" });
     await flush();
     expect(sentText).toBe("hello");
+    expect(pageKeys()?.tagged).toBeUndefined();
+  });
+
+  it("an answer a parked card waits on goes as typed, and the tags wait for the next message", async () => {
+    // A drafted filing waits on the exact word "send"; a ✎ prefix would stop it matching.
+    let sentText: string | undefined;
+    useMoneypenny.setState({
+      send: (text: string) => {
+        sentText = text;
+        return Promise.resolve(true);
+      },
+      draft: { title: "t", body: "b" } as never,
+      parkedIn: undefined,
+    });
+    mount(<Marks />);
+    await flush();
+    fireEvent.click(markFor(ENERGY));
+    fireEvent.change(box(), { target: { value: "send" } });
+    fireEvent.keyDown(box(), { key: "Enter" });
+    await flush();
+    expect(sentText).toBe("send");
+    expect(chips()).toEqual([`✎ ${ENERGY.label}×`]);
     expect(pageKeys()?.tagged).toBeUndefined();
   });
 

@@ -22,11 +22,12 @@ describe("withTag", () => {
     expect(labels(withTag(one, tag("B")))).toEqual(["A", "B"]);
   });
 
-  it("changes nothing for a label already tagged, even with a different key", () => {
+  it("is one tag per subject: the same key, or keyless the same words", () => {
     const tags = [tag("A", "story-1"), tag("B")];
-    const again = withTag(tags, tag("A", "story-2"));
-    expect(again).toBe(tags);
-    expect(again[0]?.key).toBe("story-1");
+    // Two calendar events can share a name; their keys tell them apart, so both are kept.
+    expect(labels(withTag(tags, tag("A", "story-2")))).toEqual(["A", "B", "A"]);
+    expect(withTag(tags, tag("A again", "story-1"))).toBe(tags);
+    expect(withTag(tags, tag("B"))).toBe(tags);
   });
 
   it("keeps the newest three, dropping the oldest", () => {

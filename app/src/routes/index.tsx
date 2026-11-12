@@ -9,6 +9,7 @@ import {
   storyAnchor,
 } from "../../../src/domain/edition-keys";
 import { parseBoardMetric } from "../live/board";
+import { dayLabel } from "../live/book-events";
 import {
   asOfLine,
   type Edition,
@@ -246,7 +247,10 @@ function CalendarBody({
       eventAsk={(e) => (
         <>
           <TagMark
-            tag={{ label: `Calendar · ${e.what}`, key: eventAnchor(editionEventKey(e)) }}
+            tag={{
+              label: `Calendar · ${e.what} (${dayLabel(e.date)})`,
+              key: eventAnchor(editionEventKey(e)),
+            }}
             size="inline"
           />
           <EventThread event={e} />
