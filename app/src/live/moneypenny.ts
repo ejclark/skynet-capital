@@ -196,6 +196,10 @@ export interface MoneypennyState extends Persisted {
   readonly askGoal: () => Promise<void>;
   /** Forget the member's goal, and say so. */
   readonly clearGoal: () => Promise<void>;
+  /** Step out of the first visit without a line: a ✎-tagged question typed while the box collects a
+   *  goal is a question about what was tagged, never the goal (the box says "Ask about what you
+   *  tagged"), so the goal stage ends and the line routes as a question. */
+  readonly leaveVisit: () => void;
 }
 
 export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
@@ -740,9 +744,12 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
     askGoal: async () => {
       const s = get();
       if (s.typing || s.streaming || s.pending !== undefined) return;
-      // The goal is said in the main conversation, and the box takes focus to collect it.
+      // The goal is said in the main conversation, and the box takes focus to collect it. Any
+      // scripted beat still waiting there (the setup offer, left by an intro the member skipped past)
+      // is set aside, as the welcome does: a waiting beat hides every move, so the picks and "Not
+      // now" her line offers would never show.
       set({ thread: undefined, focusSeq: s.focusSeq + 1 });
-      save({ visit: { kind: "goal" } });
+      save({ flow: "idle", visit: { kind: "goal" } });
       await say([GOAL_ASK], "main");
     },
     clearGoal: async () => {
@@ -750,6 +757,9 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
       save({ goal: undefined, ...(s.visit?.kind === "goal" ? { visit: undefined } : {}) });
       if (s.typing || s.streaming || s.pending !== undefined) return;
       await say([GOAL_CLEARED], "main");
+    },
+    leaveVisit: () => {
+      if (get().visit) save({ visit: undefined });
     },
 
     reset: () => {

@@ -43,7 +43,8 @@ import { ThreadBar, ThreadIndex } from "./rail-threads";
 const dayOf = (at: number | undefined) => (at ? new Date(at).toDateString() : undefined);
 
 /** What the box asks for: about the ✎ tags, a reply in a side thread, the member's goal (the first
- *  visit, slice 7), or anything. */
+ *  visit, slice 7), or anything. Tags lead, and `sendTagged` keeps the same precedence: a tagged line
+ *  sent while the goal is collected is a question about the tags, never the goal. */
 const boxPlaceholder = (
   tagged: boolean,
   threadTitle: string | undefined,
@@ -176,6 +177,7 @@ export function MoneypennyDock(): ReactElement {
   const convictionSeq = useMoneypenny((s) => s.convictionSeq);
   const focusSeq = useMoneypenny((s) => s.focusSeq);
   const send = useMoneypenny((s) => s.send);
+  const leaveVisit = useMoneypenny((s) => s.leaveVisit);
   // The first visit (#7487 slice 7) lives in the main conversation only.
   const visit = useMoneypenny((s) => (s.thread ? undefined : s.visit));
   const collectingGoal = visit?.kind === "goal";
@@ -195,6 +197,10 @@ export function MoneypennyDock(): ReactElement {
   const href = useRouterState({ select: (s) => s.location.href });
   const queryClient = useQueryClient();
   const box = useRef<HTMLInputElement>(null);
+  const movesList = useRef<HTMLUListElement>(null);
+  // A first-visit move replaces itself with the next stage's moves; once it has played, focus goes
+  // to the first of them (or the box), never to <body>.
+  const [visitPlayed, setVisitPlayed] = useState(0);
   const opener = useRef<HTMLButtonElement>(null);
   const dock = useRef<HTMLDivElement>(null);
   const waiting = typing || pending !== undefined;
@@ -266,10 +272,11 @@ export function MoneypennyDock(): ReactElement {
   const sendTagged = async (text: string, screenshots?: readonly string[]): Promise<boolean> => {
     // A parked card or a scripted question waits on an exact answer ("send", "never mind", "yes"),
     // so while one does, the line goes as typed and the tags wait for the next message.
-    // So does a goal being collected: the goal is the member's own words, never a tag list.
-    const exact =
-      draft || view || followup || research || collectingGoal || (!thread && flow !== "idle");
+    const exact = draft || view || followup || research || (!thread && flow !== "idle");
     if (tags.length === 0 || exact) return send(text, screenshots);
+    // A goal being collected gives way to the tags: the box says "Ask about what you tagged", so the
+    // line is that question, and saving it as her goal would be a lie on the Quests row.
+    if (collectingGoal) leaveVisit();
     stampTagged(taggedKeys(tags));
     // `send` resolves once her answer is in, so whatever the request did not read is spent here:
     // a stamp never rides a later, unrelated question.
@@ -300,11 +307,20 @@ export function MoneypennyDock(): ReactElement {
       return;
     }
     if (m.kind === "visit") {
-      void runVisit(m.to);
+      void runVisit(m.to).then(() => setVisitPlayed((n) => n + 1));
       return;
     }
     goToPlace(router, m.href);
   };
+
+  useEffect(() => {
+    if (visitPlayed === 0) return;
+    const at = document.activeElement;
+    const list = movesList.current;
+    // Focus the member put somewhere else (the box the goal focused, a row) stays where it is.
+    if (at && at !== document.body && !list?.contains(at)) return;
+    (list?.querySelector<HTMLButtonElement>("button.mp-move") ?? box.current)?.focus();
+  }, [visitPlayed]);
 
   const line = waiting
     ? "typing ···"
@@ -374,7 +390,7 @@ export function MoneypennyDock(): ReactElement {
           {history || waiting || !latest ? "" : line}
         </p>
         {moves.length > 0 || tags.length > 0 ? (
-          <ul className="mp-moves" aria-label="Your moves">
+          <ul className="mp-moves" aria-label="Your moves" ref={movesList}>
             {/* The tags lead the row, then her moves; the box below never moves for either. */}
             {tags.map((t) => (
               <li key={`tag:${t.label}`} className="mp-tag">

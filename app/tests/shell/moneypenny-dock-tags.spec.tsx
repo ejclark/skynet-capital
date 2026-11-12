@@ -226,6 +226,31 @@ describe("MoneypennyDock — ✎ tags", () => {
     expect(pageKeys()?.tagged).toBeUndefined();
   });
 
+  it("a tagged line while the goal is collected is a question about the tags, never the goal", async () => {
+    // The first visit's goal stage (#7487 slice 7): the box says "Ask about what you tagged", so the
+    // line is that question; saving it as her goal would put a question on the Quests row.
+    let sentText: string | undefined;
+    useMoneypenny.setState({
+      send: (text: string) => {
+        sentText = text;
+        return realSend(text);
+      },
+      visit: { kind: "goal" },
+    });
+    mount(<Marks />);
+    await flush();
+    fireEvent.click(markFor(ENERGY));
+    expect(box()).toHaveAttribute("placeholder", "Ask about what you tagged");
+    fireEvent.change(box(), { target: { value: "explain this for me" } });
+    fireEvent.keyDown(box(), { key: "Enter" });
+    await flush();
+    await flush();
+    expect(sentText).toBe(`✎ ${ENERGY.label}: explain this for me`);
+    expect(useMoneypenny.getState().goal).toBeUndefined();
+    expect(useMoneypenny.getState().visit).toBeUndefined();
+    expect(chips()).toEqual([]);
+  });
+
   it("an answer a parked card waits on goes as typed, and the tags wait for the next message", async () => {
     // A drafted filing waits on the exact word "send"; a ✎ prefix would stop it matching.
     let sentText: string | undefined;

@@ -8,8 +8,9 @@ import { GOAL_ASK, TOUR_END, VISIT_STOPPED, WELCOME } from "../../src/live/first
 import { timing, useMoneypenny } from "../../src/live/moneypenny";
 import { useEyeLight } from "../../src/shell/eye-light";
 import { tourFacts } from "../../src/shell/first-visit-run";
+import { MissionWindowFrame, openQuietly } from "../../src/shell/mission-window";
 import { QuestGoal } from "../../src/shell/quest-goal";
-import { json, mount } from "./moneypenny-dock-harness";
+import { flush, json, mount } from "./moneypenny-dock-harness";
 
 /**
  * PLAYING THE FIRST VISIT (#7487 slice 7). The tour reads the page's own answers (the edition, the
@@ -198,6 +199,75 @@ describe("the first visit in the dock", () => {
     expect(screen.getByRole("button", { name: "Help me get set up" })).toBeTruthy();
   });
 
+  it("drops a tour step whose reads land after the member stopped the tour", async () => {
+    // Mid-tour, the edition read is still out when "Next ›" is tapped; the member stops the tour
+    // meanwhile. The stale step must not open its window, light the Eye or restart the tour.
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((ok) => {
+      release = ok;
+    });
+    const served = globalThis.fetch;
+    globalThis.fetch = ((url: string, init?: RequestInit) =>
+      url === "/api/edition"
+        ? gate.then(() => served(url, init))
+        : served(url, init)) as typeof globalThis.fetch;
+    useMoneypenny.setState({ visit: { kind: "tour", step: 0 } });
+    const { router } = mount();
+    act(() => {
+      fireEvent.click(screen.getByRole("button", { name: "Next ›" }));
+    });
+    act(() => {
+      fireEvent.click(screen.getByRole("button", { name: "That's enough" }));
+    });
+    await waitFor(() => expect(useMoneypenny.getState().messages.at(-1)?.text).toBe(VISIT_STOPPED));
+    release();
+    await flush();
+    await flush();
+    expect(useMoneypenny.getState().visit).toBeUndefined();
+    expect(router.state.location.search).not.toEqual({ w: "calendar" });
+    expect(useEyeLight.getState().request).toBeUndefined();
+    expect(useMoneypenny.getState().messages.at(-1)?.text).toBe(VISIT_STOPPED);
+  });
+
+  it("keeps focus in the dock through the tour: on the next move, not <body>", async () => {
+    mount();
+    const walk = screen.getByRole("button", { name: "Walk me through it" });
+    walk.focus();
+    act(() => {
+      fireEvent.click(walk);
+    });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Next ›" })).toHaveFocus());
+    // "One last thing ›" replaces itself with the end's moves; focus follows to the first of them.
+    useMoneypenny.setState({ visit: { kind: "tour", step: 3 } });
+    const last = await screen.findByRole("button", { name: "One last thing ›" });
+    last.focus();
+    act(() => {
+      fireEvent.click(last);
+    });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Set a goal" })).toHaveFocus());
+  });
+
+  it("a window the tour opens leaves focus in the dock; one the member switches to takes it", () => {
+    const frame = () => (
+      <MissionWindowFrame
+        id="market"
+        side={1}
+        title="Market"
+        sub=""
+        links={[]}
+        open={() => undefined}
+      >
+        <p>rows</p>
+      </MissionWindowFrame>
+    );
+    openQuietly("market");
+    render(frame());
+    expect(screen.getByRole("heading", { name: "Market" })).not.toHaveFocus();
+    cleanup();
+    render(frame());
+    expect(screen.getByRole("heading", { name: "Market" })).toHaveFocus();
+  });
+
   it("collects a goal in the box, then pins it as the first row of Quests", async () => {
     mount(
       <ul>
@@ -224,7 +294,8 @@ describe("the first visit in the dock", () => {
       fireEvent.click(screen.getByRole("button", { name: "Clear your goal" }));
     });
     expect(useMoneypenny.getState().goal).toBeUndefined();
-    expect(screen.getByRole("button", { name: /Set a goal/ })).toBeTruthy();
+    // Clear unmounts itself; focus lands on the "Set a goal" row that replaces it, not <body>.
+    await waitFor(() => expect(screen.getByRole("button", { name: /Set a goal/ })).toHaveFocus());
   });
 
   it("tags the goal row with the day it was set once that day has passed", () => {

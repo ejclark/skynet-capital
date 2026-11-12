@@ -156,6 +156,15 @@ export interface WindowLink {
   readonly to: MissionWindow;
 }
 
+/** The window the first-visit tour is opening (#7487 slice 7), if any. The tour is driven from the
+ *  dock, one control at a time, and her line about the window reaches assistive tech through the
+ *  dock's live region, so that window leaves focus in the dock instead of taking it at its heading.
+ *  Set just before the tour navigates, consumed by the frame it opens, cleared once her line lands. */
+let quietFor: MissionWindow | undefined;
+export function openQuietly(w: MissionWindow | undefined): void {
+  quietFor = w;
+}
+
 /** The window on the stage. Keyed by its id at the call site, so each opening slides in fresh. */
 export function MissionWindowFrame({
   id,
@@ -183,6 +192,10 @@ export function MissionWindowFrame({
   const heading = useRef<HTMLHeadingElement>(null);
   // biome-ignore lint/correctness/useExhaustiveDependencies: on mount only; the frame is keyed by id
   useEffect(() => {
+    if (quietFor === id) {
+      quietFor = undefined;
+      return;
+    }
     if (side !== 0) heading.current?.focus({ preventScroll: true });
   }, []);
   const from = useTrail((s) => s.trail.from[id]);

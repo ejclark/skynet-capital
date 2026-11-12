@@ -22,6 +22,7 @@ import { fetchQuests, placeQuests, type QuestsAnswer } from "../live/quests";
 import { DEFAULT_LENS } from "../live/research";
 import { requestLight } from "./eye-light";
 import { calendarShows } from "./landing-calendar";
+import { openQuietly } from "./mission-window";
 import { partyRows } from "./mission-windows";
 
 /**
@@ -96,12 +97,17 @@ export function tourFacts(
   };
 }
 
+/** The latest tour step asked for. A step waits on the page's reads; one asked for after it (a
+ *  second tap, "That's enough", the goal) makes it stale. */
+let latestRun = 0;
+
 /** Run a first-visit move: the dock's `run` hands every `visit` move here. */
 export function useRunVisit(): (to: VisitStep) => Promise<void> {
   const client = useQueryClient();
   const router = useRouter();
   return async (to) => {
     const mp = useMoneypenny.getState();
+    const run = ++latestRun;
     if (mp.typing || mp.streaming || mp.pending !== undefined) return;
     if (to.kind === "goal") return mp.askGoal();
     if (to.kind === "stop") return mp.stepVisit(undefined, VISIT_STOPPED);
@@ -113,9 +119,22 @@ export function useRunVisit(): (to: VisitStep) => Promise<void> {
       read(client, ["quests"], fetchQuests),
       read(client, ["board", "realized"], () => fetchBoard("realized")),
     ]);
+    // While the reads were out the member may have left the visit ("That's enough", a typed line, a
+    // side thread), tapped again, or started a turn: then this step is stale, and it must not open a
+    // window, light the Eye or bring the visit back under them.
+    const now = useMoneypenny.getState();
+    const busy = now.typing || now.streaming || now.pending !== undefined;
+    if (run !== latestRun || now.visit !== mp.visit || now.thread || busy) return;
     const stop = tourStop(window, tourFacts(view, quests, board, mp.connected === true));
+    // The tour is driven from the dock, so the window it opens leaves focus there (the dock puts it
+    // on the next move) instead of taking it at its heading.
+    openQuietly(stop.window);
     void router.navigate({ to: "/", search: { w: parseWindow(stop.window) } });
     if (stop.anchor) requestLight(`/#${stop.anchor}`, stop.reason);
-    await useMoneypenny.getState().stepVisit(visitAfter(to), stop.line);
+    try {
+      await useMoneypenny.getState().stepVisit(visitAfter(to), stop.line);
+    } finally {
+      openQuietly(undefined);
+    }
   };
 }

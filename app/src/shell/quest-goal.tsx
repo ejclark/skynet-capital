@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import { type ReactElement, useEffect, useRef } from "react";
 import { GOAL_ANCHOR, goalTag } from "../live/first-visit";
 import { useMoneypenny } from "../live/moneypenny";
 import { MissionRow } from "./mission-window";
@@ -20,6 +20,14 @@ export function QuestGoal({ now = Date.now() }: { readonly now?: number }): Reac
   const goal = useMoneypenny((s) => s.goal);
   const askGoal = useMoneypenny((s) => s.askGoal);
   const clearGoal = useMoneypenny((s) => s.clearGoal);
+  // Clear unmounts itself (the row becomes "Set a goal"), so focus goes to that row's control, never
+  // to <body>, the way a window switch focuses its heading.
+  const cleared = useRef(false);
+  useEffect(() => {
+    if (goal || !cleared.current) return;
+    cleared.current = false;
+    document.getElementById(GOAL_ANCHOR)?.querySelector<HTMLButtonElement>("button")?.focus();
+  }, [goal]);
   if (!goal)
     return (
       <MissionRow
@@ -27,6 +35,7 @@ export function QuestGoal({ now = Date.now() }: { readonly now?: number }): Reac
         title="Set a goal"
         sub="Optional · say it in your own words"
         onOpen={() => void askGoal()}
+        anchor={GOAL_ANCHOR}
       />
     );
   return (
@@ -53,7 +62,10 @@ export function QuestGoal({ now = Date.now() }: { readonly now?: number }): Reac
         type="button"
         className="mctl-row-act"
         aria-label="Clear your goal"
-        onClick={() => void clearGoal()}
+        onClick={() => {
+          cleared.current = true;
+          void clearGoal();
+        }}
       >
         Clear
       </button>

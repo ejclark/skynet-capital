@@ -1,12 +1,14 @@
 import {
   GOAL_ASK,
   GOAL_CLEARED,
+  GOAL_PICKS,
   GOAL_SET,
   TOUR_END,
   VISIT_STOPPED,
   WELCOME,
 } from "../../src/live/first-visit";
 import { timing, useMoneypenny } from "../../src/live/moneypenny";
+import { movesFor } from "../../src/live/moneypenny-moves";
 import { keyFor, load } from "../../src/live/moneypenny-storage";
 import { json, onboarding } from "../shell/moneypenny-dock-harness";
 
@@ -134,6 +136,27 @@ describe("a member's first visit", () => {
     expect(mpLines().at(-1)).toBe(GOAL_SET);
     expect(chats).toBe(0);
     expect(load("m-1").goal?.text).toBe("Get comfortable with covered calls");
+  });
+
+  it("asked for outside the welcome, sets aside a waiting setup beat so the picks show", async () => {
+    // A member who skipped past the intro (History first, or a new conversation) has the setup
+    // offer still waiting; the Quests row's "Set a goal" must still offer the picks and "Not now".
+    useMoneypenny.setState({ member: "m-1", introDone: true, flow: "setup", visit: undefined });
+    await useMoneypenny.getState().askGoal();
+    const s = useMoneypenny.getState();
+    expect(s.flow).toBe("idle");
+    expect(s.visit).toEqual({ kind: "goal" });
+    const labels = movesFor({
+      busy: false,
+      inThread: false,
+      flow: s.flow,
+      parked: { draft: false, view: false, followup: false, research: false },
+      connected: false,
+      firstTradeDone: false,
+      latest: undefined,
+      ...(s.visit ? { visit: s.visit } : {}),
+    }).map((m) => m.label);
+    expect(labels).toEqual([...GOAL_PICKS, "Not now"]);
   });
 
   it("answers a question typed while a goal is collected, and the goal waits", async () => {
