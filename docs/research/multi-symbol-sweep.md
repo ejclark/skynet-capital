@@ -1159,6 +1159,9 @@ robust, alpha fragile — is the finding.
   "removed political overhang" lift off a result whose own winners campaigned on the overhang: Democrats took both chambers and the Texas governor's race on a pledge to halt new data centers,
   and the power sleeve fell −10.65% on 11-04 alone while the S&P rose 1.58%.
 
+- **"The $42B-era indirect-share floor of 61.7% holds on the November 10-Year new issue (FT-treasury-10y-note-2026-11-10-5)"** — added 2026-11-12 from the
+  [treasury-10y-note-2026-11-10 close-out](events/treasury-10y-note-2026-11-10.md). The 11-10 auction printed indirect **61.23%** of competitive awards, 0.47pp under a floor that was simply the minimum of 11 prior prints (2024-11-05). Direct bidders took 29.0% and dealers 9.77%, so end-investor demand held. Do not register a floor equal to a small sample's own minimum; the next print is a coin flip against it.
+
 ## Portfolio-level critique — what no single-symbol view sees
 
 1. **Multiple testing.** ~40–70 statistical looks across eight tickers; the family-corrected bar
