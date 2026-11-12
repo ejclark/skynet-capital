@@ -108,6 +108,8 @@ interface Lit {
   readonly touch?: number;
   /** The item's corner radius. */
   readonly radius: number;
+  /** Why the Eye holds it, said on the ring's label beside "the Eye" (#7487 slice 7's tour). */
+  readonly reason?: string;
 }
 
 interface Drawn {
@@ -158,10 +160,13 @@ export function EyeRing({
   el,
   touch,
   radius = 0,
+  reason,
 }: {
   readonly el: HTMLElement;
   readonly touch?: number;
   readonly radius?: number;
+  /** Why the Eye is on it ("led the week"), in words on the label. */
+  readonly reason?: string;
 }): ReactElement | null {
   const rect = useLiveRect(el);
   if (!rect) return null;
@@ -198,7 +203,7 @@ export function EyeRing({
         </svg>
       )}
       <span className="eye-ring-label">
-        <span className="eye-ring-glyph">◉</span> the Eye
+        <span className="eye-ring-glyph">◉</span> the Eye{reason ? ` · ${reason}` : ""}
       </span>
     </div>
   );
@@ -332,9 +337,10 @@ export function EyeLight({
     const play = (el: HTMLElement) => {
       const path = page.current;
       const radius = radiusOf(el);
+      const reason = request.reason;
       const origin = prefersStill() ? undefined : originFor();
       if (!origin) {
-        setLit({ el, path, radius });
+        setLit({ el, path, radius, ...(reason ? { reason } : {}) });
         return;
       }
       // The Eye turns toward the item as it focuses (the scene's glance, `tower-bus.ts`).
@@ -363,6 +369,7 @@ export function EyeLight({
                   el,
                   path,
                   radius,
+                  ...(reason ? { reason } : {}),
                   // The spark comes down its arc's last leg from the control point (`onArc`).
                   touch: touchShare(target, arcControl(origin, centre(target), ceiling)),
                 },
@@ -441,7 +448,14 @@ export function EyeLight({
   return (
     <>
       {drawn && rootBox ? <LightLayer drawn={drawn} root={rootBox} /> : null}
-      {litHere ? <EyeRing el={litHere.el} touch={litHere.touch} radius={litHere.radius} /> : null}
+      {litHere ? (
+        <EyeRing
+          el={litHere.el}
+          touch={litHere.touch}
+          radius={litHere.radius}
+          reason={litHere.reason}
+        />
+      ) : null}
     </>
   );
 }

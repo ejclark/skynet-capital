@@ -233,6 +233,8 @@ export function scrollToFit(r: Rect, a: ViewArea): number {
 export interface LightRequest {
   readonly anchor: string;
   readonly seq: number;
+  /** Why the Eye lights it, in a few words for the ring's label (#7487 slice 7's tour). */
+  readonly reason?: string;
 }
 
 interface LightStore {
@@ -241,8 +243,9 @@ interface LightStore {
 
 export const useEyeLight = create<LightStore>(() => ({ request: undefined }));
 
-/** Light the item `path`'s hash names (`/accounts#pos-NVDA`); a path with no hash lights nothing. */
-export function requestLight(path: string): void {
+/** Light the item `path`'s hash names (`/accounts#pos-NVDA`); a path with no hash lights nothing.
+ *  With `reason`, the ring's label says why the Eye holds it ("◉ the Eye · led the week"). */
+export function requestLight(path: string, reason?: string): void {
   const hash = path.split("#")[1];
   if (!hash) return;
   let anchor = hash;
@@ -252,5 +255,5 @@ export function requestLight(path: string): void {
     // a malformed escape is still an anchor; match it as written
   }
   const seq = (useEyeLight.getState().request?.seq ?? 0) + 1;
-  useEyeLight.setState({ request: { anchor, seq } });
+  useEyeLight.setState({ request: { anchor, seq, ...(reason ? { reason } : {}) } });
 }

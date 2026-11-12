@@ -4,7 +4,9 @@ import type { ReactElement } from "react";
 import { type BoardRow, fetchBoard, isUnranked } from "../live/board";
 import type { Edition, EditionDate } from "../live/edition";
 import { moveFigure, type SectorsView } from "../live/edition-sectors";
+import { TOWER_ANCHOR } from "../live/first-visit";
 import type { MissionWindow } from "../live/mission";
+import { useMoneypenny } from "../live/moneypenny";
 import { signedMoney } from "../live/position-act";
 import type { Quest } from "../live/quests";
 import { MissionHead, MissionRow } from "./mission-window";
@@ -96,6 +98,8 @@ export function OverviewWindow({
 }): ReactElement {
   const navigate = useNavigate();
   const party = useParty();
+  // The member's goal leads Quests (#7487 slice 7); its glance here says one is set.
+  const goalSet = useMoneypenny((s) => s.goal !== undefined);
   const market = marketGlance(edition?.sectors);
   const next = quests?.[0];
   const split = party.data ? partyRows(party.data.rows) : undefined;
@@ -152,11 +156,11 @@ export function OverviewWindow({
           mark="◆"
           title="Quests"
           about={{ label: "Quests" }}
-          sub={
+          sub={`${
             quests
               ? `${String(quests.length)} for your account, best first`
               : "Yours once a paper account is connected"
-          }
+          }${goalSet ? " · goal set" : ""}`}
           {...(quests ? { figure: String(quests.length) } : {})}
           onOpen={() => open("quests")}
         />
@@ -208,6 +212,7 @@ export function PartyWindow(): ReactElement {
             {against.map((r) => (
               <MissionRow
                 key={r.key}
+                anchor={TOWER_ANCHOR}
                 title={r.name}
                 sub="bot"
                 figure={r.value}

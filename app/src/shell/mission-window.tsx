@@ -244,6 +244,7 @@ export function MissionRow({
   figure,
   onOpen,
   about,
+  anchor,
 }: {
   readonly mark?: string;
   readonly title: string;
@@ -253,6 +254,8 @@ export function MissionRow({
   readonly onOpen?: () => void;
   /** The row as a ✎ tag ("Party · Tony"), when it can be talked about (#7487 slice 3). */
   readonly about?: PromptTag;
+  /** The row's id, for the Eye to light it by (`requestLight`; the first-visit tour, slice 7). */
+  readonly anchor?: string;
 }): ReactElement {
   const body = (
     <>
@@ -277,7 +280,7 @@ export function MissionRow({
   const mark_ = about ? <TagMark tag={about} /> : null;
   if (onOpen)
     return (
-      <li className="mctl-row-item">
+      <li className="mctl-row-item" id={anchor}>
         <button type="button" className="mctl-row mctl-row--go" onClick={onOpen}>
           {body}
         </button>
@@ -285,7 +288,7 @@ export function MissionRow({
       </li>
     );
   return (
-    <li className="mctl-row-item">
+    <li className="mctl-row-item" id={anchor}>
       <div className="mctl-row">{body}</div>
       {mark_}
     </li>

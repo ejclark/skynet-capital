@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { questAnchor } from "../live/first-visit";
 import {
   exitLines,
   expiresLine,
@@ -27,7 +28,8 @@ import {
 
 function QuestItem({ quest }: { readonly quest: Quest }): ReactElement {
   return (
-    <li className="quest">
+    // The id lets the Eye light it (the first-visit tour, #7487 slice 7); a quest shows in one place.
+    <li className="quest" id={questAnchor(quest.id)}>
       <details className="quest-row">
         <summary className="quest-line">
           <span className="quest-label">{quest.move.label}</span>

@@ -17,6 +17,7 @@ import {
   storedLook,
   trailChart,
 } from "../live/edition-sectors";
+import { sectorAnchor } from "../live/first-visit";
 import { usePhoneWidth } from "./use-media";
 
 /**
@@ -152,7 +153,7 @@ function LineRow({
   readonly wide: boolean;
 }): ReactElement {
   return (
-    <li className={rowClass(row, "sector-line-row")}>
+    <li className={rowClass(row, "sector-line-row")} id={sectorAnchor(row.fund)}>
       <span className="sector-label">
         <span className="sector-title">
           <span className="sector-name">{row.name}</span>
@@ -175,7 +176,10 @@ function Tile({
 }): ReactElement {
   const shape = moveShape(row.moves[period]);
   return (
-    <li className={`${rowClass(row, "sector-tile")} sector-tile--${shape.word}`}>
+    <li
+      className={`${rowClass(row, "sector-tile")} sector-tile--${shape.word}`}
+      id={sectorAnchor(row.fund)}
+    >
       <span className="sector-label">
         <span className="sector-name">{row.name}</span>
         <RangeWord row={row} />

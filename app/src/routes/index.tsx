@@ -19,8 +19,10 @@ import {
   waitingOn,
 } from "../live/edition";
 import { sinceLine } from "../live/edition-sectors";
+import { CONNECT_ANCHOR } from "../live/first-visit";
 import { useHorizonRange } from "../live/horizon-params";
 import { DEFAULT_WINDOW, type MissionWindow, parseWindow } from "../live/mission";
+import { useMoneypenny } from "../live/moneypenny";
 import { type PageKeys, usePublishPageKeys } from "../live/page-keys";
 import { signedMoney } from "../live/position-act";
 import { fetchQuests, placeQuests, type QuestsAnswer } from "../live/quests";
@@ -45,6 +47,7 @@ import {
   partyRows,
   useParty,
 } from "../shell/mission-windows";
+import { QuestGoal } from "../shell/quest-goal";
 import { SectorOverview } from "../shell/sector-overview";
 import { TagMark } from "../shell/tag-mark";
 
@@ -56,6 +59,9 @@ import { TagMark } from "../shell/tag-mark";
  * default; a `#event-`/`#story-` link or a `?show=` pivot opens the Calendar. Market, Calendar and
  * Quests are the components below, unchanged inside the window; Overview and Party are new
  * (`shell/mission-windows.tsx`). The ask box leads Overview until the dock replaces it (slice 2).
+ * A member's first visit (slice 7) starts here: her welcome in the dock, a tour that opens one
+ * window per step with the Eye on one real row, and a goal pinned as the first row of Quests
+ * (`live/first-visit.ts`, `shell/first-visit-run.ts`, `shell/quest-goal.tsx`).
  * What follows is the page's history; its parts still hold inside their windows.
  *
  * THE LANDING PAGE (#7077, parent #6948 slice 4): sign-in opens the day's market news, not the
@@ -269,10 +275,21 @@ function QuestsBody({
   placed,
   onConnect,
 }: Pick<WindowBodyProps, "answer" | "placed" | "onConnect">): ReactElement {
-  if (answer) return <AccountQuests quests={placed.account} unread={answer.unread} />;
+  // The member's goal leads the window, whether or not an account is connected (#7487 slice 7).
+  if (answer)
+    return (
+      <>
+        <ul className="mctl-rows">
+          <QuestGoal />
+        </ul>
+        <AccountQuests quests={placed.account} unread={answer.unread} />
+      </>
+    );
   return (
     <ul className="mctl-rows">
+      <QuestGoal />
       <MissionRow
+        anchor={CONNECT_ANCHOR}
         mark="◆"
         title="Connect your paper account"
         sub="Your quests are read from your own positions and cash · play money only"
@@ -364,6 +381,13 @@ function Landing(): ReactElement {
       resetScroll: false,
     });
   }, [inferred]);
+  // A member's first visit (#7487 slice 7): her latest line becomes the welcome and its three moves.
+  // The store decides whether this is one (a bound member the server has no record of yet); a
+  // returning member, or a signed-out viewer, gets nothing new.
+  const welcome = useMoneypenny((s) => s.welcome);
+  useEffect(() => {
+    void welcome();
+  }, [welcome]);
   const keys = editionKeys(view.data?.edition, view.data?.today, horizon, pivot);
   // The chat sends these with a question asked from here, and her links land on the same rows. They
   // are published from every window, not only the Calendar's: each is one tap away (a link into the
