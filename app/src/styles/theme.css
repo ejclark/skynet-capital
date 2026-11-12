@@ -142,7 +142,6 @@
     /* warm-white vanishes on white, so light mode's "charged" is a deep teal ink: 6.4:1 on
        --surface-2, the same emphasis role in the only direction that shows up */
     --charged: #0a5f54;
-    --voice: #0a5f54;
     /* the light accent is 3.1:1 on the page, a mark not a text colour: her words take the ink */
     --voice: #0a5f54;
     --accent-contrast: #032420; /* on --accent #0e9f8c: 4.98:1 (white was 3.30, under AA) */
@@ -177,6 +176,7 @@
   --pos: #1a7f37;
   --neg: #cf222e;
   --charged: #0a5f54;
+  --voice: #0a5f54;
   --accent-contrast: #032420; /* on --accent #0e9f8c: 4.98:1 (white was 3.30, under AA) */
   --pos-contrast: #ffffff;
   /* the light ramp, twice over — this block and the prefers-color-scheme copy above must move
