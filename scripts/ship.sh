@@ -725,6 +725,13 @@ cmd_automerge() {
   node="$(printf '%s' "$body" | json_field node_id)"
   [ -n "$node" ] || { echo "ship automerge: no node_id on PR #$num" >&2; exit 2; }
   local base_ref; base_ref="$(printf '%s' "$body" | python3 -c 'import sys,json; print(json.load(sys.stdin)["base"]["ref"])')"
+  # NEVER ARM A STACKED CHILD (2026-11-12). A PR based on another PR's branch merges INTO that branch,
+  # and pipeline.yml runs CI only on PRs into main. When its parent squash-merges, GitHub retargets it
+  # to main, `node scripts/stack-sync.mjs <parent>` catches it up, and the pipeline arms it from there.
+  if [ "$base_ref" != "main" ]; then
+    echo "ship automerge: #$num is based on '$base_ref', not main — a stacked child is never armed. It arms itself once its parent merges and its base is main (see the ship skill's Stacked slices)." >&2
+    exit 7
+  fi
   git fetch origin "$base_ref" >/dev/null 2>&1 || true
 
   # Guard on the PR's OWN file list, not the local tree: this is the thing being armed, and a

@@ -73,7 +73,10 @@ async function scan() {
   const isBoarded = boardedBranches(open);
   const stuck = [];
   for (const listed of open) {
-    if (listed.draft || Date.parse(listed.created_at) > cutoff) continue;
+    // Pipeline runs only on PRs into main, so a stacked child (based on its parent's branch) has no
+    // checks to stall on. It is retargeted to main when its parent merges; headless-pr.mjs skips it too.
+    if (listed.draft || listed.base?.ref !== "main" || Date.parse(listed.created_at) > cutoff)
+      continue;
     const sha = listed.head.sha;
     const [checks, suites] = await Promise.all([
       api(`commits/${sha}/check-runs?per_page=100`),
