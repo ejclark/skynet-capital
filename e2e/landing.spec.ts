@@ -453,4 +453,33 @@ test.describe("campaign mission control", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(rail).toBeHidden();
   });
+
+  // Slice 3: ✎ tags a window or a row onto the dock's prompt; Escape in the dock drops every tag.
+  test("tags a window and an opened event onto the dock's box with ✎, and Escape clears them", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/app/?w=market");
+    const box = page.getByRole("textbox", { name: "Message Moneypenny" });
+    const tags = page.getByRole("list", { name: "Your moves" }).locator("li.mp-tag");
+    await page
+      .locator("header.mctl-window-head")
+      .getByRole("button", { name: /^Ask or say something about Market/ })
+      .click();
+    await expect(box).toBeFocused();
+    await expect(tags).toHaveCount(1);
+    await expect(tags.first()).toHaveText(/✎\s*Market/);
+    await page
+      .getByRole("navigation", { name: "Linked windows" })
+      .getByRole("button", { name: /Calendar/ })
+      .click();
+    await expect(page.locator("h1.mctl-window-title")).toHaveText("The calendar");
+    const event = page.locator(".ecal li.ecal-event").first();
+    await event.locator("summary.ecal-line").click();
+    await event.locator("button.tag-mark--inline").click();
+    await expect(tags).toHaveCount(2);
+    await expect(tags.nth(1)).toContainText("Calendar · ");
+    await box.press("Escape");
+    await expect(tags).toHaveCount(0);
+  });
 });
