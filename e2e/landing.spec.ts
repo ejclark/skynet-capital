@@ -6,27 +6,25 @@ import { expect, test } from "@playwright/test";
 // under week headers (AT10), with R&D's month grid beside them at desktop width (AT11).
 // Behavioural only: the edition is the latest one checked in, and the server cuts its dated items
 // against the real date, so the words change by design; the shape is what's held here.
+// #7487 slice 1 (Campaign mission control): the page is now one window at a time, chosen by `?w=`
+// (Overview the default, never written). The ask box leads Overview at /app/; the sectors are the
+// Market window (`?w=market`), the calendar the Calendar window (`?w=calendar`) and the account's
+// quests the Quests window (`?w=quests`). Each test opens the window its part now lives in.
 test.describe("landing page", () => {
-  // AT9 as revised (#7018 round 5) with AT1 and AT8: the question box and its two canned paths lead,
-  // on one row each, and all 11 sectors and the S&P 500 still end above the 844px fold at 390, each
-  // with its 20-day range mark and a whole figure (#7018 round 6's geometry: ~838px).
-  test("opens on the question box, then all 11 sectors and the S&P 500 above the fold, each with its range mark", async ({
+  // AT9 as revised (#7018 round 5): the question box and its two canned paths lead the Overview
+  // window at /app/, one line, its canned paths on one row, ahead of "Your next step".
+  test("opens on the question box, one line, its canned paths on one row (AT9)", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/app/");
-    await page.evaluate(() => window.localStorage.removeItem("skynet.landing.sector-look"));
-    await page.reload();
     await expect(page).toHaveURL(/\/app\/$/);
-    const rows = page.locator(".sectors-rows--lines > li");
-    await expect(rows).toHaveCount(12);
-    await expect(rows.first()).toContainText("S&P 500");
-    // AT9: the question box leads the overview, one line, its canned paths on one row.
     const ask = page.getByLabel("What do you want to do today?");
     const before = await page
-      .locator(".sectors")
+      .locator(".mctl-window .mctl-rows")
+      .first()
       .evaluate(
-        (s, a) => Boolean(a && s.compareDocumentPosition(a) & Node.DOCUMENT_POSITION_PRECEDING),
+        (r, a) => Boolean(a && r.compareDocumentPosition(a) & Node.DOCUMENT_POSITION_PRECEDING),
         await ask.elementHandle(),
       );
     expect(before).toBe(true);
@@ -35,9 +33,28 @@ test.describe("landing page", () => {
     const chips = await page.locator(".ask-quick .ask-chip").all();
     const tops = await Promise.all(chips.map(async (c) => (await c.boundingBox())?.y ?? -1));
     expect(new Set(tops).size).toBe(1);
+  });
+
+  // AT1 and AT8: all 11 sectors and the S&P 500 still end within an 844px screen of the Market
+  // window's top at 390, each with its 20-day range mark and a whole figure (#7018 round 6's
+  // geometry: ~838px). The trail now sits above the window, so the fold is measured from the window.
+  test("opens the Market window on all 11 sectors and the S&P 500 within one screen, each with its range mark", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/app/?w=market");
+    await page.evaluate(() => window.localStorage.removeItem("skynet.landing.sector-look"));
+    await page.reload();
+    await expect(page).toHaveURL(/\/app\/\?w=market$/);
+    const rows = page.locator(".sectors-rows--lines > li");
+    await expect(rows).toHaveCount(12);
+    await expect(rows.first()).toContainText("S&P 500");
+    const top = (await page.locator("section.mctl-window").boundingBox())?.y ?? 0;
     for (const row of await rows.all()) {
       const box = await row.boundingBox();
-      expect((box?.y ?? Number.POSITIVE_INFINITY) + (box?.height ?? 0)).toBeLessThanOrEqual(844);
+      expect((box?.y ?? Number.POSITIVE_INFINITY) + (box?.height ?? 0) - top).toBeLessThanOrEqual(
+        844,
+      );
       // AT8: the range mark replaced the ▲ ▼, and says where the close sits for a screen reader.
       await expect(row.locator(".sector-range")).toHaveAttribute("aria-label", /20-day range/);
       await expect(row.locator(".sector-glyph")).toHaveCount(0);
@@ -68,7 +85,7 @@ test.describe("landing page", () => {
   });
 
   test("redraws every move for the period chosen, Week first (AT2)", async ({ page }) => {
-    await page.goto("/app/");
+    await page.goto("/app/?w=market");
     const period = page.getByRole("group", { name: "Period" });
     await expect(period.getByRole("button", { name: "Week" })).toHaveAttribute(
       "aria-pressed",
@@ -85,7 +102,7 @@ test.describe("landing page", () => {
   test("draws the same numbers as Lines or Tiles, Lines first, and keeps the last view (AT3)", async ({
     page,
   }) => {
-    await page.goto("/app/");
+    await page.goto("/app/?w=market");
     await page.evaluate(() => window.localStorage.setItem("skynet.landing.sector-look", "bars"));
     await page.reload();
     // Bars are gone (AT3 revised): a member who had picked them opens on Lines.
@@ -106,20 +123,17 @@ test.describe("landing page", () => {
     await expect(page.locator(".sectors-rows--lines > li")).toHaveCount(12);
   });
 
-  // AT4 and AT5: below the sectors, the week's stories, then the coming days' events, each one line
-  // at 390 with its number whole, closed until tapped.
+  // AT4 and AT5: the Calendar window holds the week's stories, then the coming days' events, each
+  // one line at 390 with its number whole, closed until tapped. (Before #7487 the calendar sat below
+  // the sectors on one page; now each is its own window, so the calendar shows without the sectors.)
   test("puts every story and event on one line, closed until tapped (AT4, AT5)", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/app/");
-    const sectors = page.locator(".sectors");
-    const cal = page.locator(".ecal");
-    const below = await sectors.evaluate(
-      (s, c) => Boolean(c && s.compareDocumentPosition(c) & Node.DOCUMENT_POSITION_FOLLOWING),
-      await cal.elementHandle(),
-    );
-    expect(below).toBe(true);
+    await page.goto("/app/?w=calendar");
+    const cal = page.locator(".mctl-window .ecal");
+    await expect(cal).toBeVisible();
+    await expect(page.locator(".sectors")).toHaveCount(0);
     await expect(cal.locator(".ecal-key")).toContainText("◆");
     // AT5b: the days sit under week headers, and the weeks run down the page, never across.
     const weeks = cal.locator(".ecal-week-title");
@@ -167,7 +181,7 @@ test.describe("landing page", () => {
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/app/");
+    await page.goto("/app/?w=calendar");
     const cal = page.locator(".ecal");
     const lenses = cal.locator(".eh-lens");
     await expect(lenses).toHaveText(["Day", "Week", "Month"]);
@@ -196,7 +210,7 @@ test.describe("landing page", () => {
   // AT11: at desktop width R&D's month grid sits beside the rows, the range banded on it.
   test("adds R&D's month grid beside the rows at desktop width (AT11)", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
-    await page.goto("/app/");
+    await page.goto("/app/?w=calendar");
     const cal = page.locator(".ecal");
     const grid = cal.locator(".ecal-grid .eh-grid");
     await expect(grid).toBeVisible();
@@ -214,7 +228,7 @@ test.describe("landing page", () => {
     page,
   }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
-    await page.goto("/app/");
+    await page.goto("/app/?w=market");
     await page.evaluate(() => window.localStorage.removeItem("skynet.landing.sector-look"));
     await page.reload();
     const rows = page.locator(".sectors-rows--lines > li");
@@ -227,8 +241,11 @@ test.describe("landing page", () => {
       expect(points?.trim().split(/\s+/)).toHaveLength(20);
       await expect(trail.locator(".sector-trail-band")).toHaveCount(1);
       await expect(trail.locator(".sector-trail-dot")).toBeVisible();
-      // The room on the right goes to the chart: wider than the name's column at 1280.
-      expect((await trail.boundingBox())?.width ?? 0).toBeGreaterThan(200);
+      // The room on the right goes to the chart: wider than the name's column at 1280. (A fixed
+      // 200px held before #7487; the Waypoints rail now takes ~234px of the 1280, so the chart is
+      // measured against the name's column it sits beside, as the line above always said.)
+      const name = (await row.locator(".sector-name").boundingBox())?.width ?? 0;
+      expect((await trail.boundingBox())?.width ?? 0).toBeGreaterThan(name);
     }
     const ends = page.locator(".sectors-axis-ends > span");
     await expect(ends).toHaveCount(2);
@@ -247,7 +264,7 @@ test.describe("landing page", () => {
   test("answers a story's hunch with the record, never a buy call (criteria 5, 7)", async ({
     page,
   }) => {
-    await page.goto("/app/");
+    await page.goto("/app/?w=calendar");
     await page.locator(".story--lead > .story-row > summary").click();
     const ask = page.locator(".story--lead .story-ask");
     await expect(ask.getByText("Ask your own")).toBeVisible();
@@ -261,7 +278,8 @@ test.describe("landing page", () => {
   // Slice 3 (#7028 slice 5): quests sit by their source. The offline server owns no signed-in
   // account, so `/api/quests` answers 404 and the page draws none; this test answers it with one
   // market quest on the lead story's first name and four account quests, ranked as the route ranks.
-  test("puts a market quest under its story and the account's quests after the news, 3 shown (slice 3)", async ({
+  // Since #7487 the account's quests are the Quests window and the story's quest is in the Calendar.
+  test("puts a market quest under its story and the account's quests in their own window, 3 shown (slice 3)", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
@@ -303,17 +321,12 @@ test.describe("landing page", () => {
         json: { available: true, asOf: "2026-11-09T12:00:00Z", quests, unread: [] },
       }),
     );
-    await page.goto("/app/");
-    const part = page.locator("section.quests");
-    await expect(part.getByRole("heading", { name: "Your quests" })).toBeVisible();
-    // After the news: the calendar comes before the account's quests.
-    const after = await page
-      .locator(".ecal")
-      .evaluate(
-        (c, q) => Boolean(q && c.compareDocumentPosition(q) & Node.DOCUMENT_POSITION_FOLLOWING),
-        await part.elementHandle(),
-      );
-    expect(after).toBe(true);
+    await page.goto("/app/?w=quests");
+    const part = page.locator(".mctl-window section.quests");
+    // The section's own heading is visually hidden inside the window, but still names it.
+    await expect(part.getByRole("heading", { name: "Your quests" })).toBeAttached();
+    // Apart from the news: the Quests window holds no calendar.
+    await expect(page.locator(".ecal")).toHaveCount(0);
     await expect(part.locator(":scope > .quest-list > .quest")).toHaveCount(3);
     await expect(part.locator(".quest-rest > summary")).toHaveText("1 more quest");
     for (const line of await part.locator(".quest-line").all())
@@ -321,6 +334,7 @@ test.describe("landing page", () => {
     await part.scrollIntoViewIfNeeded();
     await part.screenshot({ path: "test-results/landing-quests-390.jpg", quality: 85 });
     // The market quest sits inside the lead story, closed until tapped, opening on a draft ticket.
+    await page.goto("/app/?w=calendar");
     await page.locator(".story--lead > .story-row > summary").click();
     const inStory = page.locator(".story--lead .story-quests");
     await expect(inStory.locator(".quest-label")).toHaveText(
@@ -337,17 +351,100 @@ test.describe("landing page", () => {
     await inStory.screenshot({ path: "test-results/landing-story-quest-390.jpg", quality: 85 });
   });
 
-  test("gives Chronicles the first tab, and the Leaderboard leaves the bar for Profile's card", async ({
+  test("gives Campaign the first tab, and the Leaderboard leaves the bar for Profile's card", async ({
     page,
   }) => {
     await page.goto("/app/");
     const nav = page.locator("nav.topnav");
-    await expect(nav.getByRole("link", { name: "Chronicles", exact: true })).toHaveAttribute(
+    await expect(nav.getByRole("link", { name: "Campaign", exact: true })).toHaveAttribute(
       "aria-current",
       "page",
     );
     await expect(nav.getByRole("link", { name: "Leaderboard" })).toHaveCount(0);
     await page.goto("/app/leaderboard");
     await expect(page.getByRole("heading", { name: "Leaderboard" })).toBeVisible();
+  });
+});
+
+// #7487 slice 1: Campaign mission control. One window at a time, `?w=` names it (Overview the
+// default, never written), the trail lists the windows reached this session, and the waypoints
+// rail sits beside the window from 861px.
+test.describe("campaign mission control", () => {
+  test("opens on Overview: the trail, your next step and every window at a glance", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/app/");
+    const win = page.locator("section.mctl-window");
+    await expect(win).toHaveCount(1);
+    await expect(win.locator("h1.mctl-window-title")).toHaveText("Where things stand");
+    const trail = page.getByRole("navigation", { name: "Windows opened this session" });
+    const pills = trail.locator(".mctl-trail-pill");
+    await expect(pills).toHaveCount(1);
+    await expect(pills.first()).toContainText("Overview");
+    await expect(pills.first()).toHaveAttribute("aria-current", "page");
+    await expect(win.getByRole("heading", { name: "Your next step" })).toBeVisible();
+    await expect(win.getByRole("heading", { name: "At a glance" })).toBeVisible();
+    const glance = win.locator(".mctl-rows").nth(1).locator("button.mctl-row");
+    await expect(glance.locator(".mctl-row-title")).toHaveText([
+      "The whole market",
+      "The calendar",
+      "Quests",
+      "The party",
+    ]);
+  });
+
+  test("opens a window from its row: the address gains ?w= and the trail both pills", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/app/");
+    await page.locator("section.mctl-window button.mctl-row", { hasText: "The calendar" }).click();
+    await expect(page).toHaveURL(/\/app\/\?w=calendar$/);
+    await expect(page.locator("h1.mctl-window-title")).toHaveText("The calendar");
+    await expect(page.locator(".mctl-window .ecal")).toBeVisible();
+    const pills = page
+      .getByRole("navigation", { name: "Windows opened this session" })
+      .locator(".mctl-trail-pill");
+    await expect(pills).toHaveCount(2);
+    await expect(pills.nth(0)).toContainText("Overview");
+    await expect(pills.nth(0)).not.toHaveAttribute("aria-current", "page");
+    await expect(pills.nth(1)).toContainText("Calendar");
+    await expect(pills.nth(1)).toHaveAttribute("aria-current", "page");
+    // The trail is Back: its Overview pill returns, and Overview is never written to the address.
+    await pills.nth(0).click();
+    await expect(page).toHaveURL(/\/app\/$/);
+    await expect(page.locator("h1.mctl-window-title")).toHaveText("Where things stand");
+  });
+
+  test("opens the Calendar window when the address points at one of its events", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    // A real key from the fixture edition: the first event row the calendar draws this week.
+    await page.goto("/app/?w=calendar");
+    const event = page.locator(".ecal li.ecal-event[id^='event-']").first();
+    await expect(event).toBeAttached();
+    const id = await event.getAttribute("id");
+    expect(id).toMatch(/^event-\d{4}-\d{2}-\d{2}/);
+    await page.goto("about:blank");
+    await page.goto(`/app/#${id}`);
+    await expect(page.locator("h1.mctl-window-title")).toHaveText("The calendar");
+    await expect(page.locator(`[id="${id}"]`)).toBeAttached();
+    // The inferred window is written into the address (replace, hash kept), so stepping the
+    // calendar's range or clearing a pivot never snaps the member back to Overview.
+    await expect(page).toHaveURL(/[?&]w=calendar/);
+    expect(new URL(page.url()).hash).toBe(`#${id}`);
+  });
+
+  test("shows the Waypoints rail at 1280 and hides it at 390", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("/app/");
+    const rail = page.getByRole("navigation", { name: "Waypoints" });
+    await expect(rail).toBeVisible();
+    await expect(rail.locator(".mctl-way")).toHaveCount(5);
+    await expect(rail.locator(".mctl-way[aria-current='page']")).toContainText("Overview");
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(rail).toBeHidden();
   });
 });
