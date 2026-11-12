@@ -19,6 +19,17 @@ interface Row {
   trail: number[];
 }
 
+/** A signed-in member. The offline server runs without auth, so its onboarding read names no
+ *  viewer, and Moneypenny's thread never binds: the Eye waits for a bound thread before it speaks
+ *  (`remark`), as it does for every member behind the invite gate. */
+async function signedIn(page: Page): Promise<void> {
+  await page.route("**/api/onboarding", async (route) => {
+    const res = await route.fetch();
+    const body = (await res.json()) as Record<string, unknown>;
+    await route.fulfill({ response: res, json: { ...body, viewerId: "e2e-member" } });
+  });
+}
+
 /** Serve the real edition with one sector that just left its usual range, and nothing else new. */
 async function oneSectorLeft(page: Page): Promise<Row> {
   let picked: Row | undefined;
@@ -47,6 +58,7 @@ async function oneSectorLeft(page: Page): Promise<Row> {
     await route.fulfill({ response: res, json: body });
   });
   await page.route("**/api/quests", (route) => route.fulfill({ status: 404, body: "" }));
+  await signedIn(page);
   await page.goto("/app/?w=market");
   await expect(page.locator(".sectors-rows > li").first()).toBeVisible();
   if (!picked) throw new Error("the edition carries no sectors");
