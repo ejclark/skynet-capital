@@ -431,7 +431,10 @@ test.describe("campaign mission control", () => {
     await page.goto(`/app/#${id}`);
     await expect(page.locator("h1.mctl-window-title")).toHaveText("The calendar");
     await expect(page.locator(`[id="${id}"]`)).toBeAttached();
-    await expect(page).not.toHaveURL(/[?&]w=/);
+    // The inferred window is written into the address (replace, hash kept), so stepping the
+    // calendar's range or clearing a pivot never snaps the member back to Overview.
+    await expect(page).toHaveURL(/[?&]w=calendar/);
+    expect(new URL(page.url()).hash).toBe(`#${id}`);
   });
 
   test("shows the Waypoints rail at 1280 and hides it at 390", async ({ page }) => {
