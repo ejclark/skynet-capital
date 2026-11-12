@@ -71,6 +71,9 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"A single meeting-month cohort of Summary-of-Opinions Nikkei moves is sampling noise, so the 2026-11-10 bar lands at or below the cohort median of 1.264% (FT-boj-summary-of-opinions-2026-11-10-1)"** — added 2026-11-12 from the
+  [boj-summary-of-opinions-2026-11-10 close-out](events/boj-summary-of-opinions-2026-11-10.md). The Nikkei 225 closed **+2.865%** (58,775.50 to 60,459.58; gap +1.02%) in a tape whose five prior sessions averaged 2.37%, after a +2.35% S&P session overnight. Do not register a fixed-threshold Tokyo bar against a BoJ document in a VIX-17+ regime without a vol-conditioned base rate; this is one kill on a median-threshold row, not evidence the Summary moves the index.
+
 - **"The release-day US session is indifferent to a BoJ Minutes release, so the clean-subset base rate (0.35x) is operative" (FT-boj-minutes-2026-11-05-4)** — added 2026-11-11 from the
   [boj-minutes-2026-11-05 close-out](events/boj-minutes-2026-11-05.md). The S&P 500 fell **4.355%** on 11-05 (7,688.62 to 7,353.73; VIX 16.61 to 28.18), a post-midterm AI/chip rout the press
   does not tie to Tokyo. Do not register a US-session threshold against a BoJ document that lands in the Nov 2-7 corridor; the calendar, not the document, sets the day.
