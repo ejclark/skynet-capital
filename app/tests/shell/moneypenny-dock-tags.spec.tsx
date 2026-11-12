@@ -101,11 +101,11 @@ describe("MoneypennyDock — ✎ tags", () => {
   it("the box's placeholder says what it is for while tags are on", async () => {
     mount(<Marks />);
     await flush();
-    expect(box()).not.toHaveAttribute("placeholder", "Ask or say something about what you tagged");
+    expect(box()).not.toHaveAttribute("placeholder", "Ask about what you tagged");
     fireEvent.click(markFor(CPI));
-    expect(box()).toHaveAttribute("placeholder", "Ask or say something about what you tagged");
+    expect(box()).toHaveAttribute("placeholder", "Ask about what you tagged");
     fireEvent.click(screen.getByRole("button", { name: `Remove the tag ${CPI.label}` }));
-    expect(box()).not.toHaveAttribute("placeholder", "Ask or say something about what you tagged");
+    expect(box()).not.toHaveAttribute("placeholder", "Ask about what you tagged");
   });
 
   it("× removes only its own tag", async () => {

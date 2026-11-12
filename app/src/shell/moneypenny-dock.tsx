@@ -381,7 +381,7 @@ export function MoneypennyDock(): ReactElement {
           ref={box}
           placeholder={
             tags.length > 0
-              ? "Ask or say something about what you tagged"
+              ? "Ask about what you tagged"
               : thread
                 ? `Reply in the thread on ${thread.title}`
                 : "Ask, or say where to go"
