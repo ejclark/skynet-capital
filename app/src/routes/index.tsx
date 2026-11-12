@@ -1,20 +1,53 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate, useRouterState } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { editionEventKey, PIVOT_PARAM, parsePivot } from "../../../src/domain/edition-keys";
 import { parseBoardMetric } from "../live/board";
-import { asOfLine, type Edition, type EditionView, fetchEdition, staleLine } from "../live/edition";
+import {
+  asOfLine,
+  type Edition,
+  type EditionDate,
+  fetchEdition,
+  staleLine,
+  waitingOn,
+} from "../live/edition";
 import { useHorizonRange } from "../live/horizon-params";
+import { DEFAULT_WINDOW, type MissionWindow, parseWindow } from "../live/mission";
 import { type PageKeys, usePublishPageKeys } from "../live/page-keys";
+import { signedMoney } from "../live/position-act";
 import { fetchQuests, placeQuests } from "../live/quests";
-import { useLandOnEdition } from "../shell/edition-anchor";
+import { targetedEditionAnchor, useLandOnEdition } from "../shell/edition-anchor";
 import { PageFrame } from "../shell/frame";
 import { AskBox, EventThread, StoryAsk } from "../shell/landing-ask";
 import { calendarShows, LandingCalendar } from "../shell/landing-calendar";
 import { AccountQuests, StoryQuests } from "../shell/landing-quests";
+import {
+  MissionRow,
+  MissionWindowFrame,
+  Trail,
+  useOpenWindow,
+  Waypoints,
+  type WindowLink,
+} from "../shell/mission-window";
+import {
+  marketGlance,
+  OverviewWindow,
+  PartyWindow,
+  partyRows,
+  useParty,
+} from "../shell/mission-windows";
 import { SectorOverview } from "../shell/sector-overview";
 
 /**
+ * CAMPAIGN MISSION CONTROL (#7487 slice 1, the Claude Design handoff of 2026-11-11): the landing
+ * page is now ONE WINDOW AT A TIME — Overview, Market, Calendar, Quests, Party — with the trail of
+ * windows reached this session above it and the waypoints beside it from the tablet width
+ * (`shell/mission-window.tsx`, `live/mission.ts`). The open window is `?w=`; Overview is the
+ * default; a `#event-`/`#story-` link or a `?show=` pivot opens the Calendar. Market, Calendar and
+ * Quests are the components below, unchanged inside the window; Overview and Party are new
+ * (`shell/mission-windows.tsx`). The ask box leads Overview until the dock replaces it (slice 2).
+ * What follows is the page's history; its parts still hold inside their windows.
+ *
  * THE LANDING PAGE (#7077, parent #6948 slice 4): sign-in opens the day's market news, not the
  * Leaderboard. Eric, #7018 round 0: "I don't care for the leaderboard as the landing page." The
  * Leaderboard keeps its route and leaves the tab bar; Profile's league card ("Full leaderboard ›")
@@ -52,6 +85,8 @@ type BoardAsk = {
   readonly b?: string;
   /** The rows a pivot names, comma-joined (`parsePivot`); never part of the board's redirect. */
   readonly show?: string;
+  /** The window on the stage (#7487); absent = Overview, or the Calendar when the address points into it. */
+  readonly w?: MissionWindow;
 };
 
 /** A `?show=` value, cleaned to the row anchors it names, or undefined when it names none. */
@@ -60,22 +95,69 @@ const asPivot = (raw: unknown): string | undefined => {
   return rows.length > 0 ? rows.join(",") : undefined;
 };
 
-function Masthead({ view }: { readonly view: EditionView }): ReactElement {
-  const edition = view.edition;
-  return (
-    <header className="page-header edition-head">
-      <p className="edition-kicker">
-        <span className="edition-name">Skynet Chronicles</span> · the market news
-      </p>
-      {edition ? (
-        <p className="edition-asof">
-          {asOfLine(edition)}
-          {edition.campaignTitle ? ` · ${edition.campaignTitle}` : ""}
-        </p>
-      ) : null}
-      {edition && staleLine(edition) ? <p className="edition-stale">{staleLine(edition)}</p> : null}
-    </header>
-  );
+/** Each window's header and the windows it links to (the handoff's table, with real figures). */
+function windowSpec(
+  cur: MissionWindow,
+  ctx: {
+    readonly edition: Edition | null;
+    readonly inside: readonly EditionDate[];
+    readonly figures: Partial<Record<MissionWindow, string>>;
+    readonly hasAccount: boolean;
+  },
+): { title: string; sub: string; figure?: string; links: readonly WindowLink[] } {
+  const { edition, figures } = ctx;
+  const fig = (w: MissionWindow) => (figures[w] ? { figure: figures[w] } : {});
+  switch (cur) {
+    case "market":
+      return {
+        title: "The whole market",
+        sub: "The S&P 500 and its 11 sectors, close to close",
+        ...fig("market"),
+        links: [{ label: "Calendar: the dates that move these", to: "calendar" }],
+      };
+    case "calendar":
+      return {
+        title: "The calendar",
+        sub: edition
+          ? `Company results and reports · ${asOfLine(edition)}`
+          : "Company results and reports",
+        ...fig("calendar"),
+        links: [
+          { label: "Market: the sectors", to: "market" },
+          { label: "Quests: moves from these stories", to: "quests" },
+        ],
+      };
+    case "quests":
+      return {
+        title: "Quests",
+        sub: ctx.hasAccount
+          ? "Your next steps, at your pace"
+          : "Your next steps, once you're connected",
+        ...fig("quests"),
+        links: [
+          { label: "Calendar: the stories behind them", to: "calendar" },
+          { label: "Party: what you book adds up", to: "party" },
+        ],
+      };
+    case "party":
+      return {
+        title: "The party",
+        sub: "Season 1 · out-trade The Tower together",
+        ...fig("party"),
+        links: [{ label: "Quests: how you add to it", to: "quests" }],
+      };
+    default:
+      return {
+        title: "Where things stand",
+        sub: "Your next step, and the rest at a glance",
+        links: [
+          { label: "Market", to: "market" },
+          { label: "Calendar", to: "calendar" },
+          { label: "Quests", to: "quests" },
+          { label: "Party", to: "party" },
+        ],
+      };
+  }
 }
 
 /**
@@ -100,6 +182,18 @@ function editionKeys(
   };
 }
 
+/** The window a page address opens: `?w=` when it names one, the Calendar when the address points
+ *  into it (Moneypenny's `#event-`/`#story-` links, a `?show=` pivot), else Overview. */
+function openWindow(
+  w: MissionWindow | undefined,
+  pivot: readonly string[],
+  hash: string,
+): MissionWindow {
+  if (w) return w;
+  if (pivot.length > 0 || targetedEditionAnchor(hash)) return "calendar";
+  return DEFAULT_WINDOW;
+}
+
 function Landing(): ReactElement {
   const view = useQuery({ queryKey: ["edition"], queryFn: fetchEdition, staleTime: 60_000 });
   // The member's quests load beside the news and never hold it up; one that fails shows nothing.
@@ -110,8 +204,13 @@ function Landing(): ReactElement {
     staleTime: 60_000,
     refetchOnWindowFocus: false,
   });
+  const party = useParty();
   const horizon = useHorizonRange();
-  const pivot = parsePivot(Route.useSearch().show);
+  const search = Route.useSearch();
+  const pivot = parsePivot(search.show);
+  const hash = useRouterState({ select: (s) => s.location.hash });
+  const cur = openWindow(search.w, pivot, hash);
+  const open = useOpenWindow(cur);
   const navigate = useNavigate();
   // ✕ on the pivot's bar: one more history entry, so Back still returns to the pivot, and the
   // page keeps its scroll, so the member stays on the calendar as the rest of it comes back.
@@ -122,9 +221,10 @@ function Landing(): ReactElement {
       resetScroll: false,
     });
   const keys = editionKeys(view.data?.edition, view.data?.today, horizon, pivot);
-  // The chat sends these with a question asked from here, and her links land on the same rows.
+  // The chat sends these with a question asked from here, and her links land on the same rows —
+  // a link into the calendar opens its window first (`openWindow`), so the row is there to land on.
   usePublishPageKeys(keys);
-  useLandOnEdition(keys ? JSON.stringify(keys) : "");
+  useLandOnEdition(keys ? `${cur}:${JSON.stringify(keys)}` : "");
   if (view.isPending)
     return (
       <PageFrame>
@@ -138,41 +238,101 @@ function Landing(): ReactElement {
       </PageFrame>
     );
   const edition = view.data.edition;
+  const today = view.data.today;
   const answer = quests.data?.available ? quests.data : undefined;
   const placed = placeQuests(answer?.quests ?? [], edition?.stories ?? []);
+  const inside = edition && today ? calendarShows(edition, today, horizon, pivot).inside : [];
+  const market = marketGlance(edition?.sectors);
+  // ◆ means "a story waits on it" on the calendar itself, so the figure counts only those events.
+  const waited = inside.filter((e) => waitingOn(e, edition?.stories ?? []).length > 0).length;
+  const total = party.data ? partyRows(party.data.rows).total : undefined;
+  const figures: Partial<Record<MissionWindow, string>> = {
+    ...(market.figure ? { market: market.figure.replace(" wk", "") } : {}),
+    calendar: `◆ ${String(waited)}`,
+    ...(answer ? { quests: String(placed.account.length) } : {}),
+    ...(total !== undefined ? { party: signedMoney(total) } : {}),
+  };
+  const spec = windowSpec(cur, { edition, inside, figures, hasAccount: Boolean(answer) });
   return (
     <PageFrame>
-      <Masthead view={view.data} />
-      <AskBox />
-      {edition?.sectors ? <SectorOverview view={edition.sectors} /> : null}
-      {edition ? (
-        <>
-          <LandingCalendar
-            edition={edition}
-            today={view.data.today}
-            storyAsk={(s) => (
+      <div className="mctl">
+        <Waypoints cur={cur} open={open} figures={figures} linked={spec.links.map((k) => k.to)} />
+        <div className="mctl-stage">
+          <Trail cur={cur} open={open} />
+          {edition && staleLine(edition) ? (
+            <p className="edition-stale">{staleLine(edition)}</p>
+          ) : null}
+          <MissionWindowFrame
+            key={cur}
+            id={cur}
+            title={spec.title}
+            sub={spec.sub}
+            {...(spec.figure ? { figure: spec.figure } : {})}
+            links={spec.links}
+            open={open}
+          >
+            {cur === "overview" ? (
               <>
-                <StoryAsk
-                  story={s}
-                  campaign={edition.campaign}
-                  campaignTitle={edition.campaignTitle}
+                <AskBox />
+                <OverviewWindow
+                  edition={edition}
+                  inside={inside}
+                  waited={waited}
+                  quests={answer ? placed.account : undefined}
+                  open={open}
                 />
-                <StoryQuests quests={placed.byStory.get(s.id)} />
               </>
-            )}
-            eventAsk={(e) => <EventThread event={e} />}
-            pivot={pivot}
-            onClearPivot={clearPivot}
-          />
-          {answer ? <AccountQuests quests={placed.account} unread={answer.unread} /> : null}
-          <footer className="obs-foot">{edition.writtenBy}</footer>
-        </>
-      ) : (
-        <>
-          <p className="note">No edition has been written yet.</p>
-          {answer ? <AccountQuests quests={placed.account} unread={answer.unread} /> : null}
-        </>
-      )}
+            ) : null}
+            {cur === "market" ? (
+              edition?.sectors ? (
+                <SectorOverview view={edition.sectors} />
+              ) : (
+                <p className="note">This edition carries no market closes.</p>
+              )
+            ) : null}
+            {cur === "calendar" ? (
+              edition ? (
+                <LandingCalendar
+                  edition={edition}
+                  today={today}
+                  storyAsk={(s) => (
+                    <>
+                      <StoryAsk
+                        story={s}
+                        campaign={edition.campaign}
+                        campaignTitle={edition.campaignTitle}
+                      />
+                      <StoryQuests quests={placed.byStory.get(s.id)} />
+                    </>
+                  )}
+                  eventAsk={(e) => <EventThread event={e} />}
+                  pivot={pivot}
+                  onClearPivot={clearPivot}
+                />
+              ) : (
+                <p className="note">No edition has been written yet.</p>
+              )
+            ) : null}
+            {cur === "quests" ? (
+              answer ? (
+                <AccountQuests quests={placed.account} unread={answer.unread} />
+              ) : (
+                <ul className="mctl-rows">
+                  <MissionRow
+                    mark="◆"
+                    title="Connect your paper account"
+                    sub="Your quests are read from your own positions and cash · play money only"
+                    tag="step 1"
+                    onOpen={() => void navigate({ to: "/accounts" })}
+                  />
+                </ul>
+              )
+            ) : null}
+            {cur === "party" ? <PartyWindow /> : null}
+          </MissionWindowFrame>
+          {edition ? <footer className="obs-foot">{edition.writtenBy}</footer> : null}
+        </div>
+      </div>
     </PageFrame>
   );
 }
@@ -180,7 +340,9 @@ function Landing(): ReactElement {
 export const Route = createFileRoute("/")({
   validateSearch: (search: Record<string, unknown>): BoardAsk => {
     const show = asPivot(search[PIVOT_PARAM]);
+    const w = parseWindow(search.w);
     return {
+      ...(w ? { w } : {}),
       ...(search.by !== undefined ? { by: parseBoardMetric(search.by) } : {}),
       ...(asId(search.a) ? { a: asId(search.a) } : {}),
       ...(asId(search.b) ? { b: asId(search.b) } : {}),
@@ -190,7 +352,7 @@ export const Route = createFileRoute("/")({
   beforeLoad: ({ search }) => {
     if (search.by === undefined && search.a === undefined && search.b === undefined) return;
     // The board's ask goes on; a pivot is the landing page's own and stays behind.
-    const { show: _pivot, ...ask } = search;
+    const { show: _pivot, w: _window, ...ask } = search;
     throw redirect({ to: "/leaderboard", search: { ...ask, by: search.by ?? "equity" } });
   },
   component: Landing,

@@ -7,6 +7,7 @@ reviewable git diff.
 | Directory | Upstream | Refresh |
 | --- | --- | --- |
 | [`claude-code/`](claude-code/) | [code.claude.com/docs](https://code.claude.com/docs) — the official Claude Code docs (all English pages, via the site's `llms.txt` index) | `npm run docs:claude` |
+| [`emil-kowalski-skills.md`](emil-kowalski-skills.md) | [emilkowalski/skills](https://github.com/emilkowalski/skills): nine motion skills, copied into `.claude/skills/` | re-clone and copy, as its own PR |
 
 Ground rules:
 
