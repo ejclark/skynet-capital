@@ -23,7 +23,13 @@ name: Pipeline
 # merge to main is far less frequent than a PR sync.
 on:
   pull_request:
-    branches: [ main ]
+    # Every base, not only main (#7487, Eric 2026-11-12: "leverage the pr stacking feature… lets PRs
+    # start building ahead of waiting for full completion of previous features"). A stacked PR — one
+    # whose base is its parent PR's branch, so its diff is only its own slice — gets `verify`,
+    # integration tests and stability while its parent is still open. It is never ARMED there:
+    # `arm-auto-merge` below arms only a PR whose base is main. When the parent squash-merges, the
+    # repo deletes its branch and GitHub retargets the child to main; that retarget is an `edited`
+    # event (in `types:` below), so the child's checks run against main and it arms then.
     # `ready_for_review` is NOT in the default type list (opened/synchronize/reopened), and leaving
     # it out silently voided the whole gate for any PR that started as a draft: the draft's run
     # skipped `verify`, promoting it to ready fired no run at all, and that stale `skipped` check
@@ -381,6 +387,10 @@ jobs:
     # lane builds' post-build body edit (`scripts/moneypenny/rekick-pr.mjs`, #5936), which starts CI
     # on a PR the job token opened. Drop `edited` from either list and both stop working silently.
     needs: [verify, e2e, stability]
+    # `base.ref == 'main'` (#7487, 2026-11-12): the trigger above runs on stacked PRs too, and a green
+    # child armed against its parent's branch would merge INTO the parent, not main. It arms when
+    # GitHub retargets it to main after the parent merges.
+    #
     # `!cancelled()` is load-bearing (found by #4169, 2026-09-30): `e2e` is skipped on a docs-only PR,
     # and a job whose `needs:` include a skipped job is skipped too unless its `if:` calls a status
     # function — so the `skipped` branch below never ran and docs PRs were never armed. With sessions
@@ -392,6 +402,7 @@ jobs:
           (needs.stability.result == 'success' || needs.stability.result == 'skipped') &&
           github.event.pull_request.draft == false &&
           contains(fromJSON('["opened","reopened","ready_for_review","synchronize","edited"]'), github.event.action) &&
+          github.event.pull_request.base.ref == 'main' &&
           !contains(github.event.pull_request.labels.*.name, 'hold-merge') }}
     runs-on: ubuntu-latest
     timeout-minutes: 50 # room for two capped rate-limit waits (#4351)
