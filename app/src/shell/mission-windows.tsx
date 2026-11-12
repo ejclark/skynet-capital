@@ -173,7 +173,7 @@ export function OverviewWindow({
           about={{ label: "Party" }}
           sub={
             split
-              ? `${String(split.members.length)} members, together against The Tower`
+              ? `${String(split.members.length)} ${split.members.length === 1 ? "member" : "members"}, together against The Tower`
               : "The members, together against The Tower"
           }
           {...(split ? { figure: signedMoney(split.total) } : {})}
