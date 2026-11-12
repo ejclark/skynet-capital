@@ -30,6 +30,9 @@ import { TagMark } from "./tag-mark";
  * `--dur-spatial` / `--ease-spatial` tokens, which `prefers-reduced-motion` collapses to 0ms — the
  * window then appears at once, as the handoff asks. A keyframe, not a transition, is right here:
  * each window is a fresh element keyed by its id, so there is nothing to retarget from.
+ *
+ * The window and the waypoints are the stage's CARDS for the Eye's beam (`data-eye-card`, #7487
+ * slice 5): it runs behind them, shows in the gaps, and glows through each one it crosses.
  */
 
 /** Open `next` from `cur`: step the trail, then make it the page's address. */
@@ -121,7 +124,7 @@ export function Waypoints({
   readonly linked: readonly MissionWindow[];
 }): ReactElement {
   return (
-    <nav className="mctl-rail" aria-label="Waypoints">
+    <nav className="mctl-rail" aria-label="Waypoints" data-eye-card="">
       <p className="mctl-eyebrow">Waypoints</p>
       <ul>
         {WINDOWS.map((w) => (
@@ -189,6 +192,7 @@ export function MissionWindowFrame({
   return (
     <section
       className="mctl-window"
+      data-eye-card=""
       data-side={side === 0 ? undefined : side === 1 ? "right" : "left"}
       aria-labelledby={`mctl-title-${id}`}
     >

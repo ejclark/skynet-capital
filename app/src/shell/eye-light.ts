@@ -1,19 +1,28 @@
 import { create } from "zustand";
 
 /**
- * THE EYE'S LIGHT (#7216 slice 2; Eric's Build picks on #7018: round 5 "The Eye's light", round 6 B
- * "A spark along an arc", round 8 Q3 A "Spark, then spotlight"). When one of Moneypenny's links
- * names an item on the page, the light travels from the Eye to it, in four steps and about one
- * second: the Eye focuses under a small pool of light; a spark arcs over the page with a short
- * trail, lit by a moving spotlight; it lands as the page dims around the item; the dim lifts, and a
- * ring plus a label naming the Eye stay on the item. His words: "We need visual effects for the
- * light beam to manifest across the view to land on it's target - this helps the user move their
- * attention along the animation and what it focuses on", and "The eye effectively needs line of
- * sight to perform this task."
+ * THE EYE'S LIGHT (#7216 slice 2; Eric's Build picks on #7018: round 5 "The Eye's light"). When one
+ * of Moneypenny's links, or the Eye itself (`eye-notice.ts`), points at an item on the page, the
+ * light travels from the Eye to it. His words: "We need visual effects for the light beam to
+ * manifest across the view to land on it's target - this helps the user move their attention along
+ * the animation and what it focuses on", and "The eye effectively needs line of sight to perform
+ * this task."
+ *
+ * THE BEAM (#7487 slice 5; the Campaign mission control spec § "5. The Eye", and the handoff's
+ * `reference/Campaign Hub Prototype v2.dc.html`). It replaced the spark that arced over the page
+ * (#7216's round 6 B and round 8 "spark, then spotlight"): a short STRAIGHT beam extends from the
+ * Eye to the item — no sweep — and runs BEHIND the cards. It shows in the gaps between them, each
+ * card it crosses glows through from behind as the beam's tip reaches it (no border flash), and the
+ * card it lands in is lit from behind; then the ring and its label stay on the item:
+ * `◉ THE EYE · <reason>`. The spec's timing, about 220 ms to extend, 200 ms held and 240 ms to fade,
+ * is mapped onto the house's tokens (`theme.css`): the extend and the fade run on `--dur-spatial`
+ * and `--ease-spatial`, and the hold is `BEAM_HOLD_MS`, a pause rather than a third speed. Under
+ * reduced motion no beam plays and the ring shows at once. Declined, never to be re-proposed (the
+ * spec's list): a sweeping cone of light, and the Eye on the chat panel's edge.
  *
  * This module is the light's arithmetic, pure so a spec can drive it: where the light starts, the
- * arc it flies, and what each step draws at a given moment. `eye-light-layer.tsx` draws it on a
- * layer above the page, outside the tower's canvas.
+ * line it runs along, which cards it crosses and when its tip reaches each. `eye-light-layer.tsx`
+ * draws it on a layer above the page, outside the tower's canvas.
  */
 
 export interface Point {
@@ -32,19 +41,20 @@ export interface Rect {
  *  scene, 2026-11-09 — the iris centre at (230, 78). A share of the frame, so a resized slot keeps it. */
 export const EYE_IN_FRAME: Point = { x: 0.6, y: 0.118 };
 
-/** The four steps, in ms. Steps 1–3 take one second; the lift then hands over to the ring. */
-export const FOCUS_MS = 200;
-export const ARC_MS = 520;
-export const LAND_MS = 280;
-export const LIFT_MS = 320;
-export const LIGHT_MS = FOCUS_MS + ARC_MS + LAND_MS + LIFT_MS;
+/** How long the beam holds on the item before it fades: the spec's 200 ms. A pause, not a speed, so
+ *  it is no third duration token (docs/vendor/emil-kowalski-skills.md → House rules). */
+export const BEAM_HOLD_MS = 200;
 
-/** The ring draws itself round the item from where the light touched it, starting the moment the
- *  spark lands and done inside 300 ms of it (#7227 criterion 1): it finishes as the dim peaks. */
-export const RING_DRAW_MS = LAND_MS;
+/** `--dur-spatial` when the stylesheet cannot be read (a spec's DOM): `theme.css`'s value. */
+export const SPATIAL_FALLBACK_MS = 260;
 
-/** How dark the page goes around the item at the height of the landing. */
-export const DIM_MAX = 0.55;
+/** A motion token's value in ms: "260ms" → 260, "0.26s" → 260; anything unreadable → `fallback`. */
+export function tokenMs(raw: string, fallback: number): number {
+  const m = /^\s*(-?[\d.]+)\s*(ms|s)\s*$/.exec(raw);
+  if (!m?.[1]) return fallback;
+  const n = Number.parseFloat(m[1]) * (m[2] === "s" ? 1000 : 1);
+  return Number.isFinite(n) && n >= 0 ? n : fallback;
+}
 
 /** Where the light starts. `tower`: the column's Eye, on screen. `brand`: the topbar's still Eye
  *  (the phone face, `brand-eye.tsx`). `edge`: the column's Eye is scrolled above the page, so the
@@ -84,104 +94,99 @@ export function lightOrigin(
 
 export const centre = (r: Rect): Point => ({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
 
-/** The arc's control point: above the straight line's midpoint, by a share of its length, so the
- *  spark rises over the page and comes down onto the item rather than sliding across the text —
- *  but never above `ceiling` (the topbar's foot), so the whole flight stays in sight. */
-export function arcControl(from: Point, to: Point, ceiling = 0): Point {
-  const dist = Math.hypot(to.x - from.x, to.y - from.y);
-  const lift = Math.min(260, dist * 0.35);
-  return { x: (from.x + to.x) / 2, y: Math.max(ceiling, Math.min(from.y, to.y) - lift) };
+/** The beam's line on screen: it starts at `x`,`y` and runs `length` px at `angle` degrees
+ *  (clockwise from the positive x axis, as CSS `rotate()` reads it). */
+export interface BeamLine extends Point {
+  readonly length: number;
+  readonly angle: number;
 }
 
-/** The point `t` (0–1) along the quadratic arc from `from` to `to`, under `ceiling`. */
-export function onArc(from: Point, to: Point, t: number, ceiling = 0): Point {
-  const c = arcControl(from, to, ceiling);
-  const u = 1 - t;
+export function beamLine(from: Point, to: Point): BeamLine {
   return {
-    x: u * u * from.x + 2 * u * t * c.x + t * t * to.x,
-    y: u * u * from.y + 2 * u * t * c.y + t * t * to.y,
+    x: from.x,
+    y: from.y,
+    length: Math.hypot(to.x - from.x, to.y - from.y),
+    angle: (Math.atan2(to.y - from.y, to.x - from.x) * 180) / Math.PI,
   };
 }
 
-/** Ease-in-out: the spark leaves the Eye gently and settles onto the item. */
-const ease = (t: number): number => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
-const clamp01 = (t: number): number => Math.min(1, Math.max(0, t));
+/** Where the beam ends on its item: the centre, across a row; on a tall item (a card), no lower
+ *  than 60 px under its top, so the tip lands where the eye reads first (the Hub prototype's rule). */
+export const beamTip = (item: Rect): Point => ({
+  x: item.left + item.width / 2,
+  y: item.top + Math.min(item.height / 2, 60),
+});
 
-/** The trail behind the spark: this share of the arc. */
-const TRAIL = 0.22;
-const TRAIL_POINTS = 10;
-
-/** What the light draws at one moment. Absent parts are not drawn. */
-export interface LightFrame {
-  readonly step: 1 | 2 | 3 | 4 | "done";
-  /** Step 1: the pool of light at the Eye. */
-  readonly pool?: { readonly r: number; readonly opacity: number };
-  /** Step 2: the spark, its trail (oldest first) and the spotlight that follows it. */
-  readonly spark?: Point;
-  readonly trail?: readonly Point[];
-  /** Steps 3–4: how dark the page is around the item. */
-  readonly dim?: number;
-  /** Step 3 on: the ring and its label are on the item (it draws itself through step 3). */
-  readonly ring: boolean;
-}
-
-/** The light at `ms` after it starts, flying from `from` to `to` under `ceiling`. */
-export function lightAt(ms: number, from: Point, to: Point, ceiling = 0): LightFrame {
-  if (ms < FOCUS_MS) {
-    const t = clamp01(ms / FOCUS_MS);
-    return { step: 1, pool: { r: 10 + 26 * t, opacity: 0.35 + 0.5 * t }, ring: false };
-  }
-  const arcEnd = FOCUS_MS + ARC_MS;
-  if (ms < arcEnd) {
-    const t = ease(clamp01((ms - FOCUS_MS) / ARC_MS));
-    const trail: Point[] = [];
-    for (let i = 0; i <= TRAIL_POINTS; i++)
-      trail.push(onArc(from, to, Math.max(0, t - TRAIL + (TRAIL * i) / TRAIL_POINTS), ceiling));
-    return {
-      step: 2,
-      pool: { r: 36, opacity: 0.85 * (1 - t) },
-      spark: onArc(from, to, t, ceiling),
-      trail,
-      ring: false,
-    };
-  }
-  const landEnd = arcEnd + LAND_MS;
-  // The ring starts as the spark lands (#7227): it draws round the item while the page dims.
-  if (ms < landEnd) return { step: 3, dim: DIM_MAX * clamp01((ms - arcEnd) / LAND_MS), ring: true };
-  if (ms < LIGHT_MS)
-    return { step: 4, dim: DIM_MAX * (1 - clamp01((ms - landEnd) / LIFT_MS)), ring: true };
-  return { step: "done", ring: true };
+/** One edge of the Liang–Barsky clip: the part `[t0, t1]` of the segment still inside after the
+ *  edge with direction term `p` and distance term `q`, or undefined once none is. */
+function clipEdge(
+  [t0, t1]: readonly [number, number],
+  p: number,
+  q: number,
+): readonly [number, number] | undefined {
+  if (p === 0) return q < 0 ? undefined : [t0, t1];
+  const r = q / p;
+  if (p < 0) return r > t1 ? undefined : [Math.max(t0, r), t1];
+  return r < t0 ? undefined : [t0, Math.min(t1, r)];
 }
 
 /**
- * WHERE THE LIGHT TOUCHED THE ITEM (#7227 criterion 1): the spark comes down the arc's last leg,
- * from the arc's control point toward the item's centre, and crosses the item's edge on the way
- * in. The ring draws itself out both ways from there, so the motion starts where the eye followed
- * the spark to. Returned as a share (0–1) of the edge's length, clockwise from the top-left corner
- * — the way an SVG `<rect>`'s outline runs.
+ * How far along the beam (0–1) its tip enters `box`, or undefined when the beam never crosses it
+ * (the Liang–Barsky clip of the segment `from`→`to` against the box). A beam that starts inside the
+ * box enters it at 0.
  */
-export function touchShare(item: Rect, from: Point): number {
-  const c = centre(item);
-  const dx = from.x - c.x;
-  const dy = from.y - c.y;
-  const hw = item.width / 2;
-  const hh = item.height / 2;
-  const w = item.width;
-  const h = item.height;
-  const edge = 2 * (w + h);
-  if (edge <= 0) return 0;
-  // The ray from the centre toward `from` meets whichever edge it reaches first.
-  const t = Math.min(dx ? hw / Math.abs(dx) : Infinity, dy ? hh / Math.abs(dy) : Infinity);
-  const p = Number.isFinite(t) ? { x: c.x + dx * t, y: c.y + dy * t } : { x: c.x, y: item.top };
-  const x = Math.min(w, Math.max(0, p.x - item.left));
-  const y = Math.min(h, Math.max(0, p.y - item.top));
-  let along: number;
-  if (y <= 0.5) along = x;
-  else if (x >= w - 0.5) along = w + y;
-  else if (y >= h - 0.5) along = w + h + (w - x);
-  else along = 2 * w + h + (h - y);
-  return (along / edge) % 1;
+export function crossing(from: Point, to: Point, box: Rect): number | undefined {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  let span: readonly [number, number] | undefined = [0, 1];
+  const edges: readonly (readonly [number, number])[] = [
+    [-dx, from.x - box.left],
+    [dx, box.left + box.width - from.x],
+    [-dy, from.y - box.top],
+    [dy, box.top + box.height - from.y],
+  ];
+  for (const [p, q] of edges) {
+    span = span && clipEdge(span, p, q);
+    if (!span) return undefined;
+  }
+  const [t0, t1] = span ?? [1, 0];
+  return t0 <= t1 ? t0 : undefined;
 }
+
+/** `--ease-spatial`, `cubic-bezier(0.2, 0.8, 0.2, 1)`: progress at time share `u` (0–1). */
+export function easeSpatial(u: number): number {
+  const [x1, y1, x2, y2] = [0.2, 0.8, 0.2, 1];
+  const at = (a: number, b: number, s: number) =>
+    3 * a * s * (1 - s) ** 2 + 3 * b * s * s * (1 - s) + s ** 3;
+  // x(s) rises monotonically for these control points, so bisection finds the s whose x is u.
+  let lo = 0;
+  let hi = 1;
+  for (let i = 0; i < 40; i++) {
+    const mid = (lo + hi) / 2;
+    if (at(x1, x2, mid) < u) lo = mid;
+    else hi = mid;
+  }
+  return at(y1, y2, (lo + hi) / 2);
+}
+
+/** The share (0–1) of the extend at which the eased tip reaches `share` of the beam's length: when
+ *  a crossed card starts to glow, so it lights exactly as the tip gets there. */
+export function reachAt(share: number): number {
+  const goal = Math.min(1, Math.max(0, share));
+  let lo = 0;
+  let hi = 1;
+  for (let i = 0; i < 40; i++) {
+    const mid = (lo + hi) / 2;
+    if (easeSpatial(mid) < goal) lo = mid;
+    else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+/** The ring's label: the Eye, and why it looks when it has a reason (spec: `◉ THE EYE · <reason>`;
+ *  the stylesheet sets it in capitals, so screen readers read the words as written). */
+export const ringLabel = (reason?: string): string =>
+  reason?.trim() ? `the Eye · ${reason.trim()}` : "the Eye";
 
 /** The part of the window the member can see the page through: under the sticky topbar, inside
  *  the window, and outside the chat panel. Undefined when the chat covers the whole page (the
@@ -233,6 +238,8 @@ export function scrollToFit(r: Rect, a: ViewArea): number {
 export interface LightRequest {
   readonly anchor: string;
   readonly seq: number;
+  /** Why the Eye looks, for the ring's label (`ringLabel`): absent, the label names the Eye alone. */
+  readonly reason?: string;
 }
 
 interface LightStore {
@@ -241,8 +248,9 @@ interface LightStore {
 
 export const useEyeLight = create<LightStore>(() => ({ request: undefined }));
 
-/** Light the item `path`'s hash names (`/accounts#pos-NVDA`); a path with no hash lights nothing. */
-export function requestLight(path: string): void {
+/** Light the item `path`'s hash names (`/accounts#pos-NVDA`); a path with no hash lights nothing.
+ *  `reason` goes on the ring's label (#7487 slice 5: "◉ THE EYE · <reason>"). */
+export function requestLight(path: string, reason?: string): void {
   const hash = path.split("#")[1];
   if (!hash) return;
   let anchor = hash;
@@ -252,5 +260,5 @@ export function requestLight(path: string): void {
     // a malformed escape is still an anchor; match it as written
   }
   const seq = (useEyeLight.getState().request?.seq ?? 0) + 1;
-  useEyeLight.setState({ request: { anchor, seq } });
+  useEyeLight.setState({ request: { anchor, seq, ...(reason ? { reason } : {}) } });
 }

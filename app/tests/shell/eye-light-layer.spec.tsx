@@ -11,6 +11,7 @@ import { useRef } from "react";
 import { CALENDAR_ANCHOR } from "../../../src/domain/edition-keys";
 import { requestLight, useEyeLight } from "../../src/shell/eye-light";
 import { EyeLight } from "../../src/shell/eye-light-layer";
+import { setVantageFrame } from "../../src/shell/tower-bus";
 
 // #7216 slice 2 — the ring and its label stay on the item her link names. happy-dom draws no Eye
 // (no tower frame, no laid-out brand Eye), so these exercise the ring alone: the reduced-motion
@@ -33,7 +34,7 @@ async function mount() {
     path: "/accounts",
     component: () => (
       <>
-        <table>
+        <table data-eye-card="">
           <tbody>
             <tr id="pos-NVDA">
               <td>NVDA</td>
@@ -71,12 +72,9 @@ async function mount() {
 function layOut(): () => void {
   const rects = Element.prototype.getClientRects;
   const box = Element.prototype.getBoundingClientRect;
-  Element.prototype.getClientRects = function () {
-    return [{}] as unknown as DOMRectList;
-  };
-  Element.prototype.getBoundingClientRect = function () {
-    return { top: 300, left: 400, width: 600, height: 40, bottom: 340, right: 1000 } as DOMRect;
-  };
+  Element.prototype.getClientRects = () => [{}] as unknown as DOMRectList;
+  Element.prototype.getBoundingClientRect = () =>
+    ({ top: 300, left: 400, width: 600, height: 40, bottom: 340, right: 1000 }) as DOMRect;
   return () => {
     Element.prototype.getClientRects = rects;
     Element.prototype.getBoundingClientRect = box;
@@ -218,5 +216,65 @@ describe("EyeLight · the landing, articulated, on an item in view", () => {
     expect(document.querySelector("[data-eye-ring]")).toBeNull();
     chat.remove();
     await waitFor(() => expect(document.querySelector("[data-eye-ring]")).not.toBeNull());
+  });
+});
+
+// #7487 slice 5 — the beam: with the tower's Eye on screen, a straight beam runs from it to the item,
+// behind the cards it crosses, and the ring lands with its tip carrying the Eye's reason. happy-dom
+// reads no stylesheet, so the extend runs on the spatial token's fallback (260 ms).
+describe("EyeLight · the beam from the tower's Eye", () => {
+  let restore: () => void;
+  let frame: HTMLIFrameElement;
+  beforeEach(() => {
+    useEyeLight.setState({ request: undefined });
+    restore = layOut();
+    frame = document.createElement("iframe");
+    frame.setAttribute("data-shown", "true");
+    // The scene's glance goes to the frame's window; here a stand-in takes it.
+    Object.defineProperty(frame, "contentWindow", { value: { postMessage: () => undefined } });
+    document.body.append(frame);
+    setVantageFrame(frame);
+  });
+  afterEach(() => {
+    setVantageFrame(null);
+    frame.remove();
+    restore();
+  });
+
+  it("plays the beam through the item's card, then rings the item with the reason", async () => {
+    await mount();
+    act(() => requestLight("/accounts#pos-NVDA", "left its usual range"));
+    const beam = await waitFor(() => {
+      const el = document.querySelector("[data-eye-beam]");
+      expect(el).not.toBeNull();
+      return el as SVGElement;
+    });
+    // The item's own card (the table marked data-eye-card) is crossed and lit from behind.
+    expect(Number(beam.getAttribute("data-eye-beam-passes"))).toBeGreaterThanOrEqual(1);
+    expect(beam.querySelector("[data-eye-beam-back]")).not.toBeNull();
+    // No ring until the tip lands.
+    expect(document.querySelector("[data-eye-ring]")).toBeNull();
+    const ring = await waitFor(() => {
+      const el = document.querySelector("[data-eye-ring]");
+      expect(el).not.toBeNull();
+      return el as HTMLElement;
+    });
+    expect(ring).toHaveTextContent("◉ the Eye · left its usual range");
+    // Held, faded, gone; the ring stays.
+    await waitFor(() => expect(document.querySelector("[data-eye-beam]")).toBeNull());
+    expect(document.querySelector("[data-eye-ring]")).not.toBeNull();
+  });
+
+  it("under reduced motion plays no beam, and the ring shows at once", async () => {
+    const matchMedia = window.matchMedia;
+    window.matchMedia = ((q: string) => ({ matches: q.includes("reduce") })) as typeof matchMedia;
+    try {
+      await mount();
+      act(() => requestLight("/accounts#pos-NVDA"));
+      await waitFor(() => expect(document.querySelector("[data-eye-ring]")).not.toBeNull());
+      expect(document.querySelector("[data-eye-beam]")).toBeNull();
+    } finally {
+      window.matchMedia = matchMedia;
+    }
   });
 });

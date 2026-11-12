@@ -10,17 +10,20 @@ import {
 } from "react";
 import { CALENDAR_ANCHOR } from "../../../src/domain/edition-keys";
 import {
-  arcControl,
-  centre,
-  DIM_MAX,
+  BEAM_HOLD_MS,
+  type BeamLine,
+  beamLine,
+  beamTip,
+  crossing,
   fullyInView,
-  type LightFrame,
-  lightAt,
   lightOrigin,
   type Origin,
   type Rect,
+  reachAt,
+  ringLabel,
+  SPATIAL_FALLBACK_MS,
   scrollToFit,
-  touchShare,
+  tokenMs,
   useEyeLight,
   type ViewArea,
   viewArea,
@@ -31,36 +34,46 @@ import { glanceMessage, postTo, prefersStill, useTowerBus } from "./tower-bus";
 /**
  * THE EYE'S LIGHT, DRAWN (#7216 slice 2; the arithmetic and Eric's words are `eye-light.ts`). One
  * layer above the page and outside the tower's canvas, mounted once by the shell beside the tower
- * frame. A tap on one of Moneypenny's links into the page (`moneypenny-rail.tsx`) asks for the light;
- * this waits for the item to render and settle (the page's own landing, `landing.ts`, scrolls and
- * opens it, and anything it left off screen is scrolled into view here), then plays the four steps.
+ * frame. A tap on one of Moneypenny's links into the page (`mp-message.tsx`), or the Eye noticing
+ * something (`eye-notice.ts`), asks for the light; this waits for the item to render and settle (the
+ * page's own landing, `landing.ts`, scrolls and opens it, and anything it left off screen is
+ * scrolled into view here), then plays the beam.
  *
- * Never over the text once it lands: the dim is a frame around the item, and the ring is drawn
- * outside its edge, with its label sitting on that edge. The ring is a shape and a label, never a
- * colour alone (docs/BRAND.md → Accessibility): a night line and an amber line, so one of the two
- * holds contrast in either palette. It stays until the member taps elsewhere on the page, leaves
- * the page, or follows another of her links. Under reduced motion only the ring shows, and where no
- * Eye is drawn (no column at this width, no brand Eye) the ring shows alone too.
+ * THE BEAM, BEHIND THE CARDS (#7487 slice 5, the spec's § "5. The Eye"). The layer sits above the
+ * page, so "behind" is drawn, not stacked: the beam is masked out of every card it crosses and shows
+ * only in the gaps between them; inside each crossed card a dim, screened copy of it (the pass)
+ * glows through from behind as the tip arrives; the card it lands in glows round its edge, lit from
+ * behind; and then the ring and its label stay on the item. A card is anything marked
+ * `data-eye-card` (Campaign's window and waypoints); on a page that marks none, the item is its own
+ * card. The motion is CSS on the house's tokens (`eye-light.css`): the reach is `transform` only on
+ * `--dur-spatial` / `--ease-spatial`, and every glow is `opacity`.
  *
- * THE LANDING, ARTICULATED (#7227; Eric on #7018 round 9: "I like the idea of section/container of
- * the content being gazed upon being articulated in the visual communication via animation/motion",
- * and "The content the eye gazes upon needs to be in view"). The moment the spark lands, the ring
- * draws itself out both ways round the item from the point the light touched its edge, following
- * the item's own corners (a card's rounded edge, a row's square one), and the item's own edge lifts
- * to a lit state; both rest within 300 ms. Before any of it plays, the item is brought wholly into
- * the part of the window the member can see: under the topbar, inside the window, and outside the
- * chat panel — and when the phone's chat covers the whole page, the light waits for it to close.
+ * Never over the text once it lands: the ring is drawn outside the item's edge, with its label on
+ * that edge. The ring is a shape and a label, never a colour alone (docs/BRAND.md → Accessibility):
+ * a night line and an amber line, so one of the two holds contrast in either palette. It stays until
+ * the member taps elsewhere on the page, leaves the page, or follows another link. Under reduced
+ * motion no beam plays and only the ring shows, and where no Eye is drawn (no column at this width,
+ * no brand Eye) the ring shows alone too.
+ *
+ * Before any of it plays, the item is brought wholly into the part of the window the member can see
+ * (#7227; Eric on #7018 round 9: "The content the eye gazes upon needs to be in view"): under the
+ * topbar, inside the window, and clear of Moneypenny's dock — and when her History covers the whole
+ * page on a phone, the light waits for it to close.
  */
 
 /** How long the light waits for its item to render (a page loads its rows late) before giving up. */
 const WAIT_MS = 8000;
 /** The item's box must hold still this long — the landing's scroll and the opened row's growth done. */
 const STILL_MS = 160;
+/** A beam crosses at most this many cards; more would be a beam drawn across the whole page. */
+const MAX_PASSES = 6;
 
 const rectOf = (el: Element): Rect => {
   const r = el.getBoundingClientRect();
   return { top: r.top, left: r.left, width: r.width, height: r.height };
 };
+
+const laidOut = (el: Element): boolean => el.getClientRects().length > 0;
 
 /** How far down the sticky topbar reaches. */
 const topbarBottom = (): number =>
@@ -70,7 +83,7 @@ const topbarBottom = (): number =>
  *  never lands an item under it (#7487 slice 2; a full-width bar, so `viewArea` clips the bottom). */
 function chatBox(): Rect | null {
   const chat = document.querySelector(".mp-dock");
-  return chat && chat.getClientRects().length > 0 ? rectOf(chat) : null;
+  return chat && laidOut(chat) ? rectOf(chat) : null;
 }
 
 /** The part of the window the page shows through right now (`viewArea`). */
@@ -86,7 +99,7 @@ function bringIntoView(el: Element, r: Rect, area: ViewArea): void {
   if (window.scrollY === y) el.scrollIntoView?.({ block: "center" });
 }
 
-/** The item's own corner, so the ring follows its outline (a card rounds, a row stays square). */
+/** An element's own corner, so the ring and the beam's holes follow its outline. */
 function radiusOf(el: Element): number {
   const r = Number.parseFloat(getComputedStyle(el).borderTopLeftRadius);
   return Number.isFinite(r) ? r : 0;
@@ -97,23 +110,65 @@ function originFor(): Origin | undefined {
   const frame = useTowerBus.getState().frame;
   const shown = frame?.getAttribute("data-shown") === "true" ? rectOf(frame) : null;
   const brand = document.querySelector(".brand-eye");
-  const brandBox = brand && brand.getClientRects().length > 0 ? rectOf(brand) : null;
+  const brandBox = brand && laidOut(brand) ? rectOf(brand) : null;
   return lightOrigin(shown, brandBox, topbarBottom());
+}
+
+/** `--dur-spatial` as it stands (0 under reduced motion, `theme.css`). */
+function spatialMs(): number {
+  return tokenMs(
+    getComputedStyle(document.documentElement).getPropertyValue("--dur-spatial"),
+    SPATIAL_FALLBACK_MS,
+  );
 }
 
 interface Lit {
   readonly el: HTMLElement;
   readonly path: string;
-  /** Where the light touched the item's edge (`touchShare`); absent when no light flew. */
-  readonly touch?: number;
   /** The item's corner radius. */
   readonly radius: number;
+  readonly reason?: string;
 }
 
-interface Drawn {
-  readonly frame: LightFrame;
-  readonly origin: Origin;
-  readonly target: Rect;
+/** A card the beam crosses: its box, its corner, and when the tip reaches it (ms into the reach). */
+interface Pass {
+  readonly box: Rect;
+  readonly radius: number;
+  readonly at: number;
+}
+
+interface Beam {
+  readonly line: BeamLine;
+  readonly passes: readonly Pass[];
+  /** The card the item sits in, lit from behind as the beam lands. */
+  readonly home: Pass;
+  /** The topbar's foot: nothing of the beam is drawn over the topbar. */
+  readonly clear: number;
+}
+
+/**
+ * The beam's cards: every marked card it crosses, and the item's own card, each with the moment the
+ * eased tip reaches it. The item's card always counts — the tip ends inside it.
+ */
+function beamFor(origin: Origin, el: HTMLElement, spatial: number): Beam {
+  const home = el.closest<HTMLElement>("[data-eye-card]") ?? el;
+  const to = beamTip(rectOf(el));
+  const pass = (card: HTMLElement): Pass | undefined => {
+    const box = rectOf(card);
+    const share = crossing(origin, to, box);
+    if (share === undefined) return undefined;
+    return { box, radius: radiusOf(card), at: Math.round(reachAt(share) * spatial) };
+  };
+  const homePass = pass(home) ?? { box: rectOf(home), radius: radiusOf(home), at: spatial };
+  const others = [...document.querySelectorAll<HTMLElement>("[data-eye-card]")]
+    .filter((c) => c !== home && !c.contains(home) && laidOut(c))
+    .flatMap((c) => pass(c) ?? []);
+  return {
+    line: beamLine(origin, to),
+    passes: [...others.slice(0, MAX_PASSES - 1), homePass],
+    home: homePass,
+    clear: topbarBottom(),
+  };
 }
 
 /** Track an element's box in the viewport while `el` is set. */
@@ -151,147 +206,162 @@ function useLiveRect(el: HTMLElement | undefined): Rect | undefined {
 /** The ring's gap outside the item's edge. */
 const RING_GAP = 3;
 
-/** Steps 3–4, held: the ring outside the item's edge and the label naming the Eye on it. With a
- *  `touch`, the ring's amber line draws itself out both ways from that point first (the outline
- *  is 1000 units long, so the dash grows from 0 to the whole of it, centred on the touch). */
+/** Held: the ring outside the item's edge and the label naming the Eye, and why it looks, on it. */
 export function EyeRing({
   el,
-  touch,
   radius = 0,
+  reason,
 }: {
   readonly el: HTMLElement;
-  readonly touch?: number;
   readonly radius?: number;
+  readonly reason?: string;
 }): ReactElement | null {
   const rect = useLiveRect(el);
   if (!rect) return null;
-  const w = rect.width + 2 * RING_GAP;
-  const h = rect.height + 2 * RING_GAP;
-  const r = radius + RING_GAP;
-  const at = touch === undefined ? 0 : touch * 1000;
   return (
     <div
       className="eye-ring"
       data-eye-ring=""
-      data-eye-ring-draw={touch === undefined ? undefined : ""}
       aria-hidden="true"
       style={{
         top: rect.top - RING_GAP,
         left: rect.left - RING_GAP,
-        width: w,
-        height: h,
-        borderRadius: r,
+        width: rect.width + 2 * RING_GAP,
+        height: rect.height + 2 * RING_GAP,
+        borderRadius: radius + RING_GAP,
       }}
     >
-      {touch === undefined ? null : (
-        <svg className="eye-ring-trace" width={w} height={h} aria-hidden="true" focusable="false">
-          <rect
-            x="-3"
-            y="-3"
-            width={w + 6}
-            height={h + 6}
-            rx={r + 3}
-            pathLength="1000"
-            data-eye-ring-from={touch.toFixed(3)}
-            style={{ "--eye-from": `${-at}`, "--eye-to": `${500 - at}` } as CSSProperties}
-          />
-        </svg>
-      )}
       <span className="eye-ring-label">
-        <span className="eye-ring-glyph">◉</span> the Eye
+        <span className="eye-ring-glyph">◉</span> {ringLabel(reason)}
       </span>
     </div>
   );
 }
 
-/** Steps 1–3 and the lift: the pool, the spark and its trail under a moving spotlight, the dim. */
-function LightLayer({ drawn, root }: { readonly drawn: Drawn; readonly root: Rect }): ReactElement {
+/** The reach's own transform, set on the element that moves (never inherited by its children). */
+const reachStyle = (line: BeamLine): CSSProperties =>
+  ({
+    "--beam-x": `${line.x}px`,
+    "--beam-y": `${line.y}px`,
+    "--beam-a": `${line.angle}deg`,
+  }) as CSSProperties;
+
+/** The wedge, narrow at the Eye and `half` wide either side of the line at its tip. */
+const wedge = (length: number, half: number, root: number): string =>
+  `0,${-root} ${length},${-half} ${length},${half} 0,${root}`;
+
+/** The beam: the Eye's pool and the wedge in the gaps, the pass inside each card it crosses, and
+ *  the glow round the card it lands in. Drawn once; CSS plays it (`eye-light.css`). */
+function BeamLayer({ beam }: { readonly beam: Beam }): ReactElement {
   const id = useId().replace(/:/g, "");
-  const { frame, origin, target } = drawn;
-  // The layer covers the app column (the chat beside it is never dimmed): page x → layer x.
-  const x = (px: number) => px - root.left;
-  const trail = frame.trail ?? [];
-  const tail = trail[0];
-  const head = trail[trail.length - 1];
+  const { line, passes, home, clear } = beam;
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  const hole = (b: Rect, r: number, fill: string, key?: string) => (
+    <rect key={key} x={b.left} y={b.top} width={b.width} height={b.height} rx={r} fill={fill} />
+  );
   return (
     <svg
-      className="eye-light"
-      data-eye-light-step={frame.step}
+      className="eye-beam"
+      data-eye-beam=""
+      data-eye-beam-passes={passes.length}
       aria-hidden="true"
       focusable="false"
-      style={{ left: root.left, width: root.width }}
+      width={w}
+      height={h}
+      viewBox={`0 0 ${w} ${h}`}
     >
       <defs>
+        <clipPath id={`${id}-below`}>
+          <rect x="0" y={clear} width={w} height={Math.max(0, h - clear)} />
+        </clipPath>
+        <mask id={`${id}-gaps`} maskUnits="userSpaceOnUse" x="0" y="0" width={w} height={h}>
+          <rect width={w} height={h} fill="#fff" />
+          {passes.map((p, i) => hole(p.box, p.radius, "#000", String(i)))}
+        </mask>
+        {passes.map((p, i) => (
+          <clipPath key={String(i)} id={`${id}-card-${String(i)}`}>
+            {hole(p.box, p.radius, "#fff")}
+          </clipPath>
+        ))}
+        <linearGradient id={`${id}-core`}>
+          <stop offset="0" stopColor="#fff3d6" />
+          <stop offset="0.35" stopColor="#ffc24d" stopOpacity="0.95" />
+          <stop offset="1" stopColor="#ff9e3d" stopOpacity="0.8" />
+        </linearGradient>
+        <linearGradient id={`${id}-outer`}>
+          <stop offset="0" stopColor="#fff3d6" stopOpacity="0.7" />
+          <stop offset="0.3" stopColor="#ffc24d" stopOpacity="0.5" />
+          <stop offset="1" stopColor="#ff7a2e" stopOpacity="0.3" />
+        </linearGradient>
         <radialGradient id={`${id}-pool`}>
           <stop offset="0" stopColor="#fff3d6" stopOpacity="0.9" />
-          <stop offset="0.35" stopColor="#ffc24d" stopOpacity="0.55" />
+          <stop offset="0.4" stopColor="#ffc24d" stopOpacity="0.5" />
           <stop offset="1" stopColor="#ff7a2e" stopOpacity="0" />
         </radialGradient>
-        <radialGradient id={`${id}-spot`}>
-          <stop offset="0" stopColor="#ffc24d" stopOpacity="0.2" />
-          <stop offset="1" stopColor="#ffc24d" stopOpacity="0" />
-        </radialGradient>
-        {tail && head ? (
-          <linearGradient
-            id={`${id}-trail`}
-            gradientUnits="userSpaceOnUse"
-            x1={x(tail.x)}
-            y1={tail.y}
-            x2={x(head.x)}
-            y2={head.y}
-          >
-            <stop offset="0" stopColor="#ff7a2e" stopOpacity="0" />
-            <stop offset="1" stopColor="#ffc24d" stopOpacity="0.9" />
-          </linearGradient>
-        ) : null}
-        {frame.dim !== undefined ? (
-          <mask id={`${id}-hole`}>
-            <rect width="100%" height="100%" fill="#fff" />
-            <rect
-              x={x(target.left) - 6}
-              y={target.top - 6}
-              width={target.width + 12}
-              height={target.height + 12}
-              rx="10"
-              fill="#000"
-            />
-          </mask>
-        ) : null}
+        <filter id={`${id}-soft`} x="-20%" y="-200%" width="140%" height="500%">
+          <feGaussianBlur stdDeviation="6" />
+        </filter>
+        <filter id={`${id}-haze`} x="-30%" y="-300%" width="160%" height="700%">
+          <feGaussianBlur stdDeviation="16" />
+        </filter>
       </defs>
-      {frame.dim !== undefined ? (
-        <rect
-          width="100%"
-          height="100%"
-          fill="#05070b"
-          opacity={frame.dim}
-          mask={`url(#${id}-hole)`}
-          data-eye-dim={(frame.dim / DIM_MAX).toFixed(2)}
-        />
-      ) : null}
-      {frame.pool ? (
-        <circle
-          cx={x(origin.x)}
-          cy={origin.y}
-          r={frame.pool.r}
-          fill={`url(#${id}-pool)`}
-          opacity={frame.pool.opacity}
-        />
-      ) : null}
-      {frame.spark ? (
-        <>
-          <circle cx={x(frame.spark.x)} cy={frame.spark.y} r="150" fill={`url(#${id}-spot)`} />
-          <polyline
-            points={trail.map((p) => `${x(p.x)},${p.y}`).join(" ")}
-            fill="none"
-            stroke={`url(#${id}-trail)`}
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+      <g className="eye-beam-all" clipPath={`url(#${id}-below)`}>
+        <g mask={`url(#${id}-gaps)`}>
+          {/* The card it lands in, lit from behind: a glow that shows only round its edge. */}
+          <rect
+            className="eye-beam-back"
+            data-eye-beam-back=""
+            x={home.box.left - 4}
+            y={home.box.top - 4}
+            width={home.box.width + 8}
+            height={home.box.height + 8}
+            rx={home.radius + 4}
+            fill="#ff9e3d"
+            fillOpacity="0.5"
+            filter={`url(#${id}-haze)`}
           />
-          <circle cx={x(frame.spark.x)} cy={frame.spark.y} r="9" fill={`url(#${id}-pool)`} />
-          <circle cx={x(frame.spark.x)} cy={frame.spark.y} r="2.5" fill="#fff3d6" />
-        </>
-      ) : null}
+          <circle
+            className="eye-beam-pool"
+            cx={line.x}
+            cy={line.y}
+            r="28"
+            fill={`url(#${id}-pool)`}
+          />
+          <g className="eye-beam-reach" style={reachStyle(line)}>
+            <polygon
+              points={wedge(line.length, 32, 4)}
+              fill={`url(#${id}-outer)`}
+              filter={`url(#${id}-soft)`}
+            />
+            <polygon points={wedge(line.length, 9, 1)} fill={`url(#${id}-core)`} />
+          </g>
+        </g>
+        {passes.map((p, i) => (
+          <g
+            key={String(i)}
+            className="eye-beam-pass"
+            data-eye-pass-at={p.at}
+            clipPath={`url(#${id}-card-${String(i)})`}
+            style={{ animationDelay: `${String(p.at)}ms` }}
+          >
+            <g className="eye-beam-reach" style={reachStyle(line)}>
+              <polygon
+                points={wedge(line.length, 60, 20)}
+                fill="#ffc24d"
+                fillOpacity="0.2"
+                filter={`url(#${id}-haze)`}
+              />
+              <polygon
+                points={wedge(line.length, 11, 3)}
+                fill="#ffc24d"
+                fillOpacity="0.42"
+                filter={`url(#${id}-soft)`}
+              />
+            </g>
+          </g>
+        ))}
+      </g>
     </svg>
   );
 }
@@ -305,21 +375,23 @@ export function EyeLight({
   const request = useEyeLight((s) => s.request);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [lit, setLit] = useState<Lit | undefined>(undefined);
-  const [drawn, setDrawn] = useState<Drawn | undefined>(undefined);
-  const [rootBox, setRootBox] = useState<Rect | undefined>(undefined);
+  const [beam, setBeam] = useState<{ readonly beam: Beam; readonly seq: number } | undefined>(
+    undefined,
+  );
   // The page the light lands on: read when it lands, after a link to another page has moved there.
   const here = pathname.replace(/^\/app(?=\/|$)/, "") || "/";
   const page = useRef(here);
   page.current = here;
 
   // A light requested: wait for its item, scroll it into view if the landing left it off screen,
-  // then play the steps. A newer request (or unmounting) cancels this one where it stands.
+  // then play the beam. A newer request (or unmounting) cancels this one where it stands.
   useEffect(() => {
     if (!request) return;
     let cancelled = false;
     let raf = 0;
+    const timers: ReturnType<typeof setTimeout>[] = [];
     setLit(undefined);
-    setDrawn(undefined);
+    setBeam(undefined);
     // Her link to the whole calendar only scrolls (#7337; `landing.css` says why: a ring round the
     // whole calendar marks nothing). It still lets go of an earlier ring, as any newer link does, but
     // lights nothing and never re-centres the section over the landing's top-aligned scroll.
@@ -330,51 +402,28 @@ export function EyeLight({
     let scrolled = false;
 
     const play = (el: HTMLElement) => {
-      const path = page.current;
-      const radius = radiusOf(el);
-      const origin = prefersStill() ? undefined : originFor();
+      const landed: Lit = {
+        el,
+        path: page.current,
+        radius: radiusOf(el),
+        ...(request.reason ? { reason: request.reason } : {}),
+      };
+      const spatial = spatialMs();
+      const origin = prefersStill() || spatial === 0 ? undefined : originFor();
       if (!origin) {
-        setLit({ el, path, radius });
+        setLit(landed);
         return;
       }
-      // The Eye turns toward the item as it focuses (the scene's glance, `tower-bus.ts`).
+      // The Eye turns toward the item as the beam leaves it (the scene's glance, `tower-bus.ts`).
       const frame = useTowerBus.getState().frame;
       if (origin.kind === "tower" && frame)
         postTo(frame, glanceMessage(frame.getBoundingClientRect(), el.getBoundingClientRect()));
-      const ceiling = topbarBottom();
-      const start = performance.now();
-      // `performance.now()`, never the frame's own timestamp: the two need not share an origin.
-      const tick = () => {
-        if (cancelled) return;
-        const now = performance.now();
-        const target = el.isConnected ? rectOf(el) : undefined;
-        if (!target) {
-          setDrawn(undefined);
-          return;
-        }
-        const f = lightAt(now - start, origin, centre(target), ceiling);
-        const box = root.current?.getBoundingClientRect();
-        setRootBox(box ? { top: 0, left: box.left, width: box.width, height: 0 } : undefined);
-        if (f.ring)
-          setLit((prev) =>
-            prev?.el === el
-              ? prev
-              : {
-                  el,
-                  path,
-                  radius,
-                  // The spark comes down its arc's last leg from the control point (`onArc`).
-                  touch: touchShare(target, arcControl(origin, centre(target), ceiling)),
-                },
-          );
-        if (f.step === "done") {
-          setDrawn(undefined);
-          return;
-        }
-        setDrawn({ frame: f, origin, target });
-        raf = requestAnimationFrame(tick);
-      };
-      raf = requestAnimationFrame(tick);
+      setBeam({ beam: beamFor(origin, el, spatial), seq: request.seq });
+      // The ring lands with the tip; the beam lets go once it has held and faded.
+      timers.push(setTimeout(() => !cancelled && setLit(landed), spatial));
+      timers.push(
+        setTimeout(() => !cancelled && setBeam(undefined), spatial + BEAM_HOLD_MS + spatial),
+      );
     };
 
     const wait = () => {
@@ -409,8 +458,9 @@ export function EyeLight({
     return () => {
       cancelled = true;
       if (raf) cancelAnimationFrame(raf);
+      for (const t of timers) clearTimeout(t);
     };
-  }, [request, root]);
+  }, [request]);
 
   // Leaving the page lets the ring go; the light that brought the member here lit after the move.
   const litHere = lit && lit.path === here ? lit : undefined;
@@ -440,8 +490,14 @@ export function EyeLight({
 
   return (
     <>
-      {drawn && rootBox ? <LightLayer drawn={drawn} root={rootBox} /> : null}
-      {litHere ? <EyeRing el={litHere.el} touch={litHere.touch} radius={litHere.radius} /> : null}
+      {beam ? <BeamLayer key={beam.seq} beam={beam.beam} /> : null}
+      {litHere ? (
+        <EyeRing
+          el={litHere.el}
+          radius={litHere.radius}
+          {...(litHere.reason ? { reason: litHere.reason } : {})}
+        />
+      ) : null}
     </>
   );
 }
