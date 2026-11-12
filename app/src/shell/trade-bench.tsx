@@ -49,6 +49,9 @@ export interface StageProps {
   /** A `?desk=` that isn't the session's own, by name — see `DeskTicket`'s `notYours`. */
   readonly notYours?: string;
   readonly symbol: string;
+  /** `?shares=` / `?order=` — a draft from Campaign's Trade window (#7487 slice 6), share ticket only. */
+  readonly shares?: number;
+  readonly order?: "market" | "limit";
   readonly play: string;
   readonly strike: string;
   readonly expiration: string;
@@ -84,6 +87,20 @@ export interface StageProps {
   readonly preset?: ChainPreset;
   readonly onPresetHandled: () => void;
   readonly onStage: (preset: Omit<ChainPreset, "key">) => void;
+}
+
+/** A Campaign draft (#7487 slice 6) is a BUY of shares, so only the buy-shares ticket (rung 101)
+ *  starts from it; the member switching to Sell or an option rung gets that ticket fresh, never a
+ *  buy's share count carried onto a different order. */
+function campaignDraftFor(
+  play: string,
+  props: Pick<StageProps, "shares" | "order">,
+): { initialShares?: number; initialOrderType?: "market" | "limit" } {
+  if (play !== "101") return {};
+  return {
+    ...(props.shares === undefined ? {} : { initialShares: props.shares }),
+    ...(props.order === undefined ? {} : { initialOrderType: props.order }),
+  };
 }
 
 /** Whether the ticket at `props.play` is an option rung — the one case `chartSlot` applies to
@@ -166,6 +183,7 @@ function Pane({
       code={play}
       onPreset={props.onPreset}
       initialSymbol={symbol || undefined}
+      {...campaignDraftFor(play, props)}
       onSymbolCommit={props.onSymbolCommit}
       initialStrike={strike || undefined}
       onStrikeCommit={props.onStrikeCommit}

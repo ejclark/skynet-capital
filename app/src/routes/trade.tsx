@@ -9,6 +9,7 @@ import type { DraftLeg, NewLeg } from "../live/draft-order";
 import { normalizeExpiration } from "../live/expiration";
 import { carriedPlan, planSearch } from "../live/fast-track";
 import { focusFrom, manageSearch, ROLL_TO } from "../live/manage-handoff";
+import { parseOrderType, parseShares } from "../live/mission-ticket";
 import { fetchPlays, type PlayInfo } from "../live/options";
 import { navForPlay } from "../live/plays";
 import { questSearch } from "../live/quest-link";
@@ -115,11 +116,25 @@ import { useBenchWidth } from "../shell/use-bench-width";
 
 const PLAY_CODES = new Set(["101", "102", "201", "202", "301", "302", "401"]);
 
+/** A draft handed over from Campaign's Trade window (#7487 slice 6), as the bench's props: only the
+ *  parts the address carried, so a ticket opened any other way starts exactly as it always has. */
+function campaignDraft(
+  shares: number | undefined,
+  order: "market" | "limit" | undefined,
+): Pick<StageProps, "shares" | "order"> {
+  return {
+    ...(shares === undefined ? {} : { shares }),
+    ...(order === undefined ? {} : { order }),
+  };
+}
+
 function TradePage(): ReactElement {
   const {
     desk,
     play,
     symbol,
+    shares,
+    type: order,
     strike,
     exp,
     section: askedSection,
@@ -320,6 +335,7 @@ function TradePage(): ReactElement {
     section,
     ...(notYours ? { notYours } : {}),
     symbol: symbol ?? "",
+    ...campaignDraft(shares, order),
     play: play ?? "101",
     strike: strike ?? "",
     expiration: exp ?? "",
@@ -425,6 +441,8 @@ export const Route = createFileRoute("/trade")({
     const symbol = normalizeSymbol(search.symbol);
     // `?strike=` (task 4e): same shape check pattern as symbol, mirrored one-for-one.
     const strike = normalizeStrike(search.strike);
+    const shares = parseShares(search.shares);
+    const type = parseOrderType(search.type);
     // `?exp=` (#3407, Workbench slice 4a): ISO date or dropped, same posture as symbol/strike.
     const exp = normalizeExpiration(search.exp);
     // `?manage=` (#3729): a held contract's OCC symbol, or dropped; `?rollTo=` only its target shape.
@@ -442,6 +460,11 @@ export const Route = createFileRoute("/trade")({
         : {}),
       ...(PLAY_CODES.has(play) ? { play: play as PlayInfo["code"] } : {}),
       ...(symbol !== undefined ? { symbol } : {}),
+      // `?shares=&type=` (#7487 slice 6): a draft handed over from Campaign's Trade window, kept
+      // only when well formed; the share ticket starts from it and the gate reviews it as usual.
+      // (`?order=` was taken: the ledger and accounts pages use it for an order id.)
+      ...(shares !== undefined ? { shares } : {}),
+      ...(type !== undefined ? { type } : {}),
       ...(strike !== undefined ? { strike } : {}),
       ...(exp !== undefined ? { exp } : {}),
       ...(manage !== undefined ? { manage } : {}),
