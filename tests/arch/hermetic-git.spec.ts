@@ -45,6 +45,20 @@ describe("hermetic git in specs", () => {
     expect(env.GITHUB_HEAD_REF).toBe(""); // not a GIT_ var — a GitHub one; must survive
   });
 
+  it("drops ship.sh's inherited re-run marker so a board's own verify still exercises the catch-up", () => {
+    // #7551: `ship.sh platter board` re-runs itself with SHIP_PLATTER_RERUN=1 exported, and the
+    // verify it runs used to hand that marker to every ship spec's child ship.sh.
+    const saved = process.env.SHIP_PLATTER_RERUN;
+    process.env.SHIP_PLATTER_RERUN = "1";
+    try {
+      expect("SHIP_PLATTER_RERUN" in hermeticGitEnv()).toBe(false);
+      expect(hermeticGitEnv({ SHIP_PLATTER_RERUN: "1" }).SHIP_PLATTER_RERUN).toBe("1");
+    } finally {
+      if (saved === undefined) delete process.env.SHIP_PLATTER_RERUN;
+      else process.env.SHIP_PLATTER_RERUN = saved;
+    }
+  });
+
   it("every spec that spawns git reaches it through hermeticGitEnv", () => {
     const offenders = specFiles(SPEC_ROOT).filter((file) => {
       const source = readFileSync(file, "utf8");
