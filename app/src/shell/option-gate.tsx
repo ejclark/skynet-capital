@@ -402,6 +402,7 @@ export function OptionGate({
   useEffect(() => {
     if (!preset || preset.play !== play.code || preset.strike !== (initialStrike ?? "")) return;
     if (preset.limit !== undefined) setLimitPrice(String(preset.limit));
+    if (preset.contracts !== undefined) setContracts(String(preset.contracts));
     setLockedPickNote(preset.note);
     onPresetHandled?.();
   }, [preset?.key, initialStrike, play.code]);

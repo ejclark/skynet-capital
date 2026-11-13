@@ -115,6 +115,43 @@ import { useBenchWidth } from "../shell/use-bench-width";
 
 const PLAY_CODES = new Set(["101", "102", "201", "202", "301", "302", "401"]);
 
+/** The tiers a suggestion link may name (`src/options/trade-suggestions-rules.ts`). */
+const TIER_WORDS = {
+  conservative: "Conservative",
+  standard: "Standard",
+  "high-risk": "High risk",
+} as const;
+type SuggestionTier = keyof typeof TIER_WORDS;
+
+/** The line a suggestion link leaves on the ticket: whose numbers, which tier, how old the price is. */
+export function suggestionNote(
+  tier: SuggestionTier | undefined,
+  qty: number | undefined,
+  limit: number | undefined,
+): string {
+  const which = tier ? `${TIER_WORDS[tier]} option` : "Suggested trade";
+  const size = qty !== undefined ? ` ${String(qty)} contract${qty === 1 ? "" : "s"}` : "";
+  const price =
+    limit !== undefined
+      ? ` at $${limit.toFixed(2)}, the mid when Moneypenny suggested it. Check the live quote before you review`
+      : "";
+  return `${which} from Moneypenny (SIM):${size}${price}.`;
+}
+
+/** `?qty=`: whole contracts, 1–100. Anything else is dropped. */
+export function normalizeQty(v: unknown): number | undefined {
+  const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : Number.NaN;
+  return Number.isInteger(n) && n >= 1 && n <= 100 ? n : undefined;
+}
+
+/** `?limit=`: a positive per-share price in whole cents, under $100,000. Anything else is dropped. */
+export function normalizeLimit(v: unknown): number | undefined {
+  const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : Number.NaN;
+  return Number.isFinite(n) && n > 0 && n < 100_000 && Math.abs(Math.round(n * 100) - n * 100) < 1e-6
+    ? n
+    : undefined;
+}
+
 function TradePage(): ReactElement {
   const {
     desk,
@@ -125,6 +162,9 @@ function TradePage(): ReactElement {
     section: askedSection,
     manage,
     rollTo,
+    qty,
+    limit,
+    tier,
     ...carried
   } = Route.useSearch();
   // A fast track's stop and exit, shown while the ticket is on the name they were written for.
@@ -195,6 +235,29 @@ function TradePage(): ReactElement {
   useEffect(() => {
     setPreset((p) => (p && p.play !== (play ?? "101") ? undefined : p));
   }, [play]);
+  // A SUGGESTION LINK (#7547: "Stage a trade for NVDA" → three tiers, each a link here). The URL
+  // names the whole ticket — rung, strike, expiry, contracts, limit — and the count and the price
+  // ride the same hand-off a chain tap uses, with one line saying where they came from. The limit
+  // was the mid when she suggested it, which the line says, so a link opened later is never read
+  // as a live price (the reason a chain tap's limit stays out of the URL).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: staged once per suggestion link
+  useEffect(() => {
+    if (!play || !strike || (qty === undefined && limit === undefined)) return;
+    stagePreset({
+      play,
+      strike,
+      ...(limit !== undefined ? { limit } : {}),
+      ...(qty !== undefined ? { contracts: qty } : {}),
+      note: suggestionNote(tier, qty, limit),
+    });
+    // Spent once staged: the count and price belong to this exact contract, so they leave the URL
+    // and can never re-price a strike or symbol the member moves to afterwards.
+    void navigate({
+      replace: true,
+      resetScroll: false,
+      search: ({ qty: _q, limit: _l, tier: _t, ...rest }) => rest,
+    });
+  }, [play, strike, qty, limit, tier]);
   const [draftLegs, setDraftLegs] = useState<readonly DraftLeg[]>([]);
   // The strikes of a structure picked on the Outlook pane — outlined on the chain so the member can
   // see which rows the proposal sits on (`onOutlookUse`). The SYMBOL it was picked against is held
@@ -436,6 +499,13 @@ export const Route = createFileRoute("/trade")({
       manage && typeof search.rollTo === "string" && ROLL_TO.test(search.rollTo)
         ? search.rollTo
         : undefined;
+    // `?qty=&limit=&tier=` (#7547): a suggestion link's count, price and tier, each shape-checked.
+    const qty = normalizeQty(search.qty);
+    const limit = normalizeLimit(search.limit);
+    const tier =
+      typeof search.tier === "string" && Object.hasOwn(TIER_WORDS, search.tier)
+        ? (search.tier as SuggestionTier)
+        : undefined;
     return {
       ...(typeof search.desk === "string" && search.desk.length > 0 && search.desk.length <= 100
         ? { desk: search.desk }
@@ -446,6 +516,9 @@ export const Route = createFileRoute("/trade")({
       ...(exp !== undefined ? { exp } : {}),
       ...(manage !== undefined ? { manage } : {}),
       ...(rollTo !== undefined ? { rollTo } : {}),
+      ...(qty !== undefined ? { qty } : {}),
+      ...(limit !== undefined ? { limit } : {}),
+      ...(tier !== undefined ? { tier } : {}),
       // `?plan=&stop=&exit=` (#7034 slice 2): a fast track's carried plan, kept only whole.
       ...planSearch(search),
       // `?quest=` (#7028 slice 6): the quest this ticket was opened from, sent with the order.
