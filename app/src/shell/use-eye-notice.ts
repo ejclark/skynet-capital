@@ -11,6 +11,7 @@ import {
   seenQuests,
   useNoticeMoves,
 } from "../live/eye-notice";
+import { isFirstVisit } from "../live/first-visit";
 import type { MissionWindow } from "../live/mission";
 import { useMoneypenny } from "../live/moneypenny";
 import { quietNextWindow } from "./mission-window";
@@ -30,6 +31,9 @@ import { goToPlace } from "./mp-message";
  *     mode, a tab): they are using the page, and a window swap would take it from under them;
  *   - moved to another window or address (a waypoint, one of Moneypenny's links, Back);
  *   - started a turn with Moneypenny at any point (her notice would bury her answer);
+ *   - is on their first visit, or in its tour or goal (#7487 slice 7, `live/first-visit.ts`): her
+ *     welcome is the page's first word, and the tour lights its own rows; a notice would talk over
+ *     both (the order the dock settles any meeting by is `moneypenny-moves.ts`'s);
  *   - or nothing settled within `LOOK_FOR_MS` of the first look: a notice that late is no longer
  *     the page's first word.
  * It waits, without giving up, while a text field holds words, while the page has scrolled in the
@@ -64,6 +68,13 @@ function fieldInUse(): boolean {
 function herTurn(): boolean {
   const s = useMoneypenny.getState();
   return s.typing || s.streaming || s.pending !== undefined;
+}
+
+/** The member's first visit is due (her welcome is on its way) or running (the welcome, the tour,
+ *  the goal): the Eye stays quiet for all of it (#7487 slices 5 and 7). */
+function inFirstVisit(): boolean {
+  const s = useMoneypenny.getState();
+  return s.visit !== undefined || isFirstVisit(s);
 }
 
 /** The Eye's one look this visit: the notice to play, if any, with the quests on the page recorded
@@ -152,6 +163,7 @@ export function useEyeNotice({
       router.state.location.href !== arrival.current.href ||
       live.current.cur !== arrival.current.cur ||
       herTurn() ||
+      inFirstVisit() ||
       now - firstLook > LOOK_FOR_MS;
     /** Words in a field, a page still scrolling, a thread not yet bound: look again shortly. */
     const notQuietYet = (now: number): boolean =>

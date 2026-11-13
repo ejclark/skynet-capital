@@ -403,6 +403,30 @@
   flex: 1;
   min-width: 0;
 }
+/* The member's goal, the first row of Quests (#7487 slice 7, `shell/quest-goal.tsx`): their words
+   wrap rather than cut, and Change / Clear are each a full 44px word button beside the row. */
+.mctl-goal-text {
+  overflow-wrap: anywhere;
+}
+.mctl-row-act {
+  flex: none;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 11.5px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.mctl-row-act:hover,
+.mctl-row-act:focus-visible {
+  background: var(--surface-2);
+}
 .tag-mark {
   flex: none;
   display: inline-grid;
@@ -451,4 +475,164 @@
 .tag-mark--inline:hover {
   border-style: solid;
   border-color: var(--tag-ink);
+}
+
+/* The rail's second head, "Workbench" (#7487 slice 6): a little air between the two groups. */
+.mctl-rail ul + .mctl-eyebrow {
+  margin-top: 10px;
+}
+
+/* ── the Trade window: a draft paper ticket (#7487 slice 6, `shell/mission-trade.tsx`) ──
+   Phone first: at 390 the three fields stack, Symbol across the whole width; from 600 Shares and
+   Order type sit side by side under it. Segments are 44px tall. A pressed segment is bold and ringed
+   as well as tinted, so the pick never rests on colour (BRAND.md → Accessibility). No motion: these
+   are controls the member changes many times a visit (`/animate`'s gate). */
+.mctl-trade {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding-top: 10px;
+}
+.mctl-trade-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px 16px;
+  width: 100%;
+}
+@media (min-width: 600px) {
+  .mctl-trade-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .mctl-trade-field--wide {
+    grid-column: 1 / -1;
+  }
+}
+/* A fieldset (its legend names the group to a screen reader), with the browser's frame taken off. */
+.mctl-trade-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.mctl-trade-label {
+  padding: 0;
+  margin-bottom: 5px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.mctl-trade-from {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+.mctl-trade-from-label {
+  flex: none;
+  min-width: 84px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--muted);
+}
+.mctl-trade-empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  text-wrap: pretty;
+}
+.mctl-seg {
+  display: inline-flex;
+  align-self: flex-start;
+  max-width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+/* Symbol's names wrap at 390 rather than scroll: each one stays a whole 44px target. */
+.mctl-seg--wrap {
+  flex-wrap: wrap;
+}
+.mctl-seg-btn,
+.mctl-seg-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.mctl-seg > :last-child {
+  border-right: 0;
+}
+.mctl-seg-btn {
+  cursor: pointer;
+}
+.mctl-seg-btn:hover:not(:disabled, [aria-disabled="true"]) {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.mctl-seg-btn[aria-pressed="true"] {
+  background: var(--surface-2);
+  color: var(--text);
+  font-weight: 700;
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+.mctl-seg-btn:disabled,
+.mctl-seg-btn[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+/* Focus draws INSIDE the button: `.mctl-seg` clips its children to its rounded corners, and
+   would clip the page's 2px-offset ring to a sliver. The ring sits 4px in, a clear gap inside the
+   pressed state's edge ring, so a pressed segment with focus shows two rings and one without shows
+   one: focus and "selected" differ by shape, not by colour (#7487 slice 6 review). */
+.mctl-seg-btn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -6px;
+}
+.mctl-seg-count {
+  color: var(--text);
+  font-family: var(--mono);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.mctl-trade-quote {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.mctl-trade-review {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+.mctl-trade-go {
+  width: auto;
+  min-height: 44px;
+  padding: 0 18px;
+}
+.mctl-trade-line {
+  flex: 1 1 220px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--text);
+}
+.mctl-trade .mctl-rows {
+  width: 100%;
+}
+.mctl-trade .mctl-note {
+  margin-top: 0;
 }

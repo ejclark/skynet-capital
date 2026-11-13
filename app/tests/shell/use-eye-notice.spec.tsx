@@ -66,8 +66,14 @@ describe("useEyeNotice", () => {
     useEyeLight.setState({ request: undefined });
     useNoticeMoves.setState({ line: undefined, moves: [] });
     useMoneypenny.getState().reset();
-    // The dock's `hydrate` has bound the thread to its member (the notice waits for that).
-    useMoneypenny.setState({ member: "member-1" });
+    // The dock's `hydrate` has bound the thread to its member (the notice waits for that). Its
+    // onboarding facts stay unread, so no first visit is due (`reset` keeps them, slice 7).
+    useMoneypenny.setState({
+      member: "member-1",
+      connected: undefined,
+      messaged: undefined,
+      firstTradeDone: undefined,
+    });
   });
 
   it("on the first look only records the quests already there", async () => {
@@ -105,6 +111,27 @@ describe("useEyeNotice", () => {
     await mount();
     await past();
     expect(useEyeLight.getState().request).toBeUndefined();
+  });
+
+  // #7487 slice 7: a member's first visit is her welcome's, then the tour's — the Eye never talks
+  // over either (the dock's order, `moneypenny-moves.ts`, only settles a meeting that slips by).
+  it("stays quiet while a first visit is due or running", async () => {
+    rememberQuests([]);
+    useMoneypenny.setState({
+      connected: false,
+      messaged: false,
+      firstTradeDone: false,
+      introDone: false,
+    });
+    await mount();
+    await past();
+    expect(useEyeLight.getState().request).toBeUndefined();
+    useMoneypenny.getState().reset();
+    useMoneypenny.setState({ member: "member-1", visit: { kind: "tour", step: 1 } });
+    await mount();
+    await past();
+    expect(useEyeLight.getState().request).toBeUndefined();
+    expect(useMoneypenny.getState().messages).toEqual([]);
   });
 
   it("holds back on a visit that arrived on a deep link", async () => {

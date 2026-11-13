@@ -19,14 +19,19 @@ interface Row {
   trail: number[];
 }
 
-/** A signed-in member. The offline server runs without auth, so its onboarding read names no
- *  viewer, and Moneypenny's thread never binds: the Eye waits for a bound thread before it speaks
- *  (`remark`), as it does for every member behind the invite gate. */
+/** A signed-in, returning member. The offline server runs without auth, so its onboarding read
+ *  names no viewer, and Moneypenny's thread never binds: the Eye waits for a bound thread before it
+ *  speaks (`remark`), as it does for every member behind the invite gate. They have messaged her
+ *  before, so this is not their first visit: the Eye stays quiet through a first visit and its tour
+ *  (#7487 slice 7, `e2e/first-visit.spec.ts`), where her welcome is the page's first word. */
 async function signedIn(page: Page): Promise<void> {
   await page.route("**/api/onboarding", async (route) => {
     const res = await route.fetch();
-    const body = (await res.json()) as Record<string, unknown>;
-    await route.fulfill({ response: res, json: { ...body, viewerId: "e2e-member" } });
+    const body = (await res.json()) as { steps: { id: string; done: boolean }[] };
+    if (!body.steps.some((s) => s.id === "first-message"))
+      throw new Error("the onboarding read carries no first-message step");
+    const steps = body.steps.map((s) => (s.id === "first-message" ? { ...s, done: true } : s));
+    await route.fulfill({ response: res, json: { ...body, steps, viewerId: "e2e-member" } });
   });
 }
 

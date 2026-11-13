@@ -9,6 +9,7 @@ import { dockText, latestLine, type Move, movesFor } from "../live/moneypenny-mo
 import { linesOf } from "../live/moneypenny-threads";
 import { stampTagged } from "../live/page-keys";
 import { taggedKeys, taggedLine, usePromptTags } from "../live/prompt-tags";
+import { useRunVisit } from "./first-visit-run";
 import { DockBox } from "./mp-composer";
 import { goToPlace, Message } from "./mp-message";
 import { ThreadBar, ThreadIndex } from "./rail-threads";
@@ -30,6 +31,10 @@ import { ThreadBar, ThreadIndex } from "./rail-threads";
  * carries. Closed by default; closed on every navigation (a `?w=` window change counts) and by
  * Escape inside the dock (D2). Asking her never opens it: her answer arrives in the latest line.
  *
+ * A member's FIRST VISIT (slice 7) runs through the same three parts: her welcome is the latest
+ * line, its steps are moves (`live/first-visit.ts`, played by `first-visit-run.ts`), and while she
+ * collects a goal the box says "Your goal, in your own words" and takes the line as typed.
+ *
  * Side effects carried over from the rail: after a filing it invalidates the queries that carry the
  * feedback gate, after a view is saved from her card it invalidates the member's convictions, and on
  * mount it wakes the store (binds the member) so her moves read the member's own facts.
@@ -37,6 +42,20 @@ import { ThreadBar, ThreadIndex } from "./rail-threads";
  */
 
 const dayOf = (at: number | undefined) => (at ? new Date(at).toDateString() : undefined);
+
+/** What the box asks for: about the ✎ tags, a reply in a side thread, the member's goal (the first
+ *  visit, slice 7), or anything. Tags lead, and `sendTagged` keeps the same precedence: a tagged line
+ *  sent while the goal is collected is a question about the tags, never the goal. */
+const boxPlaceholder = (
+  tagged: boolean,
+  threadTitle: string | undefined,
+  collectingGoal: boolean,
+): string => {
+  if (tagged) return "Ask about what you tagged";
+  if (threadTitle !== undefined) return `Reply in the thread on ${threadTitle}`;
+  if (collectingGoal) return "Your goal, in your own words";
+  return "Ask, or say where to go";
+};
 
 function History({
   messages,
@@ -159,6 +178,11 @@ export function MoneypennyDock(): ReactElement {
   const convictionSeq = useMoneypenny((s) => s.convictionSeq);
   const focusSeq = useMoneypenny((s) => s.focusSeq);
   const send = useMoneypenny((s) => s.send);
+  const leaveVisit = useMoneypenny((s) => s.leaveVisit);
+  // The first visit (#7487 slice 7) lives in the main conversation only.
+  const visit = useMoneypenny((s) => (s.thread ? undefined : s.visit));
+  const collectingGoal = visit?.kind === "goal";
+  const runVisit = useRunVisit();
   const tags = usePromptTags((s) => s.tags);
   const tagSeq = usePromptTags((s) => s.seq);
   const dropTag = usePromptTags((s) => s.drop);
@@ -174,6 +198,10 @@ export function MoneypennyDock(): ReactElement {
   const href = useRouterState({ select: (s) => s.location.href });
   const queryClient = useQueryClient();
   const box = useRef<HTMLInputElement>(null);
+  const movesList = useRef<HTMLUListElement>(null);
+  // A first-visit move replaces itself with the next stage's moves; once it has played, focus goes
+  // to the first of them (or the box), never to <body>.
+  const [visitPlayed, setVisitPlayed] = useState(0);
   const opener = useRef<HTMLButtonElement>(null);
   const dock = useRef<HTMLDivElement>(null);
   const waiting = typing || pending !== undefined;
@@ -193,6 +221,7 @@ export function MoneypennyDock(): ReactElement {
     connected,
     firstTradeDone,
     latest,
+    ...(visit ? { visit } : {}),
     ...(notice ? { notice } : {}),
   });
 
@@ -253,6 +282,9 @@ export function MoneypennyDock(): ReactElement {
     // so while one does, the line goes as typed and the tags wait for the next message.
     const exact = draft || view || followup || research || (!thread && flow !== "idle");
     if (tags.length === 0 || exact) return send(text, screenshots);
+    // A goal being collected gives way to the tags: the box says "Ask about what you tagged", so the
+    // line is that question, and saving it as her goal would be a lie on the Quests row.
+    if (collectingGoal) leaveVisit();
     stampTagged(taggedKeys(tags));
     // `send` resolves once her answer is in, so whatever the request did not read is spent here:
     // a stamp never rides a later, unrelated question.
@@ -282,8 +314,21 @@ export function MoneypennyDock(): ReactElement {
       closeThread();
       return;
     }
+    if (m.kind === "visit") {
+      void runVisit(m.to).then(() => setVisitPlayed((n) => n + 1));
+      return;
+    }
     goToPlace(router, m.href);
   };
+
+  useEffect(() => {
+    if (visitPlayed === 0) return;
+    const at = document.activeElement;
+    const list = movesList.current;
+    // Focus the member put somewhere else (the box the goal focused, a row) stays where it is.
+    if (at && at !== document.body && !list?.contains(at)) return;
+    (list?.querySelector<HTMLButtonElement>("button.mp-move") ?? box.current)?.focus();
+  }, [visitPlayed]);
 
   const line = waiting
     ? "typing ···"
@@ -353,7 +398,7 @@ export function MoneypennyDock(): ReactElement {
           {history || waiting || !latest ? "" : line}
         </p>
         {moves.length > 0 || tags.length > 0 ? (
-          <ul className="mp-moves" aria-label="Your moves">
+          <ul className="mp-moves" aria-label="Your moves" ref={movesList}>
             {/* The tags lead the row, then her moves; the box below never moves for either. */}
             {tags.map((t) => (
               <li key={`tag:${t.label}`} className="mp-tag">
@@ -387,15 +432,11 @@ export function MoneypennyDock(): ReactElement {
         ) : null}
         <DockBox
           ref={box}
-          placeholder={
-            tags.length > 0
-              ? "Ask about what you tagged"
-              : thread
-                ? `Reply in the thread on ${thread.title}`
-                : "Ask, or say where to go"
-          }
+          placeholder={boxPlaceholder(tags.length > 0, thread?.title, collectingGoal)}
           busy={busy}
-          attachable={companionEnabled && (thread !== undefined || flow === "idle")}
+          attachable={
+            companionEnabled && (thread !== undefined || (flow === "idle" && !collectingGoal))
+          }
           send={sendTagged}
         />
       </aside>

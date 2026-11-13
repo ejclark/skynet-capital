@@ -132,6 +132,8 @@ interface Lit {
   readonly path: string;
   /** The item's corner radius. */
   readonly radius: number;
+  /** Why the Eye holds it, on the ring's label (`ringLabel`): an Eye notice's reason (#7487 slice 5)
+   *  or a first-visit tour stop's (slice 7). */
   readonly reason?: string;
 }
 

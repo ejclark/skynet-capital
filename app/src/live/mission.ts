@@ -3,7 +3,8 @@ import { create } from "zustand";
 /**
  * CAMPAIGN MISSION CONTROL, THE WINDOW MODEL (#7487 slice 1; the Claude Design handoff "Campaign
  * mode — Mission Control", 2026-11-11). The landing page holds ONE window on its stage at a time —
- * Overview, Market, Calendar, Quests, Party — and slides as the member steers. This file is the
+ * Overview, Market, Calendar, Quests, Party, and Trade, the workbench (slice 6) — and slides as the
+ * member steers. This file is the
  * model; `shell/mission-window.tsx` draws the chrome and `routes/index.tsx` fills each window.
  *
  * Where the state lives (the IA decision on #7487): the open window is the page's address,
@@ -17,8 +18,11 @@ import { create } from "zustand";
  * nothing. The slide comes from the side the new window sits on in the trail.
  */
 
-/** The waypoints, in the rail's order. Trade joins as the workbench in slice 6. */
-export const WINDOWS = ["overview", "market", "calendar", "quests", "party"] as const;
+/** The waypoints, in the rail's order: the journeys, then the workbench under its own head. */
+export const WAYPOINTS = ["overview", "market", "calendar", "quests", "party"] as const;
+/** The workbench (#7487 slice 6, spec § 1 "Workbench: Trade"): the draft paper ticket. */
+export const WORKBENCH = ["trade"] as const;
+export const WINDOWS = [...WAYPOINTS, ...WORKBENCH] as const;
 export type MissionWindow = (typeof WINDOWS)[number];
 
 export const DEFAULT_WINDOW: MissionWindow = "overview";
@@ -30,6 +34,7 @@ export const WINDOW_LABEL: Readonly<Record<MissionWindow, { glyph: string; label
   calendar: { glyph: "◷", label: "Calendar" },
   quests: { glyph: "◆", label: "Quests" },
   party: { glyph: "◉", label: "Party" },
+  trade: { glyph: "⇄", label: "Trade" },
 };
 
 /** A `?w=` value cleaned to a window; anything else (absent, unknown, the default) is undefined. */
