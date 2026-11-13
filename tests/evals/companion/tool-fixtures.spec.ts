@@ -20,12 +20,13 @@ const SAMPLE_INPUT: Record<string, unknown> = {
   get_work_status: { issues: [1204] },
   get_roadmap: {},
   get_my_positions: {},
+  get_sized_suggestions: { underlying: "NVDA" },
 };
 
 describe("COMPANION_TOOL_FIXTURES", () => {
   describe("when read as a suite", () => {
-    it("holds three fixtures, each declaring tool use", () => {
-      expect(COMPANION_TOOL_FIXTURES).toHaveLength(3);
+    it("holds four fixtures, each declaring tool use", () => {
+      expect(COMPANION_TOOL_FIXTURES).toHaveLength(4);
       for (const f of COMPANION_TOOL_FIXTURES) expect(f.toolUse).toBeDefined();
     });
 

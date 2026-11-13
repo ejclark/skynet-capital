@@ -37,7 +37,7 @@ const markFor = (t: PromptTag) =>
   });
 const box = () => screen.getByLabelText("Message Moneypenny");
 const chips = () => Array.from(document.querySelectorAll("li.mp-tag")).map((li) => li.textContent);
-const historyShown = () => screen.queryByRole("region", { name: "Conversation with Moneypenny" });
+const pane = () => screen.getByRole("region", { name: "Conversation with Moneypenny" });
 const userLines = () =>
   useMoneypenny
     .getState()
@@ -71,7 +71,7 @@ describe("MoneypennyDock — ✎ tags", () => {
     timing.opsMs = 0;
     localStorage.clear();
     useMoneypenny.getState().reset();
-    useMoneypenny.setState({ member: undefined, history: false });
+    useMoneypenny.setState({ member: undefined, expanded: false });
     usePromptTags.setState({ tags: [], seq: 0 });
     calls.length = 0;
     stubFetch({ "/api/onboarding": () => onboarding(true) }, calls);
@@ -128,14 +128,14 @@ describe("MoneypennyDock — ✎ tags", () => {
     expect(usePromptTags.getState().tags).toEqual([]);
   });
 
-  it("Escape closes History first, keeping the tags, and drops them on the second press", async () => {
+  it("Escape drops an expanded pane to compact first, keeping the tags, and drops them next", async () => {
     mount(<Marks />);
     await flush();
     fireEvent.click(markFor(ENERGY));
-    act(() => useMoneypenny.setState({ history: true }));
-    expect(historyShown()).toBeInTheDocument();
+    act(() => useMoneypenny.setState({ expanded: true }));
+    expect(pane()).toHaveAttribute("data-size", "expanded");
     fireEvent.keyDown(box(), { key: "Escape" });
-    expect(historyShown()).not.toBeInTheDocument();
+    expect(pane()).toHaveAttribute("data-size", "compact");
     expect(chips()).toHaveLength(1);
     fireEvent.keyDown(box(), { key: "Escape" });
     expect(chips()).toEqual([]);

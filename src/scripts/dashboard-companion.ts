@@ -65,6 +65,10 @@ export interface CompanionSetupDeps {
    *  Optional, like `botControls`: without it, `get_structures_for_outlook` degrades to "not
    *  available" rather than throwing. */
   readonly optionsClientFor?: (participantId: string) => AlpacaOptionsClient | undefined;
+  /** #7547: one symbol's market read through the member's own account, for `get_sized_suggestions`
+   *  (`guidanceMarketFor`, wired in `serve-dashboard.ts` where the server config lives). Optional:
+   *  without it the tool says "not available". */
+  readonly suggestMarketFor?: CompanionDeskDeps["suggestMarketFor"];
 }
 
 export interface CompanionSetup {
@@ -132,6 +136,7 @@ export function setupCompanion(env: NodeJS.ProcessEnv, deps: CompanionSetupDeps)
       }),
     // The ledgers, campaigns and lessons are checked in; the research list is on the volume.
     readResearchOn,
+    ...(deps.suggestMarketFor ? { suggestMarketFor: deps.suggestMarketFor } : {}),
     ...(optionsClientFor
       ? {
           rankFor: async (participantId, outlook) => {

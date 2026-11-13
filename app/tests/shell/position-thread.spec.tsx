@@ -11,7 +11,7 @@ import { flush, json, onboarding } from "./moneypenny-dock-harness";
  * A SIDE THREAD ON A POSITION'S ROW (#7167 criterion 11, after #7275's story and event rows). A
  * question asked from a holding's opened guidance opens a thread named by the row's own anchor,
  * `pos-<symbol>` — the key her links already land on — with no wiring of its own. The row shows it
- * behind one closed line; the dock's History names the row and links back to it. Offered on the member's own
+ * behind one closed line; the dock's conversation names the row and links back to it. Offered on the member's own
  * trading account only, the book her positions tool reads.
  */
 
@@ -22,7 +22,7 @@ rstest.mock("@tanstack/react-router", () => ({
     </a>
   ),
   useRouter: () => undefined,
-  // the dock closes History on a location change; one page here, so the address never moves
+  // one page here, so the address never moves
   useRouterState: () => "/app/accounts",
   useSearch: () => ({}),
   useNavigate: () => () => Promise.resolve(),
@@ -72,7 +72,7 @@ describe("a side thread on a position's row", () => {
     timing.opsMs = 0;
     localStorage.clear();
     useMoneypenny.getState().reset();
-    useMoneypenny.setState({ member: undefined, history: false });
+    useMoneypenny.setState({ member: undefined, expanded: false });
     chats = [];
     let turn = 0;
     globalThis.fetch = ((url: string, init?: RequestInit) => {
@@ -125,17 +125,17 @@ describe("a side thread on a position's row", () => {
     await flush();
   };
   const row = () => screen.getByTestId("row");
-  /** The dock's History sheet, opened by hand: asking on a row opens nothing (#7487 slice 2). */
+  /** The dock's conversation pane, expanded by hand: asking on a row never changes its size. */
   const sheet = () => {
-    act(() => useMoneypenny.setState({ history: true }));
+    act(() => useMoneypenny.setState({ expanded: true }));
     return screen.getByRole("region", { name: "Conversation with Moneypenny" });
   };
 
-  it("asks on the position's thread, keyed by its row; History names the row with the way back", async () => {
+  it("asks on the position's thread, keyed by its row; the pane names the row with the way back", async () => {
     mount(true);
     await askOnRow("should I roll this?");
-    // asking opens nothing: her answer arrives in the dock's latest line
-    expect(useMoneypenny.getState().history).toBe(false);
+    // asking never changes the pane's size: her answer arrives in it, compact
+    expect(useMoneypenny.getState().expanded).toBe(false);
     expect(useMoneypenny.getState().thread?.key).toBe(KEY);
     const lines = useMoneypenny.getState().messages.filter((m) => m.role !== "sys");
     expect(lines.map((m) => [m.role, m.thread])).toEqual([
@@ -157,7 +157,7 @@ describe("a side thread on a position's row", () => {
   it("shows the thread on its row, collapsed, with a way to continue it in the chat", async () => {
     mount(true);
     await askOnRow("should I roll this?");
-    act(() => useMoneypenny.getState().closeHistory());
+    act(() => useMoneypenny.getState().collapse());
     expect(within(row()).getByText(/Your thread with Moneypenny/)).toHaveTextContent(
       "Your thread with Moneypenny · 2 messages",
     );

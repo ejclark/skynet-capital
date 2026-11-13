@@ -164,7 +164,8 @@
     "shoot:status-line": "tsx scripts/shoot/status-line.mjs",
     "shoot:route-error": "tsx scripts/shoot/route-error.mjs",
     "shoot:mermaid-pairs": "node scripts/shoot/mermaid-pairs.mjs",
-    "newsletter": "node scripts/newsletter.mjs"
+    "newsletter": "node scripts/newsletter.mjs",
+    "shoot:trade-suggestion": "tsx scripts/shoot/trade-suggestion.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",

@@ -71,8 +71,12 @@ export interface ChainPreset {
   readonly strike: string;
   /** The tapped bid or ask. Absent for a "—" cell, so the ticket's own mid seed applies. */
   readonly limit?: number;
-  /** Set when the tapped side's rung is locked: the one line saying why the side stayed. */
+  /** Set when the tapped side's rung is locked: the one line saying why the side stayed — or, from a
+   *  suggestion link of Moneypenny's (#7547), the line saying where these numbers came from. */
   readonly note?: string;
+  /** How many contracts — set only by a suggestion link (`?qty=`, #7547); a chain tap leaves the
+   *  ticket's own count alone. */
+  readonly contracts?: number;
   readonly key: number;
 }
 

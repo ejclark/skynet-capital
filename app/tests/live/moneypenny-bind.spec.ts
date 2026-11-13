@@ -40,7 +40,7 @@ describe("a failed onboarding read keeps the member's chat (#7307)", () => {
     timing.opsMs = 0;
     localStorage.clear();
     useMoneypenny.getState().reset();
-    useMoneypenny.setState({ member: undefined, history: false, thread: undefined });
+    useMoneypenny.setState({ member: undefined, expanded: false, thread: undefined });
     read = "member-1";
     let turn = 0;
     globalThis.fetch = ((url: string) => {

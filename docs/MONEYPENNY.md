@@ -15,9 +15,10 @@ coach). Nothing named who owns the whole board. This does.
 ## In the app — the dock is her voice
 
 Members meet her directly in the dock under every page (`app/src/shell/moneypenny-dock.tsx`,
-#7487 slice 2; it replaced the ✦ toggle and the right rail): her latest line, her moves as
-buttons, and a one-line box. History, opened from her latest line, holds the whole conversation,
-side threads, Copy and New conversation. There she answers questions live and files feedback.
+#7487 slice 2; it replaced the ✦ toggle and the right rail): the conversation, her moves as
+buttons, and a one-line box. Since 2026-11-13 the conversation is always in the dock, compact or
+expanded (Eric: "Consolidate the chat and history windows"), and it opens on the first line of her
+latest answer; expanded adds side threads, Copy and New conversation. There she answers questions live and files feedback.
 Her voice there is the companion chat (`src/companion/*`, `/api/companion/chat`) — Claude on the
 same key the feedback coach uses, with nine read-only lookups and two hand-offs (the member's own desk, progress and market views,
 the play catalog, a chain read through their own linked account, and the public work record,

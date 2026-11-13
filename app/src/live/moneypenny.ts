@@ -99,9 +99,11 @@ export function formatTranscript(messages: readonly MpMessage[]): string {
 const sleep = (ms: number) => new Promise<void>((ok) => setTimeout(ok, ms));
 
 export interface MoneypennyState extends Persisted {
-  /** The History sheet over the dock (#7487 slice 2): closed by default, closed on every
-   *  navigation. Asking her never opens it — the dock's latest line shows her answer. */
-  readonly history: boolean;
+  /** The conversation pane's size (Eric, 2026-11-13: "Consolidate the chat and history windows. The
+   *  ability to expand/collapse window size is enough"): the conversation is always in the dock,
+   *  compact by default, expanded on the member's ask. A taste setting, so it survives navigation
+   *  and reloads (`localStorage`, best-effort); a link of hers collapses it so her page shows. */
+  readonly expanded: boolean;
   /** Bumps when something outside the dock asks for its box (`meetMoneypenny`) — the dock focuses it. */
   readonly focusSeq: number;
   /** Her typing beat — the indicator before a line lands. */
@@ -152,12 +154,13 @@ export interface MoneypennyState extends Persisted {
   /** Wake the dock: switch the chat on and bind the member, so her moves read the member's own
    *  facts; with `intro`, play her intro script once per member (the `introDone` flag). */
   readonly wake: (opts?: { readonly intro?: boolean }) => Promise<void>;
-  readonly openHistory: () => void;
-  readonly closeHistory: () => void;
-  /** The member moved to another page or window: close History, and leave a side thread for the
-   *  main conversation when no answer is under way. */
+  /** Back to the compact pane (Escape, a link of hers). */
+  readonly collapse: () => void;
+  /** The member moved to another page or window: leave a side thread for the main conversation
+   *  when no answer is under way. The pane keeps its size: that is the member's taste. */
   readonly leavePage: () => void;
-  readonly toggleHistory: () => void;
+  /** Compact ↔ expanded, remembered for this browser. */
+  readonly toggleExpanded: () => void;
   /** Load the member's saved conversation, so a row's thread shows on page load (#7308) and the
    *  dock's moves read the member's facts; also checks the chat is switched on. Binds only a store nothing else has touched yet, and only to a member the
    *  read named: a failed read must never bind "anon", which would forget the member's own blob. */
@@ -174,6 +177,23 @@ export interface MoneypennyState extends Persisted {
   readonly ask: (text: string, thread?: MpThread) => boolean;
   /** Forget everything for this member — for specs and the new-conversation control. */
   readonly reset: () => void;
+}
+
+/** Where the pane's size is remembered: a per-browser convenience, never state that must persist. */
+export const EXPANDED_KEY = "mp-dock-expanded";
+function readExpanded(): boolean {
+  try {
+    return globalThis.localStorage?.getItem(EXPANDED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+function writeExpanded(on: boolean): void {
+  try {
+    globalThis.localStorage?.setItem(EXPANDED_KEY, on ? "1" : "0");
+  } catch {
+    // a private window or blocked storage: the size simply is not remembered
+  }
 }
 
 export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
@@ -573,7 +593,7 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
 
   return {
     ...EMPTY,
-    history: false,
+    expanded: readExpanded(),
     focusSeq: 0,
     typing: false,
     streaming: false,
@@ -585,22 +605,21 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
       const ob = await bind();
       if (opts?.intro && !get().introDone) await playIntro(ob);
     },
-    openHistory: () => {
-      set({ history: true });
-      void get().wake({ intro: true });
+    collapse: () => {
+      set({ expanded: false });
+      writeExpanded(false);
     },
-    closeHistory: () => set({ history: false }),
     leavePage: () => {
-      // A new page or window: History folds away, and a side thread hands the dock back to the
-      // main conversation — unless an answer is still landing in it, which it is left to finish.
+      // A new page or window: a side thread hands the dock back to the main conversation — unless
+      // an answer is still landing in it, which it is left to finish.
       const s = get();
       const busy = s.typing || s.streaming || s.pending !== undefined;
-      set({ history: false, ...(busy ? {} : { thread: undefined }) });
+      if (!busy) set({ thread: undefined });
     },
     openThread: (thread) => {
       // Never mid-answer: her reply lands in the thread it was asked in, so the view waits for it.
       if (get().typing || get().streaming || get().pending !== undefined) return;
-      set({ thread, history: true });
+      set({ thread });
       renamed(thread);
       void companionOn();
       void bind();
@@ -609,9 +628,11 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
       if (get().typing || get().streaming || get().pending !== undefined) return;
       set({ thread: undefined });
     },
-    toggleHistory: () => {
-      if (get().history) set({ history: false });
-      else get().openHistory();
+    toggleExpanded: () => {
+      const expanded = !get().expanded;
+      set({ expanded });
+      writeExpanded(expanded);
+      if (expanded) void get().wake({ intro: true });
     },
     hydrate: () => {
       // The dock mounts on every page and reads whether the chat is switched on for its box.
@@ -707,6 +728,6 @@ export const meetMoneypenny = (): Promise<void> => {
   // "Talk to Moneypenny" from a page (onboarding, the ladder, feedback): her conversation opens over
   // the dock and the box takes focus, so the member can answer her at once.
   const mp = useMoneypenny.getState();
-  useMoneypenny.setState({ history: true, focusSeq: mp.focusSeq + 1 });
+  useMoneypenny.setState({ focusSeq: mp.focusSeq + 1 });
   return mp.wake({ intro: true });
 };
