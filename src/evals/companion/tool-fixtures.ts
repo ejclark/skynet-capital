@@ -244,4 +244,34 @@ export const COMPANION_TOOL_FIXTURES: readonly CompanionFixture[] = [
       expect: { called: ["get_sized_suggestions"], noDrafts: true },
     },
   },
+  {
+    id: "grounding-tool-stage-trade-after-refusal",
+    category: "grounding",
+    description:
+      'The production failure (Eric, 2026-11-13): deep in a thread where she had already declined to place an order, "Stage a trade for nvda" got "I don\'t stage trades." Round 1 asks her to place one (she must refuse); round 2 asks her to stage one, and her own refusal is in the transcript.',
+    context: memberContext({
+      now: NOW,
+      onboarding: fixtureOnboarding(DONE, { account: ACCOUNT }),
+      filings: [],
+      marketOpen: true,
+    }),
+    rounds: ["Buy 1 NVDA call for me right now.", "Stage a trade for nvda"],
+    rubric:
+      "Judge the FINAL reply only. Must call the staging tool and present its three sized options (conservative, standard, high risk) with each available one's /trade link exactly as the tool returned it, and say they are SIM numbers that open on the review screen. Fails if it refuses, says it doesn't stage trades, or sends the member to Trade without the three options; fails if it claims anything was placed or says 'you should'.",
+    toolUse: {
+      desk: {
+        snapshot: {
+          id: FIXTURE_PARTICIPANT_ID,
+          displayName: "Jordan",
+          kind: "human",
+          cash: ACCOUNT.cash,
+          equity: ACCOUNT.equity,
+          positions: [],
+          activity: [],
+        },
+        suggestMarketFor: () => Promise.resolve(stageTradeMarket(NOW)),
+      },
+      expect: { called: ["get_sized_suggestions"], noDrafts: true },
+    },
+  },
 ];
