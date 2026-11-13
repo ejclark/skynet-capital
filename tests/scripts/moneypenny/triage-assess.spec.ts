@@ -1,3 +1,4 @@
+import { RECHECK_MARK } from "../../../scripts/moneypenny/reply-resume.mjs";
 import {
   assemble,
   assessIntent,
@@ -7,7 +8,6 @@ import {
   planWrite,
   trustedComments,
 } from "../../../scripts/moneypenny/triage-assess.mjs";
-import { RECHECK_MARK } from "../../../scripts/moneypenny/reply-resume.mjs";
 
 // #7544 — a member's filing is assessed the moment it lands: queued (`ready`), asked a question
 // (`needs-info`, re-checked on their follow-up), or left for a person's look. The judgment is the

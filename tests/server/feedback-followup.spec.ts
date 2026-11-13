@@ -86,7 +86,11 @@ describe("feedback-followup", () => {
     const intent = async (labels: string[], after: string[]) => {
       const { calls, doFetch } = github(labels);
       await createFollowup(config, doFetch)({ issueNumber: 7, body: "and the export too" });
-      const body = (calls.find((c) => c.url.endsWith("/comments"))?.body as { body: string }).body;
+      const posted = calls.find((c) => c.url.endsWith("/comments"))?.body as
+        | { body: string }
+        | undefined;
+      if (!posted) throw new Error("expected the follow-up to post a comment");
+      const body = posted.body;
       return assessIntent(
         {
           eventName: "issue_comment",
