@@ -12,7 +12,8 @@ import {
 
 // The write half of .claude/workflows/clear-path-flip.js (docs/ISSUES.md → Who may flip it): only a
 // survivor with four passing checks and two verifier lines is ever posted, and anything malformed
-// refuses the whole run before a write. Driven offline — the CLI path runs with --dry-run only.
+// refuses the whole run before a write. Driven offline — the CLI runs with no token, so the one
+// non-dry run (refusals only) can reach no network write.
 const PASS = { pass: true, evidence: "x" };
 const survivor = (over: Record<string, unknown> = {}) => ({
   issue: 6001,
@@ -107,9 +108,13 @@ describe("the CLI", () => {
     const file = join(dir, "result.json");
     writeFileSync(file, JSON.stringify(result));
     try {
+      // No credentials reach the CLI: a real run records refusals on the ledger branch, and a spec
+      // must never write there. An empty gh config dir makes `gh auth token` fail too (#7311).
+      const env = { ...process.env, GH_TOKEN: "", GITHUB_TOKEN: "", GH_CONFIG_DIR: dir };
       const out = execFileSync("node", ["scripts/clear-path-post.mjs", file, ...flags], {
         encoding: "utf8",
         stdio: "pipe",
+        env,
       });
       return { out, code: 0 };
     } catch (error) {
@@ -135,5 +140,16 @@ describe("the CLI", () => {
     const { out, code } = run({ survivors: [], refuted: [{ issue: 1 }] });
     expect(code).toBe(0);
     expect(out).toMatch(/nothing to post/);
+  });
+  it("a refusal it cannot record (no token) is a warning, never a failed run", () => {
+    const { out, code } = run({ survivors: [], refuted: [{ issue: 1 }], notClear: [{ issue: 2 }] });
+    expect(code).toBe(0);
+    expect(out).toMatch(/could not record 2 flip refusal\(s\)/);
+  });
+  it("a dry run says how many refusals it would record, and records none", () => {
+    const { out, code } = run({ survivors: [survivor()], refuted: [{ issue: 1 }] }, "--dry-run");
+    expect(code).toBe(0);
+    expect(out).toContain("1 would post, 1 refusal(s) would be recorded");
+    expect(out).not.toMatch(/recorded 1 refusal/);
   });
 });

@@ -53,3 +53,9 @@ rule.."). State the surface's job in its IA decision, then rank the content by t
   - Held as a hypothesis, confidence medium. It is wrong if, by 2026-12-15, members open a sector
   or story before touching the landing page's question box or its canned paths on most visits,
   since that would make the market the entry point's highest-value item after all.
+- **DOM and CSS motion runs through the vendored animation skills** (Eric, 2026-11-11: "Include
+skills for animations"). Building one: `/animate`; several moving together: `/choreograph`;
+dropped frames: `/animation-performance`. Pass the task as the skill's argument. Before finishing,
+check `/animate`'s *Never Ship* table (`/review-animations` is user-only: Eric runs it). The tower
+and the Eye stay with `/vision` and `/telestrator`. House tokens, reduced motion and no motion
+library win where they meet: [`docs/vendor/emil-kowalski-skills.md`](../../docs/vendor/emil-kowalski-skills.md).

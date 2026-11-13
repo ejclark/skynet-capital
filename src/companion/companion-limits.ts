@@ -72,7 +72,15 @@ export const COMPANION_MODEL_CALLS_MAX = 100;
 
 /**
  * The graceful close-out at the turn ceiling — no model call is made once this fires, so it costs
- * nothing and cannot be gamed into one more paid round.
+ * nothing and cannot be gamed into one more paid round. It names what to tap, History then New
+ * conversation (#7487 slice 2: the chat is a box under every page, its conversation behind History).
  */
 export const TURN_LIMIT_MESSAGE =
-  "We've covered a lot of ground in this thread — start a new conversation (↺ in the rail) and let's pick it back up fresh. If something's still off or you'd like it built, tell me there and I'll draft the filing.";
+  "We've covered a lot of ground in this thread — tap History, then New conversation, and let's pick it back up fresh. If something's still off or you'd like it built, tell me there and I'll draft the filing.";
+
+/** Screenshot ids read off one message; the ids past the third are ignored (#6007 criterion 12). */
+export const MAX_SCREENSHOTS_PER_MESSAGE = 3;
+
+/** Image blocks on one model request, newest first; each other screenshot rides as a one-line
+ *  text note instead (#6007 criterion 14). Bounds what a request's images cost the member's budget. */
+export const MAX_SCREENSHOT_BLOCKS_PER_REQUEST = 3;

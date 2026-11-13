@@ -1,7 +1,7 @@
 import { timing, useMoneypenny } from "../../src/live/moneypenny";
 import { keyFor } from "../../src/live/moneypenny-storage";
 import { type MpThread, rowLines } from "../../src/live/moneypenny-threads";
-import { json, onboarding } from "../shell/moneypenny-rail-harness";
+import { json, onboarding } from "../shell/moneypenny-dock-harness";
 
 /**
  * A failed onboarding read is not a sign-out (#7307). The server answers a signed-out session 200
@@ -40,7 +40,7 @@ describe("a failed onboarding read keeps the member's chat (#7307)", () => {
     timing.opsMs = 0;
     localStorage.clear();
     useMoneypenny.getState().reset();
-    useMoneypenny.setState({ member: undefined, open: false, thread: undefined });
+    useMoneypenny.setState({ member: undefined, history: false, thread: undefined });
     read = "member-1";
     let turn = 0;
     globalThis.fetch = ((url: string) => {
@@ -100,7 +100,7 @@ describe("a failed onboarding read keeps the member's chat (#7307)", () => {
     useMoneypenny.getState().ask("and the risk?", thread);
     await settle();
     read = "member-1";
-    await useMoneypenny.getState().openRail();
+    await useMoneypenny.getState().wake();
     const s = useMoneypenny.getState();
     expect(s.member).toBe("member-1");
     expect(s.threads.map((t) => t.key)).toEqual([thread.key]);
@@ -111,17 +111,17 @@ describe("a failed onboarding read keeps the member's chat (#7307)", () => {
   it("never deletes a saved member's blob when the very first read on a page load fails", async () => {
     useMoneypenny.setState({ member: undefined, thread: undefined });
     read = "503";
-    await useMoneypenny.getState().openRail();
+    await useMoneypenny.getState().wake();
     expect(storedKeys()).toContain(keyFor("member-1"));
     read = "member-1";
-    await useMoneypenny.getState().openRail();
+    await useMoneypenny.getState().wake();
     expect(useMoneypenny.getState().member).toBe("member-1");
     expect(rowThread()).toHaveLength(2);
   });
 
   it("still forgets member-1's chat when the read answers signed out", async () => {
     read = "signed-out";
-    await useMoneypenny.getState().openRail();
+    await useMoneypenny.getState().wake();
     expect(useMoneypenny.getState().member).toBe("anon");
     expect(useMoneypenny.getState().messages).toEqual([]);
     expect(storedKeys()).not.toContain(keyFor("member-1"));
@@ -129,7 +129,7 @@ describe("a failed onboarding read keeps the member's chat (#7307)", () => {
 
   it("still switches member and forgets the other's chat when the read answers someone else", async () => {
     read = "member-2";
-    await useMoneypenny.getState().openRail();
+    await useMoneypenny.getState().wake();
     expect(useMoneypenny.getState().member).toBe("member-2");
     expect(useMoneypenny.getState().messages).toEqual([]);
     expect(storedKeys()).not.toContain(keyFor("member-1"));

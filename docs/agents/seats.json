@@ -157,7 +157,7 @@
   "friction": [
     {
       "edge": "Members → front desk → builders",
-      "channel": "the in-app rail and coach, filed as a GitHub issue",
+      "channel": "the in-app chat (the dock under every page) and coach, filed as a GitHub issue",
       "what": "Members almost never file from the app. One untested reading (Conway): the intake is shaped like the build team's issue capsule (app/src/live/moneypenny-filing.ts:30-34), not like play.",
       "number": "2 in-app filings since 2026-10-01 (#4861, #6007), both Eric's; the last other member filing is #716 (2026-08-28). Nearly all of the 238 feedback issues since 10-01 were filed by sessions under Eric's account",
       "cite": "#7031",
@@ -290,7 +290,7 @@
       "name": "League members",
       "kind": "human",
       "job": "Invite-only friends and family who sign in, trade their own paper account, chat with Moneypenny, give views to their own bots and file feedback",
-      "wakesOn": "the in-app rail, feedback status badges, the follow-up form when an issue goes needs-info",
+      "wakesOn": "the in-app chat (the dock under every page), feedback status badges, the follow-up form when an issue goes needs-info",
       "speaksOn": "orders on their own desk, rail messages, feedback filings, conviction card taps, follow-up answers",
       "cadence": "whenever they open the app; async",
       "invoker": "self",
@@ -299,7 +299,7 @@
         "src/server/auth",
         "src/server/trade-orders-routes.ts",
         "src/server/feedback-service.ts",
-        "app/src/shell/moneypenny-rail.tsx"
+        "app/src/shell/moneypenny-dock.tsx"
       ],
       "cite": "docs/architecture/README.md:21 \"Invited friend or family on the allowlist... trades a paper account, chats with Moneypenny, files feedback\"; src/server/trade-orders-routes.ts:171 ownsAccount check; docs/MONEYPENNY.md:28-30 (member's own reply posts through /api/feedback); .github/workflows/moneypenny-events.yml:511-516 (authorized reply resumes a needs-info build)"
     },
@@ -338,8 +338,8 @@
       "name": "Companion chat (Moneypenny in the app)",
       "kind": "service",
       "job": "Answers member questions with Claude using a closed list of nine read-only lookups and two draft hand-offs; has no code path that places an order",
-      "wakesOn": "POST /api/companion/chat from the rail",
-      "speaksOn": "streamed SSE reply; draft_feedback and draft_conviction cards for the rail",
+      "wakesOn": "POST /api/companion/chat from the dock under every page",
+      "speaksOn": "streamed SSE reply; draft_feedback and draft_conviction cards for the chat",
       "cadence": "per turn, throttled",
       "invoker": "member",
       "status": "hired",
@@ -348,7 +348,7 @@
         "src/companion/companion-tools.ts",
         "src/companion/companion-convictions.ts",
         "src/companion",
-        "app/src/shell/moneypenny-rail.tsx",
+        "app/src/shell/moneypenny-dock.tsx",
         "app/src/live/moneypenny.ts",
         "app/src/live/moneypenny-script.ts"
       ],
@@ -720,6 +720,24 @@
       "cite": ".github/workflows/moneypenny-events.yml:440-446; scripts/moneypenny/index.mjs:571-593 (triageFeedbackDecision)"
     },
     {
+      "id": "filing-check",
+      "department": "build",
+      "name": "Member filing check",
+      "kind": "lane",
+      "job": "Runs the clear-path flip on one member's freeform filing the moment it lands: a judge, then two refuters on a clear call; queues it (ready), asks the member plain questions (needs-info, re-checked on their follow-up), or leaves it for a person's look. Each session runs on its own runner with a read-only token and reads only the member/bot-filtered thread; a specced script on a fresh runner posts",
+      "wakesOn": "issues labeled feedback carrying a member- label; an app-relayed follow-up on a filing this check parked on needs-info",
+      "speaksOn": "One comment, and ready, needs-info or no label",
+      "cadence": "Per member filing, while the work dial is normal or surge",
+      "invoker": "event",
+      "status": "hired",
+      "codeRoots": [
+        ".github/prompts/feedback-triage.md",
+        "scripts/moneypenny/triage-assess.mjs",
+        ".github/workflows/moneypenny-events.yml"
+      ],
+      "cite": "scripts/moneypenny/triage-assess.mjs (assessIntent, assemble, planWrite); .github/workflows/moneypenny-events.yml (route step assess; jobs assess-judge, assess-refute-envelope, assess-refute-thread, assess-post); #7544"
+    },
+    {
       "id": "feedback-build",
       "department": "build",
       "name": "Feedback build lane (with reply resume)",
@@ -910,6 +928,31 @@
       "status": "hired",
       "codeRoots": [".claude/skills/mermaid/", "scripts/mermaid-skill-scan.mjs"],
       "cite": "CLAUDE.md:441-444; scripts/ship.sh:256"
+    },
+    {
+      "id": "motion",
+      "department": "build",
+      "name": "Motion skills (vendored from Emil Kowalski)",
+      "kind": "skill",
+      "job": "Nine DOM and CSS motion skills: build one animation (animate), several together (choreograph), find, remove, audit and speed up motion, and name an effect; house tokens and rules win where they meet",
+      "wakesOn": "motion work on a member surface; a named motion effect; Eric running review-animations",
+      "speaksOn": "the animation in the diff; a plan as a GitHub issue",
+      "cadence": "on demand",
+      "invoker": "session",
+      "status": "hired",
+      "codeRoots": [
+        ".claude/skills/animate/",
+        ".claude/skills/choreograph/",
+        ".claude/skills/review-animations/",
+        ".claude/skills/improve-animations/",
+        ".claude/skills/find-animation-opportunities/",
+        ".claude/skills/remove-animations/",
+        ".claude/skills/animation-performance/",
+        ".claude/skills/animation-vocabulary/",
+        ".claude/skills/emil-design-eng/",
+        "docs/vendor/emil-kowalski-skills.md"
+      ],
+      "cite": ".claude/rules/member-surfaces.md (motion routing line); docs/vendor/emil-kowalski-skills.md"
     },
     {
       "id": "pipeline",

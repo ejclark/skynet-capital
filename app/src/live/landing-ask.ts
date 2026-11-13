@@ -192,7 +192,13 @@ export function holderLine(q: PartyQuestion): string {
 // ── Asking in the campaign (POST /api/campaigns/ask) ────────────────────────────────────────────
 
 export type AskReply =
-  | { readonly ok: true; readonly status?: string; readonly tell?: string }
+  | {
+      readonly ok: true;
+      readonly status?: string;
+      readonly tell?: string;
+      /** On a `covered` reply, whose cover it is: the house's (shelf or campaign) or the party's. */
+      readonly cover?: "house" | "party";
+    }
   | { readonly ok: false; readonly error: string };
 
 export function askInCampaign(input: {
@@ -206,6 +212,28 @@ export function askInCampaign(input: {
     campaign: input.campaign,
     question: input.question.trim().slice(0, QUESTION_MAX),
   });
+}
+
+/**
+ * File one name on the research list with no campaign (a bare ask, #7034 slice 3c): "Ask what we
+ * know" on a calendar event. The walk's question rides with the name, as the chat's research card
+ * sends its own (#7300), so the desk reads what was asked. The server's reply carries the queue's
+ * own wait, so nothing here words a time.
+ */
+export function askForResearch(input: {
+  readonly subject: string;
+  readonly question: string;
+}): Promise<AskReply> {
+  return postJson<AskReply>("/api/campaigns/ask", {
+    kind: "name",
+    subject: input.subject,
+    question: input.question.trim().slice(0, QUESTION_MAX),
+  });
+}
+
+/** What a filed research ask tells the member: the queue's own sentence, never a guessed wait. */
+export function filedLine(reply: AskReply): string {
+  return reply.ok ? (reply.tell ?? "Kept on the research list.") : reply.error;
 }
 
 /** The sentence a reply leaves under the form: the server's own words when it sent some. */

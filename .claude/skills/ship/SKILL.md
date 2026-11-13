@@ -123,6 +123,28 @@ scripts/ship.sh platter sync                 # re-post the ledger; refuses if th
   `edited` event, which starts a real run. The output says when it did this. `SHIP_REVERIFY_WAIT`
   sets the wait.
 
+## Stacked slices
+
+A slice that builds on an unmerged PR stacks on it instead of waiting (Eric, 2026-11-12).
+
+- **Open the child with `base` set to the parent's branch**, so its diff shows only its own slice.
+  Its PR body carries the line `Stacked on #<parent>` above the fold. Lanes and scripts read that
+  line to find the parent.
+- **After every push to the parent, merge the parent's branch into the child** (merge, never
+  rebase). `stack-sync` refuses a child that lacks the parent's final head, because keeping the
+  child's side would silently revert a parent review fix pushed after the child was cut.
+- **When the parent squash-merges**, GitHub deletes the parent's branch and retargets the child to
+  `main`. The child still carries the parent's original commits, so merging `main` conflicts on every
+  file both touched.
+- **Then, on the child branch:** `node scripts/stack-sync.mjs <parent> --push`. It proves that
+  `main`'s copy of each conflicting path is exactly the parent's final head copy, keeps the child's
+  side, commits the merge and pushes with `--no-verify` (CI runs the suite). If `main` changed a path
+  after the parent's head, it aborts and names the paths: that merge is a real one to read by hand.
+  `--dry-run` shows the plan and commits nothing.
+- **Never arm a stacked child, by hand or with `ship.sh automerge`. It arms itself once its base is
+  main.** `ship.sh automerge` refuses a PR whose base is not `main` (exit 7), and
+  `stuck-pr-scan.mjs` does not report one as stuck.
+
 ## Mechanics & traps (this skill owns the landing detail)
 
 - **No `git stash`, ever.** It has silently dropped stashed edits in this environment (the incident

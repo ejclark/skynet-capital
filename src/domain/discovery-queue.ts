@@ -45,11 +45,13 @@
  *
  * Paper only; educational. A discovery never places an order and never sizes one.
  */
+
+import { cleanQuestion, QUESTION_MAX } from "./ask-input.js";
 import type { Campaign } from "./campaigns.js";
 import { castSymbols } from "./campaigns.js";
 import { LANE_READS_QUEUE } from "./discovery-lane.js";
 
-export { LANE_READS_QUEUE };
+export { cleanQuestion, LANE_READS_QUEUE, QUESTION_MAX };
 
 export const DISCOVERY_KINDS = ["sector", "market", "name"] as const;
 export type DiscoveryKind = (typeof DISCOVERY_KINDS)[number];
@@ -60,8 +62,6 @@ export const MAX_QUEUED = 24;
 export const MAX_PER_MEMBER = 5;
 /** The most members one ask remembers; a popular question stops counting, never grows the file. */
 export const MAX_ASKERS = 20;
-/** The longest question a member's words may run to (criterion 9: capped at 200 characters). */
-export const QUESTION_MAX = 200;
 /** The longest campaign scope an ask carries: a member key (10), a separator and a 60-character id. */
 export const CAMPAIGN_SCOPE_MAX = 80;
 
@@ -86,17 +86,6 @@ export function askId(kind: DiscoveryKind, subject: string, campaign?: string): 
   return campaign ? `${campaign}/${kind}:${subject}` : `${kind}:${subject}`;
 }
 
-/** A member's words as one tidy line of at most `QUESTION_MAX` characters, or undefined when empty. */
-export function cleanQuestion(raw: unknown): string | undefined {
-  if (typeof raw !== "string") return undefined;
-  // Control characters (a NUL, a bell, an escape) become spaces, then runs of space collapse.
-  const spaced = Array.from(raw, (ch) =>
-    ch.charCodeAt(0) < 32 || ch.charCodeAt(0) === 127 ? " " : ch,
-  );
-  const line = spaced.join("").replace(/\s+/g, " ").trim();
-  return line.length > 0 ? line.slice(0, QUESTION_MAX) : undefined;
-}
-
 export type DiscoveryQueue = readonly DiscoveryAsk[];
 
 export type QueueOutcome =
@@ -113,6 +102,16 @@ export type QueueOutcome =
       readonly campaign: string;
       /** Set when a campaign the party shares covers it, so the member is pointed at it by name. */
       readonly party?: { readonly title: string };
+    }
+  | {
+      /**
+       * The lane already wrote this exact ask up on the research shelf (#7333). It joins that
+       * write-up rather than queueing: the lane never takes an answered ask again, so "queued" would
+       * promise research that never happens. `ask` is what the question log records the asker on.
+       */
+      readonly status: "answered";
+      readonly queue: DiscoveryQueue;
+      readonly ask: DiscoveryAsk;
     }
   | { readonly status: "full"; readonly queue: DiscoveryQueue }
   | { readonly status: "limit"; readonly queue: DiscoveryQueue };
@@ -164,7 +163,9 @@ export interface AskInput {
  * Put one question on the queue. A subject a house or party campaign covers is `covered` (there is
  * nothing to discover outside it, so the member is pointed at it to ask in); one already waiting is
  * `joined`; a full queue is `full` and unchanged. `campaigns` is the house list followed by the
- * party's, and `researched` says a name already has a ledger.
+ * party's, and `researched` says a name already has a ledger. `answered` says the lane already wrote
+ * this exact ask up on the shelf: such an ask is `answered`, never `queued`, because a research pass
+ * skips it and the next queue write would drop it (#7333).
  */
 export function queueAsk(
   queue: DiscoveryQueue,
@@ -172,6 +173,7 @@ export function queueAsk(
   campaigns: readonly CoveringCandidate[],
   researched: (symbol: string) => boolean,
   at: Date = new Date(),
+  answered: (ask: Pick<DiscoveryAsk, "kind" | "subject" | "campaign">) => boolean = () => false,
 ): QueueOutcome {
   const covering = coveringCampaign(input.kind, input.subject, campaigns, input.campaign);
   if (covering)
@@ -186,6 +188,22 @@ export function queueAsk(
     return { status: "covered", queue, campaign: "the research shelf" };
   }
   const id = askId(input.kind, input.subject, input.campaign);
+  const scoped = {
+    kind: input.kind,
+    subject: input.subject,
+    ...(input.campaign ? { campaign: input.campaign } : {}),
+  };
+  if (answered(scoped)) {
+    // Joined to the write-up already on the shelf; the queue is untouched, so nothing is promised.
+    const ask: DiscoveryAsk = {
+      id,
+      ...scoped,
+      askedAt: at.toISOString(),
+      askers: [input.by],
+      ...(input.question ? { question: input.question } : {}),
+    };
+    return { status: "answered", queue, ask };
+  }
   const at0 = queue.findIndex((a) => a.id === id);
   if (at0 >= 0) {
     const prior = queue[at0] as DiscoveryAsk;
@@ -252,6 +270,8 @@ export function tellMember(
     return outcome.party
       ? `"${outcome.party.title}", a campaign the party shares, already covers this. Ask in it to look further.`
       : `The house already covers this in ${outcome.campaign}, so there is nothing new to look into.`;
+  if (outcome.status === "answered")
+    return `The research desk already wrote up ${outcome.ask.subject} ${outcome.ask.campaign ? "for this campaign" : "here"}, and your question is joined to that write-up on the research shelf. Asking again doesn't start new research. Nothing is bought or sold.`;
   if (outcome.status === "full" || outcome.status === "limit")
     return outcome.status === "full"
       ? "The house has a full list of questions to look into right now. Ask again in a day or two."

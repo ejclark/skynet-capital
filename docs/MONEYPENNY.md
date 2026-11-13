@@ -12,10 +12,12 @@ this: scope lived scattered across five near-identical `.github/prompts/*.md` fi
 "orchestrator" already meant something else in this repo (`docs/COACHES.md`'s in-session head
 coach). Nothing named who owns the whole board. This does.
 
-## In the app — the rail is her voice
+## In the app — the dock is her voice
 
-Members meet her directly: the ✦ button in the shell's top bar opens a right
-rail (`app/src/shell/moneypenny-rail.tsx`) where she answers questions live and files feedback.
+Members meet her directly in the dock under every page (`app/src/shell/moneypenny-dock.tsx`,
+#7487 slice 2; it replaced the ✦ toggle and the right rail): her latest line, her moves as
+buttons, and a one-line box. History, opened from her latest line, holds the whole conversation,
+side threads, Copy and New conversation. There she answers questions live and files feedback.
 Her voice there is the companion chat (`src/companion/*`, `/api/companion/chat`) — Claude on the
 same key the feedback coach uses, with nine read-only lookups and two hand-offs (the member's own desk, progress and market views,
 the play catalog, a chain read through their own linked account, and the public work record,
@@ -25,10 +27,24 @@ asked from, reduced to fixed words (`companion-page.ts`, #2224), with their own 
 page's symbol (`companion-holding.ts`), and a cached help desk
 (`companion-help.ts`) so "how do I…" answers come from this app's facts. She cannot place an
 order (no such tool exists — `tests/companion/companion-no-order-path.spec.ts`). Filing is hers to
-draft: `draft_feedback` hands the rail a draft built from the whole thread and files nothing; the
+draft: `draft_feedback` hands the chat a draft built from the whole thread and files nothing; the
 member's own reply ("send", or an answer to her one question) is what posts it through
 `/api/feedback`. The scripted lines in
 `app/src/live/moneypenny-script.ts` are the fallback when the key isn't set.
+
+### Screenshots in the chat (#6007)
+
+A member can attach up to 3 screenshots to a message (the **Attach screenshot** button, paste, or
+drop) when the live chat is on. The box (`app/src/shell/mp-composer.tsx`) fits each one in the
+browser to 1568 px on its long edge and re-encodes it as PNG or JPEG under 1.5 MB
+(`app/src/live/mp-screenshots.ts`), shows it as a thumbnail with a remove control, and uploads it
+only on Send; the chat turn and the saved conversation carry ids, never bytes. The server keeps them
+on the volume (`src/server/companion-screenshots-store.ts`, 20 MB a member, 100 MB in all, oldest
+removed first) and hands the model at most 3 as image blocks a request. Any signed-in member may open
+one by id; nothing before sign-in does, and none is ever copied into a filing, since filings land on
+the public repo (a drafted filing says so in one line). A removed one reads `Screenshot no longer
+kept`. The 1568 px edge is the plan's number: the vision limits were not read from the docs in
+slices 2 or 3 (the docs tools were denied in both sessions), so check them before relying on it.
 
 ### Four jobs
 

@@ -14,7 +14,10 @@ import { editions, editionView } from "../domain/edition.js";
 import { regularSessionOpen } from "../domain/market-session.js";
 import type { Session } from "./auth/session.js";
 import { companionConvictionsFor } from "./companion-convictions-port.js";
+import { companionFollowupFor } from "./companion-followup-port.js";
 import { recordFirstMessageSafely } from "./companion-message-log.js";
+import { SCREENSHOTS_PATH, serveCompanionScreenshots } from "./companion-screenshot-routes.js";
+import { SCREENSHOT_ID } from "./companion-screenshots-store.js";
 import { resolveCurrentId } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { opaqueMemberId } from "./feedback-issue.js";
@@ -24,7 +27,8 @@ import { parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
 import { openSseStream, sseFrame } from "./sse.js";
 
 /**
- * THE COMPANION'S HTTP SURFACE — three endpoints, all gated on the SAME `Session` every
+ * THE COMPANION'S HTTP SURFACE — three endpoints (plus the chat screenshot pair, served from
+ * `companion-screenshot-routes.ts` behind the same session check, #6007), all gated on the SAME `Session` every
  * other member-only route checks upstream (`gateRequest` in `dashboard-auth-gate.ts`, wired by
  * the caller before this file ever runs):
  *
@@ -86,17 +90,24 @@ function modelCallAllowed(
 }
 
 /** Never model- or client-trusted beyond shape: role must be one of the two literals, content a
- *  string. Length/round bounds are enforced downstream in `companion-chat.ts`. */
+ *  string. Length/round bounds are enforced downstream in `companion-chat.ts`. A user turn may
+ *  carry screenshot ids (#6007): kept only when they are well-formed ids (the cap of three per
+ *  message and the store lookup are `companion-screenshots.ts`'s), never bytes. */
 function parseMessages(body: Record<string, unknown> | undefined): CompanionMessage[] {
   const raw = body?.messages;
   if (!Array.isArray(raw)) return [];
-  return raw.filter(
-    (m): m is CompanionMessage =>
-      !!m &&
-      typeof m === "object" &&
-      ((m as CompanionMessage).role === "user" || (m as CompanionMessage).role === "assistant") &&
-      typeof (m as CompanionMessage).content === "string",
-  );
+  const parsed: CompanionMessage[] = [];
+  for (const m of raw as unknown[]) {
+    if (!m || typeof m !== "object") continue;
+    const { role, content, screenshots } = m as Record<string, unknown>;
+    if ((role !== "user" && role !== "assistant") || typeof content !== "string") continue;
+    const ids =
+      role === "user" && Array.isArray(screenshots)
+        ? screenshots.filter((id): id is string => typeof id === "string" && SCREENSHOT_ID.test(id))
+        : [];
+    parsed.push(ids.length > 0 ? { role, content, screenshots: ids } : { role, content });
+  }
+  return parsed;
 }
 
 /** `{ enabled }` plus the two client-facing constants a chat UI needs verbatim rather than
@@ -218,6 +229,7 @@ async function serveChat(
     onScreen,
   );
 
+  const screenshotStore = config.companionScreenshots;
   openSseStream(res);
   let seq = 0;
   await config.companion(
@@ -226,6 +238,12 @@ async function serveChat(
       ...(participantId ? { participantId } : {}),
       ...(context ? { context } : {}),
       convictions: companionConvictionsFor(config, session),
+      // Any signed-in member's screenshot loads by id, whoever attached it (Eric, 2026-11-10).
+      ...(screenshotStore ? { loadScreenshot: (id: string) => screenshotStore.load(id) } : {}),
+      // A drafted follow-up on the member's own filing — their tap there is what posts it (#7286).
+      followup: companionFollowupFor(config, session, (draft) => {
+        res.write(sseFrame(JSON.stringify(draft), "followup", seq++));
+      }),
     },
     {
       onText: (chunk) => {
@@ -248,6 +266,10 @@ async function serveChat(
       // A drafted view's card (#5482 criterion 9) — the member's tap there is what saves it.
       onConvictionDraft: (drafted) => {
         res.write(sseFrame(JSON.stringify(drafted), "conviction", seq++));
+      },
+      // A drafted research question — the member's tap there is what puts it on the research list.
+      onResearchAskDraft: (draft) => {
+        res.write(sseFrame(JSON.stringify(draft), "research-ask", seq++));
       },
       budget: () => modelCallAllowed(session.email),
     },
@@ -275,9 +297,20 @@ export async function serveCompanionApi(
   config: DashboardServerConfig,
   session: Session | undefined,
 ): Promise<boolean> {
-  if (path !== "/api/companion" && path !== "/api/companion/chat" && path !== "/api/companion/ack")
+  const screenshots = path === SCREENSHOTS_PATH || path.startsWith(`${SCREENSHOTS_PATH}/`);
+  if (
+    !screenshots &&
+    path !== "/api/companion" &&
+    path !== "/api/companion/chat" &&
+    path !== "/api/companion/ack"
+  )
     return false;
   if (!session) return false;
+  if (screenshots) {
+    const store = config.companionScreenshots;
+    const member = opaqueMemberId(session.email);
+    return serveCompanionScreenshots(req, res, path, store, member, config.logLine);
+  }
   if (path === "/api/companion" && (req.method ?? "GET") === "GET") {
     serveCompanionIndex(res, config);
     return true;

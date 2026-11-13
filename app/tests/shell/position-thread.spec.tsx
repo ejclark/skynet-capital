@@ -5,13 +5,13 @@ import type { DeskPosition } from "../../src/live/desk";
 import { timing, useMoneypenny } from "../../src/live/moneypenny";
 import { keyFor } from "../../src/live/moneypenny-storage";
 import type { RowMark } from "../../src/shell/use-row-marks";
-import { flush, json, onboarding } from "./moneypenny-rail-harness";
+import { flush, json, onboarding } from "./moneypenny-dock-harness";
 
 /**
  * A SIDE THREAD ON A POSITION'S ROW (#7167 criterion 11, after #7275's story and event rows). A
  * question asked from a holding's opened guidance opens a thread named by the row's own anchor,
  * `pos-<symbol>` — the key her links already land on — with no wiring of its own. The row shows it
- * behind one closed line; the rail names the row and links back to it. Offered on the member's own
+ * behind one closed line; the dock's History names the row and links back to it. Offered on the member's own
  * trading account only, the book her positions tool reads.
  */
 
@@ -22,12 +22,14 @@ rstest.mock("@tanstack/react-router", () => ({
     </a>
   ),
   useRouter: () => undefined,
+  // the dock closes History on a location change; one page here, so the address never moves
+  useRouterState: () => "/app/accounts",
   useSearch: () => ({}),
   useNavigate: () => () => Promise.resolve(),
 }));
 
 const { GuidanceSlot } = await import("../../src/shell/position-guidance-slot");
-const { MoneypennyRail } = await import("../../src/shell/moneypenny-rail");
+const { MoneypennyDock } = await import("../../src/shell/moneypenny-dock");
 const { RowThread } = await import("../../src/shell/row-thread");
 const { PositionAsk, positionQuestion, positionThread, useOwnTradingAccount } = await import(
   "../../src/shell/position-thread"
@@ -70,7 +72,7 @@ describe("a side thread on a position's row", () => {
     timing.opsMs = 0;
     localStorage.clear();
     useMoneypenny.getState().reset();
-    useMoneypenny.setState({ member: undefined, open: false });
+    useMoneypenny.setState({ member: undefined, history: false });
     chats = [];
     let turn = 0;
     globalThis.fetch = ((url: string, init?: RequestInit) => {
@@ -103,15 +105,15 @@ describe("a side thread on a position's row", () => {
             initialOpen
             {...(threaded
               ? {
-                  ask: <PositionAsk position={PUT} />,
-                  thread: <RowThread thread={positionThread(PUT)} />,
+                  ask: <PositionAsk position={PUT} accountId="member-desk" />,
+                  thread: <RowThread thread={positionThread(PUT, "member-desk")} />,
                 }
               : {})}
             onAside={() => undefined}
             onUndo={() => undefined}
           />
         </div>
-        <MoneypennyRail />
+        <MoneypennyDock />
       </QueryClientProvider>,
     );
   const askOnRow = async (text: string) => {
@@ -123,11 +125,18 @@ describe("a side thread on a position's row", () => {
     await flush();
   };
   const row = () => screen.getByTestId("row");
-  const rail = () => screen.getByRole("complementary", { name: "Moneypenny" });
+  /** The dock's History sheet, opened by hand: asking on a row opens nothing (#7487 slice 2). */
+  const sheet = () => {
+    act(() => useMoneypenny.setState({ history: true }));
+    return screen.getByRole("region", { name: "Conversation with Moneypenny" });
+  };
 
-  it("opens the rail on the position's thread, keyed by its row, with the way back", async () => {
+  it("asks on the position's thread, keyed by its row; History names the row with the way back", async () => {
     mount(true);
     await askOnRow("should I roll this?");
+    // asking opens nothing: her answer arrives in the dock's latest line
+    expect(useMoneypenny.getState().history).toBe(false);
+    expect(useMoneypenny.getState().thread?.key).toBe(KEY);
     const lines = useMoneypenny.getState().messages.filter((m) => m.role !== "sys");
     expect(lines.map((m) => [m.role, m.thread])).toEqual([
       ["user", KEY],
@@ -138,17 +147,17 @@ describe("a side thread on a position's row", () => {
       "About my CRWV $80 PUT · 6 NOV 26 position (CRWV261106P00080000): should I roll this?",
     );
     expect(chats.at(-1)?.messages.map((m) => m.content)).toEqual([lines[0]?.text]);
-    expect(within(rail()).getByRole("link", { name: PUT.display })).toHaveAttribute(
+    expect(within(sheet()).getByRole("link", { name: PUT.display })).toHaveAttribute(
       "href",
-      `/app/accounts#${KEY}`,
+      `/app/accounts?account=member-desk#${KEY}`,
     );
-    expect(within(rail()).getByRole("button", { name: "Main conversation" })).toBeEnabled();
+    expect(within(sheet()).getByRole("button", { name: "Main conversation" })).toBeEnabled();
   });
 
   it("shows the thread on its row, collapsed, with a way to continue it in the chat", async () => {
     mount(true);
     await askOnRow("should I roll this?");
-    act(() => useMoneypenny.getState().closeRail());
+    act(() => useMoneypenny.getState().closeHistory());
     expect(within(row()).getByText(/Your thread with Moneypenny/)).toHaveTextContent(
       "Your thread with Moneypenny · 2 messages",
     );
@@ -162,7 +171,9 @@ describe("a side thread on a position's row", () => {
     mount(true);
     await askOnRow("should I roll this?");
     const saved = JSON.parse(localStorage.getItem(keyFor("member-1")) ?? "{}");
-    expect(saved.threads).toEqual([{ key: KEY, title: PUT.display, path: `/accounts#${KEY}` }]);
+    expect(saved.threads).toEqual([
+      { key: KEY, title: PUT.display, path: `/accounts?account=member-desk#${KEY}` },
+    ]);
   });
 
   it("offers no ask on an account her positions tool doesn't read", () => {

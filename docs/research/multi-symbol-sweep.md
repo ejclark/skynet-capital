@@ -71,6 +71,21 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"A JGB 30-year tail of 2bp or more does not transmit to the next US session: the US 30Y CMT does not rise 5bp (FT-jgb-30y-auction-2026-10-08-5)"** — added 2026-11-13 from the
+  [jgb-30y-auction-2026-10-08 ledger](events/jgb-30y-auction-2026-10-08.md). The 2026-11-10 tail was **2.4bp** and the US 30Y CMT rose **+8bp** (5.35 to 5.43) on 11-12, on a CPI day plus a US 30-year auction.
+  Do not register a same-tenor JGB-to-US D+1 threshold on a date that shares a US CPI print or auction; one observation, and the JGB 30Y par yield moved +5.5bp on 11-11 too.
+
+- **"The first MTS of FY2027 is forecastable to ±$42B from ten-month growth rates alone: the October 2026 deficit lands in $280–365B (FT-mts-october-2026-11-12-1)"** — added 2026-11-13 from the
+  [mts-october-2026-11-12 close-out](events/mts-october-2026-11-12.md). Printed **$404.06B**: receipts $368.94B (ex-customs −6.2% y/y against a +0.24% to +3% build) and outlays $773.00B (+12.2% against +5.17%).
+  Do not forecast a Monthly Treasury Statement deficit from trailing growth rates; use the DTS mapping, and register it alone with its own standard error.
+
+- **"The DTS-to-MTS mapping, averaged across four bias variants, brackets the October 2026 deficit in $345–395B (FT-mts-october-2026-11-12-4)"** — added 2026-11-13 from the
+  [mts-october-2026-11-12 close-out](events/mts-october-2026-11-12.md). Printed **$404.06B**, $9.1B over the ceiling; the interest-corrected fit alone said $387.5B (+$16.6B, +0.78 SE), while the three constant-bias variants blended into the $370B central missed by $34–62B.
+  Do not register a blend that includes a model the previous close-out refuted; one observation, and the fit is extrapolated at the floor of its range (n=11).
+
+- **"A single meeting-month cohort of Summary-of-Opinions Nikkei moves is sampling noise, so the 2026-11-10 bar lands at or below the cohort median of 1.264% (FT-boj-summary-of-opinions-2026-11-10-1)"** — added 2026-11-12 from the
+  [boj-summary-of-opinions-2026-11-10 close-out](events/boj-summary-of-opinions-2026-11-10.md). The Nikkei 225 closed **+2.865%** (58,775.50 to 60,459.58; gap +1.02%) in a tape whose five prior sessions averaged 2.37%, after a +2.35% S&P session overnight. Do not register a fixed-threshold Tokyo bar against a BoJ document in a VIX-17+ regime without a vol-conditioned base rate; this is one kill on a median-threshold row, not evidence the Summary moves the index.
+
 - **"The release-day US session is indifferent to a BoJ Minutes release, so the clean-subset base rate (0.35x) is operative" (FT-boj-minutes-2026-11-05-4)** — added 2026-11-11 from the
   [boj-minutes-2026-11-05 close-out](events/boj-minutes-2026-11-05.md). The S&P 500 fell **4.355%** on 11-05 (7,688.62 to 7,353.73; VIX 16.61 to 28.18), a post-midterm AI/chip rout the press
   does not tie to Tokyo. Do not register a US-session threshold against a BoJ document that lands in the Nov 2-7 corridor; the calendar, not the document, sets the day.
@@ -1158,6 +1173,9 @@ robust, alpha fragile — is the finding.
   [midterm-elections-2026-11-03 close-out](events/midterm-elections-2026-11-03.md). The basket lost **12.68%** against QQQ's **4.26%** (excess **−8.42pp**, 11-03 → 11-06), with the AMD print confound not rescuing it (AMD was the smallest loser). Do not register a
   "removed political overhang" lift off a result whose own winners campaigned on the overhang: Democrats took both chambers and the Texas governor's race on a pledge to halt new data centers,
   and the power sleeve fell −10.65% on 11-04 alone while the S&P rose 1.58%.
+
+- **"The $42B-era indirect-share floor of 61.7% holds on the November 10-Year new issue (FT-treasury-10y-note-2026-11-10-5)"** — added 2026-11-12 from the
+  [treasury-10y-note-2026-11-10 close-out](events/treasury-10y-note-2026-11-10.md). The 11-10 auction printed indirect **61.23%** of competitive awards, 0.47pp under a floor that was simply the minimum of 11 prior prints (2024-11-05). Direct bidders took 29.0% and dealers 9.77%, so end-investor demand held. Do not register a floor equal to a small sample's own minimum; the next print is a coin flip against it.
 
 ## Portfolio-level critique — what no single-symbol view sees
 

@@ -18,7 +18,7 @@ import { PHONE_QUERY, TABLET_QUERY } from "./widths";
  *
  * THE DEEP DIVE (#5101, R2-deep): with `detail` naming a loaded order, its full detail opens — on a
  * desktop as a non-modal side panel beside the list (the list stays live; where the frame draws the
- * tower's column, on the left since #7216, it docks over it), at tablet width and below as a page in the list's place. Closing it brings the member back to the same row, opened as they
+ * tower's column, in the right margin since #7487 slice 4a, it docks over it), at tablet width and below as a page in the list's place. Closing it brings the member back to the same row, opened as they
  * left it, with focus on its control. A `detail` the loaded rows do not hold opens nothing: the list
  * stays, and the page's own note says the linked order is older than what is loaded.
  */

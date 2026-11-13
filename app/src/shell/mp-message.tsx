@@ -2,10 +2,10 @@ import { useRouter } from "@tanstack/react-router";
 import type { MouseEvent, ReactElement, ReactNode } from "react";
 import { Fragment } from "react";
 import { type MpMessage, useMoneypenny } from "../live/moneypenny";
-import { linkPieces } from "../live/moneypenny-links";
+import { linkPieces, pivotOf } from "../live/moneypenny-links";
 import { type Run, readMarkdown } from "../live/moneypenny-markdown";
 import { requestLight } from "./eye-light";
-import { usePhoneWidth } from "./use-media";
+import { MessageShots } from "./mp-screenshot";
 
 /**
  * ONE LINE OF A MONEYPENNY CONVERSATION, DRAWN — split from `moneypenny-rail.tsx` so a page's row
@@ -14,6 +14,29 @@ import { usePhoneWidth } from "./use-media";
  * the places she names are in-app links that also ask for the Eye's light onto what they name.
  * @category feedback
  */
+
+/**
+ * Go where she points (a link in her line, or a move in the dock that carries one): the Eye lights
+ * the item it names, and a row on the page already open lands in place instead of jumping to the top.
+ */
+export function goToPlace(router: ReturnType<typeof useRouter>, path: string): void {
+  // A link that names an item on a page (`#pos-NVDA`) also asks for the Eye's light onto it
+  // (#7216 slice 2, `eye-light-layer.tsx`), which waits for the item to land wherever it renders.
+  requestLight(path);
+  // "Open-position return" while the board is already showing re-ranks it in place — the member keeps
+  // their spot; any other page opens at its top, as a new view should.
+  const samePage = router.state.location.pathname === path.split(/[?#]/)[0];
+  if (!samePage) {
+    void router.navigate({ href: path });
+    return;
+  }
+  // A row she points at on the page already open (#7167, `/accounts#pos-NVDA`): the router's
+  // pushState fires no `hashchange`, and the page's landing (`landing.ts`) listens for exactly
+  // that, so it is announced here. Re-tapping the same link lands again rather than doing nothing.
+  void router.navigate({ href: path, resetScroll: false }).then(() => {
+    if (path.includes("#")) window.dispatchEvent(new HashChangeEvent("hashchange"));
+  });
+}
 
 /** A place she names, as a link (#5238): an in-app navigation, so the thread survives the move.
  *  At ≤860 the rail covers the page, so the tap closes it and the place shows; wider, the rail
@@ -27,29 +50,15 @@ export function PlaceLink({
   readonly text: string;
 }): ReactElement {
   const router = useRouter({ warn: false });
-  const closeRail = useMoneypenny((s) => s.closeRail);
-  const phone = usePhoneWidth();
+  const closeHistory = useMoneypenny((s) => s.closeHistory);
   const onClick = (e: MouseEvent<HTMLAnchorElement>) => {
     if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-    if (phone) closeRail();
+    // Her conversation folds away so the page she points at is in view (the dock also closes it on
+    // every navigation; a same-page landing fires none, so it closes here too).
+    closeHistory();
     if (!router) return;
     e.preventDefault();
-    // A link that names an item on a page (`#pos-NVDA`) also asks for the Eye's light onto it
-    // (#7216 slice 2, `eye-light-layer.tsx`), which waits for the item to land wherever it renders.
-    requestLight(path);
-    // "Open-position return" while the board is already showing re-ranks it in place — the member keeps
-    // their spot; any other page opens at its top, as a new view should.
-    const samePage = router.state.location.pathname === path.split(/[?#]/)[0];
-    if (!samePage) {
-      void router.navigate({ href: path });
-      return;
-    }
-    // A row she points at on the page already open (#7167, `/accounts#pos-NVDA`): the router's
-    // pushState fires no `hashchange`, and the page's landing (`landing.ts`) listens for exactly
-    // that, so it is announced here. Re-tapping the same link lands again rather than doing nothing.
-    void router.navigate({ href: path, resetScroll: false }).then(() => {
-      if (path.includes("#")) window.dispatchEvent(new HashChangeEvent("hashchange"));
-    });
+    goToPlace(router, path);
   };
   return (
     <a className="mp-place" href={`/app${path}`} onClick={onClick}>
@@ -127,11 +136,29 @@ function Reply({ text }: { readonly text: string }): ReactElement {
   );
 }
 
+/**
+ * The page pivots to her answer (#7167 slice 3, #7018 round 4 B): when she links two or more of
+ * the landing page's rows, one line under her answer narrows the calendar to just those rows. It is
+ * a link, so the member's tap is the only thing that changes the page, and Back or the calendar's
+ * ✕ undoes it. Drawn after her answer, never inside it, so her words stay hers.
+ */
+function PivotLine({ text }: { readonly text: string }): ReactElement | null {
+  const pivot = pivotOf(text);
+  if (!pivot) return null;
+  return (
+    <p className="mp-pivot">
+      <PlaceLink path={pivot.href} text={`Show just these ${String(pivot.count)} on the page ›`} />
+    </p>
+  );
+}
+
 /** The member's own words stay exactly as typed; hers (and system notes) get her formatting. */
 export function Message({ m }: { readonly m: MpMessage }): ReactElement {
   return (
     <div className={`mp-msg mp-${m.role}`}>
+      {m.role === "user" ? <MessageShots ids={m.screenshots} /> : null}
       {m.role === "user" ? linkify(m.text) : <Reply text={m.text} />}
+      {m.role === "mp" ? <PivotLine text={m.text} /> : null}
     </div>
   );
 }

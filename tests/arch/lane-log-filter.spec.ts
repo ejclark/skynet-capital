@@ -113,10 +113,10 @@ describe("the swallowed-result step prints the envelope, never the transcript", 
     expect(limitRejected(print([{ type: "result", api_error_status: 401 }]))).toBe(false);
   });
 
-  // Three lanes print this file, and a print left on the old filter leaks on its own.
+  // Six lanes print this file, and a print left on the old filter leaks on its own.
   it("runs the same program in every lane's print", () => {
     const programs = [...text.matchAll(/^\s*jq -c '([^']+)' "\$F"/gm)].map((m) => m[1]);
-    expect(programs).toHaveLength(3);
+    expect(programs).toHaveLength(6);
     expect(new Set(programs).size).toBe(1);
   });
 });

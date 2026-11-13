@@ -7,10 +7,12 @@ reviewable git diff.
 | Directory | Upstream | Refresh |
 | --- | --- | --- |
 | [`claude-code/`](claude-code/) | [code.claude.com/docs](https://code.claude.com/docs) — the official Claude Code docs (all English pages, via the site's `llms.txt` index) | `npm run docs:claude` |
+| [`emil-kowalski-skills.md`](emil-kowalski-skills.md) | [emilkowalski/skills](https://github.com/emilkowalski/skills): nine motion skills, copied into `.claude/skills/` | re-clone and copy, as its own PR |
 
 Ground rules:
 
-- **These are mirrors, not sources.** Never hand-edit; a refresh overwrites. Cite the upstream URL
+- **These are mirrors, not sources.** Never hand-edit; a refresh overwrites. The one exception is
+  `emil-kowalski-skills.md`'s *House rules* section, which is ours to edit. Cite the upstream URL
   in prose (`https://code.claude.com/docs/en/<page>`), read the local file.
 - **Model facts never come from this mirror.** What the `opus` / `sonnet` / `fable` / `haiku`
   aliases resolve to, default models and effort levels, fallback targets, and prices change with

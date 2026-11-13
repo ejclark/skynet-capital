@@ -96,8 +96,13 @@ export function logAsked(
     const before = store.load();
     let log = before;
     for (const o of outcomes) {
-      if (o.status !== "queued" && o.status !== "joined") continue;
-      const ask = o.queue[o.ahead];
+      // An ask joined to a write-up already on the shelf is logged too, so the asker shows on it (#7333).
+      const ask =
+        o.status === "answered"
+          ? o.ask
+          : o.status === "queued" || o.status === "joined"
+            ? o.queue[o.ahead]
+            : undefined;
       if (ask) log = recordQuestion(log, ask, asker);
     }
     if (log !== before) store.write(log);

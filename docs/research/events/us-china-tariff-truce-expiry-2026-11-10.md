@@ -301,6 +301,62 @@ every row; a dated adjacent event found gets proposed to `market-events.ts` as a
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
 
+## Outcome
+
+**Close-out (2026-11-12, D+2, inside `closeOutWithinDays`).** Geopolitical mode runs no `earnings-cycle` or
+`intraday-edges` instrument (`symbols: []` by design); the instrument cache was busted first and nothing in this
+ledger reads it. "Re-run data" here is a fresh direct read of the Federal Register API and the notice's raw text
+(2026-11-12), fresh press sourcing for China's side, and fresh Yahoo daily closes (11/9-11/11). Hard limit
+honoured: the calendar entry is untouched and stays `estimate`.
+
+**Headline: both registered forward tests PASS, and the stand-aside call held.** Every cliff this event stood for
+was extended by two months, not allowed to bite. The new shared deadline is **2027-01-10** (estimate), proposed in
+this PR as `us-china-truce-expiry-2027-01-10` because it is now 59 days out, inside the horizon.
+
+| Leg | What happened | Grade |
+|---|---|---|
+| China export controls (FT-1) | Reuters and The Star, both 2026-11-09: the Commerce Ministry extended the pause "for two months until January 10" and "gave no other details". MOFCOM/GAC text, announcement number and item list **not read** (english.mofcom.gov.cn reset the connection). | press-grade |
+| USTR Sec. 301 maritime action (FT-2) | FR doc **2026-22867**, read from the API and raw text: "further suspended through 11:59 p.m. Eastern Time on January 9, 2027", effective **2026-11-09**. Filed for public inspection **2026-11-09 08:45 ET**; official publication **2026-11-10**. | primary |
+| BIS Affiliates Rule | FR doc **2026-22793** (2026-11-09) extends the suspension to 2027-01-10. | primary |
+| The 24% tariff this event was filed for | Already dead since the 2026-02-20 SCOTUS ruling (see the initial research); nothing on the US side keyed to 11/10. | unchanged |
+
+**Tape (Yahoo daily closes; 11/12 not yet closed).** The market priced no lapse and no drama on the day.
+
+| | 11/9 | 11/10 | 11/11 |
+|---|---|---|---|
+| VIX | 19.92 | 19.46 | 17.49 |
+| SPY | 752.69 | 749.92 | 759.81 |
+| SOXX | 146.76 | 146.59 | 155.40 |
+| MP | 37.75 | 36.46 | 36.73 |
+| REMX | 53.72 | 51.84 | 53.13 |
+
+11/10 was also the CPI print, a 10Y auction and the CRWV print, so none of this is attributable to the event. The
+one fair read is negative: no lapse bid appeared, and rare earths (MP, REMX) gave back a little on the expiry day
+itself while the chips were flat. The stance's "do not pay for tail protection" would have saved premium: VIX fell
+from 25.64 (11/6) to 17.49.
+
+**What the stance got right and wrong.**
+- **Right:** "Never position for a snapback" and the stand-aside at every horizon; the n=2 same-minute precedent
+  (IEEPA to Sec. 122, Sec. 122 to Sec. 301) became n=5 with the three extensions.
+- **Wrong in size, right in direction:** support (2) of FT-1 named a *one-year* extension as the summit's likely
+  deliverable. The deliverable was two months. The pass condition was "any extension", so the test passes, but a
+  reader should not take it as evidence the truce got durable: it bought 59 days.
+- **Counterweight not retired:** licensed-shipment refusals and the 2026-06-22 MP/USA Rare Earth listing (the
+  truce-decay flag) were never contradicted. The extension is a delay.
+
+**Scoring-wording notes.** FT-2 says "published (Federal Register or ustr.gov)... by 11:59 p.m. ET 2026-11-09".
+The notice was on the Federal Register's public-inspection list that morning and in the Federal Register on
+11/10, with the suspension effective 11/9; the substantive condition, a lapse-free handover with no fee accruing,
+is met. Whether ustr.gov carried it on 11/9 was not checked. FT-1's China leg is press-grade as above; no partial
+outcome (relief for some of the six announcements but not others) is evidenced, so it is not scored mixed.
+
+**Loop census (what a person or session still did by hand).** *Sense:* reading China's instrument is still manual
+(no MOFCOM fetch from a runner). *Verify:* the scanner cannot tell press-grade from primary, so a "pass" carries a
+caveat in prose. Candidate for automation: a MOFCOM/GAC announcement fetch with a recorded fallback.
+
+Conviction proposals and declared intents for this event: none printed (`conviction-proposals.mjs`, `intents.mjs`
+both `[]`).
+
 **Last assessed:** 2026-09-22
 <!-- probe-ref: {"symbols":{},"vix":14.87,"daysBand":"high:21+","adjacentIds":["boe-decision-2026-11-05","boj-minutes-2026-11-05","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","existing-home-sales-2026-11-12","jgb-10y-auction-2026-11-05","jgb-30y-auction-2026-11-10","jgb-5y-auction-2026-11-12","jobs-2026-11-06","mts-october-2026-11-12","ppi-2026-11-13","productivity-costs-q3-2026-11-05","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","sp-global-investment-manager-index-2026-11-10","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-3y-note-2026-11-09","treasury-buyback-1mo2y-2026-11-05","treasury-coupon-announcement-2026-11-12","umich-sentiment-prelim-2026-11-06","wholesale-trade-2026-11-09"],"adjacentStrongIds":["cpi-2026-11-10","jobs-2026-11-06"],"screenStreak":1} -->
 
@@ -351,3 +407,6 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-11-10
 <!-- probe-ref: {"symbols":{},"vix":19.92,"daysBand":"high:0+","adjacentIds":["boe-decision-2026-11-05","boj-minutes-2026-11-05","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","erock-q3-2026-results-2026-11-12","existing-home-sales-2026-11-12","japan-balance-of-payments-2026-11-10","jgb-10y-auction-2026-11-05","jgb-30y-auction-2026-11-10","jgb-5y-auction-2026-11-12","jobs-2026-11-06","mts-october-2026-11-12","nbis-2026-11-12-print","pbls-q3-2026-results-2026-11-12","ppi-2026-11-13","productivity-costs-q3-2026-11-05","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","sp-global-investment-manager-index-2026-11-10","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-3y-note-2026-11-09","treasury-buyback-1mo2y-2026-11-05","treasury-coupon-announcement-2026-11-12","uk-gdp-q3-first-2026-11-12","uk-gilt-auction-long-2026-11-10","umich-sentiment-prelim-2026-11-06","wholesale-trade-2026-11-09"],"adjacentStrongIds":["cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","jobs-2026-11-06","nbis-2026-11-12-print"],"screenStreak":0,"blocked":[{"url":"https://english.mofcom.gov.cn/","status":0,"at":"2026-11-10"}]} -->
+
+**Last assessed:** 2026-11-12
+<!-- probe-ref: {"symbols":{},"vix":17.49,"daysBand":"high:0+","adjacentIds":["boe-decision-2026-11-05","boj-minutes-2026-11-05","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","erock-q3-2026-results-2026-11-12","existing-home-sales-2026-11-12","japan-balance-of-payments-2026-11-10","jgb-10y-auction-2026-11-05","jgb-30y-auction-2026-11-10","jgb-5y-auction-2026-11-12","jobs-2026-11-06","mts-october-2026-11-12","nbis-2026-11-12-print","pbls-q3-2026-results-2026-11-12","ppi-2026-11-13","productivity-costs-q3-2026-11-05","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","sp-global-investment-manager-index-2026-11-10","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-3y-note-2026-11-09","treasury-buyback-1mo2y-2026-11-05","treasury-coupon-announcement-2026-11-12","uk-gdp-q3-first-2026-11-12","uk-gilt-auction-long-2026-11-10","umich-sentiment-prelim-2026-11-06","wholesale-trade-2026-11-09"],"adjacentStrongIds":["cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","jobs-2026-11-06","nbis-2026-11-12-print"],"screenStreak":0,"blocked":[{"url":"https://english.mofcom.gov.cn/","status":0,"at":"2026-11-10"},{"url":"https://english.mofcom.gov.cn/","status":0,"at":"2026-11-12"}]} -->

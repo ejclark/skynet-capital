@@ -182,6 +182,7 @@ describe("toolsFor — what the turn is allowed to call", () => {
   it("offers only the tools that read no member data when no desk is linked", () => {
     expect(names(undefined).sort()).toEqual([
       "draft_feedback",
+      "draft_research_ask",
       "get_roadmap",
       "get_upcoming_events",
       "get_work_status",
@@ -623,5 +624,31 @@ describe("the model-call budget", () => {
     const c = collect();
     expect(await run(doFetch, c)).toEqual({ kind: "answered" });
     expect(requests).toHaveLength(1);
+  });
+});
+
+describe("the research question hand-off (the Moneypenny operator plan, research slice)", () => {
+  it("routes a drafted research question to onResearchAskDraft, without a desk, and asks nothing", async () => {
+    const { doFetch, requests } = scriptedFetch([
+      toolReply(
+        toolUse("draft_research_ask", "r", {
+          kind: "name",
+          subject: "pltr",
+          question: "Why is it moving?",
+        }),
+      ),
+      textReply("Here's the question — tap to ask the research desk."),
+    ]);
+    const c = collect();
+    const asks: unknown[] = [];
+    await run(doFetch, c, { handlers: { onResearchAskDraft: (d: unknown) => asks.push(d) } });
+    expect(asks).toEqual([
+      { kind: "name", subject: "PLTR", label: "PLTR", question: "Why is it moving?" },
+    ]);
+    const result = JSON.parse(onlyResult(requests).content);
+    expect(result.ok).toBe(true);
+    expect(result.result.shown).toBe(true);
+    expect(c.handoffs).toEqual([]);
+    expect(c.convictions).toEqual([]);
   });
 });

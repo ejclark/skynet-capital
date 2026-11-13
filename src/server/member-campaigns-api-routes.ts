@@ -17,7 +17,7 @@ import {
   castSymbols,
   SYMBOL_RE,
 } from "../domain/campaigns.js";
-import { withoutAnswered } from "../domain/discovery-pass.js";
+import { shelfFileFor, withoutAnswered } from "../domain/discovery-pass.js";
 import {
   type CoveringCandidate,
   cleanQuestion,
@@ -106,6 +106,8 @@ import {
  * subject the campaign already covers still queues, and a second member's identical ask joins the
  * first. A campaign the member cannot read gets the same answer as one that doesn't exist, so the
  * route never confirms another member's private campaign. The words are kept on the volume only.
+ * A bare ask (no `campaign`) keeps its `question` too, so a question drafted in the chat reaches
+ * the list in the member's words.
  *
  * Same auth invariant as the other member APIs: `!session` means the route doesn't exist
  * (`false`), before anything else runs.
@@ -243,15 +245,25 @@ function queueDiscoveries(
   subjects: readonly string[],
   covering: readonly CoveringCandidate[],
   scope: { readonly campaign?: string; readonly question?: string } = {},
-): { readonly status: string; readonly tell: string; readonly campaign?: string } | undefined {
+):
+  | {
+      readonly status: string;
+      readonly tell: string;
+      readonly campaign?: string;
+      readonly cover?: "house" | "party";
+      readonly writeUp?: string;
+    }
+  | undefined {
   const memberKey = asker.key;
   const store = config.discoveryQueue;
   if (!store || subjects.length === 0) return undefined;
   const isResearched = config.campaignShelf ?? shelfResearched();
   const perPass = config.discoveryPerPass ?? discoveryPerPass();
-  // An ask the lane already answered (its shelf file is on main) has left the queue (discovery-pass.ts).
+  // An ask the lane already answered (its shelf file is on main) has left the queue (discovery-pass.ts),
+  // and asking it again joins that write-up rather than queueing work no pass will take (#7333).
+  const answered = config.campaignShelfAnswered ?? shelfAnswered();
   const loaded: DiscoveryQueue = store.load();
-  const before: DiscoveryQueue = withoutAnswered(loaded, shelfAnswered());
+  const before: DiscoveryQueue = withoutAnswered(loaded, answered);
   let queue = before;
   let last: QueueOutcome | undefined;
   let refused = 0;
@@ -264,6 +276,8 @@ function queueDiscoveries(
       { kind, subject, by: memberKey, ...scope },
       covering,
       isResearched,
+      new Date(),
+      answered,
     );
     queue = outcome.queue;
     asked.push(outcome);
@@ -288,8 +302,13 @@ function queueDiscoveries(
   return {
     status: last.status,
     tell: tellMember(last, perPass) + note,
-    // A covered subject names the campaign to ask in.
-    ...(last.status === "covered" ? { campaign: last.campaign } : {}),
+    // A covered subject names the campaign to ask in, and whose cover it is: a party campaign's
+    // sentence quotes a member-written title, so the chat says only the house's sentences (#7443).
+    ...(last.status === "covered"
+      ? { campaign: last.campaign, cover: last.party ? ("party" as const) : ("house" as const) }
+      : {}),
+    // An answered ask names the write-up it joined.
+    ...(last.status === "answered" ? { writeUp: shelfFileFor(last.ask) } : {}),
   };
 }
 
@@ -328,7 +347,10 @@ function askRoute(
     sendJson(res, 200, { ok: false, error: "Questions aren't wired in this deployment." });
     return;
   }
-  let scope: { campaign?: string; question?: string } = {};
+  // The member's words travel with every ask, inside a campaign or not (a question drafted in the
+  // chat posts here with no campaign — the Moneypenny operator plan, research slice).
+  const question = cleanQuestion(body?.question);
+  let scope: { campaign?: string; question?: string } = question ? { question } : {};
   let askedIn: Readable | undefined;
   if (body?.campaign !== undefined) {
     const id = boundedString(body.campaign, CAMPAIGN_MAX_ID);
@@ -337,7 +359,6 @@ function askRoute(
       sendJson(res, 200, { ok: false, error: "That campaign isn't one you can ask in." });
       return;
     }
-    const question = cleanQuestion(body.question);
     scope = { campaign: readable.scope, ...(question ? { question } : {}) };
     askedIn = readable;
   }

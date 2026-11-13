@@ -60,6 +60,12 @@ export interface CampaignQuestion {
   /** The first asker's words, already through `cleanQuestion`. */
   readonly question?: string;
   readonly askedAt: string;
+  /**
+   * When it was last asked, set on every re-ask (#7445). `askedAt` stays the first date the campaign
+   * shows; this is the dated record the league count (`what-members-ask.ts`) reads, because a re-ask
+   * joined to a write-up already on the shelf leaves nothing on the list to date it.
+   */
+  readonly lastAskedAt?: string;
   readonly askers: readonly Asker[];
 }
 
@@ -75,7 +81,10 @@ export function displayName(raw: string | undefined): string {
   return name.length > 0 && !name.includes("@") ? name : NEUTRAL_NAME;
 }
 
-/** Record one question asked in a campaign: a new entry, or one more asker on the same question. */
+/**
+ * Record one question asked in a campaign: a new entry, or a re-ask of the same question — one more
+ * asker (never the same one twice) and `lastAskedAt` moved to now, so the re-ask stays dated.
+ */
 export function recordQuestion(
   log: QuestionLog,
   ask: DiscoveryAsk,
@@ -86,12 +95,14 @@ export function recordQuestion(
   const at0 = log.findIndex((q) => q.id === ask.id);
   if (at0 >= 0) {
     const prior = log[at0] as CampaignQuestion;
-    if (prior.askers.some((a) => a.key === asker.key)) return log;
-    const askers = [...prior.askers, asker].slice(0, MAX_ASKERS);
+    const askers = prior.askers.some((a) => a.key === asker.key)
+      ? prior.askers
+      : [...prior.askers, asker].slice(0, MAX_ASKERS);
     // The first asker's words stay, the queue's own rule; a joiner's only fill a gap.
     const question = prior.question ?? ask.question;
+    const lastAskedAt = at.toISOString();
     return log.map((q, i) =>
-      i === at0 ? { ...prior, askers, ...(question ? { question } : {}) } : q,
+      i === at0 ? { ...prior, askers, ...(question ? { question } : {}), lastAskedAt } : q,
     );
   }
   const entry: CampaignQuestion = {
@@ -150,7 +161,7 @@ export interface QuestionView {
   readonly suggestion: boolean;
 }
 
-function findingOf(lesson: Lesson): FindingView {
+export function findingOf(lesson: Lesson): FindingView {
   return {
     kind: lesson.kind,
     idea: lesson.idea,

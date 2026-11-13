@@ -39,11 +39,12 @@
 }
 
 /* The pick bar: stuck to the bottom of the screen while one account is picked. Sticky inside the
- * stage, not fixed: it keeps the stage's width (the Moneypenny rail beside it is never covered)
- * and settles in place under the footer at the very end of the page. */
+ * stage, not fixed: it keeps the stage's width and settles in place under the footer at the very
+ * end of the page. It stands above Moneypenny's dock, which sticks to the same edge (--dock-h,
+ * published by moneypenny-dock.tsx, #7487 slice 2). */
 .cmp-pickslot {
   position: sticky;
-  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(var(--dock-h, 0px) + 12px);
   z-index: 4;
 }
 .cmp-pickbar {

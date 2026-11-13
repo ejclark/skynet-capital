@@ -328,6 +328,7 @@ is not a re-registration.
 | 2026-11-09 | D-3 | **Deterministic screen (no Claude session).** Readings — VIX 25.6 (+0.0pt since last), band unchanged (medium:0+), 40 adjacent event(s) tracked, new in corridor since last pulse: `japan-balance-of-payments-2026-11-10`, `japan-gdp-q3-prelim-2026-11-16`, `pbls-q3-2026-results-2026-11-12` (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-11-11 |
 | 2026-11-11 | D-1 | **Pulse (band `medium:0+`, 2d; screened material on one reason, `vix-regime-change:-6.2pt`, 25.64 → 19.46, the unwind of the 11-05 spike). Date unchanged, stays `estimate`:** Tentative Auction Schedule re-fetched direct (HTTP 200, 27,527 B, sha256 prefix `4cc365b5131b` — byte-identical to the 11-07 fetch), so the five rows announced `Thu, Nov 12, 2026` stand as filed. treasurydirect `upcoming` (HTTP 200) now lists the 11-12 block with **blank sizes** — 13W, 26W, 6W, `Bond 20-Year` (not a reopening) and `Note 9-Year 8-Month` (reopening = the 10Y TIPS leg) — i.e. the announcement is set for tomorrow and nothing has leaked early. **Coupon legs unchanged and published, not deduced: 20Y new issue $16B and 10Y TIPS reopening $19B (`sb0678`, read in the 11-05 row); neither FT is scored until the announcement prints.** **Bill legs: no new number.** treasurydirect `announced` (HTTP 200): 13W **$95B** · 26W **$82B** · 6W **$100B** as of the 11-05 announcement, and the 11-10 announcement held 4W **$115B** · 8W **$110B** · 17W **$75B** (all unchanged from 11-03), so the 11-12 bill null stays **95/82/100**. No CMB in the announced feed, press stream `sb0680`→`sb0687` (curl HTTP 200) is TBAC minutes, sanctions, IRS and FATF items plus a Bessent–He Lifeng call readout — **no issuance action, no refunding-guidance change** (kill switches 2 and 5 unchanged since the 11-05 row; 1 cleared; 4 pending 11-19; 3 still rests on three of four cells as recorded 10-27). **The new tape since the 11-07 row is rates, not supply.** Auctions (treasurydirect results, not re-sourced elsewhere): 3Y **$58B** on 11-09 at **4.627%**, bid-to-cover **2.53**; 10Y **$42B** on 11-10 at **5.020%**, bid-to-cover **2.46** — both sizes on the 11-04 table. **CPI (BLS API, primary, SA index levels, no consensus sourced):** October all-items 337.476 vs 336.298 = **+0.35% m/m**, core (ex food and energy) 339.900 vs 338.896 = **+0.30% m/m**. **Par curve (`home.treasury.gov` XML, primary, HTTP 200), 11-09 → 11-10:** 2Y 4.56 → **4.73**, 10Y 4.88 → **4.98**, 20Y 5.29 → **5.39**, 30Y 5.26 → **5.35**: a +10bp curve selloff on CPI day that sits against the 11-06 base (2Y 4.51, 20Y 5.29). Level, not size: Treasury sets coupon sizes on its borrowing estimate and TBAC, and the 11-04 statement published 16/19 a week ago. **Volatility:** VIX Yahoo bar-close **19.92** (11-09), **19.46** (11-10) vs 25.64 (11-06) and 28.18 (11-05); the equity-driven spike has mostly unwound. **Adjacency:** corridor **40** entries within ±5 days; strong: `cbrs-lockup-expiry-2026-11-09`, `cbrs-q3-2026-results-2026-11-11`, `cpi-2026-11-10`, `nbis-2026-11-12-print`, `nvda-2026-11-18-print`, `retail-sales-2026-11-17`. `--on-date=2026-11-12` lists ten entries, all tracked (including `treasury-30y-bond-2026-11-12`, auction 1:00pm ET the same day, and `mts-october-2026-11-12`), so **no proposal filed**; nothing dated beyond the horizon noted. 11-11 is Veterans Day (the Tentative Schedule carries the holiday line and SIFMA's closure is tracked), so no auction or announcement falls on it. Web search for a 20Y size outside Treasury primaries returned only the `sb0678` release and secondary pieces that disagree ($16B vs a pre-refunding Citi $13B call dated 10-21); the primary table settles it at $16B, nothing adopted from the secondaries. Conviction proposals (`conviction-proposals.mjs`): none waiting. Declared intents (`intents.mjs`): none naming this event. Peers n/a. | **None.** Coupon legs 20Y $16B / 10Y TIPS reopening $19B (published 11-04), bill null 95/82/100; FT-1 and FT-2 unscored, scoring on the announcement itself. Nothing registered this pass | Close-out after 2026-11-12 11:00 ET (`event-passed-unscored`): score FT-1 (20Y $16B) and FT-2 (TIPS reopening $19B) from the print |
 | 2026-11-11 | D-1 | **Pulse (band `medium:0+`, 2d; full session, resets screenStreak 1 → 0). Date unchanged, stays `estimate`:** Tentative Auction Schedule re-fetched direct (curl HTTP 200, 27,527 B, sha256 prefix `4cc365b5131b` — byte-identical to the 11-07 fetch), so the five rows announced `Thu, Nov 12, 2026` stand as filed. treasurydirect `upcoming` (HTTP 200) lists those same five for announcement 2026-11-12 with **blank sizes** (13W `912797TV9` and 26W `912797XD4` auction 11-16, 6W `912797VJ3` auction 11-17 — all settle 11-19; 20Y `912810UZ9` new issue and the 10Y TIPS reopening `91282CRE3` settle 11-30), so nothing is announced early. **Coupon legs unchanged — $16B 20Y new issue and $19B 10Y TIPS reopening, both published 11-04 (`sb0678`) and scored by FT-1 (11-19) and FT-2 (11-20), neither scoreable yet.** **Bill legs: the null is now measured, not carried.** treasurydirect `announced` (HTTP 200) shows the 11-05 announcement at 13W **$95B** · 26W **$82B** · 6W **$100B** (resolving the 11-07 row's blank), so the 11-12 bill null is **95/82/100** by the last printed values; the 11-03 announcement held 4W $115B · 8W $110B · 17W $75B. The refunding's *maintain benchmark bill sizes into late November* and December-reduction language still frames the next move, and a late-November CMB stays undated and bill-side. **Auctions since the last row (treasurydirect `auctioned`, HTTP 200):** 3Y 11-09 **$58B** high yield **4.627** bid/cover **2.53**; 10Y 11-10 **$42B** **5.020** **2.46** — both on the grid (3Y 58 / 10Y 42 in `sb0678`'s Nov-26 row), no off-grid coupon print. fiscaldata `auctions_query` still stops at 10-22 (lag), so it was not used. **Macro:** CPI printed 11-10 (headline a step above preview, core 0.296% per the [cpi ledger](cpi-2026-11-10.md), secondary to that doc, not re-opened here); Treasury par (`home.treasury.gov` XML, primary, HTTP 200) 11-09 → 11-10: 2Y **4.56 → 4.73** · 10Y **4.88 → 4.98** · 20Y **5.29 → 5.39** · 30Y **5.26 → 5.35** — rate level, not size. **Volatility:** VIX Yahoo bar-close **19.92** (11-09) and **19.46** (11-10) vs 25.64 at the 11-07 row = **−6.2pt**, the 11-05/11-06 spike has unwound; this moves no size. Veterans Day: bond market closed today 11-11 ([sifma-bond-market-closure-2026-11-11](sifma-bond-market-closure-2026-11-11.md)), so the announcement and the 30Y auction (1:00pm ET) are the first bond session after it. **Press stream:** Treasury press index top items through `sb0687` plus a web search for *CMB / coupon sizes / 11-12* found no off-cycle issuance action, no CMB and no coupon change; search results only re-surfaced `sb0678` (refunding) and its guidance-wording change. **Corridor:** 40 entries within ±5d (same set as the 11-09 screen, all already canonical); `--on-date=2026-11-12` read, 10 entries, every one already on the calendar — **no proposals filed**. Beyond the 60-day horizon: nothing seen. `conviction-proposals --event` and `intents --event` both returned `[]`. **Kill switches:** 1 clear · 2 fired on wording only (unchanged) · 3 clear · 4 clear (11-19 not yet printed) · 5 not fired · 6 clear. No forward test registered or scored: FT-1 (score by 11-19) and FT-2 (11-20) stand. Tomorrow's tell is the sizes themselves: 20Y $16B, TIPS $19B, bills vs 95/82/100; any coupon size other than those two would be the first off-grid print since April 2024 and would be read against kill switch 5. | None to the call: stand aside, coupons $16B / $19B published, bills the only open numbers (95/82/100 as last announced). VIX regime unwound. | 2026-11-12 (announcement day) |
+| 2026-11-13 | D+1 | **Close-out (`event-passed-unscored`). The announcement printed as the base case on every leg; `## Outcome` appended below, both forward tests deliberately left `_open_` (score-by 11-19 / 11-20 not yet arrived).** Treasury's own `A_20261112_1`-`_5.xml` (HTTP 200) and `TA_WS/securities/announced`: 20-Year BOND `912810UZ9` **$16B**, Reopening N (new issue); 10-Year TIPS `91282CRE3` **$19B**, Reopening Y; 13W **$95B** · 26W **$82B** · 6W **$100B** (all unchanged from 11-05). Stamps 11:02:30-11:05:14 ET. Date stays `estimate`. No dated adjacent event proposed. Beyond-horizon notes: none new. | — (close-out; stance unchanged) | 2026-11-19 (`FT-…-11-12-1` scoreable) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse: it is a note to
 the next session, not an essay. The adjacency sweep (peer prints · macro surprises · VIX regime ·
@@ -368,3 +369,102 @@ proposed as a new `src/domain/market-events/proposals/<id>.from-treasury-coupon-
 
 **Last assessed:** 2026-11-11
 <!-- probe-ref: {"symbols":{},"vix":19.46,"daysBand":"medium:0+","adjacentIds":["asean-summit-manila-2026-11-16","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","empire-state-mfg-2026-11-16","erock-q3-2026-results-2026-11-12","existing-home-sales-2026-11-12","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-balance-of-payments-2026-11-10","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-30y-auction-2026-11-10","jgb-5y-auction-2026-11-12","msft-ignite-2026-11-17","mtis-2026-11-17","mts-october-2026-11-12","nahb-hmi-2026-11-17","nbis-2026-11-12-print","nvda-2026-11-18-print","pbls-q3-2026-results-2026-11-12","ppi-2026-11-13","retail-sales-2026-11-17","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","sp-global-investment-manager-index-2026-11-10","survey-of-professional-forecasters-q4-2026-11-16","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-3y-note-2026-11-09","uk-gdp-q3-first-2026-11-12","uk-gilt-auction-long-2026-11-10","uk-labour-market-2026-11-17","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","nbis-2026-11-12-print","nvda-2026-11-18-print","retail-sales-2026-11-17"],"screenStreak":0} -->
+
+## Outcome
+
+**Assessed 2026-11-13 (D+1, inside the close-out window).** `rates` event, `symbols: []` — no
+`earnings-cycle`/`intraday-edges` target applies, so the instrument cache bust
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) was run and had nothing
+to clear (recorded, not skipped silently). Every number below is a fresh pull this session, never carried
+from a prior row: treasurydirect `xml/A_20261112_1.xml`-`_5.xml` (HTTP 200; `_6`-`_8` are empty, so the
+announcement is exactly five securities, as the Tentative Auction Schedule named), `TA_WS/securities/announced`
+(HTTP 200), Treasury's daily par-curve XML, Yahoo daily and 5-minute bars for `^VIX`/`^TNX`/`^TYX`. fiscaldata
+`auctions_query` (`announcemt_date:eq:2026-11-12`) returned `total-count` 0 — it lags the announcement, as the
+10-22 close-out also found — so the scoring evidence rests on the two Treasury primaries that carry it. The
+run-length anchors registered from fiscaldata on 2026-09-08 were not re-run.
+
+### The announcement, re-pulled from the primary
+
+| Security | CUSIP | Reopening? | Offering | Auction | Issue/settle | Stamp (ET) |
+|---|---|---|---|---|---|---|
+| 13-Week BILL | 912797TV9 | Yes | **$95.000B** | 2026-11-16 | 2026-11-19 | 11:03:14 |
+| 26-Week BILL | 912797XD4 | No | **$82.000B** | 2026-11-16 | 2026-11-19 | 11:03:56 |
+| 6-Week BILL | 912797VJ3 | Yes | **$100.000B** | 2026-11-17 | 2026-11-19 | 11:02:30 |
+| 10-Year TIPS (9-Year 8-Month) | **91282CRE3** | **Yes** | **$19.000B** | 2026-11-19 | 2026-11-30 | 11:04:38 |
+| 20-Year BOND | **912810UZ9** | **No — new issue** | **$16.000B** | 2026-11-18 | 2026-11-30 | 11:05:14 |
+
+All five carry `AnnouncementDate` 2026-11-12; the XML's `Last-Modified` on the 20-Year file is 16:01:21 GMT
+(11:01 ET). The 20Y's maturity is 2046-11-15 and the TIPS reopening's 2036-07-15 at 2.375%, so the CUSIP the
+registration inferred for the TIPS leg (91282CRE3, "an inference from a three-year cycle, not a fetched field")
+is now a fetched field and it was right.
+
+### Forward tests: not scored, on purpose
+
+Both registered rows are **left `_open_`**. The announcement-side facts they key on are now in hand — **FT-1's
+number printed $16B as a new issue; FT-2's printed $19B as a reopening of 91282CRE3** — but their registered
+`Score by` dates are **2026-11-19** and **2026-11-20**, and scoring a prediction before its stated window closes is
+falsification (EVENT-RESEARCH.md, *A close-out waits for its own predictions*). The scanner's
+`forwardTestsBeyondWindow` names both; per the `forward-test-due` mode (#2884) this lane is re-dispatched on
+those dates to score them, and the verdict written then should read these readings back and the 11-19 auction
+result for the kill switches that outlive the announcement. Disclosed now so it is not discovered then: **FT-2's
+"genuinely unpublished TIPS number" premise was superseded by the ledger's own 11-05 update** (`sb0678`
+published $19B), so a pass confirms a published number and is weaker evidence for the asymmetry mechanism than
+registered. **A pass on FT-1 is likewise confirmation of a published number** ($16B in `sb0678`'s Nov-26 row), not the
+unpublished-across-the-boundary test it was registered as. Neither has a kill that fired on the announcement.
+
+### Stance vs. what printed
+
+- **Coupon legs: base case, 2 of 2.** 20Y new issue **$16B** (14th consecutive new issue at that size, from the
+  13 anchored at registration) and 10Y TIPS reopening **$19B** (the second reopening equalling the first, now
+  8 of 8 by announced size) — both published in writing on 11-04 and unchanged on 11-12.
+- **Bill legs: the carry-forward null held exactly.** 13W **$95B**, 26W **$82B**, 6W **$100B** = the 11-05
+  announcement's values, i.e. the 11-07/11-11 rows' "95/82/100 as last announced" null. The initial research
+  expected the bill legs to carry the only real information (stance: "genuinely new numbers whose direction
+  Treasury has pre-announced"); the direction (increases) had already been delivered through 10-29/11-05, and
+  this announcement added **no further change**. That is the honest correction to the initial stance's "not a
+  scheduled nil" framing: by the time it printed, it was one for every leg.
+- **No off-cycle action:** the announced feed for 11-12 holds exactly these five rows — no CMB, no coupon-size
+  change, no buyback line. Not a statement about later CMBs (the late-November one stays undated and bill-side).
+
+### Kill switches, adjudicated against the close-out data
+
+- **"A 20-Year new-issue size other than $16B on 2026-11-12" (FT-1)** — does **not** fire ($16B).
+- **"A 10-Year TIPS reopening size other than $19B" / "11-19 security not a reopening of 91282CRE3" (FT-2)** —
+  does **not** fire on the announcement ($19B; CUSIP and Reopening Y confirmed). The security's own 11-19 auction
+  is FT-2's scoring date.
+- **"The 11-04 refunding publishing a Nov-26 20Y cell other than 16"** — cleared 11-05 (cell was 16).
+- **"Treasury dropping or qualifying *for at least the next several quarters*"** — fired on the wording at 11-04
+  (recorded in the 11-05 row; `FT-39` owns it); sizes held, nothing here re-adjudicates it.
+- **"A TIPS size printed at a reopening rather than a new issue"** — **no change**: the reopening printed at the
+  registered $19B, so no size change at a reopening. Final adjudication waits for the 11-19 auction.
+- **"An off-cycle issuance action"** — does **not** fire (see above); bill sizes are the lever `sb0590` reserves
+  and did not move.
+
+### Tape, for the record (no attribution claimed)
+
+Treasury par, primary, 11-10 → **11-12** (11-11 is a SIFMA closure with no par print): 3-Mo 4.30 → **4.32** · 2Y
+4.73 → **4.86** · 5Y 4.81 → **4.95** · 10Y 4.98 → **5.10** · 20Y 5.39 → **5.48** · 30Y 5.35 → **5.43**. Yahoo
+`^TNX` 4.983 (11-10) → 4.998 (11-11) → **5.103** (11-12); `^TYX` 5.350 → 5.356 → **5.433**. VIX **19.46 → 17.49
+→ 18.70**. A ~10bp selloff day — but **the announcement did not cause it, and the 5-minute bars show why:** `^TNX`
+was already **5.046 at 08:20 ET** (about 5bp over the prior close) before any Treasury publication, and across the
+11:02-11:05 stamps it moved **5.066 (11:00) → 5.068 (11:05)**, +0.2bp, inside ordinary drift; the rest of the
+move came later in the session (5.097 at 11:50). The 30-Year bond auction the same day at 1:00pm ET
+([treasury-30y-bond-2026-11-12](treasury-30y-bond-2026-11-12.md)) and the PPI/other adjacents are those ledgers'
+to read; this session did not source them. The announcement restated numbers already in writing since 11-04:
+**no tape move is attributed to it**, and no position was or is keyed to it.
+
+### What this closes
+
+**Stand aside held for the whole life of this event, and it was correct — nothing was keyed to a scheduled,
+pre-published announcement, and nothing is retrofitted now.** What the event resolved: the five-security
+composition (not the two the proposing sweep named) was found at D-65 from Treasury's own schedule, both coupon
+numbers were deduced from the base rates at registration and then published on 11-04 before this announcement
+printed them, and the bill legs ended where the live adjustment lever had already put them. Durable outputs
+stand as written at initial research: the composition correction, the TIPS-leg asymmetry (now carrying the
+disclosure above), and the ~29-month nominal-coupon base rate. The calendar file keeps `status: estimate`: this
+lane records the observed announcement from Treasury's documents and does not rewrite a calendar entry's date
+status on a close-out. **What stays open: `FT-…-11-12-1` on 2026-11-19 and `FT-…-11-12-2` on 2026-11-20**, where
+the `forward-test-due` lane scores them. The scanner goes quiet on this event until 11-19.
+
+**Last assessed:** 2026-11-13
+<!-- probe-ref: {"symbols":{},"vix":18.7,"daysBand":"medium:0+","adjacentIds":["asean-summit-manila-2026-11-16","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","empire-state-mfg-2026-11-16","erock-q3-2026-results-2026-11-12","existing-home-sales-2026-11-12","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-balance-of-payments-2026-11-10","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-30y-auction-2026-11-10","jgb-5y-auction-2026-11-12","msft-ignite-2026-11-17","mtis-2026-11-17","mts-october-2026-11-12","nahb-hmi-2026-11-17","nbis-2026-11-12-print","nvda-2026-11-18-print","pbls-q3-2026-results-2026-11-12","ppi-2026-11-13","retail-sales-2026-11-17","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","sp-global-investment-manager-index-2026-11-10","survey-of-professional-forecasters-q4-2026-11-16","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-3y-note-2026-11-09","uk-gdp-q3-first-2026-11-12","uk-gilt-auction-long-2026-11-10","uk-labour-market-2026-11-17","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","nbis-2026-11-12-print","nvda-2026-11-18-print","retail-sales-2026-11-17"],"screenStreak":0,"blocked":[]} -->

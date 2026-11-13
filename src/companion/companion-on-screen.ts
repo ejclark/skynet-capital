@@ -26,6 +26,9 @@ export interface PageKeys {
   readonly edition: string;
   readonly stories: readonly string[];
   readonly events: readonly string[];
+  /** What the member tagged with ✎ onto the message they just sent (#7487 slice 3): the subjects
+   *  they mean, a subset of the same vocabulary. Checked against the served edition like the rest. */
+  readonly tagged?: { readonly stories: readonly string[]; readonly events: readonly string[] };
 }
 
 const MAX_KEYS = 40;
@@ -45,7 +48,20 @@ export function parsePageKeys(raw: unknown): PageKeys | undefined {
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return undefined;
   const r = raw as Record<string, unknown>;
   if (typeof r.edition !== "string" || !DATE_RE.test(r.edition)) return undefined;
-  return { edition: r.edition, stories: keyList(r.stories), events: keyList(r.events) };
+  const t = r.tagged;
+  const tagged =
+    typeof t === "object" && t !== null && !Array.isArray(t)
+      ? {
+          stories: keyList((t as Record<string, unknown>).stories).slice(0, 3),
+          events: keyList((t as Record<string, unknown>).events).slice(0, 3),
+        }
+      : undefined;
+  return {
+    edition: r.edition,
+    stories: keyList(r.stories),
+    events: keyList(r.events),
+    ...(tagged && tagged.stories.length + tagged.events.length > 0 ? { tagged } : {}),
+  };
 }
 
 /** The slice of the server's edition this needs — `EditionView["edition"]`, narrowed. */
@@ -76,11 +92,26 @@ export function describeOnScreen(
     .filter(({ key }) => shownEvents.has(key))
     .slice(0, MAX_EVENTS_NAMED)
     .map(({ e, key }) => `${quoteTitle(e.what)} (${e.date}) → ${landingRow(eventAnchor(key))}`);
-  if (stories.length === 0 && events.length === 0) return undefined;
+  // What the member tagged with ✎ (#7487 slice 3): only items this edition holds, named the same way.
+  const taggedStories = new Set(keys.tagged?.stories ?? []);
+  const taggedEvents = new Set(keys.tagged?.events ?? []);
+  const tagged = [
+    ...served.stories
+      .filter((s) => taggedStories.has(s.id))
+      .map((s) => `${quoteTitle(s.line)} → ${landingRow(storyAnchor(s.id))}`),
+    ...served.next
+      .map((e) => ({ e, key: editionEventKey(e) }))
+      .filter(({ key }) => taggedEvents.has(key))
+      .map(({ e, key }) => `${quoteTitle(e.what)} (${e.date}) → ${landingRow(eventAnchor(key))}`),
+  ];
+  if (stories.length === 0 && events.length === 0 && tagged.length === 0) return undefined;
   return [
     `the edition of the ${served.date} close`,
     stories.length > 0 ? `its stories: ${stories.join("; ")}` : undefined,
     events.length > 0 ? `its calendar events: ${events.join("; ")}` : undefined,
+    tagged.length > 0
+      ? `the member tagged these onto their message, so it is about them: ${tagged.join("; ")}`
+      : undefined,
   ]
     .filter(Boolean)
     .join(". ");

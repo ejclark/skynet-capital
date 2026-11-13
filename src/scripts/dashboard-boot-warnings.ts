@@ -28,8 +28,8 @@ const deviceOf = (path: string): number | undefined => {
 /**
  * The derived-store root must be a real mount on Fly (#4604). Refuses the boot once any store
  * derives its path from it — a refused boot fails the deploy loudly, where a write inside the
- * image would fail silently on the next one. With no derived store yet it only warns, so the
- * check is proven against production before anything depends on it.
+ * image would fail silently on the next one. It only warned while no store derived from the root;
+ * the first, chat screenshots (#6007), landed after a production boot log showed no warning.
  */
 export function assertDataRootMounted(env: NodeJS.ProcessEnv): void {
   const problem = dataRootProblem(env, deviceOf);

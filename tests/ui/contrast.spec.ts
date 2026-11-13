@@ -32,6 +32,9 @@ const TEXT_PAIRS: readonly [string, string][] = [
   ["--text", "--surface-2"], // raised cards: the guidance strike rows (#3729)
   ["--muted", "--surface-2"],
   ["--accent-contrast", "--accent"], // a pinned day, a pressed lens, any accent-filled control
+  ["--voice", "--bg"], // Moneypenny's latest line in the dock (#7487 slice 2)
+  ["--voice", "--surface-2"], // her lines in History
+  ["--tag-ink", "--bg"], // a ✎ tag above the dock's box (#7487 slice 3)
   // How sure a call is (#5444): each word is painted in its own colour on the card and its rows.
   ["--sure-low", "--surface"],
   ["--sure-mid", "--surface"],

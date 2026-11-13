@@ -132,28 +132,29 @@ function joinAsks(queue: DiscoveryQueue, log: QuestionLog): Map<string, JoinedAs
     id: string,
     kind: DiscoveryKind,
     subject: string,
-    askedAt: string,
+    askedAts: string[],
     keys: string[],
   ) => {
     const prior = byId.get(id);
     if (!prior) {
-      byId.set(id, { kind, subject, askedAts: [askedAt], keys: new Set(keys) });
+      byId.set(id, { kind, subject, askedAts: [...askedAts], keys: new Set(keys) });
       return;
     }
     for (const k of keys) prior.keys.add(k);
-    // Keep both records' times. The question log keeps a campaign question's FIRST date and never
-    // refreshes it on a re-ask, while the list record is new each time it is asked after a research
-    // run drained it — so an ask counts when EITHER record falls inside the window. Keeping only the
-    // earlier one read "asked yesterday" as "nobody asked this week".
-    prior.askedAts.push(askedAt);
+    // Keep every record's time, and count the ask when ANY falls inside the window. Keeping only the
+    // earliest read "asked yesterday" as "nobody asked this week".
+    prior.askedAts.push(...askedAts);
   };
-  for (const a of queue) add(a.id, a.kind, a.subject, a.askedAt, [...a.askers]);
+  for (const a of queue) add(a.id, a.kind, a.subject, [a.askedAt], [...a.askers]);
+  // The question log keeps a campaign question's FIRST date in `askedAt` and its latest re-ask in
+  // `lastAskedAt` (#7445). The latest is the one that matters: a re-ask joined to a write-up already
+  // on the shelf leaves no list record, so without it a question asked today read as last month's.
   for (const q of log as readonly CampaignQuestion[])
     add(
       q.id,
       q.kind,
       q.subject,
-      q.askedAt,
+      q.lastAskedAt ? [q.askedAt, q.lastAskedAt] : [q.askedAt],
       q.askers.map((p) => p.key),
     );
   return byId;
