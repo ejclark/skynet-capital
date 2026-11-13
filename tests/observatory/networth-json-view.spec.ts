@@ -49,6 +49,21 @@ describe("accountsNetWorthView", () => {
     expect(a.windows.every((w) => w.known)).toBe(true);
   });
 
+  // Eric, 2026-11-13: "$757,918 ready to use" while the broker allowed $42,999 for options.
+  it("names what can actually be spent as ready, apart from cash, when buying power is below it", () => {
+    const view = accountsNetWorthView("t", [
+      account({ id: "e", equity: 958_530, cash: 757_918, optionsBuyingPower: 42_999 }),
+      account({ id: "f", equity: 100_000, cash: 50_000, optionsBuyingPower: 50_000 }),
+      account({ id: "g", equity: 100_000, cash: 50_000 }),
+    ]);
+    const [e, f, g] = view.accounts;
+    expect(e?.ready).toBe("$42,999");
+    expect(e?.cash).toBe("$757,918");
+    // Nothing held back, or nothing reported: no second figure, cash reads as before.
+    expect(f?.ready).toBeUndefined();
+    expect(g?.ready).toBeUndefined();
+  });
+
   it("renders '—' for a window the broker did not report, without flipping the tone", () => {
     const view = accountsNetWorthView("t", [
       account({ id: "a", windows: { ...WINDOWS, "1Y": {} } }),

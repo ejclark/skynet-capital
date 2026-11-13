@@ -114,8 +114,19 @@ function CashSplit({ stats }: { readonly stats: NetWorthStatsView }): ReactEleme
         ) : null}
         <span className="head-split-idle">
           {drawsCash ? <span className="head-swatch head-swatch--idle" aria-hidden="true" /> : null}
-          <b className="num">{stats.cash}</b> {negative(stats.cash) ? "cash" : "ready to use"} ·{" "}
-          <span className="num">{stats.idlePct.toFixed(1)}%</span>
+          {stats.ready !== undefined ? (
+            // Cash securing sold puts is still cash, never "ready to use" (Eric, 2026-11-13): the
+            // hatch is labelled cash, and "ready" is what the broker lets an options order spend.
+            // The same length as the line it replaces, so the head keeps its one height.
+            <span title="Ready is your options buying power; the rest of the cash secures sold options">
+              <b className="num">{stats.cash}</b> cash · <b className="num">{stats.ready}</b> ready
+            </span>
+          ) : (
+            <>
+              <b className="num">{stats.cash}</b> {negative(stats.cash) ? "cash" : "ready to use"} ·{" "}
+              <span className="num">{stats.idlePct.toFixed(1)}%</span>
+            </>
+          )}
         </span>
       </p>
     </div>

@@ -93,6 +93,7 @@ async function accountNetWorth(
     readonly kind: "human" | "bot";
     readonly equity: number;
     readonly cash: number;
+    readonly optionsBuyingPower?: number;
     readonly positions: readonly unknown[];
     readonly realizedPl?: number;
     readonly error?: string;
@@ -157,6 +158,9 @@ async function accountNetWorth(
     ...base,
     equity: found.equity,
     cash: found.cash,
+    ...(found.optionsBuyingPower !== undefined
+      ? { optionsBuyingPower: found.optionsBuyingPower }
+      : {}),
     ...(lastEquity !== undefined && Number.isFinite(lastEquity) ? { lastEquity } : {}),
     ...(typeof found.realizedPl === "number" ? { realizedPl: found.realizedPl } : {}),
     ...(typeof unrealizedPl === "number" && Number.isFinite(unrealizedPl) ? { unrealizedPl } : {}),

@@ -1,4 +1,4 @@
-import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
+import { optionsSpendable, type ParticipantSnapshot } from "../observatory/participant-snapshot.js";
 import type { GuidanceMarket } from "../options/position-guidance-types.js";
 import {
   type SuggestedTrade,
@@ -119,7 +119,10 @@ export function accountFor(snapshot: ParticipantSnapshot, symbol: string): Sugge
   }
   return {
     equity: snapshot.equity,
-    cash: snapshot.cash,
+    // What a put can actually be secured with — never raw cash, which still counts the collateral
+    // already securing open puts (Eric, 2026-11-13: a staged put the broker refused at $308,700
+    // against $42,999 of buying power).
+    cash: optionsSpendable(snapshot),
     ...(shares > 0 ? { shares } : {}),
     ...(callsSold > 0 ? { callsSold } : {}),
     ...(shares > 0 && costBasis !== undefined ? { costBasis } : {}),

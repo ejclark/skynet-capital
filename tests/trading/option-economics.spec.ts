@@ -154,6 +154,35 @@ describe("validateAffordability — no naked premium from this desk", () => {
     expect(refusals.join(" ")).toContain("more than your available cash");
   });
 
+  // Eric, 2026-11-13: a 20-contract NVDA $162.50 put passed review against $757,918 of cash, then
+  // the broker refused it at submit — its options buying power was $42,999, the rest of the cash
+  // already securing sold puts. Review now checks what can actually be spent, and says why.
+  it("refuses a put the cash covers but the options buying power does not, naming the held part", () => {
+    const refusals: string[] = [];
+    validateAffordability(
+      { ...request, code: "201" as const, strike: 162.5, contracts: 20 },
+      context({ cash: 757_918, optionsBuyingPower: 42_999 }),
+      8.02,
+      refusals,
+      [],
+    );
+    const said = refusals.join(" ");
+    expect(said).toContain("needs $325,000 set aside and you have $42,999");
+    expect(said).toContain("$714,919 already securing your sold options");
+  });
+
+  it("keeps judging on cash when the account reports no options buying power", () => {
+    const refusals: string[] = [];
+    validateAffordability(
+      { ...request, code: "201" as const, strike: 162.5, contracts: 20 },
+      context({ cash: 757_918 }),
+      8.02,
+      refusals,
+      [],
+    );
+    expect(refusals).toEqual([]);
+  });
+
   // #6328: an assignment can drain broker cash below zero; a call the shares fully cover sets
   // aside $0 and must not be judged against it.
   it("passes a share-covered call on an account whose cash is negative", () => {

@@ -187,6 +187,9 @@ export function ticketContext(
 ): TicketContext {
   return {
     cash: snapshot.cash,
+    ...(snapshot.optionsBuyingPower !== undefined
+      ? { optionsBuyingPower: snapshot.optionsBuyingPower }
+      : {}),
     positions: snapshot.positions,
     tradingEnabled: options.tradingEnabled,
     isSelf: options.isSelf,
