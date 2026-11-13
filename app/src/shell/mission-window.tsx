@@ -166,11 +166,15 @@ export interface WindowLink {
   readonly prefill?: () => void;
 }
 
-/** The window the Eye is about to open on its own, whose frame must not take focus. */
+/** The window about to open that the member did not open themselves, whose frame must not take
+ *  focus: one the Eye opens on its own (#7487 slice 5, `use-eye-notice.ts`), or one the first-visit
+ *  tour opens (slice 7, `first-visit-run.ts`), which is driven from the dock, one control at a time,
+ *  so focus stays there. Either way her line in the dock's live region says what changed. */
 let quietWindow: MissionWindow | undefined;
 
-/** The next opening of `w` is the Eye's, not the member's: its frame leaves focus where it is. */
-export function quietNextWindow(w: MissionWindow): void {
+/** The next opening of `w` is not the member's own: its frame leaves focus where it is. `undefined`
+ *  clears a mark nothing spent (the tour clears its own once her line lands). */
+export function quietNextWindow(w: MissionWindow | undefined): void {
   quietWindow = w;
 }
 
@@ -206,8 +210,9 @@ export function MissionWindowFrame({
   // A window the member switched to takes focus at its heading, so keyboard and screen-reader focus
   // never falls to <body> when the control they used (a row, a Linked pill) unmounts with the old
   // one. Arriving at the page (side 0) leaves focus where the browser put it, and so does a switch
-  // the Eye made on its own (`quietNextWindow`): the member asked for nothing, so focus is not moved
-  // from under them (WCAG 3.2.1) — Moneypenny's line in the dock's live region says what changed.
+  // the Eye or the first-visit tour made (`quietNextWindow`): the member did not move, so focus is
+  // not moved from under them (WCAG 3.2.1) — Moneypenny's line in the dock's live region says what
+  // changed.
   const heading = useRef<HTMLHeadingElement>(null);
   // biome-ignore lint/correctness/useExhaustiveDependencies: on mount only; the frame is keyed by id
   useEffect(() => {
@@ -277,6 +282,7 @@ export function MissionRow({
   figure,
   onOpen,
   about,
+  anchor,
 }: {
   readonly mark?: string;
   readonly title: string;
@@ -286,6 +292,8 @@ export function MissionRow({
   readonly onOpen?: () => void;
   /** The row as a ✎ tag ("Party · Tony"), when it can be talked about (#7487 slice 3). */
   readonly about?: PromptTag;
+  /** The row's id, for the Eye to light it by (`requestLight`; the first-visit tour, slice 7). */
+  readonly anchor?: string;
 }): ReactElement {
   const body = (
     <>
@@ -310,7 +318,7 @@ export function MissionRow({
   const mark_ = about ? <TagMark tag={about} /> : null;
   if (onOpen)
     return (
-      <li className="mctl-row-item">
+      <li className="mctl-row-item" id={anchor}>
         <button type="button" className="mctl-row mctl-row--go" onClick={onOpen}>
           {body}
         </button>
@@ -318,7 +326,7 @@ export function MissionRow({
       </li>
     );
   return (
-    <li className="mctl-row-item">
+    <li className="mctl-row-item" id={anchor}>
       <div className="mctl-row">{body}</div>
       {mark_}
     </li>

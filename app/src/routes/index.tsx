@@ -20,6 +20,7 @@ import {
 } from "../live/edition";
 import { sinceLine } from "../live/edition-sectors";
 import { noticeCandidates } from "../live/eye-notice";
+import { CONNECT_ANCHOR } from "../live/first-visit";
 import { useHorizonRange } from "../live/horizon-params";
 import { DEFAULT_WINDOW, type MissionWindow, parseWindow } from "../live/mission";
 import {
@@ -30,6 +31,7 @@ import {
   reportsDue,
   useCampaignTicket,
 } from "../live/mission-ticket";
+import { useMoneypenny } from "../live/moneypenny";
 import { type PageKeys, usePublishPageKeys } from "../live/page-keys";
 import { signedMoney } from "../live/position-act";
 import { fetchQuests, placeQuests, QUESTS_SHOWN, type QuestsAnswer } from "../live/quests";
@@ -55,6 +57,7 @@ import {
   partyRows,
   useParty,
 } from "../shell/mission-windows";
+import { QuestGoal } from "../shell/quest-goal";
 import { SectorOverview } from "../shell/sector-overview";
 import { TagMark } from "../shell/tag-mark";
 import { useEyeNotice } from "../shell/use-eye-notice";
@@ -69,6 +72,9 @@ import { useEyeNotice } from "../shell/use-eye-notice";
  * default; a `#event-`/`#story-` link or a `?show=` pivot opens the Calendar. Market, Calendar and
  * Quests are the components below, unchanged inside the window; Overview and Party are new
  * (`shell/mission-windows.tsx`). The ask box leads Overview until the dock replaces it (slice 2).
+ * A member's first visit (slice 7) starts here: her welcome in the dock, a tour that opens one
+ * window per step with the Eye on one real row, and a goal pinned as the first row of Quests
+ * (`live/first-visit.ts`, `shell/first-visit-run.ts`, `shell/quest-goal.tsx`).
  * What follows is the page's history; its parts still hold inside their windows.
  *
  * THE LANDING PAGE (#7077, parent #6948 slice 4): sign-in opens the day's market news, not the
@@ -98,7 +104,8 @@ import { useEyeNotice } from "../shell/use-eye-notice";
  * The Eye notices (#7487 slice 5, `shell/use-eye-notice.ts`): once the page has its data, the Eye
  * may point at one thing worth a look — an event a story waits on, a new quest, a sector that just
  * left its usual range — sliding to its window and lighting its row while Moneypenny says what it
- * saw. Never on a visit that arrived on an address naming a window or a row.
+ * saw. Never on a visit that arrived on an address naming a window or a row, and never during a
+ * member's first visit or its tour (slice 7, above): the welcome is the page's first word.
  *
  * An old bookmark or a shared compare link (`/?by=`, `?a=`, `?b=`) was always a member asking for
  * the board, so it still goes there with its query intact (#2321's promise).
@@ -334,10 +341,21 @@ function QuestsBody({
   placed,
   onConnect,
 }: Pick<WindowBodyProps, "answer" | "placed" | "onConnect">): ReactElement {
-  if (answer) return <AccountQuests quests={placed.account} unread={answer.unread} />;
+  // The member's goal leads the window, whether or not an account is connected (#7487 slice 7).
+  if (answer)
+    return (
+      <>
+        <ul className="mctl-rows">
+          <QuestGoal />
+        </ul>
+        <AccountQuests quests={placed.account} unread={answer.unread} />
+      </>
+    );
   return (
     <ul className="mctl-rows">
+      <QuestGoal />
       <MissionRow
+        anchor={CONNECT_ANCHOR}
         mark="◆"
         title="Connect your paper account"
         sub="Your quests are read from your own positions and cash · play money only"
@@ -435,6 +453,13 @@ function Landing(): ReactElement {
       resetScroll: false,
     });
   }, [inferred]);
+  // A member's first visit (#7487 slice 7): her latest line becomes the welcome and its three moves.
+  // The store decides whether this is one (a bound member the server has no record of yet); a
+  // returning member, or a signed-out viewer, gets nothing new.
+  const welcome = useMoneypenny((s) => s.welcome);
+  useEffect(() => {
+    void welcome();
+  }, [welcome]);
   const keys = editionKeys(view.data?.edition, view.data?.today, horizon, pivot);
   // The chat sends these with a question asked from here, and her links land on the same rows. They
   // are published from every window, not only the Calendar's: each is one tap away (a link into the

@@ -241,7 +241,8 @@ export function scrollToFit(r: Rect, a: ViewArea): number {
 export interface LightRequest {
   readonly anchor: string;
   readonly seq: number;
-  /** Why the Eye looks, for the ring's label (`ringLabel`): absent, the label names the Eye alone. */
+  /** Why the Eye looks, in a few words for the ring's label (`ringLabel`): an Eye notice's reason
+   *  (#7487 slice 5) or a first-visit tour stop's (slice 7). Absent, the label names the Eye alone. */
   readonly reason?: string;
 }
 
@@ -252,7 +253,8 @@ interface LightStore {
 export const useEyeLight = create<LightStore>(() => ({ request: undefined }));
 
 /** Light the item `path`'s hash names (`/accounts#pos-NVDA`); a path with no hash lights nothing.
- *  `reason` goes on the ring's label (#7487 slice 5: "◉ THE EYE · <reason>"). */
+ *  `reason` goes on the ring's label, "◉ THE EYE · <reason>" (#7487 slice 5's ring): an Eye
+ *  notice says what it saw, and the first-visit tour (slice 7) why it lights a row ("led the week"). */
 export function requestLight(path: string, reason?: string): void {
   const hash = path.split("#")[1];
   if (!hash) return;
