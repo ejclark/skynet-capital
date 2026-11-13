@@ -4,7 +4,9 @@ import type { ReactElement } from "react";
 import { type BoardRow, fetchBoard, isUnranked } from "../live/board";
 import type { Edition, EditionDate } from "../live/edition";
 import { moveFigure, type SectorsView } from "../live/edition-sectors";
+import { TOWER_ANCHOR } from "../live/first-visit";
 import type { MissionWindow } from "../live/mission";
+import { useMoneypenny } from "../live/moneypenny";
 import { signedMoney } from "../live/position-act";
 import type { Quest } from "../live/quests";
 import { MissionHead, MissionRow } from "./mission-window";
@@ -84,6 +86,7 @@ export function OverviewWindow({
   inside,
   waited,
   quests,
+  draft,
   open,
 }: {
   readonly edition: Edition | null;
@@ -92,10 +95,14 @@ export function OverviewWindow({
   readonly waited: number;
   /** The member's quests; undefined when the session owns no account to read. */
   readonly quests: readonly Quest[] | undefined;
+  /** The draft ticket's line and where it stands (`draftStatus`), once it names a company. */
+  readonly draft?: string | undefined;
   readonly open: (w: MissionWindow) => void;
 }): ReactElement {
   const navigate = useNavigate();
   const party = useParty();
+  // The member's goal leads Quests (#7487 slice 7); its glance here says one is set.
+  const goalSet = useMoneypenny((s) => s.goal !== undefined);
   const market = marketGlance(edition?.sectors);
   const next = quests?.[0];
   const split = party.data ? partyRows(party.data.rows) : undefined;
@@ -152,11 +159,11 @@ export function OverviewWindow({
           mark="◆"
           title="Quests"
           about={{ label: "Quests" }}
-          sub={
+          sub={`${
             quests
               ? `${String(quests.length)} for your account, best first`
               : "Yours once a paper account is connected"
-          }
+          }${goalSet ? " · goal set" : ""}`}
           {...(quests ? { figure: String(quests.length) } : {})}
           onOpen={() => open("quests")}
         />
@@ -166,12 +173,25 @@ export function OverviewWindow({
           about={{ label: "Party" }}
           sub={
             split
-              ? `${String(split.members.length)} members, together against The Tower`
+              ? `${String(split.members.length)} ${split.members.length === 1 ? "member" : "members"}, together against The Tower`
               : "The members, together against The Tower"
           }
           {...(split ? { figure: signedMoney(split.total) } : {})}
           onOpen={() => open("party")}
         />
+        {/* The Trade row earns its place only once there is a draft to return to: an empty ticket
+            is already one tap away on the rail and the Linked row, and a row saying "nothing here"
+            would cost every visit a line (#7487 slice 6). */}
+        {draft ? (
+          <MissionRow
+            mark="⇄"
+            title="Your draft ticket"
+            about={{ label: "Trade" }}
+            sub={draft}
+            tag="draft"
+            onOpen={() => open("trade")}
+          />
+        ) : null}
       </ul>
     </>
   );
@@ -208,6 +228,7 @@ export function PartyWindow(): ReactElement {
             {against.map((r) => (
               <MissionRow
                 key={r.key}
+                anchor={TOWER_ANCHOR}
                 title={r.name}
                 sub="bot"
                 figure={r.value}

@@ -122,6 +122,21 @@ describe("movesFor — the member's moves, best first", () => {
       BACK_TO_MAIN,
     ]);
   });
+
+  // #7487 slice 5: her line about what the Eye noticed offers its own moves — a question about it
+  // and the way back — in place of the canned ones, but never over a parked card or mid-turn.
+  it("offers the Eye's notice moves while her line about it is the latest", () => {
+    const notice = [
+      { kind: "say", label: "What moved XLE?", msg: "What moved Energy (XLE)?" },
+      { kind: "go", label: "Back to where I was", href: "/" },
+    ] as const;
+    expect(labels(at({ notice }))).toEqual(["What moved XLE?", "Back to where I was"]);
+    expect(movesFor(at({ notice, busy: true }))).toEqual([]);
+    expect(labels(at({ notice, parked: { ...base.parked, view: true } }))).toEqual(
+      chipLabels(CONVICTION_CHIPS),
+    );
+    expect(movesFor(at({ notice, inThread: true }))).toEqual([BACK_TO_MAIN]);
+  });
 });
 
 describe("latestLine — her voice in the dock", () => {
@@ -166,5 +181,41 @@ describe("dockText — a line as the dock shows it", () => {
 
   it("folds every run of whitespace, newlines included, to one space, trimmed", () => {
     expect(text("Moneypenny · one\n\n- two   three\t\n")).toBe("one - two three");
+  });
+});
+
+describe("movesFor — the first visit (#7487 slice 7) is one more stage of the same model", () => {
+  const welcome = at({ visit: { kind: "welcome" }, connected: false, firstTradeDone: false });
+
+  it("offers the visit's moves where the canned moves would stand", () => {
+    expect(labels(welcome)).toEqual(["Walk me through it", "First step", "I have a goal"]);
+    expect(labels(at({ visit: { kind: "tour", step: 1 } }))).toEqual(["Next ›", "That's enough"]);
+  });
+
+  it("waits under a turn, a parked card, a side thread and a scripted beat", () => {
+    expect(movesFor({ ...welcome, busy: true })).toEqual([]);
+    expect(labels({ ...welcome, parked: { ...base.parked, view: true } })).toEqual(
+      chipLabels(CONVICTION_CHIPS),
+    );
+    expect(movesFor({ ...welcome, inThread: true })).toEqual([BACK_TO_MAIN]);
+    expect(movesFor({ ...welcome, flow: "setup" })).toEqual([]);
+  });
+
+  // The order is one list (`movesFor`'s docblock): the tour the member asked for stands over the
+  // Eye's unprompted notice, should the two ever meet (the Eye stays quiet during a visit).
+  it("stands over a live Eye notice", () => {
+    const notice = [{ kind: "go", label: "Back to where I was", href: "/" }] as const;
+    expect(labels({ ...welcome, notice })).toEqual([
+      "Walk me through it",
+      "First step",
+      "I have a goal",
+    ]);
+  });
+
+  it("gives the canned moves back once the visit is over", () => {
+    expect(labels(at({ connected: false, firstTradeDone: false }))).toEqual([
+      "Help me get set up",
+      "File feedback",
+    ]);
   });
 });

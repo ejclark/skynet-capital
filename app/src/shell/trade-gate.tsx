@@ -149,6 +149,24 @@ function GateStatus({ state }: { readonly state: GateState }): ReactElement | nu
   );
 }
 
+/** The fields a ticket mounts with: the route's symbol and, for a draft handed over from Campaign
+ *  (#7487 slice 6), its share count and order type; everything else blank, as on a fresh ticket. */
+function startingFields(
+  action: "buy" | "sell",
+  symbol: string | undefined,
+  shares: number | undefined,
+  orderType: "market" | "limit" | undefined,
+): TicketFields {
+  return {
+    symbol: symbol ?? "",
+    quantity: shares === undefined ? "" : String(shares),
+    action,
+    orderType: orderType ?? "market",
+    limitPrice: "",
+    stopPrice: "",
+  };
+}
+
 /** @category trading */
 export function TradeGate({
   deskId,
@@ -156,6 +174,8 @@ export function TradeGate({
   showSide = true,
   play,
   initialSymbol,
+  initialShares,
+  initialOrderType,
   onSymbolCommit,
   header,
 }: {
@@ -174,20 +194,21 @@ export function TradeGate({
   /** `?symbol=` (#2017 cockpit plan) — seeds the symbol field on mount so a remount (every
    *  Instrument/Side switch keys this component fresh) doesn't drop a hand-typed symbol. */
   readonly initialSymbol?: string;
+  /** `?shares=` (#7487 slice 6) — a share count drafted on Campaign's Trade window. */
+  readonly initialShares?: number;
+  /** `?order=` (#7487 slice 6) — Market or Limit, drafted on Campaign. A drafted Market is the
+   *  member's own pick, so it counts as touched and the limit-at-mid seed leaves it alone; a
+   *  drafted Limit has no price yet, so the seed prices it at the mid as on a fresh ticket. */
+  readonly initialOrderType?: "market" | "limit";
   /** Fires when the symbol field commits, so the route can keep `?symbol=` in sync. */
   readonly onSymbolCommit?: (symbol: string) => void;
   /** Account/Rung/Instrument-Side-Type — one card, not two (Eric, 2026-09-22). Forwarded to the
    *  locked branch below too, so a locked stock rung explains itself on the same card. */
   readonly header?: ReactElement;
 }): ReactElement {
-  const [fields, setFields] = useState<TicketFields>({
-    symbol: initialSymbol ?? "",
-    quantity: "",
-    action: initialAction,
-    orderType: "market",
-    limitPrice: "",
-    stopPrice: "",
-  });
+  const [fields, setFields] = useState<TicketFields>(() =>
+    startingFields(initialAction, initialSymbol, initialShares, initialOrderType),
+  );
   const [state, setState] = useState<GateState>({ step: "draft" });
   const queryClient = useQueryClient();
   /** The quote header's own committed symbol (#2017 Phase 0.9) — fetches on COMMIT only, never a
@@ -210,7 +231,7 @@ export function TradeGate({
    *  wheel" this seed is explicitly not allowed to be. One seed per symbol; a new symbol seeds
    *  again, a moving mid never does. */
   const quote = useQuery(quoteQuery(quoteSym));
-  const [priced, setPriced] = useState(false);
+  const [priced, setPriced] = useState(initialOrderType === "market");
   const [seed, setSeed] = useState<{ symbol: string; bid: number; ask: number; mid: number }>();
   const mid = quote.data && "mid" in quote.data ? quote.data : undefined;
   useEffect(() => {

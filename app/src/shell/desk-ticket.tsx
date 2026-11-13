@@ -46,6 +46,8 @@ export function DeskTicket({
   code,
   onPreset,
   initialSymbol,
+  initialShares,
+  initialOrderType,
   onSymbolCommit,
   initialStrike,
   onStrikeCommit,
@@ -75,6 +77,10 @@ export function DeskTicket({
   readonly onPreset: (code: PlayCode) => void;
   /** `?symbol=` — the value a fresh (or remounted) ticket starts from. */
   readonly initialSymbol?: string;
+  /** `?shares=` and `?order=` — a draft handed over from Campaign's Trade window (#7487 slice 6);
+   *  the share ticket starts from them and reviews them like any other entry. */
+  readonly initialShares?: number;
+  readonly initialOrderType?: "market" | "limit";
   /** Committing a symbol in either gate writes it back to `?symbol=` (cockpit plan, red-team
    *  finding): both gates remount on every Instrument/Side switch (`key={info.code}` /
    *  `key={code}` below), which used to drop a hand-typed symbol on every switch. */
@@ -203,6 +209,8 @@ export function DeskTicket({
       showSide={false}
       play={info}
       initialSymbol={initialSymbol}
+      {...(initialShares !== undefined ? { initialShares } : {})}
+      {...(initialOrderType !== undefined ? { initialOrderType } : {})}
       onSymbolCommit={onSymbolCommit}
     />
   );

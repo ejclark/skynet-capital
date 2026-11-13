@@ -7,8 +7,9 @@ import {
   slideSide,
   stepTrail,
   useTrail,
+  WAYPOINTS,
   WINDOW_LABEL,
-  WINDOWS,
+  WORKBENCH,
 } from "../live/mission";
 import type { PromptTag } from "../live/prompt-tags";
 import { TagMark } from "./tag-mark";
@@ -30,6 +31,9 @@ import { TagMark } from "./tag-mark";
  * `--dur-spatial` / `--ease-spatial` tokens, which `prefers-reduced-motion` collapses to 0ms — the
  * window then appears at once, as the handoff asks. A keyframe, not a transition, is right here:
  * each window is a fresh element keyed by its id, so there is nothing to retarget from.
+ *
+ * The window and the waypoints are the stage's CARDS for the Eye's beam (`data-eye-card`, #7487
+ * slice 5): it runs behind them, shows in the gaps, and glows through each one it crosses.
  */
 
 /** Open `next` from `cur`: step the trail, then make it the page's address. */
@@ -108,7 +112,9 @@ export function Trail({
   );
 }
 
-/** The waypoints: every window, its one figure, and ⤳ where the open window links to it. */
+/** The waypoints: every window, its one figure, and ⤳ where the open window links to it. The
+ *  journeys come first under "Waypoints"; the draft ticket sits under its own "Workbench" head
+ *  (#7487 slice 6, spec § 1), since it is a tool the member works at, not a place they visit. */
 export function Waypoints({
   cur,
   open,
@@ -120,33 +126,34 @@ export function Waypoints({
   readonly figures: Readonly<Partial<Record<MissionWindow, string>>>;
   readonly linked: readonly MissionWindow[];
 }): ReactElement {
+  const item = (w: MissionWindow) => (
+    <li key={w}>
+      <button
+        type="button"
+        className="mctl-way"
+        aria-current={w === cur ? "page" : undefined}
+        onClick={() => open(w)}
+      >
+        <span className="mctl-glyph" aria-hidden="true">
+          {WINDOW_LABEL[w].glyph}
+        </span>
+        <span className="mctl-way-label">{WINDOW_LABEL[w].label}</span>
+        {figures[w] ? <span className="mctl-fig">{figures[w]}</span> : null}
+        {linked.includes(w) && w !== cur ? (
+          <span className="mctl-linked-mark" title="Linked to the open window">
+            <span aria-hidden="true">⤳</span>
+            <span className="visually-hidden">linked</span>
+          </span>
+        ) : null}
+      </button>
+    </li>
+  );
   return (
-    <nav className="mctl-rail" aria-label="Waypoints">
+    <nav className="mctl-rail" aria-label="Waypoints" data-eye-card="">
       <p className="mctl-eyebrow">Waypoints</p>
-      <ul>
-        {WINDOWS.map((w) => (
-          <li key={w}>
-            <button
-              type="button"
-              className="mctl-way"
-              aria-current={w === cur ? "page" : undefined}
-              onClick={() => open(w)}
-            >
-              <span className="mctl-glyph" aria-hidden="true">
-                {WINDOW_LABEL[w].glyph}
-              </span>
-              <span className="mctl-way-label">{WINDOW_LABEL[w].label}</span>
-              {figures[w] ? <span className="mctl-fig">{figures[w]}</span> : null}
-              {linked.includes(w) && w !== cur ? (
-                <span className="mctl-linked-mark" title="Linked to the open window">
-                  <span aria-hidden="true">⤳</span>
-                  <span className="visually-hidden">linked</span>
-                </span>
-              ) : null}
-            </button>
-          </li>
-        ))}
-      </ul>
+      <ul>{WAYPOINTS.map(item)}</ul>
+      <p className="mctl-eyebrow">Workbench</p>
+      <ul>{WORKBENCH.map(item)}</ul>
     </nav>
   );
 }
@@ -154,6 +161,29 @@ export function Waypoints({
 export interface WindowLink {
   readonly label: string;
   readonly to: MissionWindow;
+  /** Runs before the window opens: a pill that pre-fills it ("Trade: NVDA reports Tue, Nov 17"
+   *  puts NVDA on the ticket, #7487 slice 6). */
+  readonly prefill?: () => void;
+}
+
+/** The window about to open that the member did not open themselves, whose frame must not take
+ *  focus: one the Eye opens on its own (#7487 slice 5, `use-eye-notice.ts`), or one the first-visit
+ *  tour opens (slice 7, `first-visit-run.ts`), which is driven from the dock, one control at a time,
+ *  so focus stays there. Either way her line in the dock's live region says what changed. */
+let quietWindow: MissionWindow | undefined;
+
+/** The next opening of `w` is not the member's own: its frame leaves focus where it is. `undefined`
+ *  clears a mark nothing spent (the tour clears its own once her line lands). */
+export function quietNextWindow(w: MissionWindow | undefined): void {
+  quietWindow = w;
+}
+
+/** Whether this frame's opening was the Eye's; any frame's mount spends the mark either way, so a
+ *  stale one never quiets a later switch the member made. */
+function takeQuiet(id: MissionWindow): boolean {
+  const quiet = quietWindow === id;
+  quietWindow = undefined;
+  return quiet;
 }
 
 /** The window on the stage. Keyed by its id at the call site, so each opening slides in fresh. */
@@ -179,16 +209,21 @@ export function MissionWindowFrame({
 }): ReactElement {
   // A window the member switched to takes focus at its heading, so keyboard and screen-reader focus
   // never falls to <body> when the control they used (a row, a Linked pill) unmounts with the old
-  // one. Arriving at the page (side 0) leaves focus where the browser put it.
+  // one. Arriving at the page (side 0) leaves focus where the browser put it, and so does a switch
+  // the Eye or the first-visit tour made (`quietNextWindow`): the member did not move, so focus is
+  // not moved from under them (WCAG 3.2.1) — Moneypenny's line in the dock's live region says what
+  // changed.
   const heading = useRef<HTMLHeadingElement>(null);
   // biome-ignore lint/correctness/useExhaustiveDependencies: on mount only; the frame is keyed by id
   useEffect(() => {
-    if (side !== 0) heading.current?.focus({ preventScroll: true });
+    const quiet = takeQuiet(id);
+    if (side !== 0 && !quiet) heading.current?.focus({ preventScroll: true });
   }, []);
   const from = useTrail((s) => s.trail.from[id]);
   return (
     <section
       className="mctl-window"
+      data-eye-card=""
       data-side={side === 0 ? undefined : side === 1 ? "right" : "left"}
       aria-labelledby={`mctl-title-${id}`}
     >
@@ -215,7 +250,10 @@ export function MissionWindowFrame({
               key={k.label}
               type="button"
               className="mctl-link-pill"
-              onClick={() => open(k.to)}
+              onClick={() => {
+                k.prefill?.();
+                open(k.to);
+              }}
             >
               <span className="mctl-link-mark" aria-hidden="true">
                 ⤳
@@ -244,6 +282,7 @@ export function MissionRow({
   figure,
   onOpen,
   about,
+  anchor,
 }: {
   readonly mark?: string;
   readonly title: string;
@@ -253,6 +292,8 @@ export function MissionRow({
   readonly onOpen?: () => void;
   /** The row as a ✎ tag ("Party · Tony"), when it can be talked about (#7487 slice 3). */
   readonly about?: PromptTag;
+  /** The row's id, for the Eye to light it by (`requestLight`; the first-visit tour, slice 7). */
+  readonly anchor?: string;
 }): ReactElement {
   const body = (
     <>
@@ -277,7 +318,7 @@ export function MissionRow({
   const mark_ = about ? <TagMark tag={about} /> : null;
   if (onOpen)
     return (
-      <li className="mctl-row-item">
+      <li className="mctl-row-item" id={anchor}>
         <button type="button" className="mctl-row mctl-row--go" onClick={onOpen}>
           {body}
         </button>
@@ -285,7 +326,7 @@ export function MissionRow({
       </li>
     );
   return (
-    <li className="mctl-row-item">
+    <li className="mctl-row-item" id={anchor}>
       <div className="mctl-row">{body}</div>
       {mark_}
     </li>

@@ -5,6 +5,7 @@ import {
   HOUSE_CALL_WORD,
   QUESTS_SHOWN,
   type Quest,
+  questAnchor,
   rateLines,
   rateTag,
   SOURCE_WORD,
@@ -27,7 +28,9 @@ import {
 
 function QuestItem({ quest }: { readonly quest: Quest }): ReactElement {
   return (
-    <li className="quest">
+    // The id lets the Eye light it — a new quest it notices (#7487 slice 5) and the first-visit
+    // tour's stop (slice 7); a quest shows in one place.
+    <li id={questAnchor(quest.id)} className="quest">
       <details className="quest-row">
         <summary className="quest-line">
           <span className="quest-label">{quest.move.label}</span>

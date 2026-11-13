@@ -1,24 +1,23 @@
 import {
-  ARC_MS,
-  arcControl,
-  DIM_MAX,
+  BEAM_HOLD_MS,
+  beamLine,
+  beamTip,
+  crossing,
   EYE_IN_FRAME,
-  FOCUS_MS,
+  easeSpatial,
   fullyInView,
-  LAND_MS,
-  LIGHT_MS,
-  lightAt,
   lightOrigin,
-  onArc,
-  RING_DRAW_MS,
+  reachAt,
   requestLight,
+  ringLabel,
   scrollToFit,
-  touchShare,
+  tokenMs,
   useEyeLight,
   viewArea,
 } from "../../src/shell/eye-light";
 
-// #7216 slice 2 — the Eye's light: where it starts, the arc it flies, and the four steps in order.
+// #7216 slice 2 — the Eye's light: where it starts and the item wholly in view. #7487 slice 5 — the
+// straight beam that replaced the arc: its line, the cards it crosses, and when its tip reaches each.
 
 const frame = { top: 74, left: 32, width: 384, height: 664 };
 
@@ -48,83 +47,75 @@ describe("the Eye's light · where it starts", () => {
   });
 });
 
-describe("the Eye's light · the arc", () => {
-  const from = { x: 262, y: 152 };
-  const to = { x: 810, y: 420 };
+describe("the Eye's beam · its line (#7487 slice 5)", () => {
+  const from = { x: 1000, y: 150 };
 
-  it("rises above both ends, so the spark arcs over the page", () => {
-    expect(arcControl(from, to).y).toBeLessThan(from.y);
+  it("runs straight from the Eye to the item, no arc", () => {
+    const line = beamLine(from, { x: 400, y: 150 });
+    expect(line).toEqual({ x: 1000, y: 150, length: 600, angle: 180 });
+    const down = beamLine(from, { x: 1000, y: 450 });
+    expect(down.angle).toBeCloseTo(90);
+    expect(down.length).toBe(300);
   });
 
-  it("never flies above the topbar's foot", () => {
-    const edge = { x: 262, y: 52 };
-    for (let t = 0; t <= 1; t += 0.05) expect(onArc(edge, to, t, 52).y).toBeGreaterThanOrEqual(52);
-  });
-
-  it("runs from the Eye to the item", () => {
-    expect(onArc(from, to, 0)).toEqual(from);
-    const end = onArc(from, to, 1);
-    expect(end.x).toBeCloseTo(to.x);
-    expect(end.y).toBeCloseTo(to.y);
+  it("ends at a row's centre, and no lower than 60px into a tall card", () => {
+    expect(beamTip({ top: 300, left: 100, width: 400, height: 44 })).toEqual({ x: 300, y: 322 });
+    expect(beamTip({ top: 300, left: 100, width: 400, height: 600 })).toEqual({ x: 300, y: 360 });
   });
 });
 
-describe("the Eye's light · the four steps", () => {
-  const from = { x: 262, y: 152 };
-  const to = { x: 810, y: 420 };
+describe("the Eye's beam · the cards it crosses", () => {
+  const from = { x: 1000, y: 100 };
+  const to = { x: 200, y: 100 };
 
-  it("step 1: the Eye focuses under a small pool of light", () => {
-    const f = lightAt(FOCUS_MS / 2, from, to);
-    expect(f.step).toBe(1);
-    expect(f.pool?.r).toBeGreaterThan(0);
-    expect(f.spark).toBeUndefined();
-    expect(f.ring).toBe(false);
+  it("says how far along the beam its tip enters a card", () => {
+    expect(crossing(from, to, { top: 50, left: 500, width: 200, height: 100 })).toBeCloseTo(0.375);
+    // The card the item sits in: the tip ends inside it.
+    expect(crossing(from, to, { top: 50, left: 100, width: 300, height: 100 })).toBeCloseTo(0.75);
   });
 
-  it("step 2: a spark arcs over the page with a short trail", () => {
-    const f = lightAt(FOCUS_MS + ARC_MS / 2, from, to);
-    expect(f.step).toBe(2);
-    expect(f.spark).toBeDefined();
-    expect(f.trail?.length).toBeGreaterThan(2);
-    expect(f.trail?.at(-1)).toEqual(f.spark);
+  it("misses a card off its line, and one past its tip", () => {
+    expect(crossing(from, to, { top: 300, left: 500, width: 200, height: 100 })).toBeUndefined();
+    expect(crossing(from, to, { top: 50, left: 0, width: 100, height: 100 })).toBeUndefined();
   });
 
-  it("step 3: it lands as the page dims around the item, inside one second", () => {
-    expect(FOCUS_MS + ARC_MS + LAND_MS).toBe(1000);
-    const f = lightAt(FOCUS_MS + ARC_MS + LAND_MS - 1, from, to);
-    expect(f.step).toBe(3);
-    expect(f.dim).toBeGreaterThan(DIM_MAX * 0.9);
-    expect(f.spark).toBeUndefined();
-  });
-
-  it("step 4: the dim lifts and the ring stays", () => {
-    const lifting = lightAt(LIGHT_MS - 1, from, to);
-    expect(lifting.step).toBe(4);
-    expect(lifting.ring).toBe(true);
-    expect(lifting.dim).toBeLessThan(0.05);
-    expect(lightAt(LIGHT_MS + 500, from, to)).toEqual({ step: "done", ring: true });
+  it("enters at once when it starts inside the card", () => {
+    expect(crossing(from, to, { top: 0, left: 900, width: 200, height: 200 })).toBe(0);
   });
 });
 
-describe("the Eye's light · the landing, articulated (#7227)", () => {
-  const from = { x: 262, y: 152 };
-  const to = { x: 810, y: 420 };
-  const landed = FOCUS_MS + ARC_MS;
-
-  it("starts the ring the moment the spark lands, and has it drawn inside 300 ms", () => {
-    expect(lightAt(landed - 1, from, to).ring).toBe(false);
-    expect(lightAt(landed, from, to)).toMatchObject({ step: 3, ring: true });
-    expect(RING_DRAW_MS).toBeLessThanOrEqual(300);
+describe("the Eye's beam · its timing, on the house's tokens", () => {
+  it("eases on --ease-spatial: fast out of the Eye, settling onto the item", () => {
+    expect(easeSpatial(0)).toBeCloseTo(0);
+    expect(easeSpatial(1)).toBeCloseTo(1);
+    expect(easeSpatial(0.25)).toBeGreaterThan(0.5);
   });
 
-  // A card 200 × 100 at (100, 100); its outline is 600 long, clockwise from the top-left corner.
-  const card = { top: 100, left: 100, width: 200, height: 100 };
-  it("draws from where the light touched the edge, on whichever side it came in", () => {
-    expect(touchShare(card, { x: 200, y: -400 })).toBeCloseTo(100 / 600); // straight down: top middle
-    expect(touchShare(card, { x: 900, y: 150 })).toBeCloseTo(250 / 600); // from the right: right middle
-    expect(touchShare(card, { x: 200, y: 900 })).toBeCloseTo(400 / 600); // from below: bottom middle
-    expect(touchShare(card, { x: -500, y: 150 })).toBeCloseTo(550 / 600); // from the left
-    expect(touchShare(card, { x: 0, y: 50 })).toBeCloseTo(0); // through the top-left corner
+  it("lights each card as the eased tip gets there, not on a straight clock", () => {
+    for (const share of [0.1, 0.4, 0.8]) expect(easeSpatial(reachAt(share))).toBeCloseTo(share, 3);
+    expect(reachAt(0.5)).toBeLessThan(0.5);
+    expect(reachAt(0)).toBeCloseTo(0);
+    expect(reachAt(1)).toBeCloseTo(1, 3);
+  });
+
+  it("reads a motion token in ms or s, and falls back when it cannot", () => {
+    expect(tokenMs("260ms", 1)).toBe(260);
+    expect(tokenMs(" 0.26s", 1)).toBe(260);
+    expect(tokenMs("0ms", 1)).toBe(0);
+    expect(tokenMs("", 260)).toBe(260);
+    expect(tokenMs("fast", 260)).toBe(260);
+  });
+
+  it("holds 200ms, the spec's pause", () => {
+    expect(BEAM_HOLD_MS).toBe(200);
+  });
+});
+
+describe("the Eye's ring · its label", () => {
+  it("names the Eye, and why it looks when there is a reason", () => {
+    expect(ringLabel()).toBe("the Eye");
+    expect(ringLabel("  ")).toBe("the Eye");
+    expect(ringLabel("left its usual range")).toBe("the Eye · left its usual range");
   });
 });
 
