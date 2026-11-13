@@ -245,6 +245,40 @@ export const COMPANION_TOOL_FIXTURES: readonly CompanionFixture[] = [
     },
   },
   {
+    id: "grounding-tool-stage-trade-print-blocks",
+    category: "grounding",
+    description:
+      'The second production failure (Eric, 2026-11-13): four days before NVDA\'s print every tier came back unavailable and she ended at "try a different ticker". A print that blocks the sale must leave the member somewhere to go.',
+    context: memberContext({
+      now: NOW,
+      onboarding: fixtureOnboarding(DONE, { account: ACCOUNT }),
+      filings: [],
+      marketOpen: true,
+    }),
+    rounds: ["Stage a trade for nvda"],
+    rubric:
+      "The tool reports every sale tier unavailable because NVDA reports earnings on Thu, Sep 17. Must say that, with the date, and that the tiers don't sell premium across a print. Must then offer to size a bought call or a bought put instead and ask which direction the member leans. Fails if it picks a direction for the member, presents a sale anyway, says 'you should', or ends without offering the bought option.",
+    toolUse: {
+      desk: {
+        snapshot: {
+          id: FIXTURE_PARTICIPANT_ID,
+          displayName: "Jordan",
+          kind: "human",
+          cash: ACCOUNT.cash,
+          equity: ACCOUNT.equity,
+          positions: [],
+          activity: [],
+        },
+        suggestMarketFor: () =>
+          Promise.resolve({
+            ...stageTradeMarket(NOW),
+            earnings: { start: "2026-09-17", end: "2026-09-18", status: "confirmed", source: "IR" },
+          }),
+      },
+      expect: { called: ["get_sized_suggestions"], noDrafts: true },
+    },
+  },
+  {
     id: "grounding-tool-stage-trade-after-refusal",
     category: "grounding",
     description:

@@ -97,9 +97,6 @@ async function readMarket(
 ): Promise<GuidanceMarket | { readonly reason: string; readonly note: string }> {
   const now = deps.now();
   const today = etDateOf(now);
-  const active = activePrint(UPCOMING_PRINTS, symbol, today);
-  const print = active?.print;
-  const earnings = active?.window;
   const trading = config.tradingClientFor?.(requesterId);
   const barsFrom = new Date(Date.parse(now) - BARS_LOOKBACK_DAYS * 86_400_000)
     .toISOString()
@@ -113,6 +110,11 @@ async function readMarket(
     // The IV clock's history (local disk): a failed read degrades to "no rank yet", never a 500.
     config.ivHistory?.list(symbol).catch(() => []) ?? Promise.resolve([]),
   ]);
+  // After the filings are in: an earnings 8-K inside the window means the print already happened
+  // (`reportedIn`), so it no longer blocks an expiry — the next print on file becomes the active one.
+  const active = activePrint(UPCOMING_PRINTS, symbol, today, filings?.filings);
+  const print = active?.print;
+  const earnings = active?.window;
   if (!quote)
     return { reason: "failed", note: `No live quote for ${symbol} — nothing to advise on.` };
   if (expirations.length === 0)
@@ -242,6 +244,51 @@ async function readMarket(
  * (#7028) both read through here, so a member opening both pays for one read. A read that throws is
  * forgotten at once, so the next ask tries again.
  */
+/** At most this many extra expiries a staging read pages: the ones nearest the window's target. */
+const WINDOW_PAGES = 3;
+
+/**
+ * THE STAGING WINDOW'S CHAIN (#7547; Eric, 2026-11-13: "Stage a trade for nvda" came back empty
+ * four days before NVDA's print). The guidance read prices only expiries BEFORE the print, which
+ * is right for its own advice and wrong for a staging ask: a bought call or put is meant to span
+ * the print (`trade-suggestions.ts` → `earnings`), and the engine filters a sale's window itself.
+ * So the staging path pages the strategy's own DTE window — the few expiries nearest its target,
+ * one side only — onto a copy of the read. The coalesced read is never mutated.
+ */
+export async function withWindowChain(
+  client: AlpacaOptionsClient,
+  market: GuidanceMarket,
+  window: { readonly min: number; readonly max: number; readonly target: number },
+  type: "call" | "put",
+): Promise<GuidanceMarket> {
+  const today = etDateOf(market.now);
+  const have = new Set(market.chain.filter((q) => q.type === type).map((q) => q.expiration));
+  const want = (market.expirations ?? [])
+    .filter((e) => {
+      const dte = daysBetween(today, e);
+      return dte >= window.min && dte <= window.max && !have.has(e);
+    })
+    .sort(
+      (a, b) =>
+        Math.abs(daysBetween(today, a) - window.target) -
+        Math.abs(daysBetween(today, b) - window.target),
+    )
+    .slice(0, WINDOW_PAGES);
+  if (want.length === 0) return market;
+  const pages = await Promise.all(
+    want.map(async (expiration) => ({
+      expiration,
+      rows: await chainFor(client, market.symbol, expiration, type),
+    })),
+  );
+  const days = (e: string) =>
+    daysToExpiryFrom(e, new Date(market.now)) ?? Math.max(1, daysBetween(today, e));
+  const added = pages.flatMap(({ expiration, rows }) =>
+    rows.map((row) => toGuidanceQuote(row, expiration, type, market.spot, days(expiration))),
+  );
+  return { ...market, chain: [...market.chain, ...added] };
+}
+
 export function guidanceMarketFor(
   client: AlpacaOptionsClient,
   config: DashboardServerConfig,

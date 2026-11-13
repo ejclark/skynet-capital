@@ -152,6 +152,29 @@ function tradable(q: GuidanceQuote, input: SuggestionInputs): Candidate["quote"]
 const spansPrint = (expiration: string, input: SuggestionInputs): boolean =>
   input.earnings !== undefined && expiration >= input.earnings.start;
 
+/**
+ * Why no expiry qualifies, in words that leave the member somewhere to go (Eric, 2026-11-13: four
+ * days before NVDA's print every tier read "No expiry 21–45 days out before earnings is listed" —
+ * a dead end). When the window has expiries and the print is what blocks them, say so with the
+ * print's date, and name the bought option a member can size instead; otherwise the window is
+ * simply empty.
+ */
+function noExpiryReason(input: SuggestionInputs, today: string): string {
+  const window = dteWindow(input.strategy);
+  const inWindow = [...new Set(input.chain.map((q) => q.expiration))].some((e) => {
+    const dte = daysBetween(today, e);
+    return dte >= window.min && dte <= window.max;
+  });
+  if (inWindow && input.earnings && !isLong(input.strategy)) {
+    const when =
+      input.earnings.status === "confirmed"
+        ? `on ${dayText(input.earnings.start)}`
+        : `around ${dayText(input.earnings.start)}–${dayText(input.earnings.end)} (estimated)`;
+    return `${input.symbol} reports earnings ${when}, and every expiry ${window.min}–${window.max} days out spans it; these tiers never sell premium across a print. A bought call or put can be sized instead.`;
+  }
+  return `No expiry ${window.min}–${window.max} days out is listed.`;
+}
+
 /** In the strategy's DTE window (and, for a sale, before any print window); nearest the target
  *  first, then sooner. */
 function expiriesByPreference(input: SuggestionInputs, today: string): string[] {
@@ -302,7 +325,7 @@ function optionFor(
   if (!pick) {
     const why =
       expiries.length === 0
-        ? `No expiry ${window.min}–${window.max} days out${input.earnings && !long ? " before earnings" : ""} is listed.`
+        ? noExpiryReason(input, today)
         : `No tradable strike sits at ${band.min.toFixed(2)}–${band.max.toFixed(2)} delta in the ${window.min}–${window.max} day window.`;
     return { ...head, available: false, reason: why };
   }
