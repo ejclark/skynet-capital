@@ -206,6 +206,10 @@ jobs:
       feedback_reply_at: ${{ steps.reply.outputs.reply_at || '' }}
       plan_issue: ${{ steps.plan.outputs.number || (steps.next.outputs.lane == 'plan' && steps.next.outputs.number) || '' }}
       plan_model: ${{ steps.plan.outputs.model || (steps.next.outputs.lane == 'plan' && steps.next.outputs.model) || '' }}
+      # #7544: a member's filing to check now (`assess-feedback`), and whether it is a new filing or
+      # the member's follow-up to a question that check asked. Empty when nothing is to be checked.
+      assess_issue: ${{ steps.assess.outputs.issue || '' }}
+      assess_mode: ${{ steps.assess.outputs.mode || '' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -444,6 +448,23 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: node scripts/moneypenny/index.mjs --triage-feedback
+
+      # THE FILING CHECK (#7544, a member's filing: "sees it enter the build queue within seconds,
+      # either ready to build or with clear feedback on what needs to happen next"). The step above
+      # self-readies only the coach-shaped filings; a freeform one used to wait for a person or the
+      # daily flip. This asks `triage-assess.mjs --intent` whether to check it now — a member's
+      # `feedback` filing, or the member's app-relayed follow-up to a question that check asked —
+      # and `assess-feedback` below runs the clear-path flip's judgment on it. Reads only; the
+      # dial (halt/conserve defer it) is read from the checkout.
+      - name: Ask whether a member's filing gets checked now
+        id: assess
+        if: >-
+          (github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'feedback') ||
+          (github.event_name == 'issue_comment' && github.event.action == 'created' &&
+           contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/moneypenny/triage-assess.mjs --intent
 
       # THE DECISION-QUEUE CHECK (#3913 slice 2b). `needs-eric` promises Eric a decision; the
       # `Needs from you` callout is where that decision is actually written (docs/ISSUES.md rule 7).
@@ -781,6 +802,305 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: node scripts/moneypenny/quota.mjs --publish-from /home/runner/work/_temp/claude-execution-output.json --source "lane:build-events"
+
+  # ═══ THE FILING CHECK (#7544) ═══
+  # The clear-path flip (docs/ISSUES.md → Who may flip it), run on one member filing the moment it
+  # lands instead of in the daily batch: a judge records the four checks, and only a clear call gets
+  # the two independent refuters (envelope paths, the thread). Outcomes and their writes are
+  # scripts/moneypenny/triage-assess.mjs's header: queued (`ready`), a plain question to the member
+  # (`needs-info`, re-checked on their follow-up), or a note that it waits for a person's look.
+  #
+  # ONE RUNNER PER SESSION, AND THE WRITER ON ITS OWN (red-team of #7546). Member text is untrusted,
+  # and a session that follows injected text can do anything its runner can: rewrite the workspace,
+  # plant ~/.curlrc, leave a process behind. So each session gets a fresh runner holding no secret
+  # but the OAuth token (scrubbed from its subprocesses) and a read-only GITHUB_TOKEN, and hands back
+  # one JSON blob as a job output, which no later job can rewrite. `assess-post` then starts clean:
+  # a fresh checkout of this run's commit, the App token minted there, and the specced script that
+  # computes "clear" from the four checks itself. No session ever shares a runner with the App key.
+  #
+  # The thread each session reads is fetched by a script step BEFORE the session starts, filtered to
+  # repo members and this repo's bots (feedback-build.md's #2224 filter): the repo is public, and a
+  # stranger's comment is not input.
+  assess-judge:
+    name: check a member's filing — judge
+    needs: route
+    # claude-code-action rejects `push` outright (workflow-lint rule 9).
+    if: github.event_name != 'push' && needs.route.outputs.assess_issue != ''
+    runs-on: ubuntu-latest
+    # One judge at a time, queued not dropped: a burst of filings must not fan out into parallel
+    # Opus sessions (the app itself allows 5 filings per 10 minutes per member).
+    concurrency:
+      group: moneypenny-assess-judge
+      queue: max
+    permissions:
+      contents: read
+      issues: read
+    outputs:
+      json: ${{ steps.snap.outputs.json }}
+      clear: ${{ steps.judged.outputs.clear }}
+    env:
+      ASSESS_ISSUE: ${{ needs.route.outputs.assess_issue }}
+      ASSESS_MODE: ${{ needs.route.outputs.assess_mode }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .nvmrc
+
+      - id: gate
+        uses: ./.github/actions/oauth-token-gate
+        with:
+          token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          blocked-message: "CLAUDE_CODE_OAUTH_TOKEN missing — member filing #${{ needs.route.outputs.assess_issue }} was not checked; it waits in Backlog for the daily flip."
+
+      - name: Fetch the issue and its trusted thread
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/moneypenny/triage-assess.mjs --fetch "$ASSESS_ISSUE" .triage
+
+      - if: steps.gate.outputs.armed == 'true'
+        id: session
+        uses: anthropics/claude-code-action@d535f5172dec02b204866b393d6b20b9b2aaf98d  # v1 tag, installs Claude Code 2.1.286 (first CLI to know both Opus 5.5 and Sonnet 5.5 is 2.1.284; floating v1 once broke native-binary install, see docs/LESSONS.md)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Strip the OAuth token from every subprocess the session spawns (Claude Code env docs).
+          CLAUDE_CODE_SUBPROCESS_ENV_SCRUB: "1"
+        with:
+          allowed_bots: "github-actions,claude,skynet-envoy"
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # Opus, --effort high: judgment on a member's ask (docs/COMPUTE.md — a tie rounds up).
+          claude_args: |
+            --allowedTools "Bash,Read,Write,Glob,Grep" --model claude-opus-5-5 --effort high --max-turns 60
+          prompt: |
+            Read `.github/prompts/feedback-triage.md` in this repo and follow it exactly.
+            Role: judge. Issue: #${{ needs.route.outputs.assess_issue }}. Mode: ${{ needs.route.outputs.assess_mode }}.
+            Output file: .triage/out.json
+
+      # A job output, which no later job can rewrite; the post job rebuilds its files from these.
+      - if: always() && steps.session.outcome != 'skipped'
+        id: snap
+        run: echo "json=$(jq -c . .triage/out.json 2>/dev/null || true)" >> "$GITHUB_OUTPUT"
+
+      - if: steps.snap.outputs.json != ''
+        id: judged
+        env:
+          JUDGE_JSON: ${{ steps.snap.outputs.json }}
+        run: |
+          D="$RUNNER_TEMP/judged" && mkdir -p "$D"
+          printf '%s' "$JUDGE_JSON" > "$D/judge.json"
+          node scripts/moneypenny/triage-assess.mjs --judged "$D" --mode "$ASSESS_MODE"
+
+      # The same print as build-feedback's: the terminal envelope and the rate-limit events, never
+      # the transcript (this log is public), so repair.mjs can tell a usage limit from a dead token.
+      - if: always() && steps.session.outcome == 'failure'
+        name: Surface the swallowed Claude result on failure
+        run: |
+          echo "::group::Claude execution result (the action hides this by default)"
+          F=/home/runner/work/_temp/claude-execution-output.json
+          if [ -f "$F" ]; then
+            jq -c 'if type=="array" then .[] else . end | select(.type == "result" or .type == "rate_limit_event") | {type, subtype, is_error, terminal_reason, api_error_status, duration_ms, num_turns, total_cost_usd, modelUsage, rate_limit_info} | with_entries(select(.value != null))' "$F" \
+              || echo "(execution-output.json is not JSON the result filter can read — nothing printed, by design: this log is public)"
+          else
+            echo "(no execution-output.json — failure happened before Claude Code produced one)"
+          fi
+          echo "::endgroup::"
+
+  # A refuter that fails, or never answers, counts as a refutation in `assess-post`.
+  assess-refute-envelope:
+    name: check a member's filing — refute (envelope)
+    needs: [route, assess-judge]
+    if: github.event_name != 'push' && needs.assess-judge.outputs.clear == 'true'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    permissions:
+      contents: read
+      issues: read
+    outputs:
+      json: ${{ steps.snap.outputs.json }}
+    env:
+      ASSESS_ISSUE: ${{ needs.route.outputs.assess_issue }}
+      ASSESS_MODE: ${{ needs.route.outputs.assess_mode }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .nvmrc
+
+      - id: gate
+        uses: ./.github/actions/oauth-token-gate
+        with:
+          token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          blocked-message: "CLAUDE_CODE_OAUTH_TOKEN missing — member filing #${{ needs.route.outputs.assess_issue }} was not checked; it waits in Backlog for the daily flip."
+
+      - name: Fetch the issue and its trusted thread
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JUDGE_JSON: ${{ needs.assess-judge.outputs.json }}
+        run: node scripts/moneypenny/triage-assess.mjs --fetch "$ASSESS_ISSUE" .triage
+
+      - if: steps.gate.outputs.armed == 'true'
+        id: session
+        uses: anthropics/claude-code-action@d535f5172dec02b204866b393d6b20b9b2aaf98d  # v1 tag, installs Claude Code 2.1.286 (first CLI to know both Opus 5.5 and Sonnet 5.5 is 2.1.284; floating v1 once broke native-binary install, see docs/LESSONS.md)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Strip the OAuth token from every subprocess the session spawns (Claude Code env docs).
+          CLAUDE_CODE_SUBPROCESS_ENV_SCRUB: "1"
+        with:
+          allowed_bots: "github-actions,claude,skynet-envoy"
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # Opus, --effort high: judgment on a member's ask (docs/COMPUTE.md — a tie rounds up).
+          claude_args: |
+            --allowedTools "Bash,Read,Write,Glob,Grep" --model claude-opus-5-5 --effort high --max-turns 60
+          prompt: |
+            Read `.github/prompts/feedback-triage.md` in this repo and follow it exactly.
+            Role: refute-envelope. Issue: #${{ needs.route.outputs.assess_issue }}. Mode: ${{ needs.route.outputs.assess_mode }}.
+            Output file: .triage/out.json
+
+      # A job output, which no later job can rewrite; the post job rebuilds its files from these.
+      - if: always() && steps.session.outcome != 'skipped'
+        id: snap
+        run: echo "json=$(jq -c . .triage/out.json 2>/dev/null || true)" >> "$GITHUB_OUTPUT"
+
+      # The same print as build-feedback's: the terminal envelope and the rate-limit events, never
+      # the transcript (this log is public), so repair.mjs can tell a usage limit from a dead token.
+      - if: always() && steps.session.outcome == 'failure'
+        name: Surface the swallowed Claude result on failure
+        run: |
+          echo "::group::Claude execution result (the action hides this by default)"
+          F=/home/runner/work/_temp/claude-execution-output.json
+          if [ -f "$F" ]; then
+            jq -c 'if type=="array" then .[] else . end | select(.type == "result" or .type == "rate_limit_event") | {type, subtype, is_error, terminal_reason, api_error_status, duration_ms, num_turns, total_cost_usd, modelUsage, rate_limit_info} | with_entries(select(.value != null))' "$F" \
+              || echo "(execution-output.json is not JSON the result filter can read — nothing printed, by design: this log is public)"
+          else
+            echo "(no execution-output.json — failure happened before Claude Code produced one)"
+          fi
+          echo "::endgroup::"
+
+  # A refuter that fails, or never answers, counts as a refutation in `assess-post`.
+  assess-refute-thread:
+    name: check a member's filing — refute (thread)
+    needs: [route, assess-judge]
+    if: github.event_name != 'push' && needs.assess-judge.outputs.clear == 'true'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    permissions:
+      contents: read
+      issues: read
+    outputs:
+      json: ${{ steps.snap.outputs.json }}
+    env:
+      ASSESS_ISSUE: ${{ needs.route.outputs.assess_issue }}
+      ASSESS_MODE: ${{ needs.route.outputs.assess_mode }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .nvmrc
+
+      - id: gate
+        uses: ./.github/actions/oauth-token-gate
+        with:
+          token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          blocked-message: "CLAUDE_CODE_OAUTH_TOKEN missing — member filing #${{ needs.route.outputs.assess_issue }} was not checked; it waits in Backlog for the daily flip."
+
+      - name: Fetch the issue and its trusted thread
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JUDGE_JSON: ${{ needs.assess-judge.outputs.json }}
+        run: node scripts/moneypenny/triage-assess.mjs --fetch "$ASSESS_ISSUE" .triage
+
+      - if: steps.gate.outputs.armed == 'true'
+        id: session
+        uses: anthropics/claude-code-action@d535f5172dec02b204866b393d6b20b9b2aaf98d  # v1 tag, installs Claude Code 2.1.286 (first CLI to know both Opus 5.5 and Sonnet 5.5 is 2.1.284; floating v1 once broke native-binary install, see docs/LESSONS.md)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Strip the OAuth token from every subprocess the session spawns (Claude Code env docs).
+          CLAUDE_CODE_SUBPROCESS_ENV_SCRUB: "1"
+        with:
+          allowed_bots: "github-actions,claude,skynet-envoy"
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # Opus, --effort high: judgment on a member's ask (docs/COMPUTE.md — a tie rounds up).
+          claude_args: |
+            --allowedTools "Bash,Read,Write,Glob,Grep" --model claude-opus-5-5 --effort high --max-turns 60
+          prompt: |
+            Read `.github/prompts/feedback-triage.md` in this repo and follow it exactly.
+            Role: refute-thread. Issue: #${{ needs.route.outputs.assess_issue }}. Mode: ${{ needs.route.outputs.assess_mode }}.
+            Output file: .triage/out.json
+
+      # A job output, which no later job can rewrite; the post job rebuilds its files from these.
+      - if: always() && steps.session.outcome != 'skipped'
+        id: snap
+        run: echo "json=$(jq -c . .triage/out.json 2>/dev/null || true)" >> "$GITHUB_OUTPUT"
+
+      # The same print as build-feedback's: the terminal envelope and the rate-limit events, never
+      # the transcript (this log is public), so repair.mjs can tell a usage limit from a dead token.
+      - if: always() && steps.session.outcome == 'failure'
+        name: Surface the swallowed Claude result on failure
+        run: |
+          echo "::group::Claude execution result (the action hides this by default)"
+          F=/home/runner/work/_temp/claude-execution-output.json
+          if [ -f "$F" ]; then
+            jq -c 'if type=="array" then .[] else . end | select(.type == "result" or .type == "rate_limit_event") | {type, subtype, is_error, terminal_reason, api_error_status, duration_ms, num_turns, total_cost_usd, modelUsage, rate_limit_info} | with_entries(select(.value != null))' "$F" \
+              || echo "(execution-output.json is not JSON the result filter can read — nothing printed, by design: this log is public)"
+          else
+            echo "(no execution-output.json — failure happened before Claude Code produced one)"
+          fi
+          echo "::endgroup::"
+
+  # The one writer, on a runner no session touched. The App token is scoped to what it writes.
+  assess-post:
+    name: check a member's filing — post
+    needs: [route, assess-judge, assess-refute-envelope, assess-refute-thread]
+    if: always() && github.event_name != 'push' && needs.assess-judge.result == 'success' && needs.assess-judge.outputs.json != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .nvmrc
+
+      - id: app-token
+        uses: ./.github/actions/app-token
+        with:
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          permission-issues: write     # the comment and the labels
+          permission-contents: write   # the flip ledger row on data/pr-review (flip-refusals.mjs)
+
+      - name: Post the outcome to the filing
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          ASSESS_ISSUE: ${{ needs.route.outputs.assess_issue }}
+          ASSESS_MODE: ${{ needs.route.outputs.assess_mode }}
+          JUDGE_JSON: ${{ needs.assess-judge.outputs.json }}
+          ENVELOPE_JSON: ${{ needs.assess-refute-envelope.outputs.json }}
+          THREAD_JSON: ${{ needs.assess-refute-thread.outputs.json }}
+        run: |
+          D="$RUNNER_TEMP/post" && mkdir -p "$D"
+          printf '%s' "$JUDGE_JSON" > "$D/judge.json"
+          [ -z "$ENVELOPE_JSON" ] || printf '%s' "$ENVELOPE_JSON" > "$D/refute-envelope.json"
+          [ -z "$THREAD_JSON" ] || printf '%s' "$THREAD_JSON" > "$D/refute-thread.json"
+          node scripts/moneypenny/triage-assess.mjs --post "$D" --mode "$ASSESS_MODE"
 
   # ═══ THE FEEDBACK LANE (2026-08-19) ═══
   # A member filed feedback through the app (docs/FEEDBACK.md) and the app labelled the issue

@@ -720,6 +720,24 @@
       "cite": ".github/workflows/moneypenny-events.yml:440-446; scripts/moneypenny/index.mjs:571-593 (triageFeedbackDecision)"
     },
     {
+      "id": "filing-check",
+      "department": "build",
+      "name": "Member filing check",
+      "kind": "lane",
+      "job": "Runs the clear-path flip on one member's freeform filing the moment it lands: a judge, then two refuters on a clear call; queues it (ready), asks the member plain questions (needs-info, re-checked on their follow-up), or leaves it for a person's look. Each session runs on its own runner with a read-only token and reads only the member/bot-filtered thread; a specced script on a fresh runner posts",
+      "wakesOn": "issues labeled feedback carrying a member- label; an app-relayed follow-up on a filing this check parked on needs-info",
+      "speaksOn": "One comment, and ready, needs-info or no label",
+      "cadence": "Per member filing, while the work dial is normal or surge",
+      "invoker": "event",
+      "status": "hired",
+      "codeRoots": [
+        ".github/prompts/feedback-triage.md",
+        "scripts/moneypenny/triage-assess.mjs",
+        ".github/workflows/moneypenny-events.yml"
+      ],
+      "cite": "scripts/moneypenny/triage-assess.mjs (assessIntent, assemble, planWrite); .github/workflows/moneypenny-events.yml (route step assess; jobs assess-judge, assess-refute-envelope, assess-refute-thread, assess-post); #7544"
+    },
+    {
       "id": "feedback-build",
       "department": "build",
       "name": "Feedback build lane (with reply resume)",
