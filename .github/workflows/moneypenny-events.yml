@@ -866,9 +866,24 @@ jobs:
             Role: judge. Issue: #${{ needs.route.outputs.assess_issue }}. Mode: ${{ needs.route.outputs.assess_mode }}.
             Output file: .triage/judge.json
 
+      # Snapshot, then clear: a step output cannot be rewritten by a later session, a file on disk can.
+      - if: always() && steps.judge.outcome != 'skipped'
+        id: snap_judge
+        run: |
+          J="$(jq -c . .triage/judge.json 2>/dev/null || true)"
+          echo "json=$J" >> "$GITHUB_OUTPUT"
+          rm -rf .triage && mkdir -p .triage
+          # The refuters read the judge's evidence from here; the post step never does.
+          [ -z "$J" ] || printf '%s' "$J" > .triage/judge.json
+
       - if: steps.gate.outputs.armed == 'true'
         id: judged
-        run: node scripts/moneypenny/triage-assess.mjs --judged .triage --mode "$ASSESS_MODE"
+        env:
+          JUDGE_JSON: ${{ steps.snap_judge.outputs.json }}
+        run: |
+          D="$RUNNER_TEMP/judged" && mkdir -p "$D"
+          printf '%s' "$JUDGE_JSON" > "$D/judge.json"
+          node scripts/moneypenny/triage-assess.mjs --judged "$D" --mode "$ASSESS_MODE"
 
       - if: steps.judged.outputs.clear == 'true'
         id: refute_envelope
@@ -887,6 +902,13 @@ jobs:
             Role: refute-envelope. Issue: #${{ needs.route.outputs.assess_issue }}. Mode: ${{ needs.route.outputs.assess_mode }}.
             Output file: .triage/refute-envelope.json
 
+      # Snapshot, then clear: a step output cannot be rewritten by a later session, a file on disk can.
+      - if: always() && steps.refute_envelope.outcome != 'skipped'
+        id: snap_refute_envelope
+        run: |
+          echo "json=$(jq -c . .triage/refute-envelope.json 2>/dev/null || true)" >> "$GITHUB_OUTPUT"
+          rm -rf .triage && mkdir -p .triage
+
       - if: steps.judged.outputs.clear == 'true'
         id: refute_thread
         uses: anthropics/claude-code-action@d535f5172dec02b204866b393d6b20b9b2aaf98d  # v1 tag, installs Claude Code 2.1.286 (first CLI to know both Opus 5.5 and Sonnet 5.5 is 2.1.284; floating v1 once broke native-binary install, see docs/LESSONS.md)
@@ -903,6 +925,13 @@ jobs:
             Read `.github/prompts/feedback-triage.md` in this repo and follow it exactly.
             Role: refute-thread. Issue: #${{ needs.route.outputs.assess_issue }}. Mode: ${{ needs.route.outputs.assess_mode }}.
             Output file: .triage/refute-thread.json
+
+      # Snapshot, then clear: a step output cannot be rewritten by a later session, a file on disk can.
+      - if: always() && steps.refute_thread.outcome != 'skipped'
+        id: snap_refute_thread
+        run: |
+          echo "json=$(jq -c . .triage/refute-thread.json 2>/dev/null || true)" >> "$GITHUB_OUTPUT"
+          rm -rf .triage && mkdir -p .triage
 
       # The same print as build-feedback's: the terminal envelope and the rate-limit events, never
       # the transcript (this log is public), so repair.mjs can tell a usage limit from a dead token.
@@ -934,7 +963,16 @@ jobs:
         name: Post the outcome to the filing
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: node scripts/moneypenny/triage-assess.mjs --post .triage --mode "$ASSESS_MODE"
+          JUDGE_JSON: ${{ steps.snap_judge.outputs.json }}
+          ENVELOPE_JSON: ${{ steps.snap_refute_envelope.outputs.json }}
+          THREAD_JSON: ${{ steps.snap_refute_thread.outputs.json }}
+        # Rebuilt from the snapshots after every session has ended, so no session's file survives.
+        run: |
+          D="$RUNNER_TEMP/post" && rm -rf "$D" && mkdir -p "$D"
+          printf '%s' "$JUDGE_JSON" > "$D/judge.json"
+          [ -n "$ENVELOPE_JSON" ] && printf '%s' "$ENVELOPE_JSON" > "$D/refute-envelope.json"
+          [ -n "$THREAD_JSON" ] && printf '%s' "$THREAD_JSON" > "$D/refute-thread.json"
+          node scripts/moneypenny/triage-assess.mjs --post "$D" --mode "$ASSESS_MODE"
 
   # ═══ THE FEEDBACK LANE (2026-08-19) ═══
   # A member filed feedback through the app (docs/FEEDBACK.md) and the app labelled the issue
