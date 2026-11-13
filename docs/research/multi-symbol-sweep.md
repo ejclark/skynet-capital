@@ -71,6 +71,10 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"A JGB 30-year tail of 2bp or more does not transmit to the next US session: the US 30Y CMT does not rise 5bp (FT-jgb-30y-auction-2026-10-08-5)"** — added 2026-11-13 from the
+  [jgb-30y-auction-2026-10-08 ledger](events/jgb-30y-auction-2026-10-08.md). The 2026-11-10 tail was **2.4bp** and the US 30Y CMT rose **+8bp** (5.35 to 5.43) on 11-12, on a CPI day plus a US 30-year auction.
+  Do not register a same-tenor JGB-to-US D+1 threshold on a date that shares a US CPI print or auction; one observation, and the JGB 30Y par yield moved +5.5bp on 11-11 too.
+
 - **"The first MTS of FY2027 is forecastable to ±$42B from ten-month growth rates alone: the October 2026 deficit lands in $280–365B (FT-mts-october-2026-11-12-1)"** — added 2026-11-13 from the
   [mts-october-2026-11-12 close-out](events/mts-october-2026-11-12.md). Printed **$404.06B**: receipts $368.94B (ex-customs −6.2% y/y against a +0.24% to +3% build) and outlays $773.00B (+12.2% against +5.17%).
   Do not forecast a Monthly Treasury Statement deficit from trailing growth rates; use the DTS mapping, and register it alone with its own standard error.
