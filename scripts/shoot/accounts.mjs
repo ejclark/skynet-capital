@@ -137,6 +137,8 @@ const networth = {
       idle: "81% idle",
       invested: "$200,632",
       idlePct: 80.9,
+      // Options buying power below cash (Eric, 2026-11-13): most of the cash secures sold puts.
+      ready: "$42,999",
     },
     {
       id: "bot-sauron",
@@ -361,6 +363,10 @@ await page.goto(`${origin}/app/accounts`);
 await page.getByText("Net worth · Eric").waitFor();
 await page.locator(".hero-chart-legend").waitFor({ state: "attached" });
 await shootCockpit("accounts-summary-phone");
+// "Ready to use" is what an options order can spend, apart from the cash securing sold puts.
+await page.locator(".head-split-idle").waitFor();
+await page.evaluate(() => window.scrollTo({ top: 0, left: 0 }));
+await shooter(page, join(process.cwd(), "docs/shots/ready-to-use"))("ready-to-use-phone");
 
 // The head, Level 2 (#5072): Sauron's Overview at landing — the account row with the bot's status
 // as a plain link, one vitals line (net worth · today · cash), the switch with "More ▾" — then the
