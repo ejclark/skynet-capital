@@ -1,7 +1,7 @@
-import { pct, usd } from "./position-guidance-rules.js";
+import { dayText, pct, usd } from "./position-guidance-rules.js";
 import { priceOption } from "./pricing.js";
 import { probabilityAbove, probabilityBelow } from "./terminal-odds.js";
-import type { SuggestionStrategy } from "./trade-suggestions-rules.js";
+import { isLong, type SuggestionStrategy } from "./trade-suggestions-rules.js";
 
 /**
  * The numbers each suggested trade cites (#7547) — every value the engine used, each with the
@@ -14,12 +14,14 @@ type MetricId =
   | "delta"
   | "chance-of-profit"
   | "chance-assigned"
+  | "chance-in-the-money"
   | "theta-per-day"
   | "iv"
   | "iv-rank"
   | "premium"
   | "max-loss"
-  | "account-at-risk";
+  | "account-at-risk"
+  | "earnings";
 
 /** One cited number: the value the engine used, and the sentence a member reads. */
 export interface SuggestionMetric {
@@ -45,9 +47,100 @@ export interface CitedTrade {
   readonly equity: number;
   readonly ivRank?: number;
   readonly rate?: number;
+  /** A bought option whose expiry falls on or after the print window: its start, and days to it. */
+  readonly print?: { readonly start: string; readonly days: number };
+}
+
+const deltaMetric = (t: CitedTrade): SuggestionMetric => ({
+  id: "delta",
+  value: t.absDelta,
+  text: `Delta ${t.absDelta.toFixed(2)}: the option moves about ${usd(t.absDelta)} per $1 the stock moves.`,
+});
+
+/** IV rank, cited only when the instrument has a full window. */
+const ivRankMetric = (t: CitedTrade): SuggestionMetric[] =>
+  t.ivRank !== undefined && Number.isFinite(t.ivRank)
+    ? [
+        {
+          id: "iv-rank",
+          value: t.ivRank,
+          text: `IV rank ${Math.round(t.ivRank)} of 100 over the past year.`,
+        },
+      ]
+    : [];
+
+/** A bought call or put: a debit whose most it can lose is the premium paid. */
+function longMetrics(t: CitedTrade): SuggestionMetric[] {
+  const call = t.type === "call";
+  const shares = t.contracts * 100;
+  const rate = t.rate ?? 0;
+  const odds = { spot: t.spot, daysForward: t.days, volatility: t.iv, rate };
+  // Break-even at expiry is the strike plus the premium for a call, less it for a put.
+  const breakEven = call ? t.strike + t.limit : t.strike - t.limit;
+  const beyond = call ? probabilityAbove : probabilityBelow;
+  const profit = beyond({ ...odds, target: breakEven }) ?? 0;
+  const inMoney = beyond({ ...odds, target: t.strike }) ?? 0;
+  const valuation = priceOption({
+    spot: t.spot,
+    strike: t.strike,
+    daysToExpiry: t.days,
+    volatility: t.iv,
+    rate,
+    type: t.type,
+  });
+  // A holder pays the decay a seller earns: the model's theta, as a cost, for the whole size.
+  const decay = -(valuation?.theta ?? 0) * shares;
+  const paid = t.limit * shares;
+  const atRisk = t.equity > 0 ? paid / t.equity : 0;
+  const metrics: SuggestionMetric[] = [
+    deltaMetric(t),
+    {
+      id: "chance-of-profit",
+      value: profit,
+      text: `${pct(profit)} model chance of a profit at expiry (break-even ${usd(breakEven)}).`,
+    },
+    {
+      id: "chance-in-the-money",
+      value: inMoney,
+      text: `${pct(inMoney)} model chance it finishes in the money, ${call ? "above" : "below"} ${usd(t.strike)}.`,
+    },
+    {
+      id: "theta-per-day",
+      value: decay,
+      text: `About ${usd(decay)} a day lost to time decay today, if nothing else moves (model).`,
+    },
+    { id: "iv", value: t.iv, text: `Implied volatility ${pct(t.iv)} on this contract.` },
+  ];
+  metrics.push(...ivRankMetric(t));
+  if (t.print) {
+    metrics.push({
+      id: "earnings",
+      value: t.print.days,
+      text: `Earnings fall before this expiry (window opens ${dayText(t.print.start)}, ${t.print.days} days out). Implied volatility tends to drop once the news is out, which can lower this option's value even if the stock moves your way.`,
+    });
+  }
+  metrics.push(
+    {
+      id: "premium",
+      value: paid,
+      text: `${usd(paid)} premium paid if filled at the limit.`,
+    },
+    {
+      id: "max-loss",
+      value: paid,
+      text: `${usd(paid)} if it expires worthless: the premium paid, the most this trade can lose.`,
+    },
+    {
+      id: "account-at-risk",
+      value: atRisk,
+      text: `${pct(atRisk, 1)} of your account at that max loss.`,
+    },
+  );
+  return metrics;
 }
 
 export function metricsFor(t: CitedTrade): SuggestionMetric[] {
+  if (isLong(t.strategy)) return longMetrics(t);
   const call = t.strategy === "covered-call";
   const shares = t.contracts * 100;
   const rate = t.rate ?? 0;
@@ -71,11 +164,7 @@ export function metricsFor(t: CitedTrade): SuggestionMetric[] {
   const maxLoss = breakEven * shares;
   const atRisk = t.equity > 0 ? maxLoss / t.equity : 0;
   const metrics: SuggestionMetric[] = [
-    {
-      id: "delta",
-      value: t.absDelta,
-      text: `Delta ${t.absDelta.toFixed(2)}: the option moves about ${usd(t.absDelta)} per $1 the stock moves.`,
-    },
+    deltaMetric(t),
     {
       id: "chance-of-profit",
       value: profit,
@@ -95,13 +184,7 @@ export function metricsFor(t: CitedTrade): SuggestionMetric[] {
     },
     { id: "iv", value: t.iv, text: `Implied volatility ${pct(t.iv)} on this contract.` },
   ];
-  if (t.ivRank !== undefined && Number.isFinite(t.ivRank)) {
-    metrics.push({
-      id: "iv-rank",
-      value: t.ivRank,
-      text: `IV rank ${Math.round(t.ivRank)} of 100 over the past year.`,
-    });
-  }
+  metrics.push(...ivRankMetric(t));
   metrics.push(
     {
       id: "premium",

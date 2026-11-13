@@ -5,7 +5,7 @@ import {
   suggestTrades,
   type TierOption,
 } from "../../src/options/trade-suggestions.js";
-import { SUGGESTION_DTE, TIER_RULES } from "../../src/options/trade-suggestions-rules.js";
+import { LONG_DTE, SUGGESTION_DTE, TIER_RULES } from "../../src/options/trade-suggestions-rules.js";
 import { CHAIN, NOW, SPOT } from "./position-guidance-fixture.js";
 
 /**
@@ -167,6 +167,106 @@ describe("suggestTrades — cash-secured put", () => {
   });
 });
 
+describe("suggestTrades — long call and long put (#7547 slice 4)", () => {
+  const long = (
+    strategy: "long-call" | "long-put",
+    account: SuggestionInputs["account"] = { equity: 1_000_000, cash: 1_000_000 },
+    over: Partial<SuggestionInputs> = {},
+  ) => suggestTrades(input({ strategy, account, ...over }));
+
+  it("buys, inside each tier's BOUGHT delta band and the 45–90 day window", () => {
+    for (const strategy of ["long-call", "long-put"] as const) {
+      const options = available(long(strategy).options);
+      expect(options).toHaveLength(3);
+      options.forEach((o) => {
+        const { min, max } = ruleOf(o).longDelta;
+        expect(o.side).toBe("buy");
+        expect(o.type).toBe(strategy === "long-call" ? "call" : "put");
+        expect(metric(o, "delta")).toBeGreaterThanOrEqual(min);
+        expect(metric(o, "delta")).toBeLessThanOrEqual(max);
+        expect(o.dte).toBeGreaterThanOrEqual(LONG_DTE.min);
+        expect(o.dte).toBeLessThanOrEqual(LONG_DTE.max);
+        expect(o.summary).toMatch(/^Buy \d+ CRWV /);
+      });
+    }
+  });
+
+  it("runs the delta the other way from a sale: conservative in the money, high risk out of it", () => {
+    const [c, s, h] = available(long("long-call").options);
+    if (!(c && s && h)) throw new Error("tier missing");
+    expect(c.strike).toBeLessThan(SPOT);
+    expect(h.strike).toBeGreaterThan(SPOT);
+    expect(metric(c, "delta")).toBeGreaterThan(metric(s, "delta"));
+    expect(metric(s, "delta")).toBeGreaterThan(metric(h, "delta"));
+    expect(metric(c, "chance-in-the-money")).toBeGreaterThan(metric(h, "chance-in-the-money"));
+  });
+
+  it("states the bought rule: the band, the window and the premium cap", () => {
+    const [c] = long("long-put").options;
+    expect(c.rule).toBe(
+      "Conservative: a strike near 0.65–0.80 delta, 45–90 days out, at most 2% of the account lost if it expires worthless.",
+    );
+  });
+
+  it("caps the premium paid — its max loss — at each tier's share of the account", () => {
+    const { options } = long("long-call", { equity: 200_000, cash: 200_000 });
+    options.forEach((o) => {
+      if (!o.available) throw new Error(`${o.tier} unavailable`);
+      expect(metric(o, "max-loss")).toBeCloseTo(o.limit * 100 * o.contracts, 6);
+      expect(metric(o, "premium")).toBe(metric(o, "max-loss"));
+      expect(metric(o, "account-at-risk")).toBeLessThanOrEqual(ruleOf(o).maxAccountAtRisk);
+    });
+  });
+
+  it("declines a tier one contract would overrun, and never sizes past the cash", () => {
+    const [c] = long("long-call", { equity: 20_000, cash: 20_000 }).options;
+    expect(c.available).toBe(false);
+    if (!c.available) expect(c.reason).toMatch(/all of it lost if it expires worthless; .* 2%/);
+    for (const o of long("long-call", { equity: 10_000_000, cash: 100 }).options) {
+      expect(o.available).toBe(false);
+      if (!o.available) expect(o.reason).toContain("in cash");
+    }
+  });
+
+  it("prices the limit at the mid, rounding a tie toward the buyer", () => {
+    for (const o of available(long("long-put").options)) {
+      const q = CHAIN.find(
+        (x) => x.expiration === o.expiration && x.strike === o.strike && x.type === o.type,
+      );
+      if (!(q?.bid && q.ask)) throw new Error("quote missing");
+      expect(o.limit).toBeGreaterThanOrEqual(q.bid);
+      expect(o.limit).toBeLessThanOrEqual((q.bid + q.ask) / 2 + 1e-9);
+    }
+  });
+
+  it("buys across earnings, citing the print instead of hiding the expiry", () => {
+    const earnings = {
+      start: "2026-11-09",
+      end: "2026-11-16",
+      status: "estimate",
+      source: "8-K cadence",
+    } as const;
+    for (const o of available(long("long-call", undefined, { earnings }).options)) {
+      expect(o.expiration >= earnings.start).toBe(true);
+      const cite = o.metrics.find((m) => m.id === "earnings");
+      expect(cite?.value).toBe(45);
+      expect(cite?.text).toContain("Implied volatility tends to drop");
+    }
+    const none = firstAvailable(long("long-call").options);
+    expect(none.metrics.some((m) => m.id === "earnings")).toBe(false);
+  });
+
+  it("cites a buyer's numbers: decay as a cost, premium paid, no assignment", () => {
+    const o = firstAvailable(long("long-call").options);
+    const text = (id: string) => o.metrics.find((m) => m.id === id)?.text ?? "";
+    expect(text("theta-per-day")).toContain("lost to time decay");
+    expect(text("premium")).toContain("premium paid");
+    expect(text("max-loss")).toContain("the most this trade can lose");
+    expect(o.metrics.some((m) => m.id === "chance-assigned")).toBe(false);
+    expect(metric(o, "theta-per-day")).toBeGreaterThan(0);
+  });
+});
+
 describe("suggestTrades — prices, honesty, determinism", () => {
   it("prices the limit at the mid on the contract's tick grid, inside the quote", () => {
     for (const o of available(suggestTrades(input()).options)) {
@@ -211,7 +311,7 @@ describe("suggestTrades — prices, honesty, determinism", () => {
   });
 
   it("cites every probability as the model's, with its own number, and never promises a gain", () => {
-    for (const strategy of ["covered-call", "cash-secured-put"] as const) {
+    for (const strategy of ["covered-call", "cash-secured-put", "long-call", "long-put"] as const) {
       const { options } = suggestTrades(
         input({ strategy, account: { equity: 1_000_000, cash: 1_000_000, shares: 400 } }),
       );
