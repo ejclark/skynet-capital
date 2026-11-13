@@ -7,6 +7,7 @@ import {
   planWrite,
   trustedComments,
 } from "../../../scripts/moneypenny/triage-assess.mjs";
+import { RECHECK_MARK } from "../../../scripts/moneypenny/reply-resume.mjs";
 
 // #7544 — a member's filing is assessed the moment it lands: queued (`ready`), asked a question
 // (`needs-info`, re-checked on their follow-up), or left for a person's look. The judgment is the
@@ -32,6 +33,8 @@ const followup = (labels: string[], body = RELAYED) => ({
   payload: { action: "created", comment: { body }, issue: issue(labels) },
 });
 const MEMBER = ["feedback", "idea", "member-d7037b4107"];
+/** A follow-up the app held out of the build (#7548): the trailer ends with the mark. */
+const HELD = RELAYED.replace(/_$/, ` ${RECHECK_MARK}_`);
 
 describe("assessIntent — who starts an assessment", () => {
   it("assesses a member's freeform filing when `feedback` lands", () => {
@@ -78,6 +81,46 @@ describe("assessIntent — who starts an assessment", () => {
     ],
   ])("does not re-assess: %s", (_why, ctx) => {
     expect(assessIntent(ctx, GO).assess).toBe(false);
+  });
+
+  // #7548: a `ready` filing no build had claimed — the app took `ready` off before posting, so the
+  // payload shows none — is judged again as a fresh filing, coach-shaped or not.
+  it.each([
+    ["a freeform filing", MEMBER],
+    ["a coach-shaped filing", [...MEMBER, "curated"]],
+  ])("re-checks %s the app held out of the build, as a fresh filing", (_why, labels) => {
+    expect(assessIntent(followup(labels, HELD), GO)).toMatchObject({
+      assess: true,
+      mode: "filing",
+      number: 7544,
+    });
+  });
+
+  it.each([
+    [
+      "the mark typed mid-comment, not ending it",
+      followup(MEMBER, `${RECHECK_MARK}_\n\n${RELAYED}`),
+    ],
+    ["held, but ready is somehow still on", followup([...MEMBER, "ready"], HELD)],
+    ["held, but a build claimed it", followup([...MEMBER, "in-progress"], HELD)],
+    ["held, but parked on a person", followup([...MEMBER, "needs-design"], HELD)],
+    ["held, but not a member's filing", followup(["feedback", "idea"], HELD)],
+    ["held, but a plan", followup([...MEMBER, "plan"], HELD)],
+    ["the mark without the relay trailer", followup(MEMBER, `Some words. ${RECHECK_MARK}_`)],
+  ])("does not re-check: %s", (_why, ctx) => {
+    expect(assessIntent(ctx, GO).assess).toBe(false);
+  });
+
+  it("a held follow-up that answers this check's own question stays a follow-up", () => {
+    expect(assessIntent(followup([...MEMBER, "needs-info"], HELD), GO)).toMatchObject({
+      assess: true,
+      mode: "followup",
+    });
+  });
+
+  it("a held re-check defers to the dial like a fresh filing", () => {
+    const conserve = { dispatch: true, position: "conserve", reason: "cleared" };
+    expect(assessIntent(followup(MEMBER, HELD), conserve).reason).toMatch(/daily flip/);
   });
 
   it("defers to the dial: nothing under halt, the daily flip under conserve", () => {

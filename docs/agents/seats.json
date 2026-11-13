@@ -381,14 +381,14 @@
       "department": "front-desk",
       "name": "Feedback status and follow-up",
       "kind": "in-app",
-      "job": "Lets a member answer a needs-info question from inside the app and restarts the build",
+      "job": "Lets a member answer a needs-info question from inside the app, and holds a ready filing out of the build until the filing check has re-read it",
       "wakesOn": "an issue going needs-info",
-      "speaksOn": "POST /api/feedback/followup; the ready label is removed and re-applied for the restart",
+      "speaksOn": "POST /api/feedback/followup; the ready label is removed before the comment and only the filing check puts it back (#7548)",
       "cadence": "per follow-up",
       "invoker": "member",
       "status": "hired",
       "codeRoots": ["src/server/feedback-followup.ts", "src/server/feedback-status.ts"],
-      "cite": "docs/architecture/README.md:142 \"files feedback and needs-info answers... /api/feedback/followup\"; src/server/feedback-followup.ts:140"
+      "cite": "docs/architecture/README.md:142 \"files feedback and needs-info answers... /api/feedback/followup\"; src/server/feedback-followup.ts:12"
     },
     {
       "id": "conviction-card",
