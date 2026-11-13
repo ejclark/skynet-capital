@@ -77,7 +77,8 @@ in code — only as a host secret, exactly like the Alpaca keys.
    the build by removing and re-adding `ready` — the label that starts the claim (#3912), the
    claim lease making the re-label a safe retry. A filing still in Backlog gets the comment only,
    and the member is told it builds once it's picked from the queue: a follow-up never adds `ready`,
-   which would skip the backlog gate below. Nor does it cycle `ready` on a filing the claim's pull
+   which would skip the backlog gate below. The one exception is a filing the filing check parked on
+   `needs-info` (below): the follow-up re-runs that check, which may ready it (#7544). Nor does it cycle `ready` on a filing the claim's pull
    rule (`notPullableReason`) refuses — closed, parked on someone, already `in-progress`,
    `needs-session`, or blocked — and the member's line names which (#5848). If `ready` comes off
    and won't go back on after one retry, the server logs the issue number (`[feedback-followup]`)
@@ -100,6 +101,23 @@ including anything already `needs-eric`/`needs-info`/`needs-design`, sits in **B
 board (Status/Horizon populated the same way every other issue's is — `scripts/moneypenny/projects.mjs`)
 until something applies `ready`: Eric's own call, or a triage pass's clear-path flip
 ([`ISSUES.md`](ISSUES.md) → *Who may flip it*, 2026-10-19).
+
+**A member's freeform filing is checked the moment it lands (#7544).** `moneypenny-events.yml`'s
+`assess-feedback` job runs that same clear-path flip on one filing — a judge, then two independent
+refuters on a clear call — and posts one of three outcomes on the issue
+(`scripts/moneypenny/triage-assess.mjs`):
+
+| Outcome | Labels | What the member sees in the app |
+| --- | --- | --- |
+| Clear, and neither refuter could refute it | `ready` | *Up next* (the admission gate still decides when it starts) |
+| Only the acceptance criteria or the size fell short | `needs-info` + plain questions | *Waiting on your answer*. Their **Follow up** re-runs the check automatically |
+| A fork only Eric settles, the protected class, a blocker, or a refuter said no | none, a plain note | *Filed — waiting to be picked*: nothing is asked of the member |
+
+The sessions hold a read-only token and write only JSON; the post script is the one writer. It runs
+for filings carrying a `member-` label, not `curated` ones (the coach path above), and only while the
+work dial is `normal` or `surge`. Under `conserve` or `halt` the filing waits for the daily flip. Its
+flips and refusals land in the same ledger as the daily flip's, so they count toward the falsifier in
+*Who may flip it*.
 
 Only once `ready` lands does `moneypenny-events.yml` pick the issue up and build it end to end in a
 fresh Claude session. What `ready` means, mechanically and for every puller — the pull conditions,

@@ -14,7 +14,7 @@ It is two things at once:
 flowchart TD
   members(["Members"])
   front_desk["Front desk (in the app) · 7 seats"]
-  build["Builders · 14 seats"]
+  build["Builders · 15 seats"]
   staff["Chief of staff · 16 seats"]
   quality["Quality · 18 seats"]
   owner(["Eric · owner and game master"])
@@ -114,7 +114,7 @@ feels them only as honest timing on their own ask ("queued behind 2 builds"), ne
 | The trading floor: your bots, each a character with a strategy | Bot runtime (paper) |
 | The research desk: what is coming up, and what the house has written about it | Market-event calendar |
 
-Below decks: 60 seats, every one in Builders, Quality, Chief of staff and Platform. A
+Below decks: 61 seats, every one in Builders, Quality, Chief of staff and Platform. A
 member sees their own ask's status in plain words, never the lanes.
 
 ## The board's Role lanes
@@ -197,6 +197,7 @@ Turn ready issues and plans into merged pull requests.
 | Seat | Job | Wakes on | Speaks on | Status | Code roots |
 |---|---|---|---|---|---|
 | Feedback triage | On a fresh feedback or fast-track label, self-readies a curated filing or a bug+fast-track; everything else waits in Backlog | issues labeled feedback or fast-track | The ready label, or nothing | hired | `scripts/moneypenny/index.mjs` |
+| Member filing check | Runs the clear-path flip on one member's freeform filing the moment it lands: a judge, then two refuters on a clear call; queues it (ready), asks the member plain questions (needs-info, re-checked on their follow-up), or leaves it for a person's look. Sessions hold a read-only token; a specced script posts | issues labeled feedback carrying a member- label; an app-relayed follow-up on a filing this check parked on needs-info | One comment, and ready, needs-info or no label | hired | `.github/prompts/feedback-triage.md` `scripts/moneypenny/triage-assess.mjs` `.github/workflows/moneypenny-events.yml` |
 | Feedback build lane (with reply resume) | Builds a ready feedback/bug issue end to end on a feedback/<n> branch and opens a PR; model picked from the issue's skynet-spec block: Haiku for one criterion and no assumptions, Sonnet for up to 3 criteria, Opus otherwise, including any issue with no spec block | ready label, an unpark (needs-* or hold-merge removed), the retry sweep | A PR, a receipt comment, one of four endings; needs-session via the guard | hired | `.github/workflows/moneypenny-events.yml` `.github/prompts/feedback-build.md` `scripts/moneypenny/model-tier.mjs` `scripts/moneypenny/feedback-guard.mjs` `scripts/moneypenny/reply-resume.mjs` `scripts/moneypenny/index.mjs` |
 | Plan build lane (with continuation and relay) | Builds the slice a ready plan issue's state block names, on a plan/<n> branch | A ready comment from OWNER/MEMBER/COLLABORATOR, the ready label, an unpark, the retry or continuation sweep | A slice PR, a state-block edit, needs-eric when stuck | hired | `.github/prompts/plan-build.md` `scripts/moneypenny/plan-claim.mjs` `scripts/moneypenny/continuation.mjs` `scripts/moneypenny/state-block.mjs` `scripts/moneypenny/relay.mjs` |
 | Retry sweep (claims the next ready issue) | Claims the top-ranked admissible ready issue in either lane; on a push it only peeks, then re-dispatches itself as scan | workflow_dispatch scan (from the push re-dispatch, the wake, or the clock) | A lease and a build job | hired | `scripts/moneypenny/index.mjs` `scripts/moneypenny/labels.mjs` |
