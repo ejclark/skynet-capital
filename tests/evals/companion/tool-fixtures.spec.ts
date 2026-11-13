@@ -25,8 +25,8 @@ const SAMPLE_INPUT: Record<string, unknown> = {
 
 describe("COMPANION_TOOL_FIXTURES", () => {
   describe("when read as a suite", () => {
-    it("holds four fixtures, each declaring tool use", () => {
-      expect(COMPANION_TOOL_FIXTURES).toHaveLength(4);
+    it("holds five fixtures, each declaring tool use", () => {
+      expect(COMPANION_TOOL_FIXTURES).toHaveLength(5);
       for (const f of COMPANION_TOOL_FIXTURES) expect(f.toolUse).toBeDefined();
     });
 
