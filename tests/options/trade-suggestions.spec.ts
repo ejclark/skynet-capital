@@ -228,6 +228,17 @@ describe("suggestTrades — long call and long put (#7547 slice 4)", () => {
     }
   });
 
+  it("says plainly when the account has no equity to size against, never a broken percentage", () => {
+    for (const strategy of ["long-put", "cash-secured-put"] as const) {
+      for (const o of suggestTrades(input({ strategy, account: { equity: 0, cash: 50_000 } }))
+        .options) {
+        expect(o.available).toBe(false);
+        if (!o.available)
+          expect(o.reason).toBe("Your account shows no equity to size a trade against.");
+      }
+    }
+  });
+
   it("prices the limit at the mid, rounding a tie toward the buyer", () => {
     for (const o of available(long("long-put").options)) {
       const q = CHAIN.find(
@@ -252,6 +263,11 @@ describe("suggestTrades — long call and long put (#7547 slice 4)", () => {
       expect(cite?.value).toBe(45);
       expect(cite?.text).toContain("Implied volatility tends to drop");
     }
+    const open = { ...earnings, start: "2026-09-24" };
+    const during = firstAvailable(long("long-call", undefined, { earnings: open }).options);
+    const cite = during.metrics.find((m) => m.id === "earnings");
+    expect(cite?.value).toBe(0);
+    expect(cite?.text).toContain("the window is open now");
     const none = firstAvailable(long("long-call").options);
     expect(none.metrics.some((m) => m.id === "earnings")).toBe(false);
   });

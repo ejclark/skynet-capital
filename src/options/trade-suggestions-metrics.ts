@@ -47,7 +47,8 @@ export interface CitedTrade {
   readonly equity: number;
   readonly ivRank?: number;
   readonly rate?: number;
-  /** A bought option whose expiry falls on or after the print window: its start, and days to it. */
+  /** A bought option whose expiry falls on or after the print window: its start, and days to it
+   *  (0 once the window has opened). */
   readonly print?: { readonly start: string; readonly days: number };
 }
 
@@ -116,7 +117,7 @@ function longMetrics(t: CitedTrade): SuggestionMetric[] {
     metrics.push({
       id: "earnings",
       value: t.print.days,
-      text: `Earnings fall before this expiry (window opens ${dayText(t.print.start)}, ${t.print.days} days out). Implied volatility tends to drop once the news is out, which can lower this option's value even if the stock moves your way.`,
+      text: `Earnings fall before this expiry (${t.print.days > 0 ? `window opens ${dayText(t.print.start)}, ${t.print.days} days out` : "the window is open now"}). Implied volatility tends to drop once the news is out, which can lower this option's value even if the stock moves your way.`,
     });
   }
   metrics.push(

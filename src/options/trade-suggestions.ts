@@ -178,12 +178,12 @@ function candidatesAt(expiration: string, input: SuggestionInputs, today: string
   return input.chain.flatMap((q) => {
     if (q.expiration !== expiration || q.type !== type) return [];
     // A sale stays out of the money; a purchase may sit in it (the conservative buy does).
-    const otm = long || (type === "call" ? q.strike > spot : q.strike < spot);
+    const strikeAllowed = long || (type === "call" ? q.strike > spot : q.strike < spot);
     const aboveBasis =
       input.strategy !== "covered-call" ||
       account.costBasis === undefined ||
       q.strike >= account.costBasis;
-    const quote = otm && aboveBasis ? tradable(q, input) : undefined;
+    const quote = strikeAllowed && aboveBasis ? tradable(q, input) : undefined;
     if (!quote) return [];
     const valuation = priceOption({
       spot,
@@ -208,7 +208,9 @@ function candidatesAt(expiration: string, input: SuggestionInputs, today: string
 }
 
 /** The row whose |delta| sits nearest the band's middle, inside the band. Ties: tighter spread,
- *  then farther out of the money, then the lower strike — a total order. */
+ *  then farther out of the money, then the lower strike — a total order. (An exact delta tie needs
+ *  two strikes the model prices identically, so these rungs only make the order total; they carry
+ *  no tier intent, for a sale or a purchase.) */
 function pickInBand(
   rows: readonly Candidate[],
   band: { readonly min: number; readonly max: number },
@@ -235,23 +237,6 @@ function sizeFor(
   limit: number,
 ): { contracts: number } | { reason: string } {
   const { account } = input;
-  if (isLong(input.strategy)) {
-    // A debit: the premium is both the cash it takes and the most it can lose.
-    const cost = limit * 100;
-    const byRisk = Math.floor((rule.maxAccountAtRisk * account.equity) / cost + 1e-9);
-    const byCash = Math.floor(account.cash / cost + 1e-9);
-    if (byRisk < 1) {
-      return {
-        reason: `One contract at the ${usd(strike)} strike costs ${usd(cost)} (${pct(cost / account.equity, 1)} of your account), all of it lost if it expires worthless; this tier caps that at ${pct(rule.maxAccountAtRisk)}.`,
-      };
-    }
-    if (byCash < 1) {
-      return {
-        reason: `One contract at the ${usd(strike)} strike costs ${usd(cost)}; you have ${usd(account.cash)} in cash.`,
-      };
-    }
-    return { contracts: Math.min(byCash, byRisk) };
-  }
   if (input.strategy === "covered-call") {
     const lots = coverableLots({ shares: account.shares, callsSold: account.callsSold });
     if (lots < 1) {
@@ -261,17 +246,32 @@ function sizeFor(
     }
     return { contracts: Math.max(1, Math.floor(lots * rule.coveredLotShare + 1e-9)) };
   }
-  const perContract = (strike - limit) * 100;
-  const byCash = Math.floor(account.cash / (strike * 100) + 1e-9);
-  const byRisk = Math.floor((rule.maxAccountAtRisk * account.equity) / perContract + 1e-9);
+  // A cash-secured put and a long option size the same way — the account cap on one contract's max
+  // loss, then the cash one contract ties up — differing only in those two figures and their words.
+  // A long option is a debit: its premium is both the cash it takes and the most it can lose.
+  const long = isLong(input.strategy);
+  const loss = (long ? limit : strike - limit) * 100;
+  const cash = (long ? limit : strike) * 100;
+  if (!(account.equity > 0)) {
+    return { reason: "Your account shows no equity to size a trade against." };
+  }
+  const byRisk = Math.floor((rule.maxAccountAtRisk * account.equity) / loss + 1e-9);
+  const byCash = Math.floor(account.cash / cash + 1e-9);
+  const at = `One contract at the ${usd(strike)} strike`;
+  const share = `(${pct(loss / account.equity, 1)} of your account)`;
+  const cap = `this tier caps that at ${pct(rule.maxAccountAtRisk)}.`;
   if (byRisk < 1) {
     return {
-      reason: `One contract at the ${usd(strike)} strike could lose ${usd(perContract)} (${pct(perContract / account.equity, 1)} of your account) if the stock went to zero; this tier caps that at ${pct(rule.maxAccountAtRisk)}.`,
+      reason: long
+        ? `${at} costs ${usd(loss)} ${share}, all of it lost if it expires worthless; ${cap}`
+        : `${at} could lose ${usd(loss)} ${share} if the stock went to zero; ${cap}`,
     };
   }
   if (byCash < 1) {
     return {
-      reason: `One contract at the ${usd(strike)} strike needs ${usd(strike * 100)} in cash to secure; you have ${usd(account.cash)}.`,
+      reason: long
+        ? `${at} costs ${usd(cash)}; you have ${usd(account.cash)} in cash.`
+        : `${at} needs ${usd(cash)} in cash to secure; you have ${usd(account.cash)}.`,
     };
   }
   return { contracts: Math.min(byCash, byRisk) };
@@ -347,7 +347,12 @@ function optionFor(
       ivRank: input.ivRank,
       rate: input.rate,
       ...(input.earnings && spansPrint(quote.expiration, input)
-        ? { print: { start: input.earnings.start, days: daysBetween(today, input.earnings.start) } }
+        ? {
+            print: {
+              start: input.earnings.start,
+              days: Math.max(0, daysBetween(today, input.earnings.start)),
+            },
+          }
         : {}),
     }),
   };
