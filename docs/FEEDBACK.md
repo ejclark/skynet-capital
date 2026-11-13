@@ -103,7 +103,7 @@ until something applies `ready`: Eric's own call, or a triage pass's clear-path 
 ([`ISSUES.md`](ISSUES.md) → *Who may flip it*, 2026-10-19).
 
 **A member's freeform filing is checked the moment it lands (#7544).** `moneypenny-events.yml`'s
-`assess-feedback` job runs that same clear-path flip on one filing — a judge, then two independent
+`assess-*` jobs run that same clear-path flip on one filing — a judge, then two independent
 refuters on a clear call — and posts one of three outcomes on the issue
 (`scripts/moneypenny/triage-assess.mjs`):
 
@@ -113,7 +113,7 @@ refuters on a clear call — and posts one of three outcomes on the issue
 | Only the acceptance criteria or the size fell short | `needs-info` + plain questions | *Waiting on your answer*. Their **Follow up** re-runs the check automatically |
 | A fork only Eric settles, the protected class, a blocker, or a refuter said no | none, a plain note | *Filed — waiting to be picked*: nothing is asked of the member |
 
-The sessions hold a read-only token and write only JSON; the post script is the one writer. It runs
+Each session runs on its own runner with a read-only token, reads only the thread's member and bot comments, and returns one JSON blob; the post script, on a fresh runner, is the one writer and builds every posted line itself. It runs
 for filings carrying a `member-` label, not `curated` ones (the coach path above), and only while the
 work dial is `normal` or `surge`. Under `conserve` or `halt` the filing waits for the daily flip. Its
 flips and refusals land in the same ledger as the daily flip's, so they count toward the falsifier in

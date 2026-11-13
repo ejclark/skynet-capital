@@ -69,3 +69,13 @@ export function planWrite(
 };
 /** Why to skip writing now, or null. */
 export function liveSkip(issue: unknown, mode?: Mode): string | null;
+export const TRUSTED_ASSOCIATIONS: string[];
+export const TRUSTED_BOTS: string[];
+/** The comments a session may read: repo members and this repo's bots. */
+export function trustedComments<
+  T extends { author_association?: string; user?: { login?: string } },
+>(comments?: T[]): T[];
+/** One flattened, defused, capped line of session text. */
+export function clean(text: unknown, max?: number): string;
+/** The flip comment, built from the four checks. */
+export function flipComment(judged: Judged | null): string;

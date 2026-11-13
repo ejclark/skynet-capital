@@ -2,6 +2,7 @@
 // ASSESS A MEMBER'S FILING THE MOMENT IT LANDS (#7544) — the clear-path flip, triggered per filing.
 //
 //   node scripts/moneypenny/triage-assess.mjs --intent            # read $GITHUB_EVENT_PATH → outputs
+//   node scripts/moneypenny/triage-assess.mjs --fetch <n> <dir>   # issue + trusted thread → files
 //   node scripts/moneypenny/triage-assess.mjs --judged <dir>      # judge.json → clear=true|false
 //   node scripts/moneypenny/triage-assess.mjs --post <dir> --mode filing|followup [--dry-run]
 //
@@ -16,10 +17,12 @@
 //
 // WHAT RUNS WHERE. `moneypenny-events.yml` asks `--intent` on the `feedback` label event (a new
 // filing) and on an app-relayed follow-up to a filing this check parked on `needs-info` (the member
-// iterating). The judge and the two refuters are claude-code-action steps holding a READ-ONLY token:
-// they write JSON files into <dir> and cannot touch the issue, however the member's text is worded.
-// Only `--post`, a specced script holding the App token, writes — and it computes "clear" from the
-// four checks itself, never from a session's summary, exactly as clear-path-flip.js does.
+// iterating). The judge and the two refuters each run on their OWN runner with a read-only token and
+// hand back one JSON blob as a job output; `--post` runs on a fresh runner, holds the App token, and
+// computes "clear" from the four checks itself, never from a session's summary (clear-path-flip.js's
+// rule). Every string a session wrote is flattened and capped before it is posted (`clean`), and the
+// flip comment is built here from the checks, so a session never authors free markdown under the
+// App's name. Sessions read only the thread `--fetch` filtered to repo members and bots (#2224).
 //
 // THE THREE OUTCOMES, each one comment with the footer:
 //   - clear and unrefuted → the flip comment (clear-path-post's shape) + `ready` (+ `feedback`).
@@ -31,13 +34,13 @@
 //     said no) → a plain note that it waits for a person's look, and no label: the member has
 //     nothing to answer, so `needs-info` would be a false promise.
 // Refusals and flips are recorded in the same ledger the daily flip keeps (flip-refusals.mjs).
-import { appendFileSync, existsSync, readFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { planPosts, unescapeHtml } from "../clear-path-post.mjs";
 import { FLIP_REFUSALS_PATH, readiedRows, refusalRows } from "../flip-refusals.mjs";
 import { isMain } from "../is-main.mjs";
 import { appendLedgerRows } from "../pr-review/ledger.mjs";
-import { ensureGhToken, ghRest, sh } from "./gh.mjs";
+import { ensureGhToken, ghRest, ghRestAll, sh } from "./gh.mjs";
 import { FOOTER, LABELS, labelNames, parkedBy } from "./labels.mjs";
 import { isClaudeComment } from "./plan-claim.mjs";
 import { isRelayedFollowup } from "./reply-resume.mjs";
@@ -145,7 +148,7 @@ export function assemble({ number, judged, envelope, thread, mode = "filing" }) 
       ? thread
       : { refuted: true, line: "thread — verifier did not return" },
   ];
-  const verifiers = votes.map((v) => String(v.line ?? ""));
+  const verifiers = votes.map((v) => clean(v.line ?? "", 200));
   if (votes.some((v) => v.refuted)) {
     out.refuted.push({ issue: number, title, verifiers });
     return out;
@@ -155,20 +158,59 @@ export function assemble({ number, judged, envelope, thread, mode = "filing" }) 
     title,
     checks: judged.checks,
     addFeedback: !labelNames(judged.labels).includes(LABELS.feedback.name),
-    comment: judged.comment,
+    // Built here from the checks, never the judge's own markdown: the App posts it.
+    comment: flipComment(judged),
     verifiers,
   });
   return out;
+}
+
+/** Who may speak on a public thread (feedback-build.md's #2224 filter): repo members and our bots. */
+export const TRUSTED_ASSOCIATIONS = ["OWNER", "MEMBER", "COLLABORATOR"];
+export const TRUSTED_BOTS = ["skynet-envoy[bot]", "github-actions[bot]"];
+
+/** Pure. The comments a session may read: trusted authors only, in the order given. */
+export function trustedComments(comments = []) {
+  return comments.filter(
+    (c) =>
+      TRUSTED_ASSOCIATIONS.includes(c?.author_association) || TRUSTED_BOTS.includes(c?.user?.login),
+  );
+}
+
+/**
+ * Pure. One line of session text, safe to post under the App's name: whitespace collapsed (no
+ * breaking out of a table or a fold), `<`/`>` swapped for lookalikes (no raw HTML), `@` defused (no pings), `|`
+ * escaped (no extra table cells), capped.
+ */
+export function clean(text, max = 300) {
+  const flat = unescapeHtml(text ?? "")
+    .replace(/\s+/g, " ")
+    .trim()
+    // A lookalike, not `&lt;`: clear-path-post's renderBody unescapes entities, which would revive it.
+    .replace(/</g, "‹")
+    .replace(/>/g, "›")
+    .replace(/@/g, "@​")
+    .replace(/\|/g, "\\|");
+  return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
+}
+
+/** The flip comment, from the four checks alone. */
+export function flipComment(judged) {
+  const rows = CHECKS.map((k) => `| ${k} | pass | ${clean(judged?.checks?.[k]?.evidence)} |`);
+  return [
+    "**Clear path — filing check** (docs/ISSUES.md → Who may flip it)",
+    "",
+    "| Check | Verdict | Evidence |",
+    "|---|---|---|",
+    ...rows,
+  ].join("\n");
 }
 
 const checkTable = (judged) => {
   const rows = CHECKS.map((k) => {
     const c = judged?.checks?.[k];
     const verdict = c?.pass === true ? "pass" : "**fail**";
-    const evidence = unescapeHtml(c?.evidence ?? "no evidence")
-      .replace(/\|/g, "\\|")
-      .trim();
-    return `| ${k} | ${verdict} | ${evidence} |`;
+    return `| ${k} | ${verdict} | ${clean(c?.evidence ?? "no evidence")} |`;
   });
   return [
     "<details><summary>The four checks (docs/ISSUES.md → Who may flip it)</summary>",
@@ -204,7 +246,10 @@ export function planWrite(result, judged, mode = "filing") {
   }
   const entry = result.refuted[0] ?? result.notClear[0];
   const failed = entry?.failed ?? [];
-  const asks = (judged?.memberAsks ?? []).map((a) => unescapeHtml(a).trim()).filter(Boolean);
+  const asks = (judged?.memberAsks ?? [])
+    .slice(0, 3)
+    .map((a) => clean(a))
+    .filter(Boolean);
   const answerable =
     result.notClear.length > 0 &&
     failed.length > 0 &&
@@ -235,8 +280,8 @@ export function planWrite(result, judged, mode = "filing") {
       add: mode === "followup" ? [] : [LABELS.needsInfo.name],
     };
   }
-  const reason = unescapeHtml(judged?.plainReason ?? "").trim();
-  const verifierLines = (entry?.verifiers ?? []).map((v) => `- ${unescapeHtml(v).trim()}`);
+  const reason = clean(judged?.plainReason ?? "");
+  const verifierLines = (entry?.verifiers ?? []).map((v) => `- ${clean(v, 200)}`);
   return {
     kind: "backlog",
     issue: entry?.issue,
@@ -382,7 +427,33 @@ function runPost(dir, mode, dryRun) {
   return 0;
 }
 
+/** Write what a session may read: the issue, its trusted thread, and (refuters) the judge's file. */
+function runFetch(number, dir) {
+  ensureGhToken();
+  mkdirSync(dir, { recursive: true });
+  const issue = ghRest(`issues/${number}`);
+  const slim = {
+    number: issue.number,
+    title: issue.title,
+    state: issue.state,
+    labels: labelNames(issue.labels),
+    body: issue.body ?? "",
+  };
+  writeFileSync(join(dir, "issue.json"), `${JSON.stringify(slim, null, 2)}\n`);
+  const thread = trustedComments(ghRestAll(`issues/${number}/comments`))
+    .map((c) => `--- ${c.user?.login} ${c.created_at}\n${c.body ?? ""}`)
+    .join("\n\n");
+  writeFileSync(join(dir, "thread.txt"), `${thread}\n`);
+  if (process.env.JUDGE_JSON) writeFileSync(join(dir, "judge.json"), process.env.JUDGE_JSON);
+  console.log(`::notice::fetched #${number}; trusted thread ${thread ? "written" : "empty"}`);
+  return 0;
+}
+
 function main(argv) {
+  if (argv.includes("--fetch")) {
+    const i = argv.indexOf("--fetch");
+    return runFetch(Number(argv[i + 1]), argv[i + 2]);
+  }
   if (argv.includes("--intent")) {
     const ctx = readCtx();
     let gate;
