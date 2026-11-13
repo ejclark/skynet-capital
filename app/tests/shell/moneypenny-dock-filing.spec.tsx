@@ -97,6 +97,54 @@ describe("MoneypennyDock — the drafted filing", () => {
     expect(filing?.body).not.toHaveProperty("spec");
   });
 
+  // 2026-11-12: one tap filed #7494–#7497, four copies in the same second — every "send" that
+  // landed while the first filing was still in flight found the draft still parked.
+  it("files once when 'send' lands again while the first filing is still in flight", async () => {
+    let posts = 0;
+    let release: (r: Response) => void = () => undefined;
+    globalThis.fetch = ((url: string, init?: RequestInit) => {
+      if (url === "/api/companion") return Promise.resolve(json({ enabled: true, disclosure: "" }));
+      if (url === "/api/companion/chat")
+        return Promise.resolve(
+          new Response(
+            'event: handoff\ndata: {"kind":"bug","title":"Chips overlap","details":"On the phone."}\n\nevent: delta\ndata: {"text":"drafted."}\n\nevent: done\ndata: {}\n\n',
+            { status: 200, headers: { "content-type": "text/event-stream" } },
+          ),
+        );
+      if (url === "/api/feedback") {
+        if (!init?.body)
+          return Promise.resolve(
+            json({
+              enabled: true,
+              coachEnabled: false,
+              followupEnabled: false,
+              feedbackCount: 1,
+              celebrating: [],
+              recent: [],
+            }),
+          );
+        posts += 1;
+        return new Promise<Response>((resolve) => {
+          release = resolve;
+        });
+      }
+      return Promise.resolve(new Response("{}", { status: 404 }));
+    }) as typeof globalThis.fetch;
+    mount();
+    await showHistory();
+    const store = useMoneypenny.getState();
+    await store.send("report it");
+    expect(await inHistory().findByText("Moneypenny · drafted.")).toBeInTheDocument();
+    const first = store.send("send");
+    await flush();
+    // the filing is in flight; the member taps again, twice
+    await Promise.all([store.send("send"), store.send("send")]);
+    release(json({ ok: true, url: "u", number: 9 }));
+    await first;
+    await flush();
+    expect(posts).toBe(1);
+  });
+
   it("files her draft as is when the coach isn't wired — never loses the filing to shaping", async () => {
     const sent: { url: string; body: unknown }[] = [];
     globalThis.fetch = ((url: string, init?: RequestInit) => {

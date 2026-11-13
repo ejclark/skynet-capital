@@ -579,7 +579,18 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
     // card's handler is awaited: an extra await ahead of it would push its busy mark a tick late.
     if (await (get().followup ? answeredFollowup(note) : answeredResearch(note))) return true;
     if (draft && SEND_AS_IS.test(note)) {
-      await lane.sendDraft(draft);
+      // Unpark and go busy in the same tick, BEFORE the filing's awaits (the coach's shaping pass
+      // and the GitHub call take seconds): a second "send" in that window used to find the draft
+      // still parked and file it again — one tap filed #7494–#7497, four copies in one second
+      // (2026-11-12). A failed filing parks the same draft again, so "send" still retries it.
+      const before = get().filedSeq;
+      set({ draft: undefined, streaming: true });
+      try {
+        await lane.sendDraft(draft);
+      } finally {
+        set({ streaming: false });
+        if (get().filedSeq === before) set({ draft });
+      }
       return true;
     }
     if (draft && NEVER_MIND.test(note)) {
