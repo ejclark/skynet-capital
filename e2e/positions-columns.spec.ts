@@ -5,7 +5,7 @@ import { OWNED, ownTheDayTrader } from "./own-account";
  * The desk table's ranked columns (#5071; round 2 of #5037, Q2 R2 — Eric's Build A: "ranked
  * columns, the rest opens in the row, no sideways scroll"). Which columns show is a container
  * query on the table's own scroll box, so only a real browser at real widths can prove it: at
- * 390 (the phone's cards), 860, 1100, 1280 beside the tower, and 1280 with Moneypenny's History
+ * 390 (the phone's cards), 860, 1100, 1280 beside the tower, and 1280 with Moneypenny's conversation
  * open over her dock (#7487 slice 2: the tower stays, nothing narrows), neither the page nor the
  * table scrolls sideways — closed, and with every row opened.
  *
@@ -101,7 +101,7 @@ const measure = (page: Page) =>
         .filter(shown)
         .map((th) => (th.className.match(/pos-col-(\w+)/) ?? [])[1]),
       tower: [...document.querySelectorAll(".tower-column")].some(laidOut),
-      history: [...document.querySelectorAll(".mp-history")].some(laidOut),
+      history: [...document.querySelectorAll('.mp-convo[data-size="expanded"]')].some(laidOut),
     };
   });
 
@@ -223,10 +223,11 @@ test.describe("the positions table at 1280px", () => {
 
   // Before #7487 slice 2 Moneypenny's rail took 440px here, so the tower stepped aside (#3977) and
   // the book read as a table or as cards by what was left. The rail is now a dock under the page
-  // and her History overlays from its top edge, so the premise inverts: opening it moves nothing.
+  // and her conversation is a pane inside it (expanded on request), so the premise inverts: expanding
+  // it moves nothing sideways.
   // The tower keeps its column and the book keeps the same five columns, never scrolling sideways.
   for (const route of ROUTES) {
-    test(`keeps the tower and the five columns with Moneypenny's History open on ${route}`, async ({
+    test(`keeps the tower and the five columns with Moneypenny's conversation expanded on ${route}`, async ({
       page,
     }) => {
       await stage(page);
@@ -234,16 +235,16 @@ test.describe("the positions table at 1280px", () => {
       await expect(page.locator("table.pos-table").first()).toBeVisible();
       await page
         .locator(".mp-dock")
-        .getByRole("button", { name: /^History/ })
+        .getByRole("button", { name: /^Expand/ })
         .click();
       await expect(
         page.getByRole("region", { name: "Conversation with Moneypenny" }),
-      ).toBeVisible();
+      ).toHaveAttribute("data-size", "expanded");
       const open = await measure(page);
       expect(open.history).toBe(true);
       expect(open.tower, "the tower keeps its column").toBe(true);
       expect(open.columns).toEqual(FIVE);
-      expectNoSidewaysScroll(open, "with History open");
+      expectNoSidewaysScroll(open, "with the conversation expanded");
     });
   }
 });
