@@ -138,7 +138,12 @@ describe("get_sized_suggestions — end to end through the dispatcher", () => {
     if (!out.ok) return;
     type Linked = { readonly link?: string };
     const result = out.result as TradeSuggestions;
-    expect(marketFor).toHaveBeenCalledWith("acct-1", "CRWV");
+    // It asks for its own window, one side: a sale's 21–45 days on puts (#7547 — the guidance read
+    // alone priced only expiries before a print).
+    expect(marketFor).toHaveBeenCalledWith("acct-1", "CRWV", {
+      window: { min: 21, max: 45, target: 30 },
+      type: "put",
+    });
     expect(result.strategy).toBe("cash-secured-put");
     expect(result.options.map((o) => o.tier)).toEqual(["conservative", "standard", "high-risk"]);
     const linked = result.options.filter((o): o is SuggestedTrade => o.available);

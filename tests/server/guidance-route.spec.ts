@@ -6,7 +6,7 @@ import { daysToExpiryFrom } from "../../src/options/single-leg-odds.js";
 import { InMemoryIvHistory } from "../../src/research/in-memory-iv-history.js";
 import type { SpotCheck } from "../../src/research/spot-checks.js";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
-import { serveGuidance } from "../../src/server/guidance-route.js";
+import { serveGuidance, withWindowChain } from "../../src/server/guidance-route.js";
 
 /**
  * GET /api/trade/guidance (#3729 slice 3): live reads through the member's own account, pulse-
@@ -278,5 +278,55 @@ describe("serveGuidance", () => {
       deps,
     );
     expect(partial.json().market.ivRank).toBeUndefined();
+  });
+});
+
+describe("withWindowChain — the staging ask's own window (#7547)", () => {
+  const base = {
+    symbol: "NVDA",
+    now: "2026-11-13T18:00:00Z",
+    spot: 180,
+    sessionOpen: true,
+    chain: [],
+    expirations: [
+      "2026-11-14",
+      "2026-12-04",
+      "2026-12-11",
+      "2026-12-18",
+      "2026-12-24",
+      "2027-01-15",
+    ],
+  } as unknown as GuidanceMarket;
+  const calls: string[] = [];
+  const client = {
+    getChain: (_s: string, expiration: string, type: string) => {
+      calls.push(`${expiration}:${type}`);
+      return Promise.resolve([{ occSymbol: `NVDA-${expiration}`, strike: 175, bid: 4, ask: 4.2 }]);
+    },
+  } as never;
+
+  it("pages the three expiries nearest the window's target, one side, onto a copy", async () => {
+    calls.length = 0;
+    const out = await withWindowChain(client, base, { min: 21, max: 45, target: 30 }, "put");
+    // 28, 35 and 21 days out are nearest the 30-day target; 41 days out is the one left off.
+    expect(calls.sort()).toEqual(["2026-12-04:put", "2026-12-11:put", "2026-12-18:put"]);
+    expect(out.chain.map((q) => q.expiration).sort()).toEqual([
+      "2026-12-04",
+      "2026-12-11",
+      "2026-12-18",
+    ]);
+    expect(out.chain.every((q) => q.type === "put")).toBe(true);
+    expect(base.chain).toHaveLength(0);
+  });
+
+  it("pages nothing when the read already holds the window", async () => {
+    calls.length = 0;
+    const held = {
+      ...base,
+      expirations: ["2026-12-11"],
+      chain: [{ expiration: "2026-12-11", type: "put", strike: 175 }],
+    } as unknown as GuidanceMarket;
+    expect(await withWindowChain(client, held, { min: 21, max: 45, target: 30 }, "put")).toBe(held);
+    expect(calls).toEqual([]);
   });
 });

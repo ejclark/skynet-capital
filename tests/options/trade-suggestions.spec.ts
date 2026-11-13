@@ -322,8 +322,19 @@ describe("suggestTrades — prices, honesty, determinism", () => {
     const { options } = suggestTrades(input({ earnings }));
     for (const o of options) {
       expect(o.available).toBe(false);
-      if (!o.available) expect(o.reason).toContain("before earnings");
+      // Not a dead end (Eric, 2026-11-13): the print's date, why, and what can be sized instead.
+      if (!o.available) {
+        expect(o.reason).toContain("reports earnings on");
+        expect(o.reason).toContain("never sell premium across a print");
+        expect(o.reason).toContain("A bought call or put can be sized instead");
+      }
     }
+  });
+
+  it("says only that the window is empty when no print is what blocks it", () => {
+    const { options } = suggestTrades(input({ chain: [] }));
+    for (const o of options)
+      if (!o.available) expect(o.reason).toMatch(/^No expiry 21–45 days out is listed\.$/);
   });
 
   it("cites every probability as the model's, with its own number, and never promises a gain", () => {

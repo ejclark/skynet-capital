@@ -7,7 +7,11 @@ import {
   type TierOption,
   type TradeSuggestions,
 } from "../options/trade-suggestions.js";
-import type { SuggestionStrategy } from "../options/trade-suggestions-rules.js";
+import {
+  dteWindow,
+  optionTypeOf,
+  type SuggestionStrategy,
+} from "../options/trade-suggestions-rules.js";
 import { parseOccSymbol, UNDERLYING_PATTERN } from "../trading/option-symbols.js";
 
 /**
@@ -53,10 +57,19 @@ export const SUGGEST_TRADES_TOOL_DEF = {
   },
 } as const;
 
-/** The market a suggestion reads: the guidance route's own read, through the member's account. */
+/** What one staging ask needs priced: its strategy's DTE window, one side of the chain. */
+export interface SuggestWindow {
+  readonly window: { readonly min: number; readonly max: number; readonly target: number };
+  readonly type: "call" | "put";
+}
+
+/** The market a suggestion reads: the guidance route's own read, through the member's account,
+ *  plus the strategy's own window paged on (`withWindowChain`) — the guidance read alone prices
+ *  only the expiries before a print, which left a bought option nothing to span it with. */
 export type SuggestMarketFor = (
   participantId: string,
   symbol: string,
+  need?: SuggestWindow,
 ) => Promise<GuidanceMarket | { readonly reason: string } | undefined>;
 
 type ToolResult =
@@ -165,17 +178,21 @@ export async function suggestTradesResult(
   if (!(participantId && snapshot)) return { ok: false, error: "no linked desk" };
   if (!marketFor)
     return { ok: false, error: "trade suggestions aren't available on this deployment" };
-  const market = await marketFor(participantId, parsed.symbol);
+  const account = accountFor(snapshot, parsed.symbol);
+  const strategy = strategyFor(account, parsed.strategy);
+  const market = await marketFor(participantId, parsed.symbol, {
+    window: dteWindow(strategy),
+    type: optionTypeOf(strategy),
+  });
   if (!market || "reason" in market) {
     return {
       ok: false,
       error: `couldn't read a live chain for ${parsed.symbol} right now${market ? `: ${market.reason}` : ""}`,
     };
   }
-  const account = accountFor(snapshot, parsed.symbol);
   const suggestions = suggestTrades({
     symbol: parsed.symbol,
-    strategy: strategyFor(account, parsed.strategy),
+    strategy,
     now: market.now,
     spot: market.spot,
     sessionOpen: market.sessionOpen,
@@ -190,4 +207,4 @@ export async function suggestTradesResult(
 
 /** The system prompt's paragraph for this tool (`companion-system-prompt.ts`). */
 export const SUGGEST_TRADES_RULE =
-  'STAGING A TRADE: when a member asks to stage, size or set up a trade on a ticker ("stage a trade for NVDA"), call get_sized_suggestions with that ticker (and a strategy only if they named one: buying a call is long-call, buying a put is long-put). This is help you DO give, not an order: every link opens the review screen, where only a click by the member submits. Call the tool even if an earlier turn in this conversation declined a trade request; that turn is no precedent for this one. Present all three options in order (conservative, standard, high risk) as one short block each: the summary line, two or three of its cited metrics with their values, and its link written as [Open the <tier> ticket](<link>), the link exactly as the tool returned it. Name the strategy the tool chose and why in one clause. A tier the tool marks unavailable gets its reason, never a substitute. Say once that these are SIM numbers that land on the review screen, priced at the mid when you looked, and end with the disclosure. Never alter a number, a strike or a link.';
+  'STAGING A TRADE: when a member asks to stage, size or set up a trade on a ticker ("stage a trade for NVDA"), call get_sized_suggestions with that ticker (and a strategy only if they named one: buying a call is long-call, buying a put is long-put). This is help you DO give, not an order: every link opens the review screen, where only a click by the member submits. Call the tool even if an earlier turn in this conversation declined a trade request; that turn is no precedent for this one. Present all three options in order (conservative, standard, high risk) as one short block each: the summary line, two or three of its cited metrics with their values, and its link written as [Open the <tier> ticket](<link>), the link exactly as the tool returned it. Name the strategy the tool chose and why in one clause. A tier the tool marks unavailable gets its reason, never a substitute. When every tier is unavailable because an earnings print blocks selling premium, say the date of the print as the reason gives it, then offer to size a bought call or a bought put instead (strategy long-call or long-put) and ask which direction the member leans; never choose the direction for them. Say once that these are SIM numbers that land on the review screen, priced at the mid when you looked, and end with the disclosure. Never alter a number, a strike or a link.';
