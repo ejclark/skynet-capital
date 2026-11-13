@@ -147,7 +147,10 @@ export function normalizeQty(v: unknown): number | undefined {
 /** `?limit=`: a positive per-share price in whole cents, under $100,000. Anything else is dropped. */
 export function normalizeLimit(v: unknown): number | undefined {
   const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : Number.NaN;
-  return Number.isFinite(n) && n > 0 && n < 100_000 && Math.abs(Math.round(n * 100) - n * 100) < 1e-6
+  return Number.isFinite(n) &&
+    n > 0 &&
+    n < 100_000 &&
+    Math.abs(Math.round(n * 100) - n * 100) < 1e-6
     ? n
     : undefined;
 }
@@ -242,7 +245,7 @@ function TradePage(): ReactElement {
   // as a live price (the reason a chain tap's limit stays out of the URL).
   // biome-ignore lint/correctness/useExhaustiveDependencies: staged once per suggestion link
   useEffect(() => {
-    if (!play || !strike || (qty === undefined && limit === undefined)) return;
+    if (!(play && strike) || (qty === undefined && limit === undefined)) return;
     stagePreset({
       play,
       strike,

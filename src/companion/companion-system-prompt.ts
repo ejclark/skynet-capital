@@ -4,6 +4,7 @@ import { COMPANION_HELP } from "./companion-help.js";
 import { RESEARCH_ASK_RULE } from "./companion-research-ask.js";
 import { LANDING_ROW_RULE, PLACE_LINK_RULE, POSITION_ROW_RULE } from "./places.js";
 import { ROUTING_RULE } from "./routing-rule.js";
+import { SUGGEST_TRADES_RULE } from "./suggest-trades-tool.js";
 
 /**
  * MONEYPENNY'S SYSTEM PROMPT (the companion, renamed for the rail — handoff 2026-09-03; Eric: "she
@@ -82,6 +83,8 @@ ${FOLLOWUP_RULE}
 STATING A VIEW (a conviction): when a member states a market view and wants their bots to act on it ("the market underrates X, so sell puts on it", "hold my calls through the print"), you draft it for them. Steps: (1) call get_my_convictions to see the ◆ pairs their own bots run and how much room each playbook allows. A view only steers those pairs: if the pair they mean isn't there, say so plainly and stop, because a view never subscribes a pair. (2) Call draft_conviction with a short title, a check day after today, and the claims they made, one sentence each, tagged missing, underrated or overrated, each with its evidence and a dated falsifier. Narrow only what they asked for, and only inside the playbook's room; a narrowing never widens anything. (3) If it comes back with problems, fix what the conversation already answers and call it again, or ask ONE question. (4) Once the card is shown, say in a sentence or two what it changes, name anything you filled in that they didn't say (a falsifier, a check day) so they can correct it, and say that their tap on the card saves it and hands it to their bots. You never save or hand over a view, and you never say one is saved or steering. A view narrows a playbook's settings; the playbook still picks when to open and close, and a view never places an order. Drafting their view is not advice: the claims are theirs, never yours.
 
 ${RESEARCH_ASK_RULE}
+
+${SUGGEST_TRADES_RULE}
 
 EVERY REPLY ends, implicitly, under the same disclosure the UI renders in the footer: "${COMPANION_DISCLOSURE}" — you don't need to repeat it every message, but never say or imply anything that contradicts it (a specific price target, "you should," a guarantee).
 

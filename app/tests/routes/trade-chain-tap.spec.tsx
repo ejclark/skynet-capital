@@ -8,7 +8,7 @@ import {
 } from "@tanstack/react-router";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import * as actualResearch from "../../src/live/research" with { rstest: "importActual" };
-import { Route } from "../../src/routes/trade";
+import { normalizeLimit, normalizeQty, Route, suggestionNote } from "../../src/routes/trade";
 
 /**
  * A tap on the standalone Chain section opens the ticket the cell names (#5166): the chain's own
@@ -145,5 +145,48 @@ describe("/trade — a chain tap opens the ticket the cell names (#5166)", () =>
       ),
     ).toBeInTheDocument();
     await waitFor(() => expect(screen.getByLabelText("Limit /share")).toHaveValue(7.3));
+  });
+});
+
+describe("/trade — a suggestion link of Moneypenny's fills the whole ticket (#7547)", () => {
+  it("opens the rung on the named contract with her count, her limit and the line saying whose they are", async () => {
+    const router = mountTrade(
+      "/trade?symbol=NVDA&play=201&strike=225&exp=2026-10-09&qty=2&limit=6.90&tier=standard",
+    );
+    expect(
+      await screen.findByRole("heading", { name: "Sell a cash-secured put" }),
+    ).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByLabelText("Limit /share")).toHaveValue(6.9));
+    expect(screen.getByLabelText("Contracts (100 shares)")).toHaveValue(2);
+    expect(
+      screen.getByText(
+        "Standard option from Moneypenny (SIM): 2 contracts at $6.90, the mid when Moneypenny suggested it. Check the live quote before you review.",
+      ),
+    ).toBeInTheDocument();
+    // spent once staged: the count and price leave the URL so they can never re-price another strike
+    await waitFor(() => expect(router.state.location.search).not.toHaveProperty("qty"));
+    expect(router.state.location.search).not.toHaveProperty("limit");
+    expect(router.state.location.search).toMatchObject({ play: "201", strike: "225" });
+  });
+
+  it("drops a count or price that is not a clean number", () => {
+    expect(normalizeQty("2")).toBe(2);
+    expect(normalizeQty("0")).toBeUndefined();
+    expect(normalizeQty("2.5")).toBeUndefined();
+    expect(normalizeQty("1000")).toBeUndefined();
+    expect(normalizeLimit("3.15")).toBe(3.15);
+    expect(normalizeLimit(6.9)).toBe(6.9);
+    expect(normalizeLimit("3.155")).toBeUndefined();
+    expect(normalizeLimit("-1")).toBeUndefined();
+    expect(normalizeLimit("abc")).toBeUndefined();
+  });
+
+  it("words the line for a link that names no tier, and for one contract", () => {
+    expect(suggestionNote(undefined, 1, 2)).toBe(
+      "Suggested trade from Moneypenny (SIM): 1 contract at $2.00, the mid when Moneypenny suggested it. Check the live quote before you review.",
+    );
+    expect(suggestionNote("high-risk", 3, undefined)).toBe(
+      "High risk option from Moneypenny (SIM): 3 contracts.",
+    );
   });
 });

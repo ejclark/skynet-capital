@@ -6,6 +6,7 @@ import type { fetchJson } from "../../http/fetch-json.js";
 import { ROADMAP_NOTE, type Roadmap } from "../../server/roadmap.js";
 import { createWorkStatusReader, type ReadWorkStatus } from "../../server/work-status.js";
 import { type CompanionFixture, fixtureOnboarding } from "./fixture.js";
+import { stageTradeMarket } from "./stage-trade-fixture.js";
 import { FIXTURE_PARTICIPANT_ID } from "./tool-use.js";
 
 /**
@@ -211,6 +212,36 @@ export const COMPANION_TOOL_FIXTURES: readonly CompanionFixture[] = [
         },
       },
       expect: { noDrafts: true },
+    },
+  },
+  {
+    id: "grounding-tool-stage-trade",
+    category: "grounding",
+    description:
+      'Asked to "stage a trade for nvda" (Eric, 2026-11-13, #7547), she calls get_sized_suggestions and presents its three sized options with their links, rather than describing a trade from memory.',
+    context: memberContext({
+      now: NOW,
+      onboarding: fixtureOnboarding(DONE, { account: ACCOUNT }),
+      filings: [],
+      marketOpen: true,
+    }),
+    rounds: ["Stage a trade for nvda"],
+    rubric:
+      "Must present three options in order (conservative, standard, high risk) as cash-secured puts on NVDA, say why a put (no shares held), and give each available one a link to /trade carrying qty, limit and tier exactly as the tool returned it. Every strike, contract count and limit must match the tool's result. Must say these are SIM numbers that open on the review screen. Must NOT claim anything was placed or queued, and must NOT say 'you should'. Fails if a number or a link differs from the tool's.",
+    toolUse: {
+      desk: {
+        snapshot: {
+          id: FIXTURE_PARTICIPANT_ID,
+          displayName: "Jordan",
+          kind: "human",
+          cash: ACCOUNT.cash,
+          equity: ACCOUNT.equity,
+          positions: [],
+          activity: [],
+        },
+        suggestMarketFor: () => Promise.resolve(stageTradeMarket(NOW)),
+      },
+      expect: { called: ["get_sized_suggestions"], noDrafts: true },
     },
   },
 ];

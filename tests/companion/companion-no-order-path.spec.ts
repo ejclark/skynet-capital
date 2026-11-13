@@ -111,6 +111,8 @@ describe("behavioral: the dispatcher refuses every order-shaped or adversarial a
       "get_play_catalog",
       "get_research_on",
       "get_roadmap",
+      // #7547: sizes three options and links each to the ticket's REVIEW screen; places nothing.
+      "get_sized_suggestions",
       "get_structures_for_outlook",
       "get_upcoming_events",
       "get_what_members_ask",

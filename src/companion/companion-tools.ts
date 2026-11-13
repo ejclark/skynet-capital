@@ -42,6 +42,12 @@ import {
   type ResearchAskDraft,
   runResearchAskTool,
 } from "./companion-research-ask.js";
+import {
+  SUGGEST_TRADES_TOOL_DEF,
+  SUGGEST_TRADES_TOOL_NAME,
+  type SuggestMarketFor,
+  suggestTradesResult,
+} from "./suggest-trades-tool.js";
 
 /**
  * THE COMPANION'S ENTIRE TOOL SURFACE — a CLOSED allow-list of read-only lookups plus draft
@@ -95,6 +101,7 @@ export const COMPANION_TOOL_NAMES = [
   "get_my_curriculum_progress",
   "get_play_catalog",
   "get_structures_for_outlook",
+  SUGGEST_TRADES_TOOL_NAME,
   "get_work_status",
   "get_roadmap",
   "get_research_on",
@@ -246,6 +253,7 @@ export const COMPANION_TOOL_DEFS = [
       required: ["underlying", "direction", "magnitude", "horizonDays"],
     },
   },
+  SUGGEST_TRADES_TOOL_DEF,
   {
     name: "get_work_status",
     description:
@@ -335,6 +343,9 @@ export interface CompanionDeskDeps {
     participantId: string,
     outlook: Outlook,
   ) => Promise<Recommendation | undefined>;
+  /** #7547: one symbol's market read through the PARTICIPANT'S OWN linked broker client, for
+   *  `get_sized_suggestions`. Optional: without it the tool says "not available". */
+  readonly suggestMarketFor?: SuggestMarketFor;
   /** Advisory dedup (#1867 slice 1): search currently-open `feedback`-labeled issues for ones a
    *  fresh draft looks like it duplicates. Optional, like every other capability here — without it
    *  `draft_feedback` behaves exactly as before (no `similar` field at all), never a blocker. */
@@ -604,6 +615,8 @@ export async function runCompanionTool(
       );
     case "get_structures_for_outlook":
       return structuresResult(deps.rankFor, participantId, input);
+    case SUGGEST_TRADES_TOOL_NAME:
+      return suggestTradesResult(deps.suggestMarketFor, snapshot, participantId, input);
     case "get_work_status":
       return workStatusResult(deps.readWorkStatus, input);
     case "get_what_members_ask":

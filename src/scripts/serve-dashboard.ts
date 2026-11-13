@@ -57,6 +57,7 @@ import { resolveDevelopmentActivity } from "../server/development-activity.js";
 import { discoveryPerPass } from "../server/discovery-queue-store.js";
 import { bootGithubToken } from "../server/github-token.js";
 import { installGracefulShutdown } from "../server/graceful-shutdown.js";
+import { guidanceMarketFor } from "../server/guidance-route.js";
 import { heldActivity, heldOrderOrigins } from "../server/held-activity.js";
 import { ladderEvidenceReader } from "../server/ladder-evidence.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
@@ -358,6 +359,14 @@ async function main(): Promise<void> {
     // The same per-participant resolver the server config gets below — the recommender tool reads
     // its chain through the member's OWN linked options client, never a shared one.
     optionsClientFor: (id) => clientFor(id, dataSource.optionsClientFactory),
+    // #7547 "stage a trade for NVDA": the guidance route's own market read, through the member's
+    // own client. `dashboardConfig` is declared below; this runs per question, long after boot.
+    suggestMarketFor: (id, symbol) => {
+      const client = clientFor(id, dataSource.optionsClientFactory);
+      return client
+        ? guidanceMarketFor(client, dashboardConfig, id, symbol)
+        : Promise.resolve(undefined);
+    },
   });
 
   // Alert delivery (#3407 P4 slice 3) — the member's own switch, durable; plus the two triggers
