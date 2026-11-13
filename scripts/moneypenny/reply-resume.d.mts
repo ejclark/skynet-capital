@@ -36,3 +36,10 @@ export const RELAY_TRAILER_OPENER: string;
 
 /** Whether a comment body carries the relay trailer. */
 export function isRelayedFollowup(body: unknown): boolean;
+
+/** The sentence that ends the relay trailer on a follow-up the app held out of the build queue
+ *  for the filing check (#7548). */
+export const RECHECK_MARK: string;
+
+/** Whether a relayed follow-up ENDS with the held-for-the-filing-check trailer. */
+export function isHeldForRecheck(body: unknown): boolean;

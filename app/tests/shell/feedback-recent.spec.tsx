@@ -279,25 +279,25 @@ describe("RecentFeedback — what a follow-up says it did", () => {
 
   // One line per outcome the server can answer — each says only what actually happened.
   it.each([
-    ["restarted", /the build starts again/],
+    ["rechecking", /checked again with your follow-up before it's built/],
     ["backlog", /it builds once it's picked from the queue/],
     ["held", /the build waits on a person first/],
     ["building", /it's being built right now/],
-    ["blocked", /starts once the issues it waits on close/],
     ["closed", /This one is closed, so nothing rebuilds from it/],
-    ["stranded", /the build couldn't be restarted/],
   ])("says what a %s follow-up did", async (outcome, line) => {
     sendFollowup({ ok: true, url: "https://github.com/x/y/issues/7", outcome });
     expect(await screen.findByText(line)).toBeInTheDocument();
-    if (outcome !== "restarted") {
-      expect(screen.queryByText(/build starts again|re-triggers/)).not.toBeInTheDocument();
+    if (outcome !== "rechecking") {
+      expect(screen.queryByText(/checked again|re-triggers/)).not.toBeInTheDocument();
     }
     if (outcome !== "backlog") {
       expect(screen.queryByText(/picked from the queue/)).not.toBeInTheDocument();
     }
   });
 
-  it.each([["unchanged"], [undefined], ["something-new"]])(
+  // `restarted`, `blocked` and `stranded` were outcomes before #7548: an older server's answer
+  // promises nothing past the comment.
+  it.each([["unchanged"], [undefined], ["something-new"], ["restarted"], ["stranded"]])(
     "promises nothing past the comment when the outcome is %s",
     async (outcome) => {
       sendFollowup({ ok: true, url: "https://github.com/x/y/issues/7", outcome });

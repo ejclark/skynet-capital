@@ -73,16 +73,18 @@ in code — only as a host secret, exactly like the Alpaca keys.
    keep in sync across a deploy.
 6. Each row also offers a **Follow up** disclosure — a member can add more detail to something
    they already filed without leaving the app. It posts a GitHub comment (never edits the original
-   issue body, which the build lane parses). On a filing that is already `ready` it also restarts
-   the build by removing and re-adding `ready` — the label that starts the claim (#3912), the
-   claim lease making the re-label a safe retry. A filing still in Backlog gets the comment only,
-   and the member is told it builds once it's picked from the queue: a follow-up never adds `ready`,
-   which would skip the backlog gate below. The one exception is a filing the filing check parked on
-   `needs-info` (below): the follow-up re-runs that check, which may ready it (#7544). Nor does it cycle `ready` on a filing the claim's pull
-   rule (`notPullableReason`) refuses — closed, parked on someone, already `in-progress`,
-   `needs-session`, or blocked — and the member's line names which (#5848). If `ready` comes off
-   and won't go back on after one retry, the server logs the issue number (`[feedback-followup]`)
-   so someone can re-add it by hand. Deliberately routed through
+   issue body, which the build lane parses). On a filing that is `ready` and not yet being built,
+   it first takes `ready` off and never puts it back itself: the filing check re-judges the filing
+   with the follow-up in it, exactly as a fresh filing, and re-applies `ready` only if it is still
+   clear (#7548). Before that, the follow-up re-added `ready` and the build read it unchecked, so a
+   small clear ask could carry a large one past every check. A hold that fails posts nothing; a
+   comment that fails after the hold puts `ready` back (one retry, then the server logs the issue
+   number, `[feedback-followup]`, for someone to re-add it by hand). A filing still in Backlog gets
+   the comment only, and the member is told it builds once it's picked from the queue: a follow-up
+   never adds `ready`, which would skip the backlog gate below. The one exception is a filing the
+   filing check parked on `needs-info` (below): the follow-up re-runs that check, which may ready
+   it (#7544). A filing a build already holds (`in-progress`) or one parked on someone keeps its
+   labels, and the member's line names which (#5848). Deliberately routed through
    this structured, envelope-bound lane rather than the free-form `claude.yml` comment-steering
    lane — see `src/server/feedback-followup.ts` for why. Ownership is checked against the member's
    own logged filings before anything posts.

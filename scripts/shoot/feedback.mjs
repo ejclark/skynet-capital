@@ -4,7 +4,7 @@
 //   · active — the default view, shipped filings hidden (#1308)
 //   · all    — the toggle flipped, shipped filings revealed with 🚀 and the version stamp (#1312)
 // plus a phone frame at 390, where the toggle's words must survive (#5150), and two phone frames of
-// a sent follow-up — one that restarted a `ready` filing's build, one still in Backlog (#5848).
+// a sent follow-up — one held from the build for the re-check (#7548), one still in Backlog (#5848).
 //
 // This is the harness's first use (#1327): #1308 and #1312 both waived their fridge picture with
 // "no authed /feedback shoot script exists for this repo", which is the cost the consolidation was
@@ -66,7 +66,7 @@ const feedback = {
 };
 
 // What the follow-up endpoint answers — flipped between the two follow-up frames (#5848).
-let followupOutcome = "restarted";
+let followupOutcome = "rechecking";
 
 const { page, origin, shoot, close } = await openShell({
   name: "feedback",

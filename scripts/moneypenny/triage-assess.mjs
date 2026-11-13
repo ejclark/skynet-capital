@@ -16,8 +16,11 @@
 // member where they stand", so it is the SAME rule on a different clock, not a looser rule.
 //
 // WHAT RUNS WHERE. `moneypenny-events.yml` asks `--intent` on the `feedback` label event (a new
-// filing) and on an app-relayed follow-up to a filing this check parked on `needs-info` (the member
-// iterating). The judge and the two refuters each run on their OWN runner with a read-only token and
+// filing), on an app-relayed follow-up to a filing this check parked on `needs-info` (the member
+// iterating), and on an app-relayed follow-up the app HELD out of the build: a `ready` filing no
+// build had claimed, which the app took `ready` off before posting (#7548,
+// src/server/feedback-followup.ts). That last one is judged as a fresh filing, so a small ask that
+// readied itself cannot carry a large one past these checks in a follow-up. The judge and the two refuters each run on their OWN runner with a read-only token and
 // hand back one JSON blob as a job output; `--post` runs on a fresh runner, holds the App token, and
 // computes "clear" from the four checks itself, never from a session's summary (clear-path-flip.js's
 // rule). Every string a session wrote is flattened and capped before it is posted (`clean`), and the
@@ -43,7 +46,7 @@ import { appendLedgerRows } from "../pr-review/ledger.mjs";
 import { ensureGhToken, ghRest, ghRestAll, sh } from "./gh.mjs";
 import { FOOTER, LABELS, labelNames, parkedBy } from "./labels.mjs";
 import { isClaudeComment } from "./plan-claim.mjs";
-import { isRelayedFollowup } from "./reply-resume.mjs";
+import { isHeldForRecheck, isRelayedFollowup } from "./reply-resume.mjs";
 import { workGate } from "./work-gate.mjs";
 
 export const CHECKS = ["criteria", "size", "noFork", "notBlocked"];
@@ -63,6 +66,10 @@ const no = (reason) => ({ assess: false, reason });
  * `followup` — an app-relayed follow-up on a member filing parked `needs-info` and never readied:
  * the only question open on such a filing is this check's own (the build lane asks only on `ready`
  * filings, and reply-resume.mjs already refuses to let a relayed reply ready one).
+ * `filing` again — an app-relayed follow-up whose trailer ENDS with the held mark (#7548): the app
+ * took `ready` off an unclaimed filing before posting it, and this check re-judges it exactly as a
+ * fresh filing (the same outcome comment, the same labels). Only the app ends a body with the mark,
+ * so a follow-up on a Backlog filing never re-rolls the judge.
  */
 export function assessIntent(ctx, gate) {
   const issue = ctx?.payload?.issue;
@@ -97,12 +104,17 @@ export function assessIntent(ctx, gate) {
     if (ctx.action !== "created") return no("not a new comment");
     if (isClaudeComment(body)) return no("a session's own comment never re-assesses (loop guard)");
     if (!isRelayedFollowup(body)) return no("not a follow-up the app relayed from the member");
-    if (!has(LABELS.needsInfo.name)) {
-      return no(`#${issue.number} is not waiting on the member (no needs-info)`);
+    if (has(LABELS.needsInfo.name)) {
+      const other = parkedBy(names).filter((l) => l !== LABELS.needsInfo.name);
+      if (other.length) return no(`#${issue.number} is also parked by ${other.join(", ")}`);
+      mode = "followup";
+    } else if (isHeldForRecheck(body)) {
+      const parked = parkedBy(names);
+      if (parked.length) return no(`#${issue.number} is parked by ${parked.join(", ")}`);
+      mode = "filing";
+    } else {
+      return no(`#${issue.number} is not waiting on the member (no needs-info) and was not held`);
     }
-    const other = parkedBy(names).filter((l) => l !== LABELS.needsInfo.name);
-    if (other.length) return no(`#${issue.number} is also parked by ${other.join(", ")}`);
-    mode = "followup";
   } else {
     return no(`event ${ctx.eventName} never starts an assessment`);
   }
