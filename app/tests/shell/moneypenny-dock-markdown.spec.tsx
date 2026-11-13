@@ -9,7 +9,7 @@ import { historySheet, mount } from "./moneypenny-dock-harness";
 
 function show(messages: MpMessage[]) {
   mount();
-  act(() => useMoneypenny.setState({ history: true, messages }));
+  act(() => useMoneypenny.setState({ expanded: true, messages }));
   return historySheet();
 }
 

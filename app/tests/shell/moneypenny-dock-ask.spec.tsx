@@ -26,7 +26,7 @@ describe("asking from outside the dock", () => {
     timing.bindWaitMs = 5000;
     localStorage.clear();
     useMoneypenny.getState().reset();
-    useMoneypenny.setState({ member: undefined, history: false });
+    useMoneypenny.setState({ member: undefined, expanded: false });
     // The onboarding read hangs until a case answers it; every other route is unwired (404),
     // so the live chat is off and she answers from her script.
     let release: (r: Response) => void = () => undefined;
@@ -47,17 +47,13 @@ describe("asking from outside the dock", () => {
   const mount = () => mountDock(<AskBox />);
   const userLines = () => useMoneypenny.getState().messages.filter((m) => m.role === "user");
 
-  it("shows her typing line at once and keeps the question, opening nothing", () => {
+  it("shows the question and her typing beat in the pane at once, at its size", () => {
     mount();
     fireEvent.click(screen.getByRole("button", { name: QUICK }));
     // no awaits: the onboarding read has not answered
-    expect(screen.getByRole("button", { name: /^Moneypenny: typing ···/ })).toBeInTheDocument();
     expect(useMoneypenny.getState().pending).toBe(QUICK);
-    expect(
-      screen.queryByRole("region", { name: "Conversation with Moneypenny" }),
-    ).not.toBeInTheDocument();
+    expect(useMoneypenny.getState().expanded).toBe(false);
     // the question is already in the conversation, drawn as the member's own line
-    act(() => useMoneypenny.getState().openHistory());
     expect(inHistory().getByText(QUICK)).toHaveClass("mp-user");
     expect(inHistory().getByText("Moneypenny · typing ···")).toBeInTheDocument();
   });
@@ -73,7 +69,7 @@ describe("asking from outside the dock", () => {
     expect(userLines().map((m) => m.text)).toEqual(["what's moving today?"]);
     expect(localStorage.getItem(keyFor("member-1"))).toContain("what's moving today?");
     expect(localStorage.getItem(keyFor("anon"))).toBeNull();
-    act(() => useMoneypenny.setState({ history: true }));
+    act(() => useMoneypenny.setState({ expanded: true }));
     expect(inHistory().getAllByText("what's moving today?")).toHaveLength(1);
   });
 

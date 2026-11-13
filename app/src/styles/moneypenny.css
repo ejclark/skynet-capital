@@ -1,6 +1,6 @@
 /* MONEYPENNY'S DOCK (#7487 slice 2, `shell/moneypenny-dock.tsx`) — one bar across the bottom of
    every page, sticky in the page's flow (the last row of a page is never trapped under it), its
-   contents lined up with the stage. Her History rises from its top edge. Tokens only; every state
+   contents lined up with the stage. Her conversation lives in it, compact or expanded (2026-11-13). Tokens only; every state
    is a shape and a word as well as a tint (BRAND.md → Accessibility), hit targets 44px. The
    message, thread and screenshot styles below are the rail's, kept for History. */
 
@@ -35,16 +35,28 @@
   .shell-app:has(.frame--tower) .mp-dock-inner {
     padding-right: calc(var(--gutter) + 384px + 24px);
   }
-  .shell-app:has(.frame--tower) .mp-history {
-    right: calc(var(--gutter) + 384px + 24px);
-  }
 }
 
-/* 1 · her latest line */
-.mp-dock-line {
+/* 1 · the conversation — one pane, compact or expanded (Eric, 2026-11-13: "The beginning of a
+   response should be visible without scrolling… the fixed height message isn't enough real estate").
+   In the dock's flow, never over the page: compact holds about eight of her lines, enough for the
+   start of an answer; expanded takes most of the window for reading back. The list anchors her
+   newest reply's first line at its top (moneypenny-dock.tsx), so either size opens on her start. */
+.mp-convo {
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.mp-convo-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px 0 10px;
+  border-bottom: 1px solid var(--border);
 }
 .mp-dock-disc {
   flex: none;
@@ -58,58 +70,79 @@
   color: var(--accent);
   font-size: 13px;
 }
-.mp-dock-latest {
-  flex: 1;
-  min-width: 0;
-  min-height: 37px;
-  padding: 0;
+.mp-convo-title {
+  margin-right: auto;
+  padding-left: 4px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mp-convo-act {
+  min-height: 44px;
+  padding: 0 10px;
   border: 0;
-  position: relative;
   background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12.5px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.mp-convo-act:hover:not(:disabled) {
+  color: var(--text);
+}
+.mp-convo-act:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+/* on a phone the expanded header needs its width for Copy, New conversation and Collapse; the
+   ✦ disc already says whose conversation it is, so the turn count steps aside */
+@media (max-width: 480px) {
+  .mp-convo[data-size="expanded"] .mp-convo-title {
+    display: none;
+  }
+  .mp-convo[data-size="expanded"] .mp-convo-act:first-of-type {
+    margin-left: auto;
+  }
+}
+/* the size toggle is a word and a chevron, never a tint alone (BRAND.md → Accessibility) */
+.mp-convo-size {
+  color: var(--text);
+}
+.mp-convo .mp-list {
+  /* offsetTop of an entry is measured from here, which is what the anchor reads */
+  position: relative;
+  padding: 10px 14px 12px;
+  transition: max-height var(--dur-quick) var(--ease-spatial);
+}
+.mp-convo[data-size="compact"] .mp-list {
+  max-height: min(168px, 26dvh);
+}
+.mp-convo[data-size="expanded"] .mp-list {
+  max-height: min(640px, 62dvh);
+}
+@media (prefers-reduced-motion: reduce) {
+  .mp-convo .mp-list {
+    transition: none;
+  }
+}
+.mp-convo-empty {
+  margin: 0;
   color: var(--voice);
   font-family: var(--mono);
   font-size: 11.5px;
   letter-spacing: 0.02em;
   line-height: 18.4px;
-  text-align: left;
-  cursor: pointer;
-  /* two lines, then an ellipsis: the rest is one tap away in History */
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  overflow: hidden;
 }
-.mp-dock-history {
+.mp-convo .mp-disclosure {
   flex: none;
-  min-height: 32px;
-  padding: 0 10px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--muted);
-  font: inherit;
-  font-size: 11px;
-  white-space: nowrap;
-  cursor: pointer;
-  position: relative;
-}
-/* her line is drawn two lines tall, 37px; its hit area reaches 44 */
-.mp-dock-latest::after {
-  content: "";
-  position: absolute;
-  inset: -4px 0 -3px;
-}
-/* 32px drawn, 44px to the thumb */
-.mp-dock-history::after {
-  content: "";
-  position: absolute;
-  inset: -6px 0;
-}
-.mp-dock-history:hover,
-.mp-dock-history[aria-expanded="true"] {
-  color: var(--text);
-  border-color: var(--text);
+  padding: 6px 14px 8px;
+  border-top: 1px solid var(--border);
 }
 
 /* 2 · your moves — one row that scrolls sideways on a phone */
@@ -237,68 +270,6 @@
   cursor: not-allowed;
 }
 
-/* HISTORY — rises from the dock's top edge, inside the dock so the Eye's view area (eye-light)
-   clips at its top while it is open. 340px, never more than half a phone's height. */
-@keyframes mp-history-in {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-}
-.mp-history {
-  position: absolute;
-  bottom: 100%;
-  left: var(--gutter);
-  right: var(--gutter);
-  height: min(340px, 50dvh);
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--border);
-  border-bottom: 0;
-  border-radius: 14px 14px 0 0;
-  background: var(--surface-2);
-  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.5);
-  /* a sheet slides from its edge (motion.css's grammar), on the house's quick token */
-  animation: mp-history-in var(--dur-quick) var(--ease-spatial) both;
-}
-.mp-history-head {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 8px 4px 14px;
-  border-bottom: 1px solid var(--border);
-}
-.mp-history-title {
-  margin-right: auto;
-  font-family: var(--mono);
-  font-size: 10.5px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.mp-history-act {
-  min-height: 44px;
-  padding: 0 10px;
-  border: 0;
-  background: none;
-  color: var(--muted);
-  font: inherit;
-  font-size: 12.5px;
-  cursor: pointer;
-}
-.mp-history-act:hover:not(:disabled) {
-  color: var(--text);
-}
-.mp-history-act:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-.mp-history .mp-disclosure {
-  flex: none;
-  padding: 6px 14px 8px;
-  border-top: 1px solid var(--border);
-}
 .mp-entry {
   display: flex;
   flex-direction: column;

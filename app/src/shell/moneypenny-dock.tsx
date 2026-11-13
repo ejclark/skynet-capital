@@ -4,7 +4,7 @@ import type { ReactElement } from "react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { myConvictionsKey } from "../live/member-convictions";
 import { formatTranscript, type MpMessage, useMoneypenny } from "../live/moneypenny";
-import { dockText, latestLine, type Move, movesFor } from "../live/moneypenny-moves";
+import { latestLine, type Move, movesFor } from "../live/moneypenny-moves";
 import { linesOf } from "../live/moneypenny-threads";
 import { stampTagged } from "../live/page-keys";
 import { taggedKeys, taggedLine, usePromptTags } from "../live/prompt-tags";
@@ -14,20 +14,21 @@ import { ThreadBar, ThreadIndex } from "./rail-threads";
 
 /**
  * MONEYPENNY'S DOCK (#7487 slice 2; the handoff's "Moneypenny is a dock at the bottom that drives the
- * page without covering it"). It replaces the right rail: one bar across the bottom of every page,
- * in the page's flow, so it never hides the last row of a page (D1 on #7487). Top to bottom:
+ * page without covering it"). One bar across the bottom of every page, in the page's flow, so it
+ * never hides the last row of a page (D1 on #7487). Top to bottom:
  *
- *   1. HER LATEST LINE — the ✦ disc, then her words in mono accent, clamped to two lines, as plain
- *      text (D4); a tap opens History. "History N ⌃" sits beside it.
- *   2. YOUR MOVES — her current choices as 44px buttons (`live/moneypenny-moves.ts`). Choices are
- *      never drawn inside a message, so the rail's pivot line under her answer is a move here.
+ *   1. THE CONVERSATION — always in the dock, never a sheet over it (Eric, 2026-11-13: "i have to
+ *      scroll up through the history to read the beginning of the response most all of the time…
+ *      Consolidate the chat and history windows. The ability to expand/collapse window size is
+ *      enough"). Compact by default; expanded on the member's ask, remembered per browser. When her
+ *      answer lands, the pane shows its FIRST line, not its last: the list anchors the top of her
+ *      newest reply and stays there while it streams, so reading starts where she starts.
+ *   2. YOUR MOVES — her current choices as 44px buttons (`live/moneypenny-moves.ts`).
  *   3. THE BOX — one line, Enter sends, attach a screenshot beside it (`mp-composer.tsx`, D5). It
  *      never changes width or position.
  *
- * HISTORY rises from the dock's top edge: the whole conversation (her links live here), the side
- * threads, copy and new conversation, and the standing disclosure the companion is told the UI
- * carries. Closed by default; closed on every navigation (a `?w=` window change counts) and by
- * Escape inside the dock (D2). Asking her never opens it: her answer arrives in the latest line.
+ * This replaces the two-line "latest line" and the History sheet it opened: the line repeated the
+ * start of her answer, and the sheet opened at its end, so the start was never on screen.
  *
  * Side effects carried over from the rail: after a filing it invalidates the queries that carry the
  * feedback gate, after a view is saved from her card it invalidates the member's convictions, and on
@@ -37,19 +38,23 @@ import { ThreadBar, ThreadIndex } from "./rail-threads";
 
 const dayOf = (at: number | undefined) => (at ? new Date(at).toDateString() : undefined);
 
-function History({
+/** Where a new reply's first line should sit: its entry's top, less a breath of the list's padding. */
+export const anchorTop = (entryTop: number): number => Math.max(0, entryTop - 8);
+
+function Conversation({
   messages,
   waiting,
   busy,
   pending,
-  onClose,
+  expanded,
+  onToggle,
 }: {
   readonly messages: readonly MpMessage[];
   readonly waiting: boolean;
   readonly busy: boolean;
   readonly pending: string | undefined;
-  /** Close History from inside it, returning focus to the line that opened it. */
-  readonly onClose: () => void;
+  readonly expanded: boolean;
+  readonly onToggle: () => void;
 }): ReactElement {
   const thread = useMoneypenny((s) => s.thread);
   const disclosure = useMoneypenny((s) => s.disclosure);
@@ -57,15 +62,36 @@ function History({
   const [copied, setCopied] = useState(false);
   const list = useRef<HTMLDivElement>(null);
   const atEnd = useRef(true);
+  // 0, so the first render anchors too: a page load opens on the start of her latest reply
+  const seen = useRef(0);
+  const sizeWas = useRef(expanded);
   const last = messages.at(-1);
 
-  // Follow the conversation when a line lands or grows — but a member who scrolled up to read stays
-  // where they were (#5182). Keyed by the last line's length, not the array, which is new each render.
+  // WHERE THE LIST SITS (Eric, 2026-11-13). A new reply of hers: its first line goes to the top of
+  // the pane, and it stays put while the reply streams in, so the member reads from the start
+  // rather than scrolling back up to find it. Their own line and her typing beat: the end, so they
+  // see what they sent. Anything else (her moves returning, a stream growing) leaves the list where
+  // the member has it (#5182).
   // biome-ignore lint/correctness/useExhaustiveDependencies: these ARE the trigger
   useLayoutEffect(() => {
     const el = list.current;
-    if (el && atEnd.current) el.scrollTop = el.scrollHeight;
-  }, [messages.length, last?.text.length, waiting, pending]);
+    if (!el) return;
+    const grew = messages.length > seen.current;
+    seen.current = messages.length;
+    // a size change re-anchors too: the list's height moved under the member's reading position
+    const resized = sizeWas.current !== expanded;
+    sizeWas.current = expanded;
+    if ((grew || resized) && last?.role === "mp") {
+      const entries = el.querySelectorAll<HTMLElement>(".mp-entry");
+      const newest = entries[messages.length - 1];
+      if (newest) el.scrollTop = anchorTop(newest.offsetTop);
+      atEnd.current = false;
+      return;
+    }
+    // the member just sent, or she is typing: their own line and her beat are at the end
+    if (waiting || pending !== undefined) el.scrollTop = el.scrollHeight;
+    else if (grew && atEnd.current) el.scrollTop = el.scrollHeight;
+  }, [messages.length, waiting, pending, expanded]);
   const onScroll = () => {
     const el = list.current;
     // a couple of px of slack: fractional layouts rarely land the end on an exact zero
@@ -84,36 +110,61 @@ function History({
   };
 
   return (
-    <section className="mp-history" aria-label="Conversation with Moneypenny">
-      <header className="mp-history-head">
-        <span className="mp-history-title">
+    <section
+      className="mp-convo"
+      data-size={expanded ? "expanded" : "compact"}
+      aria-label="Conversation with Moneypenny"
+    >
+      <header className="mp-convo-head">
+        <span className="mp-dock-disc" aria-hidden="true">
+          ✦
+        </span>
+        <span className="mp-convo-title">
           {thread
             ? `Thread · ${String(messages.length)} turns`
-            : `Conversation · ${String(messages.length)} turns`}
+            : `Moneypenny · ${String(messages.length)} turns`}
         </span>
+        {expanded ? (
+          <>
+            <button
+              type="button"
+              className="mp-convo-act"
+              disabled={messages.length === 0}
+              onClick={copy}
+            >
+              {copied ? "Copied" : "Copy"}
+            </button>
+            <button
+              type="button"
+              className="mp-convo-act"
+              // It forgets every conversation, threads included, so it is offered on the main one only.
+              disabled={busy || thread !== undefined}
+              onClick={() => void newConversation()}
+            >
+              New conversation
+            </button>
+          </>
+        ) : null}
         <button
           type="button"
-          className="mp-history-act"
-          disabled={messages.length === 0}
-          onClick={copy}
+          className="mp-convo-act mp-convo-size"
+          aria-expanded={expanded}
+          onClick={onToggle}
         >
-          {copied ? "Copied" : "Copy"}
-        </button>
-        <button
-          type="button"
-          className="mp-history-act"
-          // It forgets every conversation, threads included, so it is offered on the main one only.
-          disabled={busy || thread !== undefined}
-          onClick={() => void newConversation()}
-        >
-          New conversation
-        </button>
-        <button type="button" className="mp-history-act" onClick={onClose}>
-          Close <span aria-hidden="true">⌄</span>
+          {expanded ? "Collapse" : "Expand"} <span aria-hidden="true">{expanded ? "⌄" : "⌃"}</span>
         </button>
       </header>
-      {thread ? <ThreadBar thread={thread} disabled={busy} /> : <ThreadIndex disabled={busy} />}
+      {thread ? (
+        <ThreadBar thread={thread} disabled={busy} />
+      ) : expanded ? (
+        <ThreadIndex disabled={busy} />
+      ) : null}
       <div className="mp-list" ref={list} aria-live="polite" onScroll={onScroll}>
+        {messages.length === 0 && pending === undefined && !waiting ? (
+          <p className="mp-convo-empty">
+            Ask me anything about the market, your account or this page.
+          </p>
+        ) : null}
         {messages.map((m, i) => {
           const day = dayOf(m.at);
           const prev = i > 0 ? dayOf(messages[i - 1]?.at) : undefined;
@@ -132,7 +183,7 @@ function History({
         ) : null}
         {waiting ? <div className="mp-typing num">Moneypenny · typing ···</div> : null}
       </div>
-      {disclosure ? <p className="mp-disclosure">{disclosure}</p> : null}
+      {disclosure && expanded ? <p className="mp-disclosure">{disclosure}</p> : null}
     </section>
   );
 }
@@ -145,7 +196,7 @@ export function MoneypennyDock(): ReactElement {
   const streaming = useMoneypenny((s) => s.streaming);
   const pending = useMoneypenny((s) => s.pending);
   const flow = useMoneypenny((s) => s.flow);
-  const history = useMoneypenny((s) => s.history);
+  const expanded = useMoneypenny((s) => s.expanded);
   const parkedHere = useMoneypenny((s) => s.parkedIn === s.thread?.key);
   const draft = useMoneypenny((s) => parkedHere && s.draft !== undefined);
   const view = useMoneypenny((s) => parkedHere && s.conviction !== undefined);
@@ -165,15 +216,14 @@ export function MoneypennyDock(): ReactElement {
   // What the last ✎ did, said aloud: focus lands in the box, whose name stays "Message Moneypenny".
   const [tagNews, setTagNews] = useState("");
   const hydrate = useMoneypenny((s) => s.hydrate);
-  const toggleHistory = useMoneypenny((s) => s.toggleHistory);
-  const closeHistory = useMoneypenny((s) => s.closeHistory);
+  const toggleExpanded = useMoneypenny((s) => s.toggleExpanded);
+  const collapse = useMoneypenny((s) => s.collapse);
   const leavePage = useMoneypenny((s) => s.leavePage);
   const closeThread = useMoneypenny((s) => s.closeThread);
   const router = useRouter();
   const href = useRouterState({ select: (s) => s.location.href });
   const queryClient = useQueryClient();
   const box = useRef<HTMLInputElement>(null);
-  const opener = useRef<HTMLButtonElement>(null);
   const dock = useRef<HTMLDivElement>(null);
   const waiting = typing || pending !== undefined;
   const busy = waiting || streaming;
@@ -195,8 +245,8 @@ export function MoneypennyDock(): ReactElement {
     void hydrate();
   }, [hydrate]);
 
-  // Every navigation — a new page, a new window (`?w=`), a link of hers — folds History away and
-  // hands a side thread back to the main conversation.
+  // Every navigation — a new page, a new window (`?w=`), a link of hers — hands a side thread back
+  // to the main conversation. The pane keeps its size.
   // biome-ignore lint/correctness/useExhaustiveDependencies: `href` IS the trigger
   useEffect(() => {
     leavePage();
@@ -217,12 +267,6 @@ export function MoneypennyDock(): ReactElement {
       root.style.removeProperty("--dock-h");
     };
   }, []);
-
-  /** Close History from the dock and give focus back to the line that opens it. */
-  const close = () => {
-    closeHistory();
-    opener.current?.focus();
-  };
 
   // "Talk to Moneypenny" from a page: the box takes focus (`meetMoneypenny`).
   useEffect(() => {
@@ -277,22 +321,16 @@ export function MoneypennyDock(): ReactElement {
     goToPlace(router, m.href);
   };
 
-  const line = waiting
-    ? "typing ···"
-    : latest
-      ? dockText(latest)
-      : "ask me anything about the market, your account or this page.";
-
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: Escape only; every action here has its own control
     <div
       className="mp-dock"
       onKeyDown={(e) => {
         if (e.key !== "Escape") return;
-        // Escape folds History first; with History closed, it drops every ✎ tag.
-        if (history) {
+        // Escape drops an expanded pane to compact first; when compact, it drops every ✎ tag.
+        if (expanded) {
           e.stopPropagation();
-          close();
+          collapse();
         } else if (tags.length > 0) {
           e.stopPropagation();
           clearTags();
@@ -303,46 +341,16 @@ export function MoneypennyDock(): ReactElement {
       ref={dock}
     >
       <aside className="mp-dock-inner" aria-label="Moneypenny">
-        <div className="mp-dock-line">
-          <span className="mp-dock-disc" aria-hidden="true">
-            ✦
-          </span>
-          <button
-            ref={opener}
-            type="button"
-            className="mp-dock-latest"
-            aria-expanded={history}
-            // aria-expanded says open or closed; the name is her words and what the line is for.
-            aria-label={`Moneypenny: ${line.replace(/[.\s]+$/, "")} — the conversation`}
-            onClick={toggleHistory}
-          >
-            {line}
-          </button>
-          <button
-            type="button"
-            className="mp-dock-history"
-            aria-expanded={history}
-            onClick={toggleHistory}
-          >
-            History {String(messages.length)} <span aria-hidden="true">{history ? "⌄" : "⌃"}</span>
-          </button>
-        </div>
-        {/* After its triggers in the DOM, so Tab from them reaches it; drawn above the dock by CSS. */}
-        {history ? (
-          <History
-            messages={messages}
-            waiting={waiting}
-            busy={busy}
-            pending={pending}
-            onClose={close}
-          />
-        ) : null}
+        <Conversation
+          messages={messages}
+          waiting={waiting}
+          busy={busy}
+          pending={pending}
+          expanded={expanded}
+          onToggle={toggleExpanded}
+        />
         <p className="visually-hidden" aria-live="polite">
           {tagNews}
-        </p>
-        {/* Her answer, said aloud while History is closed (History's list is its own live region). */}
-        <p className="visually-hidden" aria-live="polite">
-          {history || waiting || !latest ? "" : line}
         </p>
         {moves.length > 0 || tags.length > 0 ? (
           <ul className="mp-moves" aria-label="Your moves">

@@ -60,7 +60,7 @@ async function mountAt(path: string) {
 }
 
 const say = (text: string) =>
-  act(() => useMoneypenny.setState({ history: true, messages: [{ role: "mp", text }] }));
+  act(() => useMoneypenny.setState({ expanded: true, messages: [{ role: "mp", text }] }));
 
 describe("MoneypennyDock · places she names", () => {
   let restore: (() => void) | undefined;
@@ -82,25 +82,26 @@ describe("MoneypennyDock · places she names", () => {
     expect(screen.queryByText(/\[open Trade\]/)).not.toBeInTheDocument();
   });
 
-  const historyShown = () => screen.queryByRole("region", { name: "Conversation with Moneypenny" });
+  const size = () =>
+    screen.getByRole("region", { name: "Conversation with Moneypenny" }).getAttribute("data-size");
 
-  it("at desktop width, takes you there, folds History away and keeps the dock", async () => {
+  it("at desktop width, takes you there, drops the pane to compact and keeps the dock", async () => {
     const router = await mountAt("/app/");
     await say("Moneypenny · [open Trade](/trade) now");
     fireEvent.click(inHistory().getByRole("link", { name: "open Trade" }));
     expect(await screen.findByText("the ticket")).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/trade");
-    expect(historyShown()).not.toBeInTheDocument();
+    expect(size()).toBe("compact");
     expect(screen.getByRole("complementary", { name: "Moneypenny" })).toBeInTheDocument();
   });
 
-  it("on a phone, the same: History folds away so the place shows, the dock stays", async () => {
+  it("on a phone, the same: the pane drops to compact so the place shows, the dock stays", async () => {
     restore = phone();
     await mountAt("/app/");
     await say("Moneypenny · [open Trade](/trade) now");
     fireEvent.click(inHistory().getByRole("link", { name: "open Trade" }));
     expect(await screen.findByText("the ticket")).toBeInTheDocument();
-    expect(historyShown()).not.toBeInTheDocument();
+    expect(size()).toBe("compact");
     expect(screen.getByRole("complementary", { name: "Moneypenny" })).toBeInTheDocument();
   });
 

@@ -71,12 +71,9 @@ async function mount() {
 function layOut(): () => void {
   const rects = Element.prototype.getClientRects;
   const box = Element.prototype.getBoundingClientRect;
-  Element.prototype.getClientRects = function () {
-    return [{}] as unknown as DOMRectList;
-  };
-  Element.prototype.getBoundingClientRect = function () {
-    return { top: 300, left: 400, width: 600, height: 40, bottom: 340, right: 1000 } as DOMRect;
-  };
+  Element.prototype.getClientRects = () => [{}] as unknown as DOMRectList;
+  Element.prototype.getBoundingClientRect = () =>
+    ({ top: 300, left: 400, width: 600, height: 40, bottom: 340, right: 1000 }) as DOMRect;
   return () => {
     Element.prototype.getClientRects = rects;
     Element.prototype.getBoundingClientRect = box;

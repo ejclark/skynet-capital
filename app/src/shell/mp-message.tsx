@@ -39,8 +39,7 @@ export function goToPlace(router: ReturnType<typeof useRouter>, path: string): v
 }
 
 /** A place she names, as a link (#5238): an in-app navigation, so the thread survives the move.
- *  At ≤860 the rail covers the page, so the tap closes it and the place shows; wider, the rail
- *  stays open beside it. A modified click (new tab, new window) keeps the browser's own handling
+ *  The tap collapses the dock's conversation to its compact size, so the place shows. A modified click (new tab, new window) keeps the browser's own handling
  *  — the `href` is the real URL — and with no router mounted the plain href is the whole link. */
 export function PlaceLink({
   path,
@@ -50,12 +49,11 @@ export function PlaceLink({
   readonly text: string;
 }): ReactElement {
   const router = useRouter({ warn: false });
-  const closeHistory = useMoneypenny((s) => s.closeHistory);
+  const collapse = useMoneypenny((s) => s.collapse);
   const onClick = (e: MouseEvent<HTMLAnchorElement>) => {
     if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-    // Her conversation folds away so the page she points at is in view (the dock also closes it on
-    // every navigation; a same-page landing fires none, so it closes here too).
-    closeHistory();
+    // Her conversation drops to its compact size so the page she points at is in view.
+    collapse();
     if (!router) return;
     e.preventDefault();
     goToPlace(router, path);
