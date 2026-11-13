@@ -22,6 +22,11 @@ import { run } from "../support/ship-run.js";
 // local verify on a Mac went red here while CI on Linux stayed green (2026-11-07).
 const TMP = realpathSync(tmpdir());
 
+// The board specs' commitlint stand-in drains stdin before it exits. An `exit 0` that never read
+// raced ship.sh's subject writer into SIGPIPE, and under pipefail a valid subject was refused as
+// "not a valid Conventional Commit" — under the full parallel verify only (#7555).
+const NPX_STUB = "#!/usr/bin/env bash\ncat >/dev/null\nexit 0\n";
+
 /**
  * The platter (#1343) — one held PR per cadence instead of one per protected change.
  *
@@ -484,7 +489,7 @@ printf '%s\\n__SHIP_HTTP__%s' "$out" "$code"
     const log = join(root, "curl.log");
     mkdirSync(bin);
     writeFileSync(join(bin, "curl"), STUB_CURL, { mode: 0o755 });
-    writeFileSync(join(bin, "npx"), "#!/usr/bin/env bash\nexit 0\n", { mode: 0o755 }); // commitlint
+    writeFileSync(join(bin, "npx"), NPX_STUB, { mode: 0o755 }); // commitlint
     writeFileSync(log, "");
     const env = hermeticGitEnv({
       GH_TOKEN: "test-token-never-used",
@@ -582,7 +587,7 @@ printf '%s\\n__SHIP_HTTP__200' "$out"
     const bin = join(root, "bin");
     mkdirSync(bin);
     writeFileSync(join(bin, "curl"), STUB_CURL, { mode: 0o755 });
-    writeFileSync(join(bin, "npx"), "#!/usr/bin/env bash\nexit 0\n", { mode: 0o755 });
+    writeFileSync(join(bin, "npx"), NPX_STUB, { mode: 0o755 });
     const env = hermeticGitEnv({
       GH_TOKEN: "test-token-never-used",
       PATH: `${bin}:${process.env.PATH ?? ""}`,
@@ -710,7 +715,7 @@ printf '%s\\n__SHIP_HTTP__200' "$out"
     const bin = join(root, "bin");
     mkdirSync(bin);
     writeFileSync(join(bin, "curl"), STUB_CURL, { mode: 0o755 });
-    writeFileSync(join(bin, "npx"), "#!/usr/bin/env bash\nexit 0\n", { mode: 0o755 });
+    writeFileSync(join(bin, "npx"), NPX_STUB, { mode: 0o755 });
     const env = hermeticGitEnv({
       GH_TOKEN: "test-token-never-used",
       PATH: `${bin}:${process.env.PATH ?? ""}`,
@@ -828,6 +833,15 @@ describe("ship platter — the source contract", () => {
 
   it("opens the platter held — never armed, whatever else changes around it", () => {
     expect(source).toMatch(/--body-file "\$bodyfile" --hold --no-verify/);
+  });
+
+  it("feeds commitlint a here-string, never a pipe pipefail can turn red (#7555)", () => {
+    const code = source
+      .split("\n")
+      .filter((l) => !l.trim().startsWith("#"))
+      .join("\n");
+    expect(code).not.toMatch(/\|\s*npx commitlint/);
+    expect(code).toMatch(/npx commitlint <<<"\$subject"/);
   });
 });
 
