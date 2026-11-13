@@ -543,6 +543,7 @@ jobs:
       contents: write # semantic-release: tags and the GitHub release
       issues: write # semantic-release: "released in" comments on closed issues
       pull-requests: write # semantic-release: the same comments on merged PRs
+      deployments: write # the production deployment marker (scripts/deploy-marker.mjs)
     outputs:
       # The image this push built and verified, for deploy-bots to reuse — one build per push,
       # the two apps provably on the same bits whenever both roll.
@@ -696,6 +697,14 @@ jobs:
         id: smoke
         run: bash scripts/smoke.sh https://skynet-capital.fly.dev
 
+      # THE PRODUCTION MARKER (Eric, 2026-11-13): a GitHub Deployment only when a release actually
+      # went out and passed smoke — not on the pushes the preflight skipped. Warning-only.
+      - name: Mark the production deployment
+        if: ${{ steps.smoke.conclusion == 'success' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/deploy-marker.mjs --env production --url https://skynet-capital.fly.dev --state success --description "dashboard released and smoke-tested"
+
       - name: Capture released image (for deploy-bots)
         id: released
         run: |
@@ -721,6 +730,13 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
+      # The history stays honest: a release that was rolled back is recorded as failed, never live.
+      - name: Mark the rolled-back release
+        if: ${{ failure() && (steps.deploy.conclusion == 'failure' || steps.smoke.conclusion == 'failure') }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/deploy-marker.mjs --env production --state failure --description "dashboard release failed and was rolled back"
+
   deploy-bots:
     name: release · deploy bots
     # The STATEFUL half of the deploy split: skynet-capital-bots redeploys ONLY when the push
@@ -745,6 +761,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read # checkout only — every deploy step authenticates to Fly, not GitHub
+      deployments: write # the production-bots deployment marker (scripts/deploy-marker.mjs)
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -869,6 +886,12 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN }}
 
+      - name: Mark the production-bots deployment
+        if: ${{ steps.smoke-bots.conclusion == 'success' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/deploy-marker.mjs --env production-bots --state success --description "bots released and smoke-tested"
+
       - name: Roll back bots to previous image
         # A rollback drops the GIT_SHA stamp (fly.toml env only), so the NEXT push's preflight
         # finds no baseline and fails open to deploying — the safe direction after a bad release.
@@ -881,3 +904,9 @@ jobs:
           bash scripts/bots-start-stopped.sh skynet-capital-bots
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN }}
+
+      - name: Mark the rolled-back bots release
+        if: ${{ failure() && (steps.deploy-bots.conclusion == 'failure' || steps.smoke-bots.conclusion == 'failure') }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/deploy-marker.mjs --env production-bots --state failure --description "bots release failed and was rolled back"
