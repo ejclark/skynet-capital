@@ -71,6 +71,14 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"The first MTS of FY2027 is forecastable to ±$42B from ten-month growth rates alone: the October 2026 deficit lands in $280–365B (FT-mts-october-2026-11-12-1)"** — added 2026-11-13 from the
+  [mts-october-2026-11-12 close-out](events/mts-october-2026-11-12.md). Printed **$404.06B**: receipts $368.94B (ex-customs −6.2% y/y against a +0.24% to +3% build) and outlays $773.00B (+12.2% against +5.17%).
+  Do not forecast a Monthly Treasury Statement deficit from trailing growth rates; use the DTS mapping, and register it alone with its own standard error.
+
+- **"The DTS-to-MTS mapping, averaged across four bias variants, brackets the October 2026 deficit in $345–395B (FT-mts-october-2026-11-12-4)"** — added 2026-11-13 from the
+  [mts-october-2026-11-12 close-out](events/mts-october-2026-11-12.md). Printed **$404.06B**, $9.1B over the ceiling; the interest-corrected fit alone said $387.5B (+$16.6B, +0.78 SE), while the three constant-bias variants blended into the $370B central missed by $34–62B.
+  Do not register a blend that includes a model the previous close-out refuted; one observation, and the fit is extrapolated at the floor of its range (n=11).
+
 - **"A single meeting-month cohort of Summary-of-Opinions Nikkei moves is sampling noise, so the 2026-11-10 bar lands at or below the cohort median of 1.264% (FT-boj-summary-of-opinions-2026-11-10-1)"** — added 2026-11-12 from the
   [boj-summary-of-opinions-2026-11-10 close-out](events/boj-summary-of-opinions-2026-11-10.md). The Nikkei 225 closed **+2.865%** (58,775.50 to 60,459.58; gap +1.02%) in a tape whose five prior sessions averaged 2.37%, after a +2.35% S&P session overnight. Do not register a fixed-threshold Tokyo bar against a BoJ document in a VIX-17+ regime without a vol-conditioned base rate; this is one kill on a median-threshold row, not evidence the Summary moves the index.
 
