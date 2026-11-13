@@ -43,6 +43,10 @@ describe("parseSuggestInput", () => {
       symbol: "CRWV",
       strategy: "covered-call",
     });
+    expect(parseSuggestInput({ underlying: "CRWV", strategy: "long-put" })).toEqual({
+      symbol: "CRWV",
+      strategy: "long-put",
+    });
   });
 
   it("refuses an option symbol or a strategy the engine does not run", () => {
@@ -86,6 +90,7 @@ describe("suggestionLink — the link the trade form fills itself from", () => {
   it("names the whole ticket: rung, symbol, strike, expiry, contracts, limit and tier", () => {
     const link = suggestionLink({
       type: "put",
+      side: "sell",
       symbol: "NVDA",
       strike: 170,
       expiration: "2026-12-18",
@@ -95,6 +100,24 @@ describe("suggestionLink — the link the trade form fills itself from", () => {
     } as SuggestedTrade);
     expect(link).toBe(
       "/trade?play=201&symbol=NVDA&strike=170&exp=2026-12-18&qty=2&limit=3.10&tier=standard",
+    );
+  });
+
+  it("opens the buy rung for a long call or put: 302 buys a call, 301 a put (#7547 slice 4)", () => {
+    const base = {
+      side: "buy",
+      symbol: "NVDA",
+      strike: 160,
+      expiration: "2027-01-15",
+      contracts: 1,
+      limit: 12.4,
+      tier: "conservative",
+    } as const;
+    expect(suggestionLink({ ...base, type: "call" } as SuggestedTrade)).toMatch(
+      /^\/trade\?play=302&symbol=NVDA&strike=160&exp=2027-01-15&qty=1&limit=12\.40/,
+    );
+    expect(suggestionLink({ ...base, type: "put" } as SuggestedTrade)).toMatch(
+      /^\/trade\?play=301&/,
     );
   });
 });
@@ -130,6 +153,24 @@ describe("get_sized_suggestions — end to end through the dispatcher", () => {
       expect((o as Linked).link).toBeUndefined();
     }
     expect(result.disclosure).toBeTruthy();
+  });
+
+  it("stages a named long call as three buys, each linked to the buy-a-call rung", async () => {
+    const out = await suggestTradesResult(marketFor, snapshot(), "acct-1", {
+      underlying: "CRWV",
+      strategy: "long-call",
+    });
+    if (!out.ok) throw new Error(out.error);
+    const result = out.result as TradeSuggestions;
+    expect(result.strategy).toBe("long-call");
+    const linked = result.options.filter((o): o is SuggestedTrade => o.available);
+    expect(linked.length).toBeGreaterThan(0);
+    for (const o of linked) {
+      expect(o.side).toBe("buy");
+      expect((o as SuggestedTrade & { readonly link?: string }).link).toMatch(
+        /^\/trade\?play=302&symbol=CRWV&/,
+      );
+    }
   });
 
   it("says plainly when there is no desk, no market reader, or no chain", async () => {

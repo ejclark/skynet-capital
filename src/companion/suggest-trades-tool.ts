@@ -34,7 +34,7 @@ export const SUGGEST_TRADES_TOOL_NAME = "get_sized_suggestions" as const;
 export const SUGGEST_TRADES_TOOL_DEF = {
   name: SUGGEST_TRADES_TOOL_NAME,
   description:
-    "Stage a trade on one underlying: three sized options (conservative · standard · high risk), each with contracts, strike, expiry and a limit price, the metrics that produced it, and a link that opens the trade form prefilled for review. Covered call when the member holds at least 100 shares, otherwise a cash-secured put, unless a strategy is named. Uses the member's own linked account and live chain; places nothing.",
+    "Stage a trade on one underlying: three sized options (conservative · standard · high risk), each with contracts, strike, expiry and a limit price, the metrics that produced it, and a link that opens the trade form prefilled for review. Covered call when the member holds at least 100 shares, otherwise a cash-secured put, unless a strategy is named: long-call or long-put when the member wants to buy a call or a put. Uses the member's own linked account and live chain; places nothing.",
   input_schema: {
     type: "object",
     properties: {
@@ -44,8 +44,9 @@ export const SUGGEST_TRADES_TOOL_DEF = {
       },
       strategy: {
         type: "string",
-        enum: ["covered-call", "cash-secured-put"],
-        description: "Optional. Omit to let the member's holdings decide.",
+        enum: ["covered-call", "cash-secured-put", "long-call", "long-put"],
+        description:
+          "Optional. Omit to let the member's holdings decide. long-call / long-put buy the option.",
       },
     },
     required: ["underlying"],
@@ -62,9 +63,14 @@ type ToolResult =
   | { readonly ok: true; readonly result: unknown }
   | { readonly ok: false; readonly error: string };
 
-const STRATEGIES: ReadonlySet<SuggestionStrategy> = new Set(["covered-call", "cash-secured-put"]);
+const STRATEGIES: ReadonlySet<SuggestionStrategy> = new Set([
+  "covered-call",
+  "cash-secured-put",
+  "long-call",
+  "long-put",
+]);
 
-/** The model's ask, bounded: a stock ticker and, optionally, one of the engine's two strategies. */
+/** The model's ask, bounded: a stock ticker and, optionally, one of the engine's strategies. */
 export function parseSuggestInput(
   input: unknown,
 ):
@@ -77,7 +83,7 @@ export function parseSuggestInput(
   }
   if (raw.strategy === undefined) return { symbol };
   if (typeof raw.strategy !== "string" || !STRATEGIES.has(raw.strategy as SuggestionStrategy)) {
-    return { error: "strategy must be covered-call or cash-secured-put" };
+    return { error: "strategy must be covered-call, cash-secured-put, long-call or long-put" };
   }
   return { symbol, strategy: raw.strategy as SuggestionStrategy };
 }
@@ -117,10 +123,16 @@ export function strategyFor(
   return free >= 100 ? "covered-call" : "cash-secured-put";
 }
 
-/** The ticket this option names, as a `/trade` link: rung 202 sells a call, 201 a put. */
+/** The rung each opening order names (`app/src/live/plays.ts`): 20x sells, 30x buys. */
+const RUNG = {
+  sell: { call: "202", put: "201" },
+  buy: { call: "302", put: "301" },
+} as const;
+
+/** The ticket this option names, as a `/trade` link: 202/201 sell a call/put, 302/301 buy one. */
 export function suggestionLink(t: SuggestedTrade): string {
   const params = new URLSearchParams({
-    play: t.type === "call" ? "202" : "201",
+    play: RUNG[t.side][t.type],
     symbol: t.symbol,
     strike: String(t.strike),
     exp: t.expiration,
@@ -178,4 +190,4 @@ export async function suggestTradesResult(
 
 /** The system prompt's paragraph for this tool (`companion-system-prompt.ts`). */
 export const SUGGEST_TRADES_RULE =
-  'STAGING A TRADE: when a member asks to stage, size or set up a trade on a ticker ("stage a trade for NVDA"), call get_sized_suggestions with that ticker (and a strategy only if they named one). Present all three options in order (conservative, standard, high risk) as one short block each: the summary line, two or three of its cited metrics with their values, and its link written as [Open the <tier> ticket](<link>), the link exactly as the tool returned it. Name the strategy the tool chose and why in one clause. A tier the tool marks unavailable gets its reason, never a substitute. Say once that these are SIM numbers that land on the review screen, priced at the mid when you looked, and end with the disclosure. Never alter a number, a strike or a link.';
+  'STAGING A TRADE: when a member asks to stage, size or set up a trade on a ticker ("stage a trade for NVDA"), call get_sized_suggestions with that ticker (and a strategy only if they named one: buying a call is long-call, buying a put is long-put). Present all three options in order (conservative, standard, high risk) as one short block each: the summary line, two or three of its cited metrics with their values, and its link written as [Open the <tier> ticket](<link>), the link exactly as the tool returned it. Name the strategy the tool chose and why in one clause. A tier the tool marks unavailable gets its reason, never a substitute. Say once that these are SIM numbers that land on the review screen, priced at the mid when you looked, and end with the disclosure. Never alter a number, a strike or a link.';

@@ -18,6 +18,16 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **Count how many suggested tickets get placed, then decide the ticket's *Suggested* section.**
+  #7547 shipped Moneypenny's three sized options for all four strategies; its falsifier (by
+  2026-12-13, under 1 in 10 suggested tickets placed → revisit the tier thresholds before more
+  strategies) has no counter yet: `/trade` drops `?tier=` once the ticket is staged, so nothing ties
+  an order back to a suggestion. Carry the tier onto the staged order (or log open and place per
+  tier), read the rate on 2026-12-13, and only then decide whether the ticket gets its own
+  *Suggested* section (settled fork 1 parked it on this evidence). The long-option delta bands
+  (0.65–0.80 / 0.45–0.55 / 0.25–0.35) were the slice-4 session's call, not Eric's; check them in
+  the same read. _(src: Claude · while: #7547 slice 4)_
+
 - **A headless PR might start its checks with a body edit, not a commit.** `pipeline.yml` lists
   `edited` in its `pull_request` types, and an edit from the App token starts workflows, so writing
   the headless marker into the PR body (not a comment) could start `verify` with no new commit on

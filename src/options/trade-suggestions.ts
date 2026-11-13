@@ -17,9 +17,12 @@ import { priceOption } from "./pricing.js";
 import { daysToExpiryFrom } from "./single-leg-odds.js";
 import { metricsFor, type SuggestionMetric } from "./trade-suggestions-metrics.js";
 import {
+  deltaBand,
+  dteWindow,
+  isLong,
+  optionTypeOf,
   SIM_LABEL,
   STRATEGY_WORDS,
-  SUGGESTION_DTE,
   type SuggestionStrategy,
   type SuggestionTier,
   TIER_RULES,
@@ -29,7 +32,8 @@ import {
 
 /**
  * SUGGESTED TRADES (#7547 slice 1) — a chain and an account in, exactly three sized options out
- * (conservative · standard · high risk), each a sell-to-open the trade form can prefill, each citing
+ * (conservative · standard · high risk), each an opening order the trade form can prefill (a sale
+ * for a covered call or a cash-secured put, a purchase for a long call or put), each citing
  * the metrics that produced it with the value used. PURE and deterministic: no clock (the caller
  * passes `now`), no I/O, every pick a total order. Moneypenny only ever explains this output — she
  * never invents a number (the plan's constraint), so every figure a member reads starts here.
@@ -63,7 +67,11 @@ export interface SuggestionInputs {
   readonly account: SuggestionAccount;
   /** IV rank 0–100, cited when the IV instrument has a full window. */
   readonly ivRank?: number;
-  /** An expiry on or after the print window's start sells premium across earnings — excluded. */
+  /**
+   * An expiry on or after the print window's start: a SOLD option there sells premium across
+   * earnings, so it is excluded; a BOUGHT one is allowed (a 45–90 day window nearly always spans a
+   * print) and cites the print, since its implied volatility tends to fall once the news is out.
+   */
   readonly earnings?: EarningsWindow;
   readonly rate?: number;
 }
@@ -82,7 +90,7 @@ export interface SuggestedTrade extends TierHead {
   readonly symbol: string;
   readonly strategy: SuggestionStrategy;
   readonly type: "call" | "put";
-  readonly side: "sell";
+  readonly side: "sell" | "buy";
   readonly expiration: string;
   readonly dte: number;
   readonly strike: number;
@@ -140,32 +148,42 @@ function tradable(q: GuidanceQuote, input: SuggestionInputs): Candidate["quote"]
   return { ...q, bid, ask, iv };
 }
 
-/** In the shared DTE window and before any print window; nearest the target first, then sooner. */
+/** The print window falls on or before this expiry. */
+const spansPrint = (expiration: string, input: SuggestionInputs): boolean =>
+  input.earnings !== undefined && expiration >= input.earnings.start;
+
+/** In the strategy's DTE window (and, for a sale, before any print window); nearest the target
+ *  first, then sooner. */
 function expiriesByPreference(input: SuggestionInputs, today: string): string[] {
+  const window = dteWindow(input.strategy);
+  const long = isLong(input.strategy);
   const listed = [...new Set(input.chain.map((q) => q.expiration))];
   return listed
     .filter((e) => {
       const dte = daysBetween(today, e);
-      const beforePrint = !input.earnings || e < input.earnings.start;
-      return dte >= SUGGESTION_DTE.min && dte <= SUGGESTION_DTE.max && beforePrint;
+      return dte >= window.min && dte <= window.max && (long || !spansPrint(e, input));
     })
     .sort((a, b) => {
       const da = daysBetween(today, a);
       const db = daysBetween(today, b);
-      return Math.abs(da - SUGGESTION_DTE.target) - Math.abs(db - SUGGESTION_DTE.target) || da - db;
+      return Math.abs(da - window.target) - Math.abs(db - window.target) || da - db;
     });
 }
 
 function candidatesAt(expiration: string, input: SuggestionInputs, today: string): Candidate[] {
-  const type = input.strategy === "covered-call" ? "call" : "put";
+  const type = optionTypeOf(input.strategy);
+  const long = isLong(input.strategy);
   const { spot, account } = input;
   const days = daysToExpiryFrom(expiration, new Date(input.now)) ?? 1;
   return input.chain.flatMap((q) => {
     if (q.expiration !== expiration || q.type !== type) return [];
-    const otm = type === "call" ? q.strike > spot : q.strike < spot;
+    // A sale stays out of the money; a purchase may sit in it (the conservative buy does).
+    const strikeAllowed = long || (type === "call" ? q.strike > spot : q.strike < spot);
     const aboveBasis =
-      type === "put" || account.costBasis === undefined || q.strike >= account.costBasis;
-    const quote = otm && aboveBasis ? tradable(q, input) : undefined;
+      input.strategy !== "covered-call" ||
+      account.costBasis === undefined ||
+      q.strike >= account.costBasis;
+    const quote = strikeAllowed && aboveBasis ? tradable(q, input) : undefined;
     if (!quote) return [];
     const valuation = priceOption({
       spot,
@@ -190,13 +208,18 @@ function candidatesAt(expiration: string, input: SuggestionInputs, today: string
 }
 
 /** The row whose |delta| sits nearest the band's middle, inside the band. Ties: tighter spread,
- *  then farther out of the money, then the lower strike — a total order. */
-function pickInBand(rows: readonly Candidate[], rule: TierRule): Candidate | undefined {
-  const mid = (rule.delta.min + rule.delta.max) / 2;
+ *  then farther out of the money, then the lower strike — a total order. (An exact delta tie needs
+ *  two strikes the model prices identically, so these rungs only make the order total; they carry
+ *  no tier intent, for a sale or a purchase.) */
+function pickInBand(
+  rows: readonly Candidate[],
+  band: { readonly min: number; readonly max: number },
+): Candidate | undefined {
+  const mid = (band.min + band.max) / 2;
   const fartherOtm = (a: Candidate, b: Candidate) =>
     a.quote.type === "call" ? b.quote.strike - a.quote.strike : a.quote.strike - b.quote.strike;
   return rows
-    .filter((r) => round(r.absDelta) >= rule.delta.min && round(r.absDelta) <= rule.delta.max)
+    .filter((r) => round(r.absDelta) >= band.min && round(r.absDelta) <= band.max)
     .sort(
       (a, b) =>
         round(Math.abs(a.absDelta - mid)) - round(Math.abs(b.absDelta - mid)) ||
@@ -223,17 +246,32 @@ function sizeFor(
     }
     return { contracts: Math.max(1, Math.floor(lots * rule.coveredLotShare + 1e-9)) };
   }
-  const perContract = (strike - limit) * 100;
-  const byCash = Math.floor(account.cash / (strike * 100) + 1e-9);
-  const byRisk = Math.floor((rule.maxAccountAtRisk * account.equity) / perContract + 1e-9);
+  // A cash-secured put and a long option size the same way — the account cap on one contract's max
+  // loss, then the cash one contract ties up — differing only in those two figures and their words.
+  // A long option is a debit: its premium is both the cash it takes and the most it can lose.
+  const long = isLong(input.strategy);
+  const loss = (long ? limit : strike - limit) * 100;
+  const cash = (long ? limit : strike) * 100;
+  if (!(account.equity > 0)) {
+    return { reason: "Your account shows no equity to size a trade against." };
+  }
+  const byRisk = Math.floor((rule.maxAccountAtRisk * account.equity) / loss + 1e-9);
+  const byCash = Math.floor(account.cash / cash + 1e-9);
+  const at = `One contract at the ${usd(strike)} strike`;
+  const share = `(${pct(loss / account.equity, 1)} of your account)`;
+  const cap = `this tier caps that at ${pct(rule.maxAccountAtRisk)}.`;
   if (byRisk < 1) {
     return {
-      reason: `One contract at the ${usd(strike)} strike could lose ${usd(perContract)} (${pct(perContract / account.equity, 1)} of your account) if the stock went to zero; this tier caps that at ${pct(rule.maxAccountAtRisk)}.`,
+      reason: long
+        ? `${at} costs ${usd(loss)} ${share}, all of it lost if it expires worthless; ${cap}`
+        : `${at} could lose ${usd(loss)} ${share} if the stock went to zero; ${cap}`,
     };
   }
   if (byCash < 1) {
     return {
-      reason: `One contract at the ${usd(strike)} strike needs ${usd(strike * 100)} in cash to secure; you have ${usd(account.cash)}.`,
+      reason: long
+        ? `${at} costs ${usd(cash)}; you have ${usd(account.cash)} in cash.`
+        : `${at} needs ${usd(cash)} in cash to secure; you have ${usd(account.cash)}.`,
     };
   }
   return { contracts: Math.min(byCash, byRisk) };
@@ -252,22 +290,26 @@ function optionFor(
     rule: tierRuleText(rule, input.strategy),
     label: SIM_LABEL,
   };
+  const band = deltaBand(rule, input.strategy);
+  const window = dteWindow(input.strategy);
+  const long = isLong(input.strategy);
+  const side = long ? "buy" : "sell";
   let pick: Candidate | undefined;
   for (const expiration of expiries) {
-    pick = pickInBand(candidatesAt(expiration, input, today), rule);
+    pick = pickInBand(candidatesAt(expiration, input, today), band);
     if (pick) break;
   }
   if (!pick) {
     const why =
       expiries.length === 0
-        ? `No expiry ${SUGGESTION_DTE.min}–${SUGGESTION_DTE.max} days out${input.earnings ? " before earnings" : ""} is listed.`
-        : `No tradable strike sits at ${rule.delta.min.toFixed(2)}–${rule.delta.max.toFixed(2)} delta in the ${SUGGESTION_DTE.min}–${SUGGESTION_DTE.max} day window.`;
+        ? `No expiry ${window.min}–${window.max} days out${input.earnings && !long ? " before earnings" : ""} is listed.`
+        : `No tradable strike sits at ${band.min.toFixed(2)}–${band.max.toFixed(2)} delta in the ${window.min}–${window.max} day window.`;
     return { ...head, available: false, reason: why };
   }
   const { quote } = pick;
   const limit = priceInside(
     { low: quote.bid, high: quote.ask },
-    "sell",
+    side,
     0,
     singleLegTick(quote.bid, quote.ask),
   );
@@ -284,13 +326,13 @@ function optionFor(
     symbol: input.symbol,
     strategy: input.strategy,
     type: quote.type,
-    side: "sell",
+    side,
     expiration: quote.expiration,
     dte: pick.dte,
     strike: quote.strike,
     contracts,
     limit,
-    summary: `Sell ${contracts} ${input.symbol} ${dayText(quote.expiration)} ${usd(quote.strike)} ${kind} at ${usd(limit)}`,
+    summary: `${long ? "Buy" : "Sell"} ${contracts} ${input.symbol} ${dayText(quote.expiration)} ${usd(quote.strike)} ${kind} at ${usd(limit)}`,
     metrics: metricsFor({
       strategy: input.strategy,
       spot: input.spot,
@@ -304,6 +346,14 @@ function optionFor(
       equity: input.account.equity,
       ivRank: input.ivRank,
       rate: input.rate,
+      ...(input.earnings && spansPrint(quote.expiration, input)
+        ? {
+            print: {
+              start: input.earnings.start,
+              days: Math.max(0, daysBetween(today, input.earnings.start)),
+            },
+          }
+        : {}),
     }),
   };
 }
