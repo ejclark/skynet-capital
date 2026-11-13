@@ -158,3 +158,15 @@ scored from Yahoo daily bars fetched 2026-10-20, not from memory).
 
 **Last assessed:** 2026-10-20
 <!-- probe-ref: {"symbols":{"XE":10.755},"vix":17.72,"daysBand":"medium:0+","adjacentIds":["adp-employment-2026-09-02","beige-book-2026-09-02","challenger-job-cuts-2026-09-03","fomc-blackout-start-2026-09-05","hammack-remarks-2026-09-03","ism-manufacturing-2026-09-01","ism-services-2026-09-03","jackson-hole-2026-08-28","jobs-2026-09-04","jolts-2026-09-01","opec-plus-meeting-2026-09-06","sp-rebalance-proforma-2026-09-04","treasury-7y-note-2026-08-27","treasury-coupon-announcement-2026-09-03","vmware-explore-2026-08-31","waller-economic-outlook-2026-09-03"],"adjacentStrongIds":["ism-manufacturing-2026-09-01","ism-services-2026-09-03","jackson-hole-2026-08-28","jobs-2026-09-04"],"screenStreak":0,"blocked":[]} -->
+
+**Forward-test scoring attempt 2026-11-13** (`forward-test-due` run; the assessment above is not re-opened).
+`FT-xe-lockup-expiry-2026-10-20-1` keys on the 2026-11-13 close, which did not exist when the lane read
+Yahoo (2026-11-13 01:01 UTC, after the 2026-11-12 session), so the row is recorded `unscoreable` with a
+pointer rather than scored from a partial window. The Q3 print came on schedule 2026-11-12 (8-K Ex. 99.1),
+so the void condition did not fire. Interim read at the 2026-11-12 close vs the 2026-10-19 anchors:
+XE $11.26 (+6.8%), OKLO $24.45 (-10.2%), SMR $4.82 (-15.3%), QQQ 688.17 (-4.2%), VIX 18.70. XE is well
+ahead of its peers into and through the print, so the "slide is not finished" prediction is on course to
+miss; a human can settle it from the 2026-11-13 close with the same three symbols.
+
+**Last assessed:** 2026-11-13
+<!-- probe-ref: {"symbols":{"XE":11.26},"vix":18.7,"daysBand":"medium:0+","adjacentIds":["adp-employment-2026-09-02","beige-book-2026-09-02","challenger-job-cuts-2026-09-03","fomc-blackout-start-2026-09-05","hammack-remarks-2026-09-03","ism-manufacturing-2026-09-01","ism-services-2026-09-03","jackson-hole-2026-08-28","jobs-2026-09-04","jolts-2026-09-01","opec-plus-meeting-2026-09-06","sp-rebalance-proforma-2026-09-04","treasury-7y-note-2026-08-27","treasury-coupon-announcement-2026-09-03","vmware-explore-2026-08-31","waller-economic-outlook-2026-09-03"],"adjacentStrongIds":["ism-manufacturing-2026-09-01","ism-services-2026-09-03","jackson-hole-2026-08-28","jobs-2026-09-04"],"screenStreak":0,"blocked":[]} -->
