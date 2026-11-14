@@ -69,6 +69,22 @@ export const RELAY_TRAILER_OPENER = "_Follow-up from ";
 export const isRelayedFollowup = (body) => String(body ?? "").includes(RELAY_TRAILER_OPENER);
 
 /**
+ * HELD FOR THE FILING CHECK (#7548). On a `ready` filing no build has claimed yet, the app takes
+ * `ready` off BEFORE it posts the follow-up and ends the trailer with this sentence, so the filing
+ * check (`assessIntent` in triage-assess.mjs) re-judges the filing with the follow-up in it and
+ * puts `ready` back only if it is still clear. Without the hold, a small ask that readied itself
+ * could carry a large one past every check in a follow-up the build then read unchecked.
+ * Checked at the END of the body: the app writes the trailer last, so a member's own words can
+ * never end with it, and a follow-up on a Backlog filing (never held) never re-runs the check.
+ */
+export const RECHECK_MARK = "Held from the build for the filing check.";
+export const isHeldForRecheck = (body) =>
+  isRelayedFollowup(body) &&
+  String(body ?? "")
+    .trimEnd()
+    .endsWith(`${RECHECK_MARK}_`);
+
+/**
  * The pure decision: given an `issue_comment: created` payload the workflow's authorization gate has
  * already let through, does this reply resume the lane that is blocked on it?
  *

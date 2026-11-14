@@ -56,28 +56,64 @@ describe("feedback filings and claude.yml's issues gate", () => {
     expect(opensTheLane(issueBody({ ...member, submitterEmail: undefined }))).toBe(false);
   });
 
-  it("a follow-up on such a filing still restarts its build, since the re-label opens nothing", async () => {
+  // The hold takes `ready` off — an `unlabeled` event, which the gate never listens to — so it is
+  // safe on any body. Only putting `ready` back (a `labeled` event) could open the lane.
+  it("listens only to opened and labeled issue events, so taking ready off opens nothing", () => {
+    expect(/issues:\s*\n\s*types:\s*\[([^\]]*)\]/.exec(workflow)?.[1]?.replace(/\s/g, "")).toBe(
+      "opened,labeled",
+    );
+  });
+
+  it("holds such a filing for the re-check, and never adds a label", async () => {
     const { calls, doFetch } = github(issueBody(member));
 
-    expect(await followUp(doFetch)).toMatchObject({ ok: true, outcome: "restarted" });
-    expect(calls.map((c) => c.method)).toEqual(["GET", "POST", "GET", "DELETE", "POST"]);
+    expect(await followUp(doFetch)).toMatchObject({ ok: true, outcome: "rechecking" });
+    expect(calls.map((c) => c.method)).toEqual(["GET", "DELETE", "POST"]);
   });
 
-  it("on an older filing whose body opens the lane, posts the comment but never cycles ready", async () => {
-    const before = `${member.details}\n\n---\n_Submitted from the app by **Tony** (member \`abc\`)._`;
-    expect(opensTheLane(before)).toBe(true);
-    const { calls, doFetch } = github(before);
+  /** A fake GitHub like `github`, whose comment POST fails after the hold. */
+  const failing = (body: string) => {
+    const calls: { method: string; url: string }[] = [];
+    const doFetch = (method: string, url: string): Promise<JsonResponse> => {
+      calls.push({ method, url });
+      if (url.endsWith("/comments")) return Promise.resolve({ status: 502, body: {} });
+      if (method === "GET") {
+        const labels = ["feedback", "bug", "ready"].map((name) => ({ name }));
+        return Promise.resolve({ status: 200, body: { number: 7, state: "open", labels, body } });
+      }
+      return Promise.resolve({ status: 200, body: {} });
+    };
+    return { calls, doFetch };
+  };
+  const readds = (calls: readonly { method: string; url: string }[]) =>
+    calls.filter((c) => c.method === "POST" && c.url.endsWith("/labels"));
 
-    expect(await followUp(doFetch)).toMatchObject({ ok: true, outcome: "unchanged" });
-    expect(calls.some((c) => c.url.includes("/labels"))).toBe(false);
-    expect(calls.some((c) => c.url.endsWith("/comments"))).toBe(true);
+  it("puts ready back after a failed comment on a filing whose body opens nothing", async () => {
+    const { calls, doFetch } = failing(issueBody(member));
+    expect(await followUp(doFetch)).toMatchObject({ ok: false });
+    expect(readds(calls)).toHaveLength(1);
   });
 
-  it("checks the lane's mention the way GitHub does, ignoring case", async () => {
-    const shouted = `${String(mention).toUpperCase()} please\n\n---\n_Submitted from the app by a league member._`;
-    const { calls, doFetch } = github(shouted);
+  it.each([
+    [
+      "an older filing whose body opens the lane",
+      `${member.details}\n\n---\n_Submitted from the app by **Tony** (member \`abc\`)._`,
+    ],
+    [
+      "a mention in another case (GitHub's contains ignores case)",
+      "@CLAUDE please\n\n---\n_Submitted from the app by a league member._",
+    ],
+  ])("never puts ready back on %s", async (_case, body) => {
+    expect(opensTheLane(body)).toBe(true);
+    const { calls, doFetch } = failing(body);
+    const warnings: string[] = [];
 
-    expect(await followUp(doFetch)).toMatchObject({ ok: true, outcome: "unchanged" });
-    expect(calls.some((c) => c.url.includes("/labels"))).toBe(false);
+    const result = await createFollowup({ token: "t", repo: "x/y" }, doFetch, (l) =>
+      warnings.push(l),
+    )({ issueNumber: 7, body: "still frozen" });
+
+    expect(result).toMatchObject({ ok: false });
+    expect(readds(calls)).toEqual([]);
+    expect(warnings).toHaveLength(1);
   });
 });
