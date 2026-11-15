@@ -641,3 +641,18 @@ offer.** Stand aside was right on every horizon; the date promotion to `confirme
 landed 10:00 ET as NAR's own calendar said, and the Atlanta Fed's schedule row is unchanged); one forward
 test passed, one voided on a regime shift it had itself flagged as a live possibility, and two remain
 open on a stale archive exactly as registered. This document now goes quiet.
+
+### Forward tests `-3` and `-4` scored (2026-11-15, `forward-test-due`)
+
+Both **PASS**, from a `GDPTrackingModelDataAndForecasts.xlsx` pulled 2026-11-15 (1,909 `ContribArchives`
+vintages, 2014-05-01 → 2026-10-28). The 2026-09-10 vintage names *"Wholesale trade, Producer Price Index,
+Existing-home sales"* (`-3`), and moved Q3 change-in-inventory investment by **−0.0997pp** against the
+2026-09-04 vintage, with residential at an ordinary −0.0364pp (`-4`). Detail is in the Outcome cells of
+[the fragment](../forward-tests/existing-home-sales-2026-09-10.md); the stance and the 2026-09-15 verdict
+are unchanged, and no row is left unscored. No conviction reads these rows (`research:claims` wrote nothing).
+
+**For the sibling ledgers:** the workbook's old path (`/-/media/Project/Atlanta/FRBA/Documents/cqer/researchcq/
+gdpnow/…`, cited by the `-10-13`, `-11-12` and `-12-09` ledgers) now returns **HTTP 404**; the live copy is under
+`/-/media/Project/Atlanta/FRBA/Documents/research-and-data/data/gdpnow/` (both workbooks, HTTP 200), as linked from
+atlantafed.org/cqer/research/gdpnow. The same pull holds the 2026-10-13 solo EHS vintage: inventories **−0.0001pp**,
+headline −0.0115pp — the `-11-12` lane's `-2` evidence, left for that lane to score.
