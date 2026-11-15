@@ -641,3 +641,12 @@ offer.** Stand aside was right on every horizon; the date promotion to `confirme
 landed 10:00 ET as NAR's own calendar said, and the Atlanta Fed's schedule row is unchanged); one forward
 test passed, one voided on a regime shift it had itself flagged as a live possibility, and two remain
 open on a stale archive exactly as registered. This document now goes quiet.
+
+### Forward-test scoring note (2026-11-15, `forward-test-due`)
+
+`-3` and `-4` scored **pass** off one fresh `ContribArchives` pull (the Atlanta Fed path has moved to
+`/-/media/Project/Atlanta/FRBA/Documents/research-and-data/data/gdpnow/`; the archive now ends 2026-10-28,
+1,909 vintages). The 2026-09-10 vintage reads *"Wholesale trade, Producer Price Index, Existing-home
+sales"* and moved Q3 change-in-inventory investment by −0.0997pp; verdicts are in the fragment's Outcome
+cells. The close-out verdict above is untouched. `npm run research:claims` found no conviction reading
+these rows (`nothing written`). Scored by the forward-test lane, not a re-assessment.
