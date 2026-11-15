@@ -130,6 +130,27 @@ describe("MoneypennyDock — a drafted view", () => {
     expect(sent.some((c) => c.url.startsWith("/api/convictions/"))).toBe(false);
   });
 
+  it("draws the three exits on the card itself, not in the moves row (#7614)", async () => {
+    stub();
+    await draftShown();
+    const card = document.querySelector(".mp-card");
+    const exits = Array.from(card?.querySelectorAll(".mp-card-moves button") ?? []).map(
+      (b) => b.textContent,
+    );
+    expect(exits).toEqual(["Hand it to my bots", "Save it as a draft", "Not now"]);
+    expect(card?.querySelector(".mp-draft")).toHaveTextContent("Draft view · SIM — CRWV floor");
+    expect(screen.queryByRole("list", { name: "Your moves" })).toBeNull();
+  });
+
+  it("an answered card loses its buttons; the old card in the history keeps none", async () => {
+    stub();
+    await draftShown();
+    fireEvent.click(screen.getByRole("button", { name: "Not now" }));
+    await flush();
+    expect(document.querySelector(".mp-card-moves")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Hand it to my bots" })).toBeNull();
+  });
+
   it("the tap saves the very draft she showed, then hands it over", async () => {
     const sent = stub();
     await draftShown();

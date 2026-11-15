@@ -8,6 +8,7 @@ import { latestLine, type Move, movesFor } from "../live/moneypenny-moves";
 import { linesOf } from "../live/moneypenny-threads";
 import { stampTagged } from "../live/page-keys";
 import { taggedKeys, taggedLine, usePromptTags } from "../live/prompt-tags";
+import { cardIndex, ParkedCard } from "./mp-card";
 import { DockBox } from "./mp-composer";
 import { goToPlace, Message } from "./mp-message";
 import { ThreadBar, ThreadIndex } from "./rail-threads";
@@ -23,7 +24,9 @@ import { ThreadBar, ThreadIndex } from "./rail-threads";
  *      enough"). Compact by default; expanded on the member's ask, remembered per browser. When her
  *      answer lands, the pane shows its FIRST line, not its last: the list anchors the top of her
  *      newest reply and stays there while it streams, so reading starts where she starts.
- *   2. YOUR MOVES — her current choices as 44px buttons (`live/moneypenny-moves.ts`).
+ *   2. YOUR MOVES — her current choices as 44px buttons (`live/moneypenny-moves.ts`). A parked
+ *      card's own exits are the one exception: they sit on the card itself, so it is never a
+ *      question which card "Send" acts on (#7614, `mp-card.tsx`).
  *   3. THE BOX — one line, Enter sends, attach a screenshot beside it (`mp-composer.tsx`, D5). It
  *      never changes width or position.
  *
@@ -48,6 +51,7 @@ function Conversation({
   pending,
   expanded,
   onToggle,
+  card,
 }: {
   readonly messages: readonly MpMessage[];
   readonly waiting: boolean;
@@ -55,6 +59,12 @@ function Conversation({
   readonly pending: string | undefined;
   readonly expanded: boolean;
   readonly onToggle: () => void;
+  /** The parked card's index in `messages` and its exits, drawn on the card (#7614). */
+  readonly card: {
+    readonly at: number;
+    readonly moves: readonly Move[];
+    readonly run: (m: Move) => void;
+  };
 }): ReactElement {
   const thread = useMoneypenny((s) => s.thread);
   const disclosure = useMoneypenny((s) => s.disclosure);
@@ -172,7 +182,11 @@ function Conversation({
             // biome-ignore lint/suspicious/noArrayIndexKey: an append-only conversation — position is identity
             <div key={i} className="mp-entry">
               {day && prev && day !== prev ? <div className="mp-daybreak num">{day}</div> : null}
-              <Message m={m} />
+              {m.role === "draft" && i === card.at ? (
+                <ParkedCard m={m} moves={card.moves} onMove={card.run} />
+              ) : (
+                <Message m={m} />
+              )}
             </div>
           );
         })}
@@ -237,6 +251,10 @@ export function MoneypennyDock(): ReactElement {
     firstTradeDone,
     latest,
   });
+  // A parked card's exits go on the card; the row keeps everything else (#7614).
+  const parkedCard = draft || view || followup || research;
+  const cardAt = parkedCard ? cardIndex(messages) : -1;
+  const rowMoves = cardAt >= 0 ? [] : moves;
 
   // On every page from the first: load the member so her moves read their own facts. `hydrate`, not
   // `wake`: it binds only a store nothing else has touched and never binds "anon" on a failed read,
@@ -348,11 +366,12 @@ export function MoneypennyDock(): ReactElement {
           pending={pending}
           expanded={expanded}
           onToggle={toggleExpanded}
+          card={{ at: cardAt, moves: cardAt >= 0 ? moves : [], run }}
         />
         <p className="visually-hidden" aria-live="polite">
           {tagNews}
         </p>
-        {moves.length > 0 || tags.length > 0 ? (
+        {rowMoves.length > 0 || tags.length > 0 ? (
           <ul className="mp-moves" aria-label="Your moves">
             {/* The tags lead the row, then her moves; the box below never moves for either. */}
             {tags.map((t) => (
@@ -376,7 +395,7 @@ export function MoneypennyDock(): ReactElement {
                 </button>
               </li>
             ))}
-            {moves.map((m) => (
+            {rowMoves.map((m) => (
               <li key={m.label}>
                 <button type="button" className="mp-move" onClick={() => run(m)}>
                   {m.label}
