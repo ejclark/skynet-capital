@@ -1,0 +1,22 @@
+{
+  "id": "EQ-03",
+  "member": "phone-only",
+  "viewport": "phone",
+  "start": "/app",
+  "optimal": 10,
+  "scenario": "You want 10 shares of QQQ, the Nasdaq fund, but only if you can get them for $505 or less, and if it doesn't happen in the next trading session you'd rather the offer just went away. Put it in from your phone.",
+  "end": {
+    "orders": [
+      {
+        "symbol": "QQQ",
+        "side": "buy",
+        "quantity": 10,
+        "orderType": "limit",
+        "limitPrice": [505, 505],
+        "timeInForce": "day",
+        "state": ["working", "filled"]
+      }
+    ]
+  },
+  "note": "Seeded limit is GTC; 'just went away' needs the member to find and pick the one-session duration."
+}

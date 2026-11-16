@@ -97,7 +97,9 @@ async function main() {
       path: join(o.scenarios, f),
       ...JSON.parse(readFileSync(join(o.scenarios, f), "utf8")),
     }))
-    .filter((s) => !o.only || o.only.includes(s.id));
+    .filter((s) => !o.only || o.only.includes(s.id))
+    // `--only` is also the running order: the scenarios a round most needs answered go first.
+    .sort((a, b) => (o.only ? o.only.indexOf(a.id) - o.only.indexOf(b.id) : 0));
   const jobs = scenarios.flatMap((s) =>
     Array.from({ length: o.runs }, (_, i) => ({ s, run: i + 1 })),
   );

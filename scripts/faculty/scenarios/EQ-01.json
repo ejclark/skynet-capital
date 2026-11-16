@@ -1,0 +1,20 @@
+{
+  "id": "EQ-01",
+  "member": "returning-trader",
+  "viewport": "phone",
+  "start": "/app",
+  "optimal": 9,
+  "scenario": "You've been meaning to own a little Microsoft. Buy 5 shares now at whatever price the market gives you, then tell us what the app says happens next.",
+  "end": {
+    "orders": [
+      {
+        "symbol": "MSFT",
+        "side": "buy",
+        "quantity": 5,
+        "orderType": "market",
+        "state": ["working", "filled"]
+      }
+    ]
+  },
+  "note": "The form seeds a limit at the mid once a symbol is entered (trade-gate.tsx:222); a member asking for the market price must switch it. The existing $400 MSFT order may be mistaken for a place to add shares."
+}

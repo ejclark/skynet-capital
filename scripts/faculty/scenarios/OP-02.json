@@ -1,0 +1,21 @@
+{
+  "id": "OP-02",
+  "member": "eric",
+  "viewport": "phone",
+  "start": "/app",
+  "optimal": 9,
+  "scenario": "From your phone: your NVIDIA calls are up a lot. Sell one of the two contracts to lock in some profit and keep the other running.",
+  "end": {
+    "orders": [
+      {
+        "underlying": "NVDA",
+        "optionType": "call",
+        "strike": 180,
+        "side": "sell",
+        "quantity": 1,
+        "state": ["working", "filled"]
+      }
+    ]
+  },
+  "note": "The per-buy close is desktop-only (desk.css:523-530); the option close row has no contract count (option-positions.tsx:186-194)."
+}

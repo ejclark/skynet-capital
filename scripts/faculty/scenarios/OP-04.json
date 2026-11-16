@@ -1,0 +1,22 @@
+{
+  "id": "OP-04",
+  "member": "returning-trader",
+  "viewport": "desktop",
+  "start": "/app",
+  "optimal": 12,
+  "scenario": "You own 100 Apple shares and wouldn't mind selling them around $245. Earn some income on them by agreeing to sell at $245 about a month from now.",
+  "end": {
+    "orders": [
+      {
+        "underlying": "AAPL",
+        "optionType": "call",
+        "strike": [240, 250],
+        "side": "sell",
+        "quantity": 1,
+        "expiryDays": [18, 50],
+        "state": ["working", "filled"]
+      }
+    ]
+  },
+  "note": "Covered call (rung 202)."
+}

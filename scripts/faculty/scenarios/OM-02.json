@@ -1,0 +1,18 @@
+{
+  "id": "OM-02",
+  "member": "returning-trader",
+  "viewport": "desktop",
+  "start": "/app",
+  "optimal": 6,
+  "scenario": "You have an offer out to buy 10 Microsoft shares at $400 that hasn't filled. Raise your price to $405 on that same offer rather than starting a second one.",
+  "end": {
+    "replaced": [
+      {
+        "id": "faculty-msft-limit",
+        "limitPrice": [405, 405],
+        "quantity": 10
+      }
+    ]
+  },
+  "note": "Modify sends with no review and no desk checks (trade-orders-routes.ts:220-279)."
+}

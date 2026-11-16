@@ -1,0 +1,22 @@
+{
+  "id": "OP-03",
+  "member": "eric",
+  "viewport": "desktop",
+  "start": "/app",
+  "optimal": 12,
+  "scenario": "CoreWeave pulled back and you'd happily own 100 shares at $70. Get paid to wait: take on the obligation to buy 100 shares at $70 about a month from now, collecting the premium today.",
+  "end": {
+    "orders": [
+      {
+        "underlying": "CRWV",
+        "optionType": "put",
+        "strike": [65, 70],
+        "side": "sell",
+        "quantity": 1,
+        "expiryDays": [18, 50],
+        "state": ["working", "filled"]
+      }
+    ]
+  },
+  "note": "Eric's scenario 1 (docs/members/scenarios.md). Expiries spanning the earnings window are marked."
+}
