@@ -4,6 +4,14 @@
    is a shape and a word as well as a tint (BRAND.md → Accessibility), hit targets 44px. The
    message, thread and screenshot styles below are the rail's, kept for History. */
 
+/* Whatever the BROWSER scrolls to — a field taking focus, Tab to the next control, a scrollIntoView,
+   an anchor — stops clear of the dock instead of under it. The dock's own rule keeps the page's
+   last row free; this keeps the focused one free (change-scenarios faculty run, 2026-11-16: on a
+   phone the dock holds ~28% of the screen, and the ticket's Review button scrolled in beneath it). */
+:root {
+  scroll-padding-bottom: calc(var(--dock-h, 0px) + 12px);
+}
+
 .mp-dock {
   position: sticky;
   bottom: 0;
