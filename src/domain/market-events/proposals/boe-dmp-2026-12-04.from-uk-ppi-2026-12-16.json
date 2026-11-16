@@ -1,0 +1,11 @@
+{
+  "id": "boe-dmp-2026-12-04",
+  "kind": "macro-print",
+  "title": "Bank of England Decision Maker Panel monthly data (November 2026) — firms' expected own-price growth one year ahead, the last survey read before the 12-16 UK CPI and PPI prints and the 12-17 MPC decision",
+  "date": "2026-12-04",
+  "status": "estimate",
+  "source": "EST: bankofengland.co.uk/decision-maker-panel/2026/november-2026, fetched direct 2026-11-16 (HTTP 200) — the Bank's own November-2026 DMP page states 'This monthly Decision Maker Panel data will be published on 4 December 2026', and the October-2026 page (published 30 October) names the same next release date. Primary (the publisher's own schedule); filed estimate per this lane's no-self-confirm limit and the taxonomy gap for non-Fed central banks. Discovered in the d-30 pulse of uk-ppi-2026-12-16, 2026-11-16",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BY THE uk-ppi-2026-12-16 LANE, 2026-11-16. The October survey (published 2026-10-30, fetched 2026-11-16) read realised own-price growth 3.8%, year-ahead own-price 3.8%, year-ahead CPI expectations 3.3% (from 3.1%), and 68% of firms expecting to raise prices in response to the energy shock (11 points above September). The November survey is the last firm-expectation read before the 2026-12-16 UK CPI and PPI prints and the 2026-12-17 BoE decision. symbols: [] — no tracked name has a measured channel to it. Estimate widens caution only; it licenses no date-keyed action."
+}
