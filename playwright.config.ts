@@ -1,5 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 import { FIXED_CLOCK } from "./e2e/determinism";
+import { facultyProject } from "./e2e/playwright.faculty";
 import { journeysMode } from "./e2e/playwright.journeys";
 import { SHARED_CONFIG } from "./e2e/playwright.shared";
 
@@ -18,6 +19,9 @@ import { SHARED_CONFIG } from "./e2e/playwright.shared";
 // step without `known_gap` that fails, or a `known_gap` step that passes, fails the run.
 const open = journeysMode("open", { build: false });
 const session = journeysMode("session", { build: false });
+// And the change playthroughs (e2e/changes.spec.ts): a boot whose paper account applies writes, so
+// a spec can press Submit and read the order back (e2e/playwright.faculty.ts).
+const faculty = facultyProject();
 
 export default defineConfig({
   ...SHARED_CONFIG,
@@ -30,10 +34,11 @@ export default defineConfig({
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
-      testIgnore: ["**/login.spec.ts", "**/ct/**", "**/journeys.spec.ts"],
+      testIgnore: ["**/login.spec.ts", "**/ct/**", "**/journeys.spec.ts", "**/changes.spec.ts"],
     },
     open.project,
     session.project,
+    faculty.project,
   ],
   // Launched one after another, in this order: the first boot builds the React shell (app/dist)
   // and the two playthrough boots, which skip the build, serve the same app/dist.
@@ -59,5 +64,6 @@ export default defineConfig({
     },
     open.webServer,
     session.webServer,
+    faculty.webServer,
   ],
 });
