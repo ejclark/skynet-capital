@@ -20,6 +20,16 @@ import { fetchSymbolSearch, type SymbolHit } from "../live/symbol-search";
  * Mobile-first: the suggestion list is an in-flow block directly under the input, never a floating
  * overlay — at 390px an overlay can run off the viewport. The active row is marked with a left
  * border and bolder weight, never colour alone (a standing reader is red/green colourblind).
+ *
+ * LEAVING THE FIELD NEVER MOVES THE TAP THAT LEFT IT (change-scenarios faculty run, 2026-11-16).
+ * Because the list is in flow, closing it on blur moves everything under it, and committing on
+ * blur lets the ticket insert its quote line above the fields. Both used to happen DURING the tap
+ * that caused the blur: `mousedown` on the Shares label blurred this field, the form jumped, and
+ * `mouseup` landed on the Shares input instead — so the browser sent `click` to their common
+ * parent, nothing took focus, and the quantity the member typed next went nowhere (desktop and
+ * phone alike; the probe that found it is scripts/faculty/README.md → *What it found*). The blur
+ * now defers both until that gesture's `click` has been dispatched (the click target is settled by
+ * then), so the in-flow list keeps its 390px reason and the tap lands where the member aimed.
  */
 export function SymbolField({
   id,
@@ -52,6 +62,46 @@ export function SymbolField({
   const [activeIndex, setActiveIndex] = useState(-1);
   const [tier2Hits, setTier2Hits] = useState<readonly SymbolHit[]>([]);
   const listId = useId();
+  // Whether a pointer is held right now — on a mouse, `mousedown` blurs this field before
+  // `mouseup`, so a blur with the button still down must wait for the gesture's `click`.
+  const pointerHeld = useRef(false);
+  const afterGesture = useRef<(() => void) | undefined>(undefined);
+  useEffect(() => {
+    const down = () => {
+      pointerHeld.current = true;
+    };
+    const up = () => {
+      pointerHeld.current = false;
+    };
+    document.addEventListener("pointerdown", down, true);
+    document.addEventListener("pointerup", up, true);
+    document.addEventListener("pointercancel", up, true);
+    return () => {
+      document.removeEventListener("pointerdown", down, true);
+      document.removeEventListener("pointerup", up, true);
+      document.removeEventListener("pointercancel", up, true);
+      afterGesture.current?.();
+    };
+  }, []);
+  /** Run `fn` once the tap that blurred the field has finished: on its `click` when a pointer is
+   *  still held (a mouse), else on the next task (a touch's synthesized mouseup/click are already
+   *  queued behind this blur). A 600ms backstop covers a press that never clicks (a drag away). */
+  const whenGestureEnds = (fn: () => void) => {
+    afterGesture.current?.();
+    let done = false;
+    const run = () => {
+      if (done) return;
+      done = true;
+      document.removeEventListener("click", onClick, true);
+      clearTimeout(backstop);
+      afterGesture.current = undefined;
+      fn();
+    };
+    const onClick = () => setTimeout(run, 0);
+    const backstop = setTimeout(run, pointerHeld.current ? 600 : 0);
+    if (pointerHeld.current) document.addEventListener("click", onClick, true);
+    afterGesture.current = run;
+  };
 
   // Live-value ref for the debounced tier-2 fetch's staleness guard below — avoids a stale
   // closure over `value` from the keystroke that scheduled the fetch.
@@ -167,11 +217,12 @@ export function SymbolField({
         }}
         onKeyDown={handleKeyDown}
         onBlur={() => {
-          setOpen(false);
           setActiveIndex(-1);
-          if (!commitOnBlur) return;
           const trimmed = value.trim().toUpperCase();
-          if (trimmed !== "") onCommit(trimmed);
+          whenGestureEnds(() => {
+            setOpen(false);
+            if (commitOnBlur && trimmed !== "") onCommit(trimmed);
+          });
         }}
       />
       {showList ? (

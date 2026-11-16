@@ -5,17 +5,22 @@ import {
   FixtureTradingTransport,
 } from "../adapters/fixture-trading-transport.js";
 import { parseEventsJsonl, ReplayEventStream } from "../adapters/replay-event-stream.js";
+import { SyntheticMarket } from "../adapters/synthetic-market-transport.js";
+import { WritableFixtureTradingTransport } from "../adapters/writable-fixture-trading-transport.js";
 import { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
 import { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
 import { AlpacaTradeUpdatesStream } from "../alpaca/trade-updates-stream.js";
 import { FetchAlpacaTradingTransport } from "../alpaca/trading-transport.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
+import { isSession } from "../domain/market-calendar.js";
+import { regularSessionOpen, sessionBounds } from "../domain/market-session.js";
 import type { TradeActivityRecord } from "../observatory/activity-store.js";
 import type { TradingClientFactory } from "../observatory/dashboard-data.js";
 import type { ObservatoryEvent } from "../observatory/events.js";
 import { loadParticipants } from "../participants/load-participants.js";
 import type { Participant } from "../participants/participant.js";
 import { createDefaultPersonas } from "../personas/registry.js";
+import { isOccSymbol } from "../trading/option-symbols.js";
 
 type Env = Readonly<Record<string, string | undefined>>;
 
@@ -190,18 +195,17 @@ function offlineDataSource(env: Env): DataSource {
     ]),
   );
 
+  const transportFor = offlineTransports(env, fixtures, events);
+
   const clientFactory: TradingClientFactory = (participant) =>
-    new AlpacaTradingClient(
-      new FixtureTradingTransport(fixtures.get(participant.id) ?? { account: emptyAccount() }),
-    );
+    new AlpacaTradingClient(transportFor(participant.id));
 
   return {
     mode: "offline",
     clientFactory,
+    // The writable world's simulated market is also the data host (quotes, chains, snapshots).
     optionsClientFactory: (participant) =>
-      new AlpacaOptionsClient(
-        new FixtureTradingTransport(fixtures.get(participant.id) ?? { account: emptyAccount() }),
-      ),
+      new AlpacaOptionsClient(transportFor(participant.id), transportFor.market),
     loadParticipants: () => specs.map(toParticipant),
     // Offline replay emits every account's fills already; nothing to open per-account.
     startParticipantStream: () => {
@@ -211,6 +215,7 @@ function offlineDataSource(env: Env): DataSource {
       /* offline source has no live stream */
     },
     startStreams: ({ sink, onStatus }) => {
+      transportFor.attach?.(sink);
       new ReplayEventStream({
         events,
         onEvent: sink,
@@ -218,6 +223,120 @@ function offlineDataSource(env: Env): DataSource {
       }).start();
     },
   };
+}
+
+/**
+ * Each account's offline transport. By default a fresh read-only `FixtureTradingTransport` per
+ * client (writes are benign no-ops — the frozen book the crawl and the journeys replay). With
+ * `SKYNET_OFFLINE_WRITES=apply`, ONE `WritableFixtureTradingTransport` per account, shared by its
+ * trading and options clients, so an order a member submits is the order the desk reads back —
+ * what a change scenario needs to check (`docs/members/change-scenarios.md`). Market orders fill
+ * at the replay script's last price per symbol: fixed per boot, so a run is repeatable.
+ */
+function offlineTransports(
+  env: Env,
+  fixtures: ReadonlyMap<string, AccountFixture>,
+  events: readonly ObservatoryEvent[],
+): ((participantId: string) => FixtureTradingTransport | WritableFixtureTradingTransport) & {
+  readonly market?: SyntheticMarket;
+  /** Where the writable world's fills go — the hub's sink, handed over in `startStreams`. */
+  readonly attach?: (sink: EventSink) => void;
+} {
+  const fixtureFor = (id: string): AccountFixture =>
+    fixtures.get(id) ?? { account: emptyAccount() };
+  if (env.SKYNET_OFFLINE_WRITES !== "apply") {
+    return (id) => new FixtureTradingTransport(fixtureFor(id));
+  }
+  const market = offlineMarket(env, fixtures, events);
+  const ledgers = new Map<string, WritableFixtureTradingTransport>();
+  let sink: EventSink | undefined;
+  const ledger = (id: string): WritableFixtureTradingTransport => {
+    let found = ledgers.get(id);
+    if (!found) {
+      found = new WritableFixtureTradingTransport(fixtureFor(id), {
+        market,
+        idPrefix: `paper-${id}`,
+        clock: () => marketClock(new Date()),
+        onFill: (fill) => sink?.({ type: "fill", participantId: id, ...fill }),
+      });
+      ledgers.set(id, found);
+    }
+    return found;
+  };
+  return Object.assign(ledger, {
+    market,
+    attach: (next: EventSink) => {
+      sink = next;
+    },
+  });
+}
+
+/**
+ * The writable world's `/v2/clock`, from the wall clock and the exchange calendar — so the broker
+ * and the header agree: after hours an order queues for the open, as a paper account's would.
+ */
+export function marketClock(now: Date): {
+  is_open: boolean;
+  next_open: string;
+  next_close: string;
+} {
+  const today = now.toISOString().slice(0, 10);
+  const days = [
+    today,
+    ...Array.from({ length: 10 }, (_, i) =>
+      new Date(now.getTime() + (i + 1) * 86_400_000).toISOString().slice(0, 10),
+    ),
+  ];
+  const sessions = days.filter(isSession).map(sessionBounds);
+  const current = sessions.find((s) => s.openAt <= now.getTime() && now.getTime() < s.closeAt);
+  const next = sessions.find((s) => s.openAt > now.getTime());
+  return {
+    is_open: regularSessionOpen(now),
+    next_open: new Date(next?.openAt ?? now.getTime()).toISOString(),
+    next_close: new Date((current ?? next)?.closeAt ?? now.getTime()).toISOString(),
+  };
+}
+
+/**
+ * The simulated market the writable world quotes and fills against: one mark per underlying — the
+ * replay script's last price, then every fixture position's own price, then `marks.json` beside the
+ * fixtures (a world's declared prices win) — on the server's clock (`SKYNET_FIXED_NOW` when set).
+ */
+function offlineMarket(
+  env: Env,
+  fixtures: ReadonlyMap<string, AccountFixture>,
+  events: readonly ObservatoryEvent[],
+): SyntheticMarket {
+  const marks = new Map<string, number>();
+  for (const event of events) {
+    if (event.type === "price") marks.set(event.symbol, event.price);
+  }
+  for (const fixture of fixtures.values()) {
+    for (const raw of Array.isArray(fixture.positions) ? fixture.positions : []) {
+      const p = raw as { symbol?: string; qty?: string; market_value?: string };
+      const qty = Number(p.qty);
+      const value = Number(p.market_value);
+      if (
+        p.symbol &&
+        !isOccSymbol(p.symbol) &&
+        qty &&
+        Number.isFinite(value) &&
+        !marks.has(p.symbol)
+      ) {
+        marks.set(p.symbol, Math.round((Math.abs(value / qty) + Number.EPSILON) * 100) / 100);
+      }
+    }
+  }
+  const dir = env.SKYNET_OFFLINE_FIXTURES ?? join("fixtures", "offline");
+  const declared = safeRead(join(dir, "marks.json"));
+  if (declared.trim()) {
+    for (const [symbol, price] of Object.entries(JSON.parse(declared) as Record<string, number>)) {
+      if (typeof price === "number" && price > 0) marks.set(symbol, price);
+    }
+  }
+  const fixed = Date.parse(env.SKYNET_FIXED_NOW ?? "");
+  const now = Number.isFinite(fixed) ? () => new Date(fixed) : () => new Date();
+  return new SyntheticMarket({ marks, now });
 }
 
 /** Parse the offline `participants.json` (throws on malformed JSON — fail loud in dev). */
