@@ -273,18 +273,22 @@ export function ClosePanel({
               {state.preview.refusals[0]}
             </InlineResult>
           )}
+          <BackToQuantity onBack={() => setState({ step: "editing" })} />
         </div>
       ) : null}
       {state.step === "submitting" ? <span className="tkt-close-note">closing…</span> : null}
       {state.step === "done" ? (
         state.result.ok ? (
           <InlineResult as="span" tone="ok" className="tkt-close-note">
-            order {state.result.orderId} {state.result.status}
+            {sentWords(state.result.status)}
           </InlineResult>
         ) : (
-          <InlineResult as="span" tone="err" className="tkt-close-note">
-            {state.result.refusals[0]}
-          </InlineResult>
+          <>
+            <InlineResult as="span" tone="err" className="tkt-close-note">
+              {state.result.refusals[0]}
+            </InlineResult>
+            <BackToQuantity onBack={() => setState({ step: "editing" })} />
+          </>
         )
       ) : null}
       {state.step === "error" ? (
@@ -294,4 +298,30 @@ export function ClosePanel({
       ) : null}
     </div>
   );
+}
+
+/**
+ * The way back from a reviewed or refused close (change-scenarios census, 2026-11-16: a reviewed
+ * close had no Back and a refusal hid the quantity, so a member who meant 1 contract, not 2, had
+ * to leave the row and start again). The quantity they typed is kept — it lives in its own state.
+ */
+function BackToQuantity({ onBack }: { readonly onBack: () => void }): ReactElement {
+  return (
+    <button type="button" className="btn mc-btn" onClick={onBack}>
+      Change quantity
+    </button>
+  );
+}
+
+/**
+ * A sent close in words, never the broker's id or raw status word — the receipt's own rule
+ * (`order-receipt.tsx`: "never a UUID or the broker's raw status").
+ */
+export function sentWords(status: string): string {
+  if (status === "filled") return "Sent and filled.";
+  if (status === "partially_filled") return "Sent — partly filled so far.";
+  if (["new", "accepted", "pending_new", "held", "accepted_for_bidding"].includes(status)) {
+    return "Sent — waiting to fill; it shows under Working orders until it does.";
+  }
+  return "Sent.";
 }
