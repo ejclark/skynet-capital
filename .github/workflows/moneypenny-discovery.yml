@@ -1,0 +1,178 @@
+name: Moneypenny Discovery (member questions → research shelf)
+
+# THE LANE THAT READS THE DISCOVERY QUEUE (#7034 slice 3b, #6952 criterion 7). A member asks about a
+# sector, market or name no campaign covers; the dashboard keeps the ask on its volume
+# (src/server/discovery-queue-store.ts); once a day this workflow reads that file, takes the front
+# of the queue inside the work spigot's research ceiling, and researches each ask in its own session
+# (.github/prompts/discovery-research.md). A finding is a PR on the research shelf; once it merges
+# and deploys, the dashboard drops the answered ask (src/domain/discovery-pass.ts). The lane never
+# writes the volume. It is once a day, not on every merge, so the wait a member is told is "a pass
+# runs once a day" (src/domain/discovery-queue.ts → tellMember) and stays true.
+#
+# THE CREDENTIALED READ. The queue is a file on the Fly volume, so `plan` reads it with
+# `flyctl ssh console` and the FLY_API_TOKEN the deploy jobs already hold (the pattern
+# companion-eval.yml uses, which gates on the `autonomy-ops` environment because it reads a secret).
+# This read is of one file of opaque member keys and short questions, no secret, so it runs
+# unattended: an approval tap per day would make the promised wait false. The file's contents never
+# reach a log or an output: `plan` hands the matrix only `{ id, kind, subject, slug, branch,
+# shelfFile }` (discovery-pass.ts rule 4), because this repo and its run logs are public.
+#
+# THE CEILING. `npm run work-gate` answers "may I, and how much" (the dial and the spend breaker
+# together); research PRs already open count against the same `researchPerTick`
+# (takeForPass's `spentByEvents`), so this lane can never raise what event research uses.
+#
+# Protected by envelope.json (`.github/workflows/**`): the PR that adds this file never auto-merges.
+
+on:
+  schedule:
+    - cron: "23 13 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One pass at a time. A dispatch during a running pass waits; it never cancels research mid-session.
+concurrency:
+  group: moneypenny-discovery
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    name: plan · which asks this pass takes
+    runs-on: ubuntu-latest
+    # The gate reads the work-mode label (issues) and the open PR heads (pull-requests); nothing writes.
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+    outputs:
+      asks: ${{ steps.plan.outputs.asks }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .nvmrc
+
+      - uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # v1.6
+        with:
+          # Pinned (docs/LESSONS.md, 2026-09-05): `latest` resolves through an unauthenticated
+          # releases call that 403s under runner load.
+          version: 0.4.99
+
+      - run: npm ci --no-audit --no-fund
+
+      - id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          # The dial and the spend breaker, together. Anything but dispatch=true takes nothing.
+          GATE=$(node scripts/moneypenny/work-gate.mjs | sed '/^::notice::/d')
+          echo "::notice::work gate: $(echo "$GATE" | jq -c '{position, dispatch, reason}')"
+          if ! echo "$GATE" | jq -e '.dispatch' > /dev/null; then
+            echo "asks=[]" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          CEILING=$(echo "$GATE" | jq -r '.caps.researchPerTick')
+          HEADS_FILE="$RUNNER_TEMP/heads.json"
+          gh pr list --state open --limit 100 --json headRefName | jq -c '[.[].headRefName]' > "$HEADS_FILE"
+          SPENT=$(jq '[.[] | select(startswith("research/") or startswith("discovery/"))] | length' "$HEADS_FILE")
+          # The queue file: not logged, not an output. A missing or unreadable file is an empty
+          # queue (the app writes it on the first ask), never a failed run.
+          QUEUE_FILE="$RUNNER_TEMP/queue.json"
+          if ! flyctl ssh console -a skynet-capital -C "cat /data/discovery-queue.json" 2>/dev/null | tr -d '\r' > "$QUEUE_FILE"; then
+            echo "[]" > "$QUEUE_FILE"
+          fi
+          ASKS=$(npx tsx src/scripts/discovery-pass.ts --queue "$QUEUE_FILE" --heads "$HEADS_FILE" --ceiling "$CEILING" --spent "$SPENT")
+          rm -f "$QUEUE_FILE"
+          echo "::notice::taking $(echo "$ASKS" | jq 'length') ask(s): $(echo "$ASKS" | jq -c '[.[].slug]')"
+          echo "asks=$(echo "$ASKS" | jq -c .)" >> "$GITHUB_OUTPUT"
+
+  research:
+    name: research · ${{ matrix.ask.slug }}
+    needs: plan
+    if: needs.plan.outputs.asks != '' && needs.plan.outputs.asks != '[]'
+    # One session per ask, each with its own turn budget; one dying never cancels its siblings.
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        ask: ${{ fromJSON(needs.plan.outputs.asks) }}
+    concurrency:
+      group: moneypenny-discovery-${{ matrix.ask.slug }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          # claude-code-action puts the App token in the remote URL; a persisted ambient credential
+          # would make a later push go out as github-actions[bot] (#5221).
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .nvmrc
+
+      - id: app-token
+        uses: ./.github/actions/app-token
+        with:
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - id: gate
+        uses: ./.github/actions/oauth-token-gate
+        with:
+          token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          blocked-message: "CLAUDE_CODE_OAUTH_TOKEN missing — a member's question is queued but nothing will research it."
+
+      - if: steps.gate.outputs.armed == 'true'
+        id: build
+        uses: anthropics/claude-code-action@d535f5172dec02b204866b393d6b20b9b2aaf98d  # v1 tag, installs Claude Code 2.1.286 (see docs/LESSONS.md)
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ steps.app-token.outputs.token }}
+          # The cron's actor may be a bot (the account that last edited the schedule), and a
+          # dispatch from the App is `skynet-envoy`; named, never `*` (workflow-lint rule 8).
+          allowed_bots: "github-actions,skynet-envoy"
+          # Sonnet, like event research (CLAUDE.md → COMPUTE; the lane can fan out to the ceiling
+          # every day, so an Opus pin here would be the unbounded-spend shape #2946 measured).
+          # --max-turns is a runaway backstop for ONE ask, not a budget normal work reaches.
+          claude_args: |
+            --allowedTools "Bash,Read,Write,Edit,Glob,Grep,WebSearch,WebFetch" --model claude-sonnet-5-5 --effort high --max-turns 150
+          prompt: |
+            Read `.github/prompts/discovery-research.md` in this repo and follow it exactly. It is
+            your complete instruction set for this run. You are assigned exactly ONE ask:
+            id `${{ matrix.ask.id }}`, kind `${{ matrix.ask.kind }}`, subject `${{ matrix.ask.subject }}`,
+            houseCampaign `${{ matrix.ask.houseCampaign || 'none' }}`, shelfFile `${{ matrix.ask.shelfFile }}`,
+            branch `${{ matrix.ask.branch }}`. Research only this ask; sibling legs own the others.
+
+      # Same swallowed-error fix as moneypenny-events.yml: the action hides the CLI result, so print
+      # only the terminal envelope and rate-limit events, never the transcript (this log is public).
+      - if: always() && steps.build.outcome == 'failure'
+        name: Surface the swallowed Claude result on failure
+        run: |
+          F=/home/runner/work/_temp/claude-execution-output.json
+          if [ -f "$F" ]; then
+            jq -c 'if type=="array" then .[] else . end | select(.type == "result" or .type == "rate_limit_event") | {type, subtype, is_error, terminal_reason, api_error_status, duration_ms, num_turns, total_cost_usd, modelUsage, rate_limit_info} | with_entries(select(.value != null))' "$F" \
+              || echo "(execution-output.json is not JSON the result filter can read)"
+          else
+            echo "(no execution-output.json — failure happened before Claude Code produced one)"
+          fi
+
+      # The cost meter (#2946): one greppable line per session, on every outcome.
+      - if: always()
+        name: Record this session's cost
+        run: |
+          F=/home/runner/work/_temp/claude-execution-output.json
+          if [ ! -f "$F" ]; then
+            echo "::notice::cost — ask=${{ matrix.ask.slug }} no execution-output.json (died before Claude Code ran)"
+            exit 0
+          fi
+          RESULT_FILTER='if type=="array" then ([.[] | select(.type=="result")] | last // {}) else . end'
+          COST=$(jq -r "$RESULT_FILTER | .total_cost_usd // \"?\"" "$F" 2>/dev/null || echo "?")
+          TURNS=$(jq -r "$RESULT_FILTER | .num_turns // \"?\"" "$F" 2>/dev/null || echo "?")
+          echo "::notice::cost — ask=${{ matrix.ask.slug }} usd=$COST turns=$TURNS"

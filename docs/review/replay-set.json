@@ -18,7 +18,8 @@
     "This replay runs reviewers only, not the two refuters. Findings on controls are counted before any refuter, so they overstate manufacture compared with the audit; the one-in-three survival number in each lens's kill rule cannot come from here.",
     "A hit is matched by file. A reviewer that flags the right file for the wrong reason counts until someone reads it and sets mechanism: false on that finding.",
     "docs/review/REVIEW.md, which the pre-merge lens reads, was written by a session that had read this set. A spec bars it from naming a case's PR or file, and its per-path notes state each path's contract, not a case's mechanism, but a note can still point at a case's class. Only a replay with the notes removed (the workflow's args.rulesFile) can say what they add.",
-    "A file match can count a finding the pre-merge job could never post: 5 of the 21 correctness defects (D01, D03, D14, D19, D20) sit in a file their PR never changed. The pre-merge score counts hits in the diff apart and passes only on those; a defect named at its caller counts only on reading."
+    "A file match can count a finding the pre-merge job could never post: 5 of the 21 correctness defects (D01, D03, D14, D19, D20) sit in a file their PR never changed. The pre-merge score counts hits in the diff apart and passes only on those; a defect named at its caller counts only on reading.",
+    "The ia facet was labelled by the session that wrote its lens, from the #895 cluster and the /outpost reshuffle, and each smell's shape came from these cases (#6886 slice 2). Its controls are route and nav PRs whose placement held or executed a written decision; two of them (K18, K21) were later re-homed by a newer decision, so a key or second-home finding there is a trap read by hand, not manufacture. Seven of its nine PRs predate docs/IA.md (2026-09-26), so the lens is judged there on its smells alone. A tenth, #815, was dropped after the first run: it was labelled from #819's body ('/outpost unreachable since #815'), but at #815's head the topbar still links /outpost, so the reviewer that cleared it was right and the label was wrong. A label taken from a later PR's prose is checked against the tree before it counts. I05 was labelled K19, a control, until the first run flagged a dead /app/outpost link in it and #3573 was found fixing exactly that; it is a defect the lens found, so it never counts toward the recall measured on the labels set before the run. On I04 the label names __root.tsx (the tab), and the run named the story order in edition-story.tsx at medium and the tab at low: a file match scores it low-only, a reading scores it a hit."
   ],
   "facets": {
     "correctness": "wrong result, crash, broken contract, a requirement the code does not meet (post-merge-audit.js's lens today)",
@@ -26,7 +27,8 @@
     "performance": "a request or boot path that re-reads a whole growing ledger, or asks a store once per row",
     "security": "a trust boundary crossed without the check the rest of the repo applies (author, scope, secret origin)",
     "context-loop": "a change to CLAUDE.md, a skill, an agent, a hook, a workflow or the loop registry read for startup cost, a claim the named code does not hold, a rule with no reader, a loop with no number, a verifier whose unknown reads as a verdict",
-    "structure": "a concept with no named home, a second rule beside the one predicate, a hand-synced copy: the smells-and-patterns lens"
+    "structure": "a concept with no named home, a second rule beside the one predicate, a hand-synced copy: the smells-and-patterns lens",
+    "ia": "a route left with no link from any page, data placed at a key it is not fetched by, a home or name that contradicts docs/IA.md at the head, a second home for what a page already holds: the information-architecture lens (#6886 slice 2)"
   },
   "cases": [
     {
@@ -954,20 +956,139 @@
       "trapFor": "performance",
       "note": "a perf fix (516 to 262 ms) that leaves /api/wire over the 150 ms budget, said in its own body. 'Still over budget' is a correct performance finding, not manufactured; anything else high or medium is",
       "confidence": "high"
+    },
+    {
+      "id": "I02",
+      "pr": 881,
+      "head": "00ffa73d454ce89668257e6351749ddec5c3f445",
+      "base": "b5ee7c14925dfd9da2f5c5dff56d074c958c4f9a",
+      "mergedOn": "2026-08-29",
+      "isControl": false,
+      "facet": "ia",
+      "defect": {
+        "file": "app/src/routes/__root.tsx",
+        "summary": "Takes Collections off the topbar with 'route still reachable directly': at the head only the g c keyboard chord and the collections pages themselves link /collections, so a phone member cannot reach it",
+        "laterFix": "#3343 folded it into Research (2026-09-19), naming it unreachable 'except by direct URL or a keyboard chord'"
+      },
+      "confidence": "medium-high"
+    },
+    {
+      "id": "I03",
+      "pr": 886,
+      "head": "ef931ac027f71e2d3d0d20aab1778bb9692cecc4",
+      "base": "0b7076db1e2389ae7caf8d26a43f1c662c70251e",
+      "mergedOn": "2026-08-29",
+      "isControl": false,
+      "facet": "ia",
+      "defect": {
+        "file": "app/src/routes/settings.tsx",
+        "summary": "Puts a 'Milestones →' link inside every human account's card, though fetchJourney() takes no account id: the viewer's own progress reads as per-account and repeats once per account",
+        "laterFix": "#888 two hours later: one viewer-level link on the page"
+      },
+      "confidence": "high"
+    },
+    {
+      "id": "I04",
+      "pr": 7085,
+      "head": "49d7058139cae7bdab2e1baedb1425d9e40d2a68",
+      "base": "b3745297f85dd801e4d0943c03e0a30dee9f6878",
+      "mergedOn": "2026-11-08",
+      "isControl": false,
+      "facet": "ia",
+      "defect": {
+        "file": "app/src/routes/__root.tsx",
+        "summary": "Names the first tab 'News' and leads each story with what moved, while docs/IA.md §5.9 in its own tree names the tab 'Chronicles' and has a story lead with the reports that bear on it",
+        "laterFix": "#7089 the same day: 'follow docs/IA.md 5.9'"
+      },
+      "confidence": "high"
+    },
+    {
+      "id": "K16",
+      "pr": 888,
+      "head": "446d59f996ba8cb85cd2e0c5c628e483c303b7b8",
+      "base": "ef931ac027f71e2d3d0d20aab1778bb9692cecc4",
+      "mergedOn": "2026-08-29",
+      "isControl": true,
+      "cleanFor": ["ia"],
+      "note": "the correction of #886: one viewer-level Milestones link; docs/IA.md §5.5 later kept Milestones viewer-level",
+      "confidence": "high"
+    },
+    {
+      "id": "K17",
+      "pr": 980,
+      "head": "693d4f700b59890faccc3793a514f220f1a06567",
+      "base": "b7bdfab52c4806685f7cc98bde5ef7f616b17a52",
+      "mergedOn": "2026-08-30",
+      "isControl": true,
+      "cleanFor": ["ia"],
+      "note": "restores a topbar link to an existing route with no other entry point; its body says nav parity, not a new IA call. §8 later re-homed Feedback as a viewer-level section, a planned lift, not a fix of this",
+      "confidence": "medium"
+    },
+    {
+      "id": "K18",
+      "pr": 819,
+      "head": "1775c72c20a669e93ed460db057a5da7f0d4708f",
+      "base": "a8e97435472a0802f630609b51729ace01d1dd2c",
+      "mergedOn": "2026-08-29",
+      "isControl": true,
+      "cleanFor": ["ia"],
+      "trapFor": "ia",
+      "note": "wires /outpost into Trade's rail per the settled #784 call, fixing I01. #3343 later moved the catalog to Research, so a key or second-home finding (a playbook catalog under the symbol workbench) is a defensible reading: read by hand",
+      "confidence": "medium"
+    },
+    {
+      "id": "I05",
+      "pr": 3343,
+      "head": "9dbc3d249b26d04c66c2b57de0d140b1e617bda1",
+      "base": "67e05b0ff16169eaf0d1c0909de0c522afe153e2",
+      "mergedOn": "2026-09-19",
+      "isControl": false,
+      "facet": "ia",
+      "defect": {
+        "file": "src/observatory/considerations-view.ts",
+        "summary": "Deletes /outpost but leaves the Accounts page's considerations rail building its 'View play' action as /app/outpost?symbol=…, so a member holding a symbol a house play covers taps through to not-found",
+        "laterFix": "#3573 (2026-09-22): 'dead /app/outpost?symbol= link → /app/research?section=plays&symbol='"
+      },
+      "foundBy": "the information-architecture lens's first replay (2026-11-10), on a PR labelled a control; confirmed against #3573 before relabelling, and kept out of the pre-registered recall",
+      "confidence": "high"
+    },
+    {
+      "id": "K20",
+      "pr": 7089,
+      "head": "04744fe866525e8859e1de4b1ad66db7b5244693",
+      "base": "d49ebb7a3a59beba4e3b63f44072d56ad6c4dcca",
+      "mergedOn": "2026-11-08",
+      "isControl": true,
+      "cleanFor": ["ia"],
+      "note": "executes docs/IA.md §5.9 as written (the fix of I04)",
+      "confidence": "high"
+    },
+    {
+      "id": "K21",
+      "pr": 4143,
+      "head": "2d5104a6f091a04d5410606e3b2bc6a04843e754",
+      "base": "25309b24191051bcb8159d2f9f62236e8110fe6c",
+      "mergedOn": "2026-09-29",
+      "isControl": true,
+      "cleanFor": ["ia"],
+      "trapFor": "ia",
+      "note": "the tower's column on every page, executing the §8.1 row #3977 wrote first; the room it starts at was later adjusted on its own falsifier",
+      "confidence": "medium"
     }
   ],
   "counts": {
-    "defectCases": 45,
-    "distinctDefectPRs": 44,
+    "defectCases": 49,
+    "distinctDefectPRs": 48,
     "defectIssuesFromAudit": 22,
-    "controls": 15,
+    "controls": 20,
     "byFacet": {
       "correctness": 21,
       "reuse": 4,
       "performance": 8,
       "security": 3,
       "context-loop": 9,
-      "structure": 5
+      "structure": 5,
+      "ia": 4
     }
   }
 }

@@ -33,9 +33,9 @@
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
-import { basename, dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { basename, join } from "node:path";
 import { pause, withFileLock } from "../file-lock.mjs";
+import { isMain } from "../is-main.mjs";
 
 // Tries against a git process outside this hook, about a second and a half in all.
 const LOCK_RETRIES = 8;
@@ -145,7 +145,7 @@ function record(input) {
   process.exitCode = 2;
 }
 
-if (process.argv[1] && dirname(fileURLToPath(import.meta.url)) === dirname(process.argv[1])) {
+if (isMain(import.meta.url)) {
   let raw = "";
   process.stdin.on("data", (chunk) => {
     raw += chunk;

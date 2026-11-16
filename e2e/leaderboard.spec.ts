@@ -10,6 +10,21 @@ import { expect, type Page, test } from "@playwright/test";
 // server process's. `maxDiffPixelRatio` is not the fix (docs/ENGINEERING.md → "Visual regression",
 // rule 1) — the real fix is pinning or pausing the server-side tick for e2e, which is its own
 // scoped follow-up, not patched in here. Behavioral coverage only until then.
+
+/**
+ * Wait for the page to finish rising into place before reading a scroll position or clicking.
+ * Every stage runs `stage-enter` as it mounts (app/src/styles/motion.css: an 8px rise), and the
+ * first `.rank-row` is visible partway through it. A click sent mid-rise finds its target "not
+ * stable", and Playwright's retries force their own scroll: first the target to the bottom of the
+ * screen, where Moneypenny's sticky dock takes the click, then to the middle. That moved a 390
+ * reading from 827 to 583 under a loaded parallel run, with the page itself never moving (#7549).
+ * The stage's own animations only — `document.getAnimations()` would wait on anything that loops.
+ */
+const stageLanded = (page: Page) =>
+  page
+    .locator(".stage")
+    .evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)).then(() => undefined));
+
 test.describe("leaderboard", () => {
   test("an old /?by= bookmark still opens the leaderboard, its ranking kept", async ({ page }) => {
     await page.goto("/app/?by=return");
@@ -28,6 +43,7 @@ test.describe("leaderboard", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/app/leaderboard");
     await expect(page.locator(".rank-row").first()).toBeVisible();
+    await stageLanded(page);
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     const reading = await page.evaluate(() => Math.round(window.scrollY));
     expect(reading).toBeGreaterThan(0);
@@ -64,6 +80,7 @@ for (const viewport of [
 
     // Read from the bottom of the board, where the last row is.
     await expect(row("Eric")).toBeVisible();
+    await stageLanded(page);
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     const reading = await scrollY(page);
     expect(reading).toBeGreaterThan(0);

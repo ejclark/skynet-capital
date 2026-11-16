@@ -1,10 +1,17 @@
+import { readFileSync } from "node:fs";
+
 import type { EditionStory } from "../../src/live/edition";
 import {
   askedByLine,
+  askForResearch,
   askTarget,
   chatQuestion,
+  filedLine,
+  HOLDER,
+  holderLine,
   NO_RECORD,
   type PartyQuestion,
+  QUESTION_MAX,
   QUICK_QUESTIONS,
   questionState,
   RECORD_CODA,
@@ -20,6 +27,7 @@ import {
 const story = (patch: Partial<EditionStory> = {}): EditionStory => ({
   id: "chip-drop",
   headline: "Chip stocks had their worst day since March 2020.",
+  line: "Chips' worst day since March 2020",
   symbols: ["SMH", "NVDA"],
   facts: [{ label: "NVDA", value: "−9.3%", move: "down" }],
   reports: [],
@@ -120,11 +128,45 @@ describe("what other members asked", () => {
   });
 
   it("says where a question stands in words, never a finding that isn't there", () => {
+    expect(questionState(question(), true)).toBe("In line, 2 ahead");
+    expect(questionState(question({ ahead: 0 }), true)).toBe("Next in line for research");
+    // No lane reads the queue yet, so a waiting question promises no turn (#7034 slice 3b).
     expect(questionState(question())).toBe("In line, 2 ahead");
-    expect(questionState(question({ ahead: 0 }))).toBe("Next in line for research");
+    // If the lane is ever switched off, a waiting question promises no turn (#7034 slice 3b).
+    expect(questionState(question(), false)).toBe("Kept; research doesn't read the list yet");
     expect(questionState(question({ state: "no-finding-yet" }))).toBe("No finding yet");
     const found = { idea: "x", on: "2026-11-08", source: "s" };
     expect(questionState(question({ state: "found", found: [found] }))).toBe("Answered");
+  });
+
+  it("names the job of whoever holds a question, and promises no wait (criterion 9)", () => {
+    expect(holderLine(question())).toBe("The research desk holds this question about NVDA.");
+    expect(holderLine(question({ state: "found", found: [] }))).toBe(
+      "The research desk answered this question about NVDA.",
+    );
+    expect(holderLine(question({ state: "no-finding-yet" }))).toBe(
+      "The research desk looked at NVDA and has nothing yet.",
+    );
+    expect(holderLine(question({ state: "on-the-shelf" }))).toBe(
+      "The research desk wrote up NVDA on the research shelf.",
+    );
+    expect(questionState(question({ state: "on-the-shelf" }))).toBe(
+      "Written up on the research shelf",
+    );
+    // Only the job is named: never a time, a lane or a build seat.
+    for (const state of ["waiting", "found", "on-the-shelf", "no-finding-yet"] as const) {
+      expect(holderLine(question({ state }))).not.toMatch(
+        /\d|minute|pass|soon|next|ahead|lane|builder|issue/i,
+      );
+    }
+  });
+
+  it("words the holder from a station the crew page really lists", () => {
+    const seats = JSON.parse(readFileSync("../docs/agents/seats.json", "utf8")) as {
+      seats: { station?: string }[];
+    };
+    const stations = seats.seats.flatMap((s) => (s.station ? [s.station.toLowerCase()] : []));
+    expect(stations.some((st) => st.startsWith(HOLDER.toLowerCase()))).toBe(true);
   });
 
   it("leaves the server's own sentence under the form", () => {
@@ -132,5 +174,51 @@ describe("what other members asked", () => {
     expect(replyLine({ ok: false, error: "That campaign isn't one you can ask in." })).toMatch(
       /can't|isn't/,
     );
+  });
+});
+
+describe("filing a research ask from the fast track (#7034 slice 3c)", () => {
+  const realFetch = globalThis.fetch;
+  afterEach(() => {
+    globalThis.fetch = realFetch;
+  });
+
+  it("posts a name ask with its question and no campaign, to the route the campaigns use", async () => {
+    const seen: { url: string; body: unknown }[] = [];
+    globalThis.fetch = ((url: string, init?: RequestInit) => {
+      seen.push({ url, body: JSON.parse(String(init?.body)) });
+      return Promise.resolve(Response.json({ ok: true, tell: "Queued." }));
+    }) as typeof globalThis.fetch;
+    await askForResearch({ subject: "NVDA", question: "  What do we know about NVDA earnings?  " });
+    expect(seen).toEqual([
+      {
+        url: "/api/campaigns/ask",
+        body: { kind: "name", subject: "NVDA", question: "What do we know about NVDA earnings?" },
+      },
+    ]);
+  });
+
+  it("caps the question at the server's length", async () => {
+    let sent = "";
+    globalThis.fetch = ((_url: string, init?: RequestInit) => {
+      sent = (JSON.parse(String(init?.body)) as { question: string }).question;
+      return Promise.resolve(Response.json({ ok: true }));
+    }) as typeof globalThis.fetch;
+    await askForResearch({ subject: "NVDA", question: "x".repeat(QUESTION_MAX + 50) });
+    expect(sent).toHaveLength(QUESTION_MAX);
+  });
+
+  it("shows the queue's own sentence for the wait, and its refusal in the server's words", () => {
+    expect(filedLine({ ok: true, tell: "Queued. It is next in line." })).toBe(
+      "Queued. It is next in line.",
+    );
+    expect(filedLine({ ok: false, error: "You already have 3 questions waiting." })).toMatch(
+      /already have/,
+    );
+  });
+
+  it("never invents a time when the server sent no sentence", () => {
+    expect(filedLine({ ok: true })).toBe("Kept on the research list.");
+    expect(filedLine({ ok: true })).not.toMatch(/\d|pass|day/);
   });
 });

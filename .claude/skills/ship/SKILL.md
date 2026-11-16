@@ -85,7 +85,7 @@ costs Eric a separate hand-merge.
 
 ```
 scripts/ship.sh platter open <item-branch>   # cut platter/<date> off main, board item 1, open it HELD
-scripts/ship.sh platter board <item-branch>  # board the next item; push; refresh the PR's ledger
+scripts/ship.sh platter board <item-branch>  # catch up to main; board the next item; push; refresh the ledger
 scripts/ship.sh platter ledger [--body]      # the table (or the whole PR body), read from git
 scripts/ship.sh platter sync                 # re-post the ledger; refuses if the range ≠ GitHub's count
 ```
@@ -102,7 +102,10 @@ scripts/ship.sh platter sync                 # re-post the ledger; refuses if th
   branches: [main]`, so a PR based on a platter branch runs **no CI at all** — the platter PR is the
   union's first CI run, and local verify per board is the only per-item proof that exists.
 - **Never a workspace.** A conflicting item catches up to `main` on its own branch and re-boards;
-  nothing is ever fixed on the platter.
+  nothing is ever fixed on the platter. `board` does merge `main` into a platter that is behind
+  before it squashes, then boards with `main`'s copy of `ship.sh` (#5390): a catch-up, so the
+  item commit holds only the item's own files. If `main` conflicts with a boarded item it aborts
+  and the platter is re-opened; `--no-merge` refuses instead of merging.
 - **No same-file fence.** Feast mode's "two items must not touch the same file" comes from parallel
   athletes. The platter boards sequentially onto one integration branch, so same-file items are fine
   in order — a conflict is just an item that has to catch up first.
@@ -119,6 +122,28 @@ scripts/ship.sh platter sync                 # re-post the ledger; refuses if th
   the latest `verify` is skipped or cancelled, ship adds a marker to the PR body. That edit fires an
   `edited` event, which starts a real run. The output says when it did this. `SHIP_REVERIFY_WAIT`
   sets the wait.
+
+## Stacked slices
+
+A slice that builds on an unmerged PR stacks on it instead of waiting (Eric, 2026-11-12).
+
+- **Open the child with `base` set to the parent's branch**, so its diff shows only its own slice.
+  Its PR body carries the line `Stacked on #<parent>` above the fold. Lanes and scripts read that
+  line to find the parent.
+- **After every push to the parent, merge the parent's branch into the child** (merge, never
+  rebase). `stack-sync` refuses a child that lacks the parent's final head, because keeping the
+  child's side would silently revert a parent review fix pushed after the child was cut.
+- **When the parent squash-merges**, GitHub deletes the parent's branch and retargets the child to
+  `main`. The child still carries the parent's original commits, so merging `main` conflicts on every
+  file both touched.
+- **Then, on the child branch:** `node scripts/stack-sync.mjs <parent> --push`. It proves that
+  `main`'s copy of each conflicting path is exactly the parent's final head copy, keeps the child's
+  side, commits the merge and pushes with `--no-verify` (CI runs the suite). If `main` changed a path
+  after the parent's head, it aborts and names the paths: that merge is a real one to read by hand.
+  `--dry-run` shows the plan and commits nothing.
+- **Never arm a stacked child, by hand or with `ship.sh automerge`. It arms itself once its base is
+  main.** `ship.sh automerge` refuses a PR whose base is not `main` (exit 7), and
+  `stuck-pr-scan.mjs` does not report one as stuck.
 
 ## Mechanics & traps (this skill owns the landing detail)
 

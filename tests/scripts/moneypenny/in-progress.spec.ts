@@ -83,6 +83,21 @@ describe("in-progress: the claim lanes put it on", () => {
     expect(calls()).not.toContain("issue edit 4247 --add-label feedback");
   });
 
+  // 2026-11-08 — an admitted comment-flip used to leave no `ready`, so continuation never carried the
+  // plan past its first slice (#5912, #6340, #5992 stalled in "Next part needs approval").
+  // A fresh plan's started-plan cap reads open plans over curl, which this fake cannot answer, so
+  // that one read (and the platter read beside it) is injected as empty.
+  it("records an admitted plan comment-flip as `ready` before `in-progress`", () => {
+    writeFileSync(log, "");
+    run(
+      `m.claimPlan({ payload: { issue: { number: 4248, state: "open", body: "", labels: [{ name: "plan" }] }, comment: { body: "ready" } } }, 0, "abc", { readPlans: () => [], readBoarded: () => new Map() });`,
+    );
+    const seen = calls();
+    const ready = seen.indexOf("issue edit 4248 --add-label ready");
+    expect(ready).toBeGreaterThan(-1);
+    expect(ready).toBeLessThan(seen.indexOf("issue edit 4248 --add-label in-progress"));
+  });
+
   it("never labels an issue whose claim was refused — nothing is being built", () => {
     writeFileSync(log, "");
     run(

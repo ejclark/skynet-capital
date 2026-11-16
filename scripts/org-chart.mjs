@@ -76,6 +76,22 @@ function picture(reg) {
   return lines.join("\n");
 }
 
+/**
+ * The board's Role lanes (#6886 slice 1b): the seats that pull cards, in `roleOrder`, which is also
+ * the tie-break when a card's labels match more than one. projects-role.mjs reads the same rows.
+ */
+function roleLanes(reg) {
+  const byId = new Map(reg.seats.map((s) => [s.id, s]));
+  return (reg.roleOrder ?? [])
+    .map((id) => byId.get(id))
+    .filter(Boolean)
+    .map(
+      (s, i) =>
+        `| ${i + 1} | ${cell(s.role)} | ${cell(shortName(s.name))} | ${(s.pulls ?? []).map((l) => `\`${l}\``).join(" ")} |`,
+    )
+    .join("\n");
+}
+
 /** One table per department, every seat a row; code roots last, for the agents that read raw. */
 function departments(reg) {
   return reg.depts
@@ -161,6 +177,18 @@ ${stations.map((s) => `| ${cell(s.station)} | ${cell(s.name)} |`).join("\n")}
 
 Below decks: ${below.length} seats, every one in Builders, Quality, Chief of staff and Platform. A
 member sees their own ask's status in plain words, never the lanes.
+
+## The board's Role lanes
+
+Each open card on the Orchestration board gets a **Role**: the seat whose queue it sits in, and
+the field the seat swimlanes group by (#6886 slice 3 adds that view). The sync writes it from these
+rows and the issue's labels (\`scripts/moneypenny/projects-role.mjs\`); a card whose labels match
+more than one row takes the first. A card no row pulls gets no Role and sits in "No Role" until
+someone triages it. Who must act first is the card's "Waiting on" field, not its Role.
+
+| Order | Role | Seat | Pulls cards labelled |
+|---|---|---|---|
+${roleLanes(reg)}
 
 ## Departments
 

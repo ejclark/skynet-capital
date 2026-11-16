@@ -568,3 +568,13 @@ is not yet published.
 - VIX **15.41** and USD/JPY ~158.1 are Yahoo (secondary).
 - A web search for a secondary account of the auction returned 2025 articles (¥525bn, 3.64x) and was
   discarded; the MOF pages are the only evidence for the result.
+
+### Forward-test scored after close-out (2026-11-13)
+
+`forward-test-due` run; assessment not re-opened, nothing above edited. **FT-5 — KILL.** MOF's
+`eresul20261110.htm` printed a **2.4bp** tail (4.2% issue 92, average 3.847% vs lowest accepted
+3.871%), so the trigger fired; the US 30Y CMT then went **5.35 → 5.43 (+8bp)** on 2026-11-12, the
+first US session published after 11-10 (11-11 Veterans Day). Both sources fetched direct, HTTP 200.
+One observation, confounded by CPI (11-10) and the US 30-year auction (11-12); the common-factor
+reading is wounded, not refuted (`jgb-30y-auction-2026-11-10` carries its own D+1 rows). FT-3 and
+FT-4 remain open (2027-01-15, 2027-01-08).

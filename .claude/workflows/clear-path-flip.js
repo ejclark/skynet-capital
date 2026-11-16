@@ -26,7 +26,7 @@
 export const meta = {
   name: 'clear-path-flip',
   description: 'Judge issues against the four clear-path checks, refute each positive call twice, return survivors for clear-path-post.mjs',
-  whenToUse: 'When a session wants to apply `ready` itself under docs/ISSUES.md → Who may flip it — a surge pass over the triage backlog, or any batch of issues whose flip would be a rubber stamp. Args: {issues: [number, ...]}. Read-only: it posts nothing. Save the returned object as JSON and run `node scripts/clear-path-post.mjs <file>` (add --dry-run first) to post the footed comment and apply ready (+ feedback when a non-plan issue lacks it) for survivors only.',
+  whenToUse: 'When a session wants to apply `ready` itself under docs/ISSUES.md → Who may flip it — a surge pass over the triage backlog, or any batch of issues whose flip would be a rubber stamp. Args: {issues: [number, ...]}, at most 6 per run (launch several runs together for more; #6711). Read-only: it posts nothing. Save the returned object as JSON and run `node scripts/clear-path-post.mjs <file>` (add --dry-run first) to post the footed comment and apply ready (+ feedback when a non-plan issue lacks it) for survivors only.',
   phases: [
     { title: 'Judge', detail: 'one judge per issue records the four checks and drafts the comment' },
     { title: 'Refute', detail: 'two independent refuters per positive call: envelope paths, and the thread' },

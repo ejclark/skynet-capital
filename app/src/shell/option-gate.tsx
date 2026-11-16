@@ -254,6 +254,7 @@ export function OptionGate({
    *  once, the first time the chain settles; never again, so a member's own later off-chain typed
    *  strike (a deliberate, valid choice) doesn't get yanked back open mid-edit. */
   const initialStrikeCheckedRef = useRef(false);
+  const panelRef = useRef<HTMLElement>(null);
   useEffect(() => {
     if (initialStrikeCheckedRef.current || !chainData || !initialStrike) return;
     initialStrikeCheckedRef.current = true;
@@ -402,6 +403,13 @@ export function OptionGate({
   useEffect(() => {
     if (!preset || preset.play !== play.code || preset.strike !== (initialStrike ?? "")) return;
     if (preset.limit !== undefined) setLimitPrice(String(preset.limit));
+    if (preset.contracts !== undefined) {
+      setContracts(String(preset.contracts));
+      // Only a suggestion link sets a count (#7547): the member came from her message to look at
+      // this ticket, so it comes to them rather than waiting below the page's fold.
+      const reduce = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+      panelRef.current?.scrollIntoView?.({ block: "start", behavior: reduce ? "auto" : "smooth" });
+    }
     setLockedPickNote(preset.note);
     onPresetHandled?.();
   }, [preset?.key, initialStrike, play.code]);
@@ -685,7 +693,7 @@ export function OptionGate({
   );
 
   return (
-    <section className="panel gate-panel" aria-label={play.name}>
+    <section ref={panelRef} className="panel gate-panel" aria-label={play.name}>
       {header}
       <h2 className="panel-title">{play.name}</h2>
       <p className="panel-sub">

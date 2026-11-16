@@ -42,6 +42,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { isMain } from "../is-main.mjs";
 import { trustedComment } from "./gh.mjs";
 import { readingFrom } from "./pace-reading.mjs";
 
@@ -400,4 +401,4 @@ function main() {
   console.log(noticeLine(mode));
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+if (isMain(import.meta.url)) main();

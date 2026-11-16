@@ -374,6 +374,7 @@ scoreable **2026-11-10**.
 | 2026-11-04 | D-5 | **Pulse (full session; material on new strong adjacent `nbis-2026-11-12-print`, a critical equity print three sessions after the stop; stance survives, date still `estimate`, nothing here is action).** **Timing:** run at ~9pm ET 11-03, so the 11-04 08:30 refunding statement does not exist yet; size, the "several quarters" language and the November buyback schedule are untested, not cleared, and both size kill switches and both FTs' void clauses resolve there. **Date (primary, refetched):** Tentative Auction Schedule PDF HTTP 200, **17,195 bytes**, md5 `a079d72f…`, identical to every read since 09-09, rows not re-parsed; `estimate`. Fiscal Data `upcoming_auctions` has no row dated 11-03 or later, consistent with the 11-04 announcement. **Rates (Treasury par CSV, fetched direct, 11-03 close):** 2Y 4.61 · 3Y **4.68** · 5Y 4.74 · 10Y 4.95 · 30Y 5.32, vs 10-30's 3Y 4.65: +3bp over the days since the last row, 25bp under the 10-06 stop (4.932). **Vol:** VIX **20.83** (11-03 bar, Yahoo, fetched direct) vs 19.42 at the 11-02 row, +1.4pt, no regime move; 21.15 on 11-02. **Consensus:** the two searches reached no November preview; the latest dealer read found is May-vintage (first coupon increase early 2027, guidance modified quarters ahead), so base case $58B with "at least the next several quarters" retained, search-reached and `estimate`. **Macro/geo:** midterm results not found in search (only 2018 precedents), so nothing is asserted about 11-03; Oct jobs 11-06 and CPI 11-10 still ahead; the 10-10 row's note that the tariff truce was probably extended to 2027-01-10 stands, calendar entry untouched. **Peers:** n/a, `symbols: []`. **Corridor:** 37 ids within ±5d (was 36); new is `nbis-2026-11-12-print` (critical, equity, named not assessed); strong set cbrs lockup 11-09, cbrs results 11-11, CPI 11-10, jobs 11-06, NBIS 11-12. **Proposals: none** — `--on-date` read for 11-04, 11-05, 11-06, 11-09, 11-10, 11-12, every entry already on the calendar; 11-13 PPI and Russell prelim are past the stop. Conviction proposals and declared intents: none printed. FT-1 and FT-2 stay `_open_` (scoreBy 11-10); no kill switch fired. | — (stance holds: stand aside; no falsifier fired, no position or size implication; date `estimate`) | 2026-11-06 (medium:0+, every 2d) |
 | 2026-11-06 | D-3 | **Pulse (full session, interval-elapsed; screen would be material on VIX +11.57: 16.61 → 28.18). Stance survives; date now `confirmed` (`TSY:`); nothing here is action.** **Statement read (the open item of the last two rows):** [sb0678](https://home.treasury.gov/news/press-releases/sb0678), curl 200, 75,358 bytes: *"A 3-year note in the amount of $58 billion, maturing November 15, 2029 … auctioned at 1:00 p.m. ET on Monday, November 9, 2026 … settle on Monday, November 16"*. TreasuryDirect `announced`: CUSIP 91282CRW3, $58B, `reopening: No`. Schedule PDF re-issued (27,527 bytes, was 17,195). **Size kill switch did not fire**, so neither FT is void; date flipped `estimate` → `confirmed` in the event file. **Wording kill switch fired:** *"at least"* dropped from *"the next several quarters"* (sizes flat); the refunding close-out scored the 11-04 tape TLT +0.80%, i.e. NOT the 2025-11-05 precedent's direction, so this auction is not reduced to a confirmation print on that evidence (n=2, opposite signs). **Vol regime SHIFTED:** VIX 28.18 on 11-05 (SPX −4.36%, QQQ −6.49%; AI-chip selloff per siblings, press-grade); par curve 3y **4.64 → 4.53 (−11bp)**, 2y 4.58 → 4.46, 10y 4.90 → 4.84, so a rally, not a rates shock; 3y sits 40bp under the 10-06 stop (4.932). Base rates were built on VIX 14–17 tapes; whether risk-off helps or hurts a 3Y bid stays untested, not assumed. **Adjacency:** jobs 11-06 not read (08:30 ET release not obtained); CPI 11-10 confirmed per sibling; tariff-truce suspension lapses 11-09/11-10 with no formal China notice per its ledger; no `2Y to 3Y` buyback op on 11-09 (new schedule starts 11-12). No conviction proposals or declared intents name this event. FT-1/FT-2 untouched, score by 11-10. Nothing new inside the horizon to propose; 7-year March-2027 conversion is past it. | — (stance holds: stand aside; direct < 24.0% / spread < +4.0bp kills stand as registered) | 2026-11-08 (D-1, post-jobs) |
 | 2026-11-08 | D-1 | **Deterministic screen (no Claude session).** Readings — VIX 25.6 (-2.5pt since last), band unchanged (medium:0+), 38 adjacent event(s) tracked, new in corridor since last pulse: `erock-q3-2026-results-2026-11-12` (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-11-10 |
+| 2026-11-10 | D+1 | **Close-out — scored in full in `## Outcome`.** Cache bust had no target (`symbols: []`); primaries re-fetched today: TreasuryDirect `securities/auctioned` (CUSIP **91282CRW3**; Fiscal Data `auctions_query` had not yet posted the row), par curve CSV, Yahoo VIX. 3Y printed **$58B**, stop **4.627%** (−30.5bp on 10-06), cover **2.53** (−0.85σ, inside 2.43–2.85), direct **35.0%** (**era record**, +2.2σ), indirect **55.5%** (3rd-lowest of 32), dealer **9.5%**. **FT-…-1 PASS** (direct ≥ 24.0%, fifth straight); **FT-…-2 PASS** (stop 4.627 − 3Y CMT 4.58 = **+4.7bp** ≥ +4.0; the registered 11% long shot). No `2Y to 3Y` buyback op on 11-09. CPI (11-10, 08:30 ET) had not printed when this ran, so the eve-of-print reading is untested. No conviction proposals or declared intents name this event; close-out has no adjacency sweep, nothing to propose. | No change — stand aside held | — (closed) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -415,3 +416,67 @@ this doc goes quiet.
 
 **Last assessed:** 2026-11-08
 <!-- probe-ref: {"symbols":{},"vix":25.64,"daysBand":"medium:0+","adjacentIds":["adp-employment-2026-11-04","boe-decision-2026-11-05","boj-minutes-2026-11-05","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","erock-q3-2026-results-2026-11-12","eurostat-hicp-flash-2026-11-04","existing-home-sales-2026-11-12","intl-trade-full-report-2026-11-04","ism-services-2026-11-04","jgb-10y-auction-2026-11-05","jgb-30y-auction-2026-11-10","jgb-5y-auction-2026-11-12","jobs-2026-11-06","mts-october-2026-11-12","nbis-2026-11-12-print","ppi-2026-11-13","productivity-costs-q3-2026-11-05","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","sp-global-investment-manager-index-2026-11-10","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-buyback-10y20y-2026-11-04","treasury-buyback-1mo2y-2026-11-05","treasury-coupon-announcement-2026-11-12","treasury-refunding-2026-11-04","uk-gdp-q3-first-2026-11-12","uk-gilt-auction-long-2026-11-10","umich-sentiment-prelim-2026-11-06","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","jobs-2026-11-06","nbis-2026-11-12-print"],"screenStreak":1} -->
+
+## Outcome
+
+**Close-out (2026-11-10, the evening after the stop).** `symbols: []` — rates mode carries no
+`earnings-cycle` / `intraday-edges` run — so the mandated cache bust
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) had no target.
+Everything below is re-fetched **today** from Treasury's own record: TreasuryDirect
+`securities/auctioned` for CUSIP **91282CRW3** (results release `R_20261109_3.pdf`, updated
+2026-11-09 13:04 ET), the Treasury daily par yield curve CSV, `buybacks_operations`, and Yahoo
+daily VIX. **Blocked / lagging source, recorded:** Fiscal Data `auctions_query` returned zero rows for
+the CUSIP and for any auction on or after 11-01 at fetch time, so the era statistics add this print by
+hand to the 31 rows it does hold; the results PDF itself was not opened, the TreasuryDirect JSON
+carrying its figures. The date was `confirmed` (`TSY:`) on 2026-11-06 and the auction ran exactly as
+announced. Bidder shares are computed from raw accepted dollars over competitive accepted
+($57,692,866,000), the method of every prior sheet, and sum to 100.0%.
+
+**What printed — the weakest cover of the last three, over a record-direct book.**
+
+| Measure | 2026-11-09 | 2026-10-06 | 31-auction prior era | Result |
+|---|---|---|---|---|
+| Offering | **$58,000,000,000** | $58B | $58B | thirty-second straight; `reopening: "No"`; SOMA add-on $11.77B outside it |
+| **High yield** | **4.627%** | 4.932% | — | **−30.5bp** on October; coupon 4-5/8%, median 4.580%, low 4.500% |
+| **Bid-to-cover** | **2.53** | 2.62 | mean 2.612 (σ 0.097) | **−0.85σ**; inside 2.43–2.85 and the mean ± 1.5σ band 2.467–2.758; $146.62B / $58.00B |
+| **Direct** | **35.0%** | 31.7% | mean 21.4% (σ 6.3) | **+2.2σ; highest of 32 — prior record 31.9% (2026-02-10)** |
+| **Indirect** | **55.5%** | 57.6% | mean 64.3% (σ 6.3) | **−1.4σ; third-lowest of 32** (only 2025-07-08 54.1% and 2025-08-05 54.0% lower) |
+| **Dealer** | **9.5%** | 10.7% | mean 14.3% (σ 3.9) | −1.2σ; fourth-lowest of 32 |
+| Allotted at high | 73.41% | 8.35% | — | thick — most of the stop-yield bids were filled |
+
+Era with this print (n=32): cover mean 2.610 · direct 21.8% · indirect 64.1% · dealer 14.1%; direct
+≥ 24% now **12 of 32 (37.5%)**, **5 of the last 5**. The composition run the September close-out named
+from one print has now been measured over **five consecutive auctions** (24.8 → 24.0 → 26.9 → 31.7 →
+**35.0%**) while indirect fell 64.2 → 62.1 → 57.6 → **55.5%**. The shift in who buys the 3-Year is a
+trend, not a blip, and still a measurement about composition only — the cover (2.53) is unremarkable.
+
+**Scoring the two registered forward tests.**
+
+- **FT-…-1 — PASS.** Direct share **35.0%** is at or above **24.0%**, a fifth straight (the registered
+  text said "a fourth straight" because it was written before 10-06; the operative bar was unchanged,
+  and the row is not edited). Void clauses did not fire: the 11-04 statement kept **$58B** and the
+  auction ran on 11-09. One observation about demand composition, never a rate view.
+- **FT-…-2 — PASS, the registered long shot.** Stop **4.627%** minus the same-day 3-Year CMT
+  **4.58%** (par curve CSV, 11-09 row) = **+4.7bp**, at or above **+4.0bp**. Base rate was 1 of 9 (11%);
+  with this print and 10-06's +5.2bp the 2026 series reads ≥ 4.0bp in **3 of 11 (27%)**, mean about
+  +2.8bp. **What this does not show:** the proxy compares a 1:00pm stop to a 3:30pm par close, so
+  part of the +4.7bp is intraday direction (the 3Y CMT closed 4.58 vs 4.59 on 11-06, so the day was
+  flat on net), and the premise of the test — a concession for stopping the afternoon before CPI —
+  cannot be separated from demand here: **CPI (2026-11-10, 08:30 ET, calendar `confirmed`) had not
+  printed when this ran**, so the date-did-not-move void clause is clear and the post-CPI reaction is
+  unobserved. One proxy observation; it stays a measurement the corpus accumulates, not a mechanism.
+- **Non-scoring check, resolved.** `buybacks_operations` lists no `2Y to 3Y` operation on 2026-11-09
+  (the only November rows are 11-04 10Y–20Y and 11-05 1Mo–2Y), so the October sibling's buyback lever
+  did not reach this auction.
+
+**Stance verdict.** Stand aside held; nothing about it was a trade and nothing here licenses one. The
+two nulls (Monday slot, refunding-leg status) stay nulls: cover 2.53 sits inside the same distribution.
+Date was `confirmed`; every figure is primary-sourced to Treasury. The tariff-truce expiry and the
+reaction to the 11-10 CPI print are the open items for sibling ledgers, not this one.
+
+**Loop census (sense · decide · act · verify · remember).** Sense (find the print) and verify (score
+against registered thresholds) ran unattended; the one manual step was routing around the Fiscal Data
+lag by reading the TreasuryDirect JSON — a candidate for the close-out lane to try it first.
+
+**Last assessed:** 2026-11-10
+<!-- probe-ref: {"symbols":{},"vix":19.92,"daysBand":"medium:0+","adjacentIds":["adp-employment-2026-11-04","boe-decision-2026-11-05","boj-minutes-2026-11-05","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","erock-q3-2026-results-2026-11-12","eurostat-hicp-flash-2026-11-04","existing-home-sales-2026-11-12","intl-trade-full-report-2026-11-04","ism-services-2026-11-04","jgb-10y-auction-2026-11-05","jgb-30y-auction-2026-11-10","jgb-5y-auction-2026-11-12","jobs-2026-11-06","mts-october-2026-11-12","nbis-2026-11-12-print","ppi-2026-11-13","productivity-costs-q3-2026-11-05","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","sp-global-investment-manager-index-2026-11-10","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-buyback-10y20y-2026-11-04","treasury-buyback-1mo2y-2026-11-05","treasury-coupon-announcement-2026-11-12","treasury-refunding-2026-11-04","uk-gdp-q3-first-2026-11-12","uk-gilt-auction-long-2026-11-10","umich-sentiment-prelim-2026-11-06","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","jobs-2026-11-06","nbis-2026-11-12-print"],"screenStreak":0,"blocked":[]} -->

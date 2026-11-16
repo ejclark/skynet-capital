@@ -18,6 +18,9 @@ import { held } from "./quantity";
  *                ◆ and ◇ are Review and Not now on the rows, #5093)
  *   ○ market   a headline macro print (the market-wide lane only)
  *
+ * A wait on the whole book (#4608) lands on the book's own lane, drawn above the holdings —
+ * "Your book", one per account that carries one — and its reopen day is a ⧗ like any decision.
+ *
  * Which lane an event lands on: a decision or an expiry on the exact contract it names; an event
  * on a held name on every position in that name that is still alive that day (an earnings print
  * after a put expires is not that put's); a market-wide print on the market lane. Two events on
@@ -88,6 +91,8 @@ export interface Lane {
 }
 
 export interface BookLanes {
+  /** The whole book's own lane, one per account with a wait's reopen day on it (#4608). */
+  readonly book: readonly Lane[];
   readonly holdings: readonly Lane[];
   /** Holdings with nothing in the range and nothing after it, by name — one line, never lanes. */
   readonly folded: readonly string[];
@@ -212,7 +217,21 @@ export function bookLanes({
     laneOf(s.key, s.name, s.detail, perSlot.get(s.key) ?? [], range, s.underlying),
   );
   const shown = lanes.filter((l) => l.marks.length > 0 || l.nextAfter);
+  const onBook = events.decide.filter((e) => e.book);
+  const bookIds = [...new Set(onBook.map((e) => e.book?.deskId ?? ""))];
+  const book = bookIds
+    .map((id) =>
+      laneOf(
+        `book ${id}`,
+        "Your book",
+        many ? (accounts?.get(id) ?? id) : undefined,
+        onBook.filter((e) => e.book?.deskId === id),
+        range,
+      ),
+    )
+    .filter((l) => l.marks.length > 0 || l.nextAfter);
   return {
+    book,
     holdings: shown,
     folded: lanes.filter((l) => !shown.includes(l)).map((l) => l.name),
     market: laneOf("market", "Market-wide", undefined, events.market, range),

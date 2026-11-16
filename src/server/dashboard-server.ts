@@ -12,6 +12,7 @@ import {
   driveBoardChannel,
   streamBoardPatches,
 } from "./board-patch-routes.js";
+import { serveBookWaitApi } from "./book-wait-routes.js";
 import { serveClientErrorApi } from "./client-error-route.js";
 import { serveCompanionApi } from "./companion-routes.js";
 import { serveJsonApi } from "./content-api-routes.js";
@@ -27,6 +28,7 @@ import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { serveDeskAlertsApi } from "./desk-alerts-route.js";
 import { serveDeskEventsApi } from "./desk-events-route.js";
 import { serveDraftOrderApi } from "./draft-order-route.js";
+import { serveFastTrackApi } from "./fast-track-route.js";
 import { serveFeedbackApi } from "./feedback-api-routes.js";
 import { serveFeedbackRoute } from "./feedback-routes.js";
 import { serveFilingCommentsApi } from "./filing-comments-api-routes.js";
@@ -43,11 +45,13 @@ import { serveOptionPositionsApi } from "./option-positions-route.js";
 import { servePlaybooksApi } from "./playbooks-api-routes.js";
 import { servePlaysApi } from "./plays-api-routes.js";
 import { serveQuestsApi } from "./quests-route.js";
+import { serveQuestsTakenApi } from "./quests-taken-route.js";
 import { serveQuoteStream } from "./quote-stream-route.js";
 import { isResearchDocPath, serveResearchDoc } from "./research-page-routes.js";
 import { serveSavedPositionsApi } from "./saved-positions-api-routes.js";
 import { serveSettingsApi } from "./settings-api-routes.js";
 import { serveSubscriptionsApi } from "./subscriptions-api-routes.js";
+import { serveTargetSplitApi } from "./target-split-api-routes.js";
 import { serveTradeApi } from "./trade-api-routes.js";
 import { serveTradeOrdersApi } from "./trade-orders-routes.js";
 import { serveWatchlistApi } from "./watchlist-route.js";
@@ -217,6 +221,9 @@ async function serveWriteApis(
   if (await serveOptionLifecycleApi(req, res, path, config, session)) return true;
   if (await serveDeskAlertsApi(req, res, path, config, session)) return true;
   if (await serveQuestsApi(req, res, path, config, session)) return true;
+  if (await serveQuestsTakenApi(req, res, path, config, session)) return true;
+  if (await serveBookWaitApi(req, res, path, config, session)) return true;
+  if (await serveFastTrackApi(req, res, path, config, session)) return true;
   if (await serveAlertDeliveryApi(req, res, path, config, session)) return true;
   if (await serveWatchlistApi(req, res, path, config, session)) return true;
   if (await serveOptionApi(req, res, path, config, session)) return true;
@@ -225,6 +232,7 @@ async function serveWriteApis(
   if (await serveSettingsApi(req, res, path, config, session)) return true;
   if (await servePlaybookWrites(req, res, path, config, session)) return true;
   if (await serveSavedPositionsApi(req, res, path, config, session)) return true;
+  if (await serveTargetSplitApi(req, res, path, config, session)) return true;
   if (await serveLearnApi(req, res, path, config, session)) return true;
   if (await serveOnboardingApi(req, res, path, config, session)) return true;
   if (await servePlaybookReads(req, res, path, config, session)) return true;

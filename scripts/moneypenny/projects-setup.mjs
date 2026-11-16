@@ -19,7 +19,8 @@
 //
 //   GH_TOKEN=<eric's classic PAT, project scope> node scripts/moneypenny/projects-setup.mjs
 import { sh, withRetry } from "./gh.mjs";
-import { FIELDS, PROJECT_TITLE, statusFieldUpdate } from "./projects.mjs";
+import { FIELDS, PROJECT_TITLE, ROLE, statusFieldUpdate } from "./projects.mjs";
+import { readSeatRegistry, roleOptionNames } from "./projects-role.mjs";
 import { writeStatusOptions } from "./projects-sync.mjs";
 
 const OWNER = "ejclark";
@@ -91,7 +92,14 @@ function main() {
     project = createProject(PROJECT_TITLE);
   }
 
-  for (const field of FIELDS) {
+  // Role's options are the seat registry's (#6886 slice 1b); the reconcile sweep keeps them in step
+  // after this, so a seat added later needs no second dispatch.
+  const role = {
+    name: ROLE,
+    dataType: "SINGLE_SELECT",
+    options: roleOptionNames(readSeatRegistry()),
+  };
+  for (const field of [...FIELDS, role]) {
     const existing = findField(project.number, field.name);
     if (!existing) {
       createField(project.number, field);

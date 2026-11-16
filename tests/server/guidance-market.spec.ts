@@ -4,6 +4,7 @@ import {
   earningsWindowOf,
   parityImpliedSpot,
   realizedVolatility,
+  reportedIn,
   toGuidanceQuote,
 } from "../../src/server/guidance-market.js";
 
@@ -100,5 +101,27 @@ describe("activePrint — the window, not the point date, decides", () => {
 
   it("retires it once the window closes", () => {
     expect(activePrint([crwv], "CRWV", "2026-11-17")).toBeUndefined();
+  });
+
+  // Eric, 2026-11-13: "Stage a trade for crwv" was blocked "before earnings" three days after the
+  // estimated print. An earnings 8-K inside the window is the company saying it reported.
+  it("retires it once an earnings 8-K (Item 2.02) lands in the window, and the next print takes over", () => {
+    const next = {
+      ...crwv,
+      date: "2027-02-25",
+      window: { start: "2027-02-18", end: "2027-03-05" },
+    };
+    const reported = [{ date: "2026-11-10", items: "2.02,9.01" }];
+    expect(activePrint([crwv, next], "CRWV", "2026-11-13", reported)?.print.date).toBe(
+      "2027-02-25",
+    );
+  });
+
+  it("keeps blocking on a filing that is not an earnings release, or one from the last quarter", () => {
+    const window = earningsWindowOf(crwv);
+    if (!window) throw new Error("window");
+    expect(reportedIn(window, [{ date: "2026-11-10", items: "5.02" }])).toBe(false);
+    expect(reportedIn(window, [{ date: "2026-08-11", items: "2.02" }])).toBe(false);
+    expect(reportedIn(window, [{ date: "2026-11-02", items: "2.02" }])).toBe(true);
   });
 });

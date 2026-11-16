@@ -79,7 +79,7 @@ export type ConvictionToolName = (typeof CONVICTION_TOOL_NAMES)[number];
 
 /** What the model reads back once the card is shown — said so it never claims a save. */
 export const CARD_SHOWN =
-  "shown to the member as a card in the rail; nothing is saved and nothing steers yet. Only their own tap there saves it and hands it to their bots.";
+  "shown to the member as a card in the chat; nothing is saved and nothing steers yet. Only their own tap there saves it and hands it to their bots.";
 
 const dayProp = { type: "string", description: "YYYY-MM-DD." } as const;
 
@@ -93,7 +93,7 @@ export const CONVICTION_TOOL_DEFS = [
   {
     name: "draft_conviction",
     description:
-      "Show the member a DRAFT of their stated market view as a card in the rail: its claims, the pairs it steers and each setting it narrows, before → after. Saves NOTHING and steers nothing: only the member's own tap on the card saves it and hands it to their bots. Judged by the same rules as the Playbooks form: at least one claim; each claim tagged missing / underrated / overrated, with evidence and a falsifier that names a day (YYYY-MM-DD) or a scoreBy day; a forward test needs scoreBy; steers only pairs from get_my_convictions' steerable; a narrowing only tightens the playbook's bounds, never widens them; a strike ceiling is a dollar price. Returns the card, or the rules the draft breaks in words — fix them from the conversation and call again, or ask the member.",
+      "Show the member a DRAFT of their stated market view as a card in the chat: its claims, the pairs it steers and each setting it narrows, before → after. Saves NOTHING and steers nothing: only the member's own tap on the card saves it and hands it to their bots. Judged by the same rules as the Playbooks form: at least one claim; each claim tagged missing / underrated / overrated, with evidence and a falsifier that names a day (YYYY-MM-DD) or a scoreBy day; a forward test needs scoreBy; steers only pairs from get_my_convictions' steerable; a narrowing only tightens the playbook's bounds, never widens them; a strike ceiling is a dollar price. Returns the card, or the rules the draft breaks in words — fix them from the conversation and call again, or ask the member.",
     input_schema: {
       type: "object",
       properties: {

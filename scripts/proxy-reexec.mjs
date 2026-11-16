@@ -30,9 +30,26 @@ import { spawnSync } from "node:child_process";
  * A no-op when `HTTPS_PROXY` is unset (CI, a developer's laptop), so the common path costs one
  * environment read and spawns nothing.
  */
+/** The loader flags this process started with (tsx's `--require`/`--import`), so a script that imports
+ *  TypeScript re-runs the same way. Only those: `--inspect` or `--watch` would bind or watch twice. */
+function loaderArgs() {
+  const out = [];
+  const args = process.execArgv;
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (/^--(import|require|loader|experimental-loader)=/.test(a)) out.push(a);
+    else if (
+      /^(--import|--require|-r|--loader|--experimental-loader)$/.test(a) &&
+      i + 1 < args.length
+    )
+      out.push(a, args[++i]);
+  }
+  return out;
+}
+
 export function reexecWithProxy() {
   if (!process.env.HTTPS_PROXY || process.env.NODE_USE_ENV_PROXY) return;
-  const result = spawnSync(process.execPath, process.argv.slice(1), {
+  const result = spawnSync(process.execPath, [...loaderArgs(), ...process.argv.slice(1)], {
     env: { ...process.env, NODE_USE_ENV_PROXY: "1", NODE_NO_WARNINGS: "1" },
     stdio: "inherit",
   });

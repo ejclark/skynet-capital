@@ -17,13 +17,13 @@ editing its own orders.
 **You are acting in Moneypenny's domain** — see [`docs/MONEYPENNY.md`](../../docs/MONEYPENNY.md) for
 her mandate and voice.
 
-**Why this lane exists.** `scripts/event-scan.mjs --due` treats every `never-assessed` event as
-unconditionally due, so `moneypenny-events.yml`'s push-driven rescan keeps re-listing a stuck event
+**Why this lane exists.** `scripts/event-scan.mjs --due` keeps a `never-assessed` event inside the
+research horizon due until its ledger lands, so `moneypenny-events.yml`'s push-driven rescan keeps re-listing a stuck event
 forever — but a `build-events` matrix leg that dies mid-run (turn budget, a burst-refused first
 call, a bug specific to this one event id) touches nothing on the receipt issue itself; only a
 *successful* PR merge ever does. So the same failure can repeat silently, push after push, with
-zero visible trace, which is exactly what the stall audit is built to catch and exactly what
-nothing before this lane ever acted on.
+zero visible trace, which is exactly what the stall audit is built to catch and what this lane
+exists to act on.
 
 **Terminal state.** This session ends in exactly one of two visible states —
 (a) the event actually gets researched (a normal `never-assessed` PR per
@@ -40,7 +40,7 @@ footer.
 HOW TO WORK IT:
 1. `node scripts/event-scan.mjs --due` — confirm the event this issue tracks is still due (the
    issue title is `[event-research] <event-id>`). If it is gone (someone already shipped it), the
-   issue should already be closed by the sweep's `close-shipped` intent on the next push — comment
+   issue should already be closed by the sweep's `close-receipt` intent on the next push — comment
    that it now looks resolved and stop; do not re-research something already done.
 2. Find what has actually been happening to this event id. List recent runs of
    `moneypenny-events.yml` (`gh run list --workflow moneypenny-events.yml --json

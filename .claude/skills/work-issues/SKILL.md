@@ -39,8 +39,9 @@ mandate, per `docs/MONEYPENNY.md`'s authority section.
    scripts/moneypenny/index.mjs --check-claim feedback-<n>` (or `plan-<n>`); `claimed: true` means
    skip it. Read-only; it never joins or breaks her claim.
 
-   The order is fast-track first, then `npm run rank`'s class (a hand-set `P0`–`P3` always wins),
-   an expedited bug first inside its class, then oldest. Eric may name a different order for this
+   The order is the board's lane order (#6871): `npm run rank`'s class (a hand-set `P0`–`P3` always
+   wins; `fast-track` is P0), then Kind inside the lane (a bug first, then blockers, then
+   bottlenecks, then member asks), then oldest. Eric may name a different order for this
    pass; `npm run rank` still explains *why* a row sits where it does. If the queue is empty, say
    so and stop — don't loosen the filter to find something to do.
 

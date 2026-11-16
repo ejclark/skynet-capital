@@ -15,8 +15,10 @@ import { useEffect, useRef } from "react";
  * jumps, and the centring here, clear of it.
  */
 
-/** How long the landed mark stays — long enough to find, short enough not to read as selection. */
-export const LANDED_MS = 2400;
+/** How long the landed mark stays — long enough to find, short enough not to read as selection.
+ *  4 s (#7167 criterion 3, up from 2.4): a link from Moneypenny's rail lands while the eye is
+ *  still in the chat, so the mark has to outlast the glance across. One landing, every surface. */
+export const LANDED_MS = 4000;
 
 /** How long the landing keeps re-centring while the page above it is still loading. */
 const SETTLE_MS = 2000;

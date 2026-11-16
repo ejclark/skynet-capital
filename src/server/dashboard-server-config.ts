@@ -28,10 +28,12 @@ import type { AccountAdmin } from "./account-forms.js";
 import type { Authenticator } from "./auth/authenticator.js";
 import type { AuthoredPlayStore } from "./authored-play-store.js";
 import type { BookHealthHistoryPort } from "./book-health-history-store.js";
+import type { BookWaitStore } from "./book-wait-store.js";
 import type { CampaignQuestionsStore } from "./campaign-questions-store.js";
 import type { ClaimDeps } from "./claim-form.js";
 import type { CommunityProgressionService } from "./community-progression-service.js";
 import type { CompanionMessageLogEntry } from "./companion-message-log.js";
+import type { CompanionScreenshotStore } from "./companion-screenshots-store.js";
 import type { ControlsDeps } from "./controls-form.js";
 import type { CouncilDeps } from "./council-form.js";
 import type { CouncilRepliesDeps } from "./council-replies-form.js";
@@ -49,6 +51,7 @@ import type { ObservatoryHub } from "./observatory-hub.js";
 import type { OpsStatusDeps } from "./ops-status-routes.js";
 import type { SubmitOptionTrade } from "./option-trade-service.js";
 import type { OrderAuditRecord } from "./order-audit-log.js";
+import type { ReadOwnerQueue } from "./owner-queue.js";
 import type {
   AddParticipantInput,
   AddResult,
@@ -60,6 +63,8 @@ import type { ProgressionService } from "./progression-service.js";
 import type { QuoteStreamPort } from "./quote-stream-hub.js";
 import type { SavedPositionsStore } from "./saved-positions-store.js";
 import type { SubscriptionStore } from "./subscription-store.js";
+import type { TakenQuestStore } from "./taken-quest-store.js";
+import type { TargetSplitStore } from "./target-split-store.js";
 import type { SubmitDeskTrade } from "./trade-service.js";
 import type { WireRouteDeps } from "./wire-routes.js";
 
@@ -330,6 +335,9 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * picker, whose authorization has no such bypass. Omit when OAuth isn't configured.
    */
   readonly isOwnerEmail?: (email: string) => boolean;
+  /** What waits on the owner's decision or merge (`owner-queue.ts`); read into Moneypenny's turn
+   *  only when `isOwnerEmail` passes for the session. Omit when the feedback token is unset. */
+  readonly readOwnerQueue?: ReadOwnerQueue;
   /**
    * Every host-configured (env-roster) participant id, for the same picker. An owner's OWN
    * account is a roster row too — without this, an owner whose `SKYNET_HUMAN_<ID>_EMAIL` was
@@ -353,6 +361,10 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
   /** Record one real message as ladder-gate evidence — called once, on the first message a member
    *  ever sends the rail (`/api/companion/ack`), regardless of how it's routed. */
   readonly recordMessage?: (opaqueMemberId: string) => Promise<void>;
+  /** Screenshots attached in Moneypenny's chat (#6007, `companion-screenshots-store.ts`): any
+   *  signed-in member may open one by id, never a visitor. Omit and `/api/companion/screenshots*`
+   *  does not exist (offline wiring). */
+  readonly companionScreenshots?: CompanionScreenshotStore;
   /**
    * The Playbook Store (issue #885) — an account's own playbook subscriptions and capital
    * sub-allocations. Omit to disable (offline mode) — the catalog still browses, just with no
@@ -366,11 +378,29 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    */
   readonly savedPositions?: SavedPositionsStore;
   /**
+   * A MEMBER'S TARGET SPLIT (#4607) — shares, options and cash as the member wants them, plus one
+   * tolerance, set on Settings and carried across devices. Omit to disable (offline mode): the
+   * section says it isn't wired and the money row renders as it always has.
+   */
+  readonly targetSplits?: TargetSplitStore;
+  /**
    * THE EXIT PLANS MEMBERS CARRIED (#5709 slice 3) — the house's long-call plan, recorded against a
    * contract when a member taps Carry in the options ticket's review step. Omit to disable (offline
    * mode): the review still shows the plan, and the receipt says it was not saved.
    */
   readonly exitPlans?: ExitPlanStore;
+  /**
+   * THE QUESTS MEMBERS TOOK (#7028 slice 6) — an accepted order a quest drafted, recorded with the
+   * base rate the quest carried, for `GET /api/quests/taken` to score. Omit to disable (offline
+   * mode): orders place as ever, and the scores answer empty.
+   */
+  readonly takenQuests?: TakenQuestStore;
+  /**
+   * THE WAITS MEMBERS SET ON THEIR BOOKS (#4608) — one per account: the day the question reopens
+   * and the member's reason. Omit to disable (offline mode): reads answer no wait, and a set answers
+   * "not wired in this deployment." A wait places and cancels nothing.
+   */
+  readonly bookWaits?: BookWaitStore;
   /**
    * THE AUTHORED PLAYS STORE (#5457 slice 1) — the drafts a member writes on R&D → Playbooks. Omit to
    * disable (offline mode): the list answers empty and a save answers "not wired in this deployment."
@@ -394,6 +424,12 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * research shelf on each save (`shelfResearched`); specs pass a fixed answer.
    */
   readonly campaignShelf?: (symbol: string) => boolean;
+  /** Whether the lane wrote this ask up on the research shelf; specs pass a fixture (#7034 slice 3b). */
+  readonly campaignShelfAnswered?: (ask: {
+    readonly kind: "sector" | "market" | "name";
+    readonly subject: string;
+    readonly campaign?: string;
+  }) => boolean;
   /**
    * THE DISCOVERY QUEUE (#6952 slice 2b) — questions about things no campaign covers, waiting for
    * the research lane. Omit to disable (offline mode): an ask answers "not wired in this

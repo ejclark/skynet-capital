@@ -80,12 +80,15 @@ import { useTowerColumn } from "./use-tower-column";
  * for the one section whose content it changes, with room.
  *
  * THE TOWER'S COLUMN (#3977, Eric 2026-09-30, picked by eye from a mock): from the bench width the
- * frame is TWO columns on every page but Settings — the stage, and the tower's own column from just
- * under the topbar (`tower-column.tsx`), unboxed. A frame-level column, not a page's, because of
- * CONSTANT GEOMETRY above: the stage's left edge and width stay identical across /accounts,
- * /activity, /research, /trade and /u/:id. It is not a rail: it holds no navigation and no
- * controls — the tower, and only what a page stands under it (the league on the Profile page).
- * Below the bench width the frame is one column again.
+ * frame is TWO columns on every page but Settings — the tower's own column from just under the
+ * topbar (`tower-column.tsx`), unboxed, and the stage. A frame-level column, not a page's, because
+ * of CONSTANT GEOMETRY above: the stage's left edge and width stay identical across /accounts,
+ * /activity, /research, /trade and /u/:id. It holds no navigation and no controls — the tower, and
+ * only what a page stands under it (the league on the Profile page). Below the bench width the
+ * frame is one column again. IN THE RIGHT MARGIN since #7487 slice 4a (Eric, 2026-11-12: "Move it
+ * right"; docs/IA.md §5.9): it stood on the left from #7216 (2026-11-09) only while Moneypenny's
+ * rail opened on the right, and that rail is now a dock under the stage (#7487 slice 2). The
+ * DOM keeps `<main>` first for the skip link and reading order; `tower-column.css` places it.
  *
  * `docs/PATTERNS.md` keeps the ledger these words live in, one row per named pattern.
  * @category navigation

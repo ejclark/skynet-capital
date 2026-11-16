@@ -1,88 +1,235 @@
-# Philadelphia Fed Nonmanufacturing Business Outlook Survey (Nov 2026 data) — philly-fed-nbos-2026-11-24
+# Philadelphia Fed November 2026 Nonmanufacturing Business Outlook Survey — philly-fed-nbos-2026-11-24
 
-**Kind:** macro-print · **Date:** 2026-11-24 (confirmed, FRB: philadelphiafed.org/calendar-of-events?release=nonmanufacturing-business-outlook-survey — the Philadelphia Fed's own release calendar filtered to this survey, fetched direct 2026-11-09 HTTP 200 at 131,389 bytes, whose embedded structured data reads `"month":"november 2026" … "day":"24" … "time":"8:30 a.m."`) · **Impact:** low
+**Kind:** macro-print · **Date:** 2026-11-24 (confirmed, FRB: philadelphiafed.org — the NBOS landing page's own Release Calendar panel, the bank's calendar payload and its published rule agree, all fetched direct 2026-11-09) · **Impact:** low
 **Last assessed:** 2026-11-09
-<!-- probe-ref: {"symbols":{},"vix":25.64,"daysBand":"low:15+","adjacentIds":["advance-economic-indicators-2026-11-27","advance-services-q3-2026-11-19","aruoba-inflation-term-structure-2026-11-20","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","consumer-confidence-2026-11-24","durable-goods-2026-11-25","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","gdp-q3-2026-second-2026-11-25","japan-cpi-2026-11-20","japan-cpi-tokyo-flash-2026-11-27","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-1-5y-2026-11-20","jgb-liquidity-enhancement-5-11y-2026-11-27","jpx-market-closure-2026-11-23","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","opec-plus-meeting-2026-11-29","opex-2026-11-20","pce-2026-11-25","philly-fed-mfg-2026-11-19","philly-fed-price-inflation-expectations-q4-2026-11-25","retail-ecommerce-q3-2026-11-19","sifma-bond-early-close-2026-11-27","sp-global-flash-us-pmi-2026-11-23","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","treasury-10y-tips-2026-11-19","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25"],"screenStreak":0,"blocked":[]} -->
+<!-- probe-ref: {"symbols":{},"vix":25.64,"daysBand":"low:15+","adjacentIds":["advance-economic-indicators-2026-11-27","advance-services-q3-2026-11-19","aruoba-inflation-term-structure-2026-11-20","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","consumer-confidence-2026-11-24","durable-goods-2026-11-25","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","gdp-q3-2026-second-2026-11-25","industrial-production-annual-revision-2026-11-24","japan-cpi-2026-11-20","japan-cpi-tokyo-flash-2026-11-27","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-1-5y-2026-11-20","jgb-liquidity-enhancement-5-11y-2026-11-27","jpx-market-closure-2026-11-23","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","opec-plus-meeting-2026-11-29","opex-2026-11-20","pce-2026-11-25","philly-fed-mfg-2026-11-19","philly-fed-price-inflation-expectations-q4-2026-11-25","retail-ecommerce-q3-2026-11-19","sifma-bond-early-close-2026-11-27","sp-global-flash-us-pmi-2026-11-23","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","treasury-10y-tips-2026-11-19","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25"],"screenStreak":0,"blocked":[{"url":"https://cdn.cboe.com/api/global/delayed_quotes/quotes/_VIX.json","status":"307 (followed to cdn-api.cboe.com, HTTP 200)","at":"2026-11-09"}]} -->
 
 ## At a glance
 
-**TL;DR.** **This is the services half of an input, not a market event — stand aside; and the one thing worth knowing is that the VIX spike of 11-05 lands inside its collection window.** The November NBOS is a Third-District (Delaware, southern New Jersey, eastern and central Pennsylvania) diffusion index, not a national one, and it moves no tracked symbol (`symbols: []`). The date is now **`confirmed`** (`FRB:`, read from the survey's own filtered calendar and its landing page, 8:30 a.m. ET); the sibling proposal's claim that no confirmed prefix existed for a Reserve Bank's own schedule was stale. **Three measured things.** (1) **The collection rule is published and tighter than the sibling ledgers assumed:** *"an 11-day period that closes the Thursday prior to publication"* = **Mon 2026-11-09 → Thu 2026-11-19**. That window opens 6 days after the 11-03 midterms and 4 days after the 11-05 VIX jump (16.6 → 28.2 close), and it is also the last day of responses to the Q4 PIES (published 11-25), so the PIES ledger's "fixed by roughly 11-23" is **four days too late**. (2) **October left the survey split two ways** — the region-level activity index at **−23.6** (5.9th percentile of 188 months) against the firm-level index at **+12.9**; the gap of **36.5** is the **3rd widest** since 2011 and has narrowed the next month **7 of 7** times it was ≥ 30. (3) **The series cannot be forecast better than "same as last month":** a rolling-origin AR(1) over 130 months (2016→2026) has MAE **10.07 vs 9.89 for persistence** on the region index, so the registered bands are a calibration, not an edge. The one conditional with some bite is the VIX: months where the window VIX rose ≥ 5 points saw the region **6-month-ahead** index fall **14 of 17** times (mean −8.1). All of this is `confirmed` date, `low` impact; nothing licenses an entry.
+**TL;DR.** **Do nothing with this print; read it as the services half of a number that publishes
+the next morning.** The Philadelphia Fed's services survey lands **Tuesday 2026-11-24, 8:30 a.m. ET**
+(**confirmed**, read from the survey's own page and reproduced by the bank's published rule 12
+months out of 12), the day before the Q4 Price and Inflation Expectations Survey it feeds. It is a
+`low`-impact, `symbols: []` regional diffusion index of Delaware, southern New Jersey and
+eastern/central Pennsylvania firms; no house playbook is macro-keyed. **The one measured thing worth
+carrying:** the October edition showed input costs rising and selling prices not following — prices
+paid **42.1** (85.6th percentile of 188 months), prices received **8.6** (28.2nd), a **33.5-point
+gap, the 94.1st percentile** — and the PIES nonmanufacturing own-price expectation has sat below
+what the prices-paid index implies for **four straight quarters**. The NBOS prices-paid reading
+tracks that PIES series at **r = 0.82**, but it **adds nothing over last quarter's PIES** out of
+sample (leave-one-out error **0.397 vs 0.398**): it is a *nowcast of the next morning*, not a lead.
 
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
-| Today (D-15) | **Stand aside** | High | `low` impact, `symbols: []`, sub-state qualitative index, no macro-keyed house playbook (S1/S2/E1/S3/S4 + G1), and a one-step forecast that only ties persistence. The date is `confirmed` but nothing about it is actionable. | The Philadelphia Fed re-dating the release off **2026-11-24** or off 8:30 a.m. on its filtered calendar |
-| This week | **Stand aside; the survey is mid-collection from 11-09 and nothing observable moves it** | High | Respondents answer between **11-09 and 11-19**; the only public inputs are the VIX and the tape, and the VIX → NBOS link is weak (Spearman −0.26 on the 6-month-ahead index, excluding 2020). | A mean VIX close over **2026-11-06 → 11-18** below **21.0**, which voids the conditional forward test (the stress premise failed) |
-| This month | **Watch 11-24 as the services half of the 11-25 PIES and as a read on the post-spike regime — never a trade** | Medium | If the 6-month-ahead indexes (region **−9.0**, firm **+11.3** in October, both 7.4th percentile) fall further while the VIX holds above 21, it is the first survey evidence that the 11-05 selloff reached non-financial firms. October prices paid **42.1** (85th pct) and wage costs **48.5** (92nd pct) are the inflation-side numbers to read beside it. | The region 6-month-ahead index printing **at or above −9.0** on 11-24 with the window VIX ≥ 21 (FT-2 kill) |
-| This quarter | **Stand aside; it is a minor input to the 12-09 FOMC's picture** | Medium | NBOS lands 11-24, between the 11-19 MBOS and the 11-25 PIES, Beige Book, PCE and Q3 GDP (second), all inside the pre-blackout run-up (blackout **Nov 28 – Dec 10**). A regional survey does not outrank any of them. | The 12-09 FOMC statement or its press conference citing the Philadelphia Fed surveys by name |
+| Today (D-15) | **Stand aside** | High | `low` impact, `symbols: []`, no consensus exists for a Third District services survey, and the collection window (Mon 2026-11-09 to Thu 2026-11-19, derived) has only just opened. Nothing here is a call about a tracked name. | The Philadelphia Fed's NBOS page re-dated off **2026-11-24** on a re-fetch, which voids the dated legs and forces a re-derivation |
+| This week | **Stand aside** | High | The window is still open; the survey's own history says the headline moves **10.9 points** a month on average (median 6.9), so any view formed from one month's tape is inside the noise. | A pulse showing the release slipping past 8:30 a.m. ET or a bank notice moving it |
+| This month | **Watch the 8:30 a.m. print as the PIES pre-read, never as a signal** | Medium | It is the services input to the 2026-11-25 PIES (`confirmed`) and the last NBOS inside the 2026-12-09 FOMC's information set (December's lands 12-22). Collection closes before the 11-28 FOMC blackout opens. | A Nov headline outside **−5.6 to 36.6** (the 90% band), or prices paid outside **26.1 to 53.7**: the regime read changes (FT-1) |
+| This quarter | **Stand aside; the squeeze reading carries to PIES, not to a position** | Medium | Prices paid minus prices received has stayed above its 15.0 long-run mean for **10 of the last 12 months**; after any month at 30 or more it was still above 15 the next month **20 of 20** times. | The Nov spread printing below **15.0** (FT-3), which would end the squeeze reading |
 
 **Call:** wait until 2026-11-24
 
 **Signals & conditions** — the buy/sell/hold triggers:
 
-- **Buy signal:** no — `low` impact, `symbols: []`, nothing here is a tradable level; a diffusion index does not confirm or refute a price.
-- **Never trade this print.** The date is `confirmed` (`FRB:`) but the one-step forecast only ties persistence; estimates and regional surveys widen caution, never trigger action.
-- **The collection window is a published rule:** *"an 11-day period that closes the Thursday prior to publication"* → **Mon 11-09 → Thu 11-19**, entirely after the 11-03 midterms, entirely before the **Nov 28 – Dec 10** blackout (nine days clear).
-- **VIX is the live condition.** Close **25.64** on 11-06 (28.18 on 11-05, +70% on the day; October's window mean was **16.02**). `NEWS:` coverage attributes it to an AI-trade unwind and the midterm result; treat the cause as reported, not verified.
-- **October's split is the baseline:** region activity **−23.6**, firm activity **+12.9**, gap **36.5** (98th percentile); a gap that narrows is the base-rate outcome (16 of 18 after the top decile).
-- **Revision is annual, not monthly:** seasonal factors are re-estimated each January, so November's first print is not revised before the 12-22 edition.
+- **Buy signal:** no — `low` impact, `symbols: []`, no macro-keyed house playbook; a regional survey print licenses no entry.
+- **Never trade this print.** The date is **confirmed**; the *content* has no consensus and no tracked-name channel.
+- **Headline (firm-level current general activity, seasonally adjusted):** Oct **12.9** (38% up, 25% down, 37% unchanged), up 13 points, highest since July. 188 months, mean **19.2**, 32.4th percentile. Mean-reversion fit: Nov central **15.5**, 90% band **−5.6 to 36.6**.
+- **Prices paid 42.1 / received 8.6 / gap 33.5.** Gap at the **94.1st percentile**; wages and benefits **48.5** (92.6th).
+- **The next morning:** PIES nonmanufacturing own-price expectation was **1.8%** in Q3 (13.6th percentile of 44 quarters); the NBOS-paid fit says about **3.0%**. FT-2 scores which is closer.
+- **Do not cite the NBOS as a lead on the MBOS.** Ex-COVID, month-to-month changes in the two correlate at only **r = 0.11** (n = 174).
+- **Vol regime into the window:** VIX **16.61** (last pre-jump reading in the sibling ledgers) → **28.18** (11-05 close) → **25.64** (11-06 close); the whole derived collection window falls after that move.
 
 ## Initial research
 
-### The question
+### The question, plainly
 
-The proposal that filed this event (`proposals/philly-fed-nbos-2026-11-24.from-philly-fed-mfg-2026-11-19.json`, from the MBOS initial research on 2026-09-10) assigned two tasks to whoever wrote the canonical file: **(a)** decide whether the argument that this edition is the services half of the Q4 PIES input survives contact with the PIES ledger, and **(b)** re-verify the date and time against an NBOS-specific surface rather than the shared calendar row. It also recorded that two sibling ledgers had declined the NBOS as a second-order survey, so a decline with reasoning was an acceptable outcome. **One-line verdict:** both tasks discharge from the primary; the date is promoted to `confirmed`; the PIES-upstream argument survives and tightens; and the series itself is characterised as a near-random-walk sub-state index whose only live question this month is whether the 11-05 volatility spike reached it.
+This event exists because a sibling ledger (`philly-fed-mfg-2026-11-19`, 2026-09-10) proposed it with
+two tasks for whoever wrote the canonical file: **(a)** does the claim that this print is the
+*services input to the PIES* survive contact with the PIES ledger, which may read its inputs
+differently, and **(b)** re-verify the date and time against an NBOS-specific surface rather than the
+shared calendar row. Two earlier siblings had declined the NBOS as second-order, so a **decline with
+reasoning** was an acceptable outcome.
+
+**One-line verdict:** (b) is **discharged and the date is promoted to `confirmed`**; (a) **survives at
+a smaller size** — the PIES ledger does read the NBOS as a collection vehicle, and the two series are
+strongly correlated, but the NBOS print adds nothing to last quarter's PIES, so it is a same-panel
+nowcast, not an extra lead; the entry stays `low` / `symbols: []` and the stance is a stand-aside.
 
 ### Method
 
-Macro-print mode per [`EVENT-RESEARCH.md`](../../process/EVENT-RESEARCH.md): `symbols: []`, so `earnings-cycle.mjs` and `intraday-edges.mjs` have no target and the cache-busting rule has none to bust. Sources fetched direct on 2026-11-09, all HTTP 200: the NBOS landing page, the NBOS methodology page (25,801 B), the filtered release calendar (131,389 B), and the survey's data file `nboshistory.xlsx` (198,911 B; 188 monthly observations, 2011-03 through 2026-10, three sheets — diffusion indexes, responses with increase/no-change/decrease shares, and non-seasonally-adjusted). Yahoo Finance daily `^VIX` closes from 2011-02 (3,968 sessions). Statistics were computed with a throwaway script (Python stdlib, not committed); every number below is reproducible from the two files named.
+Macro-print mode per [`EVENT-RESEARCH.md`](../../process/EVENT-RESEARCH.md). `symbols: []`, so
+`earnings-cycle.mjs` and `intraday-edges.mjs` do not apply and there is no instrument cache to bust.
+This id existed only as `proposals/philly-fed-nbos-2026-11-24.from-philly-fed-mfg-2026-11-19.json`;
+that one proposal was read first and the canonical
+`src/domain/market-events/philly-fed-nbos-2026-11-24.json` written in this PR. Inputs, all fetched
+direct 2026-11-09 with plain `curl` and a browser User-Agent, all HTTP 200:
 
-### Leg 1 — the date and time: SUPPORTED, promoted to `confirmed`
+| Source | Bytes | Used for |
+|---|---|---|
+| `calendar-of-events?release=manufacturing-business-outlook-survey` | 131,389 | the 12 enumerated 2026 NBOS rows, times, blackout dates |
+| `…/nonmanufacturing-business-outlook-survey` (NBOS landing page) | 154,662 | the NBOS-specific Release Calendar panel; data-file link |
+| `…/nbos-faqs` | 51,601 | publication and collection rules |
+| `…/nbos-2026-10` (the October report) | 34,704 | October levels and the collection dates |
+| `…/NBOS/nboshistory.xlsx` (md5 `16bf450c…`) | 198,911 | 188 monthly rows, Mar-11 → Oct-26, SA diffusion indexes |
+| `…/MBOS/Historical-Data/Data-Series/bos_history.csv` | 580,472 | the MBOS headline, for the cross-survey join |
+| `…/PIES/pies-data.xlsx` (md5 `bfa014f3…`) | 25,050 | 44 quarters of PIES means, for the upstream test |
+| `cdn.cboe.com` delayed `_VIX.json` | 491 | VIX, last trade 2026-11-06 16:15 ET |
 
-The filtered calendar carries `{"month":"november 2026","release":"nonmanufacturing-business-outlook-survey","day":"24","displayMonth":"Nov","year":"2026","time":"8:30 a.m."}`; the landing page's Release Calendar panel independently lists *November 24, 2026* and *December 22, 2026*, both at 8:30 a.m. The October edition is **day 20**, the data file's last row is dated 2026-10-01, and the 2026 schedule is Jan 20 · Feb 24 · Mar 24 · Apr 21 · May 26 · Jun 23 · Jul 21 · Aug 25 · Sep 22 · Oct 20 · Nov 24 · Dec 22 (plus a *Historical Revisions* row on Jan 13). The proposal filed this as `estimate` because it believed `market-events-data.ts` had no member for a regional Reserve Bank's own schedule; it does — **`FRB:`** (the header's own text: *"a regional Reserve Bank's own published release table, research calendar or speaking schedule … philadelphiafed.org"*), and the sibling PIES entry is already `confirmed` on it. The canonical file is therefore `confirmed`. 11-24 is a Tuesday; the Philadelphia Fed's published 2026 blackout dates include **Nov 28 – Dec 10**, so the release is four days clear of it.
+All statistics were computed from those files in this session with the Python standard library; no
+number below comes from memory. A column-mapping slip was caught and fixed on the way: the workbook's
+`garbndif_sa` is the **regional** activity index (Oct **−23.6**), and the firm-level headline is
+`gabndif_sa` (Oct **12.9**), confirmed by matching seven October values against the report text
+(new orders 2.8, sales/revenues 14.6, full-time employment 12.0, prices paid 42.1, prices received
+8.6, future firm activity 11.3, future regional −9.0).
 
-### Leg 2 — the collection window: SUPPORTED, and it corrects a sibling ledger
+### Conviction legs, tested
 
-The methodology page states: *"Each month, we email participants and collect their responses electronically. Typically, we collect responses over an 11-day period that closes the Thursday prior to publication."* For a Tuesday 11-24 release the window is **Monday 2026-11-09 → Thursday 2026-11-19** (11 days inclusive). Two consequences, both calendar arithmetic. First, the window opens **6 days after** the 11-03 midterms and **4 days after** the 11-05 VIX spike — every response is collected inside the post-election, post-spike regime, unlike October's (window 10-05 → 10-15 by the same rule, mean VIX about 16). Second, the PIES landing page (read by the [PIES ledger](philly-fed-price-inflation-expectations-q4-2026-11-25.md)) says its responses are collected *inside* the MBOS and NBOS; the later-closing instrument is the NBOS, so the Q4 PIES content is fixed by **Thursday 11-19**, not "roughly 11-23" as that ledger's This-month row states. That ledger is another lane's file and is not edited here; its next pulse owns the correction.
+**1. The date and time — CONFIRMED from three independent surfaces, supported 12 of 12.**
+   - **The NBOS-specific page.** Its Release Calendar panel reads `Nov 24 2026 | November Nonmanufacturing
+     Business Outlook Survey | 8:30 a.m.` then `Dec 22 2026`. This is the surface the 2026-09-10 proposal
+     said it could not reach for the manufacturing survey (that page publishes only the next release);
+     read after the October edition passed, the NBOS page shows the next two.
+   - **The calendar payload** enumerates all twelve 2026 NBOS rows at 8:30 a.m., plus `Historical
+     Revisions … Jan 13 2026`.
+   - **The bank's rule** (`nbos-faqs`): *"We usually publish the results at 8:30 a.m. ET on the Tuesday
+     following the third Thursday of each month, barring holidays."* Applied to every month of 2026 it
+     reproduces all **12 of 12** payload dates. November's third Thursday is the 19th, so the Tuesday is
+     the **24th**.
+   - **Promotion.** `estimate` → `confirmed` with an `FRB:` source: the no-self-confirm convention binds the
+     discovering sweep, and this is the independent second look at a primary the prefix exists for.
 
-### Leg 3 — the PIES-upstream argument: SUPPORTED (the proposal's task (a))
+**2. The collection window and what falls inside it — DERIVED, labelled as such.** The FAQ says responses
+   are collected *"over an 11-day period that closes the Thursday prior to publication"*, and the October
+   report states *"October 5 to October 15"* (a Monday to the third Thursday). Applied to November that is
+   **Mon 2026-11-09 to Thu 2026-11-19**; the November report will state the real dates. Inside it: CPI
+   (**11-10**), Veterans Day (**11-11**), the FOMC minutes and the NVDA print (**11-18**), and the
+   manufacturing survey itself (**11-19**). Outside it, before: the **11-03** midterms and the VIX jump.
+   Nothing here is tested for an effect; a calendar story about a diffusion index is worth nothing
+   until measured (the MBOS sibling killed three such stories on 700 months).
 
-The 4-for-4 construction rule the PIES ledger derived (NBOS Feb 24 → PIES Feb 25, May 26 → 27, Aug 25 → 26, Nov 24 → 25) has a mechanism behind it, and the NBOS methodology page now names the other half: the quarterly Price and Inflation Expectations Survey is one of the *special questions repeated less frequently than the core monthly questions*. So the argument survives, and it departs from the December NBOS decline for the specific reason the proposal gave — the 12-22 edition has no such role. **The decline the siblings made was right for their editions and does not extend here.** It does not make this a market event: the PIES itself is `low` impact, and the NBOS prices-paid and wage-cost indexes are the only inflation-adjacent series published *before* it.
+**3. The series — MEASURED.** Headline = *current general activity at the firm level*, seasonally
+   adjusted, 188 months.
 
-### Leg 4 — what the series is, and whether it is predictable: MIXED
+   | Statistic | All months | Excluding 2020 |
+   |---|---|---|
+   | Mean / sd | 19.2 / 18.9 | — |
+   | Mean month-to-month move | 10.9 (median 6.9) | 10.0 |
+   | 95th-percentile move | 33.0 | 30.3 |
+   | Mean-reversion fit (slope, resid sd) | 0.654, 14.3 | 0.657, 12.8 |
+   | Nov central, 90% band | 15.0, ±23.6 | 15.5, **−5.6 to 36.6** |
+   | Oct percentile | 32.4 | 31.2 |
 
-The survey asks Third-District nonmanufacturers for the direction of change (significantly/slightly higher, same, slightly/significantly lower) versus the prior month across general business activity (region and own firm), new orders, sales, unfilled orders, inventories, prices paid and received, full- and part-time employment, workweek, wage and benefit costs, and two capex lines, plus the expected direction of region and firm activity over six months. Each index is `% increase − % decrease`, seasonally adjusted, bounded −100 to 100 (**method note:** the methodology page does not state which of the two current-activity indexes is the published headline; the data file's mnemonics read `gar…` region and `ga…` firm, and its own worked example is firm-level. I report both and register on both.)
+   Last six: May **−3.8** · Jun **2.4** · Jul **17.5** · Aug **−8.2** · Sep **0.3** · Oct **12.9**. Four of
+   the last twelve months were negative; ten of the last twenty-four. November is not a distinct month:
+   mean **24.7** (n = 15) against **18.7** for the rest, Welch t = **1.16** on an already seasonally
+   adjusted series. **NOT SUPPORTED as a seasonal.**
 
-| Index (SA), Oct 2026 | Value | Percentile of 188 | AR(1) central for Nov | One-step uncertainty cut | 80% band |
-|---|---|---|---|---|---|
-| Current activity, region | **−23.6** | 5.9th | −17.5 | 41.5% | −35.9 → +0.9 |
-| Current activity, firm | **+12.9** | 31.9th | +15.0 | 23.8% | −3.4 → +33.4 |
-| Six-month-ahead, region | **−9.0** | 7.4th | −2.6 | 42.8% | −20.7 → +15.5 |
-| Six-month-ahead, firm | **+11.3** | 7.4th | +19.2 | 29.5% | +1.7 → +36.7 |
-| Prices paid | **42.1** | 85.1st | +39.9 | 43.7% | +29.1 → +50.7 |
-| Prices received | **8.6** | 27.1st | +11.0 | 16.8% | +0.4 → +21.6 |
-| Wage and benefit costs | **48.5** | 92.0th | +43.9 | 28.4% | +32.8 → +55.0 |
+**4. The squeeze — SUPPORTED, and it extends the PIES ledger's read to services.** October's prices paid
+   **42.1** is the survey's fourth straight rise and highest since April (85.6th percentile; the series
+   high is **76.8**, Oct-22). Prices received fell 11 points to **8.6** (28.2nd). The gap, **33.5**, is the
+   **94.1st percentile** against a 15.0 mean, after **37.2** in April and **29.8** in March. Wages and
+   benefits are at **48.5** (92.6th percentile, series high **62.5**). The PIES ledger measured the same
+   pattern on the manufacturing side (MBOS gap 23.2 in Aug) and concluded the energy shock was being
+   absorbed in margins; this is the services-side counterpart, from the same panel, and it points the
+   same way. A model of the gap (fit slope **0.575**, resid sd **9.6**) puts November's central at
+   **25.6** and gives **86.5%** to a reading at or above 15.0.
 
-**The honest test of "can it be forecast":** an expanding-window AR(1) fitted before each month from 2016-01, 130 one-step forecasts, against "same as last month" and "the historical mean". Region activity: MAE **10.07** (AR(1)) vs **9.89** (persistence) vs **20.8** (mean). Firm activity: **9.76 / 9.72 / 14.73**. Prices paid: **6.90 / 6.59 / 12.05**. Wage costs: **6.22 / 6.12 / 9.45**. The AR(1) beats the mean by a lot and **never beats persistence**; the nominal 80% band covered **89.2%** (region) and **90.0%** (firm) of outcomes, so it is conservative. Nothing here is an edge; the bands are a calibration to score against. No November tilt either: mean |Δ| in Novembers is **10.07** vs **10.50** other months on the region index (n=15), **12.11 vs 10.76** on the firm index.
+**5. The upstream claim — PARTIALLY SUPPORTED, and bounded.** PIES quarters are collected in the
+   Feb/May/Aug/Nov editions of this survey and the MBOS (2015Q4 is Nov-15). Joining the publisher's two
+   files on those 44 months:
 
-October's pattern: 11 of the last 12 region-level readings were negative while the firm-level index oscillated around zero; the region/firm gap of **36.5** is the **3rd highest of 188** (mean 8.1, sd 11.6). After the 18 months with a gap in the top decile (≥ 23.2) the next month's gap was lower **16 of 18** times (mean 30.2 → 12.2); after the 7 months ≥ 30 it was lower **7 of 7**, always below 30 (2011-06, 2011-09, 2011-11, 2012-08, 2020-05, 2025-08, 2025-11). Wage and benefit costs at **48.5** rank **15th of 188** (max 62.5 in 2021-11).
+   | NBOS index (survey month) vs PIES nonmanufacturing series | r | n |
+   |---|---|---|
+   | prices paid vs expected own prices | **0.82** | 44 |
+   | prices paid vs expected US inflation | **0.87** | 44 |
+   | prices received vs expected own prices | 0.76 | 44 |
+   | prices paid vs expected own prices, 2021 and 2022 removed | **0.61** | 35 |
+   | prices paid vs expected own prices, quarter-on-quarter changes | 0.37 | 42 |
+   | headline activity vs expected own prices | 0.11 | 44 |
 
-### Leg 5 — does the VIX reach it: MIXED, weak but not null
+   The levels are partly a shared 2021-22 inflation spike, which is why the ex-spike figure is the one to
+   carry. **The forecasting test is the one that matters:** leave-one-out mean absolute error predicting
+   the PIES nonmanufacturing expected own-price change, n = 43: **persistence 0.398**, own-history
+   fit 0.422, NBOS paid 0.433, NBOS received 0.488, NBOS paid + received 0.409, **last quarter plus
+   NBOS paid 0.397**, NBOS headline 0.723. **The NBOS print adds nothing** to knowing last quarter's PIES
+   (0.397 vs 0.398), and the persistence forecast is the closer of the two in just **23 of 43**
+   quarters. That is the PIES ledger's own finding (*a nowcast wearing a forecast's clothes*) reached from
+   the other side.
 
-Measured against the mean `^VIX` close over days 6–18 of each reference month (a stand-in for the collection window): the **six-month-ahead** indexes carry the signal. Change in window VIX vs month-on-month change in the index, n=187: region-ahead **−0.389**, firm-ahead **−0.359**; the current-activity indexes are weaker (region **−0.275**, firm **−0.108**). Those figures include March 2020; **excluding 2020-03 → 05** (n=184) they fall to Pearson **−0.243** / **−0.223** and Spearman **−0.26** / **−0.20** for region-ahead / firm-ahead. In the 17 months (ex-2020) where the window VIX rose ≥ 5 points, region-ahead fell **14 of 17** (mean **−8.1**) against a **47.3%** unconditional fall share, and firm-ahead **12 of 17** (mean **−6.1**) against **51.1%**; at ≥ 8 points (n=6) both fell in 6/6 and 5/6. **It is a modest conditional, 17 observations, and the cause here is reported rather than verified**: the November window has not happened, the 11-06 close (25.64) is 9.6 above October's window mean (16.02) but the window's own mean is unknown until 11-18. This is the only claim the ledger registers a forward test on beyond the bands.
+**6. The residual — MEASURED, the one thing that moves.** Fitting expected own prices to NBOS prices paid
+   (`1.28 + 0.0437 × paid`, resid sd **0.51**), the last four quarters all sit **below** the line:
+   Nov-25 **−0.42**, Feb-26 **−0.56**, May-26 **−0.58**, Aug-26 **−0.76** (actual 1.8 against a fitted
+   2.56). After a negative residual the next is negative **13 of 21** times (62%). At the model's central
+   November paid reading (**39.9**, 90% band **26.1 to 53.7**) the line says about **3.0%**; persistence
+   says **1.8%**. Which is closer is FT-2. Honest limit: 43 quarters, one panel, one fit.
 
-### Leg 6 — the tape and the adjacency read: NEWS, `estimate`
+**7. The cross-survey link — MEASURED, weak.** NBOS headline against the MBOS headline: level r = **0.48**
+   (n = 188), but **0.38** once 2020 is dropped, and month-to-month changes **0.32** (**0.11** ex-2020).
+   Signs agree in 140 of 188 months. October: NBOS **12.9**, MBOS **20.9**. The two surveys share a
+   geography and a PIES, not a cycle; cross-month leads are weak both ways (0.36 and 0.38 across all
+   months). **The services survey is not a second look at the manufacturing one.**
 
-`NEWS:` Kitco (off-the-wire item, 2026-11-05) reported the VIX up 11.5 points intraday to 28.09, its biggest intraday jump in more than 18 months and the largest since the April 2025 tariff aftermath, the Nasdaq Composite down about 4%, with analysts citing an unwind of the crowded AI trade, fear that the post-midterm Washington (Democrats winning decisively) could slow AI infrastructure build-out, and volatility-linked forced selling. Yahoo daily closes (read directly): `^VIX` 16.61 (11-04) → **28.18** (11-05) → **25.64** (11-06). Nothing the coverage cites concerns the Fed, rates or data. **Peer prints:** the MBOS lands 11-19 (five days earlier, same collection window start), the PIES 11-25. **Corridor:** 38 other tracked events within 5 days; two `confirmed` high-impact (PCE and Q3 GDP second, both 11-25). **No adjacent event was proposed** — the 11-24 date already holds seven calendar entries (`event-scan.mjs --on-date=2026-11-24`), none a duplicate of this release, and no dated release surfaced that the calendar lacks.
+**8. The morning — OBSERVED from the calendar, times not all re-verified.** The seven entries tracked on 11-24
+   are this survey, Case-Shiller (its own entry says 9:00 am ET), FHFA, the Fed's G.17 annual revision,
+   Consumer Confidence, and the 2-year FRN and 5-year note auctions (1:00 p.m. for the note). None of the
+   others carries an 8:30 a.m. time in its entry, so this survey appears to have the opening slot to itself.
+   11-25 is the crowded one: PCE and GDP (both `high` and `confirmed`) with the PIES at 10:00. A `low`-impact
+   survey in a clear slot is still a `low`-impact survey.
+
+### What the conditions support
+
+Nothing positional. The conditions support a **reading rule** and a **registered nowcast**: read the
+November NBOS prices-paid and prices-received lines as the pre-read of the PIES nonmanufacturing
+own-price number that publishes 90 minutes after PCE and GDP the next day, and judge the PIES against
+both persistence (1.8%) and the NBOS-paid line (about 3.0%). If the squeeze persists, the print is
+evidence that services firms, like manufacturers, are absorbing cost increases; that is context for a
+member reading margins on the names in the nine-name universe, not a trade.
+
+### Honest limits
+
+- **The collection window is derived**, not read; the November report will state it. If it differs
+  from Mon 11-09 → Thu 11-19, legs 2 and 8 move.
+- **No vintage archive**: the workbooks are replaced in place, so every statistic is on the revised,
+  seasonally adjusted history (the bank re-estimates factors each January). The 2026-11-24 print is
+  scored as published that day.
+- **The correlations are inflated by the 2021-22 spike** and the 2020 collapse; the tables show the
+  ex-event figure beside the headline one.
+- **Blocked paths: none.** One redirect was followed (cboe.com → cdn-api.cboe.com) and is recorded in
+  `probe-ref.blocked`. FRED and Yahoo were not needed and not tried.
+- **Not tested:** whether the VIX move into the window changes responses. The 2026-11-05→06 jump
+  (16.61 → 28.18 at the 11-05 close, 25.64 at the 11-06 close) happened before collection opened; no claim is made.
+- **Zero capital.** Nothing here is a position; the registered tests are accuracy records.
 
 ## Stance & kill switches
 
-**Stand aside** (high confidence), `confirmed` date, `low` impact, `symbols: []`. Stated plainly, the survey cannot be forecast better than persistence, moves no tracked symbol and has no macro-keyed playbook; its only information value is as the services half of the 11-25 PIES and as a first read on whether the 11-05 volatility spike reached non-financial Third-District firms. Kill switches: the Philadelphia Fed moves the release off 11-24 8:30 a.m. (re-derive the document); a ledger pulse finds the window VIX mean (11-06 → 11-18) below 21.0 (the stress premise failed — FT-2 voids); the 11-24 print lands outside the registered bands (the calibration, not the stance, is refuted). Three forward tests are registered in [`forward-tests/philly-fed-nbos-2026-11-24.md`](../forward-tests/philly-fed-nbos-2026-11-24.md).
+**Permanent stand-aside on the `confirmed` 2026-11-24 date, with one carried reading rule.** A
+`low`-impact, `symbols: []`, sub-state services survey with no consensus supports no position and no
+house playbook is macro-keyed. Its value is informational: it is the pre-read of the PIES the next
+morning, and the October prices-paid minus prices-received gap (33.5, 94.1st percentile) is the
+services-side evidence for the margin-absorption reading the PIES ledger reached on the goods side.
+
+**What would change the stance:**
+
+- **A re-tier to `medium` or above**, or a tracked name acquiring a Third District services channel.
+- **The Philadelphia Fed re-dating the release off 2026-11-24** on the NBOS page or the calendar: voids
+  the dated legs; re-derive rather than pulse.
+- **A November prices-paid reading outside 26.1 to 53.7**, or a spread below 15.0: the squeeze reading
+  ends or sharpens (FT-3), and the PIES ledger's margin-absorption call deserves a fresh look.
+- **A November report stating a collection window other than 11-09 → 11-19.**
+
+**Declined, on the record:** `philly-fed-nbos-2026-12-22`. It has no upstream role (the Q4 PIES has
+published by 12-22), it sits past the 30-day line beyond which only critical and high events can become due
+(`assessment-cadence.json`), and two siblings declined it for the same reason. Named in this row instead of a calendar file.
+
+Three predictions with score-by dates are registered in
+[`forward-tests/philly-fed-nbos-2026-11-24.md`](../forward-tests/philly-fed-nbos-2026-11-24.md). All
+carry **zero capital**.
 
 ## Assessment ledger
 
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
-| 2026-11-09 | D-15 | **Initial research on an id that existed only as a proposal; both tasks it assigned are discharged and the date is promoted to `confirmed`.** Read `proposals/philly-fed-nbos-2026-11-24.from-philly-fed-mfg-2026-11-19.json` first (now shadowed by the canonical file). **(b) Date:** the NBOS-specific filtered calendar (HTTP 200, 131,389 B) and the landing page both read 11-24 at 8:30 a.m.; `FRB:` is the right prefix (the proposal's claim that none existed is stale). **(a) PIES upstream:** survives, and the methodology page's *"11-day period that closes the Thursday prior to publication"* puts the window at **Mon 11-09 → Thu 11-19**, so the Q4 PIES content is fixed 11-19, not "roughly 11-23" as the PIES ledger says (not edited; its next pulse owns it). **Series:** Oct region activity **−23.6** (5.9th pct) vs firm **+12.9**, gap **36.5** (3rd of 188); AR(1) ties persistence (MAE 10.07 vs 9.89, n=130). **Adjacency:** VIX **16.61 → 28.18 → 25.64** (11-04/05/06), `NEWS:` AI-trade unwind plus midterm result; the window opens 4 days after it; VIX → six-month-ahead link Spearman −0.26 (ex-2020). No adjacent event proposed (11-24 holds seven entries; none missing). Conviction proposals and declared intents for this id: both scripts printed `[]` (nothing to answer). 3 forward tests registered. | Stance set: **stand aside** (high). Date `estimate` → `confirmed` (`FRB:`). | 2026-11-16 (the `low` band's 7-day interval inside D-15), or earlier if the Nov 6–18 VIX mean is already clearly above or below 21 |
+| 2026-11-09 | D-15 | **Initial research.** Canonical entry written from the one proposal that existed for this id; both tasks it assigned are answered. **(b) date `confirmed`** (`FRB:`) from the NBOS landing page's own Release Calendar panel (HTTP 200, 154,662 B: `Nov 24 2026 … 8:30 a.m.`), the calendar payload (131,389 B) and the bank's rule (Tuesday after the third Thursday, 12 of 12 for 2026). **(a)** the PIES-upstream argument survives smaller: NBOS prices paid vs PIES nonmanufacturing own prices **r = 0.82** (0.61 ex-2021-22), but leave-one-out MAE **0.397 with it vs 0.398 without** (n = 43). Series: Oct headline **12.9** (32.4th pct); prices paid **42.1**, received **8.6**, gap **33.5** (94.1st pct). Three forward tests registered. **Adjacency sweep.** *Peer prints:* MBOS Oct **20.9** (Sep 37.8); cross-survey change correlation only 0.11 ex-2020. *Macro:* CPI 11-10, FOMC minutes 11-18 and NVDA 11-18 fall inside the derived window; PCE and GDP (`high`, `confirmed`) land 11-25, the day after. *Vol:* VIX **25.64** at the 11-06 close, from **28.18** at the 11-05 close and **16.61** at the last pre-jump reading in the sibling ledgers, all before the window opens. *Geopolitical/policy:* midterms passed 11-03; CR expiry 12-11 is after the window. *Event tape:* no consensus exists for this survey. Declined `philly-fed-nbos-2026-12-22` (no upstream role; sibling declines stand). `conviction-proposals.mjs` and `intents.mjs` for this id: both `[]`. Beyond-horizon items seen: none. | Stand-aside, set; date promoted `estimate` → `confirmed` | 2026-11-16 (band `low:0+`, 7d) |
+| 2026-11-16 | D-8 | **Pulse (`interval-elapsed`; screen would have been material: band `low:15+`→`low:0+`, VIX −6.3pt).** **Date re-read, holds.** NBOS landing page re-fetched direct (HTTP 200, 154,668 B vs 154,662 B on 11-09; the Release Calendar panel still reads `Nov 24 2026 … November Nonmanufacturing Business Outlook Survey … 8:30 a.m.`, then `Dec 22 2026`). `nboshistory.xlsx` byte-identical (md5 `16bf450c…`, 198,911 B): no November row yet, so FT-1 to FT-3 stand as registered. **Adjacency sweep.** *Peer prints:* Empire State (11-16) and SPF Q4 (11-16, 10:00) are today's prints and not yet read here; MBOS Nov 11-19 and the PIES stay ahead. *Macro:* October CPI (11-10, `NEWS:` via the 5Y-note ledger) **+0.4% m/m vs 0.3% expected, core +0.3% vs 0.2%**, inside the derived window (Mon 11-09 → Thu 11-19, still unconfirmed until the report states it); Treasury par CSV, direct: 5Y **4.64** (11-06) → **4.98** (11-13), 10Y **4.86** → **5.15**. Directionally that leans prices paid up and widens the squeeze reading, but no number here is tested and the FT bands are unchanged (prices paid 26.1 to 53.7; spread ≥ 15.0). *Vol:* VIX **19.30** (11-13 bar close, Cboe `_VIX.json`, HTTP 200) from **25.64** at the 11-06 close; the 11-05 spike has round-tripped. *Geopolitical/policy:* nothing touching a symbol-free regional survey; CR expiry 12-11 still after the window. *Event tape:* no consensus exists for NBOS; no new 11-24 entry on `--on-date` beyond the seven already named; PCE and GDP-2nd (`high`, `confirmed`, 11-25) remain the corridor's strong set. New adjacent seen: `china-ga-ge-sb-suspension-expiry-2026-11-27` (already a calendar entry, nothing proposed). `conviction-proposals.mjs` and `intents.mjs` for this id: both `[]`. Beyond-horizon items seen: none. | None; stand-aside holds | 2026-11-23 (band `low:0+`, 7d; the print is 11-24) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -91,11 +238,12 @@ prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT
 every row; a dated adjacent event found **inside the research horizon**
 (`assessment-cadence.json`'s `horizon`: nothing past `maxDaysOut`, and past `allImpactsWithinDays`
 only critical/high) gets proposed as a new
-`src/domain/market-events/proposals/<id>.from-philly-fed-nbos-2026-11-24.json` (`status: "estimate"`) in the
+`src/domain/market-events/proposals/<id>.from-<this-event-id>.json` (`status: "estimate"`) in the
 same PR — your own file, never another event's canonical one (#1717). One past the horizon is named
-in the row instead (#2946). Close-out fills `## Outcome` below from re-run instrument data (cache busted
+in the row instead (#2946): it can never become due, so a calendar file for it is clutter, while
+prose in a row is free. Close-out fills `## Outcome` below from re-run instrument data (cache busted
 first), never from memory. After that the assessment is closed; the doc reopens only to score a
 registered forward test whose `Score by` has arrived (`forward-test-due`).
 
-**Last assessed:** 2026-11-09
-<!-- probe-ref: {"symbols":{},"vix":25.64,"daysBand":"low:15+","adjacentIds":["advance-economic-indicators-2026-11-27","advance-services-q3-2026-11-19","aruoba-inflation-term-structure-2026-11-20","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","consumer-confidence-2026-11-24","durable-goods-2026-11-25","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","gdp-q3-2026-second-2026-11-25","japan-cpi-2026-11-20","japan-cpi-tokyo-flash-2026-11-27","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-1-5y-2026-11-20","jgb-liquidity-enhancement-5-11y-2026-11-27","jpx-market-closure-2026-11-23","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","opec-plus-meeting-2026-11-29","opex-2026-11-20","pce-2026-11-25","philly-fed-mfg-2026-11-19","philly-fed-price-inflation-expectations-q4-2026-11-25","retail-ecommerce-q3-2026-11-19","sifma-bond-early-close-2026-11-27","sp-global-flash-us-pmi-2026-11-23","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","treasury-10y-tips-2026-11-19","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25"],"screenStreak":0,"blocked":[]} -->
+**Last assessed:** 2026-11-16
+<!-- probe-ref: {"symbols":{},"vix":19.3,"daysBand":"low:0+","adjacentIds":["advance-economic-indicators-2026-11-27","advance-services-q3-2026-11-19","aruoba-inflation-term-structure-2026-11-20","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","china-ga-ge-sb-suspension-expiry-2026-11-27","consumer-confidence-2026-11-24","durable-goods-2026-11-25","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","gdp-q3-2026-second-2026-11-25","industrial-production-annual-revision-2026-11-24","japan-cpi-2026-11-20","japan-cpi-tokyo-flash-2026-11-27","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-1-5y-2026-11-20","jgb-liquidity-enhancement-5-11y-2026-11-27","jpx-market-closure-2026-11-23","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","opec-plus-meeting-2026-11-29","opex-2026-11-20","pce-2026-11-25","philly-fed-mfg-2026-11-19","philly-fed-price-inflation-expectations-q4-2026-11-25","retail-ecommerce-q3-2026-11-19","sifma-bond-early-close-2026-11-27","sp-global-flash-us-pmi-2026-11-23","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","treasury-10y-tips-2026-11-19","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25"],"screenStreak":0,"blocked":[]} -->

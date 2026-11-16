@@ -7,6 +7,7 @@ import {
   boardStatus,
   commentWrite,
   csv,
+  dryRunLines,
   findDuplicates,
   followUps,
   matches,
@@ -18,6 +19,7 @@ import {
   searchRemote,
   splitLabels,
   titleWords,
+  unknownFlags,
   updateCommentOp,
   withFooter,
 } from "../../scripts/issues.mjs";
@@ -34,6 +36,107 @@ describe("issues cli: parseArgs", () => {
       positional: ["42"],
       flags: { add: "needs-eric,bug", reopen: true },
     });
+  });
+});
+
+// #7352: a stub curl that logs every call and answers like an issue read. A write is the call that
+// carries `-X` (ghWrite); a read (ghRest) never does.
+function runStubbed(argv: string[], files: Record<string, string> = {}) {
+  const dir = mkdtempSync(join(tmpdir(), "issues-7352-"));
+  const log = join(dir, "curl.log");
+  writeFileSync(
+    join(dir, "curl"),
+    `#!/bin/sh\necho "$@" >> "${log}"\ncat >/dev/null\necho '{"id":70,"number":7,"title":"t","state":"open","labels":[]}'\n`,
+  );
+  chmodSync(join(dir, "curl"), 0o755);
+  for (const [name, text] of Object.entries(files)) writeFileSync(join(dir, name), text);
+  const res = spawnSync(
+    process.execPath,
+    [ISSUES, ...argv.map((a) => a.replace(/^@/, `${dir}/`))],
+    {
+      env: { ...process.env, PATH: `${dir}:${process.env.PATH}`, GH_TOKEN: "stub" },
+      encoding: "utf8",
+    },
+  );
+  const calls = existsSync(log) ? readFileSync(log, "utf8").trim().split("\n").filter(Boolean) : [];
+  return { res, calls, writes: calls.filter((c) => / -X /.test(` ${c} `)) };
+}
+
+describe("issues cli: refuses what it would silently drop (#7352)", () => {
+  it("names every flag a subcommand does not read", () => {
+    expect(unknownFlags("update", parseArgs(["update", "7", "--dry-run"]).flags)).toEqual([]);
+    expect(
+      unknownFlags("update", parseArgs(["update", "7", "--force", "--labels", "a"]).flags),
+    ).toEqual(["--force", "--labels"]);
+    expect(unknownFlags("show", parseArgs(["show", "7", "--json"]).flags)).toEqual([]);
+    expect(unknownFlags("link", parseArgs(["link", "1", "2", "--dry-run"]).flags)).toEqual([
+      "--dry-run",
+    ]);
+    expect(unknownFlags("nope", { x: true })).toEqual([]);
+  });
+
+  it("exits non-zero on an unknown flag, names it, and makes no call at all", () => {
+    const { res, calls } = runStubbed(["update", "7", "--add", "bug", "--dryrun"]);
+    expect(res.status).not.toBe(0);
+    expect(res.stderr).toContain("--dryrun");
+    expect(calls).toEqual([]);
+  });
+
+  it("refuses an empty or whitespace-only --comment-file before any write", () => {
+    const read = (text: string) => () => text;
+    const flags = parseArgs(["update", "7", "--comment-file", "c.md"]).flags;
+    expect(() => updateCommentOp({ n: 7, flags, read: read("") })).toThrow(/empty/);
+    expect(() => updateCommentOp({ n: 7, flags, read: read(" \n\t\n") })).toThrow(/empty/);
+    expect(updateCommentOp({ n: 7, flags, read: read("hi") })?.method).toBe("POST");
+    const trailing = parseArgs(["update", "7", "--comment-file"]).flags;
+    expect(() => updateCommentOp({ n: 7, flags: trailing, read: read("x") })).toThrow(
+      /needs a file path/,
+    );
+
+    const { res, writes } = runStubbed(
+      ["update", "7", "--close", "completed", "--comment-file", "@empty.md"],
+      { "empty.md": "" },
+    );
+    expect(res.status).toBe(1);
+    expect(res.stderr).toMatch(/empty/);
+    expect(writes).toEqual([]);
+  });
+});
+
+describe("issues cli: update --dry-run (#7352)", () => {
+  it("prints each write, a comment's full text included, and writes nothing", () => {
+    const { res, writes } = runStubbed(
+      ["update", "7", "--add", "bug", "--comment-file", "@c.md", "--dry-run"],
+      { "c.md": "Preview me" },
+    );
+    expect(res.status).toBe(0);
+    expect(writes).toEqual([]);
+    expect(res.stdout).toContain('dry-run: would PATCH issues/7 {"labels":["bug"]}');
+    expect(res.stdout).toContain("dry-run: would POST issues/7/comments");
+    expect(res.stdout).toContain(withFooter("Preview me").trimEnd());
+    expect(res.stdout).toContain("dry-run: nothing written");
+  });
+
+  it("writes the same issue edit and comment without the flag", () => {
+    const { res, writes } = runStubbed(["update", "7", "--add", "bug", "--comment-file", "@c.md"], {
+      "c.md": "Preview me",
+    });
+    expect(res.status).toBe(0);
+    expect(writes).toHaveLength(2);
+    expect(writes[0]).toMatch(/-X PATCH .*issues\/7$/);
+    expect(writes[1]).toMatch(/-X POST .*issues\/7\/comments$/);
+  });
+
+  it("lists the blocked-by links it would add, and says when there is nothing to write", () => {
+    expect(
+      dryRunLines([
+        { method: "POST", path: "issues/7/dependencies/blocked_by", payload: { issue_id: 70 } },
+      ]),
+    ).toEqual([
+      'dry-run: would POST issues/7/dependencies/blocked_by {"issue_id":70}',
+      "dry-run: nothing written",
+    ]);
+    expect(dryRunLines([])).toEqual(["dry-run: nothing to write"]);
   });
 });
 

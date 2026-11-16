@@ -1,4 +1,4 @@
-import { describePage, pageSymbol } from "../../src/companion/companion-page.js";
+import { describePage, pagePath, pageSymbol } from "../../src/companion/companion-page.js";
 
 // The page half of the chat's context stamp (#2224 shape 2, docs/IA.md MISSING 31). The client's
 // path is member-controlled, so the contract is: known pages map to fixed words, checked values
@@ -22,6 +22,26 @@ describe("describePage — known pages map to fixed words", () => {
     expect(describePage("/research?section=playbooks")).toBe(
       "the research page, showing the playbooks",
     );
+  });
+
+  // #7167: the browser reports the router's basepath, `/app/trade`; before this, no real page matched.
+  it("reads the path a browser actually sends, with the app's /app basepath", () => {
+    expect(describePage("/app/trade?symbol=NVDA")).toBe("the trade ticket for NVDA");
+    expect(describePage("/app/leaderboard")).toBe("the leaderboard");
+    expect(pageSymbol("/app/trade?symbol=nvda")).toBe("NVDA");
+  });
+
+  it("names the landing page, with or without its basepath", () => {
+    const landing = "the landing page (the day's market news and its calendar)";
+    expect(describePage("/")).toBe(landing);
+    expect(describePage("/app/")).toBe(landing);
+    expect(describePage("/app")).toBe(landing);
+    expect(pagePath("/app/")).toBe("/");
+  });
+
+  it("strips only a whole /app segment", () => {
+    expect(describePage("/apple")).toBeUndefined();
+    expect(pagePath("/application/x")).toBe("/application/x");
   });
 
   it("names the plain pages, ignoring a trailing slash", () => {

@@ -170,6 +170,9 @@ describe("bounds — server-enforced, before any model call", () => {
     const { handlers, texts } = collect();
     await chat({ messages }, handlers);
     expect(texts).toEqual([TURN_LIMIT_MESSAGE]);
+    // #7487 slice 2: it names what to tap now, never the retired rail or its ↺ glyph
+    expect(TURN_LIMIT_MESSAGE).toContain("History, then New conversation");
+    expect(TURN_LIMIT_MESSAGE).not.toMatch(/rail|dock|↺/);
     expect(streamCalls).toEqual([]); // the close-out is pure text, never a paid round
   });
 });
@@ -193,6 +196,7 @@ describe("no desk linked — only the draft hand-off is on offer, never a desk l
       "get_roadmap",
       "get_upcoming_events",
       "draft_feedback",
+      "draft_research_ask",
     ]);
     expect(streamCalls).toEqual([]);
     expect(texts.join("")).toBe("Sure, here's how a covered call works.");
@@ -217,6 +221,7 @@ describe("no desk linked — only the draft hand-off is on offer, never a desk l
       "get_roadmap",
       "get_upcoming_events",
       "draft_feedback",
+      "draft_research_ask",
     ]);
   });
 

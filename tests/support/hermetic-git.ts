@@ -21,9 +21,20 @@
  *
  * Prefix-matching every `GIT_*` key is deliberate — an allowlist of the four or five variables you
  * happen to remember is exactly how this recurred.
+ *
+ * `scripts/ship.sh` has the same shape of leak. When `ship.sh platter board` meets a platter cut
+ * from an older `ship.sh`, it re-executes the newer copy with `SHIP_PLATTER_RERUN=1` exported —
+ * and that marker then reaches the verify it runs, so every ship spec's child `ship.sh` sees "already
+ * re-run" and skips the catch-up the spec is testing (#7551: #7548 was un-boarded from #7424 for
+ * this alone). It is scrubbed from the INHERITED environment only, so a spec that means to set it
+ * can still pass it in `extra`.
  */
+const INHERITED_SHIP_MARKERS = ["SHIP_PLATTER_RERUN"];
+
 export function hermeticGitEnv(extra: Record<string, string> = {}): NodeJS.ProcessEnv {
-  const env: NodeJS.ProcessEnv = { ...process.env, ...extra };
+  const inherited: NodeJS.ProcessEnv = { ...process.env };
+  for (const key of INHERITED_SHIP_MARKERS) delete inherited[key];
+  const env: NodeJS.ProcessEnv = { ...inherited, ...extra };
   for (const key of Object.keys(env)) {
     if (key.startsWith("GIT_")) delete env[key];
   }

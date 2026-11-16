@@ -20,8 +20,9 @@
 // "the solution is to remove the shit, not spray febreze to mask the smell." No protected entry
 // has used diffAware since; the mechanism was removed rather than kept as unexercised machinery.
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { join, relative, resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const ROOT = process.cwd();
 const MANIFEST = join(ROOT, "envelope.json");
@@ -270,6 +271,17 @@ function main() {
 }
 
 // Only run the CLI when this file is executed directly (node scripts/envelope-scan.mjs ...), never
-// when imported as an ES module (tests/arch/envelope.spec.ts imports breachOf directly) — matches
-// the established pattern in digest-scan.mjs, moneypenny/repair.mjs, comms-scan.mjs, etc.
-if (import.meta.url === `file://${process.argv[1]}`) main();
+// when imported as an ES module (tests/arch/envelope.spec.ts imports breachOf directly). Real paths
+// on both sides (#7046): through a symlinked path (every /tmp and /var path on macOS) a raw string
+// comparison never matched, so the gate printed nothing. This is scripts/is-main.mjs's comparison,
+// written out here rather than imported: pipeline.yml copies this one file out of the base commit
+// and runs it alone, so it imports node built-ins only (tests/arch/is-main.spec.ts holds that).
+function runDirectly() {
+  if (!process.argv[1]) return false;
+  try {
+    return realpathSync(resolve(process.argv[1])) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
+}
+if (runDirectly()) main();

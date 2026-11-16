@@ -5,9 +5,11 @@ import { TowerSlot } from "./vantage";
  * THE TOWER COLUMN (#3977, Eric 2026-09-30, picked by eye from a mock): one big tower, unboxed,
  * top-right, from just under the navbar — "I never intended to have 2 towers… show the big tower
  * across all screens, and adjust the two sections/rows above the tower to the left to bring the
- * tower up so it sits below the navbar." With the room of the bench width (`use-tower-column.ts`:
- * the window, less Moneypenny's rail while it is open) the page frame
- * (`frame.tsx`) is two columns on every page but Settings: the stage, and this column. The column
+ * tower up so it sits below the navbar." It stands in the RIGHT margin on every page since #7487
+ * slice 4a (Eric, 2026-11-12: "Move it right"); it sat on the stage's left from #7216 (2026-11-09)
+ * only while Moneypenny's rail opened on the right, and that rail is now a dock under the stage
+ * (#7487 slice 2). From the bench width (`use-tower-column.ts`, the bench media query) the page frame
+ * (`frame.tsx`) is two columns on every page but Settings: this column, and the stage. The column
  * holds the art box the shell's one tower frame is laid over (`vantage.tsx` — the same frame on
  * every page, so moving between pages never reloads the tower), then whatever the page stands under
  * it: the league on the Profile page (`profile-tower.tsx`), the account's league on its own page,

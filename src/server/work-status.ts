@@ -20,6 +20,7 @@
  */
 
 import { FEEDBACK_STATUS_LABEL, statusFromIssue } from "../domain/feedback-status.js";
+import { type Waiting, waitingOn } from "../domain/work-waiting.js";
 import { fetchJson } from "../http/fetch-json.js";
 import { labelNamesOf } from "./feedback-status.js";
 import { githubHeaders } from "./github-api.js";
@@ -61,6 +62,11 @@ export type WorkStatus =
       readonly state: "open" | "closed" | "merged";
       /** The member-facing words, e.g. "Being built — PR #412 open", "Needs Eric's call". */
       readonly status: string;
+      /** Open issues only: what it waits on, why, and what would move it (the Moneypenny operator
+       *  plan, slice filing-wait-explained). Absent on a closed issue and on any pull request. */
+      readonly waiting?: Waiting;
+      /** Whole days since it was opened; 0 when GitHub gave no readable date. Never a ship date. */
+      readonly openDays: number;
       /** The title as a quoted string, or a note that it is withheld (a non-member opened it). */
       readonly title: string;
       readonly labels: readonly string[];
@@ -126,6 +132,7 @@ interface IssueJson extends GitHubUserish {
   readonly body?: unknown;
   readonly comments?: unknown;
   readonly html_url?: unknown;
+  readonly created_at?: unknown;
   readonly pull_request?: { readonly merged_at?: unknown } | null;
 }
 
@@ -178,11 +185,22 @@ function threadOf(issue: IssueJson, comments: readonly unknown[]): ThreadExcerpt
   };
 }
 
+const DAY_MS = 24 * 60 * 60_000;
+
+/** Whole days since `created_at`, floored; 0 when it is missing or unreadable. */
+function openDaysOf(issue: IssueJson, nowMs: number): number {
+  const opened = typeof issue.created_at === "string" ? Date.parse(issue.created_at) : Number.NaN;
+  if (!Number.isFinite(opened)) return 0;
+  return Math.max(0, Math.floor((nowMs - opened) / DAY_MS));
+}
+
 /** Build the bound reader, with its own private cache. `doFetch` is injectable so specs never
- *  touch the network — same discipline as `createStatusFetcher`. */
+ *  touch the network — same discipline as `createStatusFetcher` — and so is the clock, so
+ *  `openDays` is deterministic in a spec. */
 export function createWorkStatusReader(
   config: { readonly token: string; readonly repo: string },
   doFetch: DoFetch = fetchJson,
+  now: () => number = Date.now,
 ): ReadWorkStatus {
   const base = `https://api.github.com/repos/${config.repo}/issues`;
   const headers = githubHeaders(config.token);
@@ -219,17 +237,22 @@ export function createWorkStatusReader(
       count > 0
         ? ((await getList(`${base}/${n}/comments?per_page=100&page=${lastPage}`)) ?? [])
         : [];
-    const labels = labelNamesOf(issue)
-      .filter(Boolean)
-      .slice(0, LABELS_KEPT)
-      .map((l) => excerpt(l, 40));
+    // What it waits on reads EVERY label; only the returned list is trimmed — the same care
+    // roadmap.ts takes, so a 13th label cannot slice `needs-eric` off and misstate the wait.
+    const allLabels = labelNamesOf(issue).filter(Boolean);
+    const labels = allLabels.slice(0, LABELS_KEPT).map((l) => excerpt(l, 40));
     const refs = pullRefsOf(timeline, config.repo);
+    const waiting = issue.pull_request
+      ? undefined
+      : waitingOn(String(issue.state ?? "open"), allLabels, refs.open);
     return {
       number: n,
       found: true,
       kind: issue.pull_request ? "pull request" : "issue",
       state: stateOf(issue),
-      status: statusWords(issue, labels, refs),
+      status: statusWords(issue, allLabels, refs),
+      ...(waiting ? { waiting } : {}),
+      openDays: openDaysOf(issue, now()),
       title: titleOf(issue),
       labels,
       openPullRequests: refs.open,
@@ -244,15 +267,15 @@ export function createWorkStatusReader(
 
   return (issueNumbers) => {
     const wanted = [...new Set(issueNumbers)].slice(0, MAX_ISSUES_PER_LOOKUP);
-    const now = Date.now();
+    const at = now();
     return Promise.all(
       wanted.map(async (n) => {
         const hit = cache.get(n);
-        if (hit && now - hit.at <= WORK_STATUS_CACHE_TTL_MS) return hit.value;
+        if (hit && at - hit.at <= WORK_STATUS_CACHE_TTL_MS) return hit.value;
         try {
           const value = await readOne(n);
           // Only a real answer is cached — a GitHub blip retries on the next question.
-          if (!("available" in value)) cache.set(n, { value, at: now });
+          if (!("available" in value)) cache.set(n, { value, at });
           return value;
         } catch {
           return { number: n, available: false } as const;

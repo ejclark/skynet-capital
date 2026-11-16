@@ -7,6 +7,22 @@ const SERIOUS = (finding) => ["high", "medium", "important"].includes(finding.se
 // A finding its refuter knocked down never reaches an author, so it counts for nothing either way.
 const STANDS = (finding) => finding.refuted !== true;
 
+// The set's defect files are repo-relative, but a reviewer runs in its own worktree and often cites
+// `file:line`, so an exact string match read correct catches as misses (#6719). Drop any `:line[:col]`
+// and a leading `./`, then accept the path itself or any absolute path ending in `/<defect file>` at a
+// folder boundary: the reviewer's root is never known here, and `xsrc/a.ts` must not pass for `src/a.ts`.
+export const FILE_FORM =
+  "Give each finding's file as a repo-relative path such as src/server/app.ts: never absolute, never with :line (the line has its own field).";
+
+function sameFile(cited, defectFile) {
+  if (typeof cited !== "string") return false;
+  const path = cited
+    .trim()
+    .replace(/(:\d+)+$/, "")
+    .replace(/^\.\//, "");
+  return path === defectFile || (path.startsWith("/") && path.endsWith(`/${defectFile}`));
+}
+
 // `changed` (PR → the paths it changed) splits hits the shipped job could post from file matches on
 // a file the PR never touched; without it, hitsInDiff is null and nothing claims to know.
 function scoreDefects(rows, seen, changed) {
@@ -32,7 +48,7 @@ function scoreDefects(rows, seen, changed) {
     }
     recall.reviewed += 1;
     if (result.findings.some((f) => SERIOUS(f) && STANDS(f))) recall.withFindings += 1;
-    const onDefect = (row) => (finding) => finding.file === row.defect.file;
+    const onDefect = (row) => (finding) => sameFile(finding.file, row.defect.file);
     const counted = (finding) => SERIOUS(finding) && finding.mechanism !== false && STANDS(finding);
     const cases = rows.filter((row) => row.pr === pr);
     const matched = cases.filter((row) =>

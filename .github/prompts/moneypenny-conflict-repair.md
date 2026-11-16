@@ -36,6 +36,17 @@ once it is `ready`. The label on the PR keeps Eric's `needs-eric` queue honest. 
 attribution footer.
 
 HOW TO WORK IT:
+0. **A stacked child first** (#7487, 2026-11-12: stacked PRs build ahead of their parents). If the PR
+   body has a line `Stacked on #<n>` above the fold, read #<n> (`gh api repos/{owner}/{repo}/pulls/<n>`).
+   If #<n> is merged and this PR's base is now main, run `node scripts/stack-sync.mjs <n> --push` on
+   this PR's branch before anything else:
+   - Exit 0: done. The conflict was the parent's squash; stop here.
+   - Exit 1 naming missing parent commits: merge `refs/pull/<n>/head` into the branch (never rebase),
+     push, and re-run stack-sync once.
+   - Exit 1 naming paths main changed after the parent's head: those are real conflicts. Resolve only
+     those paths with the steps below.
+   - Exit 2: fall through to the steps below.
+   If #<n> is not merged, leave this PR alone: a stacked child waits for its parent.
 1. `git fetch origin <pr-branch> main`, check out the PR's branch (never a new one — this fix lands
    on the PR's existing branch), and `git merge origin/main` to surface the actual conflict markers.
 2. Read every conflicted file. For each conflict, judge — the same way a human reviewer would —
@@ -73,7 +84,7 @@ HOW TO WORK IT:
    remote at your own App token — the ambient credential `actions/checkout` set up is read-only**
    (this job's own `contents: read` permission; #3334, 2026-09-19: a plain `git push` here always
    failed with `403 — Permission denied to github-actions[bot]`, even though a real write-capable
-   token was minted). The job's checkout no longer persists that credential, but clear any
+   token was minted). The job's checkout does not persist that credential, but clear any
    leftover auth header too — a header beats the token in the URL (#4027, 2026-09-29). Run:
    ```
    git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"

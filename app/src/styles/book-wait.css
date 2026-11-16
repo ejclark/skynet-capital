@@ -1,0 +1,133 @@
+/* The wait on the whole book (#4608, `book-wait-line.tsx`): the member's own call, leading the
+   Overview's money column. The state is a word and a date — "Wait until", "Open again" — set in
+   the mono label face, so hue never carries it (a standing reader is red/green colourblind). A
+   standing wait draws a solid left rule; a retired one a dashed rule: the shape changes with the
+   state, not only the tone. Phone first: everything wraps; desktop only adds width. */
+.book-wait {
+  margin: 0 0 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--text);
+  border-radius: 12px;
+  background: var(--surface);
+  font-size: 13px;
+  color: var(--text);
+}
+.book-wait[data-state="reopened"] {
+  border-left-style: dashed;
+}
+.book-wait p {
+  margin: 0;
+}
+.book-wait > * + * {
+  margin-top: 6px;
+}
+.book-wait-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 6px;
+}
+.book-wait-word {
+  font: 700 11px var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.book-wait-day {
+  font-size: 16px;
+  font-weight: 700;
+}
+.book-wait-left,
+.book-wait-note,
+.book-wait-hint {
+  color: var(--muted);
+}
+.book-wait-reason q {
+  font-style: italic;
+}
+.book-wait-link {
+  color: var(--accent);
+  white-space: nowrap;
+  text-decoration: none;
+}
+.book-wait-link:hover,
+.book-wait-link:focus-visible {
+  text-decoration: underline;
+}
+.book-wait-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.book-wait-act,
+.book-wait-open,
+.book-wait-print {
+  appearance: none;
+  min-height: 36px;
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: 600 13px var(--sans);
+  cursor: pointer;
+}
+.book-wait-act[disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.book-wait-save {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+}
+.book-wait-start {
+  margin: 10px 0 0;
+  font-size: 13px;
+}
+.book-wait-prints {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.book-wait-prints legend {
+  margin-bottom: 4px;
+  padding: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+/* A picked print is outlined heavier and ticked — never told apart by tint alone. */
+.book-wait-print[aria-pressed="true"] {
+  border: 2px solid var(--text);
+}
+.book-wait-print[aria-pressed="true"]::before {
+  content: "✓ ";
+}
+.book-wait-fields {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+}
+.book-wait-fields label {
+  font-size: 12px;
+  color: var(--muted);
+}
+.book-wait-fields input {
+  min-height: 36px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: 13px var(--sans);
+}
+@media (min-width: 700px) {
+  .book-wait-fields {
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    column-gap: 10px;
+  }
+}

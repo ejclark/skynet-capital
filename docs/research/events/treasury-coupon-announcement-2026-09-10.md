@@ -548,3 +548,14 @@ no void condition met. The register's remaining open row here is `FT-…-09-10-2
 lives in the row itself,
 [`forward-tests/treasury-coupon-announcement-2026-09-10.md`](../forward-tests/treasury-coupon-announcement-2026-09-10.md).
 This is a note on the register, not a second verdict on the event — the close-out above stands.
+
+**Forward test scored 2026-11-13 (`forward-test-due`, at the 2026-11-13 score-by).**
+`FT-treasury-coupon-announcement-2026-09-10-2` **PASSED** — the 2026-11-04 refunding statement (`sb0678`) published
+an anticipated-auction-size table for Nov-26 / Dec-26 / Jan-27, and the 2026-11-12 coupon announcement's 20-Year
+new issue (CUSIP 912810UZ9, `A_20261112_5.xml`) printed at **$16B**, equal to that table's Nov-26 20-Year cell; the
+10-year TIPS reopening printed at $19B against the same statement's TIPS paragraph. Read from Treasury primaries
+(home.treasury.gov, treasurydirect.gov XML and `TA_WS/securities/upcoming`, all HTTP 200), no void condition met.
+The D-5 call that the channel expires on 11-12 is retired: the next refunding (2027-02) is the next place the
+channel can break. This register has no open row left. Full detail lives in the row itself,
+[`forward-tests/treasury-coupon-announcement-2026-09-10.md`](../forward-tests/treasury-coupon-announcement-2026-09-10.md).
+This is a note on the register, not a second verdict on the event — the close-out above stands.

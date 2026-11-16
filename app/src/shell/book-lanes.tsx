@@ -386,7 +386,7 @@ export function BookLanesPicture({
     today,
     width,
   };
-  const shown = [...lanes.holdings, lanes.market].flatMap((l) => [
+  const shown = [...lanes.book, ...lanes.holdings, lanes.market].flatMap((l) => [
     ...l.marks.map((m) => m.glyph),
     ...(l.marks.length === 0 && l.nextAfter ? [l.nextAfter.glyph] : []),
   ]);
@@ -394,7 +394,9 @@ export function BookLanesPicture({
     shown.includes(g),
   );
   // A glyph is keyed on its tile only when a tile draws it — one pinned at an edge sits in a chip.
-  const tiled = new Set(lanes.holdings.flatMap((l) => l.marks.map((m) => m.glyph)));
+  const tiled = new Set(
+    [...lanes.book, ...lanes.holdings].flatMap((l) => l.marks.map((m) => m.glyph)),
+  );
   const row = (lane: Lane) => (
     <LaneRow
       key={lane.key}
@@ -432,6 +434,7 @@ export function BookLanesPicture({
             />
           </span>
         ) : null}
+        {lanes.book.map(row)}
         {note ?? lanes.holdings.map(row)}
         {note || lanes.folded.length === 0 ? null : (
           <p className="lanes-folded">

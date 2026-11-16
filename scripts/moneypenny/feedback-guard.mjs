@@ -64,8 +64,13 @@ export function visibleOutcome(issue = {}, hasMatchingPR = false) {
  * The phrases a Sliced hand-off uses when the remainder is an interactive-session item. Both are
  * the lane's own vocabulary, not a member's: `.claude/` is a harness-protected directory for an
  * unattended lane (`docs/grind/README.md`), so a build that runs into it says so in those words.
+ *
+ * …or names the directory and neither phrase (#7361): #6719's hand-off read "a session that can
+ * edit `.claude/`", got no label, and a second build session hit the same wall. So a `.claude/`
+ * path in a Sliced parting comment is itself the marker — `next-slice` already scopes this to a
+ * remainder the lane did not build, and a lane names `.claude/` there because it could not edit it.
  */
-const HANDOFF_MARKER = /interactive session|protected director/i;
+const HANDOFF_MARKER = /interactive session|protected director|\.claude\//i;
 
 /**
  * Did this build hand its remainder to an interactive session? (#1357)
@@ -78,7 +83,8 @@ const HANDOFF_MARKER = /interactive session|protected director/i;
  *
  * Two signals, both required:
  *   1. `next-slice` — this really was a Sliced ending, not a stall the guard is about to flag
- *   2. the last comment on the issue names an interactive session or a protected directory
+ *   2. the last comment on the issue names an interactive session, a protected directory, or a
+ *      `.claude/` path (#7361)
  *
  * Reading only the LAST comment is deliberate: it is the lane's parting word, so a hand-off that
  * has since been answered (a member replying, a session reporting back) stops matching and the

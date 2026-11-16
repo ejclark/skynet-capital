@@ -392,7 +392,7 @@ describe("a question starts discovery (#6952 slice 2b)", () => {
     const answer = await askAbout({ kind: "name", subject: "pltr" });
     expect(answer.status).toBe(200);
     expect(answer.body).toMatchObject({ ok: true, status: "queued" });
-    expect(answer.body.tell).toMatch(/^Queued\. It is next/);
+    expect(answer.body.tell).toMatch(/^Queued\. It is next in line .* runs once a day/);
     expect(queue.load().map((a) => a.id)).toEqual(["name:PLTR"]);
     expect(queue.load()[0]?.askers).toEqual([ADA]);
   });
@@ -405,9 +405,45 @@ describe("a question starts discovery (#6952 slice 2b)", () => {
 
   it("starts nothing for a subject a campaign covers", async () => {
     const answer = await askAbout({ kind: "sector", subject: "Utilities" });
-    expect(answer.body).toMatchObject({ ok: true, status: "covered" });
+    expect(answer.body).toMatchObject({ ok: true, status: "covered", cover: "house" });
     expect(answer.body.tell).toMatch(/energy-for-ai/);
     expect(queue.load()).toEqual([]);
+  });
+
+  it("marks a name the research shelf already holds as the house's cover, not a campaign's (#7443)", async () => {
+    const answer = await askAbout(
+      { kind: "name", subject: "AAPL" },
+      ada,
+      config({ campaignShelf: (s: string) => s === "AAPL" }),
+    );
+    expect(answer.body).toMatchObject({
+      ok: true,
+      status: "covered",
+      cover: "house",
+      campaign: "the research shelf",
+    });
+    expect(answer.body.tell).toMatch(/in the research shelf/);
+    expect(queue.load()).toEqual([]);
+  });
+
+  it("keeps the member's cleaned words on a bare ask, so a question drafted in the chat reaches the list", async () => {
+    const answer = await askAbout({
+      kind: "name",
+      subject: "PLTR",
+      question: "  Why is it\nmoving   this week?  ",
+    });
+    expect(answer.body).toMatchObject({ ok: true, status: "queued" });
+    expect(queue.load()).toMatchObject([
+      { id: "name:PLTR", question: "Why is it moving this week?", askers: [ADA] },
+    ]);
+    expect(queue.load()[0]?.campaign).toBeUndefined();
+  });
+
+  it("caps a bare ask's words at 200 characters and keeps none when they are blank", async () => {
+    await askAbout({ kind: "name", subject: "PLTR", question: "q".repeat(900) });
+    await askAbout({ kind: "market", subject: "gold", question: "   " });
+    expect(queue.load()[0]?.question).toHaveLength(200);
+    expect(queue.load()[1]?.question).toBeUndefined();
   });
 
   it("lets a second member join the same question instead of queueing it twice", async () => {
@@ -418,14 +454,15 @@ describe("a question starts discovery (#6952 slice 2b)", () => {
     expect(queue.load()[0]?.askers).toHaveLength(2);
   });
 
-  it("estimates the wait from the per-pass ceiling, never promising sooner than it can", async () => {
+  it("counts the research passes in days for a deep ask, from the lane's per-pass number", async () => {
     for (const s of ["AA", "BB", "CC"]) await askAbout({ kind: "name", subject: s });
     const answer = await askAbout(
       { kind: "name", subject: "DD" },
       ada,
       config({ discoveryPerPass: 2 }),
     );
-    expect(answer.body.tell).toMatch(/3 ahead of it, so about 2 research passes/);
+    // The discovery lane reads the queue once a day (#7034 slice 3b): 3 ahead at 2 a pass is 2 passes.
+    expect(answer.body.tell).toMatch(/3 ahead of it, so about 2 research passes .* once a day/);
   });
 
   it("refuses a malformed or unknown ask with 400 and writes nothing", async () => {
@@ -887,7 +924,12 @@ describe("campaigns are communal (#6949 slice 6, criteria 8, 10, 11)", () => {
     await save({ ...FORM, title: "EV pumps", symbols: ["XOM", "RIVN"] });
     queue.write([]);
     const answer = await call("/api/campaigns/ask", post({ kind: "name", subject: "RIVN" }), grace);
-    expect(answer.body).toMatchObject({ ok: true, status: "covered", campaign: "ev-pumps" });
+    expect(answer.body).toMatchObject({
+      ok: true,
+      status: "covered",
+      campaign: "ev-pumps",
+      cover: "party",
+    });
     expect(answer.body.tell).toMatch(/"EV pumps", a campaign the party shares/);
     expect(queue.load()).toEqual([]);
   });

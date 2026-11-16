@@ -2,6 +2,7 @@ import type { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
 import { rowPremium } from "../alpaca/alpaca-options-client.js";
 import type { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
 import { positionsFrom } from "../observatory/broker-positions.js";
+import { optionsBuyingPowerField } from "../observatory/participant-snapshot.js";
 import {
   type OptionPlayCode,
   type OptionTicketContext,
@@ -92,6 +93,7 @@ async function liveContext(
   const level = optionsTradingLevel(account);
   return {
     cash: Number(account.cash),
+    ...optionsBuyingPowerField(account.options_buying_power),
     positions: positionsFrom(positions),
     tradingEnabled: true,
     isSelf: true,

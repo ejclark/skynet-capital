@@ -538,3 +538,32 @@ record the better prior.
 - **No position was taken at any point in this ledger's life, and none was available.** The event
   closed `estimate`, `symbols: []`, and `low`. What it cost was one confident mechanism sentence and
   two badly-shaped falsifiers — corrected here, in §3, before anything was built on them.
+
+### Forward-test note — 2026-11-16 (scoring session; append-only, no second verdict)
+
+**FT-g20-energy-abundance-ministerial-houston-2026-09-14-1 is recorded `unscoreable`, not scored, because its own window has not closed.** The row
+scores on the **2026-11-16 close**. This session ran at 2026-11-16 00:32 UTC, about 21 hours before that
+bar exists (Yahoo's latest bar is the 2026-11-13 close, 21:00 UTC). Scoring early would shorten the
+registered window, which this lane does not do. Where a human looks: Yahoo daily closes for CEG, TLN,
+VST, NRG and NVDA on 2026-11-16, entry marks as registered.
+
+**For the record, the last available reading (fresh Yahoo pulls, 2026-11-13 close, raw closes):**
+
+| Name | 09-14 close | 11-13 close | Return |
+| --- | --- | --- | --- |
+| CEG | 264.57 | 280.20 | +5.91% |
+| TLN | 286.52 | 376.01 | +31.23% |
+| VST | 140.73 | 133.01 | −5.49% |
+| NRG | 108.47 | 97.10 | −10.48% |
+| **Equal-weight basket** | | | **+5.29%** |
+| NVDA | 210.96 | 162.85 | −22.80% |
+
+The basket leads NVDA by **+28.1pp** at the 11-13 close. The kill switch needs the basket to *trail* NVDA
+by more than 5pp, a **33pp** swing for a single session, so the 11-16 close is very unlikely to flip it.
+That is a reading of the gap, **not a score**. It also does not separate the drivers on 09-14 itself: the
+window is dominated by NVDA's slide and TLN's +31%, which are their own stories.
+
+**Calendar:** `status` stays `estimate`; no proposals filed (nothing new dated inside the horizon).
+
+**Last assessed:** 2026-11-16
+<!-- probe-ref: {"symbols":{},"vix":19.3,"daysBand":"low:0+","adjacentIds":["aapl-iphone-18-launch-2026-09-09","boe-decision-2026-09-17","boj-decision-2026-09-18","bund-30y-auction-2026-09-16","buyback-blackout-start-2026-09-12","cpi-2026-09-11","ecb-decision-2026-09-10","eia-steo-2026-09-09","empire-state-mfg-2026-09-15","eurostat-hicp-final-2026-09-17","existing-home-sales-2026-09-10","fomc-2026-09-16","gastech-2026-09-14","google-adtech-opinion-unseal-2026-09-16","housing-starts-2026-09-17","iea-omr-2026-09-11","import-export-prices-2026-09-16","industrial-production-2026-09-18","jgb-20y-auction-2026-09-15","jgb-liquidity-enhancement-1-5y-2026-09-10","missouri-uocava-ballot-mailing-2026-09-19","mts-august-2026-09-11","nahb-hmi-2026-09-16","opec-momr-2026-09-10","opex-2026-09-18","pending-home-sales-2026-09-17","philly-fed-mfg-2026-09-17","ppi-2026-09-10","qss-q2-2026-09-09","retail-sales-2026-09-16","sp-global-investment-manager-index-2026-09-15","sp-rebalance-proforma-capped-2026-09-11","tic-monthly-2026-09-16","treasury-10y-note-2026-09-09","treasury-10y-tips-2026-09-17","treasury-20y-bond-2026-09-15","treasury-30y-bond-2026-09-10","treasury-buyback-10y20y-2026-09-10","treasury-buyback-7y10y-2026-09-17","treasury-buyback-cash-mgmt-2026-09-09","treasury-buyback-increase-2026-09-09","treasury-buyback-tips-10y30y-2026-09-15","treasury-coupon-announcement-2026-09-10","treasury-coupon-announcement-2026-09-17","uk-cpi-2026-09-16","uk-labour-market-2026-09-15","umich-sentiment-prelim-2026-09-11","unsc-iran-panel-mandate-vote-2026-09-17","vix-expiration-2026-09-16"],"adjacentStrongIds":["cpi-2026-09-11","fomc-2026-09-16","opex-2026-09-18","retail-sales-2026-09-16","treasury-10y-note-2026-09-09","treasury-20y-bond-2026-09-15","treasury-30y-bond-2026-09-10"],"screenStreak":0} -->

@@ -12,10 +12,13 @@ this: scope lived scattered across five near-identical `.github/prompts/*.md` fi
 "orchestrator" already meant something else in this repo (`docs/COACHES.md`'s in-session head
 coach). Nothing named who owns the whole board. This does.
 
-## In the app — the rail is her voice
+## In the app — the dock is her voice
 
-Members meet her directly: the ✦ button in the shell's top bar opens a right
-rail (`app/src/shell/moneypenny-rail.tsx`) where she answers questions live and files feedback.
+Members meet her directly in the dock under every page (`app/src/shell/moneypenny-dock.tsx`,
+#7487 slice 2; it replaced the ✦ toggle and the right rail): the conversation, her moves as
+buttons, and a one-line box. Since 2026-11-13 the conversation is always in the dock, compact or
+expanded (Eric: "Consolidate the chat and history windows"), and it opens on the first line of her
+latest answer; expanded adds side threads, Copy and New conversation. There she answers questions live and files feedback.
 Her voice there is the companion chat (`src/companion/*`, `/api/companion/chat`) — Claude on the
 same key the feedback coach uses, with nine read-only lookups and two hand-offs (the member's own desk, progress and market views,
 the play catalog, a chain read through their own linked account, and the public work record,
@@ -25,10 +28,44 @@ asked from, reduced to fixed words (`companion-page.ts`, #2224), with their own 
 page's symbol (`companion-holding.ts`), and a cached help desk
 (`companion-help.ts`) so "how do I…" answers come from this app's facts. She cannot place an
 order (no such tool exists — `tests/companion/companion-no-order-path.spec.ts`). Filing is hers to
-draft: `draft_feedback` hands the rail a draft built from the whole thread and files nothing; the
+draft: `draft_feedback` hands the chat a draft built from the whole thread and files nothing; the
 member's own reply ("send", or an answer to her one question) is what posts it through
 `/api/feedback`. The scripted lines in
 `app/src/live/moneypenny-script.ts` are the fallback when the key isn't set.
+
+### Screenshots in the chat (#6007)
+
+A member can attach up to 3 screenshots to a message (the **Attach screenshot** button, paste, or
+drop) when the live chat is on. The box (`app/src/shell/mp-composer.tsx`) fits each one in the
+browser to 1568 px on its long edge and re-encodes it as PNG or JPEG under 1.5 MB
+(`app/src/live/mp-screenshots.ts`), shows it as a thumbnail with a remove control, and uploads it
+only on Send; the chat turn and the saved conversation carry ids, never bytes. The server keeps them
+on the volume (`src/server/companion-screenshots-store.ts`, 20 MB a member, 100 MB in all, oldest
+removed first) and hands the model at most 3 as image blocks a request. Any signed-in member may open
+one by id; nothing before sign-in does, and none is ever copied into a filing, since filings land on
+the public repo (a drafted filing says so in one line). A removed one reads `Screenshot no longer
+kept`. The 1568 px edge is the plan's number: the vision limits were not read from the docs in
+slices 2 or 3 (the docs tools were denied in both sessions), so check them before relying on it.
+
+### Four jobs
+
+Eric, 2026-11-10: "her ability to assess and evaluate the situation to perform research, delegate
+work, and evolve our systems to meet the ever changing outcomes users are pursuing." Her prompt
+names four jobs and one rule for sorting each message (`src/companion/routing-rule.ts`):
+
+| The ask | What she does by herself | What goes out, and where |
+|---|---|---|
+| The record answers it (their desk, the calendar, the build queue, the help desk) | Looks it up with her read-only tools and answers | Nothing |
+| It needs research nobody has done | Says what her tools show and what they don't | A draft feedback idea titled "Research: …", which lands as a feedback issue |
+| Something to build or fix | Writes the brief | A draft feedback issue (bug, feature or idea) |
+| How the app works has fallen behind what members are after | Checks the roadmap for a plan that already covers it | A draft feedback idea in four lines: outcome members are after, what the app does today, proposed change, how we would know it worked |
+
+She only ever reads by herself. Every write is a draft card, and the member's own tap or reply
+sends it; she never says something was asked, filed or started before that. Asked to size up where
+a member stands, she answers in three short beats (their desk, what is coming, one question back)
+and never recommends a trade. One eval fixture per job (`assess-`, `research-`, `delegate-`,
+`evolve-` in `src/evals/companion/fixtures.ts`) makes a change to any of them measurable with
+`npm run eval:companion`.
 
 ## Mandate
 
@@ -112,6 +149,13 @@ for example "Eric to decide"; blank when nothing stops a build), and **In this c
 day the sync last changed Status, written only on a real change, so a card the sync has not moved
 since the field was made reads blank). A field the board does not carry yet is skipped with one log line; the
 `projects-setup.yml` dispatch creates it.
+
+**Role** (#6886 slice 1b, `scripts/moneypenny/projects-role.mjs`) is the seat whose queue the card
+sits in: "Plan builds", "Feedback builds", "Live sessions" and so on, from the seat registry's
+`role` / `pulls` / `roleOrder` (`docs/agents/seats.json`) and the issue's labels. It is one-way, a
+copy like Kind; a card no seat pulls has no Role. The reconcile sweep creates the field itself and
+keeps its options equal to the registry's, so hiring a seat that pulls cards needs no dispatch. The
+lanes are listed on the org chart (`docs/architecture/org-chart.md` → *The board's Role lanes*).
 
 ### Where an open ask lives — the board's Waiting on a person column
 

@@ -1,4 +1,4 @@
-import type { Quest, QuestExit } from "../domain/quest.js";
+import { type Quest, type QuestExit, withQuest } from "../domain/quest.js";
 import { buildOccSymbol, occStrikeLabel } from "../trading/option-symbols.js";
 import { BUY_BACK_AT_KEPT } from "./position-guidance-manage.js";
 import { dayText, pct } from "./position-guidance-rules.js";
@@ -28,7 +28,7 @@ import type {
  * "untested" in words, which ranks it below any tested quest (AC 5). PURE: no I/O, no clock.
  */
 
-const UNTESTED = {
+export const POSITION_UNTESTED = {
   kind: "untested",
   note: "No study has measured how often this exit rule pays yet — it is the house's rule, not a tested rate.",
 } as const;
@@ -59,8 +59,9 @@ function heldCallQuest(deskId: string, symbol: string, c: LongCallCall): Quest |
     strike: c.strike,
   });
   const profit = c.call === "TAKE PROFIT";
+  const id = `position:${occ}:${profit ? "take-profit" : "time-stop"}`;
   return {
-    id: `position:${occ}:${profit ? "take-profit" : "time-stop"}`,
+    id,
     source: "position",
     move: {
       kind: "sell-to-close",
@@ -68,10 +69,10 @@ function heldCallQuest(deskId: string, symbol: string, c: LongCallCall): Quest |
       symbol,
       occ,
       contracts: c.contracts,
-      href: manageHref(deskId, symbol, occ),
+      href: withQuest(manageHref(deskId, symbol, occ), id),
     },
     why: reasons(c.reasons),
-    baseRate: UNTESTED,
+    baseRate: POSITION_UNTESTED,
     exits: [],
     // Take profit holds until the time stop takes over; a time stop holds until the call expires.
     expires:
@@ -90,6 +91,7 @@ function soldCallQuest(deskId: string, symbol: string, c: ManageCall): Quest | u
   if (!confidence) return undefined;
   const contract = contractText(symbol, c.strike, c.expiration, c.contracts);
   const rollTo = c.call === "ROLL" ? c.rollTo : undefined;
+  const id = `position:${c.occ}:${rollTo ? "roll" : "buy-back"}`;
   const exits: QuestExit[] = rollTo
     ? [
         {
@@ -103,7 +105,7 @@ function soldCallQuest(deskId: string, symbol: string, c: ManageCall): Quest | u
       ]
     : [];
   return {
-    id: `position:${c.occ}:${rollTo ? "roll" : "buy-back"}`,
+    id,
     source: "position",
     move: {
       kind: rollTo ? "roll" : "buy-to-close",
@@ -114,10 +116,10 @@ function soldCallQuest(deskId: string, symbol: string, c: ManageCall): Quest | u
       occ: c.occ,
       contracts: c.contracts,
       ...(rollTo ? { rollTo } : {}),
-      href: manageHref(deskId, symbol, c.occ),
+      href: withQuest(manageHref(deskId, symbol, c.occ), id),
     },
     why: reasons(c.reasons),
-    baseRate: UNTESTED,
+    baseRate: POSITION_UNTESTED,
     exits,
     expires: c.until
       ? { date: c.until.date, why: c.until.why }

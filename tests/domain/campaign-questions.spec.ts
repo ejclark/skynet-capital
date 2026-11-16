@@ -78,11 +78,27 @@ describe("recordQuestion", () => {
     let log = recordQuestion([], ask("NVDA", "ai-buildout", "First"), grace, AT);
     log = recordQuestion(log, ask("NVDA", "ai-buildout", "Second"), bob, AT);
     const same = recordQuestion(log, ask("NVDA"), bob, AT);
-    expect(same).toBe(log);
+    expect(same[0]?.askers).toEqual([grace, bob]);
     expect(log[0]).toMatchObject({ question: "First", askers: [grace, bob] });
     for (let i = 0; i < MAX_ASKERS + 5; i++)
       log = recordQuestion(log, ask("NVDA"), { key: `m${i}`, name: `M${i}` });
     expect(log[0]?.askers).toHaveLength(MAX_ASKERS);
+  });
+
+  it("dates every re-ask in lastAskedAt and keeps the first askedAt the campaign shows (#7445)", () => {
+    const later = new Date("2026-11-18T12:00:00Z");
+    const latest = new Date("2026-11-20T12:00:00Z");
+    let log = recordQuestion([], ask("NVDA"), grace, AT);
+    expect(log[0]?.lastAskedAt).toBeUndefined();
+    log = recordQuestion(log, ask("NVDA"), bob, later);
+    expect(log[0]).toMatchObject({ askedAt: AT.toISOString(), lastAskedAt: later.toISOString() });
+    // The same member asking again adds no asker but is still a dated ask.
+    log = recordQuestion(log, ask("NVDA"), grace, latest);
+    expect(log[0]).toMatchObject({
+      askedAt: AT.toISOString(),
+      lastAskedAt: latest.toISOString(),
+      askers: [grace, bob],
+    });
   });
 
   it("drops a campaign's oldest question past the bound, and never another campaign's", () => {
@@ -160,6 +176,15 @@ describe("questionsIn", () => {
     expect(amd).toMatchObject({ state: "waiting", ahead: 0, found: [], suggestion: false });
     expect(nvda).toMatchObject({ state: "no-finding-yet", suggestion: false });
     expect(nvda).not.toHaveProperty("ahead");
+  });
+
+  it("says a write-up is on the research shelf when no lesson carries it (#7034 slice 3b)", () => {
+    const shelved = (id: string): boolean => id === log.find((q) => q.subject === "NVDA")?.id;
+    const views = questionsIn(log, "ai-buildout", AI, queue, found, shelved);
+    expect(views.find((v) => v.subject === "NVDA")).toMatchObject({ state: "on-the-shelf" });
+    // A finding in the record still wins, and a question still waiting in line is still waiting.
+    expect(views.find((v) => v.subject === "PLTR")?.state).toBe("found");
+    expect(views.find((v) => v.subject === "AMD")?.state).toBe("waiting");
   });
 });
 

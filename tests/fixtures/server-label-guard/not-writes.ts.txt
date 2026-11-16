@@ -1,0 +1,8 @@
+// doFetch("POST", `${u}/labels`, h, { labels: ["plan", "work-mode:halt"] });
+/* the work-mode:surge label is the owner's alone */
+const n = JSON.parse(readFileSync(join(root, "work-mode.json"), "utf8"));
+const list = `${api}/issues?state=open&labels=plan&per_page=100`;
+await doFetch("GET", list, headers);
+if (labels.includes("ready")) return "Now";
+await doFetch("PUT", `${api}/contents/${path}`, headers, { content });
+const re = /"[^"]*\/labels/; res.setHeader("allow", "POST");

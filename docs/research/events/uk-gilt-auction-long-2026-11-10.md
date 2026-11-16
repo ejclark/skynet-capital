@@ -88,8 +88,79 @@ No 2026 long conventional auction result found, so the 2.50x / 1.0bp thresholds 
 |---|---|---|---|---|
 | 2026-10-26 | D-15 | **Initial research.** Canonical file written from `proposals/…from-uk-gilt-auction-short-2026-10-27.json`; **the 28 Aug DMO notice names the gilt: 5⅜% Treasury Gilt 2056** (proposal said unnamed); size 11-03. 2056: 03-26 tender 3.84x/0.3bp/5.517%; 09-08 syndication £4.25bn at 5.8168%. 2063 tender 3.98x (press). 4⅞% 2036: 09-29 3.34x/**0.5bp**, 10-20 3.61x/0.2bp (the 0.5bp tail is outside the short ledger's stated band). No 2026 long auction result found; one 2025 comparable (2.75x). IGLT.L σ 0.431%, 20d rv 4.6%. VIX 19.60, ^TNX 4.988, IGLT.L 9.60. DMO web pages 404, investing.com 403 (`blocked`). US CPI shares the day. Nothing proposed. | — (initial; stand aside) | 2026-11-03 (the DMO size notice, 3:30pm London; before it, the Budget-day calendar) |
 | 2026-11-02 | D-8 | **Full pulse (interval-elapsed; band low:15+→low:0+).** **Budget remit read direct (DMO `sa281026.pdf`, 28 Oct):** 10 Nov is **not** among the cancelled auctions (fn 9-11: 23 Jul, 15 Sep, 13 Oct, 16 Feb); Annex B still dates Tue 10-Nov, but its gilt cell is not recoverable from the text layer, so the stock is unverified (FT-1 stays open). **Supply tilted away from the long end:** long conventional sales cut **£7.7bn** to £15.5bn; long auctions **£2.3bn in two** for the year, ~£1.15bn each if both remain, which **threatens FT-2's £2.0bn floor** (registered rows stand; the 11-03 notice settles it). Gross gilts £250.6bn (+£4.4bn); gilts rallied ~20 ticks on the remit (press). IGLT.L **9.682** (+0.54% on 11-02; Budget day +0.10%), 20d vol **4.5%**, <8.3% trigger. VIX 18.97, ^TNX 4.906. Nothing proposed. No conviction proposals or declared intents name this event. | — (stand aside holds; FT-2 risk flagged) | 2026-11-03 (DMO size notice, 3:30pm London) |
+| 2026-11-09 | D-1 | **Full pulse (interval-elapsed; VIX +6.7pt, new adjacent `nbis-2026-11-12-print`).** **11-03 size notice read (DMO `pr031126.pdf`; stock/size via search summary + Newsquawk NEWS:, local decode got date/times only): 5⅜% 2056, £1,000m, Tue 10-Nov, 9–10am London, £11,154.3m in issue after. FT-2 killed** (size under £2.0bn floor, the risk flagged 11-02); **FT-1 pass** (date, stock unchanged). A £1bn sale is a smaller supply test, so FT-3's 2.50x cover is a weaker bar (small sizes cover higher); FT-3 stands as registered. **BoE 11-05 hiked to 4.00%, 8–1** (one for 50bp; Bank's own report), Dec hike ~50% (press); **VIX 16.61→28.18 on 11-05** (SPY -4.4%, midterm/AI-buildout fears, press), 25.64 on 11-06; ^TNX 4.859. **IGLT.L 9.717 (11-06), rallied through it** (+0.70% 11-04, +0.10% 11-05, -0.21% 11-06), 20d rv **4.98%** < 8.3% trigger. US CPI (13:30 London) still shares the day. Nothing proposed (nbis is not a gilt event). No conviction proposals or declared intents name this event. | — (stand aside holds; FT-2 killed, FT-1 passed) | 2026-11-11 (the 11-10 result: cover, tail, average yield) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance *change* earns its sentence in the Stance section with the row as its receipt. The adjacency sweep (peer prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in every row; a dated adjacent event found **inside the research horizon** (`assessment-cadence.json`'s `horizon`: nothing past `maxDaysOut`, and past `allImpactsWithinDays` only critical/high) gets proposed as a new `src/domain/market-events/proposals/<id>.from-<this-event-id>.json` (`status: "estimate"`) in the same PR — your own file, never another event's canonical one (#1717). One past the horizon is named in the row instead (#2946): it can never become due, so a calendar file for it is clutter, while prose in a row is free. Close-out fills `## Outcome` below from re-run instrument data (cache busted first), never from memory. After that the assessment is closed; the doc reopens only to score a registered forward test whose `Score by` has arrived (`forward-test-due`).
 
 **Last assessed:** 2026-11-02
 <!-- probe-ref: {"symbols":{},"vix":18.97,"daysBand":"low:0+","adjacentIds":["boe-decision-2026-11-05","boj-minutes-2026-11-05","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","existing-home-sales-2026-11-12","jgb-10y-auction-2026-11-05","jgb-30y-auction-2026-11-10","jgb-5y-auction-2026-11-12","jobs-2026-11-06","mts-october-2026-11-12","ppi-2026-11-13","productivity-costs-q3-2026-11-05","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","sp-global-investment-manager-index-2026-11-10","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-3y-note-2026-11-09","treasury-buyback-1mo2y-2026-11-05","treasury-coupon-announcement-2026-11-12","uk-gdp-q3-first-2026-11-12","umich-sentiment-prelim-2026-11-06","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","jobs-2026-11-06"],"screenStreak":0} -->
+
+**Last assessed:** 2026-11-09
+<!-- probe-ref: {"symbols":{},"vix":25.64,"daysBand":"low:0+","adjacentIds":["boe-decision-2026-11-05","boj-minutes-2026-11-05","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","erock-q3-2026-results-2026-11-12","existing-home-sales-2026-11-12","japan-balance-of-payments-2026-11-10","jgb-10y-auction-2026-11-05","jgb-30y-auction-2026-11-10","jgb-5y-auction-2026-11-12","jobs-2026-11-06","mts-october-2026-11-12","nbis-2026-11-12-print","pbls-q3-2026-results-2026-11-12","ppi-2026-11-13","productivity-costs-q3-2026-11-05","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","sp-global-investment-manager-index-2026-11-10","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-3y-note-2026-11-09","treasury-buyback-1mo2y-2026-11-05","treasury-coupon-announcement-2026-11-12","uk-gdp-q3-first-2026-11-12","umich-sentiment-prelim-2026-11-06","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","jobs-2026-11-06","nbis-2026-11-12-print"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out (2026-11-11, D+1 — inside `closeOutWithinDays`).** Rates mode runs no `earnings-cycle` /
+`intraday-edges` instrument (`symbols: []` by design); the cache was busted anyway and nothing here reads
+it. "Re-run data" means the IGLT.L, ^VIX and ^TNX figures below were re-fetched this session from the
+Yahoo daily chart (253 IGLT.L sessions to 2026-11-10) with σ and volatility recomputed from scratch.
+**The auction's own result (cover, tail, average yield) could not be read, and no number for it is
+stated here.** The date stays `estimate` (taxonomy), unchanged.
+
+**What could not be read — the result notice.** Search summaries of the DMO homepage list a *Result of
+the Sale By Auction of £1,000 million of 5⅜% Treasury Gilt 2056* dated 10/11/2026, so it exists. Every
+DMO web page (homepage, publications, results of gilt operations, the outright-auctions data export)
+answers a plain fetcher with a 302 to a bot-challenge page; the result PDF's media URL
+(`media/<id>/<ddmmyy>conventional.pdf`) cannot be guessed and no search returned it. The 3 Nov notice's
+PDF fetched fine (HTTP 200), so the block is on the pages, not the PDFs. Three searches turned up only
+the pre-auction notice and prospectus, and an investing.com piece on the 2025-09-23 auction. The
+challenge page was not worked around. The same search summary also listed a £3,250m 5¼% Treasury Gilt
+2041 auction beside it, unverified; not this event's.
+
+**What the dated record says about the 2056 — a comparable the initial research missed.** The 2025-09-23
+auction of the same stock (£1.5bn) drew bids of £4.601bn: **3.07x cover, 1.4bp tail, 5.476% average**
+(investing.com, NEWS:, fetched 2026-11-11). Its tail was **above FT-3's 1.0bp ceiling**, so the 1.0bp
+bar was set against one 2025 observation (4⅜% 2054, 0.3bp) while a second long-end auction, in this very
+stock, sat outside the sample. FT-3's thresholds were fixed on 2026-10-26 and are not edited.
+
+**IGLT.L proxy, re-run (rank among 251 daily moves in the year to 11-10).**
+
+| Measure | Value | Against the stated bar |
+|---|---|---|
+| Close 11-09 → 11-10 | **9.7425 → 9.69, -0.54%** (1.2σ; σ 0.435%) | stand-aside falsifier is ≤ -1.30%: **not met** |
+| Rank of that move | 124 of 251 by absolute size: an ordinary day | no distinction from the sample's median |
+| 20-day realized vol | **5.01%** (full sample recomputed 6.90%) | kill switch 4 needs ≥ 8.3%: **unfired** |
+| ^TNX 11-09 → 11-10 | 4.864 → **4.983** (+11.9bp) | US yields rose the same day, with CPI at 13:30 London |
+| VIX 11-10 | 19.46 (from 19.92 on 11-09; 28.18 on 11-05) | regime calmer than the 11-09 row |
+
+Read narrowly: gilts fell on the auction day and US ten-year yields rose more than ten basis points, so
+a gilt-market loss on 11-10 is not the auction's by default, which is the attribution warning the initial
+research gave. One day, one all-maturity ETF closing 16:30 London, and no cover or tail to join it to.
+
+**Forward tests.** **FT-1 pass** and **FT-2 kill** were scored 2026-11-09 and stand. **FT-3 (cover ≥
+2.50x and tail ≤ 1.0bp) — unscoreable**, recorded in its Outcome cell with the pointer to the DMO's own
+result notice; it is not scored from the 3.07x / 1.4bp 2025 print or from the ETF. Nothing here is a kill
+and nothing is a pass.
+
+**Kill switches, closed out.** (1) Budget changes the line: unfired (FT-1 pass). (2) Size outside £2.0–4.25bn:
+**fired** (FT-2 kill, £1.0bn). (3) Band breaks: **unknown**, result unread. (4) Quiet-market premise
+(IGLT.L 20d vol ≥ 8.3%): unfired (5.01%).
+
+**The call, scored against the tape.** Stand aside with no position stood: zero capital was exposed and no
+tracked instrument is keyed to a gilt auction, so the call cost nothing and could not have paid. Two
+analytical calls did not hold: the size band (£1.0bn vs £2.0–4.25bn) and the thresholds' one-comparable
+basis (a second 2056 auction, 1.4bp, was findable). Neither moved a position. The 11-02 row had already
+flagged the size risk from the Budget remit.
+
+**Process note — a stage a person still did.** The *sense* step failed: reading the DMO's result notice.
+The short ledger's close-out recorded the same wall and proposed recording each result PDF URL as found;
+nothing machine-readable does that yet, so this lane met it a second time. The pointer for a human is
+dmo.gov.uk → Results of Gilt Operations → *Result of the Sale By Auction of £1,000 million of 5⅜% Treasury
+Gilt 2056 (10/11/2026)*. A person who opens it can read cover and tail; the row stays unscoreable by
+design, because rewriting it later is the falsification the append-only rule exists to stop.
+
+No forward test in this doc scores past this close-out — all three carry terminal verdicts as of
+2026-11-11 — so nothing carries this ledger into `forward-test-due`. This doc goes quiet after this entry.
+
+**Last assessed:** 2026-11-11 (close-out — the scanner goes quiet on this event from here)
+<!-- probe-ref: {"symbols":{},"vix":19.46,"daysBand":"low:0+","adjacentIds":["boe-decision-2026-11-05","boj-minutes-2026-11-05","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","erock-q3-2026-results-2026-11-12","existing-home-sales-2026-11-12","japan-balance-of-payments-2026-11-10","jgb-10y-auction-2026-11-05","jgb-30y-auction-2026-11-10","jgb-5y-auction-2026-11-12","jobs-2026-11-06","mts-october-2026-11-12","nbis-2026-11-12-print","pbls-q3-2026-results-2026-11-12","ppi-2026-11-13","productivity-costs-q3-2026-11-05","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","sp-global-investment-manager-index-2026-11-10","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-3y-note-2026-11-09","treasury-buyback-1mo2y-2026-11-05","treasury-coupon-announcement-2026-11-12","uk-gdp-q3-first-2026-11-12","umich-sentiment-prelim-2026-11-06","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","jobs-2026-11-06","nbis-2026-11-12-print"],"screenStreak":0,"blocked":[{"url":"https://www.dmo.gov.uk/","status":"302 bot-challenge","at":"2026-11-11"},{"url":"https://www.dmo.gov.uk/data/gilt-market/results-of-gilt-operations/","status":"302 bot-challenge","at":"2026-11-11"},{"url":"https://www.dmo.gov.uk/umbraco/surface/PDFReport/GetDataExport?reportCode=D2.1A","status":"302 bot-challenge","at":"2026-11-11"}]} -->

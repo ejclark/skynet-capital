@@ -97,6 +97,14 @@
       "why": "the one question a lane asks before it dispatches (dial and brake together) — same reason as work-mode.mjs"
     },
     {
+      "pattern": "scripts/moneypenny/triage-assess.mjs",
+      "why": "the member filing check's one writer (#7544): it decides from the four checks whether `ready` lands and holds the App token while it posts; a green lane PR that loosened it would let a member's filing ready itself (red-team of #7546)"
+    },
+    {
+      "pattern": "scripts/clear-path-post.mjs",
+      "why": "the clear-path flip's write half, whose planPosts gate the filing check reuses: the two-verifier, four-pass rule that makes a session flip earned (docs/ISSUES.md → Who may flip it; red-team of #7546)"
+    },
+    {
       "pattern": "scripts/moneypenny/circuit-breaker.mjs",
       "why": "the spend breaker's mechanism (#2946, #6020) — the code that counts, trips and holds; its thresholds are already protected and the code that reads them must be too"
     },

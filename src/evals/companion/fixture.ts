@@ -1,5 +1,6 @@
 import { ONBOARDING_MILESTONE, type OnboardingProgress } from "../../domain/onboarding.js";
 import type { OnboardingView } from "../../server/onboarding-api-routes.js";
+import type { FixtureToolUse } from "./tool-use.js";
 
 /**
  * A COMPANION EVAL FIXTURE — one scripted conversation against a fabricated but faithful member
@@ -13,7 +14,18 @@ import type { OnboardingView } from "../../server/onboarding-api-routes.js";
  * one) needs the harness to feed each of Moneypenny's own replies back into the transcript before
  * sending the next round, exactly as the real client does (`moneypenny.ts`'s `transcript()`).
  */
-export type CompanionFixtureCategory = "grounding" | "pushback" | "unknown" | "size" | "filing";
+export type CompanionFixtureCategory =
+  | "grounding"
+  | "pushback"
+  | "unknown"
+  | "size"
+  | "filing"
+  // Her four jobs (the Moneypenny operator plan, 2026-11-10): size up, research, hand work on,
+  // propose a change. One fixture each, so an improvement to any one job is measurable.
+  | "assess"
+  | "research"
+  | "delegate"
+  | "evolve";
 
 export interface CompanionFixture {
   readonly id: string;
@@ -27,6 +39,9 @@ export interface CompanionFixture {
   /** What the judge checks about the FINAL round's reply. Given the whole transcript, not just
    *  the last line, so the judge can tell a held answer from a reversed one. */
   readonly rubric: string;
+  /** Run as a linked session with the real, full tool list, reads answered from these stubs, and
+   *  the calls scored against `expect` (#7286 slice 5, `tool-use.ts`). Absent: deskless, as before. */
+  readonly toolUse?: FixtureToolUse;
 }
 
 /** Wrap a real `deriveOnboarding()` result into an `OnboardingView` — the shape `memberContext()`

@@ -13,6 +13,7 @@ import {
 } from "../live/ticket";
 import { InlineResult } from "../ui";
 import { fifoLine, refreshAfterClose, type SentClose } from "./close-receipt";
+import type { LockInFlag } from "./locked-in";
 import { plural } from "./position-row-spec";
 
 /* Moved from blotter-row.tsx (#5071), when a row's Close moved into its opened row. */
@@ -75,6 +76,7 @@ function sentClose(
   result: { readonly orderId: string; readonly status: string },
   preview: TicketPreview | OptionPreview,
   count: number,
+  lockIn: LockInFlag | undefined,
 ): SentClose {
   return {
     orderId: result.orderId,
@@ -84,6 +86,7 @@ function sentClose(
     side: "positionIntent" in preview ? preview.side : preview.action,
     count,
     ...(preview.estNotional !== undefined ? { estNotional: preview.estNotional } : {}),
+    ...(lockIn ? { lockIn } : {}),
   };
 }
 
@@ -125,6 +128,7 @@ export function ClosePanel({
   position,
   buys,
   sellsOldestFirst = false,
+  lockIn,
   onDone,
 }: {
   readonly deskId: string;
@@ -134,6 +138,8 @@ export function ClosePanel({
   /** One buy that is not the oldest: a sell of its size comes out of older buys first, so the
    *  button says "Sell", never "Close", and the confirm step says which buys shrink. */
   readonly sellsOldestFirst?: boolean;
+  /** The row's lock-in flag (#4609; `locked-in.ts`), handed to the receipt with the sent order. */
+  readonly lockIn?: LockInFlag;
   /** The order, once accepted — the host's receipt reads it after this panel is gone. */
   readonly onDone: (sent: SentClose) => void;
 }): ReactElement {
@@ -189,7 +195,7 @@ export function ClosePanel({
       setState({ step: "done", result });
       if (result.ok) {
         refreshAfterClose(queryClient, deskId);
-        onDone(sentClose(position, result, preview, count));
+        onDone(sentClose(position, result, preview, count, lockIn));
       }
     } catch (error) {
       setState({ step: "error", message: String(error) });

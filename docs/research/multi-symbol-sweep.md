@@ -71,6 +71,38 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"A JGB 30-year tail of 2bp or more does not transmit to the next US session: the US 30Y CMT does not rise 5bp (FT-jgb-30y-auction-2026-10-08-5)"** — added 2026-11-13 from the
+  [jgb-30y-auction-2026-10-08 ledger](events/jgb-30y-auction-2026-10-08.md). The 2026-11-10 tail was **2.4bp** and the US 30Y CMT rose **+8bp** (5.35 to 5.43) on 11-12, on a CPI day plus a US 30-year auction.
+  Do not register a same-tenor JGB-to-US D+1 threshold on a date that shares a US CPI print or auction; one observation, and the JGB 30Y par yield moved +5.5bp on 11-11 too.
+
+- **"The first MTS of FY2027 is forecastable to ±$42B from ten-month growth rates alone: the October 2026 deficit lands in $280–365B (FT-mts-october-2026-11-12-1)"** — added 2026-11-13 from the
+  [mts-october-2026-11-12 close-out](events/mts-october-2026-11-12.md). Printed **$404.06B**: receipts $368.94B (ex-customs −6.2% y/y against a +0.24% to +3% build) and outlays $773.00B (+12.2% against +5.17%).
+  Do not forecast a Monthly Treasury Statement deficit from trailing growth rates; use the DTS mapping, and register it alone with its own standard error.
+
+- **"The DTS-to-MTS mapping, averaged across four bias variants, brackets the October 2026 deficit in $345–395B (FT-mts-october-2026-11-12-4)"** — added 2026-11-13 from the
+  [mts-october-2026-11-12 close-out](events/mts-october-2026-11-12.md). Printed **$404.06B**, $9.1B over the ceiling; the interest-corrected fit alone said $387.5B (+$16.6B, +0.78 SE), while the three constant-bias variants blended into the $370B central missed by $34–62B.
+  Do not register a blend that includes a model the previous close-out refuted; one observation, and the fit is extrapolated at the floor of its range (n=11).
+
+- **"A single meeting-month cohort of Summary-of-Opinions Nikkei moves is sampling noise, so the 2026-11-10 bar lands at or below the cohort median of 1.264% (FT-boj-summary-of-opinions-2026-11-10-1)"** — added 2026-11-12 from the
+  [boj-summary-of-opinions-2026-11-10 close-out](events/boj-summary-of-opinions-2026-11-10.md). The Nikkei 225 closed **+2.865%** (58,775.50 to 60,459.58; gap +1.02%) in a tape whose five prior sessions averaged 2.37%, after a +2.35% S&P session overnight. Do not register a fixed-threshold Tokyo bar against a BoJ document in a VIX-17+ regime without a vol-conditioned base rate; this is one kill on a median-threshold row, not evidence the Summary moves the index.
+
+- **"The release-day US session is indifferent to a BoJ Minutes release, so the clean-subset base rate (0.35x) is operative" (FT-boj-minutes-2026-11-05-4)** — added 2026-11-11 from the
+  [boj-minutes-2026-11-05 close-out](events/boj-minutes-2026-11-05.md). The S&P 500 fell **4.355%** on 11-05 (7,688.62 to 7,353.73; VIX 16.61 to 28.18), a post-midterm AI/chip rout the press
+  does not tie to Tokyo. Do not register a US-session threshold against a BoJ document that lands in the Nov 2-7 corridor; the calendar, not the document, sets the day.
+
+- **"The Tokyo open is a null on a Japan Balance of Payments release day: the Nikkei |opening gap| lands below 1.0% (FT-japan-balance-of-payments-2026-11-10-3)"** — added 2026-11-11 from the
+  [japan-balance-of-payments-2026-11-10 close-out](events/japan-balance-of-payments-2026-11-10.md). Nikkei opened **59,372.28** against a 58,775.50 prior close (**+1.02%**, a 0.015-point miss), the first 1-hour bar standing in for a null daily bar. One print after a −5.96% / +2.3% two-session swing and with the BoJ Summary of Opinions in the same minute. Do not register a below-1.0% open prediction for this series in a VIX-20+ regime without a vol-conditioned base rate; this is one marginal kill, not a refutation of the 12-08 ledger's null.
+
+- **"A crude spike carries retail gasoline higher into the next month's collection window, so the pump's October level holds at or above September's" (FT-cpi-2026-11-10-1)** — added 2026-11-11 from the
+  [cpi-2026-11-10 close-out](events/cpi-2026-11-10.md). EIA weekly US regular averaged **$4.3095** over the four October Mondays against **$4.3548** over September's (**−1.04%**) while Brent settled at $117.64 on 10-30:
+  retail stepped up in September, then fell four Mondays running. Do not register a pump-level hold off a crude run-up without a lag measurement; retail follows crude on a delay that the run's own peak can outlast.
+
+- **"November revises the winter natural-gas bill up and the heating degree days colder" (FT-eia-steo-2026-11-10-4)** — added 2026-11-11 from the
+  [eia-steo-2026-11-10 close-out](events/eia-steo-2026-11-10.md). Registered at **n=2** (2024-25 and 2025-26 both revised gas up +2.7% / +2.6% and degree days colder +2.5% / +1.3%) and **failed
+  on its first out-of-sample winter**: US total heating degree days went **3,155 → 3,103.6 (−1.6%)**, warmer, in all four regions; gas expenditure moved **+0.04%** ($640 → $640.28), inside the
+  October table's dollar rounding. Do not cite a "November revises colder" direction off two winters; weather revisions follow the month's own forecast, not the calendar. The magnitude claim
+  (FT-3: no fuel moves more than 5%, no year-on-year sign flips) **passed** on the same edition (largest move heating oil **+3.0%**).
+
 - **"An M3-2 update the Atlanta Fed lists as internal-only leaves no observable GDPNow vintage" (FT-m3-full-report-2026-11-03-1)** — added 2026-11-09 from the
   [m3-full-report-2026-11-03 close-out](events/m3-full-report-2026-11-03.md). The workbook's current-quarter tabs carry an **11-03** column ("M3-2 Manufacturing (Full report)", GDPNow 3.7383 to 3.7213),
   and `ContribArchives` already holds vintages on the 2026-06-03, 07-02, 09-02 and 10-02 internal dates. Do not infer "no vintage" from `InternalUpdates`; read the vintage tabs. The registered cell,
@@ -129,6 +161,19 @@ robust, alpha fragile — is the finding.
   [amd-fq3-2026-results-2026-11-03 close-out](events/amd-fq3-2026-results-2026-11-03.md). Registered at $528.75 (10-16) after an 8-session, -18.6% streak; the 11-03 close was **$483.90**
   (-8.5%) after Intel's 10-29 guide-down took AMD -10.9% on 10-30. Do not register a rebound-into-print off a sector streak whose cause is still live: the modern-era D-5→D +2.36%/67% base rate
   says nothing about a window that spans another peer's print and the hyperscaler capex week.
+
+- **"AMD's reaction day is red, because 10 of the last 16 close-to-close reactions were negative" (FT-amd-fq3-2026-results-2026-11-03-1)** — added 2026-11-10 from the
+  [amd-fq3-2026-results-2026-11-03 ledger](events/amd-fq3-2026-results-2026-11-03.md). A beat-and-raise (revenue $13.38B, Q4 guide ~$17B) closed **+1.01%** ($483.90 → $488.78) on 11-04.
+  Do not carry a 16-print sign tilt (62% negative) onto one print as a directional call; a 60/40 base rate is not a prediction, and the beat itself is the case it never priced.
+
+- **"AMD's print night moves at least 6% close-to-close because 12 of its last 16 did" (FT-amd-fq3-2026-results-2026-11-03-2)** — added 2026-11-10 from the
+  [amd-fq3-2026-results-2026-11-03 ledger](events/amd-fq3-2026-results-2026-11-03.md). The 11-03 → 11-04 move was **+1.01%** (open +0.28%); the after-hours spike to +9.4% at the high
+  faded through the session. Do not read the fat-tail count as a floor on the move; it describes the distribution, and a print that is priced in lands inside it.
+  The S2 flat-by-close guard is untouched (it prices the tail, not the median); a ≥ 6% bar is not a prediction for the next print.
+
+- **"NVDA's reaction window agrees in sign with AMD's because 12 of 16 co-windows did" (FT-amd-fq3-2026-results-2026-11-03-3)** — added 2026-11-10 from the
+  [amd-fq3-2026-results-2026-11-03 ledger](events/amd-fq3-2026-results-2026-11-03.md). AMD **+1.01%** against NVDA **-3.17%** (11-03 → 11-04), with QQQ +0.97% — NVDA fell on a day the
+  market rose. Do not lean the NVDA 11-18 stance on AMD's night as a gauge; the 0.68 correlation shares market beta and one opposite-sign print is the first read of how thin it is.
 
 - **"A paired-refuted starts-vs-sales homebuilder asymmetry stays refuted when two more reference-month pairs arrive" (FT-new-home-sales-2026-09-24-3)** — added 2026-11-03 from the
   [new-home-sales-2026-09-24 ledger](events/new-home-sales-2026-09-24.md). At 70 pairs the paired Wilcoxon put XHB at p=0.0310/0.0375 and LEN at 0.0386 with the housing-starts session larger,
@@ -295,6 +340,20 @@ robust, alpha fragile — is the finding.
   0.3pp). It landed in the last cycle before the 2026-10-26 AIES restatement, where the same revision also
   moved GDPNow's inventories line −0.0952pp; do not re-register the 0.1pp bound as exceptionless, and do
   not read it as a regime without a second pre-benchmark edition.
+
+- **"The 2026-11-09 solo GDPNow vintage moves change-in-inventory-investment by 0.10pp or more", registered
+  LOUD against an 84.6%-quiet structural cell on a September class of n=5
+  (FT-wholesale-trade-2026-11-09-1)** — added 2026-11-10 from the
+  [wholesale-trade-2026-11-09 close-out](events/wholesale-trade-2026-11-09.md). The vintage moved
+  **−0.0661pp** (0.5897 → 0.5236), quiet; the September class becomes n=6, median 0.1261pp, 3 of 6 quiet. Do
+  not cite the September reference month as a reason to expect a loud wholesale vintage; the early-quarter
+  posting position (solo, prior-quarter) is the better predictor.
+
+- **"SPY's session range is below the unconditional 0.977% baseline on a Monday, CPI-eve, wholesale-release
+  day" (FT-wholesale-trade-2026-11-09-2)** — added 2026-11-10 from the same close-out. The session printed a
+  **1.90%** range (+2.37% close to close, VIX 25.64 → 19.92) after a 4.54% range the Thursday before; the
+  stacked-quiet classes were fitted in a VIX ~14.5 regime. Do not register a session-range bet from
+  unconditional class medians without conditioning on the prior close's VIX regime.
 
 - **A 30Y reopening's bid-to-cover band as "yield-insensitive", registered as 2.30–2.52 on evidence that
   stopped at a 5.058% clearing yield (FT-treasury-30y-bond-2026-10-08-1)** — added 2026-10-09 from the
@@ -1109,6 +1168,14 @@ robust, alpha fragile — is the finding.
   non-inaugural GX prints at a near-constant ¥1,115.3bn (cv 12.3%) while the offering fell ¥350bn to ¥250bn. The eleventh drew **¥959.9bn**
   (cover 3.84), the lowest of the 5-year line. Do not register a "bid volume is constant, so cover is arithmetic" claim off a range fitted to
   prints at larger offerings; the ¥250bn prints (¥1,155.6bn, ¥875.9bn, ¥959.9bn) sit below it.
+
+- **"The election night lifts the AI-infra basket: EW NVDA/CRWV/NBIS/MU/AVGO/AMD beats QQQ by more than +3.81pp over the three sessions after the result" (FT-midterm-elections-2026-11-03-3)** — added 2026-11-09 from the
+  [midterm-elections-2026-11-03 close-out](events/midterm-elections-2026-11-03.md). The basket lost **12.68%** against QQQ's **4.26%** (excess **−8.42pp**, 11-03 → 11-06), with the AMD print confound not rescuing it (AMD was the smallest loser). Do not register a
+  "removed political overhang" lift off a result whose own winners campaigned on the overhang: Democrats took both chambers and the Texas governor's race on a pledge to halt new data centers,
+  and the power sleeve fell −10.65% on 11-04 alone while the S&P rose 1.58%.
+
+- **"The $42B-era indirect-share floor of 61.7% holds on the November 10-Year new issue (FT-treasury-10y-note-2026-11-10-5)"** — added 2026-11-12 from the
+  [treasury-10y-note-2026-11-10 close-out](events/treasury-10y-note-2026-11-10.md). The 11-10 auction printed indirect **61.23%** of competitive awards, 0.47pp under a floor that was simply the minimum of 11 prior prints (2024-11-05). Direct bidders took 29.0% and dealers 9.77%, so end-investor demand held. Do not register a floor equal to a small sample's own minimum; the next print is a coin flip against it.
 
 ## Portfolio-level critique — what no single-symbol view sees
 

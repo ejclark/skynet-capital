@@ -197,6 +197,9 @@ select(.head.repo.full_name == "ejclark/skynet-capital" and .title == "docs(news
    from the plans' next-pickup lines and the board's Horizon, each with an EARS done line.
    Until the generator reads past editions back, the picture shows this week's numbers alone.
    2026-W45 is the first edition, so it has no plan to check: say so in one line.
+   **Both loop yields go in *Numbers*** (#7311): the post-merge audit's `metrics.defects.perPr` and
+   the clear-path flip's `metrics.flip.readiedShare` (with `readied` of `judged`), each beside its
+   falsifier from `docs/process/LEARNING-LOOP.md`. Copy them; a null prints `unknown`.
 3. **Week ahead in markets,** under *Next week*: the research events dated in the coming seven
    days (`docs/research/events/*.md`, by their `**Date:**` and `**Impact:**` fields). Show at most
    five, the high- and critical-impact ones, in date order. Give each a one-word stance and the PR

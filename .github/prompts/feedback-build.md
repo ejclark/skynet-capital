@@ -188,7 +188,8 @@ comments can never resume this lane — the gate ignores anything carrying the C
    `https://x-access-token:$DEFAULT_WORKFLOW_TOKEN@github.com/$GITHUB_REPOSITORY`). That token's
    events start no workflow, so the PR opens without `verify`: say so as the Summary's first bullet
    (`CI not started — opened with the job token after the App token expired (#5936)`). The job's own
-   post-build steps re-mint the App token, so leave `in-progress` to them.
+   post-build steps re-mint the App token, start that PR's CI with one body edit, and take
+   `in-progress` off: leave both to them, and do not ask anyone to reopen the PR.
 6. **Do not arm auto-merge by hand** — `pipeline.yml`'s `arm auto-merge` job arms the PR once `verify`
    **and** `integration tests` pass, on open and on every later push (#4094: arming by hand let three
    PRs merge mid-integration-tests, because native auto-merge honours only required checks). Merging deploys;

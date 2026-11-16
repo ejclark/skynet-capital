@@ -16,6 +16,11 @@
 //   propose (one, judgment)               at most 5 proposals, each with evidence
 //   attack (one per proposal)             try to refute it; a dead attacker counts as a refutation
 //
+// A dead check or propose agent is named in the result's `notRun`, the same marker the sibling
+// workflows carry (post-merge-audit, intent-replay, review-replay). Without it a run whose judging
+// step died returned the shape of a full review that found nothing, and step 7 of the skill scores
+// "nothing found" as a reason to stop scheduling it (#6718).
+//
 // Writes nothing. Agents get no write path to memory or the repo: the proposals come back to the
 // session, a person takes or discards them, and `run-memory promote` applies the taken ones. That
 // boundary is the guard against one bad transcript, or an injected line in one, rewriting what
@@ -139,7 +144,12 @@ const checked = await agent(
       required: ["findings"],
     },
   },
-);
+).catch(() => null);
+const notRun = [];
+if (!checked) {
+  notRun.push("the memory check did not return, so stale, duplicate and contradicting memories went unexamined");
+  log("check:memory did not return");
+}
 
 const PROPOSALS = {
   type: "object",
@@ -167,9 +177,13 @@ const PROPOSALS = {
 };
 
 const proposed = await agent(
-  `You are the orchestrator of a memory review. From these patterns and memory findings, keep only what is prevalent enough to warrant a change, and propose at most ${MAX_PROPOSALS}, most valuable first. Grep origin/main:CLAUDE.md, docs/LESSONS.md and the memory folder ${args.memoryDir} for each: if a written rule already covers it, set captured true and propose enforcement rather than another sentence. Prefer retiring or merging over adding. A proposal needing no change is a dropped pattern. Say every dropped pattern and why. ${READ_ONLY}${steer}\n\nPATTERNS:\n${JSON.stringify(patterns)}\n\nMEMORY FINDINGS:\n${JSON.stringify(checked?.findings ?? [])}`,
+  `You are the orchestrator of a memory review. From these patterns and memory findings, keep only what is prevalent enough to warrant a change, and propose at most ${MAX_PROPOSALS}, most valuable first. Grep origin/main:CLAUDE.md, docs/LESSONS.md and the memory folder ${args.memoryDir} for each: if a written rule already covers it, set captured true and propose enforcement rather than another sentence. Prefer retiring or merging over adding. A proposal needing no change is a dropped pattern. Say every dropped pattern and why. ${READ_ONLY}${steer}\n\nPATTERNS:\n${JSON.stringify(patterns)}\n\nMEMORY FINDINGS:\n${checked ? JSON.stringify(checked.findings ?? []) : "(the memory check did not return; judge the patterns alone)"}`,
   { label: "propose", phase: "Propose", schema: PROPOSALS },
-);
+).catch(() => null);
+if (!proposed) {
+  notRun.push("the propose agent did not return, so no pattern was judged: re-run");
+  log("propose did not return");
+}
 
 const kept = (proposed?.proposals ?? []).slice(0, MAX_PROPOSALS);
 const attacked = await parallel(
@@ -196,4 +210,5 @@ return {
   dropped: proposed?.dropped ?? [],
   memoryFindings: checked?.findings ?? [],
   coverage: { sessions: digests.length, batchesReturned: analyzed.filter(Boolean).length, batches: batches.length },
+  ...(notRun.length ? { notRun: notRun.join("; ") } : {}),
 };

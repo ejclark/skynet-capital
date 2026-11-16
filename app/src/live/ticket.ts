@@ -6,6 +6,7 @@
 
 import { type MarketSessionView, waitsForOpen } from "./market-session";
 import { postJson } from "./post";
+import { questOfPage } from "./quest-link";
 
 /** The order classes the desk can actually place today. Mirrors the server's `TicketOrderType`
  *  (`src/trading/order-ticket.ts`) exactly — a value this list can produce is a value the broker
@@ -57,8 +58,9 @@ export type TicketResult =
 export const reviewTicket = (draft: TicketDraft): Promise<{ preview: TicketPreview }> =>
   postJson("/api/trade/review", draft);
 
+/** Sends the order with the quest the ticket was opened from, if any (#7028 slice 6). */
 export const submitTicket = (draft: TicketDraft): Promise<TicketResult> =>
-  postJson("/api/trade/submit", draft);
+  postJson("/api/trade/submit", { ...draft, ...questOfPage() });
 
 /** The dollars formatted client-side ONLY for the submit button's label — every displayed figure
  *  in the gate body comes from the server's own numbers. */

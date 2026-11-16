@@ -1,8 +1,9 @@
 // Visual harness for a view Moneypenny drafts in the chat (#5482 criterion 9) — from the REAL built
-// shell (app/dist) over a stub API, at phone width (the rail covers the page there). Two frames:
-// her card for the member's view (each setting before → after, what it takes over, the three exits
-// as chips), and the thread after the member taps "Hand it to my bots" (the save and hand-over
-// answered by the stubbed routes).
+// shell (app/dist) over a stub API, at phone width. Two frames, with History open over her dock
+// (#7487 slice 2): her card for the member's view in History (each setting before → after, what it
+// takes over), its three exits as the dock's moves (choices are never drawn inside a message), and
+// History after the member taps the "Hand it to my bots" move (the save and hand-over answered by
+// the stubbed routes).
 // Usage: npm run build --prefix app && npm run shoot:moneypenny-conviction [outdir]
 import { profileStubs } from "./profile-fixture.mjs";
 import { openShell } from "./shell.mjs";
@@ -142,21 +143,21 @@ await page.route("**/api/companion/ack", (route) => route.fulfill({ json: { ok: 
 
 await page.goto(`${origin}/app/research?section=playbooks`);
 await page.evaluate(() => localStorage.clear());
-await page
-  .getByRole("button", { name: /Moneypenny/ })
-  .first()
-  .click();
-await page
-  .getByLabel("Message Moneypenny")
+const dock = page.locator(".mp-dock");
+await dock
+  .locator(".mp-box-input")
   .fill(
     "CRWV's floor is around $55 and the market underrates its backlog. cap my wheel there, one contract",
   );
-await page.getByRole("button", { name: "Send" }).click();
-await page.getByRole("button", { name: "Hand it to my bots" }).waitFor();
-await page.locator(".mp-draft").last().scrollIntoViewIfNeeded();
+await dock.getByRole("button", { name: "Send", exact: true }).click();
+const handOver = dock.locator(".mp-move", { hasText: "Hand it to my bots" });
+await handOver.waitFor();
+await dock.locator(".mp-dock-history").click();
+const history = page.locator(".mp-history");
+await history.locator(".mp-draft").last().scrollIntoViewIfNeeded();
 await shoot("conviction-card-phone");
-await page.getByRole("button", { name: "Hand it to my bots" }).click();
-await page.getByText(/handed to your bots/).waitFor();
+await handOver.click();
+await history.getByText(/handed to your bots/).waitFor();
 await shoot("conviction-handed-phone");
 
 await close();

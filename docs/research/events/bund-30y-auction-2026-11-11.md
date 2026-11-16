@@ -481,6 +481,63 @@ the same EUR 2.5bn two-line auction either way.
 Five predictions carry score-by dates and are registered in
 [`forward-tests/bund-30y-auction-2026-11-11.md`](../forward-tests/bund-30y-auction-2026-11-11.md).
 
+## Outcome
+
+**Close-out (2026-11-12, D+1 — inside the `closeOutWithinDays: 6` deadline of 2026-11-17).** Rates
+mode runs no `earnings-cycle` / `intraday-edges` instrument (`symbols: []`; their caches were busted
+anyway). Every figure below was fetched this session from a primary: the Bundesbank auction-result
+press release of 2026-11-11 (Finanzagentur press index, PDF read in full, HTTP 200), the Bundesbank
+SDMX 30Y spot series, the Treasury daily par-yield CSV and Yahoo's `^VIX` chart. Nothing here is a
+verdict on the date, which stays `estimate` (no confirmed prefix covers a non-US debt office).
+
+### What printed vs the stance
+
+| Item | Stance said | What printed |
+|---|---|---|
+| Terms | both ISINs by 2026-11-06 | announced **2026-11-05**, on schedule (kill switch 6 did not fire) |
+| Second line | `30 Y` tag, EUR 1.0bn | **DE000BU2T000, 3.40% 2047 — a 20-year bond**; kill switch 7 **fired** on 11-05, third auction running (`FT-5` pass) |
+| Bids | — | 2047: EUR 1,560m (cover 1.8) · 2056: EUR 1,398m (cover 1.3) · combined 2,958m, **bid-to-offer 1.18** |
+| Yield | — | **3.65%** (2047) and **3.66%** (2056) average yield; Bundesbank 30Y spot 3.70% (11-10) → 3.75% (11-11) |
+| Allotment | EUR 1,850–2,100m, lean < 1,975m | **EUR 1,931.0m** (853.0m + 1,078.0m) — in band, lower half; retention EUR 569.0m (**22.8%**); no bids rejected |
+| US 30Y CMT on 11-11 | no reading (closure) | **no 11-11 row** — the file runs 11-09, 11-10 and stops; 11-12 is not yet published |
+
+- **The closure premise held, as far as it can be read today.** Treasury's CSV carries 5.26% (11-09)
+  and 5.35% (11-10) and no 11-11 row. Its newest row is 11-10, so the absence cannot yet be told from
+  publication lag; the first 11-12 row settles it (that is `FT-1`'s session, below).
+- **The year's-last claim stands.** The Finanzagentur Q4 calendar's only Bund lines after 11.11.2026
+  are a 2033 reopening (11-25), a Bobl, a Schatz and Bubills — no `Bund 30 Y` row (kill switch 8 intact;
+  `FT-4` still scores on 2027-01-15).
+- **The 30-year line itself was thin; the print was not weak by this ledger's definition** (b2o < 1.0
+  *and* retention > 30%). The 2056 line drew EUR 1,398m against a EUR 1.5bn offer (**b2o 0.93**) with
+  retention **28.1%** (422m of 1,500m); the 20-year line was covered 1.56x. Only **EUR 1,078m of
+  30-year paper** was sold, as on 09-16 and 10-14 — the title's EUR 2.5bn was never a 30-year figure.
+- **No year-end signature.** Bundesbank 30Y moved **−7bp** across T-5 → T-1 (3.77% on 11-04 → 3.70% on
+  11-10, inside the sample's −25 to +21bp), **+5bp** on the day, and the auction's b2o and retention sit
+  inside the 2026 range (`FT-3` pass).
+- **Retention regime, now 5 prints on this shape:** 1,910 / 1,906 / 2,121 / 1,889 / **1,931** — four of
+  five below EUR 1,975m, one (09-16) above EUR 2,100m. The direction limb's kill clause fired on 09-16
+  and is not erased by this print; the lean survives, the "near-certainty" never did (`FT-2`).
+- **Tape (adjacency).** US 30Y CMT **+9bp** and 10Y **+10bp** on 11-10 (CPI day, 10Y auction); Bund 30Y
+  **−2bp** that day — the euro long end did not follow, consistent with the null. VIX **17.49** (11-11),
+  down from 28.18 on 11-05 and 19.46 on 11-10. No tracked symbol carries euro-rates exposure, and no
+  headline tying one to a Bund or euro-rates move was found, so kill switch 1 did not fire.
+
+### Forward tests scored
+
+| Row | Verdict | Receipt |
+|---|---|---|
+| `FT-bund-30y-auction-2026-11-11-2` | **pass** (band and direction as registered) — with the 09-16 kill clause recorded | EUR 1,931.0m in band, below 1,975m; kill clause fired 09-16 at 2,121.23m |
+| `FT-bund-30y-auction-2026-11-11-3` | **pass** | T-5 → T-1 −7bp; b2o 1.18; retention 22.8% |
+| `FT-bund-30y-auction-2026-11-11-5` | **pass** | DE000BU2T000 on the EUR 1.0bn line, 11-05 notice and 11-11 result agree |
+| `FT-bund-30y-auction-2026-11-11-1` | left open | needs the 11-12 US 30Y CMT row, not yet published; scores by 2026-11-18 |
+| `FT-bund-30y-auction-2026-11-11-4` | left open | needs the 2027 issuance plan; scores by 2027-01-15 |
+
+**Verdict: stand aside held; nothing was exposed.** No entry, exit or hedge was keyed to this event.
+
+**Loop census (what a person still had to do).** *Sense* and *verify* were scripted. *Remember*
+was manual: reading a PDF result notice needed a hand-rolled stream decoder, and the
+`ledger → fragment → outcome` copy is typed by hand each time.
+
 ## Assessment ledger
 
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
@@ -490,6 +547,7 @@ Five predictions carry score-by dates and are registered in
 | 2026-10-30 | D-12 | **Pulse (full session; screen was material: band low:0+, VIX +4.6pt, two new adjacents).** **Terms moved:** the Q4 outlook update (`Issuance_outlook_2026_Update_Q4_en.xlsx`, new since 09-09) lists 11-11 as `30 years \| Reopening \| 1500 \| DE000BU2D012` plus `15/20/30 years \| Reopening \| 1000` — not the Q3 file's unaccompanied `30 years \| 2500` that leg 1 rested on. The Q4 calendar now fixes DE000BU2D012 (2.90% 2056) for the EUR 1.5bn line; the EUR 1.0bn line is still `Bund 30 Y (R)`, ISIN `-`. Same shape as 09-16 and 10-14, whose flexible line settled as DE000BU2T000 (2047, 20Y) both times, so kill switch 7 is likely to fire on 11-05 (`FT-5`). **Kill switch 5 read from the history workbook:** 09-16 allotted EUR 2,121.23m (retention 15.1%), above 2,100 — fired as written; 10-14 allotted 1,888.79m (24.4%), in band and below 1,975. The 2026 two-line EUR 2.5bn prints now run 1,910 / 1,906 / 2,121 / 1,889: 3 of 4 below 1,975, so the regime leans, it is not near-certain. **Tape:** Bund 30Y 3.78% (10-30; 3.82 on 09-09), UST 30Y 5.31%, spread +153bp (stalled convergence holds). VIX 19.42 (14.84 on 10-12; 19.99 on 10-16), cause not found by a standard web search; no tracked name has euro-rates exposure, so kill switch 1 is untouched. **Adjacency:** `uk-gilt-auction-long-2026-11-10` and `cbrs-*` newly in the corridor (already tracked; CBRS is equity-only); 11-04 15Y pair now DE000BU2F009 + DE0001102432. No proposal filed. | None — stand aside held; kill switch 5 fired (09-16) and 7 is flagged likely | 2026-11-06 (announcement is 11-05) |
 | 2026-10-30 | D-12 | **Pulse (interval-elapsed; full session).** **Terms, newly fixed:** the Finanzagentur Q4 calendar (fetched direct today, HTTP 200) now names the EUR 1.5bn line **DE000BU2D012** (2.90%, 15.08.2056, the bond reopened 09-16 and 10-14) and leaves the EUR 1.0bn line `Bund 30 Y (R)` unnamed. That tag was wrong twice (09-16 and 10-14 second lines were both the 2047, a 20Y), so kill switch 7 is the live risk. The press index's newest notices (10-28/29/30) are other auctions; announcement due **11-05**. **Kill switch 5 appears fired:** the 09-16 ledger's close-out (not re-fetched; the result page has rolled past it) puts that auction's combined allotment at EUR 2,121.23m, above 2,100m. `FT-2`'s direction limb is therefore broken before 11-11, but unscored until its 11-18 score-by; 10-14 allotted EUR 1,888.79m in band (Finanzagentur result page, direct). Both are mixed 20Y/30Y auctions, so the 'same-shape' class is arguable. No later 30Y date on the calendar (`FT-4` intact). **Tape:** Bund 30Y 3.69% (10-30, Bundesbank SDMX; 3.82% at the 09-09 row, 3.80% on 10-14); US 30Y CMT 5.31% (Treasury CSV, 10-30; 5.33% 10-23); UST-Bund +162bp, under the +170bp `FT-bund-30y-auction-2026-09-16-3` kill. **VIX** 17.20 (Cboe, 10-29 close; 14.84 at the 10-12 screen). **Macro (secondary, unverified):** one wire says the FOMC held 10-28 on a 10-2 vote with a December hike priced; ECB 10-29 outcome not found. **Adjacency:** 25 tracked ids within 5 days, none new in kind (US refunding block, CPI 11-10 confirmed, `sifma` closure unchanged); beyond-horizon: the 11-04 Bund 2041/2048 pair and 11-17/18 Schatz/Bund, recorded and not filed (wrong tenor). No proposal filed; no fetch failed. | None - stand aside holds; leg 1's tenor claim is downgraded for the unnamed line | 2026-11-06 (low, D-15 band: every 7d) |
 | 2026-11-06 | D-5 | **Pulse (full session; interval-elapsed).** **Terms fixed by primary:** Bundesbank press release of 5 Nov 2026 (Finanzagentur press index, fetched direct, HTTP 200) announces the multi-ISIN reopening for 11-11: **DE000BU2D012** (2.90% 2056, 30Y, EUR 1.5bn, current volume EUR 37bn) + **DE000BU2T000** (3.40% 2047, **20Y**, EUR 1.0bn, EUR 15bn), EUR 2.5bn in total incl. retention; invitation 11-10, bidding 08:00-11:30 Frankfurt on 11-11, value date 11-13. **Kill switch 7 fired as flagged** (second line is a 20-year; `FT-5` unscored until its date); **#6 satisfied** (both ISINs on 11-05, the four-bank-day rule held); #8 intact (no later 30Y date on the Q4 calendar). **Not flipped to confirmed:** no confirmed prefix covers a non-US debt office. **Tape:** 11-04 15Y pair allotted EUR 864.0m / 799.6m (cover 1.3 / 2.3), in line, not the same shape. Bund 10Y 3.27% (11-05; 3.32 on 11-04, Finanzagentur page); US 30Y CMT 5.25% (Treasury CSV, 11-05; 5.31 on 10-30). Bundesbank SDMX host did not resolve, so no Bund 30Y print. **VIX** 28.18 (Yahoo, 11-05; 19.42 on 10-30); SPX 7,353.7, -4.4% on the day (7,688.6 on 11-04); sibling ledgers read it as a risk-off day with US yields down; cause not independently found. No tracked symbol, so kill switch 1 is untouched. **Adjacency:** new strong ids `nbis-2026-11-12-print`, `cbrs-q3-2026-results-2026-11-11` (equity only); rest already tracked (US refunding block, CPI 11-10, jobs 11-06, SIFMA closure unchanged). Conviction proposals and declared intents: none. No proposal filed. | None - stand aside holds; leg 1's tenor claim is superseded by the primary | 2026-11-11 (low, D-0 band: every 7d; close-out follows) |
+| 2026-11-12 | D+1 | **Close-out (full session; event-passed-unscored).** Result notice of 11-11 (Bundesbank, direct): allotment **EUR 1,931.0m** (2047: 853m, 2056: 1,078m), bids 2,958m (b2o 1.18), retention 569m (22.8%), average yield 3.65% / 3.66%. Kill switches: **#4 held** (in band), **#5 fired 09-16** (recorded), **#6 satisfied**, **#7 fired 11-05**, **#8 intact**; #3 unconfirmed until the 11-12 Treasury row appears. `FT-2`, `-3`, `-5` scored pass; `FT-1` (needs 11-12 CMT) and `FT-4` (2027-01-15) stay open. **Tape:** Bund 30Y 3.75% (11-11), US 30Y CMT 5.35% (11-10), VIX 17.49 (11-11). **Adjacency:** 10 tracked ids on 11-12 (NBIS print, US 30Y auction, coupon announcement); nothing new beyond the calendar; no proposal filed. Conviction proposals and declared intents: none. | None - stand aside held | forward tests: `FT-1` 2026-11-18, `FT-4` 2027-01-15 |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -511,3 +569,6 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-11-06
 <!-- probe-ref: {"symbols":{},"vix":28.18,"daysBand":"low:0+","adjacentIds":["asean-summit-manila-2026-11-16","boj-summary-of-opinions-2026-11-10","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","empire-state-mfg-2026-11-16","erock-q3-2026-results-2026-11-12","existing-home-sales-2026-11-12","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-30y-auction-2026-11-10","jgb-5y-auction-2026-11-12","jobs-2026-11-06","mts-october-2026-11-12","nbis-2026-11-12-print","ppi-2026-11-13","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","sp-global-investment-manager-index-2026-11-10","survey-of-professional-forecasters-q4-2026-11-16","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-3y-note-2026-11-09","treasury-coupon-announcement-2026-11-12","uk-gdp-q3-first-2026-11-12","uk-gilt-auction-long-2026-11-10","umich-sentiment-prelim-2026-11-06","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","jobs-2026-11-06","nbis-2026-11-12-print"],"screenStreak":0,"blocked":[{"url":"https://data.bundesbank.de/api/v1/data","status":"dns-unresolved","at":"2026-11-06"}]} -->
+
+**Last assessed:** 2026-11-12
+<!-- probe-ref: {"symbols":{},"vix":17.49,"daysBand":"low:0+","adjacentIds":["asean-summit-manila-2026-11-16","boj-summary-of-opinions-2026-11-10","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","eia-steo-2026-11-10","erock-q3-2026-results-2026-11-12","existing-home-sales-2026-11-12","jgb-30y-auction-2026-11-10","jgb-5y-auction-2026-11-12","mts-october-2026-11-12","nbis-2026-11-12-print","ppi-2026-11-13","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-coupon-announcement-2026-11-12","uk-gdp-q3-first-2026-11-12"],"adjacentStrongIds":["cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","nbis-2026-11-12-print"],"screenStreak":0,"blocked":[]} -->

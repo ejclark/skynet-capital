@@ -4,6 +4,7 @@
 //
 // A source gather could not read arrives as its own words ("unavailable: …") and leaves as them:
 // the metric reads unknown, and the rest of the object is unaffected.
+import { flipYield } from "../flip-refusals.mjs";
 import { asksDue, openAsks } from "./asks.mjs";
 import { decisionsReport } from "./decisions.mjs";
 import { knownGaps, memberChanges } from "./member-changes.mjs";
@@ -101,6 +102,9 @@ export function buildNewsletter(inputs) {
     metrics: {
       mergedPrs: over(inputs.prs, (prs) => mergedByKind(prs, w)),
       defects: defectReading,
+      // The clear-path flip's yield (#7311 slice 4), from `flip/refusals.jsonl` as `{ text }`; the audit's
+      // is `defects.perPr` above. Unknown, not zero, in a week nobody flipped.
+      flip: over(inputs.flipLedger, ({ text }) => flipYield(text, w.sinceMs, w.untilMs)),
       failureToFix: failureToFix(inputs.failureToFix),
       verifyFirstTry: verifyFirstTry(inputs.jobs, isList(inputs.ciRuns) ? inputs.ciRuns : null),
       tokensPerVerified: rows,

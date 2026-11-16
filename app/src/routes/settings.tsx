@@ -28,6 +28,7 @@ import {
   type SettingsSection,
   SettingsToc,
 } from "../shell/settings-toc";
+import { TargetSplitCard } from "../shell/target-split-card";
 import { InlineResult, KindChip } from "../ui";
 
 /**
@@ -391,7 +392,10 @@ function SettingsPage(): ReactElement {
     >
       <header className="page-header">
         <h1>Settings</h1>
-        <p>Preferences, your accounts, your rules: profile, timezone, and credential rotation.</p>
+        <p>
+          Preferences, your accounts, your rules: profile, timezone, credential rotation, and your
+          target split.
+        </p>
       </header>
       {section === "preferences" ? <PreferencesCard /> : null}
       {section === "account" ? (
@@ -438,6 +442,7 @@ function SettingsPage(): ReactElement {
           </>
         )
       ) : null}
+      {section === "target" ? <TargetSplitCard /> : null}
       {section === "guests" ? <GuestListCard /> : null}
       {section === "github" ? <GithubTokenCard /> : null}
     </SettingsFrame>

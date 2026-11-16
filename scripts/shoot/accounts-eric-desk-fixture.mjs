@@ -48,6 +48,8 @@ export const ericDesk = {
       cashPct: 80.86,
       cashShare: "80.9%",
       shareCount: 300,
+      // The bar's whole in dollars (#4607 slice 2): $198,386 + $2,226 + $847,200.
+      totalRaw: 1_047_812,
     },
     positions: [
       pos(

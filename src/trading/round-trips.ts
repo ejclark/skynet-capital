@@ -66,6 +66,14 @@ export interface TradeFill {
    */
   readonly synthetic?: boolean;
   /**
+   * True on the synthetic close an ASSIGNMENT made (`OPASN`), as against an expiry (#7306). The
+   * option leg's number is the same either way — the writer keeps the premium — but an assigned
+   * put left the writer holding shares bought at the strike, a leg this ledger does not score yet
+   * (`option-lifecycle.ts`, #837). A reader judging whether the move paid needs to know the premium
+   * was not the whole story. Rides onto the trip it closes; never set on an ordinary fill.
+   */
+  readonly assigned?: boolean;
+  /**
    * Structured playbook attribution (#885) — which house playbook's `OrderIntent` produced this
    * fill, joined in by the caller (`desk-data.ts`'s `fillsFrom`) from `playbook-attribution.ts`
    * BEFORE the fill reaches this matcher; the matcher itself performs no join, only carries the
@@ -115,6 +123,8 @@ export interface RoundTrip {
    * "$420 → $0" is a full WIN, not a wipeout.
    */
   readonly short?: boolean;
+  /** True when an assignment closed the trip — see `TradeFill.assigned`. Absent otherwise. */
+  readonly assigned?: boolean;
   /** Which playbook drove the trip — carried from the OPENING fill's `TradeFill.playbookId`
    *  (#885), never the closing one: a partial close of an attributed lot still belongs to
    *  whichever playbook opened it, not whatever later closed it. */
@@ -259,6 +269,7 @@ function tripFrom(
     returnPct: basis > 0 ? (realized / basis) * 100 : 0,
     holdMs: holdMs(lot.at, fill.at),
     ...(short ? { short: true } : {}),
+    ...(fill.assigned ? { assigned: true } : {}),
     ...attributionOf(lot),
     ...(fill.orderId ? { orderId: fill.orderId } : {}),
     ...entryOf(lot),

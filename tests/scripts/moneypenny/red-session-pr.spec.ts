@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -8,6 +8,7 @@ import {
   gatherRedSessionPr,
   markerFor,
   RED_ATTEMPT_CAP,
+  RED_PR_DISPATCH_HELD,
   type RedPrFailure,
   routeRedSessionPr,
   sayOnPr,
@@ -59,13 +60,17 @@ const FILES = ["scripts/moneypenny/x.mjs"];
 const clear = { dispatch: true, reason: "cleared: work-mode is normal" };
 
 type Deps = Parameters<typeof routeRedSessionPr>[1];
+/** The decision with the #6727 hold lifted, so the dispatch path it guards stays under test. The
+ *  hold itself, at its shipped value, is the last two describe blocks. */
 const route = (
   deps: Partial<Deps> = {},
   ctx: { run?: Record<string, unknown>; failures?: RedPrFailure[] } = {},
+  { held = false } = {},
 ) =>
   routeRedSessionPr(
     { run: run(ctx.run), defaultBranch: "main", failures: ctx.failures ?? verifyRed },
     { pr: pr(), files: FILES, comments: [], gate: clear, openIssues: [], ...deps },
+    { held },
   );
 const only = (deps: Partial<Deps> = {}, ctx: Parameters<typeof route>[1] = {}) => {
   const intents = route(deps, ctx);
@@ -418,15 +423,15 @@ describe("repair.mjs routes a pull_request run here", () => {
     }
   };
 
-  it("through a fixture's PR, and files the capsule the lane already dispatches from", () => {
+  it("through a fixture's PR, and holds the dispatch the way the shipped constant says", () => {
     const [intent] = dryRun({
       repository: { default_branch: "main" },
       workflow_run: run(),
       failures: verifyRed,
       deps: { pr: pr(), files: FILES, comments: [], gate: clear, openIssues: [] },
     });
-    expect(intent.type).toBe("open-issue");
-    expect(intent.dispatch).toBe(true);
+    expect(intent.type).toBe(RED_PR_DISPATCH_HELD ? "say-on-pr" : "open-issue");
+    expect(Boolean(intent.dispatch)).toBe(!RED_PR_DISPATCH_HELD);
   });
 
   it("still ignores a red PR run it was told nothing about", () => {
@@ -438,5 +443,95 @@ describe("repair.mjs routes a pull_request run here", () => {
         deps: { openIssues: [] },
       }),
     ).toEqual([]);
+  });
+});
+
+describe("the hold (#6727): no session until its orders can fix the PR's own branch", () => {
+  // The first live dispatch (#6716, at PR #6714) sent a session whose orders say a run failed on
+  // `main` and end in a new PR or `needs-eric`: the attempt was spent and the branch never got a fix.
+  const shipped = (deps: Partial<Deps> = {}) =>
+    routeRedSessionPr(
+      { run: run(), defaultBranch: "main", failures: verifyRed },
+      { pr: pr(), files: FILES, comments: [], gate: clear, openIssues: [], ...deps },
+    );
+
+  it("is on as shipped", () => {
+    expect(RED_PR_DISPATCH_HELD).toBe(true);
+  });
+
+  it("gives a qualifying red PR its one line, dispatches nothing, and leaves the attempt unspent", () => {
+    const intents = shipped();
+    expect(intents).toHaveLength(1);
+    const [intent] = intents;
+    expect(intent?.type).toBe("say-on-pr");
+    expect(intent?.number).toBe(NUMBER);
+    expect(intent?.dispatch).toBeUndefined();
+    expect(intent?.body).toMatch(/no repair session was sent: .*held.*own branch \(#6727\)/);
+    expect(intent?.body).toContain(markerFor(SHA, false));
+    expect(intent?.body).not.toContain(markerFor(SHA, true));
+  });
+
+  it("stays quiet on a re-run of the head it already spoke about", () => {
+    const spoke = {
+      body: markerFor(SHA, false),
+      user: { type: "Bot" },
+      author_association: "NONE",
+    };
+    expect(shipped({ comments: [spoke] })).toEqual([
+      { type: "skip", issue: NUMBER, reason: "already spoke about this head" },
+    ]);
+  });
+
+  it("still says the gate's own refusal first, so a halted dial reads as halted", () => {
+    const gate = { dispatch: false, reason: "refused: work-mode is halt" };
+    expect(shipped({ gate })[0]?.body).toContain("work-mode is halt");
+  });
+});
+
+describe("the dispatch cannot fire without its protected prerequisites (#6733)", () => {
+  // docs/LESSONS.md, 2026-09-06: when a new actor gains the right to dispatch a Claude lane, its
+  // protected counterparts are part of the change. #6669 repeated that miss, so this reads both
+  // protected files (and edits neither) instead of trusting a ledger line.
+  const PROMPT = ".github/prompts/moneypenny-ci-repair.md";
+  const WORKFLOW = ".github/workflows/moneypenny-repair.yml";
+
+  /** The prompt names a red pull-request run as the failure and the PR's head branch as the push target. */
+  const promptFitsAPr = (text: string) =>
+    /pull[_ -]request run|the PR's (?:own )?(?:Pipeline )?run/i.test(text) &&
+    /push[^\n]*(?:the PR's (?:own |head )?branch|head branch|head_branch|head\.ref)/i.test(text);
+  /** The repair workflow keys its concurrency per PR, so one PR's session never holds Pipeline's slot. */
+  const concurrencyFitsAPr = (yaml: string) =>
+    /workflow_run\.(?:head_branch|pull_requests)/.test(/^\s*group:.*$/m.exec(yaml)?.[0] ?? "");
+
+  it("recognises the fitted shapes, so neither check passes by matching nothing", () => {
+    expect(
+      promptFitsAPr(
+        "When the failure is a pull-request run, push the fix to the PR's head branch and re-run.",
+      ),
+    ).toBe(true);
+    expect(
+      promptFitsAPr("A run failed on `main`. Commit the fix to its own branch, push it."),
+    ).toBe(false);
+    expect(
+      concurrencyFitsAPr(
+        "concurrency:\n  group: repair-${{ github.event.workflow_run.head_branch || 'x' }}\n",
+      ),
+    ).toBe(true);
+    expect(
+      concurrencyFitsAPr("concurrency:\n  group: repair-${{ github.event.workflow_run.name }}\n"),
+    ).toBe(false);
+  });
+
+  it("returns a dispatch only while the repair prompt and workflow both fit a PR", () => {
+    const prompt = promptFitsAPr(readFileSync(PROMPT, "utf8"));
+    const concurrency = concurrencyFitsAPr(readFileSync(WORKFLOW, "utf8"));
+    const dispatches = routeRedSessionPr(
+      { run: run(), defaultBranch: "main", failures: verifyRed },
+      { pr: pr(), files: FILES, comments: [], gate: clear, openIssues: [] },
+    ).some((i) => i.dispatch);
+    if (dispatches) {
+      expect({ prompt, concurrency }).toEqual({ prompt: true, concurrency: true });
+    }
+    if (!(prompt && concurrency)) expect(dispatches).toBe(false);
   });
 });

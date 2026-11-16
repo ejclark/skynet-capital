@@ -1,0 +1,11 @@
+{
+  "id": "us-china-truce-expiry-2027-01-10",
+  "kind": "geopolitical",
+  "title": "US–China truce extension expires — Busan/Kuala Lumpur suspensions (MOFCOM export controls, USTR Sec. 301 maritime action, BIS Affiliates Rule) run to 2027-01-10",
+  "date": "2027-01-10",
+  "status": "estimate",
+  "source": "NEWS: the 2026-11-09 two-month extension, read from three sides. US, primary and re-read direct from the Federal Register API 2026-11-12: USTR Notice of Modification of Section 301 Action, FR doc 2026-22867 (publication date 2026-11-10; the action 'further suspended through 11:59 p.m. Eastern Time on January 9, 2027'), and BIS 'Extension of the Suspension of Expansion of End-User Controls for Affiliates of Certain Listed Entities', FR doc 2026-22793 (2026-11-09, effective 2026-11-09, to 2027-01-10). China, press-grade only: Reuters via The Star and political.org (both 2026-11-09) report MOFCOM extending its export-control pause 'for two months until January 10' in 'a short statement'; MOFCOM/GAC text and any announcement number remain unread (english.mofcom.gov.cn resets the connection; one search summary cites an 'Announcement No. 58 of 2026', which neither Reuters-derived piece repeats and which collides with the 2025 joint No. 58, so it is unverified). Filed estimate: the Chinese leg rests on press, and the confirmed-prefix taxonomy has no slot for a Federal Register notice or a MOFCOM announcement.",
+  "impact": "high",
+  "symbols": [],
+  "notes": "THE SUCCESSOR TO us-china-tariff-truce-expiry-2026-11-10, NOT A NEW THEME. That event's close-out (2026-11-12) scored both registered forward tests as papered over: each lapse was extended by two months. The same three clocks now end together on 2027-01-10 (the USTR notice ends 11:59 p.m. ET on 2027-01-09). The Trump-Xi meeting expected at APEC Shenzhen on 2026-11-18/19 (attendance expected, not confirmed as of 2026-11-12) is the next venue; G20 Miami 2026-12-14/15 the one after. Not part of these clocks: the April-2025 seven-element rare-earth licensing (never suspended) and China's suspension of its gallium/germanium/antimony/superhard-materials US ban, which runs to 2026-11-27 (proposed separately). Initial research 2026-11-12 stands aside. Dates are estimates; research only; an estimate widens caution and never licenses a position."
+}

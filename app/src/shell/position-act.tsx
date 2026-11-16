@@ -39,6 +39,8 @@ import {
 } from "../live/ticket";
 import { InlineResult } from "../ui";
 import { closeRefusal, optionCloseWords } from "./close-panel";
+import { LockInWatch } from "./lock-in-ceremony";
+import { type LockInFlag, lockInFlag } from "./locked-in";
 import { usePriceContext } from "./position-picture";
 import { plural } from "./position-row-spec";
 import { RollRow } from "./roll-row";
@@ -120,7 +122,13 @@ type Step =
       readonly order: Order;
       readonly preview: TicketPreview | OptionPreview;
     }
-  | { readonly step: "done"; readonly result: TicketResult }
+  | {
+      readonly step: "done";
+      readonly result: TicketResult;
+      readonly order?: Order;
+      /** The Consider flag as Place was pressed (#4609), before the fill empties the row. */
+      readonly lockIn?: LockInFlag;
+    }
   | { readonly step: "error"; readonly message: string };
 
 function optionDraft(deskId: string, position: DeskPosition, order: Order): OptionDraft {
@@ -321,11 +329,12 @@ function CloseTicket({
   // Place sends exactly the order the recap showed: the count and limit fixed at Review.
   const place = async (order: Order, preview: TicketPreview | OptionPreview) => {
     setState({ step: "submitting", order, preview });
+    const lockIn = lockInFlag(position);
     try {
       const result = position.isOption
         ? await submitOption(optionDraft(deskId, position, order))
         : await submitTicket(ticketDraft(deskId, position, order));
-      setState({ step: "done", result });
+      setState({ step: "done", result, order, ...(lockIn ? { lockIn } : {}) });
       if (result.ok) refresh();
     } catch (error) {
       setState({ step: "error", message: String(error) });
@@ -409,6 +418,19 @@ function CloseTicket({
         <InlineResult as="p" tone="err" className="pos-tkt-note">
           {state.message}
         </InlineResult>
+      ) : null}
+      {state.step === "done" && state.result.ok && state.order && state.lockIn ? (
+        <LockInWatch
+          deskId={deskId}
+          sent={{
+            orderId: state.result.orderId,
+            symbol: position.symbol,
+            display: position.display,
+            side: verb.pays ? "buy" : "sell",
+            count: state.order.count,
+            lockIn: state.lockIn,
+          }}
+        />
       ) : null}
       {state.step === "done" ? (
         state.result.ok ? (

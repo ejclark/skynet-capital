@@ -23,7 +23,7 @@
 //
 // Pure: no network, no file reads. The IO lives in projects-sync.mjs (one issue) and
 // projects-reconcile.mjs (the sweep), which both call `planPriority` so they cannot disagree.
-import { classOf } from "../rank.mjs";
+import { blocksOf, classOf } from "../rank.mjs";
 import { isBacklogCandidate, PRIORITY_OPTIONS, SYNCED_PRIORITY } from "./projects.mjs";
 
 export { SYNCED_PRIORITY };
@@ -33,20 +33,14 @@ const namesOf = (labels = []) => labels.map((l) => (typeof l === "string" ? l : 
 
 /**
  * The priority an open issue's labels give it — the same answer `npm run rank` prints: a hand-set
- * P label wins, else `classOf()`'s class. `issue` is the REST shape; `horizons` is the hand triage
- * in projects-horizons.json (rank reads the same file, so `Later` means P3 in both).
+ * P label wins, else `classOf()`'s class. `issue` is the REST shape. The board's Horizon does not
+ * reach the class (#6871 §4): deferring work is a drag to P3.
  *
- * `blocks` comes from `issue_dependencies_summary.blocking`, the open issues this one blocks, which
- * the REST issue already carries — so the sweep pays no per-issue dependency read. `classOf` only
- * counts the list; its why-line numbers are rank's job, not the board's.
+ * `blocks` comes from `issue_dependencies_summary.blocking` (`blocksOf`, rank.mjs): the REST issue
+ * already carries it, so the sweep pays no per-issue dependency read.
  */
-export function wantedPriorityOf(issue, { horizons = {} } = {}) {
-  const blocking = Number(issue?.issue_dependencies_summary?.blocking) || 0;
-  return classOf({
-    labels: namesOf(issue?.labels),
-    blocks: Array.from({ length: blocking }, () => 0),
-    horizon: horizons[String(issue?.number)] ?? null,
-  }).cls;
+export function wantedPriorityOf(issue) {
+  return classOf({ labels: namesOf(issue?.labels), blocks: blocksOf(issue) }).cls;
 }
 
 /**
@@ -122,7 +116,6 @@ export function planPriorityDrift({
   items = [],
   openIssues = [],
   numberOf,
-  horizons = {},
   cap = PRIORITY_WRITES_PER_SWEEP,
 } = {}) {
   const open = new Map(openIssues.filter((i) => i && !i.pull_request).map((i) => [i.number, i]));
@@ -137,7 +130,7 @@ export function planPriorityDrift({
     const plan = planPriority({
       current: item?.priority ?? null,
       synced: item?.syncedPriority ?? null,
-      wanted: wantedPriorityOf(issue, { horizons }),
+      wanted: wantedPriorityOf(issue),
       labels: issue.labels,
     });
     if (plan.action === "drag") drags.push({ number, plan });

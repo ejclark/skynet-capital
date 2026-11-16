@@ -14,7 +14,8 @@ import {
 
 // DOES THE DIAL MOVE BURN? (#6470) The sum is simple; the wiring is what could lie. These specs pin
 // that a leg lands in the position its START fell in, that an unpriced or unread leg is never
-// counted as zero spend, and that the REST budget stops the read and says so.
+// passed off as zero spend (it adds nothing to the dollars, so its row reads "at least" and the
+// notes under the table count it), and that the REST budget stops the read and says so.
 
 const EVENTS = [
   { event: "labeled", label: "work-mode:normal", at: "2026-09-30T04:19:34Z" },
@@ -136,15 +137,37 @@ describe("the table: dollars and legs per hour, by position and lane", () => {
     expect(hours).toBeCloseTo(expected);
   });
 
-  it("counts an unpriced leg as a leg and never as zero dollars", () => {
+  it("counts an unpriced leg as a leg, sums only the priced ones, and marks the row a floor", () => {
     const rows = summarize(
       [leg("2026-10-16T01:00:00Z", 2), leg("2026-10-16T02:00:00Z", null)],
       windows,
     );
-    const row = rows.find((r) => r.position === "conserve");
+    const row = rows.find((r) => r.position === "conserve" && r.lane === "research");
     expect(row?.legs).toBe(2);
     expect(row?.unpriced).toBe(1);
+    // $2 is what the priced leg cost, not what the row spent: the table must not print it as exact.
     expect(row?.usd).toBe(2);
+    expect(row?.usdPerLeg).toBe(2);
+    const table = renderTable(rows);
+    expect(table).toMatch(/\| conserve \| research \|[^\n]*\| \$2\.00 \| at least \$0\.03 \|/);
+    expect(table).toContain("Legs with no price: conserve research 1. Those rows are floors.");
+    // A row with every leg priced stays exact.
+    expect(table).toMatch(/\| conserve \| plan \|[^\n]*\| \$0\.00 \|$/m);
+    expect(table).not.toContain("Unread runs");
+  });
+
+  it("names unpriced legs and unread runs on separate lines when a reading has both", () => {
+    const rows = summarize([leg("2026-10-18T07:00:00Z", null, "feedback")], windows, {
+      unread: [{ at: "2026-10-16T05:00:00Z" }],
+    });
+    const notes = renderTable(rows).split("\n\n")[1]?.split("\n");
+    expect(notes).toEqual([
+      "Unread runs: conserve 1. Those rows are floors.",
+      "Legs with no price: normal feedback 1. Those rows are floors.",
+    ]);
+    expect(renderTable(rows)).toMatch(
+      /\| normal \| feedback \|[^\n]*\| no price \| at least \$0\.00 \|/,
+    );
   });
 
   it("gives every position a row for every lane, so a lane that spent nothing reads $0.00", () => {

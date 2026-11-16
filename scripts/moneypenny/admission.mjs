@@ -52,7 +52,7 @@
 // for 38 minutes on 2026-10-27 and held the queue behind it the whole time.
 
 import { isMain } from "../is-main.mjs";
-import { classOf } from "../rank.mjs";
+import { blocksOf, classOf, kindIndex, kindOf } from "../rank.mjs";
 import { ensureGhToken, ghRest, ghRestAll, sh } from "./gh.mjs";
 import {
   boardedReason,
@@ -214,33 +214,29 @@ export function admitBuild({ issue, inFlight = [], mode, waiting }) {
   return { admit: true, reason: fastTrack ? `admitted (fast-track, ${position})` : "admitted" };
 }
 
-const createdMs = (i) => {
-  const t = Date.parse(i?.createdAt ?? i?.created_at ?? "");
-  return Number.isNaN(t) ? Number.POSITIVE_INFINITY : t;
-};
+/** The rank class (`P0`–`P3`) `npm run rank` gives an issue, from its labels and the count of open
+ *  issues it blocks (`issue_dependencies_summary.blocking`, which the REST row carries). */
+const rankOf = (i) => classOf({ labels: labelNames(i.labels), blocks: blocksOf(i) });
 
-/** The rank class (`P0`–`P3`) and bug-expedite flag `npm run rank` gives an issue, from its labels. */
-const rankOf = (i) => classOf({ labels: labelNames(i.labels) });
+/** Where an issue's Kind sits in the lane order (`KINDS`, rank.mjs): 0 pulls first inside a lane. */
+const kindRankOf = (i) => kindIndex(kindOf({ labels: labelNames(i.labels), blocks: blocksOf(i) }));
 
 /**
- * THE PULL ORDER: the pullable issues (`pullable`, labels.mjs) in the order a puller takes them.
- * `fast-track` goes first (it is urgent by definition), then the same order `npm run rank` shows —
- * class (a hand-set `P0`–`P3` wins), an expedited bug first inside its class (Eric, 2026-09-30:
- * bugs found mid-build are the next pull) — then oldest by `createdAt`, then lowest number.
+ * THE PULL ORDER: the pullable issues (`pullable`, labels.mjs) in the order a puller takes them —
+ * the order the board's lanes show (#6871 §4): class (a hand-set `P0`–`P3` wins; `fast-track` is
+ * P0), then Kind (fix first, bug, blocks other work, slows delivery, member asked, improvement,
+ * idea), then lowest issue number, which is oldest first. A bug is P1 and sorts first inside it, so
+ * it still pulls ahead of standard work and of blockers (Eric, 2026-09-30: bugs found mid-build are
+ * the next pull); a `fast-track` card set to a lower lane by hand waits in that lane.
  * Oldest-first alone picked a P3 idea (#784) over P0 work on the sweep's first live tick.
  */
 export function pullQueue(readyIssues = [], opts) {
   return (readyIssues ?? [])
     .filter((i) => i && pullable(i, opts))
-    .map((i) => ({ i, r: rankOf(i) }))
+    .map((i) => ({ i, r: rankOf(i), k: kindRankOf(i) }))
     .sort(
       (a, b) =>
-        Number(hasLabel(b.i, LABELS.fastTrack.name)) -
-          Number(hasLabel(a.i, LABELS.fastTrack.name)) ||
-        a.r.cls.localeCompare(b.r.cls) ||
-        Number(Boolean(b.r.expedite)) - Number(Boolean(a.r.expedite)) ||
-        createdMs(a.i) - createdMs(b.i) ||
-        (a.i.number ?? 0) - (b.i.number ?? 0),
+        a.r.cls.localeCompare(b.r.cls) || a.k - b.k || (a.i.number ?? 0) - (b.i.number ?? 0),
     )
     .map(({ i }) => i);
 }

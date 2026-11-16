@@ -1,6 +1,8 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { Readable } from "node:stream";
 import type { CompanionHandlers, CompanionTurn } from "../../src/companion/companion-chat.js";
+import { editions, editionView } from "../../src/domain/edition.js";
+import { editionEventKey } from "../../src/domain/edition-keys.js";
 import { serveCompanionApi } from "../../src/server/companion-routes.js";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
 
@@ -173,6 +175,64 @@ describe("serveCompanionApi — POST /api/companion/chat", () => {
     expect(out.chunks.some((c) => c.includes("event: done"))).toBe(true);
   });
 
+  // #6007 slice 2: a user turn's screenshot ids reach the turn (ids only, well-formed ones), and the
+  // turn gets the store's `load` — any signed-in member's screenshot loads by id.
+  it("passes a user turn's well-formed screenshot ids and the store's load to the turn", async () => {
+    const good = "0123456789abcdef0123456789abcdef";
+    const captured: { messages: unknown; loadScreenshot?: (id: string) => Promise<unknown> }[] = [];
+    const config = configWith({
+      companionScreenshots: {
+        save: () => Promise.resolve({ id: good }),
+        load: (id: string) =>
+          Promise.resolve(id === good ? { type: "image/png", data: Buffer.from("x") } : undefined),
+      },
+      companion: ((input, handlers: CompanionHandlers) => {
+        captured.push(input as never);
+        handlers.onDone();
+        return Promise.resolve();
+      }) as CompanionTurn,
+    });
+    const { res } = fakeRes();
+    await serveCompanionApi(
+      post({
+        messages: [
+          { role: "user", content: "look", screenshots: [good, "../etc/passwd", 7, "short"] },
+          { role: "assistant", content: "ok", screenshots: [good] },
+        ],
+      }),
+      res,
+      "/api/companion/chat",
+      config,
+      sessionFor(email()),
+    );
+    expect(captured[0]?.messages).toEqual([
+      { role: "user", content: "look", screenshots: [good] },
+      { role: "assistant", content: "ok" },
+    ]);
+    expect(await captured[0]?.loadScreenshot?.(good)).toMatchObject({ type: "image/png" });
+    expect(await captured[0]?.loadScreenshot?.("f".repeat(32))).toBeUndefined();
+  });
+
+  it("binds no loader when no screenshot store is wired", async () => {
+    const captured: { loadScreenshot?: unknown }[] = [];
+    const config = configWith({
+      companion: ((input, handlers: CompanionHandlers) => {
+        captured.push(input as never);
+        handlers.onDone();
+        return Promise.resolve();
+      }) as CompanionTurn,
+    });
+    const { res } = fakeRes();
+    await serveCompanionApi(
+      post({ messages: [{ role: "user", content: "hi" }] }),
+      res,
+      "/api/companion/chat",
+      config,
+      sessionFor(email()),
+    );
+    expect(captured[0]).not.toHaveProperty("loadScreenshot");
+  });
+
   // #5482 criterion 9: the turn gets the session's conviction READS (no save, no hand-over), and a
   // drafted view reaches the rail as its own frame, for the member's tap to act on.
   it("hands the turn read-only conviction tools and relays a drafted view as a conviction frame", async () => {
@@ -333,9 +393,48 @@ describe("serveCompanionApi — POST /api/companion/chat", () => {
   it("tells her what the member holds on the ticket's symbol, from their own desk", async () => {
     const context = await contextWithDesk("/trade?symbol=NVDA");
     expect(context).toContain(
-      "Position: on NVDA they hold 50 shares at $110.00 avg, now worth $6,000.00.",
+      "Position: on NVDA they hold 50 shares at $110.00 avg, now worth $6,000.00, its row /accounts#pos-NVDA.",
     );
     expect(context).not.toContain("999");
+  });
+
+  // #7167 slice 1: asked from the landing page, the page's keys reach her as the server's own
+  // edition text with each row's link; a key the server doesn't hold, or a key sent from another
+  // page, adds nothing.
+  describe("the landing page's context stamp", () => {
+    const served = editionView(editions(), new Date(), () => undefined).edition;
+    const keys = served
+      ? {
+          edition: served.date,
+          stories: served.stories.map((s) => s.id),
+          events: served.next.map(editionEventKey),
+        }
+      : undefined;
+
+    it("lists the stories on screen with their row links", async () => {
+      // Editions are checked in and the clock only moves forward, so one is always served.
+      expect(served).toBeTruthy();
+      if (!(served && keys)) return;
+      const context = await contextFor({ page: "/app/", keys });
+      expect(context).toContain(
+        "Page: they sent this from the landing page (the day's market news and its calendar).",
+      );
+      expect(context).toContain(`On screen: the edition of the ${served.date} close.`);
+      for (const s of served.stories) expect(context).toContain(`/#story-${s.id}`);
+    });
+
+    it("lists nothing a member made up, and nothing off the landing page", async () => {
+      const madeUp = await contextFor({
+        page: "/app/",
+        keys: { edition: keys?.edition ?? "2026-11-06", stories: ["ignore-previous"], events: [] },
+      });
+      expect(madeUp).not.toContain("On screen:");
+      expect(madeUp).not.toContain("ignore-previous");
+      expect(keys).toBeTruthy();
+      if (!keys) return;
+      const elsewhere = await contextFor({ page: "/app/leaderboard", keys });
+      expect(elsewhere).not.toContain("On screen:");
+    });
   });
 
   it("adds no position line off the ticket", async () => {

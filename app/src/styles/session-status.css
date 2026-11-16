@@ -165,11 +165,6 @@
  * the clock is back one tap down. Measured at 390, the line has 242px; the widest pair, "Opens
  * 9:30" beside "fleet status unknown", needed 280, so the fleet says it shorter ("fleet unknown")
  * and the line's gaps close a little — the widest is 226, every pair on one row. */
-/* The same ranking where Moneypenny's rail narrows the app column on a desktop: the name goes
- * first, so the views keep their room (#4046 item 4 measured them squeezed to nothing). */
-.shell:has(.mp-rail) .brand-name {
-  display: none;
-}
 /* And the desk's narrowest one-row bar (#5075): the widget is ~80px wider than the badge it
  * replaced, so from the tablet edge to 960 it sat over the last views — measured at 861 with the
  * market closed, Activity and R&D under it; pre-market, R&D until 950. The name steps aside there,

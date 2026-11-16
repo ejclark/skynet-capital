@@ -31,33 +31,24 @@
   color: var(--muted);
 }
 
-.edition-stories {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.story {
+/* A story opened from its one line (round 3, AT4): the same parts the slice-1 card had, now inside
+ * the line's disclosure, set in from the calendar's rail so it reads as the line's own detail. */
+.story-body {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 14px 16px;
-  border-radius: 14px;
+  margin: 4px 0 10px 22px;
+  padding: 12px 14px;
+  border-radius: 12px;
   border: 1px solid var(--border);
   background: var(--surface);
   min-width: 0;
-}
-.story--lead {
-  border-width: 2px;
 }
 .story-headline {
   margin: 0;
   font-size: var(--text-md);
   line-height: 1.3;
   font-weight: 700;
-}
-.story--lead .story-headline {
-  font-size: var(--text-lg);
 }
 .story-narrator {
   margin: 0;
@@ -208,17 +199,9 @@
   overflow-wrap: anywhere;
 }
 
-.edition-next {
-  margin-top: var(--space-4);
-}
-.edition-next .section-title {
-  display: block;
-  margin-bottom: 8px;
-}
-
 /* The ask box (#7077 slice 2): the member's own question first, two quick questions under it.
- * One field and one wrapping row of chips, so the lead story's key facts still reach the first
- * phone screen. The chips are outlined buttons: shape and words, never a colour alone. */
+ * Since slice 1d (AT9 as revised) a one-line field atop the page, its question its placeholder, then
+ * one row of chips. The chips are outlined buttons: shape and words, never a colour alone. */
 .ask-box {
   display: flex;
   flex-direction: column;
@@ -229,10 +212,6 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-}
-.ask-label {
-  font-size: var(--text-md);
-  font-weight: 700;
 }
 .ask-row {
   display: flex;
@@ -275,15 +254,23 @@
   font-family: var(--mono);
   font-size: var(--text-sm);
 }
+/* The canned paths sit on ONE row that scrolls sideways (#7077 AT9 as revised): two lines of chips
+ * pushed the 12th market row to 887px, past the 844px fold; one row lands it at ~838 (AT1). */
 .ask-quick {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
   gap: 6px;
   margin: 0;
   padding: 0;
   list-style: none;
+  scrollbar-width: none;
+}
+.ask-quick > li {
+  flex: none;
 }
 .ask-chip {
+  white-space: nowrap;
   min-height: 36px;
   padding: 6px 12px;
   border: 1px solid var(--border);
@@ -345,6 +332,9 @@
   flex-wrap: wrap;
   align-items: baseline;
   gap: 4px;
+  color: var(--muted);
+}
+.party-q-holder {
   color: var(--muted);
 }
 .party-q-found {

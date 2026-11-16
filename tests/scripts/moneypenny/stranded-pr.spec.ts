@@ -107,7 +107,10 @@ describe("rearmStranded — comment first, then the pipeline's own re-run", () =
 
 describe("audit — the stranded deps feed the intent list", () => {
   it("emits rearm-stranded from deps.stranded", () => {
-    const intents = audit({ stranded: [stranded()] });
+    const workMode = { trackingIssue: 1, title: null, mode: { position: "normal" } };
+    const intents = audit({ stranded: [stranded()], workMode } as unknown as Parameters<
+      typeof audit
+    >[0]);
     expect(intents.map((i: { kind: string }) => i.kind)).toContain("rearm-stranded");
   });
 

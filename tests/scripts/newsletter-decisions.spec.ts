@@ -244,9 +244,14 @@ describe("the report, beside last week", () => {
     expect(by("artifactMissing").value).toBe(1);
     expect(by("predictedShare")).toMatchObject({ value: 0.5, detail: "1 of 2" });
     expect(by("oldestBotAskDays")).toMatchObject({ value: 23, detail: "#5452, 1 open" });
-    // The live ledger, rows dated before 11-09: 9 matches of 14 decided (a row added this week
-    // moves it; #7018's nine rows took it from 5 of 8).
-    expect(by("ledgerMatchRate")).toMatchObject({ value: 0.64, detail: "9 of 14 decided rows" });
+    // The live ledger, rows dated before 11-09. Rows dated earlier keep arriving (#7018's
+    // round 3 rows landed on 11-09), so pinning the count failed every PR that added one: twice
+    // in two days. The spec holds what a counting bug would break instead: the rate agrees with
+    // its own count, and the count never falls below the 16 decided rows on 2026-11-09.
+    const rate = by("ledgerMatchRate");
+    const [, hits, decided] = /^(\d+) of (\d+) decided rows$/.exec(rate.detail) ?? [];
+    expect(Number(decided)).toBeGreaterThanOrEqual(16);
+    expect(rate.value).toBe(Number((Number(hits) / Number(decided)).toFixed(2)));
   });
 
   it("reads a week with nothing closed as no answer share, never as zero or full", () => {

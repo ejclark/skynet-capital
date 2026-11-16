@@ -29,6 +29,13 @@ const heldCall = {
 };
 
 describe("allocationOf", () => {
+  // #4607 slice 2: the dollar total the three percents are of, so a target gap reads in dollars.
+  it("carries the bar's whole in dollars — long shares, long options and cash, no shorts", () => {
+    const allocation = allocationOf(snapshot([heldCall, soldPut]));
+    expect(allocation.totalRaw).toBe(11_800);
+    expect((allocation.optionsPct / 100) * allocation.totalRaw).toBeCloseTo(1_800, 6);
+  });
+
   it("names a sold option's liability instead of reading 'Options $0'", () => {
     const allocation = allocationOf(snapshot([soldPut]));
     expect(allocation.optionsSold).toBe("-$310");

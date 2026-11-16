@@ -215,6 +215,16 @@ function actionSymbols(event: MarketEvent, book: MemberBook): readonly string[] 
 }
 
 /**
+ * The name a research ask files for an event (#7034 slice 3c): the first of the member's own names
+ * on the event, else the event's first. The research queue takes a ticker, so a market-wide event
+ * with no names has none, and the walk keeps that ask in the chat instead of filing a guess.
+ */
+export function researchSubject(input: FastTrackInput, eventId: string): string | undefined {
+  const item = input.events.find((e) => e.event.id === eventId);
+  return item ? actionSymbols(item.event, input.book)[0] : undefined;
+}
+
+/**
  * The actions one event offers. "Plan a move" needs a confirmed date (criterion 3) and a name to
  * trade; "Watch" needs a name the member doesn't already watch; "Ask what we know" is always there.
  * A multi-name event offers its actions per name, so picking one fills the symbol too — the walk

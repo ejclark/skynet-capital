@@ -191,6 +191,9 @@ export interface DeskAllocation {
   readonly cashShare: string;
   /** Signed shares held across stock positions — their delta, for "market exposure". */
   readonly shareCount: number;
+  /** The bar's whole in dollars (#4607): optional so an older server still renders; without it a
+   *  target gap reads "—" rather than a guess. */
+  readonly totalRaw?: number;
 }
 
 export interface Desk {

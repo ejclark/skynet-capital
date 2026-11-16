@@ -182,6 +182,8 @@ export function renderFailureToFix(f) {
 
 function agents(a) {
   const lines = ["", "workflow agents (local transcripts, deduped by message id)"];
+  // A string is no reading (no folder for this checkout, #6689); zero agents is a quiet window.
+  if (typeof a === "string") return [...lines, `  ${a}`];
   if (!a.agents) return [...lines, "  none in the window"];
   lines.push(
     `  first call p50 by type: ${Object.entries(a.firstCallP50ByType)
@@ -266,6 +268,7 @@ export function renderJobs({ window: w, rows, rest }) {
 }
 
 function startup(s) {
+  if (typeof s === "string") return ["", "startup (sessions)", `  ${s}`];
   const lines = [
     "",
     "startup (sessions)",
@@ -290,7 +293,9 @@ export function render(m) {
   lines.push("", "limits");
   lines.push(`  CLAUDE.md: ${m.limits.claudeMdBytes} bytes; orient: ${m.limits.orientBytes} bytes`);
   lines.push(
-    `  memory index: ${m.limits.memoryIndexLines} of ${m.limits.memoryIndexLimit} lines, ${m.limits.memoryFiles} files`,
+    m.limits.memoryIndexLines === null
+      ? "  memory index: unknown (no transcript folder for this checkout, where the index lives)"
+      : `  memory index: ${m.limits.memoryIndexLines} of ${m.limits.memoryIndexLimit} lines, ${m.limits.memoryFiles} files`,
   );
   lines.push("", `rest calls this run: ${m.rest.calls} (cap ${m.rest.cap})`);
   return lines.join("\n");

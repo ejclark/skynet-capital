@@ -132,14 +132,57 @@ const notHere = (home, here) => ({
   detail: `runs in the ${home}, and this is the ${here}`,
 });
 
-/** Judge the primary bots machine. A marked stop is a person's decision, so it passes. */
-export function judgeMachine(machines) {
+// The transient states Fly lists that a rolling deploy moves the machine through on its way back to
+// started (fly.io/docs/machines/machine-states). On 11-02 a tick read one mid-deploy, the start
+// script left it alone as it does any state but stopped, and the report opened #6686 promising a
+// start that script never makes (#6700). Fly calls a machine wedged past 5 to 10 minutes in these, so
+// the deploy grace above covers a healthy deploy with room and still catches a wedged one.
+const DEPLOY_TRANSIT = new Set(["replacing", "updating", "stopping", "starting"]);
+// What fixes a machine wedged mid-change. The start script acts on stopped only, and a stop is
+// state-destroying, so it stays a person's act and never a probe's.
+const WEDGED = {
+  corrector:
+    "nothing automatic: stopping the machine, Fly's own step for one wedged mid-change, hands it to scripts/bots-start-stopped.sh, which starts it on the next tick",
+  budget: "none: the start script acts only on a stopped machine, and a stop is a person's call",
+  rung: "wait",
+  attempts: undefined,
+};
+
+/**
+ * When the machine entered the state it is in: the newest event Fly recorded with that status, else
+ * the machine's own updated_at. NaN when neither can be read.
+ */
+function enteredStateAt(machine) {
+  const stamps = (machine.events ?? [])
+    .filter((e) => e.status === machine.state && Number.isFinite(e.timestamp))
+    .map((e) => e.timestamp);
+  return stamps.length ? Math.max(...stamps) : Date.parse(machine.updated_at ?? "");
+}
+
+/**
+ * Judge the primary bots machine. A marked stop is a person's decision, so it passes. A state a
+ * deploy passes through reads quiet for the deploy grace, then fails with the fix that acts on it;
+ * one that cannot be dated, or is dated past the clock lead, cannot be shown young, so it fails.
+ */
+export function judgeMachine(machines, nowMs = Date.now()) {
   const primary = machines.find((m) => (m.config?.standbys ?? []).length === 0);
   if (!primary) return fail("no primary machine");
   if (primary.config?.metadata?.["skynet-halt"]) {
     return pass(`deliberately halted: ${primary.config.metadata["skynet-halt"]}`);
   }
-  return primary.state === "started" ? pass("started") : fail(`machine is ${primary.state}`);
+  if (primary.state === "started") return pass("started");
+  if (!DEPLOY_TRANSIT.has(primary.state)) return fail(`machine is ${primary.state}`);
+  const graceMin = DEPLOY_GRACE_MS / 60_000;
+  const inStateMs = nowMs - enteredStateAt(primary);
+  if (inStateMs >= -CLOCK_LEAD_MS && inStateMs <= DEPLOY_GRACE_MS) {
+    return quiet(`machine is ${primary.state}, inside the ${graceMin} min deploy grace`);
+  }
+  // No minutes in the words: a standing failure comments only when its detail changes.
+  const why =
+    inStateMs > DEPLOY_GRACE_MS
+      ? `past the ${graceMin} min deploy grace`
+      : "and when it began cannot be dated";
+  return { ...fail(`machine is ${primary.state} ${why}`), ...WEDGED };
 }
 
 /** Judge the process's own stamp: alive, polling recently, and reachable by Mission Control. */
@@ -568,9 +611,9 @@ export const CONTRACTS = [
     // The same numbers as the script, which a spec holds equal: the script spends, this reads.
     attempts: { marker: "<!-- bots-start-stopped:start -->", max: 3, windowHours: 6 },
     reaches: ISSUE_TO_OWNER,
-    probe: () => {
+    probe: (nowMs) => {
       const machines = json(FLY, ["machine", "list", "-a", BOTS_APP, "--json"]);
-      return machines ? judgeMachine(machines) : unknown("cannot read Fly");
+      return machines ? judgeMachine(machines, nowMs) : unknown("cannot read Fly");
     },
   },
   {

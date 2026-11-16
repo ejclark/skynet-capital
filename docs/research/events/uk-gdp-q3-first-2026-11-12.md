@@ -201,3 +201,63 @@ registered forward test whose `Score by` has since arrived (`forward-test-due`).
 
 **Last assessed:** 2026-11-06
 <!-- probe-ref: {"symbols":{},"vix":28.18,"daysBand":"low:0+","adjacentIds":["asean-summit-manila-2026-11-16","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","eia-steo-2026-11-10","empire-state-mfg-2026-11-16","existing-home-sales-2026-11-12","import-export-prices-2026-11-17","industrial-production-2026-11-17","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-30y-auction-2026-11-10","jgb-5y-auction-2026-11-12","msft-ignite-2026-11-17","mtis-2026-11-17","mts-october-2026-11-12","nahb-hmi-2026-11-17","ppi-2026-11-13","retail-sales-2026-11-17","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","sp-global-investment-manager-index-2026-11-10","survey-of-professional-forecasters-q4-2026-11-16","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-3y-note-2026-11-09","treasury-coupon-announcement-2026-11-12","uk-gilt-auction-long-2026-11-10","uk-labour-market-2026-11-17","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","retail-sales-2026-11-17"],"screenStreak":0,"blocked":[]} -->
+
+## Outcome
+
+**Close-out (2026-11-13, D+1 — inside the `closeOutWithinDays` window).** Macro-event mode with
+`symbols: []` runs no `earnings-cycle` / `intraday-edges` instrument, so the mandated cache bust
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) was performed and
+had no target. Every number below was fetched **today** — the ONS bulletin direct, Yahoo daily and
+5-minute bars — never recalled. The CME/Econoday consensus page timed out; **no consensus was found**,
+so the surprise is measured against this ledger's arithmetic and the Bank's published numbers only.
+
+**What happened.** ONS published at 07:00 London on **2026-11-12** (the date held; the entry stays
+`estimate` on the taxonomy gap, not on doubt). Headline, quoted from the bulletin: *"UK real gross
+domestic product (GDP) is estimated to have increased by 0.7% in Quarter 3 (July to Sept) 2026"*, after
+**+0.5%** in Q2 (unrevised). Services **+0.9%** (from +0.6%, business-facing services in particular),
+production **+0.1%** (from −0.1%), construction **−0.7%**. Monthly: **September +0.2%**, **August
+revised from +0.1% to 0.0%**, **July unrevised at +0.4%**. Next release: 22 December 2026.
+
+**Score against the stance (date `estimate`; stand aside, no position taken).**
+
+| Call | Result |
+|---|---|
+| Base case: about **+0.7% q/q** on a flat September | **Hit.** +0.7%; inside the +0.5–0.9% "arithmetic working" band. A stronger September (+0.2%) and the August trim (−0.1pp) roughly cancelled |
+| Arithmetic kill: Q3 **≤ +0.3%** | **Not triggered.** The −2.2% September hurdle for a zero quarter was never close |
+| Shape kill: services below production with September services negative | **Not triggered.** Services +0.9% against production +0.1%; September GDP positive |
+| Date kill: ONS moves the release | **Not triggered** |
+| FT-uk-gdp-q3-first-2026-11-12-1 | **pass** (see the fragment) |
+
+**Versus the Bank.** +0.7% sits about 0.6pp above the July Report's 0.1% and 0.3pp above the September
+staff nowcast of 0.4%. The Bank's 11-05 Report restated its Q3 path and the page this lane read had no Q3
+figure, so that comparison is still against the older numbers.
+
+**Channel kill (judgment, not a registered test): not triggered.** Tracked names did move more than 1% on
+11-12, but the moves are not the ONS print's. ONS printed at **07:00Z (02:00 ET)**. Yahoo 5-minute bars
+(extended hours, sparse overnight; the last bar before the print is 23:55Z on 11-11): between 07:00Z and
+09:00Z NVDA 160.37 to 161.22 (+0.5%), AVGO 354.06 to 352.30 (−0.5%), MRVL 164.02 to 163.17 (−0.5%), CRWV
+56.17 to 56.48 (+0.6%). The sterling and gilt channel the print should have used barely moved: GBPUSD
+1.325 (06:55Z) to 1.326 (07:00Z) to 1.328 (08:00Z); IGLT.L 9.680 (11-11 close) to 9.700 (08:00Z), +0.2%. The
+large moves came later, between 13:00Z and 14:25Z (08:00–09:25 ET): NVDA 160.94 to 151.00, MRVL 162.35 to
+157.19, CRWV 54.84 to 50.89 (CRWV had already gapped down from its 60.93 close of 11-11 by 09:00Z).
+Daily closes 11-11 to 11-12: NVDA 173.73 to 166.19 (−4.3%), AVGO 345.22 to 364.36 (+5.5%), MRVL 168.80 to
+164.45 (−2.6%), CRWV 60.77 to 56.60 (−6.9%). The same day carried confirmed critical `nbis-2026-11-12-print`,
+`erock-q3-2026-results-2026-11-12` (before the open), `cbrs-q3-2026-results-2026-11-11` (reaction day),
+`existing-home-sales-2026-11-12`, the MTS and the 30-year auction; the ledger's own attribution rule named
+those first, and the NBIS print was not on the list when the ledger was written. Limit: 5-minute extended-
+hours bars cannot separate NBIS from the US pre-market, only show that nothing moved at 07:00Z.
+**VIX** 18.70 on 11-12 (17.49 on 11-11), down from the 28.18 spike on 11-05.
+
+**Verdict.** Stance held and scored: stand aside was right (no UK-keyed instrument, no price channel
+observed), and the base case landed on the number. The weakness is the one the ledger disclosed: no
+consensus exists to score a surprise against. Nothing is proposed: Q3 second estimate 12-22
+(`uk-quarterly-national-accounts-2026-12-22`) and the 11-17 labour market and 11-18 CPI prints are already on the calendar.
+`node scripts/conviction-proposals.mjs --event=uk-gdp-q3-first-2026-11-12` printed `[]`, so did
+`node scripts/intents.mjs --event=uk-gdp-q3-first-2026-11-12` (no declared intent to cite), and
+`npm run research:claims -- --event uk-gdp-q3-first-2026-11-12` printed `nothing written`.
+
+**Loop census (stage a person still had to do).** *Sense* — the print itself and the intraday window read
+were fetched by hand; no script fetches a macro print's headline against a ledger's stated base case.
+
+**Last assessed:** 2026-11-13
+<!-- probe-ref: {"symbols":{},"vix":18.7,"daysBand":"low:0+","adjacentIds":["asean-summit-manila-2026-11-16","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","empire-state-mfg-2026-11-16","erock-q3-2026-results-2026-11-12","existing-home-sales-2026-11-12","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-balance-of-payments-2026-11-10","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-30y-auction-2026-11-10","jgb-5y-auction-2026-11-12","msft-ignite-2026-11-17","mtis-2026-11-17","mts-october-2026-11-12","nahb-hmi-2026-11-17","nbis-2026-11-12-print","nvda-2026-11-18-print","pbls-q3-2026-results-2026-11-12","ppi-2026-11-13","retail-sales-2026-11-17","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","sp-global-investment-manager-index-2026-11-10","survey-of-professional-forecasters-q4-2026-11-16","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-3y-note-2026-11-09","treasury-coupon-announcement-2026-11-12","uk-gilt-auction-long-2026-11-10","uk-labour-market-2026-11-17","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","nbis-2026-11-12-print","nvda-2026-11-18-print","retail-sales-2026-11-17"],"screenStreak":0,"blocked":[]} -->

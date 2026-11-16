@@ -17,7 +17,8 @@
 // dial, the backlog and the merge rate differ between windows, and he usually moves the dial BECAUSE
 // of how the week is going. Only moneypenny-events.yml's three session lanes are read; local and cloud
 // sessions, repair, dep-warden and the claude.yml lane are not, and nothing here says how large those
-// are. A row that says "at least" had runs the REST budget did not reach.
+// are. A row that says "at least" had runs the REST budget did not reach, or a leg whose log carried
+// no price (a session cut off before its cost was written); the notes under the table count both.
 //
 // ITS COST. One paged run list per day and event (a busy day's `issues` list is two or three pages,
 // counted as one call here, so the printed count is a floor), then one log download per run long
@@ -146,7 +147,9 @@ export function summarize(legs, windows, { unread = [] } = {}) {
 
 const money = (n) => `$${n.toFixed(2)}`;
 
-/** The table for a person. A row with unread runs says its dollars are a floor. */
+/** The table for a person. A row with unread runs, or with a leg that carried no price, says its
+ *  dollars are a floor: neither adds to `usd`, so an exact figure there would read cheaper than the
+ *  position ran (#6693). The notes under the table say how many of each. */
 export function renderTable(rows) {
   const order = ["halt", "conserve", "normal", "surge"];
   const sorted = [...rows].sort(
@@ -157,7 +160,7 @@ export function renderTable(rows) {
     "|---|---|---|---|---|---|---|---|",
   ];
   for (const r of sorted) {
-    const floor = r.unreadRuns > 0 ? "at least " : "";
+    const floor = r.unreadRuns > 0 || r.unpriced > 0 ? "at least " : "";
     const leg = r.usdPerLeg === null ? "no price" : money(r.usdPerLeg);
     lines.push(
       `| ${r.position} | ${r.lane} | ${r.hours.toFixed(0)} | ${(r.runs / r.hours).toFixed(2)} | ${r.legsPerRun.toFixed(1)} | ${r.legsPerHour.toFixed(2)} | ${leg} | ${floor}${money(r.usdPerHour)} |`,
@@ -169,6 +172,14 @@ export function renderTable(rows) {
     lines.push(
       "",
       `Unread runs: ${counts.map(([p, n]) => `${p} ${n}`).join(", ")}. Those rows are floors.`,
+    );
+  }
+  // Unpriced legs are counted per row, not per position: the leg was read, so its lane is known.
+  const unpriced = sorted.filter((r) => r.unpriced > 0);
+  if (unpriced.length > 0) {
+    if (unread.length === 0) lines.push("");
+    lines.push(
+      `Legs with no price: ${unpriced.map((r) => `${r.position} ${r.lane} ${r.unpriced}`).join(", ")}. Those rows are floors.`,
     );
   }
   return lines.join("\n");

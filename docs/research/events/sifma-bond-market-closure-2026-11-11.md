@@ -355,3 +355,63 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-11-06
 <!-- probe-ref: {"symbols":{},"vix":28.18,"daysBand":"low:0+","adjacentIds":["asean-summit-manila-2026-11-16","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","empire-state-mfg-2026-11-16","erock-q3-2026-results-2026-11-12","existing-home-sales-2026-11-12","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-30y-auction-2026-11-10","jgb-5y-auction-2026-11-12","jobs-2026-11-06","mts-october-2026-11-12","nbis-2026-11-12-print","ppi-2026-11-13","russell-recon-preliminary-2026-11-13","sp-global-investment-manager-index-2026-11-10","survey-of-professional-forecasters-q4-2026-11-16","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-3y-note-2026-11-09","treasury-coupon-announcement-2026-11-12","uk-gdp-q3-first-2026-11-12","uk-gilt-auction-long-2026-11-10","umich-sentiment-prelim-2026-11-06","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","jobs-2026-11-06","nbis-2026-11-12-print"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out (2026-11-12, D+1, after the completed 11-11 closure session).** Instrument caches busted
+first (`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`); every number
+below was re-pulled from the Yahoo chart endpoint on 2026-11-12 (daily bars with volume, HTTP 200 for
+TLT, SPY, LQD, HYG, ^VIX), never read from this document's earlier rows. `symbols: []`, so no
+earnings-keyed instrument applies. Event status was `confirmed` (SIFMA); the stance was stand aside.
+
+**What happened vs the stance.** The closure happened as published and the stance held: a calendar
+slot is not a trade, nothing was sized. The execution guard (bond ETFs trade on thin depth while the
+cash market is dark) **held in direction: TLT thinned less than the calm-tape history, and credit ETFs
+thinned more.** Volume ratio = session volume ÷ median of the prior 20 sessions
+(2026-10-14 → 2026-11-10).
+
+| Symbol | 11-11 volume | Trailing-20 median | Ratio | Historical Veterans Day median |
+|---|---|---|---|---|
+| TLT | 26.43M | 36.76M | **0.719×** | 0.483× |
+| LQD | 8.67M | 33.36M | **0.260×** | 0.487× |
+| HYG | 13.42M | 49.68M | **0.270×** | 0.465× |
+| SPY | 37.71M | 41.98M | **0.898×** | 0.765× |
+
+- **Paired gap TLT − SPY: −0.179** (negative; history −0.287, ordinary Wednesday +0.039). Bond ETFs
+  thinned more than equities, so the thinning reads as the closure, not the holiday.
+- **TLT is the soft spot.** 0.719× is below the 0.80× line but well above the 0.48× history. The
+  trailing window contains the 11-05 stress day (TLT 50.3M, 1.43×; VIX 28.18). Dropping 11-05 and
+  11-06 from the median moves TLT to **0.740×** and SPY to **0.931×**, so the stress window did not
+  cause it. Credit ETFs (LQD, HYG) came in near 0.26× — a sizing guard built on TLT alone would have
+  overstated depth for credit.
+- **Price on the day (closes):** TLT 80.88 → 80.92 (+0.05%) after −1.3% on 11-10, the CPI session;
+  SPY 749.92 → 759.81 (+1.3%); VIX 19.46 → **17.49** (the stress of 11-05 has been unwinding since
+  28.18). No catch-up repricing in the shut-market ETF on the day itself.
+- **Not measurable yet:** the 11-12 session has no daily bar at pull time, and it carries the 30Y
+  auction (`treasury-30y-bond-2026-11-12`, the first bond session after the closure) plus
+  `nbis-2026-11-12-print` (critical) — so the next-session |move| reading for the deferred-repricing
+  refutation cannot be computed from this pull.
+
+**Forward tests — left open on purpose.** All three rows in
+[`forward-tests/sifma-bond-market-closure-2026-11-11.md`](../forward-tests/sifma-bond-market-closure-2026-11-11.md)
+carry a `Score by` after this event's close-out window (FT-1 and FT-2 on 2026-11-18, FT-3 on
+2026-11-19) — the scanner's `forwardTestsBeyondWindow`. Scoring a prediction before its registered
+date is the falsification pressure the rules exist to prevent, and a score-by is never shortened to
+fit a window, so no Outcome cell was filled. The scanner re-opens the event as `forward-test-due`
+on those dates and that session scores from fresh bars. **What it will find, read off today's
+pull and not a score:** FT-1 (TLT 11-11 ratio < 0.80×) 0.719× would pass; FT-2 (TLT ratio < SPY
+ratio) −0.179 would pass; FT-3 (TLT 11-12 |move| ≤ 1.5× trailing median) has no data yet.
+Conviction proposals `[]`, declared intents `[]` — nothing to answer or cite; `research:claims`
+scored nothing and was not run (no row is scored).
+
+**The loop, per `docs/process/LEARNING-LOOP.md`:** the one stage a person would have had to do is the
+bar pull, and the instruments were already scripted; the gap is that `market-data.mjs`'s `bars()`
+drops volume, so every volume read on this ledger family needs a bespoke fetch like this one. Worth a
+`bottleneck`-labelled issue if another closure-day ledger needs the same fetch.
+
+**Adjacency, D+1.** Nothing new dated inside the horizon: `--on-date=2026-11-12` shows every item
+already tracked (30Y auction, coupon announcement, MTS, NBIS print, 5Y JGB, UK GDP). Nothing proposed;
+nothing beyond the horizon named.
+
+**Last assessed:** 2026-11-12
+<!-- probe-ref: {"symbols":{},"vix":17.49,"daysBand":"low:0+","adjacentIds":["asean-summit-manila-2026-11-16","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","erock-q3-2026-results-2026-11-12","existing-home-sales-2026-11-12","jgb-5y-auction-2026-11-12","mts-october-2026-11-12","nbis-2026-11-12-print","ppi-2026-11-13","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-coupon-announcement-2026-11-12","uk-gdp-q3-first-2026-11-12"],"adjacentStrongIds":["cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","nbis-2026-11-12-print"],"screenStreak":0} -->

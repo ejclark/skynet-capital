@@ -1,5 +1,6 @@
 import { COMPANION_FIXTURES } from "../evals/companion/fixtures.js";
 import { formatCompanionReport, runCompanionEval } from "../evals/companion/run-eval.js";
+import { COMPANION_TOOL_FIXTURES } from "../evals/companion/tool-fixtures.js";
 
 /**
  * Run Moneypenny's replay eval and print the report.
@@ -17,7 +18,9 @@ if (!apiKey) {
   process.exit(0);
 }
 
-const report = await runCompanionEval(COMPANION_FIXTURES, apiKey, undefined, undefined, (line) =>
+// The tool-use fixtures (#7286 slice 5) run beside the main suite, scored on their calls too.
+const fixtures = [...COMPANION_FIXTURES, ...COMPANION_TOOL_FIXTURES];
+const report = await runCompanionEval(fixtures, apiKey, undefined, undefined, (line) =>
   console.log(line),
 );
 console.log(formatCompanionReport(report));

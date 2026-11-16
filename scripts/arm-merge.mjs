@@ -10,6 +10,7 @@
 // own `GraphQL: Something went wrong while executing your query` failed the job on the first try and
 // left a green PR unarmed, with nothing to re-arm it. gh.mjs has classified that wording as transient
 // since #4675; this reuses its classifier rather than keeping a second phrase list in step.
+import { isMain } from "./is-main.mjs";
 import { isTransientGhError, sh, sleepSync } from "./moneypenny/gh.mjs";
 
 /**
@@ -131,7 +132,7 @@ function main(argv) {
   process.exit(2);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url)) {
   try {
     main(process.argv.slice(2));
   } catch (err) {

@@ -38,6 +38,8 @@ import type { RowMark } from "./use-row-marks";
  * and Undo are the owner's (ownership-gated controls); everyone sees the marks.
  * Last, "Full page ›" (#5070 slice 6, `position-page.tsx`): the opt-in deep dive, whose one way
  * back returns to this row, still open.
+ * On the member's own trading account the opened guidance also asks Moneypenny about this holding,
+ * and the question's side thread sits collapsed under the line (#7167, `position-thread.tsx`).
  * On a bot's own book, the playbook that opened the position rides one line under it (#5073 slice
  * 4b, `position-playbook-tag.tsx`) — beneath what opens, so the guidance still opens under its line.
  */
@@ -137,6 +139,8 @@ export function GuidanceSlot({
   onFullPage,
   onAside,
   onUndo,
+  ask,
+  thread,
 }: {
   readonly position: DeskPosition;
   /** The account's positions: what a close frees depends on what else is held (slice 3). */
@@ -161,6 +165,10 @@ export function GuidanceSlot({
   /** Not now, with the price a share row watches while it is aside (`shareWatch`). */
   readonly onAside: (watch?: MarkWatch) => void;
   readonly onUndo: () => void;
+  /** A question to Moneypenny about this holding, inside the opened guidance — and its side thread,
+   *  collapsed under the line (#7167, `position-thread.tsx`). The member's own account only. */
+  readonly ask?: ReactNode;
+  readonly thread?: ReactNode;
 }): ReactElement {
   const [open, setOpen] = useState(initialOpen);
   const openId = useId();
@@ -218,6 +226,7 @@ export function GuidanceSlot({
               {call.word}, {call.confidence} confidence — from your guidance read at {call.readAt}.
             </p>
           ) : null}
+          {ask}
           {canTrade ? (
             <PositionActs
               deskId={deskId}
@@ -258,6 +267,7 @@ export function GuidanceSlot({
         </div>
       ) : null}
       {playbook}
+      {thread}
     </div>
   );
 }

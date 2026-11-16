@@ -1,6 +1,14 @@
 {
-  "$comment": "THE SEAT REGISTRY (#6886 slice 1) and the org chart's source (Eric, 2026-11-07: an outline of our agentic systems as a company org chart, humans included, that also compacts context for agent workflows). One row per seat: a role that does work, filled by a lane, skill, agent, workflow, routine, gate, service, hook or person. `invoker` names what starts it (event · schedule · lane · session · member · eric · self · none); `none` means nothing calls it, which the page lists. `links` draw the picture between departments and people; `friction` records measured breakdowns on a communication edge (reverse Conway). Edit this file, then run `node scripts/org-chart.mjs` to rewrite docs/architecture/org-chart.md; tests/arch/org-chart.spec.ts fails on drift, a missing code root, or a roster file no seat covers.",
+  "$comment": "THE SEAT REGISTRY (#6886 slice 1) and the org chart's source (Eric, 2026-11-07: an outline of our agentic systems as a company org chart, humans included, that also compacts context for agent workflows). One row per seat: a role that does work, filled by a lane, skill, agent, workflow, routine, gate, service, hook or person. `invoker` names what starts it (event · schedule · lane · session · member · eric · self · none); `none` means nothing calls it, which the page lists. A seat that pulls cards off the Orchestration board also carries `role` (the board's Role option, named by the job) and `pulls` (the labels whose cards sit in its queue); `roleOrder` lists those seats, first match wins (#6886 slice 1b, scripts/moneypenny/projects-role.mjs). `links` draw the picture between departments and people; `friction` records measured breakdowns on a communication edge (reverse Conway). Edit this file, then run `node scripts/org-chart.mjs` to rewrite docs/architecture/org-chart.md; tests/arch/org-chart.spec.ts fails on drift, a missing code root, or a roster file no seat covers.",
   "asOf": "2026-11-07 · main caf8770cc",
+  "roleOrder": [
+    "live-sessions",
+    "design-build",
+    "event-research",
+    "plan-build",
+    "feedback-build",
+    "grind"
+  ],
   "depts": [
     {
       "id": "people",
@@ -149,7 +157,7 @@
   "friction": [
     {
       "edge": "Members → front desk → builders",
-      "channel": "the in-app rail and coach, filed as a GitHub issue",
+      "channel": "the in-app chat (the dock under every page) and coach, filed as a GitHub issue",
       "what": "Members almost never file from the app. One untested reading (Conway): the intake is shaped like the build team's issue capsule (app/src/live/moneypenny-filing.ts:30-34), not like play.",
       "number": "2 in-app filings since 2026-10-01 (#4861, #6007), both Eric's; the last other member filing is #716 (2026-08-28). Nearly all of the 238 feedback issues since 10-01 were filed by sessions under Eric's account",
       "cite": "#7031",
@@ -282,7 +290,7 @@
       "name": "League members",
       "kind": "human",
       "job": "Invite-only friends and family who sign in, trade their own paper account, chat with Moneypenny, give views to their own bots and file feedback",
-      "wakesOn": "the in-app rail, feedback status badges, the follow-up form when an issue goes needs-info",
+      "wakesOn": "the in-app chat (the dock under every page), feedback status badges, the follow-up form when an issue goes needs-info",
       "speaksOn": "orders on their own desk, rail messages, feedback filings, conviction card taps, follow-up answers",
       "cadence": "whenever they open the app; async",
       "invoker": "self",
@@ -291,7 +299,7 @@
         "src/server/auth",
         "src/server/trade-orders-routes.ts",
         "src/server/feedback-service.ts",
-        "app/src/shell/moneypenny-rail.tsx"
+        "app/src/shell/moneypenny-dock.tsx"
       ],
       "cite": "docs/architecture/README.md:21 \"Invited friend or family on the allowlist... trades a paper account, chats with Moneypenny, files feedback\"; src/server/trade-orders-routes.ts:171 ownsAccount check; docs/MONEYPENNY.md:28-30 (member's own reply posts through /api/feedback); .github/workflows/moneypenny-events.yml:511-516 (authorized reply resumes a needs-info build)"
     },
@@ -330,8 +338,8 @@
       "name": "Companion chat (Moneypenny in the app)",
       "kind": "service",
       "job": "Answers member questions with Claude using a closed list of nine read-only lookups and two draft hand-offs; has no code path that places an order",
-      "wakesOn": "POST /api/companion/chat from the rail",
-      "speaksOn": "streamed SSE reply; draft_feedback and draft_conviction cards for the rail",
+      "wakesOn": "POST /api/companion/chat from the dock under every page",
+      "speaksOn": "streamed SSE reply; draft_feedback and draft_conviction cards for the chat",
       "cadence": "per turn, throttled",
       "invoker": "member",
       "status": "hired",
@@ -340,7 +348,7 @@
         "src/companion/companion-tools.ts",
         "src/companion/companion-convictions.ts",
         "src/companion",
-        "app/src/shell/moneypenny-rail.tsx",
+        "app/src/shell/moneypenny-dock.tsx",
         "app/src/live/moneypenny.ts",
         "app/src/live/moneypenny-script.ts"
       ],
@@ -553,6 +561,8 @@
       "cadence": "Per tick, up to researchPerTick (normal 6)",
       "invoker": "event",
       "status": "hired",
+      "role": "Event research",
+      "pulls": ["event-research"],
       "codeRoots": [
         ".github/prompts/event-research.md",
         "research-dispatch-budget.json",
@@ -562,6 +572,26 @@
         "scripts/event-scan.mjs"
       ],
       "cite": ".github/workflows/moneypenny-events.yml:564-600, 672 (sonnet, max-turns 150), 677-678, 772; research-dispatch-budget.json:3 (maxPerTick 6); .github/workflows/moneypenny-events.yml:564 build-events; docs/ROUTINES.md:44 May NOT \"trade; edit playbooks, guards, or earnings-calendar entries\"; scripts/moneypenny/events.mjs:154-165, 189-197 (RECONCILE_CAP 20)"
+    },
+    {
+      "id": "discovery-research",
+      "department": "research",
+      "name": "Discovery research lane",
+      "kind": "lane",
+      "job": "One Sonnet session per member question no campaign covers (matrix, max-parallel 3) writes a research-shelf write-up and opens a discovery/<slug> PR",
+      "wakesOn": "daily schedule, or a manual dispatch",
+      "speaksOn": "A discovery PR; the dashboard drops the answered ask once the write-up deploys",
+      "cadence": "Once a day, up to researchPerTick less the research PRs already open",
+      "invoker": "event",
+      "status": "hired",
+      "codeRoots": [
+        ".github/prompts/discovery-research.md",
+        ".github/workflows/moneypenny-discovery.yml",
+        "src/domain/discovery-pass.ts",
+        "src/domain/discovery-queue.ts",
+        "docs/research/discovery/"
+      ],
+      "cite": ".github/workflows/moneypenny-discovery.yml:28 (daily cron), :145 (sonnet, max-turns 150); src/domain/discovery-queue.ts:takeForPass (ceiling less spentByEvents); src/domain/discovery-pass.ts:planPass (skips answered and open-PR asks)"
     },
     {
       "id": "pulse-screen",
@@ -619,7 +649,7 @@
       "kind": "service",
       "job": "A market or sector people want to play, held as a record (storyline, sector, cast of symbols, forces, open questions) that links calendar events and news; three house campaigns plus members' own, each answering one landscape read (what moved, what is scheduled, what is reported, what the house has tested)",
       "wakesOn": "A PR adding or editing src/domain/campaigns/<id>.json, a member's saved form, or `npm run campaign:landscape`",
-      "speaksOn": "the landscape read, every line marked measured, reported or estimated; event-scan --due rows name the campaigns that link them, and research dispatch ranks those first",
+      "speaksOn": "the landscape read, every line marked measured, reported or estimated; the explore and find-names encounters it generates, each question before its answer, and build a strategy's names handed to the conviction, authored-play or chain form, left only with a view or a shadow test (`--encounters`); event-scan --due rows name the campaigns that link them, and research dispatch ranks those first",
       "cadence": "read at load",
       "invoker": "session",
       "status": "on trial",
@@ -627,6 +657,8 @@
         "src/domain/campaigns.ts",
         "src/domain/campaigns/",
         "src/domain/campaign-landscape.ts",
+        "src/domain/campaign-encounters.ts",
+        "src/domain/campaign-strategy.ts",
         "scripts/campaign-links.mjs"
       ],
       "cite": "src/domain/campaigns.ts:1-9 \"so research can be steered by it (slice 5's landscape read, the narrator's questions in #6948)\""
@@ -688,6 +720,24 @@
       "cite": ".github/workflows/moneypenny-events.yml:440-446; scripts/moneypenny/index.mjs:571-593 (triageFeedbackDecision)"
     },
     {
+      "id": "filing-check",
+      "department": "build",
+      "name": "Member filing check",
+      "kind": "lane",
+      "job": "Runs the clear-path flip on one member's freeform filing the moment it lands: a judge, then two refuters on a clear call; queues it (ready), asks the member plain questions (needs-info, re-checked on their follow-up), or leaves it for a person's look. Each session runs on its own runner with a read-only token and reads only the member/bot-filtered thread; a specced script on a fresh runner posts",
+      "wakesOn": "issues labeled feedback carrying a member- label; an app-relayed follow-up on a filing this check parked on needs-info",
+      "speaksOn": "One comment, and ready, needs-info or no label",
+      "cadence": "Per member filing, while the work dial is normal or surge",
+      "invoker": "event",
+      "status": "hired",
+      "codeRoots": [
+        ".github/prompts/feedback-triage.md",
+        "scripts/moneypenny/triage-assess.mjs",
+        ".github/workflows/moneypenny-events.yml"
+      ],
+      "cite": "scripts/moneypenny/triage-assess.mjs (assessIntent, assemble, planWrite); .github/workflows/moneypenny-events.yml (route step assess; jobs assess-judge, assess-refute-envelope, assess-refute-thread, assess-post); #7544"
+    },
+    {
       "id": "feedback-build",
       "department": "build",
       "name": "Feedback build lane (with reply resume)",
@@ -698,6 +748,8 @@
       "cadence": "Per ready issue, behind the admission gate",
       "invoker": "lane",
       "status": "hired",
+      "role": "Feedback builds",
+      "pulls": ["feedback", "bug", "fast-track", "ready"],
       "codeRoots": [
         ".github/workflows/moneypenny-events.yml",
         ".github/prompts/feedback-build.md",
@@ -719,6 +771,8 @@
       "cadence": "Per ready plan",
       "invoker": "lane",
       "status": "hired",
+      "role": "Plan builds",
+      "pulls": ["plan"],
       "codeRoots": [
         ".github/prompts/plan-build.md",
         "scripts/moneypenny/plan-claim.mjs",
@@ -753,6 +807,8 @@
       "cadence": "Per tap",
       "invoker": "eric",
       "status": "hired",
+      "role": "Design builds",
+      "pulls": ["handoff", "needs-design"],
       "codeRoots": [".github/prompts/design-build.md"],
       "cite": "docs/HANDOFFS.md:29-30, 74-79 ('Read .github/prompts/design-build.md'); docs/ROUTINES.md:44 ('the design canvas lane runs as a claude.ai routine, not here')"
     },
@@ -872,6 +928,31 @@
       "status": "hired",
       "codeRoots": [".claude/skills/mermaid/", "scripts/mermaid-skill-scan.mjs"],
       "cite": "CLAUDE.md:441-444; scripts/ship.sh:256"
+    },
+    {
+      "id": "motion",
+      "department": "build",
+      "name": "Motion skills (vendored from Emil Kowalski)",
+      "kind": "skill",
+      "job": "Nine DOM and CSS motion skills: build one animation (animate), several together (choreograph), find, remove, audit and speed up motion, and name an effect; house tokens and rules win where they meet",
+      "wakesOn": "motion work on a member surface; a named motion effect; Eric running review-animations",
+      "speaksOn": "the animation in the diff; a plan as a GitHub issue",
+      "cadence": "on demand",
+      "invoker": "session",
+      "status": "hired",
+      "codeRoots": [
+        ".claude/skills/animate/",
+        ".claude/skills/choreograph/",
+        ".claude/skills/review-animations/",
+        ".claude/skills/improve-animations/",
+        ".claude/skills/find-animation-opportunities/",
+        ".claude/skills/remove-animations/",
+        ".claude/skills/animation-performance/",
+        ".claude/skills/animation-vocabulary/",
+        ".claude/skills/emil-design-eng/",
+        "docs/vendor/emil-kowalski-skills.md"
+      ],
+      "cite": ".claude/rules/member-surfaces.md (motion routing line); docs/vendor/emil-kowalski-skills.md"
     },
     {
       "id": "pipeline",
@@ -1092,6 +1173,20 @@
         "docs/review/lenses/"
       ],
       "cite": "docs/review/README.md:37, 40-45; docs/review/README.md:11 'no lens below has run on any PR'; docs/review/README.md:35"
+    },
+    {
+      "id": "ia-steward",
+      "department": "quality",
+      "name": "Information-architecture reviewer (IA lens)",
+      "kind": "lens",
+      "job": "Reads a route, nav or docs/IA.md change for a page a member can no longer reach, data placed at a key it is not fetched by, or a home that contradicts the written IA decision",
+      "wakesOn": "a review-replay run of the information-architecture lens; joins post-merge-audit only once its replay keeps it",
+      "speaksOn": "findings scored by scripts/review-replay.mjs, never filed while on trial",
+      "cadence": "per replay, on trial",
+      "invoker": "session",
+      "status": "on trial",
+      "codeRoots": ["docs/review/lenses/information-architecture.md"],
+      "cite": "#6886 slice 2: the first hire is a lens, not an agent (/charter step 3; docs/review/README.md:7-10); docs/review/lenses/information-architecture.md:6-12 (kill rule, on trial); first replay 2026-11-10: 3 of 3 labelled defects on reading, 5 of 5 controls clean, one unlabelled dead link found (docs/review/README.md:47)"
     },
     {
       "id": "intent-replay",
@@ -1519,6 +1614,8 @@
       "cadence": "When Eric or another session opens one; nothing scheduled reads needs-session",
       "invoker": "session",
       "status": "hired",
+      "role": "Live sessions",
+      "pulls": ["needs-session"],
       "codeRoots": [".claude/settings.json", "docs/DELEGATION.md"],
       "cite": ".github/prompts/moneypenny-conflict-repair.md:26 (nothing reads needs-session); #4555 (lanes cannot edit .claude/**)"
     },
@@ -1561,8 +1658,10 @@
       "cadence": "on demand",
       "invoker": "session",
       "status": "hired",
+      "role": "Bottleneck research",
+      "pulls": ["bottleneck"],
       "codeRoots": [".claude/workflows/grind.js", "docs/grind/", ".claude/agents/worker.md"],
-      "cite": "CLAUDE.md:387-388; .claude/skills/governor/SKILL.md:65; .claude/workflows/grind.js:165, 229; .claude/workflows/dream.js:87; docs/COACHES.md:530"
+      "cite": "CLAUDE.md:387-388; .claude/skills/governor/SKILL.md:65; .claude/workflows/grind.js:165, 229; .claude/workflows/dream.js:92; docs/COACHES.md:530"
     },
     {
       "id": "hooks",

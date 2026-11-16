@@ -328,6 +328,16 @@ table.blotter {
   width: auto;
   white-space: nowrap;
 }
+/* A close of a position marked Consider for its gain (#4609): the dollars locked in and the reason,
+   on their own line under the receipt — words carry it, never a colour alone. */
+.close-receipt-kept {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: var(--text-sm);
+}
+.close-receipt-why {
+  color: var(--muted);
+}
 @media (max-width: 700px) {
   .desk-tiles {
     grid-template-columns: repeat(2, 1fr);

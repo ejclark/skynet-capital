@@ -1,0 +1,11 @@
+{
+  "id": "japan-gdp-q3-second-2026-12-08",
+  "kind": "macro-print",
+  "title": "Japan GDP, July–September 2026 second preliminary (Cabinet Office, 08:50 JST) — the capex-revised growth print six days before the December Tankan",
+  "date": "2026-12-08",
+  "status": "estimate",
+  "source": "EST: esri.cao.go.jp/jp/sna/kouhyou/kouhyou_top.html (Cabinet Office ESRI quarterly GDP release schedule, Japanese page), fetched direct 2026-11-14 (HTTP 200, 11,979 bytes). Its quarterly-GDP table reads '2026年7-9月期（2次速報）' with the date cell '2026（令和8）年12月8日（火）' and 8時50分, the same row the first-preliminary entry japan-gdp-q3-prelim-2026-11-16 cites (first preliminary 2026-11-16, Oct-Dec first preliminary 2027-02-15). Filed estimate: market-events-data defines no confirmed source prefix for a Japanese statistics office, and this lane may not self-confirm an event it discovered in-sweep. Checked 2026-11-14",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED during the boj-tankan-2026-12-14 interval-elapsed pulse (2026-11-14, D-30) and owned by that lane (one file per owner, #1717). Found by reading the same ESRI schedule the Q3 first-preliminary entry cites; --on-date=2026-12-08 showed only japan-balance-of-payments-2026-12-08. Inside the horizon (24 days out, low impact, allImpactsWithinDays 30). Relevance is context only: the second preliminary folds in the MoF corporate-statistics capex data, and lands the day before FOMC and six days before the December Tankan; no channel from it to the Nikkei open is measured here."
+}

@@ -98,6 +98,7 @@ import {
   writeIssueBody,
 } from "./decision-callout.mjs";
 import { executeDialTap, executeDialTidy, routeDial } from "./dial-tap.mjs";
+import { closeStaleDiscovery, flagStaleDiscovery } from "./discovery-pr-sweep.mjs";
 import { dueForResearch, RECEIPT_TITLE_RE, routeSweep } from "./events.mjs";
 import { guardFeedbackOutcome } from "./feedback-guard.mjs";
 import { ghRest, ghRestAll, sh, withRetry } from "./gh.mjs";
@@ -119,7 +120,7 @@ import { feedbackReadyIntent, planReadyIntent } from "./plan-claim.mjs";
 import { executePlanClose, gatherPlanCloseDeps } from "./plan-close.mjs";
 import { openPrsByIssue } from "./pr-issues.mjs";
 import { closeRedLanePr } from "./red-lane-pr.mjs";
-import { executeRelay, gatherRelayDeps, routeRelay } from "./relay.mjs";
+import { executeRelay, gatherRelayDeps, RELAY_KINDS, routeRelay } from "./relay.mjs";
 import { replyResumeIntent } from "./reply-resume.mjs";
 import {
   closeSupersededResearch,
@@ -687,6 +688,13 @@ export function checkCallout(ctx, deps = {}) {
  * refusals now apply `ready` before returning, as `unpark` does for a reply: the label records the
  * go the comment already gave, the board shows it in Ready, and the sweep claims it once admitted
  * (blockers honoured by `notPullableReason`). A parked or `in-progress` plan is never labelled.
+ *
+ * AN ADMITTED COMMENT-FLIP IS RECORDED TOO (2026-11-08). Only refusals used to write the label, so a
+ * flip that started a build at once left the plan with no `ready` — and continuation.mjs carries a
+ * plan to its next slice only while it is `ready`. After that first slice the plan fell into the
+ * board's "Next part needs approval" column with nobody owning the next flip: #5912, #6340 and
+ * #5992 sat there 1–3 weeks after a "ready" comment ISSUES.md calls equivalent to the label. The
+ * label now records every go the comment door gives, so both doors leave a plan in the same state.
  */
 export function claimPlan(
   ctx,
@@ -730,22 +738,22 @@ export function claimPlan(
   const out = process.env.GITHUB_OUTPUT;
   if (out) appendFileSync(out, `number=${issue.number}\nmodel=${tier.model}\n`);
   console.log(`::notice::claimed plan issue #${issue.number} — building in this run`);
+  // Before `in-progress`: the go outlives this slice, so continuation can carry the next one.
+  recordPlanFlip(ctx, issue, edit);
   setInProgress(issue.number, true); // #3960 — same in-flight signal as the feedback claim
   console.log(`::notice::plan #${issue.number} — model tier: ${tier.model} — ${tier.reason}`);
   return { ...result, number: issue.number, model: tier.model };
 }
 
 /**
- * `ready` on a plan whose comment-flip was refused (#5334, see `claimPlan`). Only for the comment
- * door — a label event already carries the label — and only when the issue lacks it, so a re-posted
- * flip writes nothing. Best-effort, `unpark`'s doctrine.
+ * `ready` on a plan whose comment-flip was refused (#5334) or admitted (2026-11-08) — see
+ * `claimPlan`. Only for the comment door — a label event already carries the label — and only when
+ * the issue lacks it, so a re-posted flip writes nothing. Best-effort, `unpark`'s doctrine.
  */
 function recordPlanFlip(ctx, issue, edit) {
   if (!ctx.payload?.comment || labelNames(issue.labels).includes(LABELS.ready.name)) return;
   if (edit(issue.number, ["--add-label", LABELS.ready.name])) {
-    console.log(
-      `::notice::plan #${issue.number} — refused flip recorded as \`ready\` for the sweep`,
-    );
+    console.log(`::notice::plan #${issue.number} — comment flip recorded as \`ready\``);
   }
 }
 
@@ -1576,11 +1584,11 @@ function executeSweepIntent(i) {
     console.log(`::warning::${line}`);
     return line;
   }
-  if (i.kind === "relay-remainder") {
-    // The three writes (file the relay, receipt the source, clear the remainder label) live in
+  if (RELAY_KINDS.has(i.kind)) {
+    // The writes (file the relay or not, receipt the source, clear the remainder label) live in
     // relay.mjs so its own CLI can reuse them without importing this router.
     const line = executeRelay(i);
-    console.log(`::notice::relayed #${i.source}'s remainder — ${i.title}`);
+    console.log(`::notice::${line}`);
     return line;
   }
   return undefined;
@@ -1613,6 +1621,9 @@ const ONE_CALL_INTENTS = {
   "close-superseded-research": (i) => closeSupersededResearch(i),
   "flag-red-research": (i) => flagRedResearch(i),
   "report-research-sweep": (i) => reportResearchSweep(i),
+  // #7341 — the discovery-PR sweep: the writes live in discovery-pr-sweep.mjs beside the decision.
+  "close-stale-discovery": (i) => closeStaleDiscovery(i),
+  "flag-stale-discovery": (i) => flagStaleDiscovery(i),
   "edit-issue-body": (i) => {
     sh("gh", ["issue", "edit", String(i.issueNumber), "--body", i.body]);
     console.log(`· refreshed the body of #${i.issueNumber}`);

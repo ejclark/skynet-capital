@@ -180,6 +180,38 @@ describe("agent meter", () => {
     });
   });
 
+  // #6690: a fixed past window must read the same on every run, whatever landed after it.
+  describe("given a window that ends before the newest row", () => {
+    const since = Date.parse("2026-10-27T05:00:00Z");
+    const until = Date.parse("2026-11-01T12:15:00Z");
+
+    it("counts only local verify rows at or before --until", () => {
+      expect(
+        localVerify(
+          [
+            { at: "2026-10-30T00:00:00Z", ok: true },
+            { at: "2026-11-01T12:15:00Z", ok: true },
+            { at: "2026-11-02T09:00:00Z", ok: false, step: "lint" },
+          ],
+          since,
+          until,
+        ),
+      ).toEqual({ runs: 2, failed: 0, bySteps: {} });
+    });
+
+    it("times only merges at or before --until", () => {
+      const merge = mergeMinutes(
+        [
+          { title: "feat: a", createdAt: "2026-10-30T00:00:00Z", mergedAt: "2026-10-30T00:20:00Z" },
+          { title: "fix: b", createdAt: "2026-11-01T17:00:00Z", mergedAt: "2026-11-01T18:00:00Z" },
+        ],
+        since,
+        until,
+      );
+      expect(merge).toEqual({ n: 1, p50: 20, p90: 20 });
+    });
+  });
+
   it("reports an unverified run as null time, never a partial", () => {
     expect(runLoop([{ kind: "attempt", at: "2026-10-02T00:00:00Z", verified: false }])).toEqual({
       attempts: 1,

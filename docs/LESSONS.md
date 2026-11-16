@@ -35,6 +35,26 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### `PR #7319 is red` red on main: pin the desk-ideas spec's clock inside the nvda earnings window
+- **SHA:** 9282f4a   **DATE:** 2026-11-10   **STATUS:** closed
+- **COVERS:** 6d9560e
+- **SIGNAL:** 1 failed run(s) of `Pipeline` → `PR #7319 is red` on `main`, the first [42760727025](https://github.com/ejclark/skynet-capital/actions/runs/42760727025) at 2026-11-10T05:13:07Z. Repair capsule #7326 filed 2026-11-10T05:17:51Z, closed 19m later by #7329.
+- **ROOT CAUSE:** `/api/desk/:id` folds house playbooks matching a held symbol into the desk's idea cards, but only while the playbook's earnings window is open (`windowClosedAt(now)`, #5719). The two specs in `tests/server/desk-json-routes-subscriptions.spec.ts` built their config without `now`, so `deskView` used `new Date()`. Both NVDA earnings windows shut on 2026-11-10, so today the desk pitched no NVDA idea and both cases failed on `expect(...length).toBeGreaterThan(0)`. It reproduced identically on `main` (64c503cc3) with no change, so #7319 (the PR whose `verify` it reddened, issue #7326) was a bystander: every branch cut today is red on the same two cases.
+- **PREVENTION:** spec — `tests/server/desk-json-routes-subscriptions.spec.ts` (#7329).
+- **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
+
+---
+
+### `release · deploy` red on main: a third flyctl download failure, so the Fly jobs retry it once after a pause
+- **SHA:** 35c754d   **DATE:** 2026-11-08   **STATUS:** closed
+- **RECURS:** Three one-off infra failures in the Claude-lane window: a lost runner and two flyctl downloads
+- **SIGNAL:** run 42464350852 failed in `Set up flyctl` with "Unexpected HTTP response: 504" three times in 35 seconds (08:47:14–08:47:49Z), before flyctl ran; capsule #7106 within minutes. `35c754d` adds a `docs/research/**` page, a runtime change for the dashboard, so production stayed one research page behind `main` until the next push, and `deploy-bots` was skipped behind it.
+- **ROOT CAUSE:** GitHub's release-asset host returned 5xx for longer than the action's own three tries cover. The version was already pinned, so this is the asset download, as on 10-12 and 10-26. The earlier entry chose ledger-only because catch-up re-runs every 15 minutes; `release · deploy` has no tick, so each failure there leaves production behind until the next push and costs a red `main`, a capsule and a repair session.
+- **PREVENTION:** script, held for Eric (workflow file, boards the platter). Both Fly jobs in `pipeline.yml` keep the first `Set up flyctl` on `continue-on-error` under `id: flyctl`, pause 60 seconds, and run one more attempt that alone can fail the job. `tests/arch/workflows.spec.ts` pins the shape: id, the conditional, the pause, the same pinned action and version (10 assertions, all red against the old file).
+- **SIDE QUESTS:** `bots-catchup.yml`, `autonomy-ops.yml`, `fly-logs.yml` and `companion-eval.yml` set up flyctl once each. Catch-up re-ticks; the rest can take the same shape if a download failure turns up there.
+
+---
+
 ### A PR with no checks at all sat 16 hours: the watcher looked only for a ghost suite
 - **SHA:** n/a   **DATE:** 2026-11-08   **STATUS:** closed
 - **RECURS:** The same severance, one hop over — a PR opened by `GITHUB_TOKEN` gets no checks at all
@@ -164,7 +184,7 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 - **SHA:** n/a   **DATE:** 2026-11-01   **STATUS:** closed
 - **SIGNAL:** the script's own last line said "removed 115 worktrees". Its subagents' transcripts name 64 worktrees for that session, so at least 51 belonged to others. Noticed on reading that line, about seven minutes after it ran. Nothing failed: the run exited 0.
 - **ROOT CAUSE:** a session hand-rolled a loop over `.claude/worktrees/*` instead of using `npm run worktree:sweep`, which already exists and prints keep or remove and why. Its keep-list was built with an unquoted pipe (`ours=$(...)a|b|c`), so the assignment ran in a pipeline and the list stayed empty, and `grep -E "^()"` matches everything. Then it did not look at the target first: no dry run printed what would go. `git worktree remove` saved most of the work by refusing dirty folders, and branches survive it. What was lost: gitignored files in those folders (installed packages, logs, local data, any `.env` copies), and no local snapshot exists to restore them. One open session's worktree was among them, and it was put back on its branch at the same commit. Nothing running was hit. The 156 commits no ref pointed at are pinned under `refs/recovered/2026-11-01/`.
-- **PREVENTION:** gate. `scripts/hooks/guard-bash.mjs` refuses `git worktree remove` on a computed path or through `xargs`, and points at the sweep. It reads the command text, so a loop inside a script file still escapes it, and that is said here rather than implied away. The general rule stays a doctrine in the harness: before deleting, look at the target.
+- **PREVENTION:** gate. `scripts/hooks/guard-bash.mjs` refuses `git worktree remove` on a computed path or through `xargs`, and points at the sweep. It reads the command text, so a loop inside a script file still escapes it, and that is said here rather than implied away. Since #6698 it reads that text the way a shell runs it: an indented loop line, an env, `sudo`, `time` or `eval` prefix, `sh -c`, a brace group, a function body and `find -exec` are refused, and text that only names the command (a heredoc body, a commit message) is allowed. The general rule stays a doctrine in the harness: before deleting, look at the target.
 - **SIDE QUESTS:** none.
 
 ### The verify queue was off on the one machine that runs the fan-outs, and its spec was skipped for saying so

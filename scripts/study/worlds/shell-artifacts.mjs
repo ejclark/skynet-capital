@@ -44,14 +44,14 @@ export const SHELL_ARTIFACTS = [
     why: "Production lists the app's real merges from GitHub; the world has no GitHub.",
   },
   {
-    route: "Moneypenny (✦) and every form",
+    route: "Moneypenny's dock and every form",
     sees:
       "A sent message, a filed note, a Council line or a saved setting gets the page's success" +
       " path but nothing comes back from it (no reply, no new row).",
     why: "A world records writes and never applies or sends them (world-route.mjs).",
   },
   {
-    route: "Moneypenny (✦) → feedback",
+    route: "Moneypenny's dock → feedback",
     sees: "No feedback coach and no community milestone track.",
     why: "Both need production services (a model key, the community log) the world does not run.",
   },

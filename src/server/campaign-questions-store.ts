@@ -29,7 +29,7 @@ function parseAsker(raw: unknown): Asker | undefined {
 
 function parseQuestion(raw: unknown): CampaignQuestion | undefined {
   if (!isRecord(raw)) return undefined;
-  const { id, campaign, kind, subject, question, askedAt, askers } = raw;
+  const { id, campaign, kind, subject, question, askedAt, lastAskedAt, askers } = raw;
   if (!(typeof campaign === "string" && SCOPE_RE.test(campaign))) return undefined;
   if (!isKind(kind) || typeof subject !== "string" || subject.length === 0) return undefined;
   if (id !== askId(kind, subject, campaign)) return undefined;
@@ -45,6 +45,10 @@ function parseQuestion(raw: unknown): CampaignQuestion | undefined {
     subject,
     ...(words ? { question: words } : {}),
     askedAt,
+    // Optional (#7445): a log written before re-asks were dated has none, and a bad one is dropped.
+    ...(typeof lastAskedAt === "string" && !Number.isNaN(Date.parse(lastAskedAt))
+      ? { lastAskedAt }
+      : {}),
     askers: people,
   };
 }

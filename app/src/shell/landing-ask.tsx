@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, type ReactElement, useId, useState } from "react";
-import type { EditionStory } from "../live/edition";
+import type { EditionDate, EditionStory } from "../live/edition";
 import { MARK_WORD } from "../live/edition";
 import {
   type AskTarget,
@@ -8,7 +8,11 @@ import {
   askInCampaign,
   askTarget,
   chatQuestion,
+  eventQuestion,
+  eventThread,
+  FAST_TRACK_QUESTION,
   fetchPartyQuestions,
+  holderLine,
   INSTINCT_QUESTION,
   NO_RECORD,
   type PartyQuestion,
@@ -19,64 +23,71 @@ import {
   recordAnswer,
   replyLine,
   storyQuestions,
+  storyThread,
 } from "../live/landing-ask";
 import { useMoneypenny } from "../live/moneypenny";
+import type { MpThread } from "../live/moneypenny-threads";
 import { InlineResult } from "../ui";
+import { FastTrackWalk } from "./fast-track-walk";
+import { RowAsk, RowThread } from "./row-thread";
 
 /**
  * THE LANDING PAGE'S ASKS, DRAWN (#7077 slice 2). The words and where each ask goes live in
- * `live/landing-ask.ts`; this file draws them. At 390 the ask box is the first thing on the page,
- * kept to one field and one row of quick questions so the lead story's key facts still reach the
- * first screen (criterion 8). A story's ask sits under its tile: the quick question opens the
+ * `live/landing-ask.ts`; this file draws them. The ask box leads the page (slice 1d, AT9 as revised
+ * on the drawn frame): the page is an entry point whose job is the member's goal, and the market is
+ * one avenue to it (`.claude/rules/member-surfaces.md`). Its question is the field's own words, read
+ * aloud through a hidden label, with the quick questions under it as fallbacks, on ONE row that
+ * scrolls sideways at 390 so all 12 market rows still clear the fold (AT1; #7018 round 6's check). A story's ask sits under its tile: the quick question opens the
  * record in place (a native disclosure, nothing to build), and "Ask your own" opens a one-line form.
+ *
+ * The first quick question opens its card walk in place under the chips (#7034 slice 2,
+ * `fast-track-walk.tsx`); the second still goes to the chat.
+ *
+ * A story's own question that goes to the chat starts the story's SIDE THREAD (#7167 criterion
+ * 11, `row-thread.tsx`), so it stays on the story's row instead of joining the main conversation.
  */
 
-/** Hand a question to the chat: open the rail and send it as the member's own message. */
-async function askChat(text: string): Promise<boolean> {
-  const mp = useMoneypenny.getState();
-  await mp.openRail();
-  return mp.send(text);
-}
+/** Hand a question to the chat as the member's own message. The rail opens with it already on
+ *  screen; it never waits on the panel's own loading (#7165). With `thread`, it opens that row's
+ *  side thread (#7167 criterion 11). False when refused. */
+export const askChat = (text: string, thread?: MpThread): boolean =>
+  useMoneypenny.getState().ask(text, thread);
 
-/** The top of the page: the member's own question first, two quick questions as fallbacks. */
+/** Atop Overview: two quick questions. The member's own question is typed in the dock's box (#7487
+ *  slice 2, D6), the one text box Moneypenny reads, so this row holds only the canned paths. */
 export function AskBox(): ReactElement {
-  const [text, setText] = useState("");
-  const inputId = useId();
-  const submit = async (e: FormEvent): Promise<void> => {
-    e.preventDefault();
-    if (text.trim() && (await askChat(text))) setText("");
-  };
+  const [walking, setWalking] = useState(false);
+  const walkId = useId();
   return (
-    <section className="ask-box" aria-label="Ask">
-      <form className="ask-form" onSubmit={(e) => void submit(e)}>
-        <label className="ask-label" htmlFor={inputId}>
-          What do you want to do today?
-        </label>
-        <div className="ask-row">
-          <input
-            id={inputId}
-            className="ask-input"
-            type="text"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Ask in your own words"
-            autoComplete="off"
-            enterKeyHint="send"
-          />
-          <button type="submit" className="btn btn-primary ask-send" disabled={!text.trim()}>
-            Ask
-          </button>
-        </div>
-      </form>
+    <section className="ask-box" aria-label="Quick questions">
       <ul className="ask-quick" aria-label="Quick questions">
-        {QUICK_QUESTIONS.map((q) => (
-          <li key={q}>
-            <button type="button" className="ask-chip" onClick={() => void askChat(q)}>
-              {q}
-            </button>
-          </li>
-        ))}
+        {QUICK_QUESTIONS.map((q) =>
+          q === FAST_TRACK_QUESTION ? (
+            <li key={q}>
+              <button
+                type="button"
+                className="ask-chip"
+                aria-expanded={walking}
+                aria-controls={walkId}
+                onClick={() => setWalking((open) => !open)}
+              >
+                {q}
+              </button>
+            </li>
+          ) : (
+            <li key={q}>
+              <button type="button" className="ask-chip" onClick={() => askChat(q)}>
+                {q}
+              </button>
+            </li>
+          ),
+        )}
       </ul>
+      {walking ? (
+        <div id={walkId}>
+          <FastTrackWalk onAsk={(q) => Promise.resolve(askChat(q))} />
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -115,6 +126,7 @@ function PartyQuestionItem({ q }: { readonly q: PartyQuestion }): ReactElement {
         <span className="num">{q.subject}</span> · asked by {askedByLine(q.askedBy)} ·{" "}
         <span className="story-mark">{questionState(q)}</span>
       </p>
+      <p className="party-q-holder">{holderLine(q)}</p>
       {finding ? <p className="party-q-found">{finding.idea}</p> : null}
     </li>
   );
@@ -146,14 +158,14 @@ function OwnQuestion({
         void client.invalidateQueries({ queryKey: ["party-questions", target.campaign] });
     },
   });
-  const submit = async (e: FormEvent): Promise<void> => {
+  const submit = (e: FormEvent): void => {
     e.preventDefault();
     if (!text.trim()) return;
     if (target.kind === "campaign") ask.mutate();
-    else if (await askChat(chatQuestion(story, text))) setText("");
+    else if (askChat(chatQuestion(story, text), storyThread(story))) setText("");
   };
   return (
-    <form className="ask-own" onSubmit={(e) => void submit(e)}>
+    <form className="ask-own" onSubmit={submit}>
       <label className="visually-hidden" htmlFor={inputId}>
         Your question about this story
       </label>
@@ -193,7 +205,7 @@ function OwnQuestion({
       <p className="ask-hint">
         {target.kind === "campaign"
           ? `Asked in ${campaignTitle ?? "this story's campaign"}: every member sees your question, with your name, and its answer.`
-          : "Goes to the chat, with this story as the subject."}
+          : "Starts a thread with Moneypenny on this story. It stays here, under the story."}
       </p>
       {ask.data ? (
         <InlineResult tone={ask.data.ok ? "ok" : "err"}>{replyLine(ask.data)}</InlineResult>
@@ -246,6 +258,18 @@ export function StoryAsk({
           </ul>
         </details>
       ) : null}
+      <RowThread thread={storyThread(story)} />
+    </section>
+  );
+}
+
+/** An event's ask and its side thread (#7167 criterion 11), under the event's details. */
+export function EventThread({ event }: { readonly event: EditionDate }): ReactElement {
+  const thread = eventThread(event);
+  return (
+    <section className="story-ask event-ask" aria-label="Ask about this event">
+      <RowAsk thread={thread} question={(text) => eventQuestion(event, text)} />
+      <RowThread thread={thread} />
     </section>
   );
 }

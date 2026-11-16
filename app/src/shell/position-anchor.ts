@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { targetedAnchor, useLandOnHash } from "./landing";
 
 /**
@@ -40,4 +41,27 @@ const findPosition = (hash: string): HTMLElement | undefined => {
  */
 export function useLandOnPosition(renderKey: string): void {
   useLandOnHash(findPosition, renderKey);
+}
+
+const pointsAt = (symbol: string): boolean =>
+  typeof window !== "undefined" &&
+  targetedPosition(window.location.hash) === positionAnchor(symbol);
+
+/**
+ * A ROW THE LINK NAMES OPENS (#7167 criterion 3: "scroll to the item, open it and outline it").
+ * The member followed a link to this one position — Moneypenny's, an Events row's — so its detail
+ * is what they came for. Open on mount when the URL already names it, and on every later
+ * `hashchange` that names it; never closes on its own, so the member's own chevron still decides
+ * after that. The landing (`useLandOnPosition`) keeps re-centring while the opened detail grows.
+ */
+export function useOpenWhenTargeted(symbol: string): readonly [boolean, (open: boolean) => void] {
+  const [open, setOpen] = useState(() => pointsAt(symbol));
+  useEffect(() => {
+    const onHash = () => {
+      if (pointsAt(symbol)) setOpen(true);
+    };
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, [symbol]);
+  return [open, setOpen] as const;
 }

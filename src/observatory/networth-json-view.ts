@@ -53,6 +53,8 @@ export interface AccountNetWorthInput {
   /** Current equity (snapshot). Omitted when the account read errored — the row renders "—". */
   readonly equity?: number;
   readonly cash?: number;
+  /** Alpaca's options buying power (`ParticipantSnapshot.optionsBuyingPower`), when reported. */
+  readonly optionsBuyingPower?: number;
   readonly positionCount: number;
   /** Equity at the previous trading day's close — omitted when unknown, so the day move is "—". */
   readonly lastEquity?: number;
@@ -109,6 +111,11 @@ interface NetWorthStatsView {
   readonly dayKnown: boolean;
   readonly cash: string;
   readonly cashKnown: boolean;
+  /** "$42,999" — what an options order can actually spend, present only when it is less than
+   *  `cash`: the rest of the cash already secures sold puts (Eric, 2026-11-13: the head said
+   *  "$757,918 ready to use" while the broker allowed $42,999, and an order he could not afford
+   *  passed review). The head then says "ready to use" of this, and calls `cash` cash. */
+  readonly ready?: string;
   readonly positionCount: number;
   /** Cumulative realized P/L — gains/losses actually BOOKED by a sell, distinct from the day move
    *  or any window's return (both of which mix in the mark on what's still held). "—" when not
@@ -132,6 +139,16 @@ interface NetWorthStatsView {
    *  so it and `cash` add to `value` (#5100, the head's bar prints both parts). Negative ("-$550")
    *  when what was sold outweighs what is held. Absent exactly when `idlePct` is. */
   readonly invested?: string;
+}
+
+/** `{ ready }` when the options buying power is below cash by at least a dollar, else nothing. */
+function readyView(
+  cash: number | undefined,
+  optionsBuyingPower: number | undefined,
+): { ready?: string } {
+  if (typeof cash !== "number" || optionsBuyingPower === undefined) return {};
+  const ready = Math.max(0, Math.min(cash, optionsBuyingPower));
+  return cash - ready >= 1 ? { ready: formatCurrency(ready) } : {};
 }
 
 /** "33% idle" — cash over total value, clamped to 0..100 for the bar — and the invested rest. */
@@ -294,6 +311,8 @@ function emptyWindowsInput(): Record<NetWorthWindowKey, NetWorthWindowInput> {
 function netWorthStatsView(input: {
   readonly equity?: number;
   readonly cash?: number;
+  /** Alpaca's options buying power (`ParticipantSnapshot.optionsBuyingPower`), when reported. */
+  readonly optionsBuyingPower?: number;
   readonly positionCount: number;
   readonly lastEquity?: number;
   readonly realizedPl?: number;
@@ -321,6 +340,7 @@ function netWorthStatsView(input: {
     dayKnown,
     cash: cashKnown ? formatCurrency(input.cash as number) : "—",
     cashKnown,
+    ...readyView(input.cash, input.optionsBuyingPower),
     positionCount: input.positionCount,
     bookedPl: bookedKnown ? formatSigned(input.realizedPl as number) : "—",
     bookedTone: bookedKnown ? plClass(input.realizedPl as number) : "flat",

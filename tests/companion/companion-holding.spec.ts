@@ -15,7 +15,7 @@ const other = { symbol: "MSFT", quantity: 10, avgPrice: 400, marketValue: 4_200 
 describe("describeHolding — their own position on the page's symbol", () => {
   it("names shares and contracts on the symbol, and nothing else they hold", () => {
     expect(describeHolding("NVDA", { positions: [shares, shortPut, other] })).toBe(
-      "on NVDA they hold 100 shares at $120.00 avg, now worth $13,000.00; short 1 NVDA $100 PUT · 18 DEC 26 contract at $320.00 each, now worth -$150.00",
+      "on NVDA they hold 100 shares at $120.00 avg, now worth $13,000.00, its row /accounts#pos-NVDA; short 1 NVDA $100 PUT · 18 DEC 26 contract at $320.00 each, now worth -$150.00, its row /accounts#pos-NVDA261218P00100000",
     );
   });
 

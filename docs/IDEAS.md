@@ -18,6 +18,16 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **Count how many suggested tickets get placed, then decide the ticket's *Suggested* section.**
+  #7547 shipped Moneypenny's three sized options for all four strategies; its falsifier (by
+  2026-12-13, under 1 in 10 suggested tickets placed → revisit the tier thresholds before more
+  strategies) has no counter yet: `/trade` drops `?tier=` once the ticket is staged, so nothing ties
+  an order back to a suggestion. Carry the tier onto the staged order (or log open and place per
+  tier), read the rate on 2026-12-13, and only then decide whether the ticket gets its own
+  *Suggested* section (settled fork 1 parked it on this evidence). The long-option delta bands
+  (0.65–0.80 / 0.45–0.55 / 0.25–0.35) were the slice-4 session's call, not Eric's; check them in
+  the same read. _(src: Claude · while: #7547 slice 4)_
+
 - **A headless PR might start its checks with a body edit, not a commit.** `pipeline.yml` lists
   `edited` in its `pull_request` types, and an edit from the App token starts workflows, so writing
   the headless marker into the PR body (not a comment) could start `verify` with no new commit on
@@ -102,13 +112,6 @@ Eric-sourced.
   so the coach stays wedged until someone confirms that file's behavior or the eye skips carve-out
   paths for `--candidate` (still counting them in `debt`, listed apart as needing a human).
   _(src: Claude · while: governor cycle 7, 2026-11-02)_
-- **The meter cannot see a cloud session's workflows.** `scripts/agent-meter.mjs` and
-  `scripts/dream-digest.mjs` hard-code the laptop's project folder
-  (`-Users-eric-Developer-skynet-capital`); a cloud session's transcripts live under
-  `-home-user-skynet-capital`, so `/governor` step 5's cost read returns nothing there, where
-  sessions now run by default. Cycle 7 got its number by calling the meter's own
-  `scanWorkflowAgents` and `agentSummary` with the container's folder. Matching every project
-  folder named for this repo would cover both. _(src: Claude · while: governor cycle 7, 2026-11-02)_
 - **IPO discovery runs only when someone types it.** `npm run research:lockups` now files a listing
   from its public S-1 (#5912 slice 3), but no schedule calls it, so "Anthropic's S-1 lands and
   discovery files it within one run" (the slice's falsifier) waits on a person remembering the run:

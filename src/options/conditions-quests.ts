@@ -1,5 +1,5 @@
 import { type DailyHighReading, underHigh } from "../domain/daily-high.js";
-import type { Quest, QuestExit } from "../domain/quest.js";
+import { type Quest, type QuestExit, withQuest } from "../domain/quest.js";
 import {
   DRAWDOWN_RATES,
   DRAWDOWN_STUDY,
@@ -91,6 +91,25 @@ export function href(deskId: string, symbol: string, play: "101" | "201"): strin
   return `/app/trade?desk=${encodeURIComponent(deskId)}&symbol=${symbol}&play=${play}`;
 }
 
+/**
+ * The measured rate a conditions quest carries for one index and move — the one place the study's
+ * row becomes a base rate, read when the quest is offered and again when it is taken
+ * (`src/server/quest-taken.ts`), so the two cannot disagree.
+ */
+export function conditionsBaseRate(
+  symbol: StudiedIndex,
+  kind: "shares" | "put",
+): Extract<Quest["baseRate"], { kind: "measured" }> {
+  const n = DRAWDOWN_RATES[symbol][kind].numbers;
+  return {
+    kind: "measured",
+    ...n,
+    episodesNeeded: EPISODES_NEEDED,
+    source: DRAWDOWN_STUDY,
+    note: `Edge untested: ${n.episodes} sell-offs measured against the ${EPISODES_NEEDED} the study needs before it will claim one. These are past results, not a promise.`,
+  };
+}
+
 function build(args: {
   deskId: string;
   index: IndexCondition;
@@ -103,7 +122,6 @@ function build(args: {
   const n = row.numbers;
   const under = underHigh(reading);
   const shares = kind === "shares";
-  const study = DRAWDOWN_STUDY;
   // Shares are told in whole percents; a put's premium-sized results need two decimals to be honest.
   const digits = shares ? 0 : 2;
   const move = shares ? `Buy ${symbol} shares` : `Sell a cash-secured put on ${symbol}`;
@@ -119,15 +137,16 @@ function build(args: {
         : "The study held the put to expiry, 30 sessions out, and never bought it back early.",
     },
   ];
+  const id = `conditions:${symbol}:${shares ? "buy-shares" : "sell-cash-secured-put"}`;
   return {
-    id: `conditions:${symbol}:${shares ? "buy-shares" : "sell-cash-secured-put"}`,
+    id,
     source: "conditions",
     move: {
       kind: shares ? "buy-shares" : "sell-cash-secured-put",
       label: move,
       symbol,
       ...(shares ? {} : { contracts: 1 }),
-      href: href(deskId, symbol, shares ? "101" : "201"),
+      href: withQuest(href(deskId, symbol, shares ? "101" : "201"), id),
     },
     why: [
       {
@@ -150,13 +169,7 @@ function build(args: {
         text: `${shares ? `The worst entry lost ${pct(n.worstSingle)}. ` : ""}${row.worstCase}`,
       },
     ],
-    baseRate: {
-      kind: "measured",
-      ...n,
-      episodesNeeded: EPISODES_NEEDED,
-      source: study,
-      note: `Edge untested: ${n.episodes} sell-offs measured against the ${EPISODES_NEEDED} the study needs before it will claim one. These are past results, not a promise.`,
-    },
+    baseRate: conditionsBaseRate(symbol, kind),
     exits,
     expires: {
       date: nextSession(reading.session),

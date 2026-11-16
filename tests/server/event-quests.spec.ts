@@ -77,7 +77,7 @@ describe("eventQuests", () => {
         label: "Sell a cash-secured put on CRWV",
         symbol: "CRWV",
         contracts: 1,
-        href: "/app/trade?desk=d-1&symbol=CRWV&play=201",
+        href: "/app/trade?desk=d-1&symbol=CRWV&play=201&quest=event%3Acrwv-2026-11-10-print%3ACRWV%3Asell-cash-secured-put",
       },
     });
     const why = q?.why.map((r) => r.text).join("\n") ?? "";

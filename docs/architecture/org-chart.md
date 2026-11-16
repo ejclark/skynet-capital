@@ -14,13 +14,13 @@ It is two things at once:
 flowchart TD
   members(["Members"])
   front_desk["Front desk (in the app) · 7 seats"]
-  build["Builders · 13 seats"]
+  build["Builders · 15 seats"]
   staff["Chief of staff · 16 seats"]
-  quality["Quality · 17 seats"]
+  quality["Quality · 18 seats"]
   owner(["Eric · owner and game master"])
   live_sessions["Live sessions"]
   platform["Platform · 12 seats"]
-  research["Research desk · 9 seats"]
+  research["Research desk · 10 seats"]
   trading["Trading floor · 5 seats"]
   contributors(["Code contributors · none yet"])
   members e0@-->|"chat · filings · trades"| front_desk
@@ -66,7 +66,7 @@ we could, the change that would give the shape we want, and where that change is
 
 | Edge | Channel | What goes wrong | Measured | The change | Tracked in |
 |---|---|---|---|---|---|
-| Members → front desk → builders | the in-app rail and coach, filed as a GitHub issue | Members almost never file from the app. One untested reading (Conway): the intake is shaped like the build team's issue capsule (app/src/live/moneypenny-filing.ts:30-34), not like play. | 2 in-app filings since 2026-10-01 (#4861, #6007), both Eric's; the last other member filing is #716 (2026-08-28). Nearly all of the 238 feedback issues since 10-01 were filed by sessions under Eric's account (#7031) | Feedback becomes a game act: a one-tap reaction and a Suggest a change that knows the quest | #7029 |
+| Members → front desk → builders | the in-app chat (the dock under every page) and coach, filed as a GitHub issue | Members almost never file from the app. One untested reading (Conway): the intake is shaped like the build team's issue capsule (app/src/live/moneypenny-filing.ts:30-34), not like play. | 2 in-app filings since 2026-10-01 (#4861, #6007), both Eric's; the last other member filing is #716 (2026-08-28). Nearly all of the 238 feedback issues since 10-01 were filed by sessions under Eric's account (#7031) | Feedback becomes a game act: a one-tap reaction and a Suggest a change that knows the quest | #7029 |
 | Builders → members | the feedback status badge; the chat's work-status lookup | A member hears back about their ask only by revisiting: no push about asks reaches them (trade alerts by email are opt-in). | unmeasured (no member filings to measure against) (src/companion/companion-tools.ts:197) | 'Your ask shipped' becomes a moment on the landing page, with a Try it quest | #7029 |
 | Every lane → Eric | the needs-eric label, then an assigned ask card | Lanes send questions that are not his to answer; most clear later without him, so the real ones wait. | 31 of 46 lane asks 09-26 to 10-26 were not decisions, 17 of them from conflict repair, since rerouted by #6010 (#6079); then 15 of 27 cleared without his answer, median ask 85h before #6953's fixes (#6079; #6953) | Ask 'only his?' before an edge points at Eric; a class whose predictions keep matching graduates (docs/process/ALIGNMENT.md) | docs/process/LEARNING-LOOP.md → Decisions reaching Eric (checks 11-20, 12-04) |
 | Lanes and sessions → live sessions | the needs-session label | Lanes hand work to a live session, but no session is scheduled to read the label. | 8 open on 2026-11-07, the oldest waiting 12 days, 1 of them from a repair lane; 5 after a live session cleared 3 (#7036) (.github/prompts/moneypenny-conflict-repair.md:26; #4555) | Staff it: a scheduled cloud routine pulls needs-session oldest first, or lanes may edit .claude/skills/ behind the envelope check | #7032 |
@@ -114,8 +114,25 @@ feels them only as honest timing on their own ask ("queued behind 2 builds"), ne
 | The trading floor: your bots, each a character with a strategy | Bot runtime (paper) |
 | The research desk: what is coming up, and what the house has written about it | Market-event calendar |
 
-Below decks: 58 seats, every one in Builders, Quality, Chief of staff and Platform. A
+Below decks: 61 seats, every one in Builders, Quality, Chief of staff and Platform. A
 member sees their own ask's status in plain words, never the lanes.
+
+## The board's Role lanes
+
+Each open card on the Orchestration board gets a **Role**: the seat whose queue it sits in, and
+the field the seat swimlanes group by (#6886 slice 3 adds that view). The sync writes it from these
+rows and the issue's labels (`scripts/moneypenny/projects-role.mjs`); a card whose labels match
+more than one row takes the first. A card no row pulls gets no Role and sits in "No Role" until
+someone triages it. Who must act first is the card's "Waiting on" field, not its Role.
+
+| Order | Role | Seat | Pulls cards labelled |
+|---|---|---|---|
+| 1 | Live sessions | Live sessions | `needs-session` |
+| 2 | Design builds | Design build lane | `handoff` `needs-design` |
+| 3 | Event research | Event research lane | `event-research` |
+| 4 | Plan builds | Plan build lane | `plan` |
+| 5 | Feedback builds | Feedback build lane | `feedback` `bug` `fast-track` `ready` |
+| 6 | Bottleneck research | Batch chore fan-out and stage runner | `bottleneck` |
 
 ## Departments
 
@@ -126,7 +143,7 @@ Decide, play, and (one day) contribute code.
 | Seat | Job | Wakes on | Speaks on | Status | Code roots |
 |---|---|---|---|---|---|
 | Owner and game master (Eric) | Makes the decisions only he can: needs-eric asks, merging held and platter PRs, approving ops runs, turning the work dial to surge or conserve | A GitHub assignment carrying an ask card; the digest push notification; the newsletter | A reply comment on the issue, labels, a merge click, an Environment approval, a work-mode label on #4153 | hired | `scripts/moneypenny/assignments.mjs` `scripts/moneypenny/work-mode.mjs` `src/server/auth/allowlist-store.ts` `src/server/invite-form.ts` `src/server/dashboard-auth-gate.ts` |
-| League members | Invite-only friends and family who sign in, trade their own paper account, chat with Moneypenny, give views to their own bots and file feedback | the in-app rail, feedback status badges, the follow-up form when an issue goes needs-info | orders on their own desk, rail messages, feedback filings, conviction card taps, follow-up answers | hired | `src/server/auth` `src/server/trade-orders-routes.ts` `src/server/feedback-service.ts` `app/src/shell/moneypenny-rail.tsx` |
+| League members | Invite-only friends and family who sign in, trade their own paper account, chat with Moneypenny, give views to their own bots and file feedback | the in-app chat (the dock under every page), feedback status badges, the follow-up form when an issue goes needs-info | orders on their own desk, rail messages, feedback filings, conviction card taps, follow-up answers | hired | `src/server/auth` `src/server/trade-orders-routes.ts` `src/server/feedback-service.ts` `app/src/shell/moneypenny-dock.tsx` |
 | Would-be code contributors | People who may want to improve the app through code; the repo is public, but granting repo or app access is Eric's call | the public repo, the weekly newsletter archive | comments on issues and PRs (the human-directed lane answers only OWNER/MEMBER/COLLABORATOR) | planned | `.github/workflows/claude.yml` |
 | Game masters | Steer the narrated campaign by posting into a scene, marked as the GM's post | the landing page scenes | GM posts on a scene | planned |  |
 
@@ -136,7 +153,7 @@ Every surface a member touches: chat, filings, the trade desk, the landing page.
 
 | Seat | Job | Wakes on | Speaks on | Status | Code roots |
 |---|---|---|---|---|---|
-| Companion chat (Moneypenny in the app) | Answers member questions with Claude using a closed list of nine read-only lookups and two draft hand-offs; has no code path that places an order | POST /api/companion/chat from the rail | streamed SSE reply; draft_feedback and draft_conviction cards for the rail | hired | `src/server/companion-routes.ts` `src/companion/companion-tools.ts` `src/companion/companion-convictions.ts` `src/companion` `app/src/shell/moneypenny-rail.tsx` `app/src/live/moneypenny.ts` `app/src/live/moneypenny-script.ts` |
+| Companion chat (Moneypenny in the app) | Answers member questions with Claude using a closed list of nine read-only lookups and two draft hand-offs; has no code path that places an order | POST /api/companion/chat from the dock under every page | streamed SSE reply; draft_feedback and draft_conviction cards for the chat | hired | `src/server/companion-routes.ts` `src/companion/companion-tools.ts` `src/companion/companion-convictions.ts` `src/companion` `app/src/shell/moneypenny-dock.tsx` `app/src/live/moneypenny.ts` `app/src/live/moneypenny-script.ts` |
 | Feedback intake: rail filing, coach and filer | The one place the rail files feedback: a draft the member said send to, or their own words, shaped once by the feedback coach | the member's 'send' on a drafted filing | POST /api/feedback; a system line saying filed and triaged | hired | `app/src/live/moneypenny-filing.ts` `src/server/feedback-coach.ts` `src/server/feedback-coach-model.ts` `src/server/feedback-coach-limits.ts` `src/server/feedback-service.ts` `src/server/feedback-api-routes.ts` |
 | Feedback status and follow-up | Lets a member answer a needs-info question from inside the app and restarts the build | an issue going needs-info | POST /api/feedback/followup; the ready label is removed and re-applied for the restart | hired | `src/server/feedback-followup.ts` `src/server/feedback-status.ts` |
 | Conviction hand-off card | Shows a market view Moneypenny drafted and acts only on the member's exact tap: hand it to my bots, save as draft, or not now | a draft_conviction card from the companion chat; the member's chip tap | /save and /hand-over posts that steer the member's own bots | hired | `app/src/live/moneypenny-conviction.ts` |
@@ -164,10 +181,11 @@ The event calendar, the research ledgers, position guidance, campaigns.
 |---|---|---|---|---|---|
 | Market-event calendar | Forward calendar of dated things that move the traded names (prints, macro, launches, Treasury supply, geopolitics), one JSON file per event | research PRs that add or amend event files | query functions the app and campaigns read | hired | `src/domain/market-events.ts` `src/domain/market-events-data.ts` `src/domain/market-events/` |
 | Event research lane | One Sonnet session per due event (matrix, max-parallel 8) writes the ledger and opens a research/<id> PR | scan dispatch with a non-empty due list | A research PR; a quota reading published to #4153 | hired | `.github/prompts/event-research.md` `research-dispatch-budget.json` `.github/workflows/moneypenny-events.yml` `scripts/moneypenny/events.mjs` `docs/research/events/` `scripts/event-scan.mjs` |
+| Discovery research lane | One Sonnet session per member question no campaign covers (matrix, max-parallel 3) writes a research-shelf write-up and opens a discovery/<slug> PR | daily schedule, or a manual dispatch | A discovery PR; the dashboard drops the answered ask once the write-up deploys | hired | `.github/prompts/discovery-research.md` `.github/workflows/moneypenny-discovery.yml` `src/domain/discovery-pass.ts` `src/domain/discovery-queue.ts` `docs/research/discovery/` |
 | Pulse screen (no model) | Screens interval-elapsed pulses without a model and opens a moneypenny/screen-* PR with the ledger rows | push or scan | A screen PR, auto-merge attempted | hired | `scripts/moneypenny/open-screen-pr.mjs` `scripts/event-material-scan.mjs` |
 | Research PR sweep and stall repair | Finds an open research/<id> PR that stopped moving and frees the event it holds | Push audit | Rearm or close intents | hired | `scripts/moneypenny/research-pr-sweep.mjs` `.github/prompts/moneypenny-event-stall-repair.md` |
 | Position guidance | Reads market inputs live through the member's own account, checks each one's freshness against its source, adds the nearest research ledger's summary; the stake math runs in the browser | GET /api/trade/guidance?symbol= | market half of guidance plus freshness rows | hired | `src/server/guidance-route.ts` `src/server/guidance-pulse.ts` `src/server/guidance-market.ts` |
-| Campaigns | A market or sector people want to play, held as a record (storyline, sector, cast of symbols, forces, open questions) that links calendar events and news; three house campaigns plus members' own, each answering one landscape read (what moved, what is scheduled, what is reported, what the house has tested) | A PR adding or editing src/domain/campaigns/<id>.json, a member's saved form, or `npm run campaign:landscape` | the landscape read, every line marked measured, reported or estimated; event-scan --due rows name the campaigns that link them, and research dispatch ranks those first | on trial | `src/domain/campaigns.ts` `src/domain/campaigns/` `src/domain/campaign-landscape.ts` `scripts/campaign-links.mjs` |
+| Campaigns | A market or sector people want to play, held as a record (storyline, sector, cast of symbols, forces, open questions) that links calendar events and news; three house campaigns plus members' own, each answering one landscape read (what moved, what is scheduled, what is reported, what the house has tested) | A PR adding or editing src/domain/campaigns/<id>.json, a member's saved form, or `npm run campaign:landscape` | the landscape read, every line marked measured, reported or estimated; the explore and find-names encounters it generates, each question before its answer, and build a strategy's names handed to the conviction, authored-play or chain form, left only with a view or a shadow test (`--encounters`); event-scan --due rows name the campaigns that link them, and research dispatch ranks those first | on trial | `src/domain/campaigns.ts` `src/domain/campaigns/` `src/domain/campaign-landscape.ts` `src/domain/campaign-encounters.ts` `src/domain/campaign-strategy.ts` `scripts/campaign-links.mjs` |
 | Ticker sweep (symbol-sweep) | Runs earnings-cycle + intraday-edges instruments per ticker, red-teams each, judges playbook fit | 'research X, Y, Z', 'run the sweep on' | research docs under docs/research/ | hired | `.claude/workflows/symbol-sweep.js` `docs/research/multi-symbol-sweep.md` |
 | Reference teardown (teardown) | Redacts and decomposes another app's screens into named patterns with a borrow/adapt/skip call sheet | screenshots of someone else's app | comment on the plan issue; images in a private artifact | hired | `.claude/skills/teardown/SKILL.md` `scripts/teardown/redact.mjs` |
 | Link intake (intake) | Reads a dropped post/video/talk without an account, finds the primary source, records what it changes | Eric pastes a link 'to scan' | findings applied to process docs | hired | `.claude/skills/intake/SKILL.md` |
@@ -179,6 +197,7 @@ Turn ready issues and plans into merged pull requests.
 | Seat | Job | Wakes on | Speaks on | Status | Code roots |
 |---|---|---|---|---|---|
 | Feedback triage | On a fresh feedback or fast-track label, self-readies a curated filing or a bug+fast-track; everything else waits in Backlog | issues labeled feedback or fast-track | The ready label, or nothing | hired | `scripts/moneypenny/index.mjs` |
+| Member filing check | Runs the clear-path flip on one member's freeform filing the moment it lands: a judge, then two refuters on a clear call; queues it (ready), asks the member plain questions (needs-info, re-checked on their follow-up), or leaves it for a person's look. Each session runs on its own runner with a read-only token and reads only the member/bot-filtered thread; a specced script on a fresh runner posts | issues labeled feedback carrying a member- label; an app-relayed follow-up on a filing this check parked on needs-info | One comment, and ready, needs-info or no label | hired | `.github/prompts/feedback-triage.md` `scripts/moneypenny/triage-assess.mjs` `.github/workflows/moneypenny-events.yml` |
 | Feedback build lane (with reply resume) | Builds a ready feedback/bug issue end to end on a feedback/<n> branch and opens a PR; model picked from the issue's skynet-spec block: Haiku for one criterion and no assumptions, Sonnet for up to 3 criteria, Opus otherwise, including any issue with no spec block | ready label, an unpark (needs-* or hold-merge removed), the retry sweep | A PR, a receipt comment, one of four endings; needs-session via the guard | hired | `.github/workflows/moneypenny-events.yml` `.github/prompts/feedback-build.md` `scripts/moneypenny/model-tier.mjs` `scripts/moneypenny/feedback-guard.mjs` `scripts/moneypenny/reply-resume.mjs` `scripts/moneypenny/index.mjs` |
 | Plan build lane (with continuation and relay) | Builds the slice a ready plan issue's state block names, on a plan/<n> branch | A ready comment from OWNER/MEMBER/COLLABORATOR, the ready label, an unpark, the retry or continuation sweep | A slice PR, a state-block edit, needs-eric when stuck | hired | `.github/prompts/plan-build.md` `scripts/moneypenny/plan-claim.mjs` `scripts/moneypenny/continuation.mjs` `scripts/moneypenny/state-block.mjs` `scripts/moneypenny/relay.mjs` |
 | Retry sweep (claims the next ready issue) | Claims the top-ranked admissible ready issue in either lane; on a push it only peeks, then re-dispatches itself as scan | workflow_dispatch scan (from the push re-dispatch, the wake, or the clock) | A lease and a build job | hired | `scripts/moneypenny/index.mjs` `scripts/moneypenny/labels.mjs` |
@@ -191,6 +210,7 @@ Turn ready issues and plans into merged pull requests.
 | Render-note translator (telestrator) | Turns 'this looks terrible / a 30/100' into a named technical cause and fix | any reaction to a rendered frame | cause -> fix table in session | hired | `.claude/skills/telestrator/SKILL.md` |
 | Art direction writer (vision) | Writes forged-epic art direction and compiles it into buildable contracts and generator prompts | 'make it feel alive', a new 3D piece brief | prose -> mechanics table, bounded prompts (e.g. docs/art/EYE.md) | hired | `.claude/skills/vision/SKILL.md` `docs/art/` |
 | Diagram expert (mermaid) | Picks the Mermaid type by story and proves it renders on GitHub; loads one reference card on demand | any mermaid block being written or reviewed | diagrams in PRs, issues, architecture pages | hired | `.claude/skills/mermaid/` `scripts/mermaid-skill-scan.mjs` |
+| Motion skills (vendored from Emil Kowalski) | Nine DOM and CSS motion skills: build one animation (animate), several together (choreograph), find, remove, audit and speed up motion, and name an effect; house tokens and rules win where they meet | motion work on a member surface; a named motion effect; Eric running review-animations | the animation in the diff; a plan as a GitHub issue | hired | `.claude/skills/animate/` `.claude/skills/choreograph/` `.claude/skills/review-animations/` `.claude/skills/improve-animations/` `.claude/skills/find-animation-opportunities/` `.claude/skills/remove-animations/` `.claude/skills/animation-performance/` `.claude/skills/animation-vocabulary/` `.claude/skills/emil-design-eng/` `docs/vendor/emil-kowalski-skills.md` |
 
 ### Quality
 
@@ -212,6 +232,7 @@ Gates, repair lanes, reviewers and the debt coach.
 | Evals expert (evals-expert) | Author mode writes a check; blind grader mode writes deliberate bugs without reading the spec | /fitness steps 7 and 10; 'how would we know if this broke' | bug list + attack returned to the caller | hired | `.claude/agents/evals-expert.md` |
 | Post-merge correctness audit | Reviews merged PRs against main per lens, refutes each high/medium finding twice | after a surge wave, governor cycle or burn-down | confirmed findings for a session to file as bug + fast-track; receipts in post-merge-audit.jsonl | hired | `.claude/workflows/post-merge-audit.js` `docs/review/` |
 | Review lenses and their replay | Replays one review lens over labelled PRs and scores it before it runs for real | a lens under docs/review/lenses changes | results scored by scripts/review-replay.mjs | on trial | `.claude/workflows/review-replay.js` `scripts/review-replay.mjs` `docs/review/lenses/` |
+| Information-architecture reviewer (IA lens) | Reads a route, nav or docs/IA.md change for a page a member can no longer reach, data placed at a key it is not fetched by, or a home that contradicts the written IA decision | a review-replay run of the information-architecture lens; joins post-merge-audit only once its replay keeps it | findings scored by scripts/review-replay.mjs, never filed while on trial | on trial | `docs/review/lenses/information-architecture.md` |
 | How-Eric-writes replay (intent-replay) | Replays real messages with and without the how-he-writes page, one blind judge | docs/READERS.md page or the eval set changes; dated check in LEARNING-LOOP | results scored by scripts/intent-replay.mjs | hired | `.claude/workflows/intent-replay.js` `docs/evals/how-he-writes-set.json` |
 | Debt head coach and drills (governor) | One dispatch cycle per coach: WIP check, gate-named target, collision check, cheap athlete via the governor chore, one cycle PR; also owns the merge-policy table | 'run the coaches', 'clean up the code', 'burn down debt' | a cycle PR; ratcheted *-budget.json | hired | `.claude/skills/governor/SKILL.md` `docs/grind/governor.instructions.md` `.claude/skills/decompose/SKILL.md` `.claude/skills/dedupe/SKILL.md` `.claude/skills/bury/SKILL.md` `.claude/skills/backfill/SKILL.md` |
 | Unused-capability check (config-audit) | Reference-counts .claude capabilities nothing routes to, owner-claim contradictions, recurring corrections | daily digest Routine ride-along | digest Needs-you tier | hired | `scripts/config-audit.mjs` |

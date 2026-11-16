@@ -119,12 +119,16 @@ jobs:
     #      HANDOFF_PR_TOKEN (see the header's "SELF-TRIGGER ON A BORROWED IDENTITY", #625).
     #   3. The sender must be a recognized repo member — see the header for why this is separate
     #      from detection. `github.event.sender` is present on every event type here, uniformly.
+    #   4. The sender must not be a bot at all (#6188). This is the human-directed lane, and the
+    #      action refuses a Bot sender anyway; a Moneypenny comment without the footer passed 1–3
+    #      and turned that refusal into a red run (docs/LESSONS.md, #6174). Turn it away here.
     if: >-
       ${{ (
             github.event_name == 'issue_comment' ||
             github.event_name == 'pull_request_review_comment' ||
             (github.event_name == 'issues' && contains(github.event.issue.body, '@claude'))
           ) &&
+          github.event.sender.type != 'Bot' &&
           github.event.sender.login != 'claude[bot]' &&
           !contains(github.event.comment.body || github.event.issue.body, '[Claude Code](https://claude') &&
           contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association || github.event.issue.author_association) }}

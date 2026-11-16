@@ -285,13 +285,15 @@ if by 2026-11-19 three session-readied issues end `needs-eric`, closed `not_plan
 reverted build, narrow this back to his flip. **Run it by name:** `.claude/workflows/clear-path-flip.js`
 (`{issues: [...]}`) judges the four checks, sends each positive call to two independent refuters
 (envelope paths · the thread) and returns survivors; `node scripts/clear-path-post.mjs <result.json>`
-posts only those, adding `feedback` to a non-plan issue that lacks it. A `plan` issue has a second, equivalent door: a ready-shaped comment from
+posts only those, adding `feedback` to a non-plan issue that lacks it. `node scripts/flip-due.mjs` says when a run is due (the lanes' pullable count is under the dial's `inFlightCap`) and which up to 6 issues to hand it; `clear-path-post` records each refusal so they sit out 7 days (#7311). A member's freeform filing gets the same judgment the moment it lands, one issue at a time, from `moneypenny-events.yml`'s `assess-*` jobs (#7544; `FEEDBACK.md` → *What the lane will build*): starvation is the batch's clock, and a member waiting to hear where they stand is this one's. A `plan` issue has a second, equivalent door: a ready-shaped comment from
 an OWNER/MEMBER/COLLABORATOR (`isReadySignal()` in `scripts/moneypenny/plan-claim.mjs` — "ready",
 "go", "ready — use the proposed defaults"). Neither door retires the other. A comment carrying the
 Claude footer counts only when its first line is exactly `ready — take slice 1 per the state block`,
-so a lane quoting the word in prose can never flip itself. When admission queues a comment-flip (cap,
-work-mode) or open blockers hold it back, `claimPlan` applies `ready` to *record* that go — not to
-grant one — so the retry sweep starts it later instead of dropping it (#5334).
+so a lane quoting the word in prose can never flip itself. Every comment-flip ends with `ready` on
+the plan: `claimPlan` applies it to *record* that go — not to grant one — whether admission queues
+the flip (cap, work-mode), open blockers hold it back, or it starts at once. A queued flip then
+starts later instead of dropping (#5334), and a started one keeps its go for the next slice, as a
+label-flip does (2026-11-08: three comment-flipped plans stalled after slice 1 without it).
 
 **Clearing a parking label re-asks the question.** Removing `needs-eric` from an issue that already
 carries `ready` wakes a claim on its own (the unpark path) — the flip was already on record and

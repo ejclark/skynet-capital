@@ -8,6 +8,8 @@ import { type DeskOrderEvent, invalidateDesk, useOrderFill } from "../live/desk-
 import { parseQuantity } from "../live/quantity";
 import { InlineResult } from "../ui";
 import { isCompletedFill, useFillFlare } from "./fill-flare";
+import { useLockInMoment } from "./lock-in-ceremony";
+import type { LockInFlag } from "./locked-in";
 
 /**
  * WHAT A CLOSE DID, SAID ONCE IT IS SENT (#5959). Three gaps one report found:
@@ -35,6 +37,10 @@ export interface SentClose {
   readonly side: "buy" | "sell";
   readonly count: number;
   readonly estNotional?: number;
+  /** Set when the position was marked Consider for its gain as this close was sent (#4609): its
+   *  fill is then said as a locked-in profit, with the reason (`locked-in.ts`), here and in the
+   *  full celebration (`lock-in-ceremony.tsx`). */
+  readonly lockIn?: LockInFlag;
 }
 
 /** Every read of a desk's positions a close changes: the desk's own (Overview, `/u/:id`, the
@@ -157,7 +163,10 @@ export function CloseReceipt({
 }): ReactElement {
   const queryClient = useQueryClient();
   const fill = useOrderFill(deskId, sent.orderId);
-  useFillFlare(fill);
+  // A locked-in profit gets the full celebration (`lock-in-ceremony.tsx`), whose shell flares the
+  // tower as the member leaves it: a flare at the fill would be spent under its opaque backdrop.
+  const kept = useLockInMoment(sent, fill);
+  useFillFlare(kept ? undefined : fill);
   const filled = isCompletedFill(fill);
   useEffect(() => {
     if (filled) refreshAfterClose(queryClient, deskId);
@@ -175,6 +184,12 @@ export function CloseReceipt({
       <button type="button" className="btn mc-btn" onClick={onDismiss}>
         Dismiss
       </button>
+      {kept ? (
+        <p className="close-receipt-kept">
+          <strong>{kept.headline}.</strong> {kept.rest}{" "}
+          <span className="close-receipt-why">{kept.why}</span>
+        </p>
+      ) : null}
     </div>
   );
 }

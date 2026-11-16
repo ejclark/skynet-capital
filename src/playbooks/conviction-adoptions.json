@@ -1,1 +1,7 @@
-{}
+{
+  "ai-dip-2026-10/2a/CRWV-WHEEL": {
+    "change": "stop-new-entries",
+    "adoptedOn": "2026-11-09",
+    "basis": "CRWV closed at $46.40 on 2026-11-06, under the $54.00 2026-11-06 put's strike: it finished in the money."
+  }
+}

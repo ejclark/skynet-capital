@@ -166,6 +166,7 @@ base rate, and is confounded by CPI (**confirmed**), the CRWV print and the US�
 | 2026-11-04 | 5 | Pulse (reads are the 11-03 close). BXDC $16.05, -19.8% vs IPO, +1.9% on the 11-02 row; month (10-02 to 11-03) -7.1% vs DLR +1.0%, EQIX -1.1%, VNQ +6.2%; cause still not found. 20-day avg vol 2.28M vs 60-day 2.00M (10.9M locked = ~4.8 days). EDGAR: nothing new since the 10-27 Schedule 13G (already noted); no Form 4 since the 08-14 grants, no 13D since 05-22, no sale, secondary or consent-release signal. VIX 20.83 (19.42 prior, +1.41, no regime shift). NEW: BXDC announced Q3 results for the morning of Mon 2026-11-16 (call 9:00 ET; NEWS: Business Wire via finviz), superseding the 11-03 third-party date - it lands after FT-1's 11-13 window, so it is not a confound there; the print is derived from earnings-calendar.ts, which this lane may not edit. Adjacency: jobs 11-06 and CPI 11-10 confirmed; CBRS lockup same date, CBRS Q3 11-12 (calendar id says 11-11); CRWV print and US-China truce expiry 11-10 still estimate; the market-events set within 5 days is unchanged. Beyond-horizon: none. No conviction proposals or declared intents name this event. | Unchanged: stand aside | 2026-11-06 (D-3; medium:0+, 2-day interval) |
 | 2026-11-06 | 3 | Pulse (reads are the 11-05 close). BXDC $15.76, -21.2% vs IPO, -2.4% on the 11-04 row; month (10-05 to 11-05) -8.5% vs DLR -2.9%, EQIX -2.5%, VNQ +7.9%; cause still not found. 20-day avg vol 2.16M vs 60-day 2.06M (10.9M locked = ~5.0 days). EDGAR (submissions, fetched 2026-11-06): nothing newer than the 10-27 Schedule 13G; no Form 4 since the 08-14 grants, no 13D since 05-22, no sale, secondary or consent-release signal. **VIX 28.18 (+7.35 vs the 20.83 last row; 16.61 on 11-04): regime shift, options-shaped plays cost far more.** 11-05 was a chip-led rout (Nasdaq 100 -6.5%, SMH -11.2%, per the CPI and CBRS ledgers); BXDC held up better than its data-center peers (DLR -5.5%, EQIX -5.4%, VNQ -1.8%): beta, not unlock. Adjacency: jobs 11-06 and CPI 11-10 confirmed; CBRS lockup same date (confirmed/high); CBRS Q3 11-12 (calendar id says 11-11); CRWV print and US-China truce expiry 11-10 still estimate; NBIS print 11-12 (confirmed) in FT-1's window; the BXDC Q3 print 11-16 still falls after it. Beyond-horizon: none. FT-1 stays open (anchors: VNQ 96.23 on 11-05). No conviction proposals or declared intents name this event. | Unchanged: stand aside | 2026-11-08 (D-1; medium:0+, 2-day interval) |
 | 2026-11-08 | D-1 | **Deterministic screen (no Claude session).** Readings — BXDC $16.01 (1.6% since last), VIX 25.6 (-2.5pt since last), band unchanged (medium:0+), 38 adjacent event(s) tracked, new in corridor since last pulse: `erock-q3-2026-results-2026-11-12` (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-11-10 |
+| 2026-11-14 | D+5 | **Close-out** (see `## Outcome`). FT-1 scored **pass**: BXDC 11-09 to 11-13 close -0.06% vs VNQ -0.85% = +0.79pp (bar -5.0%). Free-session volume averaged 1.22M vs 2.11M 20-day (0.58x); no filing signals a sale. Beyond-horizon: none. No conviction proposals or declared intents name this event. | Unchanged: stand aside (event closed) | — (closed) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -180,6 +181,53 @@ in the row instead (#2946): it can never become due, so a calendar file for it i
 prose in a row is free. Close-out fills `## Outcome` below from re-run instrument data (cache busted
 first), never from memory. After that the assessment is closed; the doc reopens only to score a
 registered forward test whose `Score by` has arrived (`forward-test-due`).
+
+## Outcome
+
+**Close-out (2026-11-14, D+5; inside `closeOutWithinDays`).** The unlock passed without a visible supply
+event: the stance (**stand aside**) was right, and the one registered prediction **passed**. Everything
+below is from daily bars re-pulled 2026-11-14 (Yahoo chart feed, NEWS-grade; instrument cache busted first),
+never from memory. The calendar entry is untouched (date stays **confirmed**, SEC: 424B4).
+
+| Read | Value |
+|---|---|
+| BXDC close 2026-11-06 / 11-09 (last locked day) | $16.01 / **$16.70** (+4.3% into the unlock; VNQ +1.6%) |
+| BXDC close 11-10 · 11-11 · 11-12 · 11-13 | $16.68 · $16.82 · $16.55 · **$16.69** |
+| FT-1 window, 11-09 close to 11-13 close | BXDC **−0.06%** · VNQ **−0.85%** (97.30 → 96.47) · **relative +0.79pp** |
+| Peers, same window | DLR −0.06% (180.10 → 179.99) · EQIX −0.07% (1054.50 → 1053.79) |
+| Volume, four free sessions 11-10 → 11-13 | 0.96M · 1.04M · 1.35M · 1.31M — average **1.22M** vs **2.11M** 20-day (0.58×) and 2.08M 60-day |
+| Versus IPO price | $16.69 is **−16.6%** against $20.00: locked holders still ~17% under water after the unlock |
+| VIX 11-09 → 11-13 | 19.92 → 19.30 (down from the 28.18 peak on 11-05); 20-day realized vol of BXDC 26% |
+
+**What happened vs the stance.**
+
+- **The prediction (FT-1) passed.** Relative return +0.79pp against a kill line of −5.0%.
+  [`FT-bxdc-lockup-expiry-2026-11-09-1`](../forward-tests/bxdc-lockup-expiry-2026-11-09.md) carries the score.
+  It is **one observation, n=1**: CPI (confirmed) and, per the calendar, the CRWV print and US–China truce
+  expiry (both estimate) shared 2026-11-10, so the pass cannot be credited to the unlock being benign. This
+  lane did not read those prints' outcomes; they are their own ledgers' to score.
+- **No supply showed up in volume.** The 10.9M locked shares were ~5 days of volume; the five sessions from
+  11-09 through 11-13 traded 6.1M in total, and 11-10 (the first free day) was the lightest of the four.
+  If the sponsor or any director sold, it was not in this tape.
+- **No filing signalled a sale.** EDGAR submissions (fetched 2026-11-14): the only new filing since the
+  2026-11-06 row is a **Schedule 13G/A on 2026-11-13** (a passive holder amending; filer not read — noted, not
+  assessed). No Form 4 since the 2026-08-14 director grants, no 13D since 2026-05-22, no secondary or
+  consent-release.
+- **No post-unlock pullback.** The stock rose 4.3% into 11-09 and then went flat; it did not sell off after
+  the unlock. The literature's pullback (see [`ipo-lockup-expiry.md`](../ipo-lockup-expiry.md)) is the thing
+  the stance bet would be muted here, and it was.
+- **The two Leg 1 wrinkles are unresolved and now moot.** A FINRA 5110(e) clock one day later (11-11) and
+  exception (x) could each have moved the first free day; no volume or price change marks either date.
+
+**Honest limits.** Free-feed prices (not an exchange tape); the 11-13 bar was read the day after, so its
+volume is final for that session but unaudited. One four-session window at zero capital. BXDC's own Q3
+results (announced for Mon 2026-11-16, NEWS: Business Wire via finviz) fall after the window and can move
+the name for reasons unrelated to supply. No position was ever suggested; paper-only.
+
+**For the lockup study.** Data point for [`ipo-lockup-expiry.md`](../ipo-lockup-expiry.md) (#5912 slice 2):
+a small (~11% of shares), sponsor-held, under-water block with the rest of the float already free produced
+no excess move and no volume spike across four sessions. The falsifier for generalising it stays what the
+stance said: this is one name, not a base rate.
 
 **Last assessed:** 2026-10-20
 <!-- probe-ref: {"symbols":{"BXDC":16.42},"vix":17.72,"daysBand":"medium:8+","adjacentIds":["adp-employment-2026-11-04","boe-decision-2026-11-05","boj-minutes-2026-11-05","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","cbrs-lockup-expiry-2026-11-09","cpi-2026-11-10","eia-steo-2026-11-10","eurostat-hicp-flash-2026-11-04","existing-home-sales-2026-11-12","intl-trade-full-report-2026-11-04","ism-services-2026-11-04","jgb-10y-auction-2026-11-05","jgb-30y-auction-2026-11-10","jgb-5y-auction-2026-11-12","jobs-2026-11-06","mts-october-2026-11-12","ppi-2026-11-13","productivity-costs-q3-2026-11-05","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","sp-global-investment-manager-index-2026-11-10","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-3y-note-2026-11-09","treasury-buyback-10y20y-2026-11-04","treasury-buyback-1mo2y-2026-11-05","treasury-coupon-announcement-2026-11-12","treasury-refunding-2026-11-04","uk-gdp-q3-first-2026-11-12","uk-gilt-auction-long-2026-11-10","umich-sentiment-prelim-2026-11-06","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["cpi-2026-11-10","jobs-2026-11-06"],"screenStreak":0,"blocked":[]} -->
@@ -198,3 +246,6 @@ registered forward test whose `Score by` has arrived (`forward-test-due`).
 
 **Last assessed:** 2026-11-08
 <!-- probe-ref: {"symbols":{"BXDC":16.01},"vix":25.64,"daysBand":"medium:0+","adjacentIds":["adp-employment-2026-11-04","boe-decision-2026-11-05","boj-minutes-2026-11-05","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","erock-q3-2026-results-2026-11-12","eurostat-hicp-flash-2026-11-04","existing-home-sales-2026-11-12","intl-trade-full-report-2026-11-04","ism-services-2026-11-04","jgb-10y-auction-2026-11-05","jgb-30y-auction-2026-11-10","jgb-5y-auction-2026-11-12","jobs-2026-11-06","mts-october-2026-11-12","nbis-2026-11-12-print","ppi-2026-11-13","productivity-costs-q3-2026-11-05","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","sp-global-investment-manager-index-2026-11-10","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-3y-note-2026-11-09","treasury-buyback-10y20y-2026-11-04","treasury-buyback-1mo2y-2026-11-05","treasury-coupon-announcement-2026-11-12","treasury-refunding-2026-11-04","uk-gdp-q3-first-2026-11-12","uk-gilt-auction-long-2026-11-10","umich-sentiment-prelim-2026-11-06","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","jobs-2026-11-06","nbis-2026-11-12-print"],"screenStreak":1} -->
+
+**Last assessed:** 2026-11-14
+<!-- probe-ref: {"symbols":{"BXDC":16.69},"vix":19.3,"daysBand":"medium:0+","adjacentIds":["adp-employment-2026-11-04","boe-decision-2026-11-05","boj-minutes-2026-11-05","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","erock-q3-2026-results-2026-11-12","eurostat-hicp-flash-2026-11-04","existing-home-sales-2026-11-12","intl-trade-full-report-2026-11-04","ism-services-2026-11-04","jgb-10y-auction-2026-11-05","jgb-30y-auction-2026-11-10","jgb-5y-auction-2026-11-12","jobs-2026-11-06","mts-october-2026-11-12","nbis-2026-11-12-print","ppi-2026-11-13","productivity-costs-q3-2026-11-05","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","sp-global-investment-manager-index-2026-11-10","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-3y-note-2026-11-09","treasury-buyback-10y20y-2026-11-04","treasury-buyback-1mo2y-2026-11-05","treasury-coupon-announcement-2026-11-12","treasury-refunding-2026-11-04","uk-gdp-q3-first-2026-11-12","uk-gilt-auction-long-2026-11-10","umich-sentiment-prelim-2026-11-06","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","jobs-2026-11-06","nbis-2026-11-12-print"],"screenStreak":0,"blocked":[]} -->

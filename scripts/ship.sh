@@ -76,6 +76,20 @@ api() {
     curl "${args[@]}" "$API/repos/$(repo)$2"
   fi
 }
+# GitHub refuses a PR body over 65,536 CHARACTERS with a 422 "body is too long" — a second, lower
+# wall behind the argv cap above. Moving the body to stdin (#6216) got #5852's ~122 KB ledger past
+# curl, only for GitHub to refuse it, so the ledger still never synced (#6879). Every PR-body write
+# measures first and refuses by name, before the request: dropping ledger rows to fit would post a
+# body that no longer lists every item a merge lands, and since #6252 a ledger holds only real items,
+# so ~200 of them is a platter overdue to land, not a body to trim.
+GH_BODY_MAX=65536
+# body_fits WHAT FIX < body → 0 when the body on stdin fits; else names the limit and FIX, returns 1.
+body_fits() {
+  local n; n="$(python3 -c 'import sys; print(len(sys.stdin.buffer.read().decode("utf-8", "replace")))')"
+  [ "$n" -le "$GH_BODY_MAX" ] && return 0
+  echo "ship: $1 is $n characters; GitHub refuses a PR body over $GH_BODY_MAX (HTTP 422, #6879) — $2" >&2
+  return 1
+}
 http_of() { printf '%s' "${1##*__SHIP_HTTP__}"; }              # code from an api() result
 body_of() { printf '%s' "${1%$'\n'__SHIP_HTTP__*}"; }         # body from an api() result
 json_field() { python3 -c "import sys,json; print(json.load(sys.stdin).get('$1',''))"; }
@@ -346,9 +360,11 @@ cmd_open() {
   # PR-title lint, locally: CI's verify job runs commitlint over the PR TITLE (it becomes the
   # squash subject), and the commit lint further down never sees it — #3774 went red on a 106-char
   # title after local verify passed (2026-09-26). Same check, before anything is pushed.
-  echo "$title" | npx commitlint >/dev/null 2>&1 || {
+  # Here-strings, never `echo | npx commitlint`: a commitlint that exits before reading SIGPIPEs the
+  # writer, and under pipefail a valid title then reads as a lint failure (see checkbody; #7555).
+  npx commitlint >/dev/null 2>&1 <<<"$title" || {
     echo "ship open: PR TITLE fails commitlint (Conventional Commit, lowercase-led, ≤100 chars):" >&2
-    echo "$title" | npx commitlint --verbose >&2 || true
+    npx commitlint --verbose >&2 <<<"$title" || true
     exit 1
   }
   local base="main" bodyfile="" verify=1 hold=0 catchup=1
@@ -387,6 +403,7 @@ cmd_open() {
 
   # The picture/format contract — fail fast, before spending verify or a push.
   cmd_checkbody "$bodyfile"
+  body_fits "the PR body" "shorten it, or move detail into a comment on the PR." < "$bodyfile" || exit 1
 
   # Screenshot weight is permanent git history (the one irreversible cost) — budget by construction.
   if git rev-parse --verify -q "origin/$base" >/dev/null; then
@@ -710,6 +727,13 @@ cmd_automerge() {
   node="$(printf '%s' "$body" | json_field node_id)"
   [ -n "$node" ] || { echo "ship automerge: no node_id on PR #$num" >&2; exit 2; }
   local base_ref; base_ref="$(printf '%s' "$body" | python3 -c 'import sys,json; print(json.load(sys.stdin)["base"]["ref"])')"
+  # NEVER ARM A STACKED CHILD (2026-11-12). A PR based on another PR's branch merges INTO that branch,
+  # and pipeline.yml runs CI only on PRs into main. When its parent squash-merges, GitHub retargets it
+  # to main, `node scripts/stack-sync.mjs <parent>` catches it up, and the pipeline arms it from there.
+  if [ "$base_ref" != "main" ]; then
+    echo "ship automerge: #$num is based on '$base_ref', not main — a stacked child is never armed. It arms itself once its parent merges and its base is main (see the ship skill's Stacked slices)." >&2
+    exit 7
+  fi
   git fetch origin "$base_ref" >/dev/null 2>&1 || true
 
   # Guard on the PR's OWN file list, not the local tree: this is the thing being armed, and a
@@ -1094,7 +1118,10 @@ platter_board_item() {
   # Default to the item's newest subject; --subject overrides, which is what a multi-commit item
   # branch wants (a squash has no subject of its own, and the newest one can under-describe it).
   [ -n "$subject" ] || subject="$(git log -1 --format=%s FETCH_HEAD)"
-  printf '%s\n' "$subject" | npx commitlint || {
+  # A here-string, not `printf | npx commitlint`: the pipe's writer could lose a SIGPIPE race to a
+  # commitlint that exits early, and pipefail then refused a valid subject with no lint output —
+  # the board specs' parallel-verify flake (#7555; the trap is the one at checkbody).
+  npx commitlint <<<"$subject" || {
     echo "ship platter: the item subject above is not a valid Conventional Commit — pass --subject." >&2
     exit 1; }
   # Resolved before the squash, so a bad --closes refuses with the platter untouched and unverified.
@@ -1271,6 +1298,8 @@ platter_sync_body() {
   fi
   platter_range_check "$branch" "$num" || return 1
   newbody="$(platter_body)"
+  printf '%s' "$newbody" | body_fits "#$num's platter body" \
+    "land this platter and board the rest onto a new one ('ship platter open <item> --name platter/<new>')." || return 1
   payload="$(printf '%s' "$newbody" | python3 -c "import json,sys; print(json.dumps({'body': sys.stdin.read()}))")"
   resp="$(api PATCH "/pulls/$num" "$payload")" || true
   http="$(http_of "$resp")"

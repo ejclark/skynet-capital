@@ -25,7 +25,7 @@ const EVIDENCE_WORDS: Readonly<Record<Reported["evidence"], string>> = {
   reported: "reported by press",
 };
 
-const signed = (n: number): string => `${n > 0 ? "+" : ""}${n.toFixed(1)}%`;
+export const signed = (n: number): string => `${n > 0 ? "+" : ""}${n.toFixed(1)}%`;
 
 /** At most `max` lines of `rows`, then one line counting the rest. */
 function capped<T>(rows: readonly T[], max: number, line: (row: T) => string): string[] {
