@@ -10,6 +10,7 @@
 // Out: <out>/<id>-<viewport>-run<n>/ per session, and <out>/round.json + <out>/round.md — the
 // table a readout starts from (verdict, unintended writes, turns, ease, worst confusion, said).
 
+import { spawnSync } from "node:child_process";
 import {
   copyFileSync,
   existsSync,
@@ -18,10 +19,13 @@ import {
   readFileSync,
   writeFileSync,
 } from "node:fs";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { ROLES } from "../study/sealed.mjs";
 import { driveChange } from "./drive.mjs";
 import { roundMarkdown, rowOf } from "./round-table.mjs";
+
+const HERE = dirname(fileURLToPath(import.meta.url));
 
 function args(argv) {
   const get = (flag) => {
@@ -102,6 +106,8 @@ async function main() {
   await Promise.all(Array.from({ length: Math.max(1, o.concurrency) }, (_, slot) => worker(slot)));
   writeFileSync(join(out, "round.json"), `${JSON.stringify(rows, null, 2)}\n`);
   writeFileSync(join(out, "round.md"), roundMarkdown(rows));
+  // The misses, read for whoever opens the round next (digest.mjs): no hand-reading of turns.
+  spawnSync(process.execPath, [join(HERE, "digest.mjs"), out], { stdio: "inherit" });
   console.log(roundMarkdown(rows));
 }
 
