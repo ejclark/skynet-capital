@@ -54,7 +54,9 @@ const KNOWN_VOLS: readonly [string, number][] = [
 
 export class SyntheticMarket implements AlpacaTradingTransport {
   private readonly marks: ReadonlyMap<string, number>;
-  private readonly now: () => Date;
+  /** The market's clock — the broker's `/v2/clock` reads the same one, so a world pinned with
+   *  SKYNET_FIXED_NOW opens and closes on the pinned day (code review). */
+  readonly now: () => Date;
   private readonly vols: ReadonlyMap<string, number>;
   private readonly defaultVol: number;
   private readonly rate: number;

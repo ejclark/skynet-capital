@@ -130,6 +130,16 @@ function changeRefusals(
   return { grows: after > before || costGrows, refusals };
 }
 
+/** Whether a change could raise what the order commits — more shares, or a buy at a higher limit
+ *  or stop. False is certain (the order alone says so); true only means "read the account". */
+export function mayGrow(order: AlpacaOrder, change: OrderChangeRequest): boolean {
+  const before = Number(order.qty);
+  if ((change.quantity ?? before) > before) return true;
+  if (order.side === "sell") return false;
+  const prices = committedPrices(order, change, undefined);
+  return prices.before === undefined || prices.after === undefined || prices.after > prices.before;
+}
+
 /**
  * The async half: re-read the order and the live account, then run the rung lock and the pure
  * rules above. Answers the refusals, empty when the change may go to the broker.
@@ -152,6 +162,10 @@ export async function reviewOrderChange(
     return [replaceRefusal(error)];
   }
   if (order.order_class === "mleg" || isOccSymbol(order.symbol)) return [];
+  // A change that only shrinks the order is never refused — decided from the order alone, BEFORE
+  // the account is read, so a broker hiccup on the account read can never stop a member from
+  // reducing a bet (code review, change-scenarios PR). It also spares two reads per shrink.
+  if (!mayGrow(order, change)) return [];
   const read = await readReview(() => Promise.all([client.getAccount(), client.getPositions()]));
   if ("refusals" in read) return read.refusals;
   const [account, positions] = read.preview;

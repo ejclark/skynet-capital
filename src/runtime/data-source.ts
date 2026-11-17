@@ -256,7 +256,7 @@ function offlineTransports(
       found = new WritableFixtureTradingTransport(fixtureFor(id), {
         market,
         idPrefix: `paper-${id}`,
-        clock: () => marketClock(new Date()),
+        clock: () => marketClock(market.now()),
         onFill: (fill) => sink?.({ type: "fill", participantId: id, ...fill }),
       });
       ledgers.set(id, found);

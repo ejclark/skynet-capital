@@ -186,10 +186,18 @@ function CloseRow({
   // Starts at everything held, so a full close reads exactly as before.
   const heldCount = held(position.quantity).count;
   const [count, setCount] = useState(String(heldCount));
+  // The holding can change under an open row (a close elsewhere, a fill): the count follows it, so
+  // a stale count never hides its own box or quietly turns a full close into a partial one.
+  useEffect(() => {
+    setCount(String(heldCount));
+  }, [heldCount]);
   const countId = useId();
   const parsedCount = Number(count.trim());
   const partial = Number.isInteger(parsedCount) && parsedCount >= 1 && parsedCount < heldCount;
-  const countValid = Number.isInteger(parsedCount) && parsedCount >= 1 && parsedCount <= heldCount;
+  // An unreadable holding (count 0) closes bare, as before: the server sizes it from the live account.
+  const countValid =
+    heldCount === 0 ||
+    (Number.isInteger(parsedCount) && parsedCount >= 1 && parsedCount <= heldCount);
   // Roll as one ticket (#3407 P3 slice 3) — a second row under this one, opened on demand.
   const [rolling, setRolling] = useState(focus?.rollTo !== undefined);
   const priceId = useId();

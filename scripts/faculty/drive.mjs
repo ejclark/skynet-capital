@@ -119,7 +119,11 @@ export async function readAccount(origin, cookie, participantId) {
   ).json();
   const desk = await (await fetch(`${origin}/api/desk/${q}`, { headers })).json();
   const positions = {};
-  for (const p of desk?.desk?.positions ?? []) positions[p.symbol] = Number(p.quantity);
+  // The desk sends a quantity as display text ("1,200"; "-1" for a sold contract) — read it the way
+  // the app's own parseQuantity does, or a holding of 1,000+ grades as NaN (code review).
+  for (const p of desk?.desk?.positions ?? []) {
+    positions[p.symbol] = Number(String(p.quantity).replace(/,/g, ""));
+  }
   // The member's watchlist — the session's own, no participant (watchlist-route.ts), so a change
   // scenario can grade a list change as well as an order (the catalog's AC rows).
   const watch = await (await fetch(`${origin}/api/trade/watchlist`, { headers }))

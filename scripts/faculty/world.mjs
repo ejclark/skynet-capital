@@ -17,10 +17,10 @@
 //    (NVDA Dec 180, his 2026-10-18 scenario), a working limit order to change or cancel
 //    (BUY 10 MSFT @ $400 GTC), and cash to sell a cash-secured put (CRWV, his scenario 1).
 //
-// Clock: the wall clock, with the market always open (the fixture clock says so). A pinned date
-// would age every quote against the server's own `asOf` stamps and list expirations in the past
-// on any later run; scenarios therefore say "about a month out", never a date, and their oracles
-// check the side, size, type and strike, with the expiry inside a window.
+// Clock: the wall clock and the real session (src/runtime/data-source.ts → marketClock): after
+// hours an order queues for the open and fills on the first read once it opens, as a paper
+// account's would. Scenarios therefore never name a date, and their `end` accepts
+// ["working","filled"]. Pin a run with SKYNET_FIXED_NOW and the market and the broker both follow.
 //
 //   node scripts/faculty/world.mjs            # prints the fixtures dir it wrote
 //   import { facultyFixturesDir, facultyBootEnv } from "./world.mjs"

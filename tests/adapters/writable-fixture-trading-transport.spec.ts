@@ -187,4 +187,49 @@ describe("WritableFixtureTradingTransport — a member's order lands", () => {
     expect(await client.isMarketOpen()).toBe(false);
     expect((await client.getPositions()).some((p) => p.symbol === "AAPL")).toBe(false);
   });
+
+  it("re-checks a replace like a fresh order: growing a buy past cash is refused", async () => {
+    const { client } = setup();
+    const order = await client.placeOrder({
+      symbol: "AAPL",
+      qty: 5,
+      side: "buy",
+      type: "limit",
+      limit_price: 100,
+    });
+    await expect(client.replaceOrder(order.id, { qty: 500 })).rejects.toMatchObject({
+      status: 403,
+    });
+    expect(await client.getOrder(order.id)).toMatchObject({ status: "new" });
+  });
+
+  it("refuses to replace a spread rather than re-place its parent as a simple order", async () => {
+    const { transport } = setup();
+    const spread = await transport.post("/v2/orders", {
+      order_class: "mleg",
+      qty: 1,
+      type: "limit",
+      limit_price: 1.2,
+      legs: [
+        { symbol: "NVDA250117C00150000", side: "buy", ratio_qty: 1 },
+        { symbol: "NVDA250117C00160000", side: "sell", ratio_qty: 1 },
+      ],
+    });
+    const id = (spread.body as { id: string }).id;
+    expect((await transport.patch(`/v2/orders/${id}`, { limit_price: 1.1 })).status).toBe(422);
+  });
+
+  it("fills a queued market order on the first read once the market opens", async () => {
+    let open = false;
+    const transport = new WritableFixtureTradingTransport(fixture(), {
+      marks,
+      now: () => NOW,
+      clock: () => ({ is_open: open }),
+    });
+    const client = new AlpacaTradingClient(transport);
+    const order = await client.placeOrder({ symbol: "AAPL", qty: 2, side: "buy" });
+    expect(order.status).toBe("accepted");
+    open = true;
+    expect(await client.getOrder(order.id)).toMatchObject({ status: "filled", filled_qty: "2" });
+  });
 });

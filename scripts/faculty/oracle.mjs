@@ -165,9 +165,17 @@ export function gradeChange(before, after, end, now) {
       problems.push(`position ${symbol} is ${got}, wanted ${JSON.stringify(want)}`);
   }
 
+  // A fresh order the member then changed in place is a superseded link of the same intent, not a
+  // second order: it ends `replaced` and a fresh successor names it (round 2, PM-01 — a $15 sell
+  // sent for the day, then changed to good-til-cancelled, read as an "unasked" sale).
+  const superseded = new Set(
+    fresh
+      .filter((o) => o.state === "replaced" && fresh.some((n) => n.replaces === o.id))
+      .map((o) => o.id),
+  );
   const unintended = [];
   for (const o of fresh) {
-    if (!claimed.has(o.id)) unintended.push(`unasked order: ${label(o)}`);
+    if (!(claimed.has(o.id) || superseded.has(o.id))) unintended.push(`unasked order: ${label(o)}`);
   }
   for (const o of before.orders) {
     const now_ = byId.get(o.id);

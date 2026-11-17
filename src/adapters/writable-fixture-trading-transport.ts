@@ -42,12 +42,13 @@ export interface WritableFixtureOptions {
    *  bid — the in-memory broker's own rule — and the reads this account does not own (option
    *  contracts) fall through to it. Without one, a fill uses the mark on both sides. */
   readonly market?: MarketSource;
+  /** Alpaca's `/v2/clock` as of now. Absent, the fixture's clock (default: open). While it says
+   *  closed, a market order queues (`accepted`) and a limit rests, filling at no price until the
+   *  open — exactly as a paper account answers an order placed in the evening; the first read once
+   *  the market is open fills what has become marketable. */
+  readonly clock?: () => { is_open: boolean; next_open?: string; next_close?: string };
   /** Told of every fill, the moment it lands — the offline twin of Alpaca's `trade_updates`
    *  stream, so the board shows the new position at once instead of on the next 60s sweep. */
-  /** Alpaca's `/v2/clock` as of now. Absent, the fixture's clock (default: open). While it says
-   *  closed, a market order queues (`accepted`) and a limit rests — they fill at no price until the
-   *  open, exactly as a paper account answers an order placed in the evening. */
-  readonly clock?: () => { is_open: boolean; next_open?: string; next_close?: string };
   readonly onFill?: (fill: {
     symbol: string;
     side: "buy" | "sell";
@@ -148,6 +149,7 @@ export class WritableFixtureTradingTransport implements AlpacaTradingTransport {
   }
 
   get(path: string): Promise<JsonResponse> {
+    this.settleQueued();
     const [route, query] = split(path);
     if (route === "/v2/account") return ok(this.accountBody());
     if (route === "/v2/positions") {
@@ -188,10 +190,13 @@ export class WritableFixtureTradingTransport implements AlpacaTradingTransport {
     const old = id ? this.orders.find((o) => o.id === id) : undefined;
     if (!old) return notFound();
     if (!OPEN.has(old.status)) return unprocessable(`order is ${old.status}, not open`);
+    // A spread is replaced by cancelling it and placing a new one; re-placing its parent as a simple
+    // order would land an order with no symbol (code review, change-scenarios PR).
+    if (old.order_class === "mleg")
+      return unprocessable("a multi-leg order cannot be replaced; cancel it and place a new one");
     const change = (body ?? {}) as Record<string, unknown>;
     if (Object.keys(change).length === 0) return unprocessable("nothing to replace");
-    const stamp = this.stamp();
-    const next = this.place({
+    const successor = {
       symbol: old.symbol,
       side: old.side,
       type: old.type,
@@ -200,7 +205,12 @@ export class WritableFixtureTradingTransport implements AlpacaTradingTransport {
       limit_price: change.limit_price ?? old.limit_price ?? undefined,
       stop_price: change.stop_price ?? old.stop_price ?? undefined,
       position_intent: old.position_intent,
-    });
+    };
+    // The same walls a fresh order meets — a replace that grows a buy past cash is refused, as POST is.
+    const refusal = this.refuse(successor);
+    if (refusal) return refusal;
+    const stamp = this.stamp();
+    const next = this.place(successor);
     next.replaces = old.id;
     old.status = "replaced";
     old.replaced_by = next.id;
@@ -362,6 +372,16 @@ export class WritableFixtureTradingTransport implements AlpacaTradingTransport {
     this.orders.push(order);
     if (!isLeg) this.tryFill(order);
     return order;
+  }
+
+  /** Orders queued while the market was shut fill on the first read after it opens — the paper
+   *  account's own behaviour at 9:30 (code review: a long-running world never filled them). */
+  private settleQueued(): void {
+    if (this.liveClock && !this.liveClock().is_open) return;
+    for (const o of this.orders) {
+      if ((o.status === "accepted" || o.status === "new") && o.order_class !== "mleg")
+        this.tryFill(o);
+    }
   }
 
   /** The market a fill meets: the quoting market's bid/ask, else the mark on both sides. */

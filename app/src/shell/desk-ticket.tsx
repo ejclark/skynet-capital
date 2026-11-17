@@ -1,11 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
-import { useId, useState } from "react";
+import { useCallback, useId, useRef } from "react";
 import type { DraftLeg, NewLeg } from "../live/draft-order";
 import { fetchPlays, type PlayInfo } from "../live/options";
 import type { PlayCode } from "../live/plays";
 import type { OwnedAccount } from "../live/settings";
-import type { TicketCarry } from "../live/ticket";
+import { carryFits, type TicketCarry } from "../live/ticket";
 import type { ChainPreset } from "./chain-section";
 import { DraftOrderBuilder } from "./draft-order-builder";
 import { LadderGateCard } from "./ladder-gate";
@@ -113,8 +113,25 @@ export function DeskTicket({
    *  on the rung): a share ticket hands over its count and chosen price (`carryAcrossSide`), an
    *  option ticket its contract count. Each instrument keeps its own, since 10 shares is not 10
    *  contracts. */
-  const [shareCarry, setShareCarry] = useState<TicketCarry>();
-  const [contractCarry, setContractCarry] = useState<string>();
+  // Refs, not state: a carry is read only when the ticket remounts, so holding it in state re-
+  // rendered this header on every keystroke (code review, change-scenarios PR). Each carry knows
+  // its symbol and is offered back only to a ticket for that symbol (`carryFits`): keyed on the
+  // rung alone, 100 NVDA at a $140 limit pre-filled an AAPL sell opened from a position card.
+  const shareCarry = useRef<TicketCarry | undefined>(undefined);
+  const contractCarry = useRef<{ readonly symbol: string; readonly count: string } | undefined>(
+    undefined,
+  );
+  const keepShareCarry = useCallback((carry: TicketCarry | undefined) => {
+    shareCarry.current = carry;
+  }, []);
+  const symbolNow = useRef(initialSymbol);
+  symbolNow.current = initialSymbol;
+  const keepContractCarry = useCallback((count: string | undefined) => {
+    contractCarry.current =
+      count === undefined
+        ? undefined
+        : { symbol: (symbolNow.current ?? "").trim().toUpperCase(), count };
+  }, []);
   const info: PlayInfo | undefined = plays.data?.plays.find((p) => p.code === code);
   // 501 has no ticket of its own (#1671) — it's an attribute any option order can carry, looked up
   // independently of `info` so the expiration field can disable today regardless of which rung
@@ -198,8 +215,10 @@ export function DeskTicket({
         preset={preset}
         onPresetHandled={onPresetHandled}
         onStage={onStage}
-        carriedContracts={contractCarry}
-        onContractsCarry={setContractCarry}
+        carriedContracts={
+          carryFits(contractCarry.current, initialSymbol) ? contractCarry.current?.count : undefined
+        }
+        onContractsCarry={keepContractCarry}
       />
     );
   }
@@ -213,8 +232,8 @@ export function DeskTicket({
       play={info}
       initialSymbol={initialSymbol}
       onSymbolCommit={onSymbolCommit}
-      carried={shareCarry}
-      onCarry={setShareCarry}
+      carried={carryFits(shareCarry.current, initialSymbol) ? shareCarry.current : undefined}
+      onCarry={keepShareCarry}
     />
   );
   // Working orders, Alerts and Option positions moved to the Orders section (#3407, Workbench

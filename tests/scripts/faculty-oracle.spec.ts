@@ -98,6 +98,26 @@ describe("gradeChange — what landed, against what was asked", () => {
     });
   });
 
+  it("reads an order the member changed in place as one intent, not an unasked second order", () => {
+    const first = order({
+      id: "paper-1",
+      symbol: "SPY",
+      quantity: 3,
+      state: "replaced",
+      replacedBy: "paper-2",
+    });
+    const second = order({
+      id: "paper-2",
+      symbol: "SPY",
+      quantity: 3,
+      timeInForce: "gtc",
+      replaces: "paper-1",
+    });
+    const after = { ...before, orders: [working, first, second] };
+    const v = gradeChange(before, after, { orders: [{ symbol: "SPY", timeInForce: "gtc" }] }, NOW);
+    expect(v).toMatchObject({ success: true, unintended: [] });
+  });
+
   it("calls a working order cancelled without being asked an unintended write", () => {
     const after = {
       ...before,

@@ -148,6 +148,53 @@ describe("the share ticket — a side flip keeps what was typed", () => {
   });
 });
 
+describe("the share ticket — a carry never crosses symbols (code review)", () => {
+  /** A position card for another symbol opens its Sell ticket: the rung AND the symbol change. */
+  function TwoSymbols(): ReactNode {
+    const [code, setCode] = useState<PlayCode>("101");
+    const [symbol, setSymbol] = useState("NVDA");
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => {
+            setSymbol("AAPL");
+            setCode("102");
+          }}
+        >
+          AAPL card
+        </button>
+        <DeskTicket
+          desk="desk-1"
+          code={code}
+          onPreset={setCode}
+          initialSymbol={symbol}
+          accounts={[]}
+          onDeskChange={() => undefined}
+        />
+      </>
+    );
+  }
+
+  it("does not seed an AAPL sell with a count and limit typed for NVDA", async () => {
+    render(
+      <QueryClientProvider client={client()}>
+        <TwoSymbols />
+      </QueryClientProvider>,
+    );
+    set("Shares", "100");
+    set("Order type", "limit");
+    set("Limit price", "140");
+    fireEvent.click(screen.getByRole("button", { name: "AAPL card" }));
+    expect(await screen.findByRole("button", { name: "Sell" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByLabelText("Shares")).toHaveValue(null);
+    expect(screen.queryByDisplayValue("140")).toBeNull();
+  });
+});
+
 describe("the share ticket — Review says what it is waiting for", () => {
   it("names what is missing under the disabled button, and goes once nothing is", () => {
     mountGate("buy");

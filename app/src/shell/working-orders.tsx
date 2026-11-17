@@ -216,7 +216,7 @@ export function useOrderActions(deskId: string) {
   const run = async <T,>(
     id: string,
     send: () => Promise<T>,
-    say: (answer: T) => string,
+    say: (answer: T) => string | undefined,
   ): Promise<T | undefined> => {
     setPendingId(id);
     setNotice(undefined);
@@ -245,7 +245,9 @@ export function useOrderActions(deskId: string) {
       (r) =>
         r.ok
           ? `Change sent — the broker replaced the order (${r.status.replace(/_/g, " ")}).`
-          : r.refusals.join(" "),
+          : // A refused change is said once, in the change drawer where the member is typing
+            // (working-order-modify.tsx); repeating it under the list read as two refusals.
+            undefined,
     );
   return { pendingId, notice, cancel, replace };
 }
