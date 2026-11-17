@@ -17,6 +17,7 @@ export interface OrderRow {
 export interface Account {
   readonly orders: readonly OrderRow[];
   readonly positions: Readonly<Record<string, number>>;
+  readonly watchlist?: readonly string[];
 }
 
 export interface Described extends OrderRow {

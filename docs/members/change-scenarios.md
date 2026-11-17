@@ -219,7 +219,7 @@ not mine." (`docs/members/invited-friend.md:10-11`)._
 | id | member · device | the situation, in the member's words | what must land (and what must not) | today |
 |---|---|---|---|---|
 | AC-01 | invited-friend · phone | You were invited to this app by a friend and have your own paper account with some energy fund XLE in it. Sell 30 of your own XLE shares at the market price — make sure it comes out of YOUR account. | sell 30 XLE at market on `human-friend` · never on the bot's account (invisible to this oracle, so it fails the run) | runs |
-| AC-02 | phone-only · phone | CoreWeave keeps coming up. Keep an eye on it from now on without buying any. | CRWV on the member's list (`GET /api/watchlist`) · no order | not yet run: the field exists (`app/src/shell/watchlist-section.tsx:109`); the oracle reads no list |
+| AC-02 | phone-only · phone | You keep hearing about CoreWeave (ticker CRWV) and want to keep an eye on its price without buying anything yet. Set things up on your phone so it's easy to check on it later. | CRWV on the member's list (`GET /api/trade/watchlist`) · no order | runs (the oracle reads the watchlist since round 1) |
 | AC-03 | invited-friend · desktop | You own two accounts here, your own and the bot you took over. Make sure every trade you start goes from your own account unless you say otherwise. | the starred default honoured by the order form, and the account named on the form · never an order on the bot's account | gap: the order form opens on the first owned account, not the default (`app/src/routes/trade.tsx:366` vs `app/src/routes/accounts.tsx:196-203`), and with one account it names none (`app/src/shell/desk-ticket.tsx:125-128`) |
 | AC-04 | eric · phone | Ask the app to let you know if NVIDIA drops below $170. | an alert on NVDA below $170 · no order | gap: alerts are derived for the member, who can only dismiss them (`src/server/desk-alerts-route.ts:20-23,40`) |
 | AC-05 | eric · desktop | You've decided not to touch CoreWeave until its earnings are out. Set that, so the app holds you back if you forget. | a wait on CRWV until the print, and a CRWV order meeting it is flagged or held | gap: the wait is saved (`app/src/shell/book-wait-line.tsx:89-91,177-187`), but no order route reads it (write census) |
@@ -277,6 +277,30 @@ do instead, which is the harm. File paths are from the 2026-11-16 write census.
 | Bot controls: fleet-wide single taps with no confirmation, a pause with no end, a fixed loss cap | `app/src/shell/mission-control.tsx:89-96`; `app/src/shell/bot-switch.tsx:82-96`; `docs/IA.md:959-965`; `src/autonomous/safety.ts:64` | BT-02, BT-05, BT-06, BT-07 |
 | Alerts can't be created, a wait holds nothing back, and a guest can't be removed | `src/server/desk-alerts-route.ts:20-23`; `app/src/shell/book-wait-line.tsx:89-91`; `app/src/live/admin.ts:48` | AC-04, AC-05, AC-07 |
 
-## Round 1 — what the faculty found
+## Round 1 — what the faculty found (2026-11-16, 22 blind sessions, one each)
 
-_Filled from scripts/faculty round results._
+**10 of 22 changes landed as meant; 1 landed wrong** (OP-05 bought a 3-day put for a month of
+protection). Every give-up was a member who could see what they wanted and could not reach or
+finish it. None was a member who misunderstood the market.
+
+| finding | sessions | cause (file) | fixed in this round? |
+|---|---|---|---|
+| A working order is invisible on a phone | OM-01, OM-03 | Trade's section switch ran past the screen edge, cutting off Orders (`routes/trade.tsx`) | yes: Priority+ "More ▾" (#5072's mechanism) |
+| Typing into a seeded amount appends ("400405", "510.00505") | OM-02, EQ-02, EQ-03, EQ-04, OM-04 | prefilled inputs keep the caret at the end (`trade-gate.tsx`, `option-gate.tsx`, `working-order-modify.tsx`) | yes: select on focus |
+| A tap inside the price box hit its spin arrows ($330 → $329.99) | EQ-02 | native number steppers (`styles/gate.css`) | yes: no arrows on order amounts |
+| No way to close part of an option holding on a phone | OP-02 | the close row closed everything (`option-positions.tsx`) | yes: a contract count |
+| "Per share" never said on an option close's limit (1500 typed for $15) | PM-01 | the unit was screen-reader-only (`option-positions.tsx`) | yes: said beside the box |
+| The card recommending the profit-take said "nothing sells from here" | OP-01 | guidance copy (`position-guidance-long.ts`) | yes: "nothing sells until you review it and send it" |
+| A protective stop needed the held count, which the form never showed | EQ-06 | the sell form (`trade-gate.tsx`) | yes: "You hold N shares" + "Sell all N" |
+| A short-dated buy is easy to miss (chain opens on the nearest expiry) | OP-05 | `option-ticket.ts` | yes: a last-week warning |
+| Taking profit on a held option from the ticket or chain | OP-01 | the ticket only opens (`ticket-nav.tsx`) | **no: a placement decision, #7669** |
+| The order form starts below the ladder card and the dock on a phone | EQ-01, EQ-03, OM-01 | Trade's order (`routes/trade.tsx`) | **no: a placement decision, #7670** |
+| Market asked, Limit-at-mid seeded | EQ-01, EQ-04, EQ-05 | `trade-gate.tsx:222` | **no: a default decision, #7671** |
+
+**The instrument was wrong in two places, and both were fixed before round 2:**
+
+- **The member could press only Enter and Escape**, so it could not clear a box a person would
+  backspace. It now has Backspace and Tab, with a count.
+- **The role prompt was edited mid-round**, which told members late in the round about Backspace
+  while the loaded recorder still refused it (EQ-03, EQ-04, OM-04, PM-01). A round now copies its
+  role at start. Those four sessions count as **confounded**, not as app failures.

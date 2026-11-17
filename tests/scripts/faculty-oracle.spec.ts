@@ -122,6 +122,22 @@ describe("gradeChange — what landed, against what was asked", () => {
   });
 });
 
+describe("gradeChange — a list change, not an order", () => {
+  it("grades a watchlist add, and an order slipped in beside it is still unintended", () => {
+    const after = { ...before, watchlist: ["CRWV"] };
+    expect(gradeChange(before, after, { watchlist: { includes: ["CRWV"] } }, NOW).success).toBe(
+      true,
+    );
+    expect(gradeChange(before, before, { watchlist: { includes: ["CRWV"] } }, NOW).reason).toBe(
+      "the watchlist does not hold CRWV",
+    );
+    const slipped = { ...after, orders: [working, order({ symbol: "CRWV" })] };
+    expect(gradeChange(before, slipped, { watchlist: { includes: ["CRWV"] } }, NOW).success).toBe(
+      false,
+    );
+  });
+});
+
 describe("describeOrder — an option contract in parts", () => {
   it("reads the underlying, type, strike and days to expiry off the OCC symbol", () => {
     const o = describeOrder(order({ symbol: "CRWV261218P00070000", side: "sell" }), NOW);

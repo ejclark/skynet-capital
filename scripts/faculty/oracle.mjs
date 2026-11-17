@@ -150,6 +150,15 @@ export function gradeChange(before, after, end, now) {
       problems.push(`the changed order (${label(next)}) is wrong on ${miss.join(", ")}`);
   }
 
+  for (const symbol of end.watchlist?.includes ?? []) {
+    if (!(after.watchlist ?? []).includes(symbol))
+      problems.push(`the watchlist does not hold ${symbol}`);
+  }
+  for (const symbol of end.watchlist?.excludes ?? []) {
+    if ((after.watchlist ?? []).includes(symbol))
+      problems.push(`the watchlist still holds ${symbol}`);
+  }
+
   for (const [symbol, want] of Object.entries(end.positions ?? {})) {
     const got = after.positions[symbol] ?? 0;
     if (!fits(want, got))

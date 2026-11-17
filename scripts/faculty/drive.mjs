@@ -120,7 +120,13 @@ export async function readAccount(origin, cookie, participantId) {
   const desk = await (await fetch(`${origin}/api/desk/${q}`, { headers })).json();
   const positions = {};
   for (const p of desk?.desk?.positions ?? []) positions[p.symbol] = Number(p.quantity);
-  return { orders: [...(orders.working ?? []), ...(orders.recent ?? [])], positions };
+  // The member's watchlist — the session's own, no participant (watchlist-route.ts), so a change
+  // scenario can grade a list change as well as an order (the catalog's AC rows).
+  const watch = await (await fetch(`${origin}/api/trade/watchlist`, { headers }))
+    .json()
+    .catch(() => ({}));
+  const watchlist = (watch?.watching ?? []).map((w) => (typeof w === "string" ? w : w.symbol));
+  return { orders: [...(orders.working ?? []), ...(orders.recent ?? [])], positions, watchlist };
 }
 
 export async function driveChange(o) {
