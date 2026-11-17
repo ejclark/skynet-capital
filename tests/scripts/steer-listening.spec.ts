@@ -162,7 +162,7 @@ describe("Done says received once a session has read it (#6606)", () => {
     expect(v.told()).toBe(ACK);
   });
 
-  it("never says received for the press before, even with a clock ahead of this one", async () => {
+  it("never says received for the press before when that ack's clock sits behind this one", async () => {
     const docs = answered();
     const v = await openWith(docs);
     await v.press("done");
@@ -174,8 +174,33 @@ describe("Done says received once a session has read it (#6606)", () => {
     await v.press("done");
     expect(docs[META]?.doneAt).not.toBe(first);
     expect(v.told()).toBe(SENT);
-    await stamp(v, { ackAt: new Date(Date.now() + 11 * MIN).toISOString(), ackFor: first });
+    await stamp(v, { ackAt: ago(5 * MIN), ackFor: first });
     expect(v.told()).toBe(SENT);
+  });
+
+  // #6729: Reopen's merging save leaves the last `ackFor` on the doc, so a session that stamps only
+  // `ackAt` on the next Done lands beside a stale one. The doc then reads the same as a late ack of
+  // the press before (`acks`, status-client.js), and the times decide: at or after this Done answers it.
+  it("says received when a fresh ack lands beside the earlier Done's stale ackFor", async () => {
+    const docs = answered();
+    const v = await openWith(docs);
+    await v.press("done");
+    const first = docs[META]?.doneAt;
+    await stamp(v, { ackAt: ago(0), ackFor: first });
+    await v.press("reopen");
+    await new Promise((r) => setTimeout(r, 2));
+    await v.press("done");
+    expect(v.told()).toBe(SENT);
+    await stamp(v, { ackAt: new Date(Date.now() + MIN).toISOString() });
+    expect(docs[META]?.ackFor).toBe(first);
+    expect(v.told()).toBe(ACK);
+  });
+
+  it("shows that ack on a page opened later, beside the stale ackFor", async () => {
+    const doneAt = ago(10 * MIN);
+    const v = await openWith(answered({ doneAt, ackAt: ago(9 * MIN), ackFor: ago(20 * MIN) }));
+    await new Promise((r) => setTimeout(r, 5));
+    expect(v.told()).toBe(ACK);
   });
 
   it("stays quiet on a guessed clock ahead of the press once he reopens and presses again", async () => {

@@ -95,12 +95,19 @@ globalThis.steerStatus = (() => {
    *  behind, so the times can't decide it. `ackFor`, the press's own stamp copied from the Done
    *  comment, decides when it is there. Without it (a page or a session from before it), a stamp that
    *  `landed` after the press answers it, whatever time it claims; on opening a page, where a landing
-   *  can't be seen, the times are all there is. */
+   *  can't be seen, the times are all there is.
+   *  An `ackFor` naming an earlier press may be stale: Reopen's merging save leaves it on the doc,
+   *  and a session that then stamps only `ackAt` leaves the same doc as one late-acking that earlier
+   *  press. Neither can be told apart, so the times decide it there, landed or not (#6729). */
   function acks(d, doneAt, landed) {
     if (!doneAt) return false;
-    if (typeof d?.ackFor === "string") return d.ackFor === doneAt;
     const ms = typeof d?.ackAt === "string" ? Date.parse(d.ackAt) : Number.NaN;
-    return landed ? !Number.isNaN(ms) : ms >= Date.parse(doneAt);
+    const doneMs = Date.parse(doneAt);
+    if (typeof d?.ackFor === "string") {
+      if (d.ackFor === doneAt) return true;
+      return Date.parse(d.ackFor) < doneMs && ms >= doneMs;
+    }
+    return landed ? !Number.isNaN(ms) : ms >= doneMs;
   }
   return {
     ACK,
