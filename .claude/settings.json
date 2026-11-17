@@ -115,5 +115,24 @@
       "mcp__Claude_Code_Remote__send_later",
       "mcp__Claude_Code_Remote__delete_trigger"
     ]
+  },
+  "enabledPlugins": {
+    "ag2-agent-guide@anthropic-plugin-directory": false,
+    "ag2-agent-reviewer@anthropic-plugin-directory": false,
+    "ag2-agent-scaffold@anthropic-plugin-directory": false,
+    "ag2-tool-builder@anthropic-plugin-directory": false,
+    "ag2-workflow-patterns@anthropic-plugin-directory": false,
+    "comparative-landscape-brief@anthropic-plugin-directory": false,
+    "cowork-plugin-management@knowledge-work-plugins": false,
+    "data@anthropic-plugin-directory": false,
+    "design-skills@anthropic-plugin-directory": false,
+    "design@anthropic-plugin-directory": false,
+    "diagrams@anthropic-plugin-directory": false,
+    "engineering@anthropic-plugin-directory": false,
+    "market-researcher@anthropic-plugin-directory": false,
+    "orch@anthropic-plugin-directory": false,
+    "productivity@anthropic-plugin-directory": false,
+    "repo-hygiene@anthropic-plugin-directory": false,
+    "superpowers@anthropic-plugin-directory": false
   }
 }
