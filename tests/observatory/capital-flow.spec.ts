@@ -46,6 +46,7 @@ describe("inferCapitalFlow", () => {
       amount: 300_000,
       direction: "added",
       unexplainedCash: 300_000,
+      heldAfter: 500_000,
       basis: "inferred",
     });
   });
@@ -60,6 +61,8 @@ describe("inferCapitalFlow", () => {
     );
     expect(flow?.amount).toBe(300_000);
     expect(flow?.unexplainedCash).toBe(800_000);
+    // The reset's own fingerprint, which the census grades on (#7729): nothing is held after it.
+    expect(flow?.heldAfter).toBe(0);
   });
 
   it("records capital removed when a member resets a winning account back down", () => {

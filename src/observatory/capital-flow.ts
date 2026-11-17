@@ -17,8 +17,9 @@ import type { EquitySample } from "./history-record.js";
  *
  * A flow is inferred only when BOTH exceed the tolerance: unexplained cash alone is an assignment
  * or an unjournaled fill (equity holds), an equity move alone is the market (cash holds). The amount
- * is the equity change — a reset that also clears held positions moves cash by far more than the
- * capital that arrived — with the unexplained cash kept beside it for tuning.
+ * is the equity change — a reset that also clears held positions moves cash by that change plus the
+ * cleared book's net value, more or less than the capital that arrived and even the other way for
+ * a short book — with the unexplained cash and the book still held kept beside it for tuning.
  *
  * This is a deduction from our records, never a broker report, so every line says `inferred`.
  * The samples are the hub's book, so the hub must fold a fill the way the journal prices it — an
@@ -48,6 +49,13 @@ export interface CapitalFlow {
   readonly direction: "added" | "removed";
   /** The cash change our fill journal did not explain — the second witness, kept for tuning. */
   readonly unexplainedCash: number;
+  /**
+   * The net value of the positions the later sample still holds (its equity minus its cash) — the
+   * third witness (#7729). An Alpaca paper reset clears every position, so a genuine reset leaves
+   * this near zero whatever the cleared book was worth, while the cash it moves is the equity change
+   * plus that book's net value (either sign). Absent on lines recorded before #7729.
+   */
+  readonly heldAfter?: number;
   /** Always inferred: deduced from two of our own records, not reported by the broker. */
   readonly basis: "inferred";
 }
@@ -157,6 +165,7 @@ export function inferCapitalFlow(
     amount: equityMove,
     direction: equityMove > 0 ? "added" : "removed",
     unexplainedCash,
+    heldAfter: next.equity - next.cash,
     basis: "inferred",
   };
 }

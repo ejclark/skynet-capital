@@ -7,12 +7,21 @@ import type { CapitalFlow } from "./capital-flow.js";
  * needs a read that never prints a member's id or a dollar figure — the repo and its run logs are
  * public. This census is that read: counts only.
  *
- * What it grades. Each line already carries its two witnesses (`capital-flow.ts`): the equity move
- * (`amount`) and the cash our fill journal did not explain (`unexplainedCash`). A real top-up or
- * reset moves both the same way, and cash by at least the equity move (a reset that also clears
- * held positions moves cash by more). A false line — a market move that happened to share a
- * five-minute window with an unjournaled cash event (an assignment, an expiry, a fee) — pairs two
- * unrelated numbers, so they disagree in sign or the cash falls well short of the equity move.
+ * What it grades. Each line carries its witnesses (`capital-flow.ts`): the equity move (`amount`),
+ * the cash our fill journal did not explain (`unexplainedCash`) and, since #7729, the net value of
+ * the book the later sample still holds (`heldAfter`). An Alpaca paper reset clears every
+ * position, so its cash moves by the equity change PLUS the cleared book's net value: more than
+ * equity for a net-long book, less or even the other way for a net-short one (#7729 — the first
+ * cut of this rule assumed cash always moved the same way and further, and graded those genuine
+ * resets "disagree"). What a reset always leaves is a flat book. So a line agrees when the later
+ * book is flat (a reset), or when cash matches the equity move (capital arriving without touching
+ * the book). A false line — a market move that happened to share a five-minute window with an
+ * unjournaled cash event (an assignment, an expiry, a fee) — leaves the book held and pairs two
+ * unrelated numbers. The one false line this cannot catch: that unjournaled event is itself what
+ * flattened the book (a covered call assigned away) in a window the market also moved.
+ *
+ * A line recorded before `heldAfter` existed can prove only the second story; when it does not,
+ * it is `ungraded` — counted and named, never folded into either side or the floor table.
  *
  * What it can recommend. Only a RAISE: a line under the current rule was never recorded, so the
  * shadow series cannot show what a lower floor would catch. Each line's equity at the time is not
@@ -30,16 +39,19 @@ export const SHADOW_DAYS_WANTED = 7;
  *  0.5% rule at the $1,000,000 starting line. */
 export const CANDIDATE_FLOORS: readonly number[] = [1_000, 5_000, 10_000, 25_000, 50_000];
 
-export type WitnessVerdict = "agree" | "disagree";
+export type WitnessVerdict = "agree" | "disagree" | "ungraded";
 
 /**
- * Do the two witnesses tell the same story? They agree when they share a sign and the unexplained
- * cash covers the equity move, give or take `slack` (the tolerance a rounding or a fee is allowed).
+ * Do the witnesses tell a flow's story? They agree when the later book is flat — a reset, which
+ * clears every position whatever the cash then did — or when the unexplained cash matches the
+ * equity move (capital that arrived with the book untouched), each give or take `slack` (the
+ * tolerance a rounding or a fee is allowed). A line with no `heldAfter` that fails the second test
+ * is `ungraded`: it predates the witness that would tell a reset from a false line.
  */
 export function witnesses(flow: CapitalFlow, slack = 1_000): WitnessVerdict {
-  const sameSign = Math.sign(flow.amount) === Math.sign(flow.unexplainedCash);
-  const cashCovers = Math.abs(flow.unexplainedCash) >= Math.abs(flow.amount) - slack;
-  return sameSign && cashCovers ? "agree" : "disagree";
+  if (Math.abs(flow.unexplainedCash - flow.amount) <= slack) return "agree";
+  if (flow.heldAfter === undefined) return "ungraded";
+  return Math.abs(flow.heldAfter) <= slack ? "agree" : "disagree";
 }
 
 export interface FloorRow {
@@ -54,6 +66,8 @@ export interface FlowCensus {
   readonly participants: number;
   readonly agree: number;
   readonly disagree: number;
+  /** Lines recorded before `heldAfter` that only a reset could explain: out of the floor table. */
+  readonly ungraded: number;
   /** Whole days from `FLOWS_RECORDED_FROM` to `now`. */
   readonly shadowDays: number;
   readonly floors: readonly FloorRow[];
@@ -71,9 +85,10 @@ const clears = (flow: CapitalFlow, floor: number): boolean =>
 /** Grade the shadow ledger. Pure: `now` is passed in so the spec pins the clock. */
 export function censusFlows(flows: readonly CapitalFlow[], now: Date): FlowCensus {
   const verdicts = flows.map((flow) => ({ flow, verdict: witnesses(flow) }));
-  const agree = verdicts.filter((v) => v.verdict === "agree").length;
+  const graded = verdicts.filter((v) => v.verdict !== "ungraded");
+  const agree = graded.filter((v) => v.verdict === "agree").length;
   const floors = CANDIDATE_FLOORS.map((floor) => {
-    const kept = verdicts.filter((v) => clears(v.flow, floor));
+    const kept = graded.filter((v) => clears(v.flow, floor));
     const keptAgree = kept.filter((v) => v.verdict === "agree").length;
     return { floor, agree: keptAgree, disagree: kept.length - keptAgree };
   });
@@ -86,7 +101,8 @@ export function censusFlows(flows: readonly CapitalFlow[], now: Date): FlowCensu
     lines: flows.length,
     participants: new Set(flows.map((flow) => flow.participantId)).size,
     agree,
-    disagree: flows.length - agree,
+    disagree: graded.length - agree,
+    ungraded: flows.length - graded.length,
     shadowDays,
     floors,
     recommendedFloor: recommended?.floor,
@@ -104,8 +120,13 @@ function verdictLine(census: FlowCensus): string {
   if (census.lines === 0) {
     return "No flows recorded. Nobody topped up or reset, and no false line appeared: keep today's rule.";
   }
+  if (census.agree + census.disagree === 0) {
+    return "No line can be graded yet: every one predates the held-book witness (#7729). Wait for lines recorded since.";
+  }
   if (census.disagree === 0) {
-    return "Every line's witnesses agree: keep today's rule.";
+    return census.ungraded === 0
+      ? "Every line's witnesses agree: keep today's rule."
+      : "Every graded line's witnesses agree: keep today's rule.";
   }
   if (census.recommendedFloor === undefined) {
     return `A disagreeing line clears every candidate floor up to ${usd(CANDIDATE_FLOORS.at(-1) ?? 0)}: a floor alone will not separate them; read the detector, not the tolerance.`;
@@ -125,6 +146,11 @@ export function censusMarkdown(census: FlowCensus): string {
     `**${verdictLine(census)}**`,
     "",
     `- Lines: ${census.lines} across ${census.participants} participant(s); witnesses agree on ${census.agree}, disagree on ${census.disagree}.`,
+    ...(census.ungraded > 0
+      ? [
+          `- Ungraded: ${census.ungraded}, recorded before lines carried the held book (#7729) and not a plain top-up, so only a reset or a false line could explain them. Left out of the floor table.`,
+        ]
+      : []),
     `- Shadow time: ${census.shadowDays} day(s) since recording began.`,
     "",
     "| Floor on both witnesses | Agree kept | Disagree kept |",
@@ -147,7 +173,9 @@ export function parseFlowLines(text: string): CapitalFlow[] {
         typeof value.amount === "number" &&
         typeof value.unexplainedCash === "number"
       ) {
-        flows.push(value as CapitalFlow);
+        // A held book that is not a number would read as a disagreeing line; drop it to ungraded.
+        const { heldAfter, ...rest } = value as CapitalFlow;
+        flows.push(typeof heldAfter === "number" ? { ...rest, heldAfter } : rest);
       }
     } catch {
       // A torn last line from a write in flight: skip it, the rest still counts.
