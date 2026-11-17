@@ -119,7 +119,7 @@ const patterns = analyzed.filter(Boolean).flatMap((r) => r.patterns);
 log(`${analyzed.filter(Boolean).length}/${batches.length} batches returned, ${patterns.length} patterns`);
 
 const checked = await agent(
-  `Check the memory files in ${args.memoryDir} against today's code on origin/main. Start from this mechanical report of cited paths and npm scripts that no longer exist, flags no longer in the script they are passed to, cited issues now closed, and wording that still waits on a closed issue: ${args.staleReport ?? "(none supplied)"}. A closed issue only makes a memory stale if its wording still depends on it being open. A column reading "unread", and every issue listed under unreadIssues, is unchecked, never clean: the report could not read it, so check it yourself. Each row is a candidate to check against the code, not a verdict. Also find duplicates, contradictions between memories, contradictions with origin/main:CLAUDE.md, and memories that merely repeat a skill or doc. ${READ_ONLY}`,
+  `Check the memory files in ${args.memoryDir} against today's code on origin/main. Start from this mechanical report of cited paths and npm scripts that no longer exist, flags no longer in the script they are passed to, cited issues now closed, and wording that still waits on a closed issue: ${args.staleReport ?? "(none supplied)"}. A closed issue only makes a memory stale if its wording still depends on it being open. A column reading "unread", and every issue listed under unreadIssues, is unchecked, never clean: the report could not read it, so check it yourself, and if you cannot read it either, report it as kind "unchecked" rather than dropping it or calling it stale. Each row is a candidate to check against the code, not a verdict. Also find duplicates, contradictions between memories, contradictions with origin/main:CLAUDE.md, and memories that merely repeat a skill or doc. ${READ_ONLY}`,
   {
     label: "check:memory",
     phase: "Check",
@@ -133,7 +133,7 @@ const checked = await agent(
             type: "object",
             properties: {
               file: { type: "string" },
-              kind: { type: "string", enum: ["stale", "duplicate", "contradiction", "repeats a doc"] },
+              kind: { type: "string", enum: ["stale", "duplicate", "contradiction", "repeats a doc", "unchecked"] },
               detail: { type: "string" },
               evidence: { type: "string" },
             },
@@ -150,6 +150,11 @@ if (!checked) {
   notRun.push("the memory check did not return, so stale, duplicate and contradicting memories went unexamined");
   log("check:memory did not return");
 }
+// An "unchecked" row is a check nobody could run (#6717): name it, and keep it out of the
+// propose agent's input so it can never become a "retire" on an unverified verdict.
+const unchecked = (checked?.findings ?? []).filter((f) => f.kind === "unchecked");
+const verdicts = (checked?.findings ?? []).filter((f) => f.kind !== "unchecked");
+if (unchecked.length) notRun.push(`${unchecked.length} memory check(s) could not run: ${unchecked.map((f) => f.file).join(", ")}`);
 
 const PROPOSALS = {
   type: "object",
@@ -177,7 +182,7 @@ const PROPOSALS = {
 };
 
 const proposed = await agent(
-  `You are the orchestrator of a memory review. From these patterns and memory findings, keep only what is prevalent enough to warrant a change, and propose at most ${MAX_PROPOSALS}, most valuable first. Grep origin/main:CLAUDE.md, docs/LESSONS.md and the memory folder ${args.memoryDir} for each: if a written rule already covers it, set captured true and propose enforcement rather than another sentence. Prefer retiring or merging over adding. A proposal needing no change is a dropped pattern. Say every dropped pattern and why. ${READ_ONLY}${steer}\n\nPATTERNS:\n${JSON.stringify(patterns)}\n\nMEMORY FINDINGS:\n${checked ? JSON.stringify(checked.findings ?? []) : "(the memory check did not return; judge the patterns alone)"}`,
+  `You are the orchestrator of a memory review. From these patterns and memory findings, keep only what is prevalent enough to warrant a change, and propose at most ${MAX_PROPOSALS}, most valuable first. Grep origin/main:CLAUDE.md, docs/LESSONS.md and the memory folder ${args.memoryDir} for each: if a written rule already covers it, set captured true and propose enforcement rather than another sentence. Prefer retiring or merging over adding. A proposal needing no change is a dropped pattern. Say every dropped pattern and why. ${READ_ONLY}${steer}\n\nPATTERNS:\n${JSON.stringify(patterns)}\n\nMEMORY FINDINGS:\n${checked ? JSON.stringify(verdicts) : "(the memory check did not return; judge the patterns alone)"}`,
   { label: "propose", phase: "Propose", schema: PROPOSALS },
 ).catch(() => null);
 if (!proposed) {
