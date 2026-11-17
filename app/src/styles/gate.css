@@ -187,9 +187,33 @@
   opacity: 0.55;
   cursor: not-allowed;
 }
+/* Why Review is disabled, in words under the button: a title has no hover on a phone. */
+.gate-why {
+  margin: 6px 0 0;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+/* A Sell ticket's "You hold N shares of SYM", with the control that fills the count. */
+.gate-held {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  margin: 0;
+  font-size: var(--text-sm);
+}
+.gate-held .gate-held-all {
+  width: auto;
+  padding: 5px 12px;
+  font-size: var(--text-sm);
+}
 @media (max-width: 700px) {
   /* Two tracks at phone width, the symbol still spanning both. */
   .gate-fields {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .gate-held .gate-held-all {
+    min-height: 44px;
   }
 }

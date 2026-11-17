@@ -126,6 +126,25 @@ export function orderTypeLabel(orderType: string): string {
   return ORDER_TYPE_LABELS[orderType as TicketOrderType] ?? orderType;
 }
 
+/** What a share ticket hands the next one when the member flips Buy ⇄ Sell (the flip remounts the
+ *  ticket on the other rung). The count always goes. The order type and its limit go once the
+ *  member chose them (`priced`); an untouched ticket re-seeds at the mid, as any fresh one does.
+ *  A stop price never goes: a buy stop sits above the market and a sell stop below it, so the same
+ *  number on the other side would fire at once. */
+export interface TicketCarry {
+  readonly quantity: string;
+  readonly priced?: Pick<TicketFields, "orderType" | "limitPrice">;
+  readonly timeInForce?: TicketTimeInForce;
+}
+
+export function carryAcrossSide(fields: TicketFields, priced: boolean): TicketCarry {
+  return {
+    quantity: fields.quantity,
+    ...(priced ? { priced: { orderType: fields.orderType, limitPrice: fields.limitPrice } } : {}),
+    ...(fields.timeInForce ? { timeInForce: fields.timeInForce } : {}),
+  };
+}
+
 /** Which price this order class needs from the member — undefined when it needs none. */
 export function priceFieldFor(orderType: TicketOrderType): "limitPrice" | "stopPrice" | undefined {
   if (orderType === "limit") return "limitPrice";
