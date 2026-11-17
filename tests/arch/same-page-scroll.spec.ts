@@ -50,8 +50,8 @@ const RESETS: Record<string, ReadonlyArray<readonly [snippet: string, why: strin
   "app/src/shell/events-agenda.tsx": [
     ["section: undefined, events: undefined", "leaves Events for the row's #pos- anchor"],
     [
-      "events: undefined, section: undefined",
-      "leaves Events for the Overview's #book-wait (#4608)",
+      "account: deskId",
+      "leaves Events for the waiting account's Overview #book-wait (#4608, #7438)",
     ],
   ],
   "app/src/shell/book-wait-line.tsx": [
