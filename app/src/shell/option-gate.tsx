@@ -595,6 +595,8 @@ export function OptionGate({
               step={1}
               inputMode="numeric"
               value={contracts}
+              // a seeded amount is replaced by typing, not appended to (change-scenarios round 1)
+              onFocus={(e) => e.currentTarget.select()}
               onChange={(e) => edit(setContracts)(e.target.value)}
             />
           </div>
@@ -620,6 +622,7 @@ export function OptionGate({
                 inputMode="decimal"
                 value={limitPrice}
                 placeholder="2.50"
+                onFocus={(e) => e.currentTarget.select()}
                 onChange={(e) => edit(setLimitPrice)(e.target.value)}
               />
             </div>

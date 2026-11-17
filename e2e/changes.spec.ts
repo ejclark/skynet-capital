@@ -77,6 +77,35 @@ test("on a phone, the Shares label takes the tap right after a symbol is typed",
   await expect(page.getByLabel("Shares", { exact: true })).toHaveValue("7");
 });
 
+test("typing over a seeded limit price replaces it, and the limit order lands at that price", async ({
+  page,
+}) => {
+  // Round 1 of the faculty: members typed into seeded amounts and sent "510.00505" (EQ-03) — the
+  // form seeds the limit at the mid on the first quote, and typing appended to it.
+  const known = new Set((await orders(page.request)).map((o) => o.id));
+  await page.goto("/app/trade");
+  await page.getByLabel("Symbol", { exact: true }).scrollIntoViewIfNeeded();
+  await enterStock(page, "QQQ", "10");
+  const limit = page.getByLabel("Limit price", { exact: true });
+  await expect(limit).not.toHaveValue("");
+  await limit.click();
+  await page.keyboard.type("505");
+  await expect(limit).toHaveValue("505");
+  await page.getByRole("button", { name: "Review order" }).click();
+  await page.getByRole("button", { name: /^Submit order/ }).click();
+  await expect
+    .poll(async () => (await orders(page.request)).filter((o) => !known.has(o.id)))
+    .toEqual([
+      expect.objectContaining({
+        symbol: "QQQ",
+        side: "buy",
+        quantity: 10,
+        orderType: "limit",
+        limitPrice: 505,
+      }),
+    ]);
+});
+
 test("changing a working order's price replaces it, then cancelling the new one ends it", async ({
   page,
 }) => {

@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { ReactElement } from "react";
+import type { FocusEvent, ReactElement } from "react";
 import { useEffect, useId, useState } from "react";
 import { marketSession } from "../live/market-session";
 import type { PlayInfo } from "../live/options";
@@ -151,6 +151,13 @@ function GateStatus({ state }: { readonly state: GateState }): ReactElement | nu
     </>
   );
 }
+
+/**
+ * Focusing an amount the form already holds selects it, so typing REPLACES it. The change study's
+ * blind members typed into seeded amounts and got "510.00505", "90.0085" and a 950-share sell they
+ * could not trim (EQ-03, OM-04, EQ-04, 2026-11-16) — the same append that cost OM-02 its change.
+ */
+const selectAll = (e: FocusEvent<HTMLInputElement>): void => e.currentTarget.select();
 
 /** @category trading */
 export function TradeGate({
@@ -364,6 +371,7 @@ export function TradeGate({
             inputMode="numeric"
             value={fields.quantity}
             placeholder="e.g. 10"
+            onFocus={selectAll}
             onChange={(e) => edit("quantity")(e.target.value)}
           />
         </div>
@@ -407,6 +415,7 @@ export function TradeGate({
               inputMode="decimal"
               value={fields[priceField]}
               placeholder="40.00"
+              onFocus={selectAll}
               onChange={(e) => price(priceField)(e.target.value)}
             />
           </div>
