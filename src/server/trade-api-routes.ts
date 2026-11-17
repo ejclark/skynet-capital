@@ -116,7 +116,7 @@ async function readTradeBody(
  *     be exempt from THIS lock, and wasn't in the domain rules (`unlockedCodes`) either — only the
  *     client and this route forgot to ask.
  */
-async function resolveStockRefusal(
+export async function resolveStockRefusal(
   action: "buy" | "sell",
   requesterId: string | undefined,
   config: DashboardServerConfig,
