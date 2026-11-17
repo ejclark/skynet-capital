@@ -106,6 +106,47 @@ test("typing over a seeded limit price replaces it, and the limit order lands at
     ]);
 });
 
+test("on a phone, a working order is reachable from Trade's sections and can be cancelled", async ({
+  page,
+}) => {
+  // Rounds 1–2 of the faculty: no member on a phone found a working order. Orders sat past the
+  // screen's edge, then behind a "More ▾" whose list the controls row clipped to a strip.
+  const known = new Set((await orders(page.request)).map((o) => o.id));
+  await page.request.post("/api/trade/submit", {
+    data: {
+      participantId: ACCOUNT,
+      action: "buy",
+      symbol: "XLE",
+      quantity: 1,
+      orderType: "limit",
+      limitPrice: 50,
+    },
+  });
+  const placed = (await orders(page.request)).find((o) => !known.has(o.id)) as Row;
+  expect(placed).toEqual(expect.objectContaining({ symbol: "XLE", state: "working" }));
+  await page.setViewportSize(PHONE);
+  await page.goto("/app/trade");
+  await page.getByRole("button", { name: "More sections" }).click();
+  const ordersItem = page.getByRole("button", { name: "Orders", exact: true });
+  // On screen as a person sees it: whole, and the thing a tap at its centre lands on. A clipped list
+  // still "clicks" for Playwright, which scrolls inside the clipping row; a member cannot.
+  await expect(ordersItem).toBeInViewport({ ratio: 1 });
+  expect(
+    await ordersItem.evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+      return hit === el || el.contains(hit);
+    }),
+  ).toBe(true);
+  await ordersItem.click();
+  const row = page.locator(".wo-row", { hasText: "XLE" }).first();
+  await row.getByRole("button", { name: "Cancel", exact: true }).click();
+  await row.getByRole("button", { name: "Confirm cancel" }).click();
+  await expect
+    .poll(async () => (await orders(page.request)).find((o) => o.id === placed.id)?.state)
+    .toBe("cancelled");
+});
+
 test("changing a working order's price replaces it, then cancelling the new one ends it", async ({
   page,
 }) => {
