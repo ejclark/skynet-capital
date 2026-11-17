@@ -1,9 +1,10 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { Readable } from "node:stream";
+import { shelfFileFor } from "../../src/domain/discovery-pass.js";
 import { CampaignQuestionsStore } from "../../src/server/campaign-questions-store.js";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
 import { DiscoveryQueueStore } from "../../src/server/discovery-queue-store.js";
@@ -73,6 +74,43 @@ const FORM = {
   mode: "explore",
 };
 
+/**
+ * A hostile research shelf (#7446). With no `campaignShelfAnswered` injected, the route reads
+ * `docs/research/discovery/` under `process.cwd()`, so a real write-up merging for a subject this
+ * spec asks about (gold, RIVN, PLTR…) flipped its `queued`/`joined` answers to `answered`. Every
+ * test here runs from a temp root whose shelf already holds those write-ups: a config that forgets
+ * the seam reads them and goes red, the same way the live shelf would turn it red later.
+ */
+const SHELVED = [
+  { kind: "market", subject: "gold" },
+  { kind: "sector", subject: "Healthcare" },
+  { kind: "name", subject: "PLTR" },
+  { kind: "name", subject: "RIVN" },
+  { kind: "name", subject: "LCID" },
+  { kind: "name", subject: "DD" },
+  { kind: "name", subject: "PLTR", campaign: "energy-for-ai" },
+  { kind: "name", subject: "NVDA", campaign: "ai-buildout" },
+  { kind: "name", subject: "AMD", campaign: "ai-buildout" },
+] as const;
+let realCwd: string;
+let shelfRoot: string;
+beforeAll(async () => {
+  realCwd = process.cwd();
+  shelfRoot = await mkdtemp(join(tmpdir(), "skynet-hostile-shelf-"));
+  for (const ask of SHELVED) {
+    const file = join(shelfRoot, shelfFileFor(ask));
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, "# planted write-up\n");
+  }
+  process.chdir(shelfRoot);
+});
+afterAll(async () => {
+  process.chdir(realCwd);
+  await rm(shelfRoot, { recursive: true, force: true });
+});
+/** The seam every config below injects, so no answer here rides on what the shelf holds. */
+const OFF_SHELF = () => false;
+
 describe("serveMemberCampaignsApi", () => {
   let dir: string;
   let file: string;
@@ -91,6 +129,7 @@ describe("serveMemberCampaignsApi", () => {
       memberCampaigns: store,
       // The house has a ledger on XOM only, in this spec's world.
       campaignShelf: (symbol: string) => symbol === "XOM",
+      campaignShelfAnswered: OFF_SHELF,
       ...over,
     }) as unknown as DashboardServerConfig;
 
@@ -376,6 +415,7 @@ describe("a question starts discovery (#6952 slice 2b)", () => {
       memberCampaigns: campaigns,
       discoveryQueue: queue,
       campaignShelf: (symbol: string) => symbol === "XOM",
+      campaignShelfAnswered: OFF_SHELF,
       discoveryPerPass: 6,
       ...over,
     }) as unknown as DashboardServerConfig;
@@ -620,6 +660,7 @@ describe("a question asked inside a campaign (#6952 slice 2c)", () => {
       memberCampaigns: campaigns,
       discoveryQueue: queue,
       campaignShelf: () => false,
+      campaignShelfAnswered: OFF_SHELF,
       discoveryPerPass: 6,
     }) as unknown as DashboardServerConfig;
   const askIn = async (body: unknown, who: unknown = ada) => {
@@ -774,6 +815,7 @@ describe("campaigns are communal (#6949 slice 6, criteria 8, 10, 11)", () => {
       discoveryQueue: queue,
       campaignQuestions: questions,
       campaignShelf: () => false,
+      campaignShelfAnswered: OFF_SHELF,
       discoveryPerPass: 6,
       campaignFindings: (campaign: string, ask: string) =>
         campaign === "ai-buildout" && ask === FOUND.answers ? [FOUND] : [],
