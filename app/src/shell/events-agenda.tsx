@@ -22,18 +22,31 @@ const TIER_WORD: Record<BookEvent["tier"], string> = {
 };
 
 function RowLink({ event }: { readonly event: BookEvent }): ReactElement {
-  // A wait on the whole book (#4608) lands on the Overview, where the wait itself is read.
-  if (event.book)
+  // A wait on the whole book (#4608) lands on the Overview, where the wait itself is read. The
+  // Overview draws that line for ONE account, so the link opens the account that waits — on All
+  // accounts, `...prev` alone kept `account=all` and landed on no `#book-wait` (#7438). Crossing
+  // accounts drops what is one account's, as the switcher does (routes/accounts.tsx).
+  if (event.book) {
+    const { deskId } = event.book;
     return (
       <Link
         to="/accounts"
-        search={(prev) => ({ ...prev, events: undefined, section: undefined })}
+        search={(prev) => ({
+          ...prev,
+          account: deskId,
+          events: undefined,
+          section: undefined,
+          ...(prev.account === deskId
+            ? {}
+            : { card: undefined, symbol: undefined, playbook: undefined, position: undefined }),
+        })}
         hash="book-wait"
         className="agenda-link"
       >
         Your wait on the Overview →
       </Link>
     );
+  }
   const [first, ...more] = event.touches;
   if (first)
     return (
