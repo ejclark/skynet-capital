@@ -76,7 +76,7 @@ describe("TradeGate — initial symbol and commit", () => {
     expect(screen.getByLabelText("Symbol")).toHaveValue("NVDA");
   });
 
-  it("calls onSymbolCommit when the symbol field commits", () => {
+  it("calls onSymbolCommit when the symbol field commits", async () => {
     let committed: string | undefined;
     const client = new QueryClient();
     render(
@@ -93,7 +93,8 @@ describe("TradeGate — initial symbol and commit", () => {
     fireEvent.change(screen.getByLabelText("Symbol"), { target: { value: "aapl" } });
     fireEvent.blur(screen.getByLabelText("Symbol"));
 
-    expect(committed).toBe("AAPL");
+    // The blur commits once the tap that caused it has finished (symbol-field.tsx), a tick later.
+    await waitFor(() => expect(committed).toBe("AAPL"));
   });
 });
 
@@ -158,7 +159,7 @@ describe("OptionGate — initial symbol and commit", () => {
     expect(chainCalls).toEqual([]);
   });
 
-  it("calls onSymbolCommit when the symbol field commits", () => {
+  it("calls onSymbolCommit when the symbol field commits", async () => {
     let committed: string | undefined;
     const client = new QueryClient();
     render(
@@ -176,6 +177,6 @@ describe("OptionGate — initial symbol and commit", () => {
     fireEvent.change(screen.getByLabelText("Symbol"), { target: { value: "tsla" } });
     fireEvent.blur(screen.getByLabelText("Symbol"));
 
-    expect(committed).toBe("TSLA");
+    await waitFor(() => expect(committed).toBe("TSLA"));
   });
 });

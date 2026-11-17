@@ -246,7 +246,7 @@ async function perform(session, action, before) {
       await page.keyboard.type(action.text);
       return null;
     case "key":
-      await page.keyboard.press(action.key);
+      for (let i = 0; i < (action.times ?? 1); i++) await page.keyboard.press(action.key);
       return null;
     case "back":
       await page.goBack({ waitUntil: "commit" }).catch(() => null);

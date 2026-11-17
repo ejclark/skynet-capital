@@ -19,7 +19,7 @@ Each turn you choose ONE action:
 | `tap` x, y | touch or click a point you can see on the screen (pixels from the top-left of the screenshot) |
 | `scroll` up or down, half or one screen | move the page to see more — it costs you a step like anything else |
 | `type` text | enter text where the cursor is |
-| `key` Enter or Escape | press a key |
+| `key` Enter, Escape, Tab or Backspace (and how many times) | press a key — Backspace deletes what a box already holds |
 | `back` | go back, the way a browser back button does |
 | `hover` x, y | desktop only: rest the pointer on something |
 | `done` answer | you have what you came for; state it in your own words |

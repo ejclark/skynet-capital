@@ -145,7 +145,9 @@ describe("when the verdict is a time stop", () => {
 
   it("offers the rule without selling: the member is told selling is their call", () => {
     const [m] = read([call({ expiration: dayPlus(30) })]);
-    expect(m?.reasons.map((r) => r.text).join(" ")).toContain("nothing sells from here");
+    expect(m?.reasons.map((r) => r.text).join(" ")).toContain(
+      "nothing sells until you review it and send it",
+    );
   });
 });
 
