@@ -179,6 +179,9 @@ function CloseRow({
   }, [focus]);
   const [state, setState] = useState<RowState>({ step: "idle" });
   const [orderType, setOrderType] = useState<"market" | "limit">("market");
+  // How long a limit close stands (change-scenarios round 2, PM-01: a standing $15 take-profit went
+  // out as a day order — the server's default — and the member had to change it in place after).
+  const [timeInForce, setTimeInForce] = useState<"day" | "gtc">("day");
   const [limitPrice, setLimitPrice] = useState("");
   // How many contracts to close (change-scenarios OP-02, 2026-11-16: a blind member on a phone who
   // wanted to sell 1 of 2 calls found no count here — this row closed the whole holding, and the
@@ -210,6 +213,7 @@ function CloseRow({
     // Part of the holding names its count; all of it goes bare, as before (#5090: the server sizes
     // a bare close from the live holding, and Confirm names the count the review answered).
     ...(partial ? { contracts: parsedCount } : {}),
+    ...(orderType === "limit" && timeInForce === "gtc" ? { timeInForce } : {}),
     ...(orderType === "limit" && limitPrice.trim() !== "" && Number.isFinite(parsedLimit)
       ? { limitPrice: parsedLimit }
       : {}),
@@ -291,6 +295,27 @@ function CloseRow({
               </button>
             ))}
           </fieldset>
+          {orderType === "limit" ? (
+            <fieldset
+              className="toggle-group tkt-close-type"
+              aria-label="How long the close stands"
+            >
+              {(["day", "gtc"] as const).map((tif) => (
+                <button
+                  key={tif}
+                  type="button"
+                  aria-pressed={timeInForce === tif}
+                  disabled={state.step === "submitting" || state.step === "done"}
+                  onClick={() => {
+                    setTimeInForce(tif);
+                    disarm();
+                  }}
+                >
+                  {tif === "day" ? "Today only" : "Until cancelled"}
+                </button>
+              ))}
+            </fieldset>
+          ) : null}
           {orderType === "limit" ? (
             <span className="field tkt-close-price">
               <label htmlFor={priceId} className="visually-hidden">

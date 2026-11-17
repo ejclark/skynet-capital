@@ -114,3 +114,9 @@ run). A `[lo, hi]` pair is a range, a list of strings is any-of, and anything el
   done, because its list was clipped by the scrolling row. That is fixed. The CI playthrough that pins
   it asserts the item is whole on screen, since Playwright's click scrolls inside a clipping row, which
   a member cannot do. Lesson: **a CI playthrough must assert what a person sees before it acts.**
+- 2026-11-17 · **round 3 (14 sessions, the phone cluster twice each): 14 of 14 landed.** Cancelling a
+  working order on a phone went from a give-up (12 turns, ease 1) to 7 turns at ease 5. Across rounds
+  2 and 3, all 23 runnable scenarios have landed on the fixed build. What stays open is placement,
+  and that is Eric's call: #7669 (close from the ticket or the chain) and #7670 (the order form above
+  the ladder on a phone). #7671 (when to seed limit-at-mid) is a default for him to choose.
+

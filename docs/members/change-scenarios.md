@@ -326,6 +326,14 @@ round now detects and sets aside).
 | PM-01 standing take-profit at $15 (desktop) | 1500 typed for $15 | landed, ease 3 | "per share" said; the oracle reads a change in place as one intent |
 | OM-01 · OM-03 · AC-02 (phone, the Orders and Watchlist sections) | gave up | **still gave up**: "More opens to nothing" | the More list was clipped by its row. Fixed after these sessions ran; round 3 re-tests it |
 
-**Still open after round 2:** the option close row has no time in force (PM-01 sent a day order, then
-changed it to good-til-cancelled in place); a held option still cannot be closed from the ticket or
+## Round 3 — the phone sessions round 2 lost, twice each (2026-11-17, 14 blind sessions)
+
+**14 of 14 landed, none with an unintended write.** On a build where Trade's "More ▾" list is no
+longer clipped, cancelling the working order on a phone took 7 turns at ease 5 (round 1: gave up at
+ease 1 after 12), changing it took 9, and adding CRWV to the watchlist took 8. The two sessions round
+2 set aside (the invited friend's own sale, the oversell refusal) landed both times, and the phone
+order and partial-close checks held. **Across rounds 2 and 3, every one of the 23 runnable scenarios
+has landed on the fixed build.**
+
+**Still open after round 3:** a held option still cannot be closed from the ticket or
 the chain (#7669); the order form still starts under the ladder card on a phone (#7670).

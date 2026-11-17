@@ -182,6 +182,16 @@ describe("OptionPositionsCard — part of a holding (change-scenarios OP-02)", (
     expect(reviewed[0]).toMatchObject({ kind: "close", contracts: 1 });
   });
 
+  it("lets a limit close stand until cancelled, and sends that (round 2, PM-01)", async () => {
+    render(withClient(<OptionPositionsCard deskId="human-eric" positions={[held]} />));
+    fireEvent.click(screen.getByRole("button", { name: "Limit" }));
+    fireEvent.change(screen.getByLabelText("Limit price per share"), { target: { value: "15" } });
+    fireEvent.click(screen.getByRole("button", { name: "Until cancelled" }));
+    fireEvent.click(screen.getByRole("button", { name: "Close…" }));
+    await waitFor(() => expect(reviewed).toHaveLength(1));
+    expect(reviewed[0]).toMatchObject({ orderType: "limit", limitPrice: 15, timeInForce: "gtc" });
+  });
+
   it("refuses a count past what is held, in words, before any review", () => {
     render(withClient(<OptionPositionsCard deskId="human-eric" positions={[held]} />));
     fireEvent.change(screen.getByLabelText("Contracts to close"), { target: { value: "3" } });
