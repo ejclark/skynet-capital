@@ -354,5 +354,20 @@ members rightly refused to invent one).
 **A world artifact, declared:** the faculty world's assistant runs without a model (offline), so a
 member who asks it to act gets a canned reply. Those replies are never counted against the app.
 
+## Final round — all 30 runnable scenarios on the final build (2026-11-17)
+
+**28 of 30 landed as meant, none with an unintended write.** By device: **15 of 17 on a phone and 13
+of 13 on desktop**. The member study's phone gap was 47% against 86%; here it is 88% against 100%.
+The median session took 13 turns at ease 5 of 7. The two misses:
+
+- **BT-02 halt every bot (phone)**, the placement call in #7673, as in round 4.
+- **OM-01 cancel the working order (phone).** It landed twice in round 3. Here the member opened More
+  → Orders on turn 11, but had earlier asked the assistant, so the dock was expanded over most of the
+  screen and the Orders list sat beneath it: "the tab now reads Orders… but the screen hasn't
+  changed." An expanded dock that stays open when the member chooses a section is evidence for #7670.
+
+BT-01 landed this time after failing both round-4 runs, which is run-to-run variance. That is the
+case for three runs per phone row (`docs/IDEAS.md`).
+
 **Still open after round 4:** pausing or halting bots on a phone (#7673); a held option still cannot be closed from the ticket or
 the chain (#7669); the order form still starts under the ladder card on a phone (#7670).

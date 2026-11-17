@@ -134,4 +134,8 @@ run). A `[lo, hi]` pair is a range, a list of strings is any-of, and anything el
   controls sit two levels into Settings, and that placement call is Eric's (#7673). BT-03 was
   withdrawn because its premise was false in this world. Lesson: **check a scenario's premise against
   the world's own guidance before running it.**
+- 2026-11-17 · **final round (all 30 scenarios, final build): 28 of 30 landed, none unintended; 15 of
+  17 on a phone, 13 of 13 on desktop.** The two misses are a placement call (#7673) and an expanded
+  assistant dock that stays open over a section the member just chose (evidence on #7670). A round now
+  writes `digest.md` itself and holds the heavy-work lock, so a push waits for it instead of competing.
 
