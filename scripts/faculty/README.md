@@ -98,3 +98,19 @@ run). A `[lo, hi]` pair is a range, a list of strings is any-of, and anything el
 - 2026-11-16 · **the static census behind the catalog** (5 readers) found that Modify ran none of the
   desk's checks, the ticket only knows "to open", and several review states had no way back. Each
   is in the catalog's *Gaps* with its file and line.
+- 2026-11-17 · **round 1 (22 sessions): 10 landed as recorded, 9 of 16 once the instrument's own
+  faults were set aside.** Every give-up was a member who could see what they wanted and could not
+  reach or finish it: a working order invisible on a phone, typing that appended to a seeded amount,
+  no count on an option close, "per share" never said, and a card that said "nothing sells from
+  here". Nine causes were fixed, and three placement decisions went to Eric (#7669, #7670, #7671).
+- 2026-11-17 · **the instrument had faults too, and now detects them itself.** The actor could press
+  only Enter and Escape (now Backspace and Tab as well, with a count). An edit to the role prompt
+  mid-round told members about keys the loaded recorder refused (a round now copies its role at
+  start). A rebuild of `app/dist` mid-round served stale chunks (a session now records the build it
+  ran on). `regrade.mjs` re-scores any round from its recorded accounts and sets aside a session the
+  instrument broke. Rule: **never rebuild the app or edit a role while a round runs.**
+- 2026-11-17 · **round 2 (23 sessions): 18 of 21 counted landed, none with an unintended write.** The
+  three left were phone sessions in the Orders and Watchlist sections: round 1's "More ▾" fix was half
+  done, because its list was clipped by the scrolling row. That is fixed. The CI playthrough that pins
+  it asserts the item is whole on screen, since Playwright's click scrolls inside a clipping row, which
+  a member cannot do. Lesson: **a CI playthrough must assert what a person sees before it acts.**

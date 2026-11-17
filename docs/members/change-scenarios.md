@@ -304,3 +304,28 @@ finish it. None was a member who misunderstood the market.
 - **The role prompt was edited mid-round**, which told members late in the round about Backspace
   while the loaded recorder still refused it (EQ-03, EQ-04, OM-04, PM-01). A round now copies its
   role at start. Those four sessions count as **confounded**, not as app failures.
+
+**Re-graded by the instrument itself** (`scripts/faculty/regrade.mjs`, which detects a refused offered
+key and a stale build chunk from each session's own files): **9 of 16 counted sessions landed, 6
+set aside** (five refused a Backspace, and OP-06 met a stale chunk from a mid-round rebuild).
+
+## Round 2 — the same scenarios on the fixed build (2026-11-17, 23 blind sessions)
+
+**18 of 21 counted changes landed as meant (86%, up from 56%), none with an unintended write; 2 set
+aside** (AC-01 and RG-02 met a stale chunk: I rebuilt the app mid-round to run CI, the fault the
+round now detects and sets aside).
+
+| scenario | round 1 | round 2 | what changed |
+|---|---|---|---|
+| OP-01 take profit on the NVDA calls (desktop) | gave up, ease 1 | landed in 7 turns, ease 5 | the card no longer says "nothing sells from here" |
+| OP-02 sell 1 of 2 calls (phone) | refused to confirm both, ease 1 | landed, ease 5 | the close row takes a count |
+| OM-02 raise a working order's price (desktop) | "400405", ease 2 | landed in 7 turns, ease 6 | typing replaces a seeded amount |
+| EQ-02 · EQ-03 · EQ-04 · OM-04 (seeded amounts) | confounded / failed | all landed, ease 5–6 | select on focus, no spin arrows, and a real Backspace |
+| EQ-06 protective stop (desktop) | ran out of steps, ease 2 | landed, ease 4 | "You hold 100 shares" on the sell form |
+| OP-05 a month of protection (phone) | bought a 3-day put | landed a month out | the last-week warning |
+| PM-01 standing take-profit at $15 (desktop) | 1500 typed for $15 | landed, ease 3 | "per share" said; the oracle reads a change in place as one intent |
+| OM-01 · OM-03 · AC-02 (phone, the Orders and Watchlist sections) | gave up | **still gave up**: "More opens to nothing" | the More list was clipped by its row. Fixed after these sessions ran; round 3 re-tests it |
+
+**Still open after round 2:** the option close row has no time in force (PM-01 sent a day order, then
+changed it to good-til-cancelled in place); a held option still cannot be closed from the ticket or
+the chain (#7669); the order form still starts under the ladder card on a phone (#7670).
