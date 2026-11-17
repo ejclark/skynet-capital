@@ -110,7 +110,10 @@ run). A `[lo, hi]` pair is a range, a list of strings is any-of, and anything el
   mid-round told members about keys the loaded recorder refused (a round now copies its role at
   start). A rebuild of `app/dist` mid-round served stale chunks (a session now records the build it
   ran on). `regrade.mjs` re-scores any round from its recorded accounts and sets aside a session the
-  instrument broke. Rule: **never rebuild the app or edit a role while a round runs.**
+  instrument broke. Rule: **never rebuild the app or edit a role while a round runs.** Watch for
+  indirect rebuilds too: `npx playwright test`, even with `--project changes`, boots every web server
+  in the config, and the main one runs `npm run build --prefix app`. A rebuild from unchanged source
+  is byte-identical, so the content-keyed check correctly lets it pass.
 - 2026-11-17 · **round 2 (23 sessions): 18 of 21 counted landed, none with an unintended write.** The
   three left were phone sessions in the Orders and Watchlist sections: round 1's "More ▾" fix was half
   done, because its list was clipped by the scrolling row. That is fixed. The CI playthrough that pins
