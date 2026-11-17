@@ -1,5 +1,5 @@
 import type { OptionPositionRow, OptionPositions } from "../live/options";
-import { MINUS } from "../ui";
+import { MINUS, signOf } from "../ui";
 
 /**
  * One held contract's time decay (#3689 slice 6), from the option book's per-holding theta: the
@@ -38,7 +38,7 @@ export interface HoldingGreeks {
 function decayOf(theta: number | undefined): HoldingDecay | undefined {
   if (theta === undefined || !Number.isFinite(theta)) return undefined;
   const amount = `${dollars.format(Math.abs(theta))}/day`;
-  return { perDay: theta, signed: `${theta < 0 ? "−" : "+"}${amount}`, amount };
+  return { perDay: theta, signed: `${signOf(theta)}${amount}`, amount };
 }
 
 const finite = (n: number | undefined) => (n !== undefined && Number.isFinite(n) ? n : undefined);

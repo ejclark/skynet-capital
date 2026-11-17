@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import { structureLabel } from "../../../src/options/candidate-mechanics";
 import type { RankedCandidate } from "../../../src/options/recommend";
 import { boundWords, noDenominatorWords, noRatioWords } from "../../../src/options/structure-words";
+import { MINUS } from "../ui";
 
 /**
  * ONE PROPOSED STRUCTURE, AS A CARD (#3407, slice 4). Mobile-first: at 390px the member reads a
@@ -26,7 +27,7 @@ import { boundWords, noDenominatorWords, noRatioWords } from "../../../src/optio
 
 const pct = (x: number) => `${Math.round(x * 100)}%`;
 const money = (x: number) =>
-  `${x < 0 ? "−" : ""}$${Math.abs(x).toLocaleString("en-US", {
+  `${x < 0 ? MINUS : ""}$${Math.abs(x).toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
