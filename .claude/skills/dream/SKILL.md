@@ -34,7 +34,8 @@ sessions. Plan: #6470. The conductor: `.claude/workflows/dream.js`.
    file changed since it was read. Repo rules go through a PR; protected ones board the platter.
    When a correction of Eric's recurs, that PR also adds a case to `docs/evals/how-he-writes-set.json`, with what his next message showed as the evidence.
 7. **Score it.** Record taken, discarded, and recurrences session-time capture missed. Under 30%
-   taken, or under 3 such recurrences, means do not schedule it.
+   taken, or under 3 such recurrences, means do not schedule it. A result carrying `notRun` was not
+   run, so record it as not run and re-run it, never as nothing taken (#6718).
 
 ## What this will not do
 
