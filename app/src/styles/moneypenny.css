@@ -4,12 +4,18 @@
    is a shape and a word as well as a tint (BRAND.md → Accessibility), hit targets 44px. The
    message, thread and screenshot styles below are the rail's, kept for History. */
 
-/* Whatever the BROWSER scrolls to — a field taking focus, Tab to the next control, a scrollIntoView,
-   an anchor — stops clear of the dock instead of under it. The dock's own rule keeps the page's
-   last row free; this keeps the focused one free (change-scenarios faculty run, 2026-11-16: on a
-   phone the dock holds ~28% of the screen, and the ticket's Review button scrolled in beneath it). */
-:root {
-  scroll-padding-bottom: calc(var(--dock-h, 0px) + 12px);
+/* Whatever the BROWSER scrolls to on the page — a field taking focus, Tab to the next control, a
+   scrollIntoView, an anchor — stops clear of the dock instead of under it. The dock's own rule keeps
+   the page's last row free; this keeps the focused one free (change-scenarios faculty run,
+   2026-11-16: on a phone the dock holds ~28% of the screen, and the ticket's Review button scrolled
+   in beneath it). A margin on the page's targets, NOT the root's scroll-padding: with padding the
+   dock's own box also counted as "under the dock", so tapping it scrolled the whole page to the
+   bottom (probed 2026-11-17, scrollY 0 → 258 at 390px). `:where` keeps it at zero specificity, so
+   any element's own scroll-margin still wins. */
+:where(a, button, input, select, textarea, summary, [tabindex], [id]):where(
+  :not(.mp-dock, .mp-dock *)
+) {
+  scroll-margin-bottom: calc(var(--dock-h, 0px) + 12px);
 }
 
 .mp-dock {
