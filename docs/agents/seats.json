@@ -1588,9 +1588,9 @@
     {
       "id": "ops-buttons",
       "department": "platform",
-      "name": "Ops buttons (autonomy ops, Fly logs, companion eval)",
+      "name": "Ops buttons (autonomy ops, Fly logs, companion eval, flow census)",
       "kind": "workflow",
-      "job": "Phone-operable ops: status, machine-status, logs, bootstrap, flip-mode observe/live, set-bridge-secret; filtered log pull; companion replay eval",
+      "job": "Phone-operable ops: status, machine-status, logs, bootstrap, flip-mode observe/live, set-bridge-secret; filtered log pull; companion replay eval; counts-only census of the capital-flow shadow ledger",
       "wakesOn": "workflow_dispatch from a session; autonomy-ops and companion-eval then wait on Eric's autonomy-ops Environment approval",
       "speaksOn": "Fly secrets and status, job logs",
       "cadence": "On demand",
@@ -1599,9 +1599,10 @@
       "codeRoots": [
         ".github/workflows/autonomy-ops.yml",
         ".github/workflows/fly-logs.yml",
-        ".github/workflows/companion-eval.yml"
+        ".github/workflows/companion-eval.yml",
+        ".github/workflows/flow-census.yml"
       ],
-      "cite": ".github/workflows/autonomy-ops.yml:26-58, 71; .github/workflows/fly-logs.yml:1-14; .github/workflows/companion-eval.yml:1-10"
+      "cite": ".github/workflows/autonomy-ops.yml:26-58, 71; .github/workflows/fly-logs.yml:1-14; .github/workflows/companion-eval.yml:1-10; .github/workflows/flow-census.yml:1-20"
     },
     {
       "id": "live-sessions",

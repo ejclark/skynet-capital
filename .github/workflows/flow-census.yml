@@ -1,0 +1,63 @@
+name: Capital-flow census (shadow ledger → tolerance tuning)
+
+# THE READ #4563'S TUNING STEP WAS MISSING. The capital-flow detector records every inferred
+# paper-balance top-up or reset on the volume (`/data/history/flows/`, src/observatory/
+# capital-flow-store.ts), in shadow: members see no mark until `flowTolerance` is tuned against what
+# was recorded and `FLOWS_SHOWN_FROM` is set (src/observatory/capital-flow.ts). Nothing could read
+# that ledger from outside the machine, so the tuning had no input. This job reads it and writes the
+# census (src/observatory/capital-flow-census.ts) to the run summary.
+#
+# THE CREDENTIALED READ is moneypenny-discovery.yml's: `flyctl ssh console` with the FLY_API_TOKEN
+# the deploy jobs already hold. The file holds member ids and dollar amounts and this repo's run logs
+# are public, so the lines never reach a log or an output: they land in a temp file, the census
+# prints counts and candidate floors only, and the file is deleted. A missing flows directory means
+# nothing was ever recorded (an empty ledger); a failed ssh fails the run, never reads as empty.
+#
+# Dispatch-only: a session (or Eric) runs it when the tuning is due; nothing here runs on a clock.
+# Protected by envelope.json (`.github/workflows/**`): the PR that adds this file never auto-merges.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flow-census
+  cancel-in-progress: false
+
+jobs:
+  census:
+    name: census · grade the shadow ledger
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .nvmrc
+
+      - uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # v1.6
+        with:
+          # Pinned (docs/LESSONS.md, 2026-09-05): `latest` resolves through an unauthenticated
+          # releases call that 403s under runner load.
+          version: 0.4.99
+
+      - run: npm ci --no-audit --no-fund
+
+      - env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          FLOWS="$RUNNER_TEMP/flows.jsonl"
+          # Not logged, not an output. `|| true` inside covers only a missing directory (no flow
+          # recorded yet); an ssh failure still fails the pipeline.
+          flyctl ssh console -a skynet-capital \
+            -C "sh -c 'cat /data/history/flows/*.jsonl 2>/dev/null || true'" \
+            | tr -d '\r' > "$FLOWS"
+          npx tsx src/scripts/flow-census.ts --file "$FLOWS" >> "$GITHUB_STEP_SUMMARY"
+          rm -f "$FLOWS"
+          echo "::notice::census written to the run summary"
