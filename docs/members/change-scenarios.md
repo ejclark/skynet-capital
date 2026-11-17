@@ -206,8 +206,8 @@ words I can see." (`docs/members/phone-only.md:25`)._
 | RG-04 | returning-trader · phone | Your waiting Microsoft offer is for 10 shares at $400. Make it 200 shares at the same price, from your phone, and tell us what happens. | refused (200 × $400 = $80,000 against $40,000 cash); the 10-share order still working · never a replaced order for 200 | gap: a change skips the cash, short, rung and trading-switch checks (`src/server/trade-orders-routes.ts:220-279`), and the world's broker applies it unchecked (`src/adapters/writable-fixture-trading-transport.ts:186-208`) |
 | RG-05 | returning-trader · desktop | You sold a call against your 100 Apple shares. Now sell 50 of the shares. | a refusal or warning that names the sold call the sale would leave uncovered · never a quiet sale | gap: a stock sale checks shares held only (`src/trading/order-ticket.ts:136-155`; `src/server/trade-service.ts:72-105`) |
 | RG-06 | first-timer · desktop | Put about $2,000 into SPY. | 3 SPY shares (about $1,770) · never 2,000 shares, which the cash check must stop | gap: one share field and no dollar field (`app/src/shell/trade-gate.tsx:338`); the cash check is the only backstop (`src/server/trade-service.ts:97`) |
-| RG-07 | eric · phone | It's evening, the exchange is shut, and bad news is coming. Sell your Apple tonight, but only if it would really happen tonight. | nothing lands once the app says the sale waits for the next open · never a queued sale the member didn't knowingly choose | not yet run: the warning exists (`src/trading/order-ticket.ts:276`); a sale outside hours does not (`app/src/live/ticket.ts:144-157`) |
-| RG-08 | first-timer · phone | You want 100 shares of Tesla at whatever price the market gives. You haven't checked what that costs. | buy 100 TSLA, sent only after a review that says it spends nearly all the cash (about $33,000 of $40,000) | not yet run: the warning exists (`src/trading/order-ticket.ts:231`) |
+| RG-07 | eric · phone | It's evening, the exchange is shut, and bad news is coming. Sell your Apple tonight, but only if it would really happen tonight. | nothing lands once the app says the sale waits for the next open · never a queued sale the member didn't knowingly choose | runs (round 4) |
+| RG-08 | first-timer · phone | You want 100 shares of Tesla at whatever price the market gives. You haven't checked what that costs. | buy 100 TSLA, sent only after a review that says it spends nearly all the cash (about $33,000 of $40,000) | runs (round 4) |
 | RG-09 | invited-friend · phone | Eric texts you from a plane: "pull my Microsoft offer for me". Try to do it from your own sign-in. | refused in words; Eric's MSFT order still working · nothing on the friend's book | gated: an order or a cancel goes only through your own account (`src/server/account-identity-gate.ts:57-63`; `src/server/trade-orders-routes.ts:176`) |
 | RG-10 | bot-watcher · phone | You're watching Sauron lose money on the leaderboard and want to pause it before it loses more. | no control renders, and a sentence says only the owner can pause it · nothing changes | gated: fleet controls are owner-only (`docs/IA.md:429-431`); write controls don't render off your own account (`docs/members/bot-watcher.md:37-42`) |
 
@@ -235,9 +235,9 @@ takes three writes in order: suspend, trade, resume… a missed resume leaves th
 
 | id | member · device | the situation, in the member's words | what must land (and what must not) | today |
 |---|---|---|---|---|
-| BT-01 | invited-friend · phone | The bot you took over has lost money three sessions running. Pause it while you think. | that bot suspended, its positions untouched · never every bot | not yet run: the own-bot switch exists (`app/src/shell/bot-switch.tsx:32,46`; `src/server/settings-api-routes.ts:240-258`); the oracle reads no bot state |
-| BT-02 | eric · phone | A bad headline just hit. Halt every bot right now, from your phone. | every bot suspended after one confirming step · members' own orders untouched | not yet run: one tap with no confirmation (`app/src/shell/mission-control.tsx:89-96`) |
-| BT-03 | returning-trader · desktop | The app suggests selling a call against your Apple shares. Take its suggestion as it stands, same strike and same date, and place it. | sell 1 AAPL call at the suggested strike and expiry · never a changed strike | not yet run: the suggestion fills the form (`app/src/shell/guidance-lever.tsx:146-153`; `app/src/shell/trade-search.ts:27-36`); the oracle needs the suggestion's strike |
+| BT-01 | invited-friend · phone | The bot you took over has lost money three sessions running. Pause it while you think. | that bot suspended, its positions untouched · never every bot | runs (round 4) |
+| BT-02 | eric · phone | A bad headline just hit. Halt every bot right now, from your phone. | every bot suspended after one confirming step · members' own orders untouched | runs (round 4) |
+| BT-03 | returning-trader · desktop | The app suggests selling a call against your Apple shares. Take its suggestion as it stands, same strike and same date, and place it. | sell 1 AAPL call at the suggested strike and expiry · never a changed strike | withdrawn: false premise in this world (the guidance says Wait on AAPL) |
 | BT-04 | invited-friend · desktop | Hand one of the house strategies to your bot, but let it use no more than $5,000. | one subscription at $5,000 · never the $50,000 default | gated: delegating needs rung 102 or wheels off (`docs/FOG-OF-WAR.md:76`); the one-tap path sends $50,000 without showing it (`app/src/shell/playbook-subscribe-bots.tsx:127-133,147`) |
 | BT-05 | invited-friend · desktop | Your bot tripped its safety brake after a bad session. Re-arm only your bot. | that bot re-armed, every other bot untouched | gap: the reset re-arms every bot in one tap (`app/src/shell/bot-switch.tsx:82-96`; `src/server/settings-api-routes.ts:207`) |
 | BT-06 | invited-friend · phone | Pause your bot until Friday, then let it carry on by itself. | suspended with an end date · never a pause that relies on remembering | gap: a pause has no end date (`docs/IA.md:959-965`) |
@@ -335,5 +335,24 @@ ease 1 after 12), changing it took 9, and adding CRWV to the watchlist took 8. T
 order and partial-close checks held. **Across rounds 2 and 3, every one of the 23 runnable scenarios
 has landed on the fixed build.**
 
-**Still open after round 3:** a held option still cannot be closed from the ticket or
+## Round 4 — new ground: bots, a second account, the closed market, a missing order type (2026-11-17, 16 sessions)
+
+**10 of 14 counted landed, none with an unintended write; BT-03 withdrawn** (its premise was false
+in this world: the guidance said "Wait" on Apple and marked its strikes "not a suggestion", and both
+members rightly refused to invent one).
+
+| scenario | result | what it says about the app |
+|---|---|---|
+| RG-07 sell tonight only if it really happens tonight (phone) | landed ×2 | the closed-market note works: nobody queued an evening sale |
+| RG-08 100 TSLA without checking the cost (phone) | landed ×2 | the order goes through; the near-all-cash warning is there to read |
+| RG-09 a trailing stop the app does not have (phone) | landed ×2 | members settled on an honest fixed stop near $218.50 |
+| EQ-07 a standing take-profit sell at $45 (phone) | landed ×2 | the sell form's "You hold" line and the seeded GTC carry it |
+| AC-03 the invited friend buys for the Day Trader's account (desktop) | landed ×2 | the account picker is found on desktop |
+| **BT-01 pause the one bot you look after (phone)** | **gave up ×2, ease 1** | the switch is two levels into Settings → Account → **#7673** |
+| **BT-02 halt every bot on a bad headline (phone)** | **gave up ×2, ease 1** | the halt is in the same place → **#7673** |
+
+**A world artifact, declared:** the faculty world's assistant runs without a model (offline), so a
+member who asks it to act gets a canned reply. Those replies are never counted against the app.
+
+**Still open after round 4:** pausing or halting bots on a phone (#7673); a held option still cannot be closed from the ticket or
 the chain (#7669); the order form still starts under the ladder card on a phone (#7670).

@@ -56,6 +56,8 @@ npx playwright test --project changes                        # the model-free fl
     chain.
 - Eric's book: $40,000 cash, EEM 950, AAPL 100, 2 × NVDA Dec $180 calls (up ~70%), and one working
   order (BUY 10 MSFT LIMIT $400 GTC).
+- **The assistant has no model here.** Offline, Moneypenny answers from her script, so a member
+  who asks her to act gets a canned reply. That is a world artifact and is never counted.
 - **The clock is the wall clock.** After hours the market is closed and orders queue (`working`),
   the way a paper account answers an evening order. Scenarios therefore never name a date, and
   their `end` accepts `["working","filled"]`.
@@ -119,4 +121,10 @@ run). A `[lo, hi]` pair is a range, a list of strings is any-of, and anything el
   2 and 3, all 23 runnable scenarios have landed on the fixed build. What stays open is placement,
   and that is Eric's call: #7669 (close from the ticket or the chain) and #7670 (the order form above
   the ladder on a phone). #7671 (when to seed limit-at-mid) is a default for him to choose.
+- 2026-11-17 · **round 4 (new ground, 16 sessions): 10 of 14 counted landed, none unintended.** The
+  closed-market judgment, a large purchase, a missing order type (trailing stop) and the friend's
+  second account all landed. Pausing a bot or halting every bot on a phone failed every time: both
+  controls sit two levels into Settings, and that placement call is Eric's (#7673). BT-03 was
+  withdrawn because its premise was false in this world. Lesson: **check a scenario's premise against
+  the world's own guidance before running it.**
 
