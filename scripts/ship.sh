@@ -360,9 +360,11 @@ cmd_open() {
   # PR-title lint, locally: CI's verify job runs commitlint over the PR TITLE (it becomes the
   # squash subject), and the commit lint further down never sees it — #3774 went red on a 106-char
   # title after local verify passed (2026-09-26). Same check, before anything is pushed.
-  echo "$title" | npx commitlint >/dev/null 2>&1 || {
+  # Here-strings, never `echo | npx commitlint`: a commitlint that exits before reading SIGPIPEs the
+  # writer, and under pipefail a valid title then reads as a lint failure (see checkbody; #7555).
+  npx commitlint >/dev/null 2>&1 <<<"$title" || {
     echo "ship open: PR TITLE fails commitlint (Conventional Commit, lowercase-led, ≤100 chars):" >&2
-    echo "$title" | npx commitlint --verbose >&2 || true
+    npx commitlint --verbose >&2 <<<"$title" || true
     exit 1
   }
   local base="main" bodyfile="" verify=1 hold=0 catchup=1
@@ -1116,7 +1118,10 @@ platter_board_item() {
   # Default to the item's newest subject; --subject overrides, which is what a multi-commit item
   # branch wants (a squash has no subject of its own, and the newest one can under-describe it).
   [ -n "$subject" ] || subject="$(git log -1 --format=%s FETCH_HEAD)"
-  printf '%s\n' "$subject" | npx commitlint || {
+  # A here-string, not `printf | npx commitlint`: the pipe's writer could lose a SIGPIPE race to a
+  # commitlint that exits early, and pipefail then refused a valid subject with no lint output —
+  # the board specs' parallel-verify flake (#7555; the trap is the one at checkbody).
+  npx commitlint <<<"$subject" || {
     echo "ship platter: the item subject above is not a valid Conventional Commit — pass --subject." >&2
     exit 1; }
   # Resolved before the squash, so a bad --closes refuses with the platter untouched and unverified.

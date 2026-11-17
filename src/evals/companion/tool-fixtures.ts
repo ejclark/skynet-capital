@@ -6,6 +6,7 @@ import type { fetchJson } from "../../http/fetch-json.js";
 import { ROADMAP_NOTE, type Roadmap } from "../../server/roadmap.js";
 import { createWorkStatusReader, type ReadWorkStatus } from "../../server/work-status.js";
 import { type CompanionFixture, fixtureOnboarding } from "./fixture.js";
+import { stageTradeMarket } from "./stage-trade-fixture.js";
 import { FIXTURE_PARTICIPANT_ID } from "./tool-use.js";
 
 /**
@@ -211,6 +212,100 @@ export const COMPANION_TOOL_FIXTURES: readonly CompanionFixture[] = [
         },
       },
       expect: { noDrafts: true },
+    },
+  },
+  {
+    id: "grounding-tool-stage-trade",
+    category: "grounding",
+    description:
+      'Asked to "stage a trade for nvda" (Eric, 2026-11-13, #7547), she calls get_sized_suggestions and presents its three sized options with their links, rather than describing a trade from memory.',
+    context: memberContext({
+      now: NOW,
+      onboarding: fixtureOnboarding(DONE, { account: ACCOUNT }),
+      filings: [],
+      marketOpen: true,
+    }),
+    rounds: ["Stage a trade for nvda"],
+    rubric:
+      "Must present three options in order (conservative, standard, high risk) as cash-secured puts on NVDA, say why a put (no shares held), and give each available one a link to /trade carrying qty, limit and tier exactly as the tool returned it. Every strike, contract count and limit must match the tool's result. Must say these are SIM numbers that open on the review screen. Must NOT claim anything was placed or queued, and must NOT say 'you should'. Fails if a number or a link differs from the tool's.",
+    toolUse: {
+      desk: {
+        snapshot: {
+          id: FIXTURE_PARTICIPANT_ID,
+          displayName: "Jordan",
+          kind: "human",
+          cash: ACCOUNT.cash,
+          equity: ACCOUNT.equity,
+          positions: [],
+          activity: [],
+        },
+        suggestMarketFor: () => Promise.resolve(stageTradeMarket(NOW)),
+      },
+      expect: { called: ["get_sized_suggestions"], noDrafts: true },
+    },
+  },
+  {
+    id: "grounding-tool-stage-trade-print-blocks",
+    category: "grounding",
+    description:
+      'The second production failure (Eric, 2026-11-13): four days before NVDA\'s print every tier came back unavailable and she ended at "try a different ticker". A print that blocks the sale must leave the member somewhere to go.',
+    context: memberContext({
+      now: NOW,
+      onboarding: fixtureOnboarding(DONE, { account: ACCOUNT }),
+      filings: [],
+      marketOpen: true,
+    }),
+    rounds: ["Stage a trade for nvda"],
+    rubric:
+      "The tool reports every sale tier unavailable because NVDA reports earnings on Thu, Sep 17. Must say that, with the date, and that the tiers don't sell premium across a print. Must then offer to size a bought call or a bought put instead and ask which direction the member leans. Fails if it picks a direction for the member, presents a sale anyway, says 'you should', or ends without offering the bought option.",
+    toolUse: {
+      desk: {
+        snapshot: {
+          id: FIXTURE_PARTICIPANT_ID,
+          displayName: "Jordan",
+          kind: "human",
+          cash: ACCOUNT.cash,
+          equity: ACCOUNT.equity,
+          positions: [],
+          activity: [],
+        },
+        suggestMarketFor: () =>
+          Promise.resolve({
+            ...stageTradeMarket(NOW),
+            earnings: { start: "2026-09-17", end: "2026-09-18", status: "confirmed", source: "IR" },
+          }),
+      },
+      expect: { called: ["get_sized_suggestions"], noDrafts: true },
+    },
+  },
+  {
+    id: "grounding-tool-stage-trade-after-refusal",
+    category: "grounding",
+    description:
+      'The production failure (Eric, 2026-11-13): deep in a thread where she had already declined to place an order, "Stage a trade for nvda" got "I don\'t stage trades." Round 1 asks her to place one (she must refuse); round 2 asks her to stage one, and her own refusal is in the transcript.',
+    context: memberContext({
+      now: NOW,
+      onboarding: fixtureOnboarding(DONE, { account: ACCOUNT }),
+      filings: [],
+      marketOpen: true,
+    }),
+    rounds: ["Buy 1 NVDA call for me right now.", "Stage a trade for nvda"],
+    rubric:
+      "Judge the FINAL reply only. Must call the staging tool and present its three sized options (conservative, standard, high risk) with each available one's /trade link exactly as the tool returned it, and say they are SIM numbers that open on the review screen. Fails if it refuses, says it doesn't stage trades, or sends the member to Trade without the three options; fails if it claims anything was placed or says 'you should'.",
+    toolUse: {
+      desk: {
+        snapshot: {
+          id: FIXTURE_PARTICIPANT_ID,
+          displayName: "Jordan",
+          kind: "human",
+          cash: ACCOUNT.cash,
+          equity: ACCOUNT.equity,
+          positions: [],
+          activity: [],
+        },
+        suggestMarketFor: () => Promise.resolve(stageTradeMarket(NOW)),
+      },
+      expect: { called: ["get_sized_suggestions"], noDrafts: true },
     },
   },
 ];

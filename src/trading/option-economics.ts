@@ -1,4 +1,5 @@
 import { type CoverLeg, coverNeeds, coverShortfall } from "../domain/option-book.js";
+import { optionsSpendable } from "../observatory/participant-snapshot.js";
 import type { PayoffCurve } from "./draft-order-preview.js";
 import { OPTION_MULTIPLIER, type OptionType, parseOccSymbol } from "./option-symbols.js";
 import type { TicketHolding } from "./order-ticket.js";
@@ -40,6 +41,9 @@ export const DEFAULT_OPTION_TIF: OptionTimeInForce = "day";
 
 export interface OptionTicketContext {
   readonly cash: number;
+  /** Alpaca's options buying power, when known: cash already securing sold puts is in `cash` but
+   *  can't secure another, so affordability checks the lesser of the two (#7547 follow-up). */
+  readonly optionsBuyingPower?: number;
   /** Everything held — stock rows and option rows (OCC symbols, contracts signed) together. */
   readonly positions: readonly TicketHolding[];
   readonly tradingEnabled: boolean;
@@ -206,11 +210,12 @@ export function validateAffordability(
   warnings: string[],
 ): void {
   const scale = request.contracts * SHARES_PER_CONTRACT;
+  const spendable = optionsSpendable(context);
   if (request.code === "201") {
     const collateral = request.strike * scale;
-    if (collateral > context.cash) {
+    if (collateral > spendable) {
       refusals.push(
-        `Cash-secured means the cash is there: this promise needs $${collateral.toLocaleString("en-US")} set aside and you have $${Math.floor(context.cash).toLocaleString("en-US")}. Fewer contracts or a lower strike.`,
+        `Cash-secured means the cash is there: this promise needs $${collateral.toLocaleString("en-US")} set aside and you have $${Math.floor(spendable).toLocaleString("en-US")}${heldNote(context)}. Fewer contracts or a lower strike.`,
       );
     }
     return;
@@ -227,11 +232,19 @@ export function validateAffordability(
     return;
   }
   const debit = estPremium * scale;
-  if (debit > context.cash) {
+  if (debit > spendable) {
     refusals.push(
-      "The premium is more than your available cash — fewer contracts, or a cheaper strike.",
+      `The premium is more than your available cash ($${Math.floor(spendable).toLocaleString("en-US")}${heldNote(context)}) — fewer contracts, or a cheaper strike.`,
     );
   }
+}
+
+/** ", once $X already securing your sold options is set apart" — only when buying power binds. */
+function heldNote(context: OptionTicketContext): string {
+  const held = context.cash - optionsSpendable(context);
+  return held >= 1
+    ? `, once $${Math.floor(held).toLocaleString("en-US")} already securing your sold options is set apart`
+    : "";
 }
 
 /**

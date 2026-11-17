@@ -483,6 +483,36 @@ describe("the cash bar on a phone (#5100 — #5037 round 2, R2)", () => {
     );
   });
 
+  // Eric, 2026-11-13: "$757,918 ready to use" while the broker allowed $42,999 for options.
+  it("calls the hatch cash and names what is ready when buying power is below cash, in the same row", async () => {
+    viewport(390);
+    const held = stats({
+      value: "$958,530",
+      cash: "$757,918",
+      idlePct: 79.1,
+      invested: "$200,612",
+      ready: "$42,999",
+    });
+    globalThis.fetch = (() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            ...NETWORTH,
+            accounts: [{ id: "bot-sauron", name: "Sauron", kind: "bot", ...held }],
+          }),
+        ),
+      )) as typeof fetch;
+    mount();
+    await screen.findByText("$958,530");
+    const said = document.querySelector(".head-split-words") as HTMLElement;
+    expect(said.querySelector(".head-split-idle")).toHaveTextContent(
+      /^\$757,918 cash · \$42,999 ready$/,
+    );
+    expect(said).not.toHaveTextContent("ready to use");
+    // still one row: the head keeps its one height
+    expect(document.querySelectorAll(".head-split > p")).toHaveLength(1);
+  });
+
   it("names a net-short book's positions for what they are, never a negative 'invested'", async () => {
     viewport(390);
     // only a sold put: $255 collected, $550 to buy back — the positions are worth −$550

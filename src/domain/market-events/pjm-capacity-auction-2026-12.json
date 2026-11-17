@@ -3,9 +3,9 @@
   "kind": "sector",
   "title": "PJM capacity auction window closes",
   "date": "2026-12-15",
-  "status": "estimate",
-  "source": "EST: docs/research/ai-energy-constraint.md watch list — confirm vs pjm.com",
+  "status": "confirmed",
+  "source": "PJM: pjm.com RPM auction schedule workbook (markets-ops/rpm/rpm-auction-info/rpm-auction-schedule.xlsx, fetched direct 2026-11-15, HTTP 200, 28,146 bytes, sha256 4769218c…b6f45), unzipped and read as XML: its 2029/2030 BRA rows read 'Auction | Auction window opens | 2026-12-09', 'Auction window closes | 2026-12-15' and 'Auction results posted | 2026-12-22', under the sheet's standing notes 'All Auctions will open at 12:01 AM EPT' and 'All Auctions will close at 5:00 PM EPT'. Corroborated by PJM's 2029/2030 BRA Planning Period Parameters report (dated 2026-09-03, fetched direct 2026-11-15), which states the BRA 'is to be conducted in December of 2026'. Promoted from the EST: docs/research/ai-energy-constraint.md watch-list estimate. Checked 2026-11-15",
   "impact": "medium",
   "symbols": [],
-  "notes": "AI-datacenter power-cost signal (the energy-constraint watch list's dated indicator)."
+  "notes": "AI-datacenter power-cost signal (the energy-constraint watch list's dated indicator). The bidding window runs 2026-12-09 12:01 AM EPT to 2026-12-15 5:00 PM EPT; results post 2026-12-22 (PJM's own schedule), a week after this date. The 2029/30 collar is $337.83 cap / $181.91 floor per PJM's planning parameters."
 }

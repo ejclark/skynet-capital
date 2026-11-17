@@ -57,6 +57,9 @@ export interface TicketRequest {
 export interface TicketContext {
   /** Settled cash available to spend. */
   readonly cash: number;
+  /** Alpaca's options buying power, when known — an option order is checked against the lesser
+   *  of this and `cash` (`ParticipantSnapshot.optionsBuyingPower`). */
+  readonly optionsBuyingPower?: number;
   readonly positions: readonly TicketHolding[];
   /**
    * Whether member-initiated trading is switched on for this deployment. Off by default: the

@@ -10,7 +10,7 @@ describe("MoneypennyDock — consent and identity", () => {
     timing.opsMs = 0;
     localStorage.clear();
     useMoneypenny.getState().reset();
-    useMoneypenny.getState().closeHistory();
+    useMoneypenny.getState().collapse();
   });
   afterEach(() => {
     globalThis.fetch = realFetch;
@@ -86,7 +86,7 @@ describe("MoneypennyDock — consent and identity", () => {
     expect(localStorage.getItem("sc.moneypenny.v1.member-a")).toContain("hi, I'm Moneypenny");
 
     viewer = "member-b";
-    await act(() => useMoneypenny.getState().closeHistory());
+    await act(() => useMoneypenny.getState().collapse());
     await showHistory();
     expect(useMoneypenny.getState().messages).toHaveLength(0);
     expect(localStorage.getItem("sc.moneypenny.v1.member-a")).toBeNull();
@@ -112,13 +112,13 @@ describe("MoneypennyDock — consent and identity", () => {
     expect(useMoneypenny.getState().draft?.title).toBe("Step 2 never completes");
   });
 
-  it("the dock's History button opens on her intro, and New conversation starts a fresh one", async () => {
+  it("expanding the pane plays her intro, and New conversation starts a fresh one", async () => {
     globalThis.fetch = ((url: string) =>
       Promise.resolve(
         url === "/api/onboarding" ? json(onboarding(true)) : new Response("{}", { status: 404 }),
       )) as typeof globalThis.fetch;
     mount();
-    fireEvent.click(screen.getByRole("button", { name: /^History \d+/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^Expand/ }));
     expect(await inHistory().findByText(/^Moneypenny · hi, I'm Moneypenny/)).toBeInTheDocument();
     expect(inHistory().getByText(/should be open right now|closed right now/)).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Message Moneypenny"), { target: { value: "hello" } });

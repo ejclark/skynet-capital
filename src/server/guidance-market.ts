@@ -145,12 +145,36 @@ export function activePrint(
   prints: readonly EarningsPrint[],
   symbol: string,
   today: string,
+  filings: readonly { readonly date: string; readonly items: string }[] = [],
 ): { readonly print: EarningsPrint; readonly window: EarningsWindow } | undefined {
   return prints
     .filter((p) => p.symbol === symbol)
     .map((print) => ({ print, window: earningsWindowOf(print) as EarningsWindow }))
-    .filter(({ window }) => window.end >= today)
+    .filter(({ window }) => window.end >= today && !reportedIn(window, filings))
     .sort((a, b) => a.print.date.localeCompare(b.print.date))[0];
+}
+
+/** How far before an estimate window an earnings 8-K still counts as this print (an early report). */
+const EARLY_REPORT_DAYS = 14;
+
+/**
+ * THE PRINT HAS HAPPENED (Eric, 2026-11-13: "Stage a trade for crwv" came back with every tier
+ * blocked "before earnings" three days after CoreWeave's estimated Nov 10 print). An estimate's
+ * window stays open to its far edge because the date is only a guess — but an Item 2.02 8-K
+ * ("Results of Operations") filed in that window, or shortly before it, is the company saying it
+ * reported. Then the print is behind us and must not block a single expiry more.
+ */
+export function reportedIn(
+  window: EarningsWindow,
+  filings: readonly { readonly date: string; readonly items: string }[],
+): boolean {
+  const from = shift(window.start, -EARLY_REPORT_DAYS);
+  return filings.some(
+    (f) =>
+      f.date >= from &&
+      f.date <= window.end &&
+      f.items.split(",").some((item) => item.trim() === "2.02"),
+  );
 }
 
 /**

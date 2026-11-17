@@ -2,13 +2,11 @@ import { act } from "@testing-library/react";
 import { useMoneypenny } from "../../src/live/moneypenny";
 import { mount } from "./moneypenny-dock-harness";
 
-// #5182: in the rail, the chips came back when her stream ended — a render where no message is
-// appended — and shortened the list from below, hiding her last line. In the dock (#7487 slice 2)
-// her moves sit in the dock under History, never inside the conversation's list, so their return
-// cannot cover her last line; the list follows every append to its end, and a member who scrolled
-// up to read is left where they were when only the moves change. happy-dom has no layout, so the
-// list's geometry is stubbed: a 500px conversation in a 300px window, its end at scrollTop 200.
-// History opens after the mount: the dock closes it on its first location read, as on any page.
+// WHERE THE LIST SITS. Eric, 2026-11-13: "i have to scroll up through the history to read the
+// beginning of the response most all of the time." So a new reply of hers anchors its FIRST line at
+// the top of the pane, and her own line or typing beat goes to the end so the member sees what they
+// sent. #5182 still holds: her moves sit outside the list, and their return never moves it. happy-dom
+// has no layout, so the geometry is stubbed: a 500px conversation in a 300px pane.
 function geometry(el: HTMLElement): { top: number } {
   const g = { top: 0 };
   Object.defineProperty(el, "scrollHeight", { configurable: true, get: () => 500 });
@@ -23,7 +21,7 @@ function geometry(el: HTMLElement): { top: number } {
   return g;
 }
 
-describe("MoneypennyDock — History stays at its end", () => {
+describe("MoneypennyDock — the pane opens her answer at its start", () => {
   beforeEach(() => {
     localStorage.clear();
     useMoneypenny.getState().reset();
@@ -36,7 +34,7 @@ describe("MoneypennyDock — History stays at its end", () => {
 
   it("draws the returning moves outside the conversation's list, so her last line stays clear", () => {
     const { container } = mount();
-    act(() => useMoneypenny.setState({ history: true }));
+    act(() => useMoneypenny.setState({ expanded: true }));
     const list = container.querySelector<HTMLElement>(".mp-list");
     if (!list) throw new Error("no message list");
     expect(container.querySelector(".mp-moves")).toBeNull();
@@ -46,25 +44,89 @@ describe("MoneypennyDock — History stays at its end", () => {
     expect(list.contains(moves)).toBe(false);
   });
 
-  it("follows every append to the end of the list", () => {
+  it("anchors at the reply's top as measured, and stays there while it streams", () => {
     const { container } = mount();
-    act(() => useMoneypenny.setState({ history: true }));
+    const list = container.querySelector<HTMLElement>(".mp-list");
+    if (!list) throw new Error("no message list");
+    const g = geometry(list);
+    // every entry reports 180px down: the newest one is the one the anchor reads
+    const proto = Object.getPrototypeOf(list) as object;
+    const original = Object.getOwnPropertyDescriptor(proto, "offsetTop");
+    Object.defineProperty(proto, "offsetTop", { configurable: true, get: () => 180 });
+    try {
+      act(() =>
+        useMoneypenny.setState((s) => ({
+          streaming: true,
+          messages: [...s.messages, { role: "mp", text: "Moneypenny · line one" }],
+        })),
+      );
+      expect(list.scrollTop).toBe(172);
+      // the stream grows the same reply: the pane holds its start
+      act(() =>
+        useMoneypenny.setState((s) => ({
+          messages: [
+            ...s.messages.slice(0, -1),
+            { role: "mp", text: "Moneypenny · line one\nline two\nline three" },
+          ],
+        })),
+      );
+      expect(g.top).toBe(172);
+    } finally {
+      if (original) Object.defineProperty(proto, "offsetTop", original);
+      else Reflect.deleteProperty(proto, "offsetTop");
+    }
+  });
+
+  it("opens a page on the start of her latest reply, not on the oldest line", () => {
+    const proto = HTMLElement.prototype as object;
+    const original = Object.getOwnPropertyDescriptor(proto, "offsetTop");
+    Object.defineProperty(proto, "offsetTop", { configurable: true, get: () => 180 });
+    try {
+      const { container } = mount();
+      const list = container.querySelector<HTMLElement>(".mp-list");
+      if (!list) throw new Error("no message list");
+      expect(list.scrollTop).toBe(172);
+    } finally {
+      if (original) Object.defineProperty(proto, "offsetTop", original);
+      else Reflect.deleteProperty(proto, "offsetTop");
+    }
+  });
+
+  it("re-anchors on the start of her latest reply when the pane changes size", () => {
+    const { container } = mount();
+    const list = container.querySelector<HTMLElement>(".mp-list");
+    if (!list) throw new Error("no message list");
+    const g = geometry(list);
+    g.top = 0;
+    const proto = HTMLElement.prototype as object;
+    const original = Object.getOwnPropertyDescriptor(proto, "offsetTop");
+    Object.defineProperty(proto, "offsetTop", { configurable: true, get: () => 180 });
+    try {
+      // set directly: toggleExpanded also wakes the store, which re-binds this stub conversation
+      act(() => useMoneypenny.setState({ expanded: !useMoneypenny.getState().expanded }));
+      expect(list.scrollTop).toBe(172);
+      g.top = 0;
+      act(() => useMoneypenny.setState({ expanded: !useMoneypenny.getState().expanded }));
+      expect(list.scrollTop).toBe(172);
+    } finally {
+      if (original) Object.defineProperty(proto, "offsetTop", original);
+      else Reflect.deleteProperty(proto, "offsetTop");
+    }
+  });
+
+  it("shows the member's own line at the end, so they see what they sent", () => {
+    const { container } = mount();
     const list = container.querySelector<HTMLElement>(".mp-list");
     if (!list) throw new Error("no message list");
     const g = geometry(list);
     g.top = 40;
-    act(() =>
-      useMoneypenny.setState((s) => ({
-        streaming: false,
-        messages: [...s.messages, { role: "mp", text: "Moneypenny · one more line." }],
-      })),
-    );
+    act(() => useMoneypenny.setState({ pending: "what's moving today?" }));
     expect(list.scrollTop).toBe(500);
   });
 
   it("leaves a member who scrolled up to read where they were when only the moves return", () => {
     const { container } = mount();
-    act(() => useMoneypenny.setState({ history: true }));
+    act(() => useMoneypenny.setState({ expanded: true }));
     const list = container.querySelector<HTMLElement>(".mp-list");
     if (!list) throw new Error("no message list");
     const g = geometry(list);

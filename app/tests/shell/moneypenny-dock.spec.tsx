@@ -27,13 +27,14 @@ describe("MoneypennyDock", () => {
     globalThis.fetch = realFetch;
   });
 
-  it("is always on screen, its History closed until opened", () => {
+  it("is always on screen, its conversation in it at the compact size", () => {
     mount();
     expect(screen.getByRole("complementary", { name: "Moneypenny" })).toBeInTheDocument();
     expect(screen.getByLabelText("Message Moneypenny")).toBeInTheDocument();
-    expect(
-      screen.queryByRole("region", { name: "Conversation with Moneypenny" }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Conversation with Moneypenny" })).toHaveAttribute(
+      "data-size",
+      "compact",
+    );
   });
 
   it("plays the intro once, steering an unconnected member toward setup", async () => {
@@ -46,7 +47,7 @@ describe("MoneypennyDock", () => {
     // the setup offer is a flow — no chips while she waits on the yes/no
     expect(screen.queryByRole("button", { name: "File feedback" })).not.toBeInTheDocument();
 
-    await act(() => useMoneypenny.getState().closeHistory());
+    await act(() => useMoneypenny.getState().collapse());
     await showHistory({ intro: true });
     await flush();
     expect(inHistory().getAllByText(/^Moneypenny · hi, I'm Moneypenny/)).toHaveLength(1);
@@ -221,7 +222,7 @@ describe("MoneypennyDock", () => {
     mount();
     // No need to wake the store — the control's disabled state depends only on the message
     // count, which is already empty from a fresh store.
-    act(() => useMoneypenny.setState({ history: true }));
+    act(() => useMoneypenny.setState({ expanded: true }));
     expect(inHistory().getByRole("button", { name: "Copy" })).toBeDisabled();
   });
 

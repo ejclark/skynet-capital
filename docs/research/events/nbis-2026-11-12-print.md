@@ -194,3 +194,63 @@ registered forward test whose `Score by` has arrived (`forward-test-due`).
 
 **Last assessed:** 2026-11-12
 <!-- probe-ref: {"symbols":{"NBIS":154.69},"vix":17.49,"daysBand":"critical:0+","adjacentIds":["asean-summit-manila-2026-11-16","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","empire-state-mfg-2026-11-16","erock-q3-2026-results-2026-11-12","existing-home-sales-2026-11-12","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-balance-of-payments-2026-11-10","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-30y-auction-2026-11-10","jgb-5y-auction-2026-11-12","msft-ignite-2026-11-17","mtis-2026-11-17","mts-october-2026-11-12","nahb-hmi-2026-11-17","nvda-2026-11-18-print","pbls-q3-2026-results-2026-11-12","ppi-2026-11-13","retail-sales-2026-11-17","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","sp-global-investment-manager-index-2026-11-10","survey-of-professional-forecasters-q4-2026-11-16","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-3y-note-2026-11-09","treasury-coupon-announcement-2026-11-12","uk-gdp-q3-first-2026-11-12","uk-gilt-auction-long-2026-11-10","uk-labour-market-2026-11-17","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","nvda-2026-11-18-print","retail-sales-2026-11-17"],"screenStreak":0,"blocked":[]} -->
+
+## Outcome
+
+**Close-out (2026-11-16, D+4; inside `closeOutWithinDays`).** Scored from Yahoo daily closes re-fetched on 11-16, the
+cache busted first (`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`). **The house
+instruments were re-run and still fail on this name**: `earnings-cycle.mjs NBIS` stops with `Cannot read properties of
+undefined (reading 'date')` (NBIS files 6-Ks, not the 8-K Item 2.02 it reads) and `intraday-edges.mjs NBIS` gets Yahoo
+`422` on its 730-day hourly request, so no instrument cell exists and every number below is by hand from daily bars.
+Neither failure is a source block (`probe-ref.blocked` stays empty). The calendar entry is untouched; it was already
+`confirmed`.
+
+**The print vs the stance.** Date and time held: 6-K filed **2026-11-12** (accession 0001104659-26-126008, EX-99.1 and the
+CEO letter EX-99.2, read direct), before the open, call 8:00 ET. Stance was *stand aside, flat through the 11-11 close,
+no open-auction trade, no directional read*: it was a study position, so no paper P/L is booked either way. The tape
+was large and one-directional this time:
+
+| Session | NBIS close | Move | QQQ | CRWV | NVDA |
+|---|---|---|---|---|---|
+| 11-11 (D-1, CRWV reaction) | $154.69 | **+15.44%** | +2.3% | +24.7% | +2.9% |
+| **11-12 (D, print)** | **$128.64** | **−16.84%** | −0.32% | −6.9% | −4.3% |
+| 11-13 (D+1) | $115.88 | −9.92% | −1.20% | −6.1% | −2.0% |
+
+D-1→D+1 **−25.09%** (QQQ −1.52%), the second-largest two-session move of the eight 6-K-dated prints and the first
+since Q3'25 (−14.2%) to fall on both days; the stock closed D+1 **−55%** from the $259.20 Q2-print close. Daily bars
+only, so the first hour is not separable: D opened **$119.94** (−22.5% gap), ranged $118.81–$132.69 and closed
+**$128.64**, **+7.3% above the open**; D+1 opened $123.55 and closed $115.88, **−6.2% below its open**. VIX
+**18.7** on 11-12, **19.3** on 11-13 (17.49 on 11-11).
+
+**What printed (Nebius 6-K, primary; street figures secondary and disagreeing by source).** Q3 revenue **$980.8M**
+(+571% y/y; Q2 $582.3M) against the street band **~$0.90–0.94B**, a beat of roughly 4–9%; adjusted EBITDA **$465.8M**
+(47.5% of revenue), Nebius AI cloud 53% adjusted EBITDA margin; Q3 capex (cash) **$7.3B**. The beat was not what moved
+it. The letter says a portion of this year's revenue moves into early next year, so **FY2026 revenue is now expected
+"at the low end" of the $3.0–3.4B guide, adjusted EBITDA margin ca. 40%**, and the **December ARR target now arrives in
+February**. With nine-month revenue $1,962.1M, the low end implies **Q4 ≈ $1.04B** (this lane's arithmetic) against the
+street ~$1.43B the 11-03 ledger named as the number to clear. First **2027 outlook**: revenue **$12–13B**, capex
+**$40–45B** (75–85% to be covered by prepayments and investment-grade asset-backed financing), pre-tax breakeven by end
+of 2027, and guidance moves to revenue and pre-tax earnings from 2027. That the Q4 trim and the capex size explain the
+reaction is this lane's reading of the filing; no headline or call transcript was read.
+
+**Forward tests scored** (fragment [`forward-tests/nbis-2026-11-12-print.md`](../forward-tests/nbis-2026-11-12-print.md)):
+`FT-nbis-2026-11-12-print-1` **pass** (|D| 16.84% against a 10% bar) and `FT-nbis-2026-11-12-print-2` **pass** (NBIS and
+CRWV both up on 11-11, +15.4% / +24.7%). Neither is a kill, so nothing moves to the sweep doc's kill list. Updated
+record, 8 prints: mean |D| **12.6%** (was 12.0%), |D| ≥10% in **4 of 8**, |D-1→D+1| mean **18.1%**, ≥10% in **7 of 8**.
+
+**What the stance got right and what it did not test.** *Held:* the size claim (S2, "fat-tailed, two-sided") and the
+"run-up does not predict it" premise, which now has an eighth observation: **+15.4% in the last session** into the print
+preceded **−25.1%** over two (the original D-10→D-1 column reads **−10.1%**, because the run-up was a single-day
+rebound off a −40% drawdown). *Not tested:* direction was refused on purpose, so there is no hit rate to score;
+the options-structure refusal (a ±13% straddle "is the market's price") now has one realized two-session move of 25%
+against a 13.5% straddle read on 11-12 (one print, no implied-vs-realized study), which is a reason to build that study,
+not a reason to change the stance. **Stance is closed with the event.** Adjacent prints: **CBRS** printed after the
+close 11-12 (its own close-out), **NVDA 2026-11-18** (calendar, confirmed) is the next sector read; both are owned by
+their own ledgers.
+
+**Loop census (docs/process/LEARNING-LOOP.md):** the stage a person would still do is *sense* on the instrument gap:
+`earnings-cycle.mjs`/`intraday-edges.mjs` fail on any 6-K filer (NBIS today, both runs this month). The 11-03 ledger
+named it; no issue was filed here from this lane.
+
+**Last assessed:** 2026-11-16
+<!-- probe-ref: {"symbols":{"NBIS":115.88},"vix":19.3,"daysBand":"critical:0+","adjacentIds":["asean-summit-manila-2026-11-16","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","empire-state-mfg-2026-11-16","erock-q3-2026-results-2026-11-12","existing-home-sales-2026-11-12","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-balance-of-payments-2026-11-10","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-30y-auction-2026-11-10","jgb-5y-auction-2026-11-12","msft-ignite-2026-11-17","mtis-2026-11-17","mts-october-2026-11-12","nahb-hmi-2026-11-17","nvda-2026-11-18-print","pbls-q3-2026-results-2026-11-12","ppi-2026-11-13","retail-sales-2026-11-17","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","sp-global-investment-manager-index-2026-11-10","survey-of-professional-forecasters-q4-2026-11-16","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-3y-note-2026-11-09","treasury-coupon-announcement-2026-11-12","uk-gdp-q3-first-2026-11-12","uk-gilt-auction-long-2026-11-10","uk-labour-market-2026-11-17","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","nvda-2026-11-18-print","retail-sales-2026-11-17"],"screenStreak":0,"blocked":[]} -->

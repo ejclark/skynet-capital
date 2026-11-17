@@ -11,6 +11,19 @@ describe("the companion's system prompt", () => {
     expect(COMPANION_SYSTEM_PROMPT).toContain("you have no tool that does so");
   });
 
+  // Eric, 2026-11-13: "Stage a trade for nvda" got "I don't stage trades. That's on you at Trade."
+  // in production, ten hours after the staging tool shipped. The never-an-order rule's own fallback
+  // ("say plainly that you don't place orders") read as the answer to a staging ask; the carve-out
+  // has to live INSIDE that rule, where the model reads it before the refusal.
+  it("carves staging out of the never-an-order rule, inside the rule itself (#7547)", () => {
+    const oneRule =
+      COMPANION_SYSTEM_PROMPT.split("THE ONE RULE THAT NEVER BENDS")[1]?.split("\n\n")[0] ?? "";
+    expect(oneRule).toContain("Staging a trade is not placing one");
+    expect(oneRule).toContain("STAGING A TRADE below");
+    expect(COMPANION_SYSTEM_PROMPT).toContain("is mechanics, not a recommendation");
+    expect(COMPANION_SYSTEM_PROMPT).toContain("that turn is no precedent for this one");
+  });
+
   it("is Moneypenny, and answers from the help desk before guessing", () => {
     expect(COMPANION_SYSTEM_PROMPT).toContain("You are Moneypenny");
     expect(COMPANION_SYSTEM_PROMPT).toContain("HELP DESK");

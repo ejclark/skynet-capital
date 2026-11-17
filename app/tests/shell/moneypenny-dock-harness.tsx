@@ -90,17 +90,16 @@ export function mount(extra?: ReactElement): ReturnType<typeof render> & {
   return { ...render(tree), router };
 }
 
-/** The rail's old `openRail(opts)`: History open, the store woken (bound; the intro with `intro`). */
+/** The rail's old `openRail(opts)`: the pane expanded, the store woken (bound; the intro with `intro`). */
 export const showHistory = (opts?: { readonly intro?: boolean }) =>
   act(async () => {
-    useMoneypenny.setState({ history: true });
+    useMoneypenny.setState({ expanded: true });
     await useMoneypenny.getState().wake(opts);
   });
 
-/** The History sheet, when open — the conversation lives here, not in the dock's latest line. */
+/** The dock's conversation pane — always on screen since 2026-11-13, compact or expanded. */
 export const historySheet = () =>
   screen.getByRole("region", { name: "Conversation with Moneypenny" });
 
-/** Queries scoped to the History sheet: her latest line also shows in the dock, so a bare text
- *  query would find it twice. */
+/** Queries scoped to the conversation pane, away from the moves and the box. */
 export const inHistory = () => within(historySheet());

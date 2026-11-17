@@ -36,7 +36,7 @@ describe("a side thread on its row", () => {
     timing.opsMs = 0;
     localStorage.clear();
     useMoneypenny.getState().reset();
-    useMoneypenny.setState({ member: undefined, history: false });
+    useMoneypenny.setState({ member: undefined, expanded: false });
     chats = [];
     let turn = 0;
     globalThis.fetch = ((url: string, init?: RequestInit) => {
@@ -66,20 +66,18 @@ describe("a side thread on its row", () => {
   };
   const row = () => screen.getByRole("region", { name: "Ask about this event" });
   const dock = () => screen.getByRole("complementary", { name: "Moneypenny" });
-  /** The dock's History sheet, opened by hand: asking on a row opens nothing (#7487 slice 2). */
+  /** The dock's conversation pane, expanded by hand: asking on a row never changes its size. */
   const sheet = () => {
-    act(() => useMoneypenny.setState({ history: true }));
+    act(() => useMoneypenny.setState({ expanded: true }));
     return screen.getByRole("region", { name: "Conversation with Moneypenny" });
   };
 
-  it("asks on the row's thread, opening nothing; History names the row, with the way back", async () => {
+  it("asks on the row's thread at the pane's size; the pane names the row, with the way back", async () => {
     mount();
     await askOnRow("what's the setup?");
-    // asking opens nothing: her answer arrives in the dock's latest line
-    expect(useMoneypenny.getState().history).toBe(false);
-    expect(
-      within(dock()).getByRole("button", { name: /^Moneypenny: answer 1/ }),
-    ).toBeInTheDocument();
+    // asking never changes the pane's size: her answer arrives in it, compact
+    expect(useMoneypenny.getState().expanded).toBe(false);
+    expect(within(dock()).getByText("Moneypenny · answer 1")).toBeInTheDocument();
     const lines = useMoneypenny.getState().messages.filter((m) => m.role !== "sys");
     expect(lines.map((m) => [m.role, m.thread])).toEqual([
       ["user", KEY],
@@ -113,7 +111,7 @@ describe("a side thread on its row", () => {
   it("sends her only the thread's own lines, never the main conversation's", async () => {
     mount();
     await act(async () => {
-      useMoneypenny.setState({ history: true });
+      useMoneypenny.setState({ expanded: true });
       await useMoneypenny.getState().wake();
       await useMoneypenny.getState().send("what's moving today?");
     });
@@ -127,14 +125,13 @@ describe("a side thread on its row", () => {
   it("shows the thread on its row, collapsed, with a way to continue it in the chat", async () => {
     mount();
     await askOnRow("what's the setup?");
-    act(() => useMoneypenny.getState().closeHistory());
+    act(() => useMoneypenny.getState().collapse());
     const thread = within(row()).getByText(/Your thread with Moneypenny/);
     expect(thread).toHaveTextContent("Your thread with Moneypenny · 2 messages");
     expect(row().querySelector("details.row-thread")).not.toHaveAttribute("open");
     expect(within(row()).getByText("Moneypenny · answer 1")).toBeInTheDocument();
     act(() => useMoneypenny.getState().closeThread());
     fireEvent.click(within(row()).getByRole("button", { name: "Continue in the chat" }));
-    expect(useMoneypenny.getState().history).toBe(true);
     expect(useMoneypenny.getState().thread?.key).toBe(KEY);
   });
 
@@ -167,7 +164,7 @@ describe("a side thread on its row", () => {
     mount();
     // Bound to the member, the main conversation is waiting on the details of a filing.
     await act(async () => {
-      useMoneypenny.setState({ history: true });
+      useMoneypenny.setState({ expanded: true });
       await useMoneypenny.getState().wake();
     });
     act(() => useMoneypenny.setState({ flow: "fb2" }));
@@ -179,13 +176,13 @@ describe("a side thread on its row", () => {
     expect(useMoneypenny.getState().flow).toBe("fb2");
   });
 
-  it("opening History plays her intro on the main conversation, never in a row's thread", async () => {
+  it("expanding the pane plays her intro on the main conversation, never in a row's thread", async () => {
     mount();
     await askOnRow("what's the setup?");
-    act(() => useMoneypenny.getState().closeHistory());
-    await act(async () => useMoneypenny.getState().toggleHistory());
+    act(() => useMoneypenny.getState().collapse());
+    await act(async () => useMoneypenny.getState().toggleExpanded());
     await flush();
-    expect(useMoneypenny.getState().history).toBe(true);
+    expect(useMoneypenny.getState().expanded).toBe(true);
     const intro = useMoneypenny.getState().messages.filter((m) => m.role === "mp" && !m.thread);
     expect(intro.length).toBeGreaterThan(0);
     // the row's question and her answer, untouched
@@ -212,7 +209,7 @@ describe("a side thread on its row", () => {
     await askOnRow("what's the setup?");
     reload(before);
     await flush();
-    expect(useMoneypenny.getState().history).toBe(false);
+    expect(useMoneypenny.getState().expanded).toBe(false);
     expect(within(row()).getByText(/Your thread with Moneypenny/)).toHaveTextContent(
       "Your thread with Moneypenny · 2 messages",
     );

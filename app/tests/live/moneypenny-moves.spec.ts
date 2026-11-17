@@ -3,7 +3,6 @@ import { CONVICTION_CHIPS } from "../../src/live/moneypenny-conviction";
 import { FOLLOWUP_CHIPS } from "../../src/live/moneypenny-followup";
 import {
   BACK_TO_MAIN,
-  dockText,
   latestLine,
   type MoveState,
   movesFor,
@@ -138,33 +137,5 @@ describe("latestLine — her voice in the dock", () => {
   it("is undefined for an empty conversation or one with only the member's lines", () => {
     expect(latestLine([])).toBeUndefined();
     expect(latestLine([{ role: "user", text: "anyone there?" }])).toBeUndefined();
-  });
-});
-
-describe("dockText — a line as the dock shows it", () => {
-  const text = (t: string) => dockText({ role: "mp", text: t });
-
-  it("drops her name prefix, since the ✦ disc says who", () => {
-    expect(text("Moneypenny · hi, I'm Moneypenny.")).toBe("hi, I'm Moneypenny.");
-  });
-
-  it("keeps a link's words and drops its markup", () => {
-    expect(text("Moneypenny · [open Trade](/trade) and buy a stock")).toBe(
-      "open Trade and buy a stock",
-    );
-  });
-
-  it("flattens bold and italic markers", () => {
-    expect(text("Moneypenny · watch **CRWV earnings** and __CPI__, *then* _rates_.")).toBe(
-      "watch CRWV earnings and CPI, then rates.",
-    );
-  });
-
-  it("leaves a lone asterisk or an underscore inside a word alone", () => {
-    expect(text("2 * 3 is in snake_case")).toBe("2 * 3 is in snake_case");
-  });
-
-  it("folds every run of whitespace, newlines included, to one space, trimmed", () => {
-    expect(text("Moneypenny · one\n\n- two   three\t\n")).toBe("one - two three");
   });
 });

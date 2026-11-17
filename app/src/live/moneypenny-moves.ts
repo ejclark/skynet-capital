@@ -1,7 +1,7 @@
 import type { MpMessage } from "./moneypenny";
 import { CONVICTION_CHIPS } from "./moneypenny-conviction";
 import { FOLLOWUP_CHIPS } from "./moneypenny-followup";
-import { linkPieces, pivotOf, plainLine } from "./moneypenny-links";
+import { linkPieces, pivotOf } from "./moneypenny-links";
 import { RESEARCH_ASK_CHIPS } from "./moneypenny-research";
 import { type Chip, chipsFor, type Flow } from "./moneypenny-script";
 
@@ -13,8 +13,9 @@ import { type Chip, chipsFor, type Flow } from "./moneypenny-script";
  * - **Choices are never drawn inside a message.** Every choice she offers is a move: a canned
  *   question, a parked card's exits, and the pivot ("Show just these N on the page"), which the rail
  *   drew under her answer.
- * - **Her latest line is plain text.** The dock clamps it to two lines and a tap opens History,
- *   where her links live; a link inside a tappable line would nest one control in another.
+ * - **Her places are also moves.** Her links are live in the dock's conversation pane (2026-11-13),
+ *   but the first one or two places she names also become 44px moves: a thumb-sized way there
+ *   when the link sits mid-sentence on a phone.
  *
  * Precedence is the rail's, unchanged: nothing while a turn is under way; a parked card's own exits
  * (in the conversation it was drafted in); else, on the main conversation at rest, the canned moves
@@ -67,8 +68,8 @@ export function movesFor(s: MoveState): readonly Move[] {
   if (s.inThread) return [BACK_TO_MAIN];
   if (s.flow !== "idle") return [];
   const pivot = s.latest?.role === "mp" ? pivotOf(s.latest.text) : undefined;
-  // Her latest line is plain text in the dock (D4), so a place she names there would be dead: the
-  // first one or two become moves. A pivot already covers the rows it names, so it wins.
+  // The first one or two places she names also become moves, a thumb-sized way there beside the
+  // link in her text. A pivot already covers the rows it names, so it wins.
   const places: Move[] =
     s.latest?.role === "mp" && !pivot
       ? linkPieces(s.latest.text)
@@ -104,14 +105,4 @@ export function latestLine(messages: readonly MpMessage[]): MpMessage | undefine
     if (m && HERS.has(m.role)) return m;
   }
   return undefined;
-}
-
-/** A line as the dock shows it: link markup gone, her name prefix dropped (the ✦ disc says who),
- *  markdown emphasis flattened, whitespace folded to one line. */
-export function dockText(m: MpMessage): string {
-  return plainLine(m.text)
-    .replace(/^Moneypenny · /, "")
-    .replace(/\*\*|__|(?<!\w)[*_](?!\s)|(?<!\s)[*_](?!\w)/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
 }

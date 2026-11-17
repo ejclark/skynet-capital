@@ -117,8 +117,12 @@ export function OverviewSection({
           {allAccounts ? null : <BookWaitStart accountId={accountId} desk={singleDesk} />}
           {!allAccounts && singleDesk?.allocation ? null : (
             <p className="desk-note">
-              {stats.cashKnown ? `cash ${stats.cash} ready to use` : "cash —"} ·{" "}
-              {stats.positionCount} open positions
+              {!stats.cashKnown
+                ? "cash —"
+                : stats.ready !== undefined
+                  ? `${stats.ready} ready to use of cash ${stats.cash}`
+                  : `cash ${stats.cash} ready to use`}{" "}
+              · {stats.positionCount} open positions
             </p>
           )}
         </div>
