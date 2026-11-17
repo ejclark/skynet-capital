@@ -1,3 +1,4 @@
+import type { TradeActivityRecord } from "./activity-record.js";
 import type { CapitalFlow } from "./capital-flow.js";
 
 /**
@@ -13,6 +14,14 @@ import type { CapitalFlow } from "./capital-flow.js";
  * held positions moves cash by more). A false line — a market move that happened to share a
  * five-minute window with an unjournaled cash event (an assignment, an expiry, a fee) — pairs two
  * unrelated numbers, so they disagree in sign or the cash falls well short of the equity move.
+ *
+ * The witnesses alone cannot catch the first named source (#7730). An assignment's share leg moves
+ * cash by the whole strike notional, which always "covers" a tolerance-sized equity move, and a put
+ * is assigned when its underlying fell (a covered call when it rose) — the agreeing sign. So each
+ * line is also checked against its window and the fill journal's lifecycle rows (#4563 asked for
+ * exactly that): a line with an assignment, exercise or expiry for the same member within
+ * `LIFECYCLE_MARGIN_MS` of its window disagrees, whatever its witnesses say. Without the journal the
+ * census can still count, but it never prints the all-clear — it cannot rule that source out.
  *
  * What it can recommend. Only a RAISE: a line under the current rule was never recorded, so the
  * shadow series cannot show what a lower floor would catch. Each line's equity at the time is not
@@ -33,10 +42,35 @@ export const CANDIDATE_FLOORS: readonly number[] = [1_000, 5_000, 10_000, 25_000
 export type WitnessVerdict = "agree" | "disagree";
 
 /**
- * Do the two witnesses tell the same story? They agree when they share a sign and the unexplained
- * cash covers the equity move, give or take `slack` (the tolerance a rounding or a fee is allowed).
+ * How far from a line's window a lifecycle row still explains its cash. A row without a time of day
+ * is stamped at the END of its date (`option-lifecycle.ts`), so the broker's cash move can sit most
+ * of a day before the stamp; a day either side covers that, and only ever withholds an all-clear.
  */
-export function witnesses(flow: CapitalFlow, slack = 1_000): WitnessVerdict {
+export const LIFECYCLE_MARGIN_MS = 24 * 60 * 60_000;
+
+/** Does the journal hold a lifecycle row (assignment, exercise, expiry) for this line's member near
+ *  its window? Then the unexplained cash has a known cause that is not capital arriving. */
+export function lifecycleNear(flow: CapitalFlow, journal: readonly TradeActivityRecord[]): boolean {
+  const start = Date.parse(flow.from) - LIFECYCLE_MARGIN_MS;
+  const end = Date.parse(flow.at) + LIFECYCLE_MARGIN_MS;
+  return journal.some((record) => {
+    if (record.source !== "lifecycle" || record.participantId !== flow.participantId) return false;
+    const at = Date.parse(record.at);
+    return at >= start && at <= end;
+  });
+}
+
+/**
+ * Do the two witnesses tell the same story? They agree when they share a sign and the unexplained
+ * cash covers the equity move, give or take `slack` (the tolerance a rounding or a fee is allowed),
+ * and no lifecycle row in the journal sits near the line's window (#7730).
+ */
+export function witnesses(
+  flow: CapitalFlow,
+  journal: readonly TradeActivityRecord[] = [],
+  slack = 1_000,
+): WitnessVerdict {
+  if (lifecycleNear(flow, journal)) return "disagree";
   const sameSign = Math.sign(flow.amount) === Math.sign(flow.unexplainedCash);
   const cashCovers = Math.abs(flow.unexplainedCash) >= Math.abs(flow.amount) - slack;
   return sameSign && cashCovers ? "agree" : "disagree";
@@ -54,6 +88,10 @@ export interface FlowCensus {
   readonly participants: number;
   readonly agree: number;
   readonly disagree: number;
+  /** Lines with a lifecycle row near their window — each one counted in `disagree`. */
+  readonly lifecycleNear: number;
+  /** The fill journal was read. Without it no all-clear is printed (#7730). */
+  readonly journalRead: boolean;
   /** Whole days from `FLOWS_RECORDED_FROM` to `now`. */
   readonly shadowDays: number;
   readonly floors: readonly FloorRow[];
@@ -68,9 +106,15 @@ export interface FlowCensus {
 const clears = (flow: CapitalFlow, floor: number): boolean =>
   Math.abs(flow.amount) > floor && Math.abs(flow.unexplainedCash) > floor;
 
-/** Grade the shadow ledger. Pure: `now` is passed in so the spec pins the clock. */
-export function censusFlows(flows: readonly CapitalFlow[], now: Date): FlowCensus {
-  const verdicts = flows.map((flow) => ({ flow, verdict: witnesses(flow) }));
+/** Grade the shadow ledger against the fill journal, when one was read. Pure: `now` is passed in
+ *  so the spec pins the clock. */
+export function censusFlows(
+  flows: readonly CapitalFlow[],
+  now: Date,
+  journal?: readonly TradeActivityRecord[],
+): FlowCensus {
+  const rows = journal ?? [];
+  const verdicts = flows.map((flow) => ({ flow, verdict: witnesses(flow, rows) }));
   const agree = verdicts.filter((v) => v.verdict === "agree").length;
   const floors = CANDIDATE_FLOORS.map((floor) => {
     const kept = verdicts.filter((v) => clears(v.flow, floor));
@@ -87,6 +131,8 @@ export function censusFlows(flows: readonly CapitalFlow[], now: Date): FlowCensu
     participants: new Set(flows.map((flow) => flow.participantId)).size,
     agree,
     disagree: flows.length - agree,
+    lifecycleNear: flows.filter((flow) => lifecycleNear(flow, rows)).length,
+    journalRead: journal !== undefined,
     shadowDays,
     floors,
     recommendedFloor: recommended?.floor,
@@ -105,7 +151,9 @@ function verdictLine(census: FlowCensus): string {
     return "No flows recorded. Nobody topped up or reset, and no false line appeared: keep today's rule.";
   }
   if (census.disagree === 0) {
-    return "Every line's witnesses agree: keep today's rule.";
+    return census.journalRead
+      ? "Every line's witnesses agree: keep today's rule."
+      : "Every line's witnesses agree, but the fill journal was not read, so an assignment or expiry in a line's window is not ruled out: rerun with --activity before keeping today's rule.";
   }
   if (census.recommendedFloor === undefined) {
     return `A disagreeing line clears every candidate floor up to ${usd(CANDIDATE_FLOORS.at(-1) ?? 0)}: a floor alone will not separate them; read the detector, not the tolerance.`;
@@ -125,6 +173,9 @@ export function censusMarkdown(census: FlowCensus): string {
     `**${verdictLine(census)}**`,
     "",
     `- Lines: ${census.lines} across ${census.participants} participant(s); witnesses agree on ${census.agree}, disagree on ${census.disagree}.`,
+    census.journalRead
+      ? `- Near an assignment, exercise or expiry in the fill journal: ${census.lifecycleNear} line(s), graded disagree.`
+      : "- Fill journal: not read; lines were graded on their witnesses alone.",
     `- Shadow time: ${census.shadowDays} day(s) since recording began.`,
     "",
     "| Floor on both witnesses | Agree kept | Disagree kept |",
@@ -132,6 +183,29 @@ export function censusMarkdown(census: FlowCensus): string {
     ...rows,
     "",
   ].join("\n");
+}
+
+/** Read the fill journal's JSONL (every participant's file concatenated) into records, skipping a
+ *  blank, torn or shapeless line the same way `parseFlowLines` does. */
+export function parseJournalLines(text: string): TradeActivityRecord[] {
+  const records: TradeActivityRecord[] = [];
+  for (const raw of text.split("\n")) {
+    const line = raw.trim();
+    if (!line) continue;
+    try {
+      const value = JSON.parse(line) as Partial<TradeActivityRecord>;
+      if (
+        typeof value.participantId === "string" &&
+        typeof value.at === "string" &&
+        typeof value.source === "string"
+      ) {
+        records.push(value as TradeActivityRecord);
+      }
+    } catch {
+      // A torn last line from a write in flight: skip it.
+    }
+  }
+  return records;
 }
 
 /** Read JSONL text into flows, skipping a blank or unparseable line rather than failing the read. */
