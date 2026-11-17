@@ -270,6 +270,15 @@ robust, alpha fragile — is the finding.
   spot, not the volatility. Do not re-register a "differs from t−2 by more than N" test for a diffusion
   index; condition on the one-month move (e.g. |Δ| above the 11.2 median) instead.
 
+- **"Prices paid is persistent enough to forecast a next print at or above 50" (FT-empire-state-mfg-2026-11-16-1)** — added
+  2026-11-17 from the [empire-state-mfg-2026-11-16 close-out](events/empire-state-mfg-2026-11-16.md). Registered
+  2026-11-05 at 84% off a lag-1 ρ of 0.931 and a 32-of-38 base rate after a print at or above 55. It printed
+  **45.9** (Oct 59.5, −13.6, the 4th percentile of monthly moves), z = −1.56 against the fit's own residual sd.
+  The re-fit through November barely moves ρ (0.925), so the fit is not what broke — a 16% tail landed. Do not
+  re-register an at-or-above-the-line test for a diffusion index from a level alone; condition on the
+  one-month move or the six-month-ahead reading, and size the registered probability to the model-free
+  count (7 of 39 below 50 after a print at or above 55), not the AR(1) alone.
+
 - **"A WPSR sign-match test (commercial-crude draw/build vs WTI close-to-close) generalizes as `print ignored` on a dense macro morning" (FT-eia-weekly-petroleum-status-2026-10-15-2)** — added 2026-10-16 from the [eia-weekly-petroleum-status-2026-10-15 close-out](events/eia-weekly-petroleum-status-2026-10-15.md). Registered 2026-09-30; the 10-15 print was an -8.557 mb draw and WTI closed +3.0%, a matched pair. WTI's rally was already in by 11:55 ET (about +0.3% across the 12:00 release), so the sign rule misattributes a session move to the print. Do not re-register a daily-close sign test for a mid-day release; use the bars either side of the release time.
 
 - **"The 09-10 operation's 23-issue spread is a regime change in how the long end buys"

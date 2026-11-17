@@ -155,6 +155,7 @@ spread, headline. Registered, scored on 2026-11-17:
 |---|---|---|---|---|
 | 2026-11-05 | D-11 | **Initial research on an id that existed only as a proposal; read first** (`proposals/empire-state-mfg-2026-11-16.from-philly-fed-mfg-2026-11-19.json`, now shadowed by the canonical file). **Date promoted `estimate` → `confirmed` (`FRB:`)** on two direct NY Fed primaries (overview page 132,035 bytes; national calendar 111,962 bytes, both HTTP 200). **Series pulled from the Bank's own CSV** (304 months, to Oct-26: headline 25.5, prices paid 59.5, received 30.6, new orders 23.2, six-month-ahead prices paid 70.9). **Fit:** prices paid ρ 0.931, Nov central 57.7, band 45.2–70.2; headline ρ 0.718 full / 0.357 since 2024, central 20.3 (10.2), band 2.6–37.9. **Adjacency sweep:** peer print — Philly Oct headline 20.9, prices paid 43.2, Nov MBOS 11-19 unchanged; macro — FOMC 10-28 held 3.75–4.00%, 10–2 with two hike dissents; VIX 16.9; geopolitical — US–China tariff-truce date 11-10, inside this survey's collection window's close; event tape — none sourced. **Corridor:** CBRS 11-11, NBIS 11-12, retail sales 11-17, NVDA 11-18 are the confirmed high/critical entries within 5 days. **No new proposals filed;** nothing dated and un-calendared was found inside the horizon. Conviction proposals and declared intents for this id: both scripts printed `[]`. Two forward tests registered. | Initial stance: stand aside | 2026-11-12 |
 | 2026-11-12 | D-4 | **Deterministic screen (no Claude session).** Readings — VIX 17.5 (+0.6pt since last), band unchanged (low:0+), 50 adjacent event(s) tracked, new in corridor since last pulse: `erock-q3-2026-results-2026-11-12`, `japan-gdp-q3-prelim-2026-11-16`, `pbls-q3-2026-results-2026-11-12` (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-11-19 |
+| 2026-11-17 | D+1 | **Close-out session** (`event-passed-unscored`; no screen applies). November printed — NY Fed overview page and the Bank's own seasonally-adjusted CSV re-pulled direct 2026-11-17 (both HTTP 200), caches busted first: headline **7.8** (Oct 25.5, −17.7), prices paid **45.9** (Oct 59.5, −13.6), prices received **27.2**, new orders **3.0**; responses collected **Nov 2–9**. **FT-1 KILLED** (45.9 < 50; registered 84%); **FT-2 PASSED** (7.8 < 25.5; registered 69%). Kill switch 1 fired (prices paid below 50: seven-print streak ended, re-fit owed before 12-15); 2, 3, 4 did not; 5 not yet scoreable (Philly prints 11-19). Adjacency: SPY −1.9%, QQQ −2.7%, VIX 19.30 → 22.91, 10Y 5.12% on the day, no Empire-specific attribution made. Conviction proposals and declared intents for this id: both scripts printed `[]`. Full account in `## Outcome`. | — (stance held: stand-aside; reading order kept, persistence leg flagged for re-fit) | — (closed; `## Outcome` filed) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse: it is a note to
 the next session, not an essay, and a stance *change* earns its sentence in the Stance section with
@@ -167,3 +168,108 @@ below from re-run instrument data (cache busted first), never from memory — af
 
 **Last assessed:** 2026-11-12
 <!-- probe-ref: {"symbols":{},"vix":17.49,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","bund-30y-auction-2026-11-11","cbrs-q3-2026-results-2026-11-11","erock-q3-2026-results-2026-11-12","eurostat-hicp-final-2026-11-18","existing-home-sales-2026-11-12","fomc-minutes-2026-11-18","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-5y-auction-2026-11-12","jgb-liquidity-enhancement-1-5y-2026-11-20","msft-ignite-2026-11-17","mtis-2026-11-17","mts-october-2026-11-12","nahb-hmi-2026-11-17","nbis-2026-11-12-print","nvda-2026-11-18-print","opex-2026-11-20","pbls-q3-2026-results-2026-11-12","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","ppi-2026-11-13","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-30y-bond-2026-11-12","treasury-coupon-announcement-2026-11-12","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-gdp-q3-first-2026-11-12","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["cbrs-q3-2026-results-2026-11-11","nbis-2026-11-12-print","nvda-2026-11-18-print","retail-sales-2026-11-17"],"screenStreak":1} -->
+
+## Outcome
+
+**Close-out (2026-11-17, D+1 — inside the `closeOutWithinDays: 6` deadline).** Macro-print mode runs no
+`earnings-cycle` / `intraday-edges` instrument (`symbols: []` by design); the cache-bust command was run
+regardless and held nothing. "Re-run instrument data" here is the New York Fed's own release and series,
+fetched direct this session and nothing recalled from initial research: the overview page
+(`newyorkfed.org/survey/empire/empiresurvey_overview`, HTTP 200, 135,508 bytes) and the seasonally-adjusted
+diffusion CSV (`esms_seasonallyadjusted_diffusion.csv`, HTTP 200, 305 monthly rows, 2001-07 → 2026-11, the
+file the initial research fit on); Yahoo daily closes for the tape context. Date label: `FRB:` primary,
+`confirmed`.
+
+**The verdict: the stand-aside stance was right and cost nothing; one of two registered forward tests
+passed and the one on the half this doc called forecastable was killed.** The headline gave back the whole of
+October's jump; prices paid fell fourteen points through the 50 line the persistence claim rested on.
+
+### What printed
+
+| Line | Nov (printed) | Oct | Change | Initial-research central (90% band) |
+|---|---|---|---|---|
+| Headline (general business conditions) | **7.8** | 25.5 | −17.7 (5th percentile of 304 monthly moves) | 20.3 (2.6 – 37.9); 2024+ fit 10.2 |
+| Prices paid | **45.9** | 59.5 | −13.6 (4th percentile) | 57.7 (45.2 – 70.2) |
+| Prices received | **27.2** | 30.6 | −3.4 | 29.1 (20.2 – 38.1) |
+| New orders | **3.0** | 23.2 | −20.2 | — |
+| Six-month-ahead prices paid | **66.7** | 70.9 | −4.2 | — |
+
+The overview page's own words: *"Survey responses were collected between November 2 and November 9"*;
+*"business activity increased modestly… The headline general business conditions index remained positive but
+fell eighteen points to 7.8"*; *"The prices paid index dropped fourteen points to 45.9, pointing to a
+significant moderation in input price increases, and the prices received index dipped three points to 27.2"*;
+future conditions rose eight points to 28.9. Paid-minus-received is **18.7** (45.9 − 27.2), down from 28.9 in
+October: below the ~20 line the 10-15 close-out flagged.
+
+### Forward tests, scored
+
+| Test | Prediction | Printed | Verdict |
+|---|---|---|---|
+| FT-…-1 (prices paid ≥ 50) | ≥ 50, registered 84% | **45.9** | **KILLED** (4.1 below the line) |
+| FT-…-2 (headline below 25.5) | below 25.5, registered 69% | **7.8** | **PASSED** |
+
+**FT-1 is killed, and it is a miss by the model's own yardstick, not a boundary case.** The AR(1) fit on
+history through October (ρ 0.927, central 57.7, residual sd 7.57) puts 45.9 at **z = −1.56**, roughly the
+6th percentile of the one-step distribution; model-free, **7 of the 39** months that followed a print at or
+above 55 fell below 50 (the initial research's 6 of 38 plus this one). A 16% event happened, which a
+registered 84% should allow about one time in six. What it does to the doc's distinguishing claim: prices paid
+was called the informative, forecastable half and the headline the unforecastable one, and in standard-deviation
+units the headline missed the central estimate by *less* (z −1.16) than prices paid did (z −1.56). One
+observation never decides an autocorrelation fit, but the kill switch is explicit: it forces a re-fit before
+the 12-15 edition. **Re-fit on the series through November**, from 45.9: prices paid full-sample ρ **0.925**,
+December central **45.0**, 90% band 32.5 – 57.6; since 2024 ρ **0.858**, central 45.9, band 35.7 – 56.2.
+The persistence estimate barely moved (0.931 → 0.925); the print is a large residual, not a broken fit. The
+seven-print streak at or above 50 (Apr–Oct 2026: 51.0 · 62.6 · 61.0 · 52.3 · 58.6 · 63.1 · 59.5) ended at seven.
+
+**FT-2 passed, and it is the weaker claim by design.** 7.8 is below 25.5 by 17.7, the 5th-percentile monthly
+move, which returns the headline to where September printed (7.6): September 7.6 → October 25.5 → November 7.8
+is a round trip. The full-sample central (20.3) overshot by 12.5, and the 2024+ fit (10.2) was the closer one,
+as the initial research said it might be. After a print at or above 20 the next fell below 25.5 in **38 of 58**
+months (the earlier 37 of 57 plus this one). One pass is one observation; the pre-stated count for promotion is
+2–3 prints, and the other prints are not this event's to claim.
+
+### The stance's kill switches, checked against the print
+
+- **1. Prices paid below 50 on 11-16** — **FIRED** (45.9). Persistence leg is re-fit above; its December
+  reading is a model output, not a call.
+- **2. The NY Fed or national calendar re-dates the print** — did not fire; it printed Monday 2026-11-16.
+- **3. A published collection window running past 11-10** — did not fire. Window was **Nov 2 – Nov 9**, so
+  Leg 2's timing claim holds: the answers were in before CPI (11-10) and PPI (11-13). It is the third
+  published window consistent with the "first business day after the 1st, closes the ninth or tenth" pattern.
+- **4. Headline at or above 25.5** — did not fire (7.8).
+- **5. Empire/Philly prices-paid gap under ~5 points on 11-19** — **not yet scoreable**: the Philadelphia Fed's
+  November survey prints 11-19 ([philly-fed-mfg-2026-11-19](philly-fed-mfg-2026-11-19.md)), whose October
+  prices paid was 43.2. Empire's November 45.9 sits 2.7 above Philly's October reading, so the October gap (16.3) has
+  shrunk on Empire's side alone; the like-for-like gap needs Philly's November print, and Leg 4 stays open
+  until then.
+
+### Does it move the tape: still no Empire-specific claim
+
+The same-day tape was weak: SPY closed 739.95 against 754.37 on 11-13 (−1.9%), QQQ 661.75 against 679.89
+(−2.7%), VIX 22.91 against 19.30, the 10-year 5.12% against 5.15%. This session ran **no intraday bars** and
+the slot carried the other 11-16 entries (SPF, ASEAN, JGB inflation-indexed auction, Japan GDP); a daily-close
+move across a window that also holds the weekend and the other same-day entries is not attributable to a
+low-impact regional survey, and none is claimed. Leg 5 stands as it was: untested for November, refuted as a standing claim.
+
+### What survives and what to carry forward
+
+- **Reading order kept, with a caveat:** prices paid first, spread second, headline last — but the one clean
+  scoring of the "prices paid is the forecastable half" claim went against it. Treat the persistence estimate
+  as fit-rather-than-verified until a second out-of-sample print.
+- **Spread leg:** paid-minus-received fell from 28.9 to 18.7 (new orders 3.0, a 20-point drop): the
+  moderation is in input costs, not yet in selling prices (27.2).
+- **Quarter-horizon call unchanged:** the December edition
+  ([empire-state-mfg-2026-12-15](empire-state-mfg-2026-12-15.md)) still lands four days after the 12-11 CR
+  expiry; nothing in this print touches that.
+- **Never traded.** `low` impact, `symbols: []`; no position was opened, closed or sized off this print at
+  any point in this document's life.
+
+### Honest accounting
+
+Two zero-capital tests registered at 84% and 69%: the weaker one passed, the stronger one — the one the doc was
+built around — was killed by 4.1 points at a 1.6-sigma miss. The kill is banked on the sweep doc's kill list
+with its lesson, and the document stays quiet from here (`event-scan.mjs`'s `hasOutcome` check) apart from
+the re-fit it asked for, which is written above rather than left owed.
+
+**Last assessed:** 2026-11-17
+<!-- probe-ref: {"symbols":{},"vix":22.91,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","bund-30y-auction-2026-11-11","cbrs-q3-2026-results-2026-11-11","erock-q3-2026-results-2026-11-12","eurostat-hicp-final-2026-11-18","existing-home-sales-2026-11-12","fomc-minutes-2026-11-18","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-5y-auction-2026-11-12","jgb-liquidity-enhancement-1-5y-2026-11-20","msft-ignite-2026-11-17","mtis-2026-11-17","mts-october-2026-11-12","nahb-hmi-2026-11-17","opex-2026-11-20","pbls-q3-2026-results-2026-11-12","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","ppi-2026-11-13","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-30y-bond-2026-11-12","treasury-coupon-announcement-2026-11-12","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-gdp-q3-first-2026-11-12","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["cbrs-q3-2026-results-2026-11-11","retail-sales-2026-11-17"],"screenStreak":0,"blocked":[]} -->
