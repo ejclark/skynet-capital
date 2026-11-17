@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactElement } from "react";
 import type { SafeguardLadderEntry, ThesisMarker, ThesisPlay } from "../live/desk";
+import { signedPercent, signOf } from "../ui";
 import { ladderStamp, SAFEGUARD_STATE_GLYPH, SAFEGUARD_STATE_LABEL } from "./safeguard-state";
 
 /**
@@ -26,13 +27,13 @@ function at(score: number): number {
 /** A score as the line labels it: `−0.70`, `+0.70`, with a true minus sign. */
 function score(value: number): string {
   if (value === 0) return "0";
-  return `${value > 0 ? "+" : "−"}${Math.abs(value).toFixed(2)}`;
+  return `${signOf(value)}${Math.abs(value).toFixed(2)}`;
 }
 
 /** A momentum fraction as a price move: `0.003` → `+0.30%`, `0` → `0%`. */
 function move(fraction: number): string {
   if (fraction === 0) return "0%";
-  return `${fraction > 0 ? "+" : "−"}${Math.abs(fraction * 100).toFixed(2)}%`;
+  return signedPercent(fraction * 100, 2);
 }
 
 /** Marks closer than this (% of the line) stack into the next row — ~22px at 390px wide. */

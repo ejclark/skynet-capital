@@ -13,7 +13,7 @@ import {
   submitOption,
 } from "../live/options";
 import { money, type TicketResult, tifLabel } from "../live/ticket";
-import { InlineResult } from "../ui";
+import { InlineResult, signOf } from "../ui";
 import { optionCloseWords } from "./close-panel";
 import { land } from "./landing";
 import { RollRow } from "./roll-row";
@@ -86,10 +86,10 @@ function BookLine({
 }
 
 const signed = (n: number, digits = 0): string =>
-  `${n < 0 ? "−" : "+"}${Math.abs(n).toLocaleString("en-US", { maximumFractionDigits: digits, minimumFractionDigits: digits })}`;
+  `${signOf(n)}${Math.abs(n).toLocaleString("en-US", { maximumFractionDigits: digits, minimumFractionDigits: digits })}`;
 /** "−$549", sign glued to the figure (U+2060) so a wrap never strands the minus. */
 const dollars = (n: number): string =>
-  `${n < 0 ? "−" : "+"}\u2060$${Math.abs(n).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+  `${signOf(n)}\u2060$${Math.abs(n).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 
 /** "Sep 29" from YYYY-MM-DD, read as a calendar day (no timezone shift). */
 function shortDay(iso: string): string {
