@@ -158,6 +158,38 @@ describe("OptionPositionsCard — close order type", () => {
   });
 });
 
+describe("OptionPositionsCard — part of a holding (change-scenarios OP-02)", () => {
+  beforeEach(() => {
+    reviewed.length = 0;
+    submitted.length = 0;
+    nextPreview = {};
+  });
+
+  it("starts at everything held and reviews a bare close, as before", async () => {
+    render(withClient(<OptionPositionsCard deskId="human-eric" positions={[held]} />));
+    expect(screen.getByLabelText("Contracts to close")).toHaveValue(2);
+    fireEvent.click(screen.getByRole("button", { name: "Close…" }));
+    await waitFor(() => expect(reviewed).toHaveLength(1));
+    expect(reviewed[0]).not.toHaveProperty("contracts");
+  });
+
+  it("closes 1 of 2 when the member asks for one, and names it on the button", async () => {
+    nextPreview = { contracts: 1 };
+    render(withClient(<OptionPositionsCard deskId="human-eric" positions={[held]} />));
+    fireEvent.change(screen.getByLabelText("Contracts to close"), { target: { value: "1" } });
+    fireEvent.click(screen.getByRole("button", { name: "Close 1 of 2…" }));
+    await waitFor(() => expect(reviewed).toHaveLength(1));
+    expect(reviewed[0]).toMatchObject({ kind: "close", contracts: 1 });
+  });
+
+  it("refuses a count past what is held, in words, before any review", () => {
+    render(withClient(<OptionPositionsCard deskId="human-eric" positions={[held]} />));
+    fireEvent.change(screen.getByLabelText("Contracts to close"), { target: { value: "3" } });
+    expect(screen.getByRole("button", { name: "Close…" })).toBeDisabled();
+    expect(screen.getByText("Close between 1 and 2 contracts.")).toBeInTheDocument();
+  });
+});
+
 describe("OptionPositionsCard — Position Statement vocabulary (#3407 P2 slice 3)", () => {
   it("shows days, the in-the-money word, the holding's greeks and the book line once the statement answers", async () => {
     nextStatement = {

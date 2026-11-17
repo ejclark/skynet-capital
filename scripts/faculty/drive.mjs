@@ -172,7 +172,7 @@ export async function driveChange(o) {
               size: vp.viewport,
               browser: session.page.context().browser(),
               call: makeCaller({ stub: o.stub && resolve(o.stub), record: join(out, "requests") }),
-              rolePath: join(ROLES, "actor.md"),
+              rolePath: join(o.roles ?? ROLES, "actor.md"),
             })
           : scriptedActor(o.actor.slice("scripted:".length), session);
       played = await play(session, actor, cap, join(out, "turns.jsonl"));

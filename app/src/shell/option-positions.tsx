@@ -12,9 +12,10 @@ import {
   reviewOption,
   submitOption,
 } from "../live/options";
+import { held } from "../live/quantity";
 import { money, type TicketResult, tifLabel } from "../live/ticket";
 import { InlineResult } from "../ui";
-import { optionCloseWords } from "./close-panel";
+import { optionCloseWords, sentWords } from "./close-panel";
 import { land } from "./landing";
 import { RollRow } from "./roll-row";
 
@@ -179,6 +180,16 @@ function CloseRow({
   const [state, setState] = useState<RowState>({ step: "idle" });
   const [orderType, setOrderType] = useState<"market" | "limit">("market");
   const [limitPrice, setLimitPrice] = useState("");
+  // How many contracts to close (change-scenarios OP-02, 2026-11-16: a blind member on a phone who
+  // wanted to sell 1 of 2 calls found no count here — this row closed the whole holding, and the
+  // count-capable close lives only in the desktop table — so they refused to confirm and gave up).
+  // Starts at everything held, so a full close reads exactly as before.
+  const heldCount = held(position.quantity).count;
+  const [count, setCount] = useState(String(heldCount));
+  const countId = useId();
+  const parsedCount = Number(count.trim());
+  const partial = Number.isInteger(parsedCount) && parsedCount >= 1 && parsedCount < heldCount;
+  const countValid = Number.isInteger(parsedCount) && parsedCount >= 1 && parsedCount <= heldCount;
   // Roll as one ticket (#3407 P3 slice 3) — a second row under this one, opened on demand.
   const [rolling, setRolling] = useState(focus?.rollTo !== undefined);
   const priceId = useId();
@@ -188,6 +199,9 @@ function CloseRow({
     participantId: deskId,
     occSymbol: position.symbol,
     orderType,
+    // Part of the holding names its count; all of it goes bare, as before (#5090: the server sizes
+    // a bare close from the live holding, and Confirm names the count the review answered).
+    ...(partial ? { contracts: parsedCount } : {}),
     ...(orderType === "limit" && limitPrice.trim() !== "" && Number.isFinite(parsedLimit)
       ? { limitPrice: parsedLimit }
       : {}),
@@ -233,6 +247,26 @@ function CloseRow({
         <span className="num">{position.quantity}</span>
         <span className="num">{position.value}</span>
         <span className="tkt-close-how">
+          {heldCount > 1 ? (
+            <span className="field tkt-close-count">
+              <label htmlFor={countId}>Contracts to close</label>
+              <input
+                id={countId}
+                type="number"
+                min={1}
+                max={heldCount}
+                step={1}
+                inputMode="numeric"
+                value={count}
+                disabled={state.step === "submitting" || state.step === "done"}
+                onFocus={(e) => e.currentTarget.select()}
+                onChange={(e) => {
+                  setCount(e.target.value);
+                  disarm();
+                }}
+              />
+            </span>
+          ) : null}
           <fieldset className="toggle-group tkt-close-type" aria-label="Close order type">
             {(["market", "limit"] as const).map((type) => (
               <button
@@ -263,18 +297,32 @@ function CloseRow({
                 value={limitPrice}
                 placeholder={`≈ ${position.price}`}
                 disabled={state.step === "submitting" || state.step === "done"}
+                onFocus={(e) => e.currentTarget.select()}
                 onChange={(e) => {
                   setLimitPrice(e.target.value);
                   disarm();
                 }}
               />
+              {/* Said, not only labelled for a screen reader: a blind member read the box as a
+                  per-contract price, typed 1500 for $15, and met a $300,000 confirm (PM-01). */}
+              <span className="tkt-close-unit" aria-hidden="true">
+                per share
+              </span>
             </span>
           ) : null}
         </span>
         {state.step === "idle" || state.step === "error" ? (
-          <button type="button" className="btn mc-btn" onClick={() => void review()}>
-            Close…
+          <button
+            type="button"
+            className="btn mc-btn"
+            disabled={!countValid}
+            onClick={() => void review()}
+          >
+            {partial ? `Close ${parsedCount} of ${heldCount}…` : "Close…"}
           </button>
+        ) : null}
+        {!countValid && (state.step === "idle" || state.step === "error") ? (
+          <span className="tkt-close-note">Close between 1 and {heldCount} contracts.</span>
         ) : null}
         {state.step === "reviewing" ? <span className="tkt-close-note">reviewing…</span> : null}
         {state.step === "reviewed" ? (
@@ -305,7 +353,7 @@ function CloseRow({
         {state.step === "done" ? (
           state.result.ok ? (
             <InlineResult as="span" tone="ok" className="tkt-close-note">
-              order {state.result.orderId} {state.result.status}
+              {sentWords(state.result.status)}
             </InlineResult>
           ) : (
             <InlineResult as="span" tone="err" className="tkt-close-note">

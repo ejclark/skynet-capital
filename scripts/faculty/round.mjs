@@ -10,8 +10,16 @@
 // Out: <out>/<id>-<viewport>-run<n>/ per session, and <out>/round.json + <out>/round.md — the
 // table a readout starts from (verdict, unintended writes, turns, ease, worst confusion, said).
 
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { join, resolve } from "node:path";
+import { ROLES } from "../study/sealed.mjs";
 import { driveChange } from "./drive.mjs";
 
 function args(argv) {
@@ -100,6 +108,17 @@ async function main() {
     .filter((s) => !o.only || o.only.includes(s.id))
     // `--only` is also the running order: the scenarios a round most needs answered go first.
     .sort((a, b) => (o.only ? o.only.indexOf(a.id) - o.only.indexOf(b.id) : 0));
+  // The round's instrument is frozen at its start: every blind call reads its role prompt per call,
+  // so editing the role mid-round told later members about keys the already-loaded recorder still
+  // refused (round 1, 2026-11-16: EQ-03 and PM-01 were refused a Backspace their role offered).
+  // Copy the role once; every session reads the copy.
+  const roles = join(out, "roles");
+  mkdirSync(roles, { recursive: true });
+  if (!existsSync(join(roles, "actor.md")))
+    copyFileSync(join(ROLES, "actor.md"), join(roles, "actor.md"));
+  if (!existsSync(join(roles, "ease.md")) && existsSync(join(ROLES, "ease.md"))) {
+    copyFileSync(join(ROLES, "ease.md"), join(roles, "ease.md"));
+  }
   const jobs = scenarios.flatMap((s) =>
     Array.from({ length: o.runs }, (_, i) => ({ s, run: i + 1 })),
   );
