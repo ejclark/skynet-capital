@@ -13,6 +13,7 @@ const replyFor =
   (_prompt, { label }) => {
     if (label === "work-mode")
       return { found: true, dispatch: true, position: "normal", grindWidth: 200 };
+    if (label === "deepen") return { fetched: true, shallow: false };
     if (label?.startsWith("triage")) return { merged: true, files, protected: false };
     if (label?.startsWith("review")) return { merged: true, findings: [finding] };
     return { refuted: false, evidence: "e" };
@@ -23,7 +24,7 @@ const stageOf = (label = "") => label.split(" ")[0];
 describe("post-merge-audit's stage agent", () => {
   it("runs triage, review and both refuters as the worker", async () => {
     const { calls } = await runWorkflow("post-merge-audit", { prs: [6501] }, replyFor(["x.ts"]));
-    const stages = calls.filter((c) => c.opts.label !== "work-mode");
+    const stages = calls.filter((c) => !["work-mode", "deepen"].includes(c.opts.label ?? ""));
     expect(stages.map((c) => stageOf(c.opts.label)).sort()).toEqual([
       "repro",
       "review",
@@ -170,6 +171,10 @@ describe("post-merge-audit's lens table", () => {
       "correctness",
       "performance",
     ]);
+    // Dropped, but never silently: the PR still needs that lens's read (#6682).
+    expect(result?.unreviewed).toEqual([
+      { pr: 6501, why: expect.stringContaining("the security lens could not find the change") },
+    ]);
   });
 
   it("runs every lens when triage found the PR but no paths", async () => {
@@ -182,11 +187,25 @@ describe("post-merge-audit's lens table", () => {
     expect(reviewers(calls)).toHaveLength(3);
   });
 
-  it("calls a PR not found only when no reviewer found it", async () => {
+  // Triage placed it, so every reviewer missing it is their read failing, not the PR (#6682).
+  it("asks for a re-run, not 'not found', when triage found the PR and no reviewer did", async () => {
     const reply: Reply = (prompt, opts) =>
       opts.label?.startsWith("review")
         ? { merged: false, findings: [] }
         : replyFor(["x.ts"])(prompt, opts);
+    const { result } = await runWorkflow("post-merge-audit", { prs: [6501] }, reply);
+    expect(result?.unreviewed).toEqual([
+      { pr: 6501, why: expect.stringMatching(/^triage found it merged.*re-run/) },
+    ]);
+  });
+
+  it("calls a PR not found only when no agent found it on a fetched clone", async () => {
+    const reply: Reply = (prompt, opts) => {
+      if (opts.label === "dead agents") return { left: [] };
+      if (opts.label?.startsWith("triage")) return null;
+      if (opts.label?.startsWith("review")) return { merged: false, findings: [] };
+      return replyFor(["x.ts"])(prompt, opts);
+    };
     const { result } = await runWorkflow("post-merge-audit", { prs: [6501] }, reply);
     expect(result?.unreviewed).toEqual([{ pr: 6501, why: "not found on origin/main" }]);
   });
