@@ -1471,7 +1471,7 @@
         "scripts/dream-digest.mjs",
         "scripts/run-memory.mjs"
       ],
-      "cite": ".claude/skills/dream/SKILL.md:6-8, 15, 36-37; CLAUDE.md:421"
+      "cite": ".claude/skills/dream/SKILL.md:6-8, 15, 36-38; CLAUDE.md:421"
     },
     {
       "id": "charter",

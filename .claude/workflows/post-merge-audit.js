@@ -93,7 +93,7 @@ const GATE_SCHEMA = {
   },
 }
 const WIDTH = prs.length
-const PRICE = `At least ${prs.length * 2} agents to start: per PR a triage on sonnet and a review on the session's model, or fable on the deep tier; one more review on opus for each lens whose paths a PR touches; then 2 refuters per high or medium finding. The 2026-11-01 run over 10 PRs used 26 agents and 3.9M tokens on the default agent.`
+const PRICE = `At least ${prs.length * 2 + 1} agents to start: one sonnet deepen of the clone, then per PR a triage on sonnet and a review on the session's model, or fable on the deep tier; one more review on opus for each lens whose paths a PR touches; then 2 refuters per high or medium finding. The 2026-11-01 run over 10 PRs used 26 agents and 3.9M tokens on the default agent.`
 const gate = await agent(
   'Run exactly: node scripts/moneypenny/work-gate.mjs\n\nIt prints one JSON object on stdout and status lines on stderr. Its exit code is part of the answer, not a failure: 0 means cleared to dispatch, 3 means refused (work-mode is halt, or the spend breaker is tripped) — BOTH are a real verdict and both print the JSON. Report "found": true plus that JSON object: the "dispatch", "position" and "reason" fields and caps.grindWidth, all verbatim, plus "until" only when it is not null.\n\nIf the command exits 1, prints no parseable JSON, or the object carries no caps.grindWidth, report "found": false and nothing else — never guess a position or a width. Do nothing else: no exploration, no fixing, no editing any file.',
   { schema: GATE_SCHEMA, agentType: 'worker', model: 'sonnet', effort: 'low', label: 'work-mode', phase: 'Triage' },
@@ -132,18 +132,85 @@ const tierOf = (n, t) => {
   return 'standard'
 }
 
-// A cloud session clones ~50 commits deep, so a busy night's earlier merges fall outside it: on
-// 2026-10-27 three of four audit batches read 12 merged PRs as "not found on origin/main" until they
-// deepened by hand. Deepen first; "not found" then means the PR really did not land.
+// ONE DEEPEN, BEFORE THE FAN-OUT (#6682). A cloud session clones ~50 commits deep, so a busy night's
+// earlier merges fall outside it: on 2026-10-27 three of four audit batches read 12 merged PRs as "not
+// found on origin/main" until they deepened by hand. The first fix had every agent deepen for itself,
+// and on 2026-11-02 two triage agents raced for .git/shallow.lock: the loser never saw #5852's commit
+// and the PR came back "not found", though it had merged. `--deepen` also counts from the current
+// boundary, so a 30-agent run fetched history up to 30 times. Now one agent fetches, alone, after the
+// dial and before any per-PR agent, and every later agent is told not to fetch (the repro refuter's
+// worktree shares this .git, so it too). A deepen that fails does not stop the run: whether a PR
+// merged is GitHub's word (FIND), and its diff can be read over REST. It deepens by count, not
+// `--shallow-since`, because a date can also SHORTEN a clone that is already deeper.
+const REST = (path) =>
+  `\`curl -sS --fail -H "Authorization: Bearer $(gh auth token 2>/dev/null || echo $GH_TOKEN)" https://api.github.com/repos/ejclark/skynet-capital/${path}\``
+// Squash and platter merges both end the subject with "(#N)". A later commit can cite "(#N)" in its
+// body, and `git log --grep` lists it first: #6572's audit was handed #6573's commit.
+const SUBJECT = (n) => `\`git log origin/main --format='%H %s' | grep -E ' \\(#${n}\\)$'\``
+const DEEPEN_SCHEMA = {
+  type: 'object',
+  required: ['fetched', 'shallow'],
+  properties: {
+    fetched: { type: 'boolean', description: 'true only if every git fetch you ran exited 0' },
+    shallow: { type: 'boolean', description: 'what `git rev-parse --is-shallow-repository` printed when you finished' },
+    missing: { type: 'array', items: { type: 'number' }, description: 'PRs GitHub reports merged whose commit you still could not find' },
+    error: { type: 'string', description: 'when a fetch failed: the command and the first line of its stderr' },
+  },
+}
+const deepen = await agent(
+  `Make this clone's origin/main deep enough to hold merged PRs ${prs.map((n) => `#${n}`).join(' ')} of ejclark/skynet-capital, before the agents that audit them start. You run alone, and they are told not to fetch, so nothing races you for .git/shallow.lock.
+
+1. \`git fetch -q origin main\`.
+2. If \`git rev-parse --is-shallow-repository\` prints false, stop: every commit is already here.
+3. For each PR, read ${REST('pulls/<n>')} and keep it only if "merged" is true. For each one kept, look for the commit whose subject ends in its number: ${SUBJECT('<n>')}.
+4. While any kept PR has no such commit and the clone is still shallow, run \`git fetch -q --deepen=500 origin main\` and look again, at most 6 times.
+
+If a fetch fails because a lock file exists, wait 10 seconds and retry that fetch once; never delete a lock file. Report what you saw. Do nothing else: no checkout, no edit, no other command that writes.`,
+  { schema: DEEPEN_SCHEMA, agentType: 'worker', model: 'sonnet', effort: 'low', label: 'deepen', phase: 'Triage' },
+).catch(() => null) // A deepen that throws is one that failed: logged, and named on every "not found" below.
+const deepened = deepen?.fetched === true
+const deepenTrouble = deepened
+  ? null
+  : deepen
+    ? `the one fetch before the fan-out failed${deepen.error ? ` (${deepen.error})` : ''}`
+    : 'the agent deepening the clone did not come back'
+log(
+  deepened
+    ? `clone fetched once${deepen.shallow ? ', still shallow' : ''}${deepen.missing?.length ? ` · no commit yet for ${deepen.missing.map((n) => `#${n}`).join(' ')}` : ''}`
+    : `${deepenTrouble}: agents read any PR the clone lacks over REST, and none fetches again`,
+)
+
 const FIND = (n) =>
-  `Find PR #${n}'s change: \`git fetch -q origin main\`; if \`git rev-parse --is-shallow-repository\` prints true, also \`git fetch -q --deepen=1000 origin main\`. Then \`git log origin/main --oneline --grep "(#${n})"\` (squash merges carry "(#${n})" in the subject) and \`git show <sha>\`. ` +
-  `If no commit matches, read it over REST: \`curl -sS --fail -H "Authorization: Bearer $(gh auth token 2>/dev/null || echo $GH_TOKEN)" https://api.github.com/repos/ejclark/skynet-capital/pulls/${n}\` (and /files).`
+  `Find PR #${n}'s change. Never fetch, deepen or unshallow: the audit fetched origin/main once before you started${deepened ? '' : `, though ${deepenTrouble}`}, and a second fetch races the other agents for .git/shallow.lock. ` +
+  `Its commit is the one whose SUBJECT ends in "(#${n})": ${SUBJECT(n)}, then \`git show <sha>\`. Never take a \`git log --grep\` match on trust: a later commit can cite "(#${n})" in its body. ` +
+  `Whether it merged is GitHub's word, not the clone's: read ${REST(`pulls/${n}`)}, and set merged=true only when its "merged" is true and its "base"."ref" is "main". ` +
+  `If GitHub says merged and no commit matched, read the diff over REST (${REST(`pulls/${n}/files`)}, whose "patch" fields hold it), still report merged=true, and set missing to "shallow clone" if \`git rev-parse --is-shallow-repository\` prints true, else "not on main". ` +
+  `If GitHub says it did not merge into main, report merged=false and missing "not merged into main". If the REST read fails, merged=true only if a commit matched; if none did, report merged=false and missing "github unreadable".`
+const MISSING = {
+  type: 'string',
+  enum: ['not merged into main', 'shallow clone', 'not on main', 'github unreadable'],
+  description: 'only when no commit\'s subject ends in the PR\'s number: why',
+}
+// What `unreviewed` says for a PR no agent could place, by the cause the agent named. "not found on
+// origin/main" is kept for the one case it is still true of: the clone was fetched, and no agent said
+// why. A fetch that failed never reads as it.
+const WHY_MISSING = {
+  'not merged into main': 'not merged into main, per GitHub',
+  'shallow clone': 'its commit is past the shallow clone: re-run this PR',
+  'not on main': 'GitHub reports it merged, but no commit on origin/main ends in its number',
+  'github unreadable': 'no commit on origin/main ends in its number, and GitHub could not be read: re-run this PR',
+}
+const notFound = (missing) =>
+  Object.hasOwn(WHY_MISSING, missing ?? '')
+    ? WHY_MISSING[missing]
+    : deepened ? 'not found on origin/main' : `not found, but ${deepenTrouble}: re-run this PR`
 
 const FINDINGS_SCHEMA = {
   type: 'object',
   required: ['merged', 'findings'],
   properties: {
-    merged: { type: 'boolean', description: 'true only if you found the change on origin/main' },
+    merged: { type: 'boolean', description: 'GitHub\'s word: true when it reports the PR merged into main, or, when GitHub cannot be read, when a commit on origin/main ends in its number' },
+    missing: MISSING,
     sha: { type: 'string' },
     findings: {
       type: 'array',
@@ -174,7 +241,8 @@ const TRIAGE_SCHEMA = {
   type: 'object',
   required: ['merged', 'files', 'protected'],
   properties: {
-    merged: { type: 'boolean', description: 'true only if you found the change on origin/main' },
+    merged: { type: 'boolean', description: 'GitHub\'s word: true when it reports the PR merged into main, or, when GitHub cannot be read, when a commit on origin/main ends in its number' },
+    missing: MISSING,
     files: { type: 'array', items: { type: 'string' }, description: 'every repo-relative path the change touched' },
     protected: { type: 'boolean', description: 'true if envelope-scan marked any of those paths protected' },
   },
@@ -264,7 +332,7 @@ const reproPrompt = (n, f) => `A reviewer claims merged PR #${n} in ejclark/skyn
 ${f.file}${f.line ? `:${f.line}` : ''} — ${f.summary}
 Failure scenario: ${f.failure_scenario}
 
-YOUR LENS — reproduce. You are in an isolated worktree. \`git fetch -q origin main && git checkout -q origin/main\`. Write ONE throwaway spec next to the nearest existing spec for that file (tests/**/*.spec.ts for root code, app/ for the app), asserting the CORRECT behaviour on the scenario above, and run only it (\`npx rstest run <path>\`, or \`npm test --prefix app -- <path>\` for app/). For a shell script, drive it with stub binaries (tests/scripts/bots-start-stopped.spec.ts shows the pattern). For a workflow file, read its text and assert the property the claim rests on (tests/arch/workflows.spec.ts). If it fails for the claimed reason, the defect reproduces: refuted=false. If it passes, or the claim can be exercised and your repro does not fail, refuted=true. If no spec or stub can exercise this claim at all, such as what a prompt makes an agent do or how GitHub schedules a run, set cannotRun=true and refuted=false and say why: that is a limit of this lens, not evidence against the claim. Delete the spec afterwards and never commit or push. Evidence: the assertion and the run's verdict line.`
+YOUR LENS — reproduce. You are in an isolated worktree. \`git checkout -q origin/main\`, and never fetch: this worktree shares the launching checkout's .git, which the audit fetched once before any agent started, and a fetch here races the others for .git/shallow.lock. Write ONE throwaway spec next to the nearest existing spec for that file (tests/**/*.spec.ts for root code, app/ for the app), asserting the CORRECT behaviour on the scenario above, and run only it (\`npx rstest run <path>\`, or \`npm test --prefix app -- <path>\` for app/). For a shell script, drive it with stub binaries (tests/scripts/bots-start-stopped.spec.ts shows the pattern). For a workflow file, read its text and assert the property the claim rests on (tests/arch/workflows.spec.ts). If it fails for the claimed reason, the defect reproduces: refuted=false. If it passes, or the claim can be exercised and your repro does not fail, refuted=true. If no spec or stub can exercise this claim at all, such as what a prompt makes an agent do or how GitHub schedules a run, set cannotRun=true and refuted=false and say why: that is a limit of this lens, not evidence against the claim. Delete the spec afterwards and never commit or push. Evidence: the assertion and the run's verdict line.`
 
 // SCRATCH FOLDERS (#6470: "each agent should have permission for their own scratch pad"). The same
 // block sits in grind.js and symbol-sweep.js, because a workflow script cannot import. The folder is
@@ -333,7 +401,7 @@ const results = await pipeline(
   // Mechanical lookup — the tier is decided by tierOf below, never by this agent.
   (n) => tracked(`triage-${n}`, triagePrompt(n), { label: `triage #${n}`, phase: 'Triage', schema: TRIAGE_SCHEMA, agentType: 'worker', model: 'sonnet', effort: 'medium' }),
   async (t, n) => {
-    if (t && !t.merged) return { pr: n, unreviewed: 'not found on origin/main' }
+    if (t && !t.merged) return { pr: n, unreviewed: notFound(t.missing) }
     // A triage that died fails safe to deep: an unknown blast radius is never skipped.
     const tier = t ? tierOf(n, t) : 'deep'
     if (tier === 'skip') return { pr: n, skipped: `docs-only: ${t.files.join(', ')}` }
@@ -348,10 +416,15 @@ const results = await pipeline(
     )
     const returned = reviews.filter(Boolean)
     if (!returned.length) return { pr: n, unreviewed: 'no reviewer came back: re-run this PR' }
-    if (!returned.some((r) => r.merged)) return { pr: n, unreviewed: 'not found on origin/main' }
+    // Triage already placed the PR, so no reviewer placing it is their read failing, not the PR missing.
+    if (!returned.some((r) => r.merged)) return { pr: n, unreviewed: t?.merged ? 'triage found it merged, but no reviewer could read the change: re-run this PR' : notFound(returned.find((r) => r.missing)?.missing) }
     const findings = returned.filter((r) => r.merged).flatMap((r) => r.findings.map((f) => ({ lens: r.lens, ...f })))
-    // A lens that did not come back is a read this PR still needs, even when another lens returned.
-    const missed = reviews.flatMap((r, i) => (r ? [] : [lenses[i].name]))
+    // A lens that did not come back, or came back without finding a change another reader found, is a
+    // read this PR still needs. Its findings are dropped, since they came from some other commit or
+    // none, and until #6682 that drop was silent while the PR read as reviewed.
+    const missed = reviews.flatMap((r, i) => (r ? [] : [`the ${lenses[i].name} lens did not come back`]))
+    const lost = returned.filter((r) => !r.merged).map((r) => `the ${r.lens} lens could not find the change${r.missing ? ` (${r.missing})` : ''}`)
+    const gaps = [...missed, ...lost]
     const { kept: serious, folded } = oncePerDefect(findings.filter((f) => f.severity !== 'low'))
     const low = [...findings.filter((f) => f.severity === 'low'), ...folded].map((f) => ({ pr: n, tier, ...f }))
     const judged = await parallel(
@@ -368,7 +441,7 @@ const results = await pipeline(
         return { pr: n, tier, ...f, confirmed: votes.every((v) => !v.refuted), ...(singleLens ? { singleLens } : {}), trace: votes[0].evidence, repro: votes[1].evidence }
       }),
     )
-    return { pr: n, tier, judged: judged.filter(Boolean), low, ...(missed.length ? { unreviewed: `the ${missed.join(', ')} lens did not come back: re-run this PR` } : {}) }
+    return { pr: n, tier, judged: judged.filter(Boolean), low, ...(gaps.length ? { unreviewed: `${gaps.join('; ')}: re-run this PR` } : {}) }
   },
 )
 
