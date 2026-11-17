@@ -147,6 +147,12 @@ export function previewOptionOrder(
       "Market orders on options fill at whatever the spread says — a limit at the quoted premium is the disciplined habit.",
     );
   }
+  // A bought contract in its last week, said as a warning rather than a fragment of the order line
+  // (change-scenarios OP-05, 2026-11-16: a member who wanted a month of protection bought this
+  // Friday's put — the chain opens on the nearest expiry, and "Expires in 3 days" sat mid-line).
+  if (side === "buy" && context.daysToExpiry !== undefined && context.daysToExpiry <= 7) {
+    warnings.push(shortDatedBuyWarning(context.daysToExpiry));
+  }
 
   const estNotional =
     estPremium !== undefined && Number.isFinite(scale) && scale > 0
@@ -408,4 +414,11 @@ export function previewOptionClose(
     refusals,
     warnings,
   };
+}
+
+/** The last-week warning on a bought contract — the days, the cost of them, and the check to make. */
+export function shortDatedBuyWarning(daysToExpiry: number): string {
+  const d = Math.max(0, Math.round(daysToExpiry));
+  const when = d === 0 ? "today" : `in ${d} day${d === 1 ? "" : "s"}`;
+  return `This contract expires ${when} — a bought option loses value fastest in its last week. Check this is the expiration you meant.`;
 }

@@ -3,6 +3,7 @@ import {
   type OptionTicketContext,
   previewOptionClose,
   previewOptionOrder,
+  shortDatedBuyWarning,
 } from "../../src/trading/option-ticket.js";
 
 const context = (over: Partial<OptionTicketContext> = {}): OptionTicketContext => ({
@@ -140,6 +141,25 @@ describe("previewOptionOrder — the discipline rules", () => {
     expect(
       previewOptionOrder({ ...csp, orderType: "limit", limitPrice: undefined }, context()).ok,
     ).toBe(false);
+  });
+});
+
+describe("a bought contract in its last week (change-scenarios OP-05)", () => {
+  const put = { ...csp, code: "301" as const, contracts: 1, strike: 410, limitPrice: 2.1 };
+
+  it("warns when a bought contract expires within a week, naming the days", () => {
+    const preview = previewOptionOrder(put, context({ daysToExpiry: 3.4 }));
+    expect(preview.warnings).toContain(shortDatedBuyWarning(3.4));
+    expect(shortDatedBuyWarning(3.4)).toMatch(/^This contract expires in 3 days/);
+  });
+
+  it("says nothing for a month out, or for a contract sold to open", () => {
+    expect(previewOptionOrder(put, context({ daysToExpiry: 30 })).warnings.join(" ")).not.toMatch(
+      /last week/,
+    );
+    expect(previewOptionOrder(csp, context({ daysToExpiry: 3 })).warnings.join(" ")).not.toMatch(
+      /last week/,
+    );
   });
 });
 
