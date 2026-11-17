@@ -20,7 +20,7 @@ flowchart TD
   owner(["Eric · owner and game master"])
   live_sessions["Live sessions"]
   platform["Platform · 12 seats"]
-  research["Research desk · 10 seats"]
+  research["Research desk · 11 seats"]
   trading["Trading floor · 5 seats"]
   contributors(["Code contributors · none yet"])
   members e0@-->|"chat · filings · trades"| front_desk
@@ -179,6 +179,7 @@ The event calendar, the research ledgers, position guidance, campaigns.
 
 | Seat | Job | Wakes on | Speaks on | Status | Code roots |
 |---|---|---|---|---|---|
+| Earnings calendar refresh | Confirms near print estimates on the company's own date, adds cadence estimates for playbook symbols, and ships the changed table as one auto-merging PR | cron 43 21 * * 1-5; dispatch | A chore/print-dates-refresh PR; a run summary; a red run when the source did not answer | hired | `.github/workflows/print-dates.yml` `scripts/print-dates-pr.mjs` `src/scripts/confirm-print-dates.ts` `src/research/print-date-refresh.ts` |
 | Market-event calendar | Forward calendar of dated things that move the traded names (prints, macro, launches, Treasury supply, geopolitics), one JSON file per event | research PRs that add or amend event files | query functions the app and campaigns read | hired | `src/domain/market-events.ts` `src/domain/market-events-data.ts` `src/domain/market-events/` |
 | Event research lane | One Sonnet session per due event (matrix, max-parallel 8) writes the ledger and opens a research/<id> PR | scan dispatch with a non-empty due list | A research PR; a quota reading published to #4153 | hired | `.github/prompts/event-research.md` `research-dispatch-budget.json` `.github/workflows/moneypenny-events.yml` `scripts/moneypenny/events.mjs` `docs/research/events/` `scripts/event-scan.mjs` |
 | Discovery research lane | One Sonnet session per member question no campaign covers (matrix, max-parallel 3) writes a research-shelf write-up and opens a discovery/<slug> PR | daily schedule, or a manual dispatch | A discovery PR; the dashboard drops the answered ask once the write-up deploys | hired | `.github/prompts/discovery-research.md` `.github/workflows/moneypenny-discovery.yml` `src/domain/discovery-pass.ts` `src/domain/discovery-queue.ts` `docs/research/discovery/` |

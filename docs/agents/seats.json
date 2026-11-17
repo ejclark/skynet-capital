@@ -532,6 +532,25 @@
       "cite": ".github/workflows/bots-catchup.yml:31-34, 82-129; docs/ROUTINES.md:47"
     },
     {
+      "id": "print-dates",
+      "department": "research",
+      "name": "Earnings calendar refresh",
+      "kind": "workflow",
+      "job": "Confirms near print estimates on the company's own date, adds cadence estimates for playbook symbols, and ships the changed table as one auto-merging PR",
+      "wakesOn": "cron 43 21 * * 1-5; dispatch",
+      "speaksOn": "A chore/print-dates-refresh PR; a run summary; a red run when the source did not answer",
+      "cadence": "Weekdays, after the US close",
+      "invoker": "schedule",
+      "status": "hired",
+      "codeRoots": [
+        ".github/workflows/print-dates.yml",
+        "scripts/print-dates-pr.mjs",
+        "src/scripts/confirm-print-dates.ts",
+        "src/research/print-date-refresh.ts"
+      ],
+      "cite": ".github/workflows/print-dates.yml:1-23; docs/ROUTINES.md (Earnings calendar refresh row)"
+    },
+    {
       "id": "calendar",
       "department": "research",
       "name": "Market-event calendar",
