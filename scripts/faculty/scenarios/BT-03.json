@@ -1,0 +1,20 @@
+{
+  "id": "BT-03",
+  "member": "returning-trader",
+  "viewport": "desktop",
+  "start": "/app",
+  "optimal": 9,
+  "scenario": "The app has ideas for earning income on shares you already own. Take its suggestion for your Apple shares as it stands \u2014 same contract it proposes \u2014 and place it.",
+  "end": {
+    "orders": [
+      {
+        "underlying": "AAPL",
+        "optionType": "call",
+        "side": "sell",
+        "quantity": 1,
+        "state": ["working", "filled"]
+      }
+    ]
+  },
+  "note": "The suggestion fills the option form (guidance-lever.tsx); any sold AAPL call of 1 contract counts. A member who changes the strike still lands."
+}

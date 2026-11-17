@@ -159,6 +159,16 @@ export function gradeChange(before, after, end, now) {
       problems.push(`the watchlist still holds ${symbol}`);
   }
 
+  for (const id of end.bots?.suspended ?? []) {
+    if (after.bots?.[id] !== true) problems.push(`bot ${id} is not paused`);
+  }
+  for (const id of end.bots?.running ?? []) {
+    if (after.bots?.[id] === true) problems.push(`bot ${id} was paused`);
+  }
+  if (end.bots?.all !== undefined && after.allSuspended !== end.bots.all) {
+    problems.push(end.bots.all ? "the fleet was not halted" : "the fleet was halted");
+  }
+
   for (const [symbol, want] of Object.entries(end.positions ?? {})) {
     const got = after.positions[symbol] ?? 0;
     if (!fits(want, got))
@@ -193,6 +203,18 @@ export function gradeChange(before, after, end, now) {
     if (a !== b && !touched.has(symbol) && !touchedByClaim(symbol, fresh, claimed)) {
       unintended.push(`position ${symbol} moved ${a} → ${b}`);
     }
+  }
+
+  // A bot switched that the scenario never named — pausing every bot when one was meant.
+  const namedBots = new Set([...(end.bots?.suspended ?? []), ...(end.bots?.running ?? [])]);
+  for (const [id, was] of Object.entries(before.bots ?? {})) {
+    const now = after.bots?.[id];
+    if (now !== undefined && now !== was && !namedBots.has(id) && end.bots?.all === undefined) {
+      unintended.push(`bot ${id} was ${now ? "paused" : "resumed"}`);
+    }
+  }
+  if (end.bots?.all === undefined && before.allSuspended === false && after.allSuspended === true) {
+    unintended.push("every bot was halted");
   }
 
   if (end.refusal) {

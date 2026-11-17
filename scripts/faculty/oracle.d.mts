@@ -18,6 +18,8 @@ export interface Account {
   readonly orders: readonly OrderRow[];
   readonly positions: Readonly<Record<string, number>>;
   readonly watchlist?: readonly string[];
+  readonly bots?: Readonly<Record<string, boolean>>;
+  readonly allSuspended?: boolean;
 }
 
 export interface Described extends OrderRow {

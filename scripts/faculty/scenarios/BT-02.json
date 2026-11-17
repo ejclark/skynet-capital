@@ -1,0 +1,14 @@
+{
+  "id": "BT-02",
+  "member": "eric",
+  "viewport": "phone",
+  "start": "/app",
+  "optimal": 6,
+  "scenario": "A bad headline just hit. Stop every bot from trading right now, from your phone.",
+  "end": {
+    "bots": {
+      "all": true
+    }
+  },
+  "note": "Mission control's halt is one tap with no confirmation (mission-control.tsx:89-96)."
+}

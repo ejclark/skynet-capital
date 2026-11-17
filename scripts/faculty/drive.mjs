@@ -133,7 +133,26 @@ export async function readAccount(origin, cookie, participantId) {
     .json()
     .catch(() => ({}));
   const watchlist = (watch?.watching ?? []).map((w) => (typeof w === "string" ? w : w.symbol));
-  return { orders: [...(orders.working ?? []), ...(orders.recent ?? [])], positions, watchlist };
+  // The bots' switches — every bot for an owner (`/api/controls` → fleet), a member's own bots from
+  // their settings — so a scenario can grade "pause my bot" and catch "halted every bot" (BT rows).
+  const controls = await (await fetch(`${origin}/api/controls`, { headers }))
+    .json()
+    .catch(() => ({}));
+  const settings = await (await fetch(`${origin}/api/settings`, { headers }))
+    .json()
+    .catch(() => ({}));
+  const bots = {};
+  for (const b of controls?.fleet?.bots ?? []) bots[b.id] = b.suspended === true;
+  for (const a of settings?.accounts ?? []) {
+    if (a.kind === "bot" && typeof a.suspended === "boolean") bots[a.id] = a.suspended;
+  }
+  return {
+    orders: [...(orders.working ?? []), ...(orders.recent ?? [])],
+    positions,
+    watchlist,
+    bots,
+    ...(controls?.fleet ? { allSuspended: controls.fleet.allSuspended === true } : {}),
+  };
 }
 
 export async function driveChange(o) {

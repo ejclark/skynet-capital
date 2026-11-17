@@ -158,6 +158,24 @@ describe("gradeChange — a list change, not an order", () => {
   });
 });
 
+describe("gradeChange — a bot's switch", () => {
+  const fleet = { ...before, bots: { "day-trader": false, sauron: false }, allSuspended: false };
+  it("grades pausing one bot, and calls halting the whole fleet unintended", () => {
+    const one = { ...fleet, bots: { "day-trader": true, sauron: false } };
+    expect(gradeChange(fleet, one, { bots: { suspended: ["day-trader"] } }, NOW).success).toBe(
+      true,
+    );
+    const all = { ...fleet, bots: { "day-trader": true, sauron: true }, allSuspended: true };
+    const v = gradeChange(fleet, all, { bots: { suspended: ["day-trader"] } }, NOW);
+    expect(v.success).toBe(false);
+    expect(v.unintended).toEqual(["bot sauron was paused", "every bot was halted"]);
+  });
+  it("grades a fleet halt when one is asked for", () => {
+    const all = { ...fleet, bots: { "day-trader": true, sauron: true }, allSuspended: true };
+    expect(gradeChange(fleet, all, { bots: { all: true } }, NOW).success).toBe(true);
+  });
+});
+
 describe("describeOrder — an option contract in parts", () => {
   it("reads the underlying, type, strike and days to expiry off the OCC symbol", () => {
     const o = describeOrder(order({ symbol: "CRWV261218P00070000", side: "sell" }), NOW);
