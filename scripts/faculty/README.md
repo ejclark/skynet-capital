@@ -39,6 +39,10 @@ npx playwright test --project changes                        # the model-free fl
   signed in. `scripted:<file>` replays a fixed finger. `scripts/faculty/proof/` is the harness proof.
 - Each session boots its own faculty server (`world.mjs`) on `--port` (+1 for the bridge), so a
   round runs sessions side by side and nobody's order leaks into the next run.
+- A round holds the checkout's heavy-work lock (`scripts/verify-locked.sh`), the same lock a
+  full verify takes. A `git push` started during a round therefore waits for it (up to 30 minutes,
+  then exit 75, "try again") instead of running out of memory beside it. Never skip the verify to
+  get past the wait.
 - Cost, measured on the first run (2026-11-16): ~40s a blind turn, 10–20 turns a session, so ~10
   minutes a session; three at once on a 4-CPU box.
 

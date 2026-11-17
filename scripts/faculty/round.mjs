@@ -111,9 +111,32 @@ async function main() {
   console.log(roundMarkdown(rows));
 }
 
+/**
+ * A round runs inside the checkout's one heavy-work lock (`scripts/verify-locked.sh`, #5548), the
+ * lock every full verify already takes. Three browsers, three servers and three blind members fill
+ * a 4-CPU cloud session; on 2026-11-17 a verify started beside a running round ran the container
+ * out of memory and killed both, and the way out offered was a push that skipped its verify. With
+ * one lock the two queue instead of competing: a push's verify waits for the round (up to
+ * VERIFY_LOCK_WAIT, then exit 75, "try again"), and a round started during a verify waits for it.
+ * SKYNET_VERIFY_LOCKED marks a process already inside the lock, so the re-run never waits on itself.
+ */
+function underTheLock(argv) {
+  if (process.env.SKYNET_VERIFY_LOCKED === "1") return undefined;
+  const self = fileURLToPath(import.meta.url);
+  const child = spawnSync(
+    "bash",
+    [join(HERE, "..", "verify-locked.sh"), "--", "npx", "tsx", self, ...argv],
+    { stdio: "inherit" },
+  );
+  return child.status ?? 1;
+}
+
 if (process.argv[1]?.endsWith("faculty/round.mjs")) {
-  main().catch((e) => {
-    console.error(e instanceof Error ? e.stack : e);
-    process.exitCode = 1;
-  });
+  const locked = underTheLock(process.argv.slice(2));
+  if (locked !== undefined) process.exitCode = locked;
+  else
+    main().catch((e) => {
+      console.error(e instanceof Error ? e.stack : e);
+      process.exitCode = 1;
+    });
 }
