@@ -57,7 +57,14 @@ describe("PositionCards — the hand-off to Trade", () => {
     });
   });
 
-  it("opens shares on their ticker", () => {
+  it("opens shares held long on the Sell side of their ticker, the receipt's own door", () => {
+    render(
+      <PositionCards positions={[position("SPY", "SPY", { quantity: "40" })]} deskId="eric" />,
+    );
+    expect(searchOf("SPY")).toEqual({ desk: "eric", symbol: "SPY", play: "102" });
+  });
+
+  it("opens a short on its ticker alone, where Buy covers it — a sell would add to it", () => {
     render(<PositionCards positions={[position("SPY", "SPY")]} deskId="eric" />);
     expect(searchOf("SPY")).toEqual({ desk: "eric", symbol: "SPY" });
   });

@@ -7,6 +7,7 @@ import type { SentOrder } from "../live/order-receipt";
 import { quoteQuery } from "../live/quote-query";
 import {
   buildDraft,
+  carryAcrossSide,
   defaultTimeInForce,
   money,
   ORDER_TYPE_LABELS,
@@ -15,6 +16,7 @@ import {
   priceFieldFor,
   reviewTicket,
   submitTicket,
+  type TicketCarry,
   type TicketFields,
   type TicketOrderType,
   type TicketPreview,
@@ -27,6 +29,7 @@ import { useNow } from "./market-session";
 import { OrderReceipt } from "./order-receipt";
 import { QuoteHeader } from "./quote-header";
 import { RecentOrdersStrip } from "./recent-orders-strip";
+import { HeldShares, reviewMissing } from "./share-ticket-hints";
 import { SymbolField } from "./symbol-field";
 import { TimeInForceField } from "./tif-field";
 
@@ -158,6 +161,8 @@ export function TradeGate({
   initialSymbol,
   onSymbolCommit,
   header,
+  carried,
+  onCarry,
 }: {
   readonly deskId: string;
   /** `?play=102` preselects Sell — the catalog's stock rungs are the same gate, sided. */
@@ -179,15 +184,22 @@ export function TradeGate({
   /** Account/Rung/Instrument-Side-Type — one card, not two (Eric, 2026-09-22). Forwarded to the
    *  locked branch below too, so a locked stock rung explains itself on the same card. */
   readonly header?: ReactElement;
+  /** What the ticket on the other side held when the member flipped Buy ⇄ Sell, which remounts this
+   *  one (`carryAcrossSide` says what goes and what never does). */
+  readonly carried?: TicketCarry;
+  /** Reports the carry on every edit, so the next flip can hand it back; undefined once an order
+   *  was sent, since its entries belonged to that order. */
+  readonly onCarry?: (carry: TicketCarry | undefined) => void;
 }): ReactElement {
-  const [fields, setFields] = useState<TicketFields>({
+  const [fields, setFields] = useState<TicketFields>(() => ({
     symbol: initialSymbol ?? "",
-    quantity: "",
+    quantity: carried?.quantity ?? "",
     action: initialAction,
-    orderType: "market",
-    limitPrice: "",
+    orderType: carried?.priced?.orderType ?? "market",
+    limitPrice: carried?.priced?.limitPrice ?? "",
     stopPrice: "",
-  });
+    ...(carried?.timeInForce ? { timeInForce: carried.timeInForce } : {}),
+  }));
   const [state, setState] = useState<GateState>({ step: "draft" });
   const queryClient = useQueryClient();
   /** The quote header's own committed symbol (#2017 Phase 0.9) — fetches on COMMIT only, never a
@@ -210,7 +222,7 @@ export function TradeGate({
    *  wheel" this seed is explicitly not allowed to be. One seed per symbol; a new symbol seeds
    *  again, a moving mid never does. */
   const quote = useQuery(quoteQuery(quoteSym));
-  const [priced, setPriced] = useState(false);
+  const [priced, setPriced] = useState(carried?.priced !== undefined);
   const [seed, setSeed] = useState<{ symbol: string; bid: number; ask: number; mid: number }>();
   const mid = quote.data && "mid" in quote.data ? quote.data : undefined;
   useEffect(() => {
@@ -221,6 +233,10 @@ export function TradeGate({
     setSeed({ symbol, bid, ask, mid: mid.mid });
     setFields((f) => ({ ...f, orderType: "limit", limitPrice: mid.mid?.toFixed(2) ?? "" }));
   }, [priced, mid, seed]);
+  const orderSent = state.step === "done" && state.result.ok;
+  useEffect(() => {
+    onCarry?.(orderSent ? undefined : carryAcrossSide(fields, priced));
+  }, [onCarry, orderSent, fields, priced]);
   /** The topbar's own clock (#6257): the order-type note says which open a closed market waits for. */
   const market = marketSession(useNow());
   const symId = useId();
@@ -228,6 +244,7 @@ export function TradeGate({
   const sideId = useId();
   const typeId = useId();
   const priceId = useId();
+  const whyId = useId();
 
   const draft = () => buildDraft(deskId, fields);
 
@@ -293,6 +310,8 @@ export function TradeGate({
       // The order list (#3407 P1 slice 2) reads the broker; the receipt finds the order there at
       // once, and the Orders pane shows it on the same visit.
       await queryClient.invalidateQueries({ queryKey: ["desk-orders", deskId] });
+      // A sell's "You hold" line reads the positions, which the fill moves.
+      void queryClient.invalidateQueries({ queryKey: ["desk", deskId] });
     } catch (error) {
       setState({ step: "error", message: String(error) });
     }
@@ -317,6 +336,7 @@ export function TradeGate({
   if (play?.locked) return <LockedPanel header={header} play={play} />;
 
   const busy = state.step === "reviewing" || state.step === "submitting";
+  const missing = busy ? undefined : reviewMissing(fields);
   const sent = state.step === "done" && state.result.ok ? state.sent : undefined;
   const form = (
     <>
@@ -343,7 +363,7 @@ export function TradeGate({
             step={1}
             inputMode="numeric"
             value={fields.quantity}
-            placeholder="10"
+            placeholder="e.g. 10"
             onChange={(e) => edit("quantity")(e.target.value)}
           />
         </div>
@@ -392,6 +412,9 @@ export function TradeGate({
           </div>
         ) : null}
       </div>
+      {fields.action === "sell" ? (
+        <HeldShares deskId={deskId} symbol={quoteSym} onSellAll={edit("quantity")} />
+      ) : null}
       <TimeInForceField
         fallback={defaultTimeInForce(fields.orderType)}
         value={fields.timeInForce}
@@ -433,13 +456,19 @@ export function TradeGate({
         <button
           type="button"
           className="btn btn-primary"
-          disabled={busy || fields.symbol.trim() === "" || fields.quantity === ""}
+          disabled={busy || missing !== undefined}
+          aria-describedby={missing ? whyId : undefined}
           onMouseDown={keepFocus}
           onClick={review}
         >
           {state.step === "reviewing" ? "Reviewing…" : "Review order"}
         </button>
       )}
+      {missing ? (
+        <p id={whyId} className="gate-why">
+          {missing}
+        </p>
+      ) : null}
     </>
   );
   return (
