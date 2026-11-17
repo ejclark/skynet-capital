@@ -43,6 +43,9 @@ import { facultyBootEnv, facultyFixturesDir } from "./world.mjs";
 const SECRET = "e2e-dev-secret";
 const MAX_ACTIONS = 24;
 const sha256 = (text) => createHash("sha256").update(text).digest("hex");
+/** The served build, by its entry page — the chunk names it loads are hashed into it. */
+const distHash = () =>
+  existsSync("app/dist/index.html") ? sha256(readFileSync("app/dist/index.html", "utf8")) : "none";
 
 /** min(2.5 × optimal, 24), never below 1 — the change study's cap (see 3. above). */
 export const changeCap = (optimal = 8) =>
@@ -153,6 +156,7 @@ export async function driveChange(o) {
     SECRET,
   );
 
+  const distBefore = distHash();
   const server = await boot(o.port);
   let summary;
   try {
@@ -201,7 +205,22 @@ export async function driveChange(o) {
       optimal: scenario.optimal,
     });
     const last = played.turns.at(-1);
+    // The instrument changed under the member: the build was replaced mid-session (round 2, AC-01 and
+    // RG-02 — a rebuild of app/dist between their page loads served "Loading chunk failed"), or the
+    // page reported a stale chunk itself. Such a session measures the harness, not the app.
+    const distAfter = distHash();
+    const staleChunk = (session.shell.log?.writes ?? []).some(
+      (w) =>
+        w.url.startsWith("/api/client-error") && /stale-chunk|ChunkLoadError/.test(w.body ?? ""),
+    );
+    const confounded =
+      distAfter !== distBefore
+        ? "the app build changed during the session"
+        : staleChunk
+          ? "the page could not load its code (a stale build chunk)"
+          : null;
     summary = {
+      ...(confounded ? { confounded } : {}),
       scenario: scenario.id,
       member: scenario.member,
       viewport,

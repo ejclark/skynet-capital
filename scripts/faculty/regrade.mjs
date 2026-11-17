@@ -15,6 +15,19 @@ import { roundMarkdown, rowOf } from "./round-table.mjs";
 
 const read = (path) => JSON.parse(readFileSync(path, "utf8"));
 
+/** Whether any turn asked for Backspace or Tab and the recorder refused it as not a key. */
+function refusedOfferedKey(turnsPath) {
+  if (!existsSync(turnsPath)) return false;
+  return readFileSync(turnsPath, "utf8")
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => JSON.parse(line))
+    .some(
+      (t) =>
+        /key must be one of/.test(t.refused ?? "") && /Backspace|Tab/.test(t.action?.key ?? ""),
+    );
+}
+
 function main(argv) {
   const dir = argv[0];
   const i = argv.indexOf("--scenarios");
@@ -34,6 +47,19 @@ function main(argv) {
       scenario.end ?? {},
       now,
     );
+    // A session whose page reported a stale build chunk is confounded, whenever it ran.
+    const stale = (summary.writes ?? []).some(
+      (w) =>
+        String(w.url).startsWith("/api/client-error") &&
+        /stale-chunk|ChunkLoadError/.test(w.body ?? ""),
+    );
+    if (stale && !summary.confounded)
+      summary.confounded = "the page could not load its code (a stale build chunk)";
+    // A member refused a key its own role offered (round 1: the role gained Backspace mid-round while
+    // the loaded recorder still refused it) was graded by a broken instrument.
+    if (!summary.confounded && refusedOfferedKey(join(session, "turns.jsonl"))) {
+      summary.confounded = "the member was refused a key its role offered (Backspace)";
+    }
     const changed = JSON.stringify(verdict) !== JSON.stringify(summary.verdict);
     const next = { ...summary, verdict, ...(changed ? { verdictBefore: summary.verdict } : {}) };
     writeFileSync(summaryPath, `${JSON.stringify(next, null, 2)}\n`);
