@@ -71,6 +71,10 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"The 10-year inflation-indexed JGB keeps its post-2022 demand floor: cover stays at or above 2.73x at the 2026-11-16 auction (FT-jgb-10y-inflation-indexed-auction-2026-11-16-2)"** — added 2026-11-18 from the
+  [jgb-10y-inflation-indexed-auction-2026-11-16 close-out](events/jgb-10y-inflation-indexed-auction-2026-11-16.md). Printed **2.696x** (bids ¥673.5bn, accepted ¥249.8bn) as the lowest-accepted yield jumped **+21.2bp** to 1.072%; allotment at the low rose to 44.7% from 21.4%.
+  Do not register a floor set at the sample's own minimum without a second, independent reason it holds; one print, and the floor was the range's edge by construction (n=18).
+
 - **"A JGB 30-year tail of 2bp or more does not transmit to the next US session: the US 30Y CMT does not rise 5bp (FT-jgb-30y-auction-2026-10-08-5)"** — added 2026-11-13 from the
   [jgb-30y-auction-2026-10-08 ledger](events/jgb-30y-auction-2026-10-08.md). The 2026-11-10 tail was **2.4bp** and the US 30Y CMT rose **+8bp** (5.35 to 5.43) on 11-12, on a CPI day plus a US 30-year auction.
   Do not register a same-tenor JGB-to-US D+1 threshold on a date that shares a US CPI print or auction; one observation, and the JGB 30Y par yield moved +5.5bp on 11-11 too.
