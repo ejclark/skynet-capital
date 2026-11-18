@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/experimental-ct-react";
+import { resolveChromium } from "../scripts/shoot/lib.mjs";
 
 // Component-level visual coverage — mounts a single app/src/shell/*.tsx component in isolation
 // with fixed mock props, no server, no data source, no live tick. This is the ONLY sound way to
@@ -6,6 +7,8 @@ import { defineConfig, devices } from "@playwright/experimental-ct-react";
 // simulation (docs/ENGINEERING.md → "Visual regression"; #3325/#3330 found /leaderboard's dollar
 // figures drift between runs even under a frozen browser clock, because the tick is server-side).
 // A pure props-in/JSX-out component sidesteps that class of problem entirely.
+const executablePath = resolveChromium();
+
 export default defineConfig({
   testDir: "../e2e/ct",
   snapshotDir: "../e2e/ct/__snapshots__",
@@ -20,11 +23,13 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      // Pinned browser path (see repo environment notes): the sandbox pre-installs one chromium
-      // build, which can trail the version-specific headless_shell Playwright resolves by default.
+      // The cloud sandbox pre-installs one Chromium that can trail the headless_shell Playwright
+      // pins; the shared resolver finds it there and returns undefined on a runner that has none
+      // (GitHub Actions after `npx playwright install chromium`), so Playwright resolves its own.
+      // A hard-coded /opt path left the suite runnable only inside the sandbox (#5638).
       use: {
         ...devices["Desktop Chrome"],
-        launchOptions: { executablePath: "/opt/pw-browsers/chromium" },
+        ...(executablePath ? { launchOptions: { executablePath } } : {}),
       },
     },
   ],

@@ -71,6 +71,18 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"The GDPNow vintage on an existing-home-sales release day is solo: its Data Releases text names existing-home sales alone (FT-existing-home-sales-2026-11-12-1)"** — added 2026-11-18 from the
+  [existing-home-sales-2026-11-12 close-out](events/existing-home-sales-2026-11-12.md). The 11-12 vintage posted on a date the Fed never scheduled, but read "Monthly Treasury Statement, Existing-home sales"; the MTS, scheduled the same day, rode along. Q4 residential moved −0.121pp (3x the solo median), inventories −0.0001pp.
+  Do not call an unscheduled vintage solo before reading its own Data Releases cell for same-day co-releases (the MTS, PPI and retail stack all share EHS-week dates); one observation, and posting itself held (8 of 8 in 2026).
+
+- **"The 2026-11-17 MTIS session is an ordinary Tuesday: SPY's range lands under 1.417% (FT-mtis-2026-11-17-2)"** — added 2026-11-18 from the
+  [mtis-2026-11-17 close-out](events/mtis-2026-11-17.md). SPY ranged **1.742%** (739.76 / 727.00, close 732.44) with prior-close VIX **22.91** (25.46 at the close), the 22+ regime the ledger's own 10-18 row put at 30.8% under the line.
+  Do not register a fixed-threshold SPY range test on a macro-print day without conditioning on prior-close VIX; one observation, cause of the day not established.
+
+- **"The base-setting, industrial-production-co-release MTIS vintage is loud: the Q4 inventory contribution moves 0.10pp or more (FT-mtis-2026-11-17-1)"** — added 2026-11-18 from the
+  [mtis-2026-11-17 close-out](events/mtis-2026-11-17.md). It moved **+0.0785pp** (0.5337 to 0.6122) while PCE moved −0.0528pp, a miss by 0.0215pp on a registered 45.5% post-2021 coin flip.
+  Do not re-register the 0.10pp line for this class without new vintages; n=1, and the 10-15 edition also sat under its line (0.0974pp).
+
 - **"A JGB 30-year tail of 2bp or more does not transmit to the next US session: the US 30Y CMT does not rise 5bp (FT-jgb-30y-auction-2026-10-08-5)"** — added 2026-11-13 from the
   [jgb-30y-auction-2026-10-08 ledger](events/jgb-30y-auction-2026-10-08.md). The 2026-11-10 tail was **2.4bp** and the US 30Y CMT rose **+8bp** (5.35 to 5.43) on 11-12, on a CPI day plus a US 30-year auction.
   Do not register a same-tenor JGB-to-US D+1 threshold on a date that shares a US CPI print or auction; one observation, and the JGB 30Y par yield moved +5.5bp on 11-11 too.
@@ -269,6 +281,15 @@ robust, alpha fragile — is the finding.
   moves). The window compares two months that straddle a swing, so it scores a coincidence of landing
   spot, not the volatility. Do not re-register a "differs from t−2 by more than N" test for a diffusion
   index; condition on the one-month move (e.g. |Δ| above the 11.2 median) instead.
+
+- **"Prices paid is persistent enough to forecast a next print at or above 50" (FT-empire-state-mfg-2026-11-16-1)** — added
+  2026-11-17 from the [empire-state-mfg-2026-11-16 close-out](events/empire-state-mfg-2026-11-16.md). Registered
+  2026-11-05 at 84% off a lag-1 ρ of 0.931 and a 32-of-38 base rate after a print at or above 55. It printed
+  **45.9** (Oct 59.5, −13.6, the 4th percentile of monthly moves), z = −1.56 against the fit's own residual sd.
+  The re-fit through November barely moves ρ (0.925), so the fit is not what broke — a 16% tail landed. Do not
+  re-register an at-or-above-the-line test for a diffusion index from a level alone; condition on the
+  one-month move or the six-month-ahead reading, and size the registered probability to the model-free
+  count (7 of 39 below 50 after a print at or above 55), not the AR(1) alone.
 
 - **"A WPSR sign-match test (commercial-crude draw/build vs WTI close-to-close) generalizes as `print ignored` on a dense macro morning" (FT-eia-weekly-petroleum-status-2026-10-15-2)** — added 2026-10-16 from the [eia-weekly-petroleum-status-2026-10-15 close-out](events/eia-weekly-petroleum-status-2026-10-15.md). Registered 2026-09-30; the 10-15 print was an -8.557 mb draw and WTI closed +3.0%, a matched pair. WTI's rally was already in by 11:55 ET (about +0.3% across the 12:00 release), so the sign rule misattributes a session move to the print. Do not re-register a daily-close sign test for a mid-day release; use the bars either side of the release time.
 
@@ -1228,3 +1249,5 @@ filings break the template, per the pipeline finding); estimated print dates are
 red-team layer caught two corrupted event lists and several researcher overstatements — treat any
 number in this doc that lacks a control clause with suspicion, and prefer the per-symbol journals
 for the full attack transcripts.
+
+- **"A low-impact G.17 morning ranges under the unconditional 2014-05+ p75 (1.332%) of SPY's close" (FT-industrial-production-2026-11-17-2)** — added 2026-11-18 from the [industrial-production-2026-11-17 close-out](events/industrial-production-2026-11-17.md). Registered 2026-09-06 on 11 of 11 November G.17 sessions under 1.30%; 11-17 ranged **1.742%** (gap −0.21%) with VIX 19.30 → 22.91 the day before and 25.46 at the close. Second same-shape kill in a month, after the 10-16 entry above. Do not register an unconditional range bar for a G.17 print; condition on the prior-day VIX or skip the test.

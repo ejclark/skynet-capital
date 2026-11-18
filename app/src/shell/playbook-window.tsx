@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import { dayText, type WindowPlan } from "../live/playbook-rule";
 import type { PrintStretchesView } from "../live/playbook-store";
+import { MINUS, signedPercent } from "../ui";
 
 /**
  * A PRE-EARNINGS PLAY AS ONE LINE (#5432; Eric's pick on #5163 round 4, "Dates counted back from the
@@ -34,10 +35,10 @@ const Z = 300;
 const charW = 6.4;
 
 /** "−20", "0": a count of trading days before the report, signed the way the ruler reads. */
-const tick = (away: number) => (away === 0 ? "0" : `−${away}`);
+const tick = (away: number) => (away === 0 ? "0" : `${MINUS}${away}`);
 
 /** "+6.3%", "−0.8%" — a true minus sign, one decimal. */
-const movePct = (pct: number) => `${pct < 0 ? "−" : "+"}${Math.abs(pct).toFixed(1)}%`;
+const movePct = (pct: number) => signedPercent(pct, 1);
 
 /** "Oct 20–28", or "Oct 28 – Nov 3" across a month. */
 function rangeText([from, to]: readonly [string, string]): string {

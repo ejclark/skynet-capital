@@ -8,14 +8,16 @@
 /* Every landing target keeps a top-aligned jump — the browser's own for a plain `#…` anchor, the
  * router's for a Link with a hash — out from under the sticky stack. `--landing-clear` is how far
  * down the topbar and the cockpit head reach, measured by the head (`publishClearance`); with no
- * head on the page, the topbar's 64px. The same margin centres a landing in the visible area. */
+ * head on the page, the topbar's 64px. The same margin centres a landing in the visible area.
+ * `#book-wait` is the Events row link's target for a wait on the whole book (#7439). */
 tr[id^="act-"],
 tr[id^="pos-"],
 .pos-card[data-pos-anchor],
 .pbb-card,
 li.story[id^="story-"],
 li.ecal-event[id^="event-"],
-.ecal[id="calendar"] {
+.ecal[id="calendar"],
+.book-wait[id="book-wait"] {
   scroll-margin-top: calc(var(--landing-clear, 64px) + 12px);
 }
 
