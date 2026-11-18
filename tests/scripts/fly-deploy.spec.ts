@@ -114,6 +114,38 @@ describe("fly deploy runner (transient-failure retry)", () => {
     expect(run.status).toBe(0);
   });
 
+  // Run 44212544985 (#7106): Fly's API reset the first app lookup with an HTTP/2 RST_STREAM.
+  const STREAM_RESET = (code: string) =>
+    `Error: Get "https://api.machines.dev/v1/apps/skynet-capital": stream error: stream ID 1; ${code}; received from peer`;
+
+  it("survives the run-44212544985 stream reset — one INTERNAL_ERROR, then a green release", () => {
+    const run = deploy(["--remote-only"], {
+      failTimes: 1,
+      message: STREAM_RESET("INTERNAL_ERROR"),
+    });
+    expect(run.attempts).toBe(2);
+    expect(run.status).toBe(0);
+    expect(run.stderr).toContain("transient Fly API error");
+  });
+
+  it("retries a REFUSED_STREAM — the server says it never processed the request", () => {
+    const run = deploy(["--remote-only"], {
+      failTimes: 1,
+      message: STREAM_RESET("REFUSED_STREAM"),
+    });
+    expect(run.attempts).toBe(2);
+    expect(run.status).toBe(0);
+  });
+
+  it("refuses to retry a PROTOCOL_ERROR reset — a client-side fault a second try only repeats", () => {
+    const run = deploy(["--remote-only"], {
+      failTimes: 99,
+      message: STREAM_RESET("PROTOCOL_ERROR"),
+    });
+    expect(run.attempts).toBe(1);
+    expect(run.status).toBe(1);
+  });
+
   it("retries a bracketed registry status — `[http 502]`", () => {
     const run = deploy(["--remote-only"], {
       failTimes: 1,

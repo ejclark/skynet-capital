@@ -53,6 +53,12 @@ const TRANSIENT = [
   /(?:\bhttp\/?[\d.]*|\bstatus(?:\s*code)?|\bcode)[\s:=]*50[234]\b/i,
   /Bad Gateway|Service Unavailable|Gateway Time-?out/i,
   /server closed idle connection|http2: (?:server sent GOAWAY|client connection lost)/i,
+  // Run 44212544985 (#7106): Fly's API reset flyctl's first app lookup with an HTTP/2 RST_STREAM —
+  // `Get "https://api.machines.dev/v1/apps/skynet-capital": stream error: stream ID 1;
+  // INTERNAL_ERROR; received from peer` — 30s in, before any build. The same read-only lookup as
+  // the 2026-10-03 EOF, lost a different way. Only the two codes that say "the server failed or
+  // never processed it": PROTOCOL_ERROR / FLOW_CONTROL_ERROR are client bugs a retry repeats.
+  /stream error: stream ID \d+; (?:INTERNAL_ERROR|REFUSED_STREAM); received from peer/i,
 ];
 
 /**
