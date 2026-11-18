@@ -1237,3 +1237,5 @@ filings break the template, per the pipeline finding); estimated print dates are
 red-team layer caught two corrupted event lists and several researcher overstatements — treat any
 number in this doc that lacks a control clause with suspicion, and prefer the per-symbol journals
 for the full attack transcripts.
+
+- **"A low-impact G.17 morning ranges under the unconditional 2014-05+ p75 (1.332%) of SPY's close" (FT-industrial-production-2026-11-17-2)** — added 2026-11-18 from the [industrial-production-2026-11-17 close-out](events/industrial-production-2026-11-17.md). Registered 2026-09-06 on 11 of 11 November G.17 sessions under 1.30%; 11-17 ranged **1.742%** (gap −0.21%) with VIX 19.30 → 22.91 the day before and 25.46 at the close. Second same-shape kill in a month, after the 10-16 entry above. Do not register an unconditional range bar for a G.17 print; condition on the prior-day VIX or skip the test.
