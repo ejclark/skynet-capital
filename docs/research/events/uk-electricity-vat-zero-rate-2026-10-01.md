@@ -410,8 +410,23 @@ own lane; it is flagged in the PR, not edited here. No new proposal filed: 2027-
 out, beyond `assessment-cadence.json`'s `maxDaysOut` of 60. `FT-…-1` (ONS October CPI, 2026-11-18)
 stays open until its score-by date. Instrument cache busted first; nothing in this macro event reads it.
 
+### Forward-test scoring — 2026-11-18 (`forward-test-due`)
+
+`FT-uk-electricity-vat-zero-rate-2026-10-01-1` (score by 2026-11-18) recorded **unscoreable**, not
+scored. The session ran at ~02:20 UTC; the ONS October 2026 CPI bulletin publishes at 07:00 London
+(06:00 UTC) the same day. The ONS release page still read "This release is not yet published" and the
+bulletin URL returned 404, so there was no print to score against. The pointer is the ONS bulletin and its
+CPI 04.5.1 (electricity) one-month change; whoever reads it can score the row against the prediction and
+kill switch exactly as registered (<2.0% m/m passes; 2.0% or more kills). Nothing else moved: no
+conviction proposals or declared intents name this event (both printed `[]`), and no claim was scored, so
+`research:claims` was not run. Last public headline before the print: September CPI 3.5% (ONS, 2026-10-21),
+read from a search summary and not re-verified here.
+
 **Last assessed:** 2026-10-02
 <!-- probe-ref: {"symbols":{},"vix":16.39,"daysBand":"low:0+","adjacentIds":[],"adjacentStrongIds":[],"screenStreak":0} -->
 
 **Last assessed:** 2026-10-30
 <!-- probe-ref: {"symbols":{},"vix":19.42,"daysBand":"low:0+","adjacentIds":[],"adjacentStrongIds":[],"screenStreak":0} -->
+
+**Last assessed:** 2026-11-18
+<!-- probe-ref: {"symbols":{},"vix":25.46,"daysBand":"low:0+","adjacentIds":[],"adjacentStrongIds":[],"screenStreak":0} -->
