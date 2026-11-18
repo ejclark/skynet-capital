@@ -75,6 +75,14 @@ robust, alpha fragile — is the finding.
   [existing-home-sales-2026-11-12 close-out](events/existing-home-sales-2026-11-12.md). The 11-12 vintage posted on a date the Fed never scheduled, but read "Monthly Treasury Statement, Existing-home sales"; the MTS, scheduled the same day, rode along. Q4 residential moved −0.121pp (3x the solo median), inventories −0.0001pp.
   Do not call an unscheduled vintage solo before reading its own Data Releases cell for same-day co-releases (the MTS, PPI and retail stack all share EHS-week dates); one observation, and posting itself held (8 of 8 in 2026).
 
+- **"The 2026-11-17 MTIS session is an ordinary Tuesday: SPY's range lands under 1.417% (FT-mtis-2026-11-17-2)"** — added 2026-11-18 from the
+  [mtis-2026-11-17 close-out](events/mtis-2026-11-17.md). SPY ranged **1.742%** (739.76 / 727.00, close 732.44) with prior-close VIX **22.91** (25.46 at the close), the 22+ regime the ledger's own 10-18 row put at 30.8% under the line.
+  Do not register a fixed-threshold SPY range test on a macro-print day without conditioning on prior-close VIX; one observation, cause of the day not established.
+
+- **"The base-setting, industrial-production-co-release MTIS vintage is loud: the Q4 inventory contribution moves 0.10pp or more (FT-mtis-2026-11-17-1)"** — added 2026-11-18 from the
+  [mtis-2026-11-17 close-out](events/mtis-2026-11-17.md). It moved **+0.0785pp** (0.5337 to 0.6122) while PCE moved −0.0528pp, a miss by 0.0215pp on a registered 45.5% post-2021 coin flip.
+  Do not re-register the 0.10pp line for this class without new vintages; n=1, and the 10-15 edition also sat under its line (0.0974pp).
+
 - **"A JGB 30-year tail of 2bp or more does not transmit to the next US session: the US 30Y CMT does not rise 5bp (FT-jgb-30y-auction-2026-10-08-5)"** — added 2026-11-13 from the
   [jgb-30y-auction-2026-10-08 ledger](events/jgb-30y-auction-2026-10-08.md). The 2026-11-10 tail was **2.4bp** and the US 30Y CMT rose **+8bp** (5.35 to 5.43) on 11-12, on a CPI day plus a US 30-year auction.
   Do not register a same-tenor JGB-to-US D+1 threshold on a date that shares a US CPI print or auction; one observation, and the JGB 30Y par yield moved +5.5bp on 11-11 too.
