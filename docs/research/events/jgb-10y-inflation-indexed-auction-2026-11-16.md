@@ -200,3 +200,77 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-11-15
 <!-- probe-ref: {"symbols":{},"vix":19.3,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","cbrs-q3-2026-results-2026-11-11","empire-state-mfg-2026-11-16","eurostat-hicp-final-2026-11-18","existing-home-sales-2026-11-12","fomc-minutes-2026-11-18","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-20y-auction-2026-11-18","jgb-liquidity-enhancement-1-5y-2026-11-20","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","nbis-2026-11-12-print","nvda-2026-11-18-print","opex-2026-11-20","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["cbrs-q3-2026-results-2026-11-11","nbis-2026-11-12-print","nvda-2026-11-18-print","retail-sales-2026-11-17"],"screenStreak":0,"blocked":[{"url":"https://www.mof.go.jp/english/policy/jgbs/reference/interest_rate/jgbcm.csv","status":"404","at":"2026-11-08"}]} -->
+
+## Outcome
+
+**Close-out (2026-11-18, D+2 — inside `closeOutWithinDays`).** Rates mode runs no `earnings-cycle` /
+`intraday-edges` instrument (`symbols: []` by design), so "re-run instrument data" means every number
+below was re-fetched from a primary **this session**, after the mandated cache bust (`rm -rf
+node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`): MOF's result page, announcement
+page and par-yield CSV. Yahoo readings (VIX, USD/JPY) are secondary. **No fetch of a cited source
+failed; `probe-ref.blocked` is empty.** Nothing is scored from memory of the tape. Date and size stay
+**estimate** in the calendar file (the lane's no-self-confirm limit); MOF's own pages agree with both.
+
+**The verdict: stand-aside was right and cost nothing; the terms rule held; but the demand floor broke —
+the first linker print under 2.73x since 2022 — on the day the price repriced another 21bp. The ledger's
+"price moved, bidders did not" finding is now half wrong.** Cover and yield moved together this time.
+
+### What Japan sold — MOF's own result page
+
+`policy/jgbs/auction/calendar/eresul/eresul20261116.htm`, fetched direct 2026-11-18 (HTTP 200, 18,731 bytes):
+
+| Field | Value |
+|---|---|
+| Security · issue · coupon · maturity | 10-Year Inflation-Indexed · **31** · **0.6%** · **3/10/2036** |
+| Auction / issue date | **11/16/2026** / **11/17/2026** |
+| Competitive bids | **¥673.5bn** |
+| Bids accepted | **¥249.8bn** |
+| **Cover** (bids ÷ accepted) | **2.696x** (prev 3.27x on 08-12; 3.40x on 05-01) |
+| Lowest accepted price · **yield** | 96.00 · **1.072%** (prev 0.860%, +21.2bp) |
+| Allotment at the lowest price | **44.6666%** (prev 21.4285%) |
+| Average price | not published (`-`), so no tail measure, as the ledger said |
+| Indexation coefficient on issue date | 1.01169 |
+
+Announcement `auct20261109e.htm` (direct, HTTP 200): dated **November 9, 2026**, *About 250 billion yen*,
+maturity March 10, 2036, *a reopening issue of the May 2026 issue*.
+
+### The forward tests
+
+Scored in [`../forward-tests/jgb-10y-inflation-indexed-auction-2026-11-16.md`](../forward-tests/jgb-10y-inflation-indexed-auction-2026-11-16.md):
+
+| Test | Verdict | The number |
+|---|---|---|
+| `FT-1` terms rule | **pass** | published 11-09 (7-day lead, 3 of 3), ¥250bn, 3/10/2036, reopening of May issue |
+| `FT-2` cover ≥ 2.73x | **kill** | **2.696x**, 0.034x under the floor; the rest of the sample's range was never under it (n=18) |
+| `FT-3` proxy in 1.70-2.30 | **pass**, streak broken | 2.927 par 10Y (11-16, MOF) − 1.072 = **1.855**, down 0.141 from 1.996 |
+
+**What the kill means, and does not.** `FT-2` set its floor at the sample's own minimum and said a pass was
+expected and only a failure informative; it failed by 0.034x, on one print. That is a thin miss on a
+n=19 sample, not a regime call: 2.696x is 0.54x under the 3.24x mean, and an allotment at the low of
+44.7% against 21.4% says the book was thinner right at the clearing price. Both numbers point the same
+way as the yield. The proxy's fall is the mechanism worth watching: the linker's yield rose 21.2bp while
+the nominal par rose only 7.1bp (2.856 → 2.927), so the real-yield leg did the moving, not the nominal.
+That reads as a linker-specific repricing, with the usual caveat that the proxy is a trend gauge and not
+a market breakeven (simple yield vs par yield, no lag adjustment).
+
+### Kill switches
+
+1. **No-price-channel premise:** not shown to fire. `symbols: []`, so no instrument scores it; a web
+   search found no linker or JGB headline attached to a tracked-name move. VIX went 19.30 (11-13) →
+   22.91 (11-16) → 25.46 (11-17), USD/JPY ~159.5-159.9 (Yahoo, secondary); this session did not attribute
+   those to any JGB headline, and no position was keyed to them.
+2. **Terms rule:** did not fire (`FT-1`). 3. **Demand leaves:** **fired** (`FT-2`). 4. **Proxy band:** did
+   not fire (`FT-3`).
+
+### Honest limits
+
+- One print. A cover of 2.696x against a 2.73x line is inside one auction's noise.
+- The workbook (`Auction_Results_for_JGBs.xls`) was not re-fetched, so "first under the floor" rests on
+  the 2026-11-01 sample (n=18), not a re-read of the full history.
+- Cover is bids ÷ accepted from MOF's result page, not a published MOF statistic.
+- The 11-18 20Y JGB and 11-20 Japan CPI follow this event and are not read here.
+- The kill moves to the sweep doc's kill list; no stance is registered on it, and nothing here licenses a
+  position. Conviction proposals: none. Declared intents: none.
+
+**Last assessed:** 2026-11-18
+<!-- probe-ref: {"symbols":{},"vix":25.46,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","cbrs-q3-2026-results-2026-11-11","empire-state-mfg-2026-11-16","eurostat-hicp-final-2026-11-18","existing-home-sales-2026-11-12","fomc-minutes-2026-11-18","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-20y-auction-2026-11-18","jgb-liquidity-enhancement-1-5y-2026-11-20","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","nbis-2026-11-12-print","nvda-2026-11-18-print","opex-2026-11-20","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["cbrs-q3-2026-results-2026-11-11","nbis-2026-11-12-print","nvda-2026-11-18-print","retail-sales-2026-11-17"],"screenStreak":0,"blocked":[]} -->

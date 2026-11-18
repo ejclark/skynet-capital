@@ -71,6 +71,10 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"The 10-year inflation-indexed JGB keeps its post-2022 demand floor: cover stays at or above 2.73x at the 2026-11-16 auction (FT-jgb-10y-inflation-indexed-auction-2026-11-16-2)"** — added 2026-11-18 from the
+  [jgb-10y-inflation-indexed-auction-2026-11-16 close-out](events/jgb-10y-inflation-indexed-auction-2026-11-16.md). Printed **2.696x** (bids ¥673.5bn, accepted ¥249.8bn) as the lowest-accepted yield jumped **+21.2bp** to 1.072%; allotment at the low rose to 44.7% from 21.4%.
+  Do not register a floor set at the sample's own minimum without a second, independent reason it holds; one print, and the floor was the range's edge by construction (n=18).
+
 - **"The GDPNow vintage on an existing-home-sales release day is solo: its Data Releases text names existing-home sales alone (FT-existing-home-sales-2026-11-12-1)"** — added 2026-11-18 from the
   [existing-home-sales-2026-11-12 close-out](events/existing-home-sales-2026-11-12.md). The 11-12 vintage posted on a date the Fed never scheduled, but read "Monthly Treasury Statement, Existing-home sales"; the MTS, scheduled the same day, rode along. Q4 residential moved −0.121pp (3x the solo median), inventories −0.0001pp.
   Do not call an unscheduled vintage solo before reading its own Data Releases cell for same-day co-releases (the MTS, PPI and retail stack all share EHS-week dates); one observation, and posting itself held (8 of 8 in 2026).
