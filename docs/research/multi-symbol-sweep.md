@@ -71,6 +71,10 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"The GDPNow vintage on an existing-home-sales release day is solo: its Data Releases text names existing-home sales alone (FT-existing-home-sales-2026-11-12-1)"** — added 2026-11-18 from the
+  [existing-home-sales-2026-11-12 close-out](events/existing-home-sales-2026-11-12.md). The 11-12 vintage posted on a date the Fed never scheduled, but read "Monthly Treasury Statement, Existing-home sales"; the MTS, scheduled the same day, rode along. Q4 residential moved −0.121pp (3x the solo median), inventories −0.0001pp.
+  Do not call an unscheduled vintage solo before reading its own Data Releases cell for same-day co-releases (the MTS, PPI and retail stack all share EHS-week dates); one observation, and posting itself held (8 of 8 in 2026).
+
 - **"A JGB 30-year tail of 2bp or more does not transmit to the next US session: the US 30Y CMT does not rise 5bp (FT-jgb-30y-auction-2026-10-08-5)"** — added 2026-11-13 from the
   [jgb-30y-auction-2026-10-08 ledger](events/jgb-30y-auction-2026-10-08.md). The 2026-11-10 tail was **2.4bp** and the US 30Y CMT rose **+8bp** (5.35 to 5.43) on 11-12, on a CPI day plus a US 30-year auction.
   Do not register a same-tenor JGB-to-US D+1 threshold on a date that shares a US CPI print or auction; one observation, and the JGB 30Y par yield moved +5.5bp on 11-11 too.
