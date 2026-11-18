@@ -1,4 +1,5 @@
 import { parseOccSymbol } from "../../../src/trading/option-symbols";
+import { signOf } from "../ui/numbers";
 import type { DeskPosition } from "./desk";
 import type { ChainRow } from "./options";
 import { signedDollars, stakeFigure } from "./position-picture";
@@ -115,7 +116,7 @@ export function actFigures(
 export const dollars = (x: number) => strikeMoney(cents(Math.abs(x)));
 
 /** "−$295", "+$200", "$0". */
-export const signedMoney = (x: number) => `${x < 0 ? "−" : x > 0 ? "+" : ""}${dollars(x)}`;
+export const signedMoney = (x: number) => `${signOf(x)}${dollars(x)}`;
 
 /** The ticket's one line: "Cash out $550 · locks in −$295 · frees $8,000". */
 export function actLine(figures: ActFigures, verb: ActVerb): string {

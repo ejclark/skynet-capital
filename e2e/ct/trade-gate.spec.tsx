@@ -7,6 +7,15 @@ import { expectComponentShot } from "./harness";
 // no provider regardless of `enabled`, even though neither actually fires a query with no symbol
 // committed (both gate on `symbol !== ""`). Now that the harness wraps everything, both states
 // are safe to cover.
+//
+// The draft ticket reads the wall clock: its time-in-force note and the order-type note both say
+// whether the market is open (#6257). Unpinned, the baseline changed with the hour the suite ran
+// (#5638), so every test here sees the same weekday mid-session moment — Wed 2026-10-14, 11:00 ET.
+const MID_SESSION = new Date("2026-10-14T15:00:00Z");
+test.beforeEach(async ({ page }) => {
+  await page.clock.setFixedTime(MID_SESSION);
+});
+
 test("renders the draft ticket with side selector", async ({ mount }) => {
   const component = await mount(<TradeGate deskId="day-trader" />);
   await expect(component.getByRole("heading", { name: "New trade" })).toBeVisible();

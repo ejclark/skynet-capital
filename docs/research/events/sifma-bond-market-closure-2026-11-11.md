@@ -415,3 +415,27 @@ nothing beyond the horizon named.
 
 **Last assessed:** 2026-11-12
 <!-- probe-ref: {"symbols":{},"vix":17.49,"daysBand":"low:0+","adjacentIds":["asean-summit-manila-2026-11-16","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","erock-q3-2026-results-2026-11-12","existing-home-sales-2026-11-12","jgb-5y-auction-2026-11-12","mts-october-2026-11-12","nbis-2026-11-12-print","ppi-2026-11-13","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-coupon-announcement-2026-11-12","uk-gdp-q3-first-2026-11-12"],"adjacentStrongIds":["cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","nbis-2026-11-12-print"],"screenStreak":0} -->
+
+**Forward-test scoring (2026-11-18, `forward-test-due`).** Scored FT-1 and FT-2 only, both
+**pass**, from bars re-pulled today with the instrument caches busted first; the Outcome cells are in
+[the fragment](../forward-tests/sifma-bond-market-closure-2026-11-11.md). The close-out above is not
+reopened. Settled 11-11 volume vs the trailing-20 median (2026-10-14 → 2026-11-10): TLT **0.723×**
+(26.57M ÷ 36.76M), SPY **0.933×**, so the paired gap is **−0.210**; LQD 0.264×, HYG 0.272×. The
+12-Nov close-out's 0.719× / 0.898× were read before the volume prints settled; neither moves a verdict.
+
+- **FT-3 stays open, due 2026-11-19.** Not scored a day early. The 11-12 bar is final, and it is
+  worth saying what it shows without scoring it: TLT 80.92 → 79.72, |move| **1.48%** against a
+  trailing-20 median |move| of **0.46%**, a **3.2×** ratio, above the 1.5× line. The next session
+  will very likely record a **kill** of the "no deferred repricing" refusal. The 11-12 session also
+  carried the 30Y auction and `nbis-2026-11-12-print`, so what it killed is the *refusal as a
+  stand-alone claim*, not a clean measurement of closure-driven deferral; the row will say so.
+- **Tape since the close-out:** TLT 79.55 (11-17); SPY 732.44, down from 759.81 on 11-11, on 69M-share
+  sessions on 11-16 and 11-17; VIX 25.46 (11-17) from 17.49 on 11-11. Context only; `symbols: []`,
+  no position, and the stand-aside call on the date is unchanged.
+- Conviction proposals `[]`, declared intents `[]`, nothing to answer or cite. Adjacency sweep:
+  nothing new dated inside the horizon was found; nothing proposed.
+- **Loop census:** the one stage a person would still do is the volume pull; `market-data.mjs`'s
+  `bars()` drops volume, so this scoring used the same bespoke fetch as the close-out (second use).
+
+**Last assessed:** 2026-11-18
+<!-- probe-ref: {"symbols":{},"vix":25.46,"daysBand":"low:0+","adjacentIds":["asean-summit-manila-2026-11-16","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","eia-steo-2026-11-10","empire-state-mfg-2026-11-16","erock-q3-2026-results-2026-11-12","existing-home-sales-2026-11-12","japan-balance-of-payments-2026-11-10","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-30y-auction-2026-11-10","jgb-5y-auction-2026-11-12","jobs-2026-11-06","mts-october-2026-11-12","pbls-q3-2026-results-2026-11-12","ppi-2026-11-13","russell-recon-preliminary-2026-11-13","sp-global-investment-manager-index-2026-11-10","survey-of-professional-forecasters-q4-2026-11-16","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-3y-note-2026-11-09","treasury-coupon-announcement-2026-11-12","uk-gdp-q3-first-2026-11-12","uk-gilt-auction-long-2026-11-10","umich-sentiment-prelim-2026-11-06","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","nbis-2026-11-12-print"],"screenStreak":0} -->

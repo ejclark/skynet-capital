@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import type { DeskAllocation } from "../live/desk";
 import { fetchOptionPositions, type OptionBookGreeks } from "../live/options";
+import { signOf } from "../ui";
 import { GlossaryTerm } from "./glossary-term";
 import { MoneyTarget } from "./money-target";
 
@@ -38,7 +39,7 @@ export function decayLine(book: OptionBookGreeks | undefined, hasOptions: boolea
   if (!hasOptions) return "none";
   if (!book || book.covered === 0) return "—";
   const perDay = book.theta;
-  const text = `${perDay < 0 ? "−" : "+"}${money.format(Math.abs(perDay))}/day`;
+  const text = `${signOf(perDay)}${money.format(Math.abs(perDay))}/day`;
   return book.covered < book.total ? `${text} (${book.covered} of ${book.total} quoted)` : text;
 }
 

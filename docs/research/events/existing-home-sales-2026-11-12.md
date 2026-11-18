@@ -4,6 +4,11 @@
 **Last assessed:** 2026-09-06
 <!-- probe-ref: {"symbols":{},"vix":14.53,"daysBand":"low:15+","adjacentIds":["boj-summary-of-opinions-2026-11-10","cpi-2026-11-10","import-export-prices-2026-11-17","industrial-production-2026-11-17","msft-ignite-2026-11-17","mtis-2026-11-17","mts-october-2026-11-12","ppi-2026-11-13","retail-sales-2026-11-17","sifma-bond-market-closure-2026-11-11","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"screenStreak":0,"blocked":[{"url":"https://query1.finance.yahoo.com/v1/test/getcrumb","status":"429","at":"2026-09-06"},{"url":"https://query2.finance.yahoo.com/v8/finance/chart/SPY","status":"429","at":"2026-09-06"},{"url":"https://stooq.com/q/d/l/?s=spy.us&i=d","status":"JS_CHALLENGE","at":"2026-09-06"},{"url":"https://www.atlantafed.org/-/media/documents/cqer/researchcq/gdpnow/GDPNowcastDataReleaseDates.xlsx","status":"404","at":"2026-09-06"},{"url":"https://www.bls.gov/schedule/news_release/cpi.htm","status":"403","at":"2026-09-06"}]} -->
 
+> **Closed out 2026-11-18 (D+6).** October sales printed **3.75M SAAR, −5.5% m/m** and this ledger goes
+> quiet — see [**`## Outcome`**](#outcome). The decision header below is preserved **as it stood before the
+> print**, not rewritten: its stand-aside held, its "solo nowcast vintage" call did not (the 11-12 vintage
+> also names the Monthly Treasury Statement).
+
 ## At a glance
 
 **TL;DR.** **The session is clean — and that is precisely why it is worth nothing to trade, because the
@@ -446,6 +451,7 @@ score one) — both refusals argued above.
 | 2026-10-16 | D-27 | **Pulse: the rehearsal passed, the stance holds, and the regime moved under it.** **Kill switch 1 (rehearsal) NOT triggered:** the live Atlanta Fed workbook (`GDPTrackingModelDataAndForecasts.xlsx`, `Contributions` tab, current through 10-15) carries a **2026-10-13** vintage, labelled "Existing-home sales" alone on a date `PostedUpdates` never scheduled. Q3 residential contribution moved **-0.0134pp** (class median 0.0399), inventories **-0.0001pp**, so `-1` and `-2` read as on-track (scored at close-out, not now). `-3` running tally: **16 vintage dates realized 09-10 to 10-15 against 9 scheduled**, 7 unscheduled, 0 scheduled-but-unposted; the full-span schedule is 16. **Collection:** the Atlanta Fed path moved again (live: `/-/media/Project/Atlanta/FRBA/Documents/research-and-data/data/gdpnow/`; the `cqer/researchcq` one still 404s). `ContribArchives` still ends 07-28, so use `Contributions`. **Date re-checked:** NAR's schedule page and live stats page both still read "Thu., Nov. 12 ... 10:00 a.m. Eastern". **Content:** September data (10-13) **3.99M, +1.5% m/m**, inventory **1.60M**, price **+1.3% y/y**; Yun: August and September were the two slowest months this year. **Sweep - macro (NEWS, secondary, unverified against BLS):** Sep CPI 10-14 **+0.6% m/m, 3.7% y/y vs 3.6% expected**, hike odds up for the 10-28 FOMC, 30y mortgage quoted ~7.3-7.5% (ledger's last FRED read 6.71%; FRED unreachable again). **Vol:** VIX **14.53 to 19.99** (10-16 bar close, Yahoo probe; 15.27 on 10-13, 16.87 on 10-14). **ITB 93.91 to 86.75, SPY 770.19 to 771.79** (10-15 closes, Nasdaq API; 10-16 bars not yet posted). **Rehearsal for `-4`:** ITB range on 10-13 about 1.8% at VIX 15.27, inside 3.0%. **Caveat:** `-4` only counts at VIX <= 16 and VIX is ~20 now; if still above 16 on 11-12 it is void as registered, not a pass. **Geopolitics:** truce expiry 11-10 still on the calendar, extension talks unresolved (NEWS); a Trump-Xi date surfaced only in unreliable results, not proposed. **Proposals:** none; 10-28 FOMC, 10-20 starts and the 11-18 stack are already on the calendar. | **None - stand aside on every horizon holds.** Date stays `confirmed` (publisher's own, re-read today). The VIX regime change makes the sibling's 3.0% ITB trigger less likely to apply on 11-12, which changes the test's reach, not the stance. | 2026-10-29 (low, enters 0+ band at D-14: every 7d) |
 | 2026-10-30 | D-13 | **Pulse: stance holds; nothing broke, and the data now leans soft for October.** **Date:** NAR's schedule page and live stats page both still read "Thu., Nov. 12 ... 10:00 a.m. Eastern" (re-fetched today, HTTP 200). **Content:** NAR's own 10-20 release - September pending home sales **-7.3% m/m, -11.3% y/y**, all four regions down - leads October closings lower; no consensus found for 11-12 (NEWS, unverified). **Rates:** Freddie Mac 30y **7.24%** (10-29, down from 7.40 on 10-15). **Macro:** FOMC 10-28 held at **3.75-4.00%**, 10-2 with Cook and Hammack dissenting for a **hike** (FED primary). Q3 advance GDP 10-29 (first BEA vintage). **Nowcast (rehearsal for `-1`/`-3`):** the live Atlanta Fed workbook adds vintages 10-16, 10-20, 10-27, 10-28, 10-29, none an EHS date; the Q4 initial nowcast posted 10-29 at **3.22%** with residential **-0.182pp** and inventories **+0.595pp** (baselines for `-2`). **Tape (Nasdaq API):** ITB **86.75 to 92.10** (10-15 to 10-29, +6.2%), ranges 5.89% on 10-22 and 3.62% on 10-29; XHB 95.75 to 101.27; SPY 771.79 to 769.36. **VIX 19.99 to 19.42** (10-30 bar; 17.20 on the 10-29 close). **For `-4`:** it counts only at VIX <= 16 and VIX is ~17-19, so it is likely void as registered, not a pass. **Geopolitics:** US-China truce expiry 11-10 - latest reliable report (09-21) says no extension agreed; a 09-23 two-month-extension item is unverified (NEWS). **Beyond/inside horizon:** CBRS lockup 11-09 and results 11-11 are already on the calendar. No conviction proposals. **Proposals:** none. | **None - stand aside on every horizon holds.** Date stays `confirmed`. Band moved low:15+ to low:0+ (7-day pulses). | 2026-11-06 (low, 7d) |
 | 2026-11-06 | D-6 | **Pulse: stance holds; the regime moved hard and the nowcast rehearsal keeps passing.** **Date:** NAR's schedule page and live stats page both still read "Thu., Nov. 12 ... 10:00 a.m. Eastern" (re-fetched today, HTTP 200). **Nowcast (`-1`/`-2`/`-3` rehearsal):** the live Atlanta Fed workbook (`Contributions` tab) now carries Q4 vintages 10-29, 11-02, 11-03, 11-04, none an EHS date; Q4 GDP nowcast **3.22% to 3.44%** (peak 3.74% on 11-02), residential **-0.182pp to +0.022pp**, inventories **+0.595pp to +0.554pp** (baselines for `-2`). `-3` tally: **24 distinct vintage dates 09-07 to 11-04**; the PostedUpdates workbook was not re-pulled, so the scheduled count stands at the registered 16 for the full span. **Vol and tape (Nasdaq API, Yahoo):** **VIX 28.18 on 11-05** (+69.7% d/d, 16.61 on 11-04; 19.42 at the last row). **SPY 769.36 to 733.00** (11-05 -4.41%), **ITB 92.10 to 98.63** (ranges 5.7% on 11-04, 4.6% on 11-05), XHB 101.27 to 103.85. Homebuilders ride a high-vol tape, not an EHS one. **For `-4`:** it counts only at VIX <= 16; VIX is 28, so it is almost certainly void as registered on 11-12, not a pass (the 3.0% line is unremarkable at this regime). **Rates (FRED unreachable; Freddie Mac PMMS direct):** 30y **7.18%** on 11-05 (7.24% prior week); the 11-05 sell-off is risk-off with yields down (^TNX 4.837% per sibling ledgers, NEWS, unverified here). **Content:** no consensus found for October (NEWS search returned nothing); NAR's 10-20 pending sales -7.3% m/m still points the print lower. **Macro:** Oct jobs is today (no actual read); CPI 11-10 is the next shock, two sessions before this print. **Geopolitics:** US-China truce expiry 11-10 still on the calendar. **Proposals:** none; every adjacent date found is already tracked. Conviction proposals: none open. Declared intents: none name this event. | **None - stand aside on every horizon holds.** Date stays `confirmed` (publisher's own, re-read today). The crash day changes what an ITB trigger costs, not the stance. | 2026-11-11 (low, 7d; D-1 session) |
+| 2026-11-18 | D+6 | **Close-out. FT-1 KILLED (a vintage posted 11-12 but names "Monthly Treasury Statement, Existing-home sales", so not solo), FT-2 PASSES (inventories −0.0001pp), FT-3 PASSES (28 realized dates vs 16 scheduled), FT-4 VOID (VIX closed 18.70, above its 16 gate).** October sales **3.75M SAAR, −5.5% m/m, −8.8% y/y**, lowest since Aug 2010; median **$416,700** (+0.4% y/y); inventory **1.59M**, **5.1 months** (NAR release, fetched today). Q4 residential moved **−0.121pp** on the vintage, under the 0.30pp switch. ITB **−1.76%** / XHB −1.73% / SPY −0.35% on the day, ITB range 3.21%, with a 13:00 30-year auction and the 14:00 MTS in the same session, so the print is not isolated. Stand-aside held: nothing was held or tracked. VIX **18.70** on 11-12, **25.46** on 11-17. No proposals; conviction proposals and declared intents: none. | **Closed — see `## Outcome`**; stance not rewritten | — (closed; this doc goes quiet) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -465,3 +471,70 @@ memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-11-06
 <!-- probe-ref: {"symbols":{},"vix":28.18,"daysBand":"low:0+","adjacentIds":["asean-summit-manila-2026-11-16","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","eia-steo-2026-11-10","empire-state-mfg-2026-11-16","import-export-prices-2026-11-17","industrial-production-2026-11-17","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-30y-auction-2026-11-10","jgb-5y-auction-2026-11-12","msft-ignite-2026-11-17","mtis-2026-11-17","mts-october-2026-11-12","nahb-hmi-2026-11-17","ppi-2026-11-13","retail-sales-2026-11-17","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","sp-global-investment-manager-index-2026-11-10","survey-of-professional-forecasters-q4-2026-11-16","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-3y-note-2026-11-09","treasury-coupon-announcement-2026-11-12","uk-gdp-q3-first-2026-11-12","uk-gilt-auction-long-2026-11-10","uk-labour-market-2026-11-17","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","retail-sales-2026-11-17"],"screenStreak":0,"blocked":[{"url":"https://fred.stlouisfed.org/graph/fredgraph.csv?id=MORTGAGE30US","status":"EMPTY_BODY","at":"2026-11-06"}]} -->
+
+## Outcome
+
+**Close-out (2026-11-18, D+6).** `symbols: []` by design, so no `earnings-cycle` / `intraday-edges`
+instrument applies; "re-run instrument data" is the Atlanta Fed workbooks re-downloaded today
+(`GDPTrackingModelDataAndForecasts.xlsx` and `GDPNowcastDataReleaseDates.xlsx`, HTTP 200), the Nasdaq API
+daily bars for ITB/XHB/SPY, CBOE's `VIX_History.csv`, and NAR's own release. Nothing is scored from memory.
+
+**Verdict: the date, the stand-aside and the posting premise held; the "solo" claim did not.** The
+publisher's release landed on its scheduled date, a GDPNow vintage posted on a date the Fed never
+scheduled, and no position existed to be wrong. But the vintage carried a second release.
+
+| | Registered | Result | Verdict |
+|---|---|---|---|
+| FT-1 11-12 vintage exists and names EHS alone | posts, solo (7/7 posting, 5/5 solo on unscheduled EHS dates) | posted; text reads "Monthly Treasury Statement, Existing-home sales" | **kill** |
+| FT-2 inventories move < 0.10pp | 123 of 123 solo | **−0.0001pp** (11-13 +0.0033, 11-17 +0.0785) | **pass** |
+| FT-3 realized dates > 16 scheduled, 09-07 → 11-12 | ~30 projected | **28** live (20 in `ContribArchives`, which ends 10-28) vs 16; 0 scheduled-but-unposted | **pass** |
+| FT-4 ITB range < 3.0% if VIX ≤ 16 | 97.8% base rate | VIX closed **18.70**, out of regime; ITB range 3.21% | **void** |
+
+### What printed
+
+October existing-home sales fell **5.5% m/m to 3.75M SAAR** (**−8.8% y/y**), the lowest since August
+2010, in NAR's words, with mortgage rates at the highest since 2000 bar one month in 2023. Inventory rose
+1.3% to **1.59M**, a **5.1-month** supply (4.7 in September), median price **$416,700** (+0.4% y/y, the
+40th straight y/y rise), median time on market 35 days. Regionally Northeast flat, Midwest −3.2%, South
+−6.5%, West −9.7%. This continues the 10-30 pulse's read (September pending home sales −7.3% m/m).
+
+### The nowcast: posted, and not solo
+
+| GDPNow vintage (Q4-2026) | Data releases | GDP | Residential | Inventories |
+|---|---|---|---|---|
+| 11-10 | Consumer Price Index | 3.486 | +0.0275 | +0.5305 |
+| **11-12** | **Monthly Treasury Statement, Existing-home sales** | **3.410** | **−0.0933** | **+0.5304** |
+| 11-13 | Producer Price Index | 3.413 | −0.0922 | +0.5337 |
+| 11-17 | Retail sales, Import and export prices, Industrial production | 3.384 | −0.1210 | +0.6122 |
+
+The residential move (−0.121pp) is 3x the solo-class median (0.040pp) and a third of the 0.30pp switch.
+The MTS is a federal-government line, so the move is plausibly all existing-home sales, but the nowcast
+does not say, which is the point of a solo vintage and the reason `-1` is a kill. The ledger's own
+At-a-glance had named the MTS as a same-day release "not a homebuilder channel" and still registered
+`-1` as a solo test: the miss is in the registration, not the data.
+
+### The tape: one session, not isolated
+
+| 2026-11-12 | Close-to-close | Range (of open) |
+|---|---|---|
+| ITB | **−1.76%** (95.45 → 93.77) | 3.21% (96.695 / 93.62) |
+| XHB | −1.73% (103.10 → 101.32) | 2.8% |
+| SPY | −0.35% (759.81 → 757.12) | 1.2% |
+
+VIX closed **18.70** (17.49 the day before), so the 3.0% ITB line is unremarkable (the ledger's own
+number: 26.5% of sessions above VIX 16 clear it), and the 13:00 30-year Treasury auction and 14:00 MTS
+fall in the same session. No hourly bar source was reachable, so the 10:00 move is not separated. The
+100-day baseline (ITB 1.915% vs 1.863%, p=0.61) is one session richer and not overturned by it.
+
+### Receipts and what this teaches
+
+- **Kill list:** `-1` goes to [`multi-symbol-sweep.md`](../multi-symbol-sweep.md), with the rule to read a
+  vintage's own co-releases before calling it solo.
+- **Source drift:** `ContribArchives` stopped updating on 10-28; the live `Contributions` tab is the
+  current record. A `ContribArchives`-only reader would have missed all four vintages above.
+- **Loop census:** the manual step this lane still did is picking which workbook tab is current; that is
+  a mechanical check a script could do (compare each tab's latest date), and the first thing to automate.
+
+
+**Last assessed:** 2026-11-18
+<!-- probe-ref: {"symbols":{},"vix":25.46,"daysBand":"low:0+","adjacentIds":["asean-summit-manila-2026-11-16","bund-30y-auction-2026-11-11","import-export-prices-2026-11-17","industrial-production-2026-11-17","mts-october-2026-11-12","nahb-hmi-2026-11-17","ppi-2026-11-13","retail-sales-2026-11-17","treasury-30y-bond-2026-11-12","treasury-coupon-announcement-2026-11-12"],"adjacentStrongIds":["retail-sales-2026-11-17"],"screenStreak":0} -->
