@@ -538,6 +538,8 @@ verdict on the date, which stays `estimate` (no confirmed prefix covers a non-US
 was manual: reading a PDF result notice needed a hand-rolled stream decoder, and the
 `ledger → fragment → outcome` copy is typed by hand each time.
 
+**Forward-test note (2026-11-18, `forward-test-due`).** `FT-bund-30y-auction-2026-11-11-1` scored **pass** from Treasury's daily par yield CSV (direct): US 30Y CMT 5.35% (11-10) → 5.43% (11-12) = **+8bp**, no 11-11 row. The kill (b2o < 1.0 AND a rise ≥ 11bp) did not fire on either limb (b2o 1.18). The 11-12 move is a two-day, US-wide one (10Y +12bp, US 30Y auction), not read as Bund spillover. `FT-4` stays open until 2027-01-15. The stance and this section's verdict are unchanged.
+
 ## Assessment ledger
 
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
