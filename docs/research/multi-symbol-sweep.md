@@ -71,6 +71,10 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"A minutes-collision VIX settlement opens at or above -0.5%: the 2026-11-18 open gap is not the decision-collision signature (FT-vix-expiration-2026-11-18-1)"** — added 2026-11-19 from the
+  [vix-expiration-2026-11-18 close-out](events/vix-expiration-2026-11-18.md). The VIX opened **24.22** against a **25.46** close (**-4.87%**; VRO 24.25), on a day the minutes released on their slot.
+  Do not register a fixed open-gap line on a VIX day without conditioning on the prior day's VIX move; after a +8% day the open gap averages -0.14% (n=602, sd 5.52), so a -0.5% line is a coin flip there, and n=1.
+
 - **"The scheduled 1 October electricity VAT cut pulls UK October 2026 headline CPI to 3.4% or lower (FT-uk-cpi-2026-09-16-3)"** — added 2026-11-19 from the
   [uk-cpi-2026-09-16 ledger](events/uk-cpi-2026-09-16.md). ONS printed **3.6%** (3.5% in September): electricity fell 0.8% m/m, but motor fuels (+33.2% y/y) and gas (+6.3%) outweighed it.
   Do not size a pre-announced tax cut against a headline print without netting the energy and fuel base moves first; the 0.10pp government estimate is a counterfactual, not a forecast of the annual rate.
