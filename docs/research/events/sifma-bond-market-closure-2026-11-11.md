@@ -439,3 +439,27 @@ reopened. Settled 11-11 volume vs the trailing-20 median (2026-10-14 → 2026-11
 
 **Last assessed:** 2026-11-18
 <!-- probe-ref: {"symbols":{},"vix":25.46,"daysBand":"low:0+","adjacentIds":["asean-summit-manila-2026-11-16","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","eia-steo-2026-11-10","empire-state-mfg-2026-11-16","erock-q3-2026-results-2026-11-12","existing-home-sales-2026-11-12","japan-balance-of-payments-2026-11-10","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-30y-auction-2026-11-10","jgb-5y-auction-2026-11-12","jobs-2026-11-06","mts-october-2026-11-12","pbls-q3-2026-results-2026-11-12","ppi-2026-11-13","russell-recon-preliminary-2026-11-13","sp-global-investment-manager-index-2026-11-10","survey-of-professional-forecasters-q4-2026-11-16","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-3y-note-2026-11-09","treasury-coupon-announcement-2026-11-12","uk-gdp-q3-first-2026-11-12","uk-gilt-auction-long-2026-11-10","umich-sentiment-prelim-2026-11-06","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","nbis-2026-11-12-print"],"screenStreak":0} -->
+
+**Forward-test scoring (2026-11-19, `forward-test-due`).** Scored FT-3 only, a **kill**, from bars
+re-pulled today with the instrument caches busted first; the Outcome cell is in
+[the fragment](../forward-tests/sifma-bond-market-closure-2026-11-11.md). The close-out above is not
+reopened, and FT-1 and FT-2 stay as scored on 2026-11-18. TLT's 2026-11-12 |close-to-close| was
+**1.483%** (80.92 to 79.72) against a trailing-20-session median |move| of **0.459%**: **3.23x**, over
+the 1.5x line (0.689%); with the closure day dropped from the window it is **2.68x**. Neither kill
+condition fired (`cpi-2026-11-10` still 2026-11-10, SIFMA unchanged).
+
+- **What died, and what did not.** The refusal "a shut bond market does not defer price discovery"
+  failed as a stand-alone claim. The 11-12 session also carried the 30Y refunding auction and
+  `nbis-2026-11-12-print`, so the bar does not say how much of the move the closure caused. The scored
+  kill is added to the sweep doc's kill list. The other half of the registered finding stands: the
+  closure day itself was thin (TLT 0.723x, credit ETFs about 0.26x, FT-1 and FT-2).
+- **Stance unchanged.** `symbols: []`, no position, the call on the date stays stand aside; the
+  execution-depth guard on bond ETFs for the closure day itself is untouched by this kill.
+- **Tape since 11-18:** TLT 80.22 (11-18), VIX 24.56 (11-18) from 25.46. Context only. Adjacency sweep:
+  nothing new dated inside the horizon; nothing proposed. Conviction proposals `[]`, declared intents
+  `[]`; `research:claims` found no stored conviction score reading this event and wrote nothing.
+- **Loop census:** the one stage a person would still do is the volume/bar pull; `market-data.mjs`'s
+  `bars()` drops volume, so this was the third use of the same bespoke fetch on this ledger family.
+
+**Last assessed:** 2026-11-19
+<!-- probe-ref: {"symbols":{},"vix":24.56,"daysBand":"low:0+","adjacentIds":["asean-summit-manila-2026-11-16","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","eia-steo-2026-11-10","empire-state-mfg-2026-11-16","erock-q3-2026-results-2026-11-12","existing-home-sales-2026-11-12","japan-balance-of-payments-2026-11-10","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-30y-auction-2026-11-10","jgb-5y-auction-2026-11-12","jobs-2026-11-06","mts-october-2026-11-12","pbls-q3-2026-results-2026-11-12","ppi-2026-11-13","russell-recon-preliminary-2026-11-13","sp-global-investment-manager-index-2026-11-10","survey-of-professional-forecasters-q4-2026-11-16","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-3y-note-2026-11-09","treasury-coupon-announcement-2026-11-12","uk-gdp-q3-first-2026-11-12","uk-gilt-auction-long-2026-11-10","umich-sentiment-prelim-2026-11-06","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","nbis-2026-11-12-print"],"screenStreak":0} -->
