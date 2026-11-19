@@ -75,6 +75,10 @@ robust, alpha fragile — is the finding.
   [nahb-hmi-2026-11-17 close-out](events/nahb-hmi-2026-11-17.md). The gap was **0.2108%** (739.95 to 738.39) on the quarter's most stacked morning (G.17 09:15, retail sales 08:30, MTIS 10:00 all published), a ~70/30 registration built on a post-hoc n=34 split, after a 1.91% SPY drop and VIX 19.30 to 22.91 the session before.
   Do not use the HMI+G.17 stacked class as a pre-open predictor without conditioning on the prior session's move and VIX; one observation, and the split was chosen after seeing the headline.
 
+- **"The 20-Year new-issue slot tops out at a bid-to-cover of 2.58: the 2026-11-18 sale prints at or below it (FT-treasury-20y-bond-2026-11-18-1)"** — added 2026-11-19 from the
+  [treasury-20y-bond-2026-11-18 close-out](events/treasury-20y-bond-2026-11-18.md). It printed **2.63** (high yield 5.459%, 70.87% at the high, direct 26.74%), above all 15 prior new issues (2.34-2.58).
+  Do not carry a ceiling set at a sample's own maximum into the next sale of the slot as a pass-prone bar; n=16 and the registered base rate was 15/15, so the test was weak by design.
+
 - **"The 10-year inflation-indexed JGB keeps its post-2022 demand floor: cover stays at or above 2.73x at the 2026-11-16 auction (FT-jgb-10y-inflation-indexed-auction-2026-11-16-2)"** — added 2026-11-18 from the
   [jgb-10y-inflation-indexed-auction-2026-11-16 close-out](events/jgb-10y-inflation-indexed-auction-2026-11-16.md). Printed **2.696x** (bids ¥673.5bn, accepted ¥249.8bn) as the lowest-accepted yield jumped **+21.2bp** to 1.072%; allotment at the low rose to 44.7% from 21.4%.
   Do not register a floor set at the sample's own minimum without a second, independent reason it holds; one print, and the floor was the range's edge by construction (n=18).

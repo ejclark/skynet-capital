@@ -148,8 +148,51 @@ prose in a row is free. Close-out fills `## Outcome` below from re-run instrumen
 first), never from memory. After that the assessment is closed; the doc reopens only to score a
 registered forward test whose `Score by` has arrived (`forward-test-due`).
 
+## Outcome
+
+**Close-out (2026-11-19, D+3; inside `closeOutWithinDays`).** Scope: a geopolitical event with no keyed
+symbol, so there is no instrument to re-run and no price cell to score; the instrument caches were not
+touched. Both registered rows are reporting facts and are scored from dated wire and local-press
+reports read on 2026-11-19, not from memory. The calendar entry is untouched and stays `estimate`: no
+primary ASEAN or White House page was read.
+
+**What happened vs the stance.** The stance (stand aside; read the weekend as a tell for the APEC date)
+held: nothing tradable came out of Manila, and Trump did go. The one thing the call sheet got wrong was
+the day. The date the ledger carried, **Trump at the PICC on 2026-11-16**, was the White House day as
+Gulf News relayed it on 10-19; the later wires moved it.
+
+- **Reuters, 2026-11-14** (via GMA News and Khaleej Times, fetched direct): Trump "arrives in Manila on
+  Tuesday", the last day of the summit, i.e. **2026-11-17**, and the Quad leaders were to gather shortly
+  after, on the sidelines.
+- **Tribune, 2026-11-16 9:02 PM PHT** (fetched direct): his arrival is "expected on Tuesday".
+- **Philstar, 2026-11-18** (fetched direct): its related stories, dated 11-18, have Trump in Manila and at
+  Malacañang with Marcos that day. The exact arrival hour and the PICC appearance were not read.
+- The summit itself opened **2026-11-15** (Himalayan Times/AFP dateline), so Proclamation 1447's Nov 16-18
+  and the Nov 15-17 reports were both partly right: the summit ran Nov 15-18 around Trump's arrival.
+
+So **FT-1 is a kill**: the Manila leg slipped off 2026-11-16, which its own kill switch names. Trump's
+attendance itself did not fail; only the day registered did. **FT-2 is a pass**: Marcos and US
+Ambassador Lipton said on 2026-11-18 there would be no Pax Silica signing on this trip ("No, not on
+this trip", Philstar, Inquirer, GMA, Tribune, 11-18); the framework is still expected before year-end.
+Neither row is a trading hypothesis (no symbol, no instrument), so neither goes on the sweep doc's kill
+list; FT-1's kill is a note for the next trip-itinerary ledger, not a market lesson.
+
+**Lessons, for the next summit-stop ledger.** (1) A host's "confirmed" and a second-hand White House day
+are not an arrival time; wait for the head-of-government's own itinerary release before registering a
+day-keyed test. (2) The summit's day split (Nov 15-17 vs 16-18) was real: leaders' segments are the
+last days, so a head of state's stop is the best date, not the summit's first. (3) **Loop stage a person
+still had to do:** none; every read here was a fetch the lane can run.
+
+**Adjacency at close-out.** VIX 22.91 on 11-16 and 25.46 on 11-17 (FRED VIXCLS, read direct) vs 18.70
+on 11-12: back at the 11-06 level, ahead of NVDA's print (11-18, estimate) and FOMC minutes (11-18,
+confirmed); not attributed to Manila. Nothing new dated inside the horizon to propose. Conviction
+proposals and declared intents: none printed.
+
 **Last assessed:** 2026-11-08
 <!-- probe-ref: {"symbols":{},"vix":25.64,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","bund-30y-auction-2026-11-11","cbrs-q3-2026-results-2026-11-11","empire-state-mfg-2026-11-16","erock-q3-2026-results-2026-11-12","eurostat-hicp-final-2026-11-18","existing-home-sales-2026-11-12","fomc-minutes-2026-11-18","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-5y-auction-2026-11-12","jgb-liquidity-enhancement-1-5y-2026-11-20","msft-ignite-2026-11-17","mtis-2026-11-17","mts-october-2026-11-12","nahb-hmi-2026-11-17","nbis-2026-11-12-print","nvda-2026-11-18-print","opex-2026-11-20","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","ppi-2026-11-13","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-30y-bond-2026-11-12","treasury-coupon-announcement-2026-11-12","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-gdp-q3-first-2026-11-12","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["cbrs-q3-2026-results-2026-11-11","nbis-2026-11-12-print","nvda-2026-11-18-print","retail-sales-2026-11-17"],"screenStreak":0,"blocked":[{"url":"https://pia.gov.ph/news/palace-confirms-trumps-attendance-at-asean-summit-in-manila/","status":"403","at":"2026-11-01"},{"url":"https://asianews.network/?p=272539","status":"403","at":"2026-11-01"}]} -->
 
 **Last assessed:** 2026-11-15
 <!-- probe-ref: {"symbols":{},"vix":18.70,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","bund-30y-auction-2026-11-11","cbrs-q3-2026-results-2026-11-11","empire-state-mfg-2026-11-16","erock-q3-2026-results-2026-11-12","eurostat-hicp-final-2026-11-18","existing-home-sales-2026-11-12","fomc-minutes-2026-11-18","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-5y-auction-2026-11-12","jgb-liquidity-enhancement-1-5y-2026-11-20","msft-ignite-2026-11-17","mtis-2026-11-17","mts-october-2026-11-12","nahb-hmi-2026-11-17","nbis-2026-11-12-print","nvda-2026-11-18-print","opex-2026-11-20","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","ppi-2026-11-13","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-30y-bond-2026-11-12","treasury-coupon-announcement-2026-11-12","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-gdp-q3-first-2026-11-12","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["cbrs-q3-2026-results-2026-11-11","nbis-2026-11-12-print","nvda-2026-11-18-print","retail-sales-2026-11-17"],"screenStreak":0,"blocked":[{"url":"https://pia.gov.ph/news/palace-confirms-trumps-attendance-at-asean-summit-in-manila/","status":"403","at":"2026-11-01"},{"url":"https://asianews.network/?p=272539","status":"403","at":"2026-11-01"}]} -->
+
+**Last assessed:** 2026-11-19
+<!-- probe-ref: {"symbols":{},"vix":25.46,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","bund-30y-auction-2026-11-11","cbrs-q3-2026-results-2026-11-11","empire-state-mfg-2026-11-16","erock-q3-2026-results-2026-11-12","eurostat-hicp-final-2026-11-18","existing-home-sales-2026-11-12","fomc-minutes-2026-11-18","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-5y-auction-2026-11-12","jgb-liquidity-enhancement-1-5y-2026-11-20","msft-ignite-2026-11-17","mtis-2026-11-17","mts-october-2026-11-12","nahb-hmi-2026-11-17","nbis-2026-11-12-print","nvda-2026-11-18-print","opex-2026-11-20","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","ppi-2026-11-13","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-30y-bond-2026-11-12","treasury-coupon-announcement-2026-11-12","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-gdp-q3-first-2026-11-12","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["cbrs-q3-2026-results-2026-11-11","nbis-2026-11-12-print","nvda-2026-11-18-print","retail-sales-2026-11-17"],"screenStreak":0,"blocked":[{"url":"https://pia.gov.ph/news/palace-confirms-trumps-attendance-at-asean-summit-in-manila/","status":"403","at":"2026-11-01"},{"url":"https://asianews.network/?p=272539","status":"403","at":"2026-11-01"}]} -->
