@@ -71,6 +71,10 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"The scheduled 1 October electricity VAT cut pulls UK October 2026 headline CPI to 3.4% or lower (FT-uk-cpi-2026-09-16-3)"** — added 2026-11-19 from the
+  [uk-cpi-2026-09-16 ledger](events/uk-cpi-2026-09-16.md). ONS printed **3.6%** (3.5% in September): electricity fell 0.8% m/m, but motor fuels (+33.2% y/y) and gas (+6.3%) outweighed it.
+  Do not size a pre-announced tax cut against a headline print without netting the energy and fuel base moves first; the 0.10pp government estimate is a counterfactual, not a forecast of the annual rate.
+
 - **"The stacked-morning SPY pre-open lift is live on 2026-11-17: the overnight gap exceeds the 0.3275% clean-baseline median (FT-nahb-hmi-2026-11-17-2)"** — added 2026-11-19 from the
   [nahb-hmi-2026-11-17 close-out](events/nahb-hmi-2026-11-17.md). The gap was **0.2108%** (739.95 to 738.39) on the quarter's most stacked morning (G.17 09:15, retail sales 08:30, MTIS 10:00 all published), a ~70/30 registration built on a post-hoc n=34 split, after a 1.91% SPY drop and VIX 19.30 to 22.91 the session before.
   Do not use the HMI+G.17 stacked class as a pre-open predictor without conditioning on the prior session's move and VIX; one observation, and the split was chosen after seeing the headline.
