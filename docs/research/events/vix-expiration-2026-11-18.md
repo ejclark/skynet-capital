@@ -100,3 +100,56 @@
 
 **Last assessed:** 2026-11-18
 <!-- probe-ref: {"symbols":{},"vix":25.46,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","empire-state-mfg-2026-11-16","eurostat-hicp-final-2026-11-18","fomc-minutes-2026-11-18","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-liquidity-enhancement-1-5y-2026-11-20","jpx-market-closure-2026-11-23","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","nvda-2026-11-18-print","opex-2026-11-20","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","ppi-2026-11-13","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","russell-recon-preliminary-2026-11-13","sp-global-flash-us-pmi-2026-11-23","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-note-2026-11-23","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20"],"adjacentStrongIds":["nvda-2026-11-18-print","retail-sales-2026-11-17"],"screenStreak":0,"blocked":[{"url":"https://cdn.cboe.com/resources/indices/VIX_History.csv","status":"403","at":"2026-11-18"},{"url":"https://cdn.cboe.com/resources/indices/VRO_History.csv","status":"403","at":"2026-11-18"}]} -->
+
+## Outcome
+
+**Close-out (2026-11-19, D+1, inside `closeOutWithinDays`).** Scored from data re-fetched today, never from the
+tape in memory: Cboe's settlement CSV and its VRO history, Cboe's VIX history, Yahoo `^VIX`/`^GSPC`/`NVDA` daily bars
+and federalreserve.gov. `symbols: []`, so no earnings-cycle or intraday-edges instrument applies and no cache needed
+busting. Nothing was traded; every number is a measurement.
+
+**The headline verdict: the settlement was ordinary mechanics and the guard was right, but the one registered test
+died.** The November contract settled to a VRO of **24.25** (Cboe's `VRO_History.csv` row 11/18/2026 24.250000;
+`VX,VX/X6,2026-11-18,24.25` on the settlement CSV for `?dt=2026-11-18`). It came in **0.49 below** the 11-17 X6
+settlement (24.7417) and **1.21 below** the 11-17 VIX close (25.46), so the backwardation kill switch that fired on
+10-19 held to the end: cash stayed above the November future into the auction and the "+3.42 owed to the auction"
+premise never came back. The VIX opened **24.22** (Yahoo `^VIX`) and the VRO printed 24.25, so the opening auction and
+the open agree to 0.03. Intraday VIX ran **23.45 to 26.26** and closed **24.56**, so the print that morning was 1.4%
+below the close and 8% below the high: nobody who sat out the auction missed a clean level.
+
+**What was around it.** FOMC minutes of the Oct 27-28 meeting were released **2026-11-18** on their calendar slot
+(federalreserve.gov `fomccalendars.htm` lists "Released November 18, 2026"; the minutes page reads "Last Update:
+November 18, 2026"); their contents were not read, so no move is attributed to them. SPX opened **7,355.69** (+0.21%
+on 7,340.53), closed **7,323.63** (-0.23%). NVDA opened **159.19** (+2.4% on 155.46) and closed **150.96**. Cause of the
+open's VIX drop is not established here; my news search returned nothing dated for 11-18.
+
+### Forward tests scored
+
+| Test | Prediction | Result | Verdict |
+|---|---|---|---|
+| `FT-vix-expiration-2026-11-18-1` (a minutes-collision settlement opens at or above -0.5%) | 2026-11-18 VIX open gap at or above -0.5%; kill below | **24.22 vs 25.46 = -4.87%** (VRO basis: 24.25 vs 25.46 = -4.75%) | **KILL** |
+
+**Reading the kill honestly.** The rule was registered with its line at -0.5%, and both bases land far below it, so the
+cell is scored a kill and not voided: the minutes did release on the slot, Cboe settled on the registered date, and no
+void condition is evidenced (I could not read the Fed press-release index, which is script-rendered, so "no
+unscheduled Fed statement" is unconfirmed rather than ruled out; the SPX range of -0.23% gives no sign of one). Two
+caveats the registration could not know. **(1) The source differs from the one named.** The registered source was Cboe's
+`VIX_History.csv`; its 11-18 row was not yet published at D+1 (last row 11/17), so the open is Yahoo's `^VIX` open,
+cross-checked against the VRO. **(2) The line is weak in this regime.** Re-run today on Cboe's VIX history 2005-2026
+(`daily_prices/VIX_History.csv`, HTTP 200): after a prior-day VIX rise of 8% or more (11-17 rose +11.1%), the open gap
+averages **-0.14%** (n=602, sd 5.52), with 100 of 602 (16.6%) at or below -4%; with the prior close at 22-30 it is
+**-0.48%** (n=143). The -0.5% line sits at the middle of that distribution, so a -4.87% gap (-0.86 sd) says little about
+decision versus minutes mornings. The contrast in leg 4 stays unpromoted; this test cannot rescue or bury it, and it
+is not re-measured against settlement-only cells here. Kill switches fired: **the 11-18 open gap below -0.5%** (yes) and
+**`VRO_History.csv` becomes reachable** (yes, at `cdn.cboe.com/api/global/us_indices/daily_prices/VRO_History.csv`, HTTP
+200; the `/resources/indices/` paths this ledger logged as blocked still return 403). Leg 4 can now be re-run on realized
+VRO prints; that is a build task, not this close-out.
+
+**The loop stage a person still had to do:** find the working fetch path and read the open off a secondary. Both of
+this ledger's "blocked" Cboe files were reachable the whole time under `/api/global/us_indices/daily_prices/`, and the
+VIX history there lags a session, so the open needed Yahoo. A scored VIX open gap should read one fetch, not three.
+
+The assessment is closed; `scripts/event-scan.mjs` will not surface this event again.
+
+**Last assessed:** 2026-11-19 (close-out, the scanner goes quiet on this event from here)
+<!-- probe-ref: {"symbols":{},"vix":24.56,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","empire-state-mfg-2026-11-16","eurostat-hicp-final-2026-11-18","fomc-minutes-2026-11-18","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-liquidity-enhancement-1-5y-2026-11-20","jpx-market-closure-2026-11-23","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","nvda-2026-11-18-print","opex-2026-11-20","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","ppi-2026-11-13","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","russell-recon-preliminary-2026-11-13","sp-global-flash-us-pmi-2026-11-23","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-note-2026-11-23","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20"],"adjacentStrongIds":["nvda-2026-11-18-print","retail-sales-2026-11-17"],"screenStreak":0,"blocked":[{"url":"https://cdn.cboe.com/resources/indices/VRO_History.csv","status":"403","at":"2026-11-19"},{"url":"https://cdn.cboe.com/resources/indices/VIX_History.csv","status":"403","at":"2026-11-19"}]} -->

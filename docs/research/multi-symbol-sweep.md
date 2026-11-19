@@ -71,6 +71,10 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"A minutes-collision VIX settlement opens at or above -0.5%: the 2026-11-18 open gap is not the decision-collision signature (FT-vix-expiration-2026-11-18-1)"** — added 2026-11-19 from the
+  [vix-expiration-2026-11-18 close-out](events/vix-expiration-2026-11-18.md). The VIX opened **24.22** against a **25.46** close (**-4.87%**; VRO 24.25), on a day the minutes released on their slot.
+  Do not register a fixed open-gap line on a VIX day without conditioning on the prior day's VIX move; after a +8% day the open gap averages -0.14% (n=602, sd 5.52), so a -0.5% line is a coin flip there, and n=1.
+
 - **"The 20-Year new-issue slot tops out at a bid-to-cover of 2.58: the 2026-11-18 sale prints at or below it (FT-treasury-20y-bond-2026-11-18-1)"** — added 2026-11-19 from the
   [treasury-20y-bond-2026-11-18 close-out](events/treasury-20y-bond-2026-11-18.md). It printed **2.63** (high yield 5.459%, 70.87% at the high, direct 26.74%), above all 15 prior new issues (2.34-2.58).
   Do not carry a ceiling set at a sample's own maximum into the next sale of the slot as a pass-prone bar; n=16 and the registered base rate was 15/15, so the test was weak by design.
