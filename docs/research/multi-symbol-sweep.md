@@ -75,6 +75,10 @@ robust, alpha fragile — is the finding.
   [vix-expiration-2026-11-18 close-out](events/vix-expiration-2026-11-18.md). The VIX opened **24.22** against a **25.46** close (**-4.87%**; VRO 24.25), on a day the minutes released on their slot.
   Do not register a fixed open-gap line on a VIX day without conditioning on the prior day's VIX move; after a +8% day the open gap averages -0.14% (n=602, sd 5.52), so a -0.5% line is a coin flip there, and n=1.
 
+- **"A shut cash bond market does not defer price discovery: TLT's next-session |move| stays at or below 1.5x its trailing-20 median (FT-sifma-bond-market-closure-2026-11-11-3)"** — added 2026-11-19 from the
+  [sifma-bond-market-closure-2026-11-11 ledger](events/sifma-bond-market-closure-2026-11-11.md). TLT's 11-12 |move| was **1.483%** against a **0.459%** median, **3.23x** (2.68x with the closure day dropped from the window).
+  Do not carry the 42-session "the day after a closure is ordinary" base rate (28.6% above 1.5x) into a closure that follows a confirmed high-impact CPI and precedes a refunding auction; the 11-12 session also held the 30Y auction and an NBIS print, so size of the closure's own share is not established.
+
 - **"The 20-Year new-issue slot tops out at a bid-to-cover of 2.58: the 2026-11-18 sale prints at or below it (FT-treasury-20y-bond-2026-11-18-1)"** — added 2026-11-19 from the
   [treasury-20y-bond-2026-11-18 close-out](events/treasury-20y-bond-2026-11-18.md). It printed **2.63** (high yield 5.459%, 70.87% at the high, direct 26.74%), above all 15 prior new issues (2.34-2.58).
   Do not carry a ceiling set at a sample's own maximum into the next sale of the slot as a pass-prone bar; n=16 and the registered base rate was 15/15, so the test was weak by design.
