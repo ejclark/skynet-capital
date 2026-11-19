@@ -517,6 +517,51 @@ every row; a dated adjacent event found gets proposed as a new
 Close-out fills `## Outcome` below from re-run instrument data (cache busted first), never from
 memory — after which this doc goes quiet.
 
+## Outcome
+
+**Close-out (2026-11-19, D+1 — inside `closeOutWithinDays`).** Macro-print, `symbols: []`: `earnings-cycle` and `intraday-edges` do
+not apply (caches busted anyway). "Re-run data" = the Census press release (`construction/nrc/current`, CB26-187, fetched direct),
+the Atlanta Fed workbooks re-fetched direct, and Yahoo hourly/daily bars cross-checked against Nasdaq's historical API.
+
+**Verdict: the stand-aside was right and all three registered tests passed; nothing here licenses an entry.** The gap on the tape
+was 0.491%, the nowcast attribution held out of sample, and the 14:00 minutes hour was one of the quietest of the day.
+
+| Test | Registered | Reading | Verdict |
+|---|---|---|---|
+| `-1` solo vintage, residential largest | 11-18 vintage names housing starts alone; residential the largest of 8 moves | `Data releases` = "Housing starts"; residential **−0.1722pp** of a **−0.1749pp** headline move; next-largest **0.0014pp** | **pass** |
+| `-2` no minutes compression | SPY 09:30 hour ≥ 35% of RTH range | **78.4%** (6.48 of 8.265); the 14:30 hour **19.1%** | **pass** (weak, as registered) |
+| `-3` homebuilder gap | ITB 11-18 overnight gap < 1.579% | **0.491%** (open 91.28 ÷ prior close 91.73) | **pass**, with a confound named |
+
+- **The print (`CENSUS:`, primary).** October starts **1,309,000** SAAR, **+9.9% (±16.8%)** on a revised September **1,191,000**
+  (down from the 1,221,000 first print) and +2.8% on a year ago; single-family starts 864,000 (+4.0%). Permits **1,295,000**,
+  **−7.4%** on a revised 1,398,000, single-family 772,000 (−8.7%). Completions 1,272,000 (+6.5%). The ±16.8% interval is wider
+  than the move, so the headline is statistically indistinguishable from zero. This ledger carried no consensus (none found at
+  D-0), so no surprise is scored.
+- **The nowcast (`-1`).** GDPNow Q4 went 3.384% → **3.209%**, all of it residential. Worth recording because it is the part
+  that was *not* predicted: the residential line fell (growth −3.32% → −7.91% annualized) while headline starts rose +9.9%;
+  the move tracks permits (−7.4%, single-family −8.7%) in direction. This session read only the workbook's outputs and did
+  not decompose the bridge, so which input drove it is **not established**. The attribution claim is unaffected (it predicts
+  *which line moves*, not its sign). Unregistered but telling: on the shared **11-17** vintage residential moved only
+  −0.0288pp, third behind inventories (+0.0784) and PCE (−0.0528). That is the solo-versus-shared contrast this test was
+  registered to draw, and the paired `housing-starts-2026-12-17-2` (shared vintage, medium conviction) is now the comparison.
+- **The tape (`-2`, `-3`).** SPY ran 733.37 open → 730.20 close, range 726.795–735.06; ITB 91.73 → **92.66** close (+1.0%) after
+  opening 91.28. The 11-18 morning was **not** the clean session the ledger argued for: NVDA reported after the 11-17 close,
+  Governor Waller spoke at 07:20 ET (per the minutes ledger's close-out), and VIX sat at 24.56 (25.46 the day before). Both
+  passes are scored with that said; a confound that can only widen a gap or front-load a morning cannot manufacture a
+  sub-threshold gap, but `-2`'s pass says little about minutes compression, and `-3` tested the post-2015 null on a noisier
+  morning than registered. The informative `-2` number is the 14:30 hour: **19.1%** of range on a minutes day.
+- **Kill switches.** None fired: date held on all three Census primaries and the release published on schedule; no funding
+  lapse before 11-18; the Atlanta Fed kept 11-18 solo; no macro- or housing-keyed playbook landed (`docs/plans/trade-playbooks.md`
+  re-grepped 2026-11-19 for housing, homebuilder, ITB, XHB: **0** hits). The 12-17 sibling's tape kill switch gets one more clean-ish observation under 1.579%, which is
+  an absence of evidence against `symbols: []`, not new evidence for it.
+- **Fetch note.** The Atlanta Fed moved both workbooks to `…/Documents/research-and-data/data/gdpnow/`; the old
+  `…/cqer/researchcq/gdpnow/` path returns **HTTP 404 with a 48,898-byte HTML body**, which is why the 11-04, 11-11 and 11-18
+  pulses logged `-1` as "uncorroborated". The page `atlantafed.org/cqer/research/gdpnow` carries the live links. Yahoo served
+  this runner through the cookie-plus-crumb route after bare requests returned 429. `probe-ref.blocked` is empty.
+- **Loop census.** A person would still have to find a moved download path (done here by reading the landing page's links) and
+  decompose the residential bridge to say *why* the line fell on a +9.9% starts print. The first is automatable: the landing
+  page's `href` list is a free source of truth for the workbook URL.
+
 **Last assessed:** 2026-10-19
 <!-- probe-ref: {"symbols":{},"vix":19.99,"daysBand":"low:15+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","fomc-minutes-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-cpi-2026-11-20","jgb-20y-auction-2026-11-18","jgb-liquidity-enhancement-1-5y-2026-11-20","jpx-market-closure-2026-11-23","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","opex-2026-11-20","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","ppi-2026-11-13","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","russell-recon-preliminary-2026-11-13","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-note-2026-11-23","treasury-coupon-announcement-2026-11-19","uk-cpi-2026-11-18","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["retail-sales-2026-11-17"],"screenStreak":0} -->
 
@@ -528,3 +573,6 @@ memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-11-18
 <!-- probe-ref: {"symbols":{},"vix":25.46,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","empire-state-mfg-2026-11-16","eurostat-hicp-final-2026-11-18","fomc-minutes-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-liquidity-enhancement-1-5y-2026-11-20","jpx-market-closure-2026-11-23","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","nvda-2026-11-18-print","opex-2026-11-20","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","ppi-2026-11-13","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","russell-recon-preliminary-2026-11-13","sp-global-flash-us-pmi-2026-11-23","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-note-2026-11-23","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["nvda-2026-11-18-print","retail-sales-2026-11-17"],"screenStreak":0,"blocked":[]} -->
+
+**Last assessed:** 2026-11-19
+<!-- probe-ref: {"symbols":{},"vix":24.56,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","empire-state-mfg-2026-11-16","eurostat-hicp-final-2026-11-18","fomc-minutes-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-liquidity-enhancement-1-5y-2026-11-20","jpx-market-closure-2026-11-23","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","nvda-2026-11-18-print","opex-2026-11-20","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","ppi-2026-11-13","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","russell-recon-preliminary-2026-11-13","sp-global-flash-us-pmi-2026-11-23","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-note-2026-11-23","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["nvda-2026-11-18-print","retail-sales-2026-11-17"],"screenStreak":0,"blocked":[]} -->
