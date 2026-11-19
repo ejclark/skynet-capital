@@ -75,6 +75,14 @@ robust, alpha fragile — is the finding.
   [vix-expiration-2026-11-18 close-out](events/vix-expiration-2026-11-18.md). The VIX opened **24.22** against a **25.46** close (**-4.87%**; VRO 24.25), on a day the minutes released on their slot.
   Do not register a fixed open-gap line on a VIX day without conditioning on the prior day's VIX move; after a +8% day the open gap averages -0.14% (n=602, sd 5.52), so a -0.5% line is a coin flip there, and n=1.
 
+- **"The scheduled 1 October electricity VAT cut pulls UK October 2026 headline CPI to 3.4% or lower (FT-uk-cpi-2026-09-16-3)"** — added 2026-11-19 from the
+  [uk-cpi-2026-09-16 ledger](events/uk-cpi-2026-09-16.md). ONS printed **3.6%** (3.5% in September): electricity fell 0.8% m/m, but motor fuels (+33.2% y/y) and gas (+6.3%) outweighed it.
+  Do not size a pre-announced tax cut against a headline print without netting the energy and fuel base moves first; the 0.10pp government estimate is a counterfactual, not a forecast of the annual rate.
+
+- **"The stacked-morning SPY pre-open lift is live on 2026-11-17: the overnight gap exceeds the 0.3275% clean-baseline median (FT-nahb-hmi-2026-11-17-2)"** — added 2026-11-19 from the
+  [nahb-hmi-2026-11-17 close-out](events/nahb-hmi-2026-11-17.md). The gap was **0.2108%** (739.95 to 738.39) on the quarter's most stacked morning (G.17 09:15, retail sales 08:30, MTIS 10:00 all published), a ~70/30 registration built on a post-hoc n=34 split, after a 1.91% SPY drop and VIX 19.30 to 22.91 the session before.
+  Do not use the HMI+G.17 stacked class as a pre-open predictor without conditioning on the prior session's move and VIX; one observation, and the split was chosen after seeing the headline.
+
 - **"A shut cash bond market does not defer price discovery: TLT's next-session |move| stays at or below 1.5x its trailing-20 median (FT-sifma-bond-market-closure-2026-11-11-3)"** — added 2026-11-19 from the
   [sifma-bond-market-closure-2026-11-11 ledger](events/sifma-bond-market-closure-2026-11-11.md). TLT's 11-12 |move| was **1.483%** against a **0.459%** median, **3.23x** (2.68x with the closure day dropped from the window).
   Do not carry the 42-session "the day after a closure is ordinary" base rate (28.6% above 1.5x) into a closure that follows a confirmed high-impact CPI and precedes a refunding auction; the 11-12 session also held the 30Y auction and an NBIS print, so size of the closure's own share is not established.
