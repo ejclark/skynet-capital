@@ -71,6 +71,10 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"The 10-year breakeven holds at or above 2.30% into the 2026-11-19 TIPS reopening: the five-week inflation leg is durable (FT-treasury-10y-tips-2026-11-19-2)"** — added 2026-11-20 from the
+  [treasury-10y-tips-2026-11-19 close-out](events/treasury-10y-tips-2026-11-19.md). Par 5.04 minus real 2.88 gave **2.16%**, the lowest of 222 paired 2026 sessions; 12 of 13 sessions since 11-02 closed under 2.30% as Brent unwound.
+  Do not extrapolate a 24-session breakeven decomposition into a regime call; the quarter-scale read (real-rate-led) was the one that held, and a registration anchored on a five-week leg was a window artefact.
+
 - **"A minutes-collision VIX settlement opens at or above -0.5%: the 2026-11-18 open gap is not the decision-collision signature (FT-vix-expiration-2026-11-18-1)"** — added 2026-11-19 from the
   [vix-expiration-2026-11-18 close-out](events/vix-expiration-2026-11-18.md). The VIX opened **24.22** against a **25.46** close (**-4.87%**; VRO 24.25), on a day the minutes released on their slot.
   Do not register a fixed open-gap line on a VIX day without conditioning on the prior day's VIX move; after a +8% day the open gap averages -0.14% (n=602, sd 5.52), so a -0.5% line is a coin flip there, and n=1.
