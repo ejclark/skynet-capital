@@ -482,3 +482,15 @@ the same lane is re-dispatched then. Conviction proposals and declared intents f
 
 **Last assessed:** 2026-11-19
 <!-- probe-ref: {"symbols":{},"vix":24.56,"daysBand":"medium:0+","adjacentIds":["nvda-2026-11-18-print","retail-sales-2026-11-17","treasury-30y-bond-2026-11-12"],"adjacentStrongIds":[],"screenStreak":0,"blocked":[]} -->
+
+### Forward-test scoring note — 2026-11-20 (`forward-test-due`, #2884)
+
+**FT-2 scored `pass`** in its fragment, from a fresh pull of Treasury's primaries today: the 11-12 announcement's
+10-Year TIPS row is a reopening of 91282CRE3 (`Reopening` Y, treasurydirect `A_20261112_4.xml`) at **$19B**, and the
+11-19 auction ran at that size (highYield 2.903%, bid-to-cover 2.43; `securities/auctioned`). Both of this event's
+registered forward tests are now scored `pass`, each disclosed as weak because the sizes were deducible. Tape for the
+record, no attribution: VIX 19.30 (11-13) → 22.91 → 25.46 → 24.56 → 28.44 (11-19). Conviction claims: none read this event (`research:claims` printed `nothing written`).
+No re-assessment, no edit to `## Outcome` above or to any registered prediction.
+
+**Last assessed:** 2026-11-20
+<!-- probe-ref: {"symbols":{},"vix":28.44,"daysBand":"medium:0+","adjacentIds":["nvda-2026-11-18-print","retail-sales-2026-11-17","treasury-30y-bond-2026-11-12"],"adjacentStrongIds":[],"screenStreak":0,"blocked":[]} -->
