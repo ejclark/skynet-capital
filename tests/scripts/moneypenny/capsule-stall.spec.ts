@@ -732,6 +732,25 @@ describe("capsuleAudit — never takes the rest of the audit down", () => {
     expect(log.mock.calls.flat().join("\n")).toContain("capsule stall check failed — HTTP 502");
     log.mockRestore();
   });
+
+  // #6942, run 44213063274 (2026-11-18): the installation's REST bucket hit 0/5000 mid-step and the
+  // capsule read's 403 turned `route` red, though `auditIntentsOrSkip` already skips a spent budget
+  // for the rest of the audit — this catch swallowed the error before that guard could see it.
+  it("skips without turning the run red when the token's budget is spent", () => {
+    const log = rstest.spyOn(console, "log").mockImplementation(() => undefined);
+    const gather = () => {
+      throw new Error(
+        "Command failed: curl -sS --fail-with-body\ncurl: (22) The requested URL returned error: 403\n" +
+          "GitHub said: API rate limit exceeded for installation ID 157155153.",
+      );
+    };
+    expect(capsuleAudit(undefined, { gather, nowMs: NOW })).toEqual([]);
+    expect(process.exitCode).not.toBe(1);
+    const said = log.mock.calls.flat().join("\n");
+    expect(said).toContain("::warning::capsule stall check skipped");
+    expect(said).not.toContain("::error::");
+    log.mockRestore();
+  });
 });
 
 describe("the writes — REST, and in an order that cannot storm", () => {
