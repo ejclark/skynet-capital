@@ -533,3 +533,23 @@ life, so neither killed forward test (`FT-1`, `FT-3`) has an entry to add to
 [`multi-symbol-sweep.md`](../multi-symbol-sweep.md)'s kill list — that list is scoped to ticker-level
 S1/S2/E1/S3/S4/G1 hypotheses, which this event never had. Recorded here so the next session that checks
 doesn't go looking for one.
+
+**Forward-test scoring (2026-11-20, `forward-test-due`).** Scored `FT-jgb-2y-auction-2026-09-30-2` only; the
+assessment above is not re-opened and no registered prediction was edited.
+
+- **`FT-2` — PASS.** MOF's announcement `auct20261113e.htm` (HTTP 200, dated 2026-11-13) lists
+  **No.478-490** of the 2-year JGBs eligible for the 2026-11-20 menu, exactly the forecast window, and the
+  lowest coupon in it is **1.0%** (No.478, No.479): nothing below 1.0%. Coupons re-read today from
+  `Auction_Results_for_JGBs.xls` (HTTP 200, saved 2026-10-02, No.489 = **2.0%**) and No.490 = **1.9%**
+  from `eresul20261029.htm`. Kill switches 2 and 3 (window rule; sub-1% survivor) did not fire.
+- **`FT-5` — not yet due**, score-by 2026-11-21 (needs `eresul20261120a.htm`, which does not exist before
+  the auction clears); left open on purpose.
+- **Stance call 'This quarter' (retire the 2-Year sector as a coupon-composition explanation after
+  2026-11-20, High) — its first falsifier (`FT-2`) now passed.** The second (`FT-5`, a demand-concentration
+  claim) is still open, so the call is half-settled, not closed.
+- **Context, no channel (`symbols: []`):** VIX **28.44** on 2026-11-19 (Yahoo chart endpoint, secondary), up from
+  16.34 at the 2026-10-01 close-out; no tracked name or JGB headline was examined for it, and none is claimed.
+- **Probe-ref coverage.** The 2Y close was not re-fetched; this note is scoring, not a coupon pulse.
+
+**Last assessed:** 2026-11-20
+<!-- probe-ref: {"symbols":{},"vix":28.44,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-09-30","advance-economic-indicators-2026-09-30","apple-eu-dma-terms-2026-10-01","bloomberg-agg-index-rebalance-2026-09-30","boe-dmp-2026-10-02","boj-jgb-purchase-schedule-q4-2026-09-30","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","case-shiller-hpi-2026-09-29","census-benchmark-revision-nsa-2026-09-28","chicago-pmi-2026-09-30","construction-spending-2026-10-01","consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","dallas-fed-trimmed-mean-2026-09-30","dallas-fed-tssos-2026-09-29","durable-goods-2026-09-25","eia-weekly-petroleum-status-2026-09-30","eurostat-hicp-flash-2026-10-01","fhfa-hpi-2026-09-29","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","google-adtech-final-judgment-2026-10-02","government-funding-deadline-2026-09-30","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-40y-auction-2026-09-29","jgb-liquidity-enhancement-5-11y-2026-09-25","jobs-2026-10-02","jolts-2026-09-29","m3-full-report-2026-10-02","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","openai-devday-2026-09-29","pce-2026-09-30","pjm-reliability-backstop-procurement-2026-09-30","pmms-2026-10-01","retail-benchmark-revision-2026-09-28","russell-style-quarter-end-capping-effective-2026-09-30","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sp-select-sector-secondary-reweight-2026-09-30","tic-quarterly-external-debt-2026-09-30","treasury-buyback-10y20y-2026-10-01","treasury-buyback-tips-1y10y-2026-09-29","treasury-coupon-announcement-2026-10-01","uk-consumer-confidence-2026-09-25","uk-electricity-vat-zero-rate-2026-10-01","uk-quarterly-national-accounts-2026-09-30","umich-sentiment-final-2026-09-25","unsc-haiti-gsf-mandate-adoption-2026-09-29","unsc-haiti-gsf-mandate-expiry-2026-09-30","unsc-iran-panel-mandate-expiry-2026-09-26","unsc-middle-east-2334-2026-09-28"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02","pce-2026-09-30"],"screenStreak":0} -->
