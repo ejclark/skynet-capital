@@ -340,3 +340,58 @@ as its receipt.
 
 **Last assessed:** 2026-11-18
 <!-- probe-ref: {"symbols":{},"vix":25.46,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","empire-state-mfg-2026-11-16","eurostat-hicp-final-2026-11-18","fomc-minutes-2026-11-18","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-liquidity-enhancement-1-5y-2026-11-20","jpx-market-closure-2026-11-23","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","nvda-2026-11-18-print","opex-2026-11-20","philly-fed-mfg-2026-11-19","ppi-2026-11-13","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","russell-recon-preliminary-2026-11-13","sp-global-flash-us-pmi-2026-11-23","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-note-2026-11-23","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["nvda-2026-11-18-print","retail-sales-2026-11-17"],"screenStreak":0,"blocked":[]} -->
+
+## Outcome
+
+**Close-out (2026-11-20, D+2 — inside `closeOutWithinDays`).** Macro-print, `symbols: []`: no `earnings-cycle` /
+`intraday-edges` run (caches busted regardless; nothing in them applies). "Re-run data" = NAR's own newsroom release
+re-fetched direct (`nar.realtor/newsroom/pending-home-sales-decreased-4-7-percent-october-2026`, HTTP 200, its `<time>`
+element reads 2026-11-18T09:00 CST = 10:00 ET), SEC EDGAR (already scored on 11-18), and Yahoo daily bars for ITB, XHB,
+SPY, ^VIX and ^TNX fetched direct 2026-11-20.
+
+**Verdict: stand-aside was right; three of four registered tests held, and the one that failed is the calibration
+warning the 11-18 pulse had already written down.** Nothing here licenses an entry (`symbols: []`, no housing-keyed playbook).
+
+### What printed
+
+NAR: October PHSI **−4.7% m/m, −16.7% y/y**, down in all four regions (West −6.9%, South −6.3%, Midwest −2.7%,
+Northeast −0.8% m/m). Chief Economist Yun: "October could mark the low point in contract signings for this housing
+cycle, as mortgage rates appear to have topped out"; two consecutive months of record-low pending contracts. The text
+names no post-10-28 policy development as a driver, so stance leg 3 (≤ ~9% post-decision exposure) was not contradicted.
+
+### Forward tests, scored
+
+| Test | Bar | Printed | Verdict |
+|---|---|---|---|
+| FT-…-1 (schedule governs) | NAR publishes Oct PHSI on 2026-11-18 | Published **2026-11-18**, 10:00 ET (NAR newsroom `<time>`) | **PASS** — schedule record now 5 for 5 |
+| FT-…-2 (ordinary ITB session) | ITB 11-18 range < 2.504% | **3.407%** (O 91.28 / H 93.62 / L 90.51) | **KILL** |
+| FT-…-3 (DHI files in October) | DHI Q4 8-K on or before 10-31 | Filed **2026-10-29** (scored 11-18) | **PASS** |
+| FT-…-4 (regime-conditional ITB line) | ITB 11-18 range < 4.062% | **3.407%** | **PASS** |
+
+**Why -2 is a kill and not a void.** The void clauses name an unscheduled policy action, a tracked-builder earnings
+release, or a funding/geopolitical headline. None is verified: NAR and the minutes both released on their slots, and no
+tracked builder reported. Two things the registration did not contain did land in the session — Governor Waller's 11-18
+interview (a speech, not a policy action; cited in the [fomc-minutes-2026-11-18](fomc-minutes-2026-11-18.md) close-out)
+and NVDA's reaction session (S&P 500 −0.23%, Dow −1.1% per that close-out) — so the kill is scored as written, with the
+context below. The kill is also the one the 11-18 pulse expected: VIX closed 25.46 on 11-17 and ITB's prior-VIX ≥ 24
+cohort breaches 2.504% on 66.3% of sessions (`-4`), so the line fired on regime.
+
+**The tape, for the record.** ITB opened **91.28** under its 91.73 prior close, ranged **3.407%** and closed
+**92.66 (+1.0%)**; XHB ranged **3.69%** (98.25 → 100.75); SPY ranged only **1.13%** (733.37 → 730.20, −0.4%); ^TNX
+5.11% → 5.07%; VIX 25.46 → **24.56**. Homebuilders were wide on a quiet index: consistent with housing starts at 08:30
+and the print at 10:00 sharing the morning (see [housing-starts-2026-11-18](housing-starts-2026-11-18.md)'s close-out),
+but this lane has no hour-level read on the session that separates the two, so the width is **not attributed to the
+10:00 print**. The minutes-day *flat* claim from the 2014+ baseline (ITB p=0.965, n=104) is not refuted by one
+volatile-regime session; it is now n=105 with this day the first in-sample miss at a ≥ 24 VIX.
+
+**What the next session on this event class should know.** A fixed 2.504% ITB line is the wrong bar whenever the prior
+day's VIX closes ≥ 24; register the `-4`-style regime-conditional line from the start. VIX then rose to **28.44** on 11-19,
+so the regime this day opened has not eased.
+
+**Loop census.** A person would still have had to decide void-versus-kill on `-2` by reading the day's headlines — the
+void clause ("a funding/geopolitical headline") has no mechanical test. That stage (decide) is the one to automate: a
+registered range test should name its void trigger as a measurable condition (e.g. a prior-day VIX bucket), not a prose
+category.
+
+**Last assessed:** 2026-11-20
+<!-- probe-ref: {"symbols":{},"vix":28.44,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","empire-state-mfg-2026-11-16","eurostat-hicp-final-2026-11-18","fomc-minutes-2026-11-18","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-liquidity-enhancement-1-5y-2026-11-20","jpx-market-closure-2026-11-23","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","nvda-2026-11-18-print","opex-2026-11-20","philly-fed-mfg-2026-11-19","ppi-2026-11-13","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","russell-recon-preliminary-2026-11-13","sp-global-flash-us-pmi-2026-11-23","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-note-2026-11-23","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["nvda-2026-11-18-print","retail-sales-2026-11-17"],"screenStreak":0,"blocked":[]} -->
