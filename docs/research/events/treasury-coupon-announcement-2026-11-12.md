@@ -482,3 +482,15 @@ the same lane is re-dispatched then. Conviction proposals and declared intents f
 
 **Last assessed:** 2026-11-19
 <!-- probe-ref: {"symbols":{},"vix":24.56,"daysBand":"medium:0+","adjacentIds":["nvda-2026-11-18-print","retail-sales-2026-11-17","treasury-30y-bond-2026-11-12"],"adjacentStrongIds":[],"screenStreak":0,"blocked":[]} -->
+
+### Forward-test scoring note — 2026-11-20 (`forward-test-due`, #2884)
+
+**FT-2 scored `pass`** in its fragment, from a fresh pull of Treasury's primaries today: the 11-12 announcement's
+10-Year TIPS row is a reopening (`Reopening` Y, 91282CRE3) at **$19B**, and `securities/auctioned` returns the
+same CUSIP at $19B (highYield 2.903%, bid-to-cover 2.43). Tape for the record, no attribution: VIX 18.70 (11-12)
+→ 28.44 (latest close, Yahoo 5-day chart). Both registered rows are now scored. Conviction proposals and declared
+intents for this event: none (both printed `[]`). No re-assessment, no edit to `## Outcome` above or to any
+registered prediction.
+
+**Last assessed:** 2026-11-20
+<!-- probe-ref: {"symbols":{},"vix":28.44,"daysBand":"medium:0+","adjacentIds":["nvda-2026-11-18-print","retail-sales-2026-11-17","treasury-30y-bond-2026-11-12"],"adjacentStrongIds":[],"screenStreak":0,"blocked":[]} -->
