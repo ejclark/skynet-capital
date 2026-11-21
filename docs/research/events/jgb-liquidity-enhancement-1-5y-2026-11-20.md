@@ -445,6 +445,7 @@ Five predictions carry score-by dates and are registered in
 | 2026-11-13 | D-7 | **Full session (interval-elapsed, `low:0+`, 7d; screen flagged VIX −9.5pt, new strong adjacent `nvda-2026-11-18-print`).** **Terms NOT yet published:** `2611e.htm` re-fetched direct 2026-11-13 (HTTP 200, 27,460 B) — the 11-20 row still reads "Detail" with no href (11-02/05/09/11 rows have links); `auct20261113e`/`1112e`/`1120e` all 404. Size and band unannounced, `FT-5` open (score-by 11-16), `FT-2`/`FT-4` open (11-21). **Calendar:** `2612e` and `2701e` live; Jan 21, 2027 1-5y row confirmed (kill 7 clear). **Tape (MOF `jgbcme.csv`, direct, through 11-12):** 1Y 1.653 / 2Y 1.857 / 5Y 2.209% vs 1.658 / 1.860 / 2.210 on 11-05 — flat, no front-end dislocation. **Vol (Yahoo, secondary):** VIX **18.70** on 11-12 close (28.18 on 11-05, 25.64 on 11-06, 17.49 on 11-11) — the spike is unwinding, no channel into `symbols: []`. **Macro/geopolitical:** web search returned nothing current on BoJ or JGB beyond the 11-06 row. **Corridor:** new since 11-06: `japan-gdp-q3-prelim-2026-11-16`, `nvda-2026-11-18-print` (both tracked); `--on-date=2026-11-20` = 8 entries, none new. **Proposed:** nothing. **Beyond the leash:** none new. Conviction proposals: none; declared intents: none. | None — stand aside holds; diagnostics as revised 11-06 | 2026-11-20 (event day; close-out follows) |
 | 2026-11-20 | D-0 | **Full session (interval-elapsed, `low:0+`, 7d; screen flagged VIX +9.7pt).** **Terms PUBLISHED:** MOF `2611e.htm` (HTTP 200) now links the 11-20 row to `auct20261113e` (HTTP 200, dated Nov 13): offering **about ¥700bn**, issue date 11-24, eligible 2Y No.478-490 · 5Y No.155-187 · 10Y No.349-364 · 20Y No.99-131 · 30Y No.1-5 (09-10 basis: 476-488 / 154-185 / 348-363 / 97-129 / 1-5). The page names no band; the calendar row labels it 1-5 years. **`FT-5` scored pass** (sixth consecutive ¥700bn; kill 6 clear). Kill 8 (>5pp share shift) **not recomputed** — only the issue ranges rolled forward ~1-2 issues; the denominators are rebuilt at close-out before `FT-2`/`FT-4` are read. Result page (`eresul20261120`) 404 — not yet published. **Tape (MOF `jgbcme.csv`, direct, through 11-19):** 1Y 1.659 / 2Y 1.853 / 5Y 2.235% vs 1.653 / 1.857 / 2.209 on 11-12 — front end flat; 10Y 2.870 (2.916 on 11-18), 20Y 3.745. **Vol (Yahoo, secondary):** VIX **28.44** on 11-19 close (18.70 on 11-12; 22.91 / 25.46 / 24.56 on 11-16/17/18) — **+9.7pt, a second regime shift**, no channel into `symbols: []`; NVDA printed 11-18 (`nvda-2026-11-18-print`), searches found no recap of its reaction. **Macro/geopolitical:** web search found nothing current on BoJ/JGB beyond the 11-06 row (Saxo 11-12 note: Fed hike >25bp priced for 12-09, unverified). 20Y JGB 11-18 result not fetched. **Corridor:** 55 tracked ids, none new since 11-13; `--on-date=2026-11-20` = 8 entries, all tracked. **Proposed:** nothing. **Beyond the leash:** none new. Conviction proposals: none; declared intents: none. | None — stand aside holds; no JGB or yen headline attributed to a tracked-name move >2% (kill 1 clear) | Close-out next (D+1: score `FT-2`/`FT-4` from the 'Issues Re-opened' page) |
 | 2026-11-20 | D-0 | **Full session (interval-elapsed, `low:0+`, 7d; screen flagged VIX +9.7pt).** **Terms PUBLISHED (MOF, direct, HTTP 200):** `announcement/auct20261113e.htm` dated 2026-11-13 — auction 11-20, issue 11-24, **about ¥700bn**, band 1-5y on the calendar row: **kill 6 not fired** (`FT-5` scored at close-out; its 11-16 score-by has passed). Eligible issues rolled forward from the 09-10 list: 2Y No.476-488 → **478-490**, 5Y 154-185 → **155-187**, 10Y 348-363 → **349-364**, 20Y 97-129 → **99-131**, 30Y No.1-5 unchanged. **Kill 8 (>5pp share shift) NOT re-derived** — outstanding amounts not re-pulled; close-out recomputes denominators before scoring `FT-2`. Result page (`eresul20261120a`) not yet live; `2611e.htm` Nov-20 row links the announcement only. **Tape (MOF `jgbcme.csv`, direct, through 11-19):** 1Y 1.659 / 2Y 1.853 / 5Y 2.235% vs 1.653 / 1.857 / 2.209 on 11-12 — front end flat (5Y +2.6bp), no dislocation. **Vol (Yahoo, secondary):** VIX **28.44** on 11-19 close (18.70 on 11-12; 22.91 on 11-16, 25.46 on 11-17, 24.56 on 11-18) — second regime shift in two weeks, no channel into `symbols: []`; web search found no attributed driver. **Macro/geopolitical:** nothing current found on BoJ/JGB. **Corridor:** `--on-date=2026-11-20` = 8 entries, none new, none proposable. **Proposed:** nothing. **Beyond the leash:** none new. Conviction proposals: none; declared intents: none. | None — stand aside holds; no stance change | Close-out within 6d of 11-20 (`FT-2`/`FT-4` score-by 11-21) |
+| 2026-11-21 | D+1 | **CLOSE-OUT — detail in `## Outcome`.** MOF result (`eresul20261120.htm`) and re-opened page (`eresul20261120a.htm`), direct, HTTP 200: bids **¥2,556.8bn**, accepted **¥699.1bn** (cover **3.657**), spreads **▲0.017% / ▲0.020%**, **34** issues; sectors re-sum exactly (2Y ¥0 · 5Y ¥4.5bn · 10Y ¥447.1bn · 20Y ¥233.8bn · 30Y ¥13.7bn). Basis rebuilt from the MOF workbook (re-fetched, saved 2026-10-02); kill 8 clear (max share move 0.7pp). Overweights: **2Y 0.00× · 5Y 0.02× · 10Y 1.70× · 20Y 2.13× · 30Y 4.24×**. **`FT-2` PASS** (10Y > 5Y, by 1.68×, the widest gap on record), **`FT-3` PASS** (09-10 pocket +1.050 < +1.626, re-derived), **`FT-4` PARTIAL** (30Y No.1-5 took 1.96%, not <1%; the 5% kill line not reached). **Tape/vol:** VIX **35.89** on 11-20 (28.44 on 11-19, +7.45); NVDA −14.0%, AVGO −12.2%, MRVL −11.7%, CRWV −12.0% on 11-20 (Yahoo, secondary); searches found no attributed driver and no JGB/yen headline, so kill 1's attribution leg is unverified, not fired. MOF curve published only through 11-19. **Proposed:** nothing. **Beyond the leash:** none. Conviction proposals: none; declared intents: none. | None — stand aside holds | — (close-out; this doc goes quiet) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -454,6 +455,82 @@ every row; a dated adjacent event found gets proposed as a new
 `src/domain/market-events/proposals/<id>.from-jgb-liquidity-enhancement-1-5y-2026-11-20.json` (`status: "estimate"`) in the
 same PR — your own file, never another event's canonical one (#1717). Close-out fills `## Outcome` below from re-run instrument
 data (cache busted first), never from memory — after which this doc goes quiet.
+
+## Outcome
+
+**Close-out 2026-11-21 (D+1).** Instrument caches busted first. This is a `rates` entry with `symbols: []`, so
+"re-run instrument data" means every MOF page re-fetched direct today and parsed cell by cell, the MOF auction
+workbook re-fetched (saved 2026-10-02) to rebuild the eligible-stock denominators, and the tracked names re-pulled
+from Yahoo (secondary). Nothing is scored from memory.
+
+**Headline: the sector inversion replicated hard, the pocket kept fading, and the 30-Year exception half-broke.**
+Stand aside was right and cost nothing.
+
+### The print
+
+| | 2026-11-20 | 2026-09-10 |
+|---|---|---|
+| Competitive bids | **¥2,556.8bn** | ¥3,083.0bn |
+| Accepted | **¥699.1bn** | ¥697.9bn |
+| Cover | **3.657** | 4.418 |
+| Excess bids | ¥1,857.7bn | ¥2,385.1bn |
+| Highest / average accepted spread | ▲0.017% / ▲0.020% | +0.014% / +0.011% |
+| Allotment at highest spread | 72.5368% | 23.8458% |
+| Issues reopened | 34 | 39 |
+
+Cover and excess both sit inside the bands the ledger set on 2026-09-09 (2.49-4.37; ¥1,043-2,352bn).
+
+### Where the ¥699.1bn went
+
+Parsed from `eresul20261120a.htm`; sector amounts sum to the accepted total exactly. Eligible shares rebuilt from
+the workbook (accepted + non-competitive + both non-price rounds), which reproduces the 09-10 corrected basis to the
+second decimal (2Y 11.48 · 5Y 35.37 · 10Y 37.27 · 20Y 15.42 · 30Y 0.46) before it is applied to the 11-20 ranges.
+
+| Sector | Take | Share of accepted | Eligible (11-20 ranges) | Overweight |
+|---|---|---|---|---|
+| 2-Year | ¥0.0bn | 0.00% | 10.77% | **0.00×** |
+| 5-Year | ¥4.5bn | 0.64% | 35.46% | **0.02×** |
+| 10-Year | ¥447.1bn | 63.95% | 37.58% | **1.70×** |
+| 20-Year | ¥233.8bn | 33.44% | 15.72% | **2.13×** |
+| 30-Year | ¥13.7bn | 1.96% | 0.46% | **4.24×** |
+
+Kill switch 8 did not fire: the largest share move from the 09-10 basis is 0.7pp (2Y), against a 5pp bar. The
+workbook predates 2Y No.490 (first issued 2026-11-02), so the 2Y denominator is understated by about one issue
+(~¥2.1tn, under 1pp); no ordering below depends on it.
+
+### Scoring the forward tests
+
+**`FT-…-2` — PASS.** 10-Year **1.70×** vs 5-Year **0.02×**: the 10-Year out-took the 5-Year at matched maturity.
+The 5-Year is now ahead in 5 of 18 prints, the same 5 as before. The 09-10 reversal was not repeated, so the
+"two consecutive" bar for abandoning the reading was not met. A single print does not rehabilitate the ordering
+claim either: 10-Year at ¥447.1bn is the largest single-sector take on this page.
+
+**`FT-…-3` — PASS (scored late; the 09-10 print was never re-derived until now).** Re-derived from
+`eresul20260910a.htm` and the workbook: ≥1%-coupon overweight **1.633×**, sub-1% **0.583×**, pocket **+1.050**,
+below the **+1.626** line, at a ¥700bn offering. This matches the sibling ledger's corrected-basis figure
+exactly. For information only (not a registered test): the 11-20 pocket is **−0.292** (≥1%: 0.832×, sub-1%: 1.124×).
+The sequence 2026-07-16 −0.88 / 09-10 +1.05 / 11-20 −0.29 does not support a monotone decay; it supports "the
+pocket is no longer reliably positive at ¥700bn".
+
+**`FT-…-4` — PARTIAL.** 30Y No.1/4/5 took **¥4.6bn / ¥0.5bn / ¥8.6bn = ¥13.7bn, 1.96% of accepted**. The
+prediction (**under 1%**, under ~¥7bn) **missed**: the take is double the line, and three of the five issues
+(coupons 2.8%, 2.9%, 2.2%) were touched, against none in 6 of the prior 8 auctions. The ledger's kill line
+(**5% or more**) was **not reached**, so kill switch 5 did not fire. Read it as: "the highest-coupon paper is the
+paper nobody buys" is weakened, and the 30-Year overweight (4.24×) rests on a 0.46% denominator and ¥13.7bn, so
+the magnitude should not be quoted alone. Not a kill, so nothing moves to the sweep doc's kill list.
+
+**`FT-…-1` and `FT-…-5`** were scored earlier (kill on 2026-11-06, pass on 2026-11-20) and are not touched.
+
+### Kill switches at close
+
+1 · attribution leg unverified: NVDA −14.0%, AVGO −12.2%, MRVL −11.7%, CRWV −12.0% on 11-20 (Yahoo, secondary),
+VIX 28.44 → 35.89, but no search result dated 11-20 names a driver and MOF's curve ends 11-19, so no JGB/yen
+headline is attributed. Not fired; this is absence of evidence, stated as such. 2 fired 11-06. 3 not fired
+(`FT-2` pass). 4 not fired. 5 not fired (1.96% < 5%). 6 clear. 7 clear (Jan 21, 2027 row). 8 clear.
+
+**Honest limits.** One print per test. Eligible stock counts face issued, not float (BoJ holdings ignored).
+The 11-20 curve and any result-day JGB tape are not yet published, so no auction-day yield reaction is scored.
+Equity-side attribution rests on search results that found nothing for 11-20.
 
 **Last assessed:** 2026-10-26
 <!-- probe-ref: {"symbols":{},"vix":17.84,"daysBand":"low:15+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","consumer-confidence-2026-11-24","durable-goods-2026-11-25","eurostat-hicp-final-2026-11-18","fhfa-hpi-2026-11-24","fomc-minutes-2026-11-18","gdp-q3-2026-second-2026-11-25","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-cpi-2026-11-20","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-40y-auction-2026-11-25","jpx-market-closure-2026-11-23","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","new-home-sales-2026-11-25","nvda-2026-11-18-print","ofgem-price-cap-announcement-2026-11-25","opex-2026-11-20","pce-2026-11-25","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","sp-global-flash-us-pmi-2026-11-23","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25","retail-sales-2026-11-17"],"screenStreak":1} -->
@@ -469,3 +546,6 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-11-20
 <!-- probe-ref: {"symbols":{},"vix":28.44,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","consumer-confidence-2026-11-24","durable-goods-2026-11-25","empire-state-mfg-2026-11-16","eurostat-hicp-final-2026-11-18","fhfa-hpi-2026-11-24","fomc-minutes-2026-11-18","gdp-q3-2026-second-2026-11-25","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","industrial-production-annual-revision-2026-11-24","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-40y-auction-2026-11-25","jpx-market-closure-2026-11-23","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","new-home-sales-2026-11-25","nvda-2026-11-18-print","ofgem-price-cap-announcement-2026-11-25","opex-2026-11-20","pce-2026-11-25","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","sp-global-flash-us-pmi-2026-11-23","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","nvda-2026-11-18-print","pce-2026-11-25","retail-sales-2026-11-17"],"screenStreak":0} -->
+
+**Last assessed:** 2026-11-21
+<!-- probe-ref: {"symbols":{},"vix":35.89,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","consumer-confidence-2026-11-24","durable-goods-2026-11-25","empire-state-mfg-2026-11-16","eurostat-hicp-final-2026-11-18","fhfa-hpi-2026-11-24","fomc-minutes-2026-11-18","gdp-q3-2026-second-2026-11-25","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","industrial-production-annual-revision-2026-11-24","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-40y-auction-2026-11-25","jpx-market-closure-2026-11-23","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","new-home-sales-2026-11-25","nvda-2026-11-18-print","ofgem-price-cap-announcement-2026-11-25","opex-2026-11-20","pce-2026-11-25","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","sp-global-flash-us-pmi-2026-11-23","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","nvda-2026-11-18-print","pce-2026-11-25","retail-sales-2026-11-17"],"screenStreak":0} -->
