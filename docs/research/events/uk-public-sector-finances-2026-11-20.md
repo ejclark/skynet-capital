@@ -370,6 +370,7 @@ this book has no instrument that would price one.
 | 2026-11-06 | D-14 | **Pulse; date holds, stance and all three tests stand, VIX regime shifted.** **Date:** ONS release page re-fetched 11-06, "20 November 2026 at 7:00am", not yet published; the gov.uk register (`public-sector-finances-uk-october-2026`) reads "20 November 2026 7:00am (confirmed)" with no change notice. Primary, but the taxonomy has no ONS prefix, so **stays estimate**. **Budget (10-28) happened**, per the sibling ledger: OBR EFO out same day, headroom ~£15bn vs £23.6bn in March, 10y gilt 5.34%, IGLT.L +0.10%. **FT-1:** obr.uk monthly-releases page lists commentary only to the July data and names no October-EFO profiles date; D+84/86 puts first use ~2027-01-21, so the 11-20 comparison is still March 2026. Open. **FT-3:** 09-22 and 10-21 prints gave FYTD +£8.1bn then +£6.0bn vs March (£97.8bn); Oct-month print still due. **Adjacency:** peers none (`symbols: []`). **Macro:** BoE hiked 8-1 to 4% on 11-05 (sibling close-out); the 11-05 IGLT.L bar is not yet on Yahoo, last close 9.727 (11-04). **Vol:** VIX **28.18** at the 11-05 close (Yahoo, 16.61 on 11-04; 17.84 at the last row, **+10.3pt**); SPX -4.36% (sibling ppi ledger); cause not sourced here. The ±0.81% IGLT.L market kill was set in a calm regime (20d vol 4.5%) and is unchanged; a miss in a 28-VIX tape would not be a clean kill. GBP/USD 1.340. **Geopolitical:** none new. Beyond horizon: none. New neighbours all tracked, no proposal. Intents and conviction proposals: none. | Stance **unchanged** (stand aside, no play) | 2026-11-13 (low, 0+d band: every 7d) |
 | 2026-11-13 | D-7 | **Pulse; date holds, stance and all three tests stand.** **Date:** ONS release page re-fetched 11-13, "20 November 2026 at 7:00am", not yet published; gov.uk register reads "20 November 2026 7:00am (confirmed)", no change notice. Primary, but no ONS prefix in the taxonomy, so **stays estimate**. **FT-1:** the ONS Sept bulletin (fetched direct) still compares against the *March 2026* EFO and April profiles and names no date for Budget-basis profiles; D+84/86 still puts first use ~2027-01-21. Open. **FT-3:** FYTD to Sept £97.8bn, £6.0bn above the £91.8bn March forecast; the Oct print is the test. Open. **Vol:** VIX **18.70** at the 11-12 close (28.18 on 11-05, 25.64, 19.92, 19.46, 17.49 after), **-9.5pt** vs the last row, back near the 09-09 baseline; the 11-05 spike has mostly unwound. **Tape:** IGLT.L 9.680 (11-11, 11-12 bar not yet printed; 9.727 on 11-04), ^TNX 5.103 (up from 4.84 on 11-05), GBP/USD 1.324. No close near the +-0.81% market kill. **Adjacency:** no peers (`symbols: []`); new strong neighbour `nvda-2026-11-18-print`, already tracked, and it is a US-session event after the pre-dawn window. No consensus for Oct borrowing found. Geopolitical: none new. Beyond horizon: none. Proposals: none (8 entries on 11-20, all known). Intents and conviction proposals: none. | Stance **unchanged** (stand aside, no play) | 2026-11-20 (print day; close-out follows, 7d band) |
 | 2026-11-20 | D-0 | **Pulse, run 01:12 UTC, before the print (07:00 London = 07:00 UTC); date holds, stance and all three tests stand, nothing to score today.** **Date:** ONS release page re-fetched direct, "20 November 2026 7:00am", "This release is not yet published"; the October bulletin URL 404s as expected pre-release; gov.uk register page returns 200 with the same date. Primary, but no ONS prefix in the taxonomy, so **stays estimate**. **FT-1 / FT-3:** unscoreable until the bulletin exists; no new basis information (ONS Sept bulletin still names March 2026 and no Budget-profile date), D+84/86 still puts first use ~2027-01-21. Open. **Vol:** VIX **28.44** at the 11-19 close (24.56 on 11-18, 25.46, 22.91, 19.30 on 11-13), **+9.7pt** vs the last row's 18.70, back above the 11-05 spike level of 28.18. **Tape (Yahoo, 11-19 close):** ^GSPC 7,175.8 (-5.1% vs 7,561.7 on 11-13), ^TNX 5.052, GBP/USD 1.309 (1.324 on 11-12), IGLT.L last printed 9.637 on 11-18 (11-19 bar not yet on Yahoo). The +-0.81% IGLT.L market kill was set in a calm regime and is unchanged; a miss in a VIX-28 tape would not be a clean kill, and a US-session move on 11-20 is opex (`opex-2026-11-20`, confirmed), never the ONS. **Adjacency:** peers none (`symbols: []`). **Sibling prints since the last row:** uk-labour-market-2026-11-17 closed out (private regular pay 3.1%, unemployment 4.6%, FT-1/FT-2 pass) and uk-cpi-2026-11-18 closed out (headline 3.6%, core 2.8%, in its 3.3-3.9% base case), both per their own ledgers, not re-scored here. **Macro:** nothing new on UK fiscal policy found beyond the 10-28 Budget already logged. No consensus for October borrowing findable. **Geopolitical:** none new. Beyond horizon: none. Proposals: none (8 entries on 11-20 per `--on-date`, all known). Conviction proposals: none; declared intents: none. | Stance **unchanged** (stand aside, no play) | 2026-11-21 (close-out follows the print) |
+| 2026-11-21 | D+1 | **Close-out.** ONS Oct bulletin (published 11-20): borrowing £17.0bn, FYTD £111.3bn, **£3.3bn above the March 2026 forecast**; comparisons still March 2026 + April profiles, October EFO named but *"monthly forecast profiles are not yet available"*. FT-1/FT-3 pass; FT-2 pass, provisional (IGLT.L +0.69% on a 16:35 UTC quote, daily bar not yet printed). Tape: ^GSPC -3.70%, VIX 35.89 (+26%), opex Friday; not credited to the ONS. Adjacency: no peers, no new proposals (`--on-date` known). Beyond horizon: none. Intents and conviction proposals: none. | Stance unchanged; closed | — (closed; forward tests scored) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -380,6 +381,77 @@ every row; a dated adjacent event found gets proposed as a new
 (`status: "estimate"`) in the same PR — your own file, never another event's canonical one (#1717).
 Close-out fills `## Outcome` below from re-run instrument data (cache busted first), never from
 memory — after which this doc goes quiet.
+
+## Outcome
+
+**Close-out (2026-11-21, D+1).** Macro-print mode has no `earnings-cycle` / `intraday-edges` mode
+(`symbols: []`); cache bust run regardless. "Re-run data" is the release itself, read from the ONS
+October 2026 bulletin (`ons.gov.uk/.../publicsectorfinances/october2026`, published 2026-11-20, fetched
+direct 2026-11-21 through a page-summarising fetcher, so the quoted sentences are the fetcher's
+extracts, not a raw-HTML read), plus Yahoo daily bars re-fetched fresh today.
+
+### What printed
+
+| Line | Oct 2026 | This ledger's call | Read |
+|---|---|---|---|
+| Borrowing, month | **£17.0bn**, +£0.8bn (5.2%) on Oct 2025 | no figure called | *"£0.8 billion higher than the March 2026 OBR monthly forecast"* |
+| **Borrowing, FY to Oct** | **£111.3bn**, £7.3bn (6.1%) below last year | **FT-3:** above the March 2026 forecast | *"£3.3 billion higher than forecast in the FY to October 2026 (as published in March 2026)"* — **pass** (+£2.3bn in July, +£6.0bn in Sept, +£3.3bn now) |
+| Comparison basis | *"Economic and fiscal outlook – March 2026 report"* + *"monthly profiles released in April 2026"* | **FT-1:** still March 2026 | **pass.** The bulletin names the **October 2026** EFO as *"the latest OBR forecast"* but says *"the corresponding monthly forecast profiles are not yet available"* and *"We will update our comparisons as soon as the October 2026 monthly profiles become available."* |
+| Central govt net cash requirement | £15.5bn, £6.2bn (28.5%) below Oct 2025 | — | the fetch gave no OBR comparison for it this month |
+| Debt | **95.8% of GDP**, 1.9pp above last year, 0.4pp above the OBR March forecast | — | provisional per the bulletin |
+| IGLT.L, 2026-11-20 | **9.465** (regularMarketPrice stamped 16:35 UTC) vs 9.400 on 11-19 = **+0.69%** | **FT-2:** within ±0.81% | **pass, provisional** — see limits |
+
+### Scored against the stance
+
+- **Stand aside — correct.** No position existed to be hurt or helped, and nothing here is a trade.
+- **The frame correction (title and FT-1) held, and held for a sharper reason than the one registered.**
+  The prediction was that the bulletin would still read March 2026 profiles because the ONS lags the
+  OBR's monthly profiles by about 12 weeks. It did, and the ONS said so in terms: the October EFO is
+  acknowledged, its profiles are not available, comparisons wait. All three sibling proposals that filed
+  this as the first Budget-scored print were wrong; the D+84/D+86 projection (first use about
+  2027-01-21) is not contradicted, and no later date is claimed beyond it.
+- **The Budget-day asymmetry trap was real but the bulletin did not show it.** The month contains
+  Budget day, and the monthly gap to the March profile is +£0.8bn. Nothing in the fetched text
+  attributes any of that to Budget measures, so none is asserted (the fetcher found no Budget-measure
+  sentence; a full read of the bulletin was not done).
+- **FT-3 passed, but not as a drift confirmation.** FYTD stayed above the March forecast at +£3.3bn,
+  yet the overshoot narrowed from +£6.0bn (Sept) and the monthly gap is only +£0.8bn. It is a
+  direction pass, as registered; the shrinking size is worth a pulse on the 12-22 print, which is the
+  last one before new profiles.
+- **Market null: held on the gilt, and the US session did what the attribution rule said.** IGLT.L's
+  +0.69% sits inside the registered ±0.81%, in a tape that was nowhere near calm: **^GSPC −3.70%**
+  (6,910.39 from 7,175.83), **^VIX +26.2% to 35.89** (from 28.44), **^TNX −2.77%** (4.912), GBP/USD
+  −0.46% (1.3086) — all Yahoo, 2026-11-20 bars. That is the opex-Friday US session
+  (`opex-2026-11-20`, confirmed); per leg 7 none of it is credited to a 02:00 ET UK borrowing print,
+  and no cause for the US move was sourced here (a news search found nothing dated 11-20). The
+  **channel kill** (a tracked name moving more than 1% in 02:00–09:30 ET because of the ONS release)
+  was not registered as a forward test and was not measurable from daily bars; nothing in hand
+  attributes any move to the release.
+- **Kill switches — none fired.** Date held (7:00am, 20 Nov), CPI stayed on 11-18, opex stayed on 11-20.
+  **Status stays `estimate`**: no ONS slot in the confirmed-prefix taxonomy, and this lane does not
+  self-confirm. The staleness kill expected after 09-22 fired as written and was routine.
+
+### Forward tests
+
+- `FT-uk-public-sector-finances-2026-11-20-1` **pass**, `-2` **pass (provisional close)**, `-3` **pass**.
+  Fragment cells filled; no row was edited or added.
+
+### Honest limits
+
+- **FT-2's close is not a settled daily bar.** Yahoo's 11-20 daily row for IGLT.L (and ^FTSE) was
+  still null when fetched (the same lag the 11-06 and 11-13 rows recorded), so the move uses the
+  quote Yahoo stamped 16:35 UTC, five minutes after the 16:30 London close, against the 11-19 close.
+  Margin to the threshold is 0.12pp. A settled bar could move it by a few basis points, not likely
+  past 0.81%; the cell says "provisional" for that reason.
+- **The pass is one observation on one day in a stressed regime**, and **IGLT.L fell −2.46% on 11-19**
+  (9.6375 to 9.400), the day before the print: the large gilt move of this window came before the
+  release and is unattributed here. FT-2's own wording is a threshold on 11-20 only, so it is not
+  re-read.
+- **No consensus or whisper** for the October borrowing figure was ever found; "above the March
+  forecast" is a read against the OBR's own profile, not a survey.
+- **Loop stage a person still does:** *sense* — reading the bulletin body for Budget-measure and VAT
+  effects was a summarised fetch, not a parse; a script that pulls the ONS series (the PSF
+  `time-series` pages) would take that off a session.
 
 **Last assessed:** 2026-10-26
 <!-- probe-ref: {"symbols":{},"vix":17.84,"daysBand":"low:15+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","consumer-confidence-2026-11-24","durable-goods-2026-11-25","eurostat-hicp-final-2026-11-18","fhfa-hpi-2026-11-24","fomc-minutes-2026-11-18","gdp-q3-2026-second-2026-11-25","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-cpi-2026-11-20","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-1-5y-2026-11-20","jpx-market-closure-2026-11-23","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","new-home-sales-2026-11-25","nvda-2026-11-18-print","ofgem-price-cap-announcement-2026-11-25","opex-2026-11-20","pce-2026-11-25","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","sp-global-flash-us-pmi-2026-11-23","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25","retail-sales-2026-11-17"],"screenStreak":1} -->
@@ -392,3 +464,6 @@ memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-11-20
 <!-- probe-ref: {"symbols":{},"vix":28.44,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","consumer-confidence-2026-11-24","durable-goods-2026-11-25","empire-state-mfg-2026-11-16","eurostat-hicp-final-2026-11-18","fhfa-hpi-2026-11-24","fomc-minutes-2026-11-18","gdp-q3-2026-second-2026-11-25","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","industrial-production-annual-revision-2026-11-24","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-1-5y-2026-11-20","jpx-market-closure-2026-11-23","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","new-home-sales-2026-11-25","nvda-2026-11-18-print","ofgem-price-cap-announcement-2026-11-25","opex-2026-11-20","pce-2026-11-25","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","sp-global-flash-us-pmi-2026-11-23","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","nvda-2026-11-18-print","pce-2026-11-25","retail-sales-2026-11-17"],"screenStreak":0} -->
+
+**Last assessed:** 2026-11-21
+<!-- probe-ref: {"symbols":{},"vix":35.89,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","consumer-confidence-2026-11-24","durable-goods-2026-11-25","empire-state-mfg-2026-11-16","eurostat-hicp-final-2026-11-18","fhfa-hpi-2026-11-24","fomc-minutes-2026-11-18","gdp-q3-2026-second-2026-11-25","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","industrial-production-annual-revision-2026-11-24","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-1-5y-2026-11-20","jpx-market-closure-2026-11-23","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","new-home-sales-2026-11-25","nvda-2026-11-18-print","ofgem-price-cap-announcement-2026-11-25","opex-2026-11-20","pce-2026-11-25","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","sp-global-flash-us-pmi-2026-11-23","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","nvda-2026-11-18-print","pce-2026-11-25","retail-sales-2026-11-17"],"screenStreak":0} -->
