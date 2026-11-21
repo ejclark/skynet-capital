@@ -20,7 +20,7 @@ type Run = { status: number; stdout: string; stderr: string; attempts: number };
 /** Run the real CLI against a stub flyctl that fails `failTimes` times with `message`, then succeeds. */
 const deploy = (
   args: string[],
-  { failTimes = 0, message = EOF_ERROR, exitCode = 1, attempts = "3" } = {},
+  { failTimes = 0, message = EOF_ERROR, exitCode = 1, attempts = "3", pushAttempts = "5" } = {},
 ): Run => {
   const dir = mkdtempSync(join(tmpdir(), "fly-deploy-"));
   const stub = join(dir, "flyctl");
@@ -48,6 +48,7 @@ const deploy = (
       ...process.env,
       FLYCTL_BIN: stub,
       FLY_DEPLOY_ATTEMPTS: attempts,
+      FLY_DEPLOY_PUSH_ATTEMPTS: pushAttempts,
       FLY_DEPLOY_BACKOFF_MS: "1",
       STUB_COUNTER: counter,
       STUB_FAIL_TIMES: String(failTimes),
@@ -113,6 +114,38 @@ describe("fly deploy runner (transient-failure retry)", () => {
     expect(run.status).toBe(0);
   });
 
+  // Run 44212544985 (#7106): Fly's API reset the first app lookup with an HTTP/2 RST_STREAM.
+  const STREAM_RESET = (code: string) =>
+    `Error: Get "https://api.machines.dev/v1/apps/skynet-capital": stream error: stream ID 1; ${code}; received from peer`;
+
+  it("survives the run-44212544985 stream reset — one INTERNAL_ERROR, then a green release", () => {
+    const run = deploy(["--remote-only"], {
+      failTimes: 1,
+      message: STREAM_RESET("INTERNAL_ERROR"),
+    });
+    expect(run.attempts).toBe(2);
+    expect(run.status).toBe(0);
+    expect(run.stderr).toContain("transient Fly API error");
+  });
+
+  it("retries a REFUSED_STREAM — the server says it never processed the request", () => {
+    const run = deploy(["--remote-only"], {
+      failTimes: 1,
+      message: STREAM_RESET("REFUSED_STREAM"),
+    });
+    expect(run.attempts).toBe(2);
+    expect(run.status).toBe(0);
+  });
+
+  it("refuses to retry a PROTOCOL_ERROR reset — a client-side fault a second try only repeats", () => {
+    const run = deploy(["--remote-only"], {
+      failTimes: 99,
+      message: STREAM_RESET("PROTOCOL_ERROR"),
+    });
+    expect(run.attempts).toBe(1);
+    expect(run.status).toBe(1);
+  });
+
   it("retries a bracketed registry status — `[http 502]`", () => {
     const run = deploy(["--remote-only"], {
       failTimes: 1,
@@ -171,6 +204,49 @@ describe("fly deploy runner (transient-failure retry)", () => {
     const run = deploy(["--image", "registry.fly.io/skynet-capital@sha256:dead"], {
       failTimes: 99,
       message: MANIFEST_404,
+    });
+    expect(run.attempts).toBe(1);
+    expect(run.status).toBe(1);
+  });
+
+  // Run 42980060977 (#7106): the Depot builder finished the image, then every push to Fly's
+  // registry was refused for the whole default window (~56s over 3 attempts). No release existed
+  // yet, so a longer push-only budget re-pushes from cache and cannot touch a machine.
+  const PUSH_REFUSED =
+    '#21 ERROR: failed to push registry.fly.io/skynet-capital:deployment-01M74RA35DVSX6BAT5DJ2WA49C: failed to do request: Head "https://_api.internal:5000/v2/skynet-capital/blobs/sha256:2a22?ns=registry.fly.io": dial tcp [fdaa::3]:5000: connect: connection refused';
+
+  it("outlasts the run-42980060977 registry refusal — four refused pushes, then a green release", () => {
+    const run = deploy(["--remote-only"], { failTimes: 4, message: PUSH_REFUSED });
+    expect(run.attempts).toBe(5);
+    expect(run.status).toBe(0);
+    expect(run.stderr).toContain("transient registry push error");
+  });
+
+  it("still gives up red once the push budget is spent", () => {
+    const run = deploy(["--remote-only"], { failTimes: 99, message: PUSH_REFUSED });
+    expect(run.attempts).toBe(5);
+    expect(run.status).toBe(1);
+  });
+
+  it("honours FLY_DEPLOY_PUSH_ATTEMPTS", () => {
+    const run = deploy(["--remote-only"], {
+      failTimes: 99,
+      message: PUSH_REFUSED,
+      pushAttempts: "4",
+    });
+    expect(run.attempts).toBe(4);
+  });
+
+  it("keeps the short budget for a transient failure after the push — the release phase", () => {
+    const run = deploy(["--remote-only"], { failTimes: 99, message: EOF_ERROR, pushAttempts: "9" });
+    expect(run.attempts).toBe(3);
+  });
+
+  it("refuses to retry a push the registry rejected outright — a 401 is not a transport failure", () => {
+    const run = deploy(["--remote-only"], {
+      failTimes: 99,
+      message:
+        "ERROR: failed to push registry.fly.io/skynet-capital:deployment-01: unexpected status from HEAD request: 401 Unauthorized",
     });
     expect(run.attempts).toBe(1);
     expect(run.status).toBe(1);

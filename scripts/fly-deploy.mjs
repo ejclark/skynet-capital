@@ -30,7 +30,9 @@
 // attempts are spent — this is a gate, and a deploy that never happened must be red.
 //
 // Seams (env, so a spec can drive the real entrypoint):
-//   FLY_DEPLOY_ATTEMPTS   total attempts, default 3
+//   FLY_DEPLOY_ATTEMPTS   total attempts, default 3 (waits 15s + 30s)
+//   FLY_DEPLOY_PUSH_ATTEMPTS total attempts when the failure was the image push, default 5
+//                         (waits 15+30+60+120s ≈ 4 min; see isImagePushFailure, #7106)
 //   FLY_DEPLOY_BACKOFF_MS first sleep, doubling per retry, default 15000
 //   FLYCTL_BIN            the binary, default "flyctl"
 import { spawn } from "node:child_process";
@@ -51,6 +53,12 @@ const TRANSIENT = [
   /(?:\bhttp\/?[\d.]*|\bstatus(?:\s*code)?|\bcode)[\s:=]*50[234]\b/i,
   /Bad Gateway|Service Unavailable|Gateway Time-?out/i,
   /server closed idle connection|http2: (?:server sent GOAWAY|client connection lost)/i,
+  // Run 44212544985 (#7106): Fly's API reset flyctl's first app lookup with an HTTP/2 RST_STREAM —
+  // `Get "https://api.machines.dev/v1/apps/skynet-capital": stream error: stream ID 1;
+  // INTERNAL_ERROR; received from peer` — 30s in, before any build. The same read-only lookup as
+  // the 2026-10-03 EOF, lost a different way. Only the two codes that say "the server failed or
+  // never processed it": PROTOCOL_ERROR / FLOW_CONTROL_ERROR are client bugs a retry repeats.
+  /stream error: stream ID \d+; (?:INTERNAL_ERROR|REFUSED_STREAM); received from peer/i,
 ];
 
 /**
@@ -78,6 +86,22 @@ export function isTransientFlyError(text) {
   const haystack = String(text ?? "");
   if (NEEDS_HUMAN.some((pattern) => pattern.test(haystack))) return false;
   return TRANSIENT.some((pattern) => pattern.test(haystack)) || isRegistryLag(haystack);
+}
+
+/**
+ * Pure. Did a transient failure land while pushing the built image to Fly's registry — before
+ * any release existed? (run 42980060977, #7106). The Depot builder finished the image, then every
+ * push to `_api.internal:5000` got `connection refused` for the whole three-attempt window
+ * (07:32:47–07:33:43Z, ~56s), and the release went red with nothing wrong in the build.
+ *
+ * Such a failure gets a LONGER budget than the general one, and it is the only class that does:
+ * a failed push means no release was created and no machine was touched, so another attempt
+ * cannot re-fling anything at the cluster — it rebuilds from Depot's cache (~2s) and pushes again.
+ * Anything after the push (machine updates, health checks) keeps the short default budget.
+ */
+export function isImagePushFailure(text) {
+  const haystack = String(text ?? "");
+  return /failed to push registry\.fly\.io\//i.test(haystack) && isTransientFlyError(haystack);
 }
 
 /** Pure. A positive integer from an env string, or `fallback` for anything else. */
@@ -112,18 +136,28 @@ function attempt(bin, args) {
  * Run the deploy until it succeeds, a failure proves non-transient, or the attempts are spent.
  * Returns the exit code to leave with.
  */
-export async function deployWithRetry({ bin, args, attempts, backoffMs, wait = sleep, log }) {
+export async function deployWithRetry({
+  bin,
+  args,
+  attempts,
+  pushAttempts = attempts,
+  backoffMs,
+  wait = sleep,
+  log,
+}) {
   for (let n = 1; ; n++) {
     const { code, output } = await attempt(bin, args);
     if (code === 0) return 0;
-    if (n >= attempts || !isTransientFlyError(output)) {
+    // Judged per attempt: the budget follows what THIS attempt's failure was.
+    const pushFailure = isImagePushFailure(output);
+    const limit = pushFailure ? Math.max(attempts, pushAttempts) : attempts;
+    if (n >= limit || !isTransientFlyError(output)) {
       if (n > 1) log(`· fly deploy failed after ${n} attempts — exiting ${code}`);
       return code;
     }
     const delay = backoffMs * 2 ** (n - 1);
-    log(
-      `· fly deploy attempt ${n}/${attempts} hit a transient Fly API error — retrying in ${delay}ms`,
-    );
+    const what = pushFailure ? "a transient registry push error" : "a transient Fly API error";
+    log(`· fly deploy attempt ${n}/${limit} hit ${what} — retrying in ${delay}ms`);
     await wait(delay);
   }
 }
@@ -133,6 +167,7 @@ if (process.argv[1]?.endsWith("fly-deploy.mjs")) {
     bin: process.env.FLYCTL_BIN || "flyctl",
     args: process.argv.slice(2),
     attempts: positiveInt(process.env.FLY_DEPLOY_ATTEMPTS, 3),
+    pushAttempts: positiveInt(process.env.FLY_DEPLOY_PUSH_ATTEMPTS, 5),
     backoffMs: positiveInt(process.env.FLY_DEPLOY_BACKOFF_MS, 15000),
     log: (line) => console.error(line),
   });
