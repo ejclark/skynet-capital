@@ -7,7 +7,8 @@ import { money } from "./format-money.js";
 /**
  * SCORING A CLAIM AGAINST ITS OWN DATED FALSIFIER (#5482 slice 5, criterion 6). A claim carries the
  * one dated observation that proves it wrong (`falsifier`) and the day it is read (`scoreBy`). When
- * that day arrives, or the study that backs it is re-run, the claim is scored:
+ * that day arrives, or the study that backs it is re-run, or the tape has already settled a price
+ * check (`settledEarly`), the claim is scored:
  *
  *   pass         the day came, the falsifier did not land: the claim held.
  *   fail         the day came and the falsifier landed: the claim did not hold.
@@ -334,8 +335,56 @@ function scoreForward(
 }
 
 /**
+ * A PRICE CHECK CAN BE SETTLED BEFORE ITS DAY (#5482, 2026-11-21). One close under a band's low
+ * means the window's lowest close lands outside the band whatever comes next, and one close at a
+ * level means the level was reached: each is already the reading the due day would make, so it is
+ * scored the pass it lands, not weeks later (claim 7's $39.51 close on 11-20 sat under its $41 low,
+ * and claim 8's $63.93 on 10-28 over its $63.15 level, both reading pending). The other half of
+ * each check stays open until the day: a lowest close inside the band can still fall out of it, and
+ * a level not yet reached can still be. Only a settled close counts, one with a later session on
+ * the tape, the rule `scorePuts` holds: the feed serves the open session's bar live, and a decided
+ * score is final. The basis for a reached level is `scoreReach`'s own sentence, so the due day's
+ * reading would say the same thing.
+ */
+function settledEarly(
+  check: FalsifierCheck | undefined,
+  dueOn: string,
+  ctx: ScoreContext,
+): ClaimScore | undefined {
+  if (check?.kind !== "closes-within" && check?.kind !== "closes-reach") return undefined;
+  const tape = ctx.tape?.(check.symbol) ?? [];
+  const last = tape.at(-1)?.date;
+  const settled = tape.filter((b) => last !== undefined && b.date < last);
+  if (check.kind === "closes-reach") {
+    const hit = settled.find(
+      (b) => b.date > check.after && b.date <= check.by && b.close >= check.level,
+    );
+    return hit
+      ? decided(
+          "pass",
+          `${check.symbol} closed at ${money(hit.close)} on ${hit.date}, at or above ${money(check.level)}.`,
+          dueOn,
+          ctx.today,
+        )
+      : undefined;
+  }
+  const under = settled.filter(
+    (b) => b.date >= check.from && b.date <= check.to && b.close < check.low,
+  );
+  if (under.length === 0) return undefined;
+  const low = under.reduce((a, b) => (b.close < a.close ? b : a));
+  return decided(
+    "fail",
+    `${check.symbol} closed at ${money(low.close)} on ${low.date}, under ${money(check.low)}: its lowest close ${check.from} to ${check.to} lands outside ${money(check.low)} to ${money(check.high)} whatever comes next.`,
+    dueOn,
+    ctx.today,
+  );
+}
+
+/**
  * The claim's score as of `ctx.today`. Pure: the tape arrives through the context, so a hit, a
  * miss, a day not yet due and a study that flips on its re-run are each specced without a network.
+ * A price check the tape has already settled is scored before its day (`settledEarly`).
  */
 export function scoreClaim(claim: ConvictionClaim, ctx: ScoreContext): ClaimScore {
   if (claim.bucket === "untestable") {
@@ -343,8 +392,10 @@ export function scoreClaim(claim: ConvictionClaim, ctx: ScoreContext): ClaimScor
   }
   const dueOn = claim.scoreBy;
   if (dueOn === undefined) return pending("No day is set to score it.");
-  if (ctx.today < dueOn) return pending(`Not due: scored on ${dueOn}.`, dueOn);
   const { check } = claim;
+  const early = settledEarly(check, dueOn, ctx);
+  if (early) return early;
+  if (ctx.today < dueOn) return pending(`Not due: scored on ${dueOn}.`, dueOn);
   if (check === undefined) {
     return pending(
       `Due ${dueOn}; no reading recorded yet. It names no check this pass can read.`,

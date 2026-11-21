@@ -1,9 +1,10 @@
 import type { ScoreLedgerEntry } from "../../src/playbooks/claim-score.js";
-import type { Conviction } from "../../src/playbooks/conviction-record.js";
+import type { Conviction, ConvictionClaim } from "../../src/playbooks/conviction-record.js";
 import { AI_DIP_2026_10 } from "../../src/playbooks/conviction-seeds.js";
 import {
   findForwardTest,
   fragmentRows,
+  fullPassScores,
   laneScores,
   readsEvent,
 } from "../../src/scripts/claim-scoring-run.js";
@@ -138,5 +139,62 @@ describe("laneScores", () => {
   it("follows the record's claims: a new claim is added, a re-read one starts fresh", () => {
     const fresh = [entry("4.", "pending"), entry("13.", "pending")];
     expect(laneScores([entry("4. (old words)", "fail")], fresh)).toEqual(fresh);
+  });
+});
+
+/** A full pass re-runs studies, so only a study-backed claim may be re-read once decided; every
+ *  other decided score is a fact it can only repeat, and keeps its scored-on day. */
+describe("fullPassScores", () => {
+  const entry = (
+    statement: string,
+    outcome: "pass" | "fail" | "pending",
+    scoredOn = "2026-11-09",
+  ) => ({
+    statement,
+    score:
+      outcome === "pending"
+        ? { outcome, basis: `${statement} waits`, dueOn: "2026-11-09" }
+        : { outcome, basis: `${statement} read`, dueOn: "2026-11-09", scoredOn },
+  });
+  const claim = (statement: string, check?: ConvictionClaim["check"]): ConvictionClaim => ({
+    tag: "underrated",
+    statement,
+    bucket: "tested",
+    evidence: "e",
+    falsifier: "f",
+    scoreBy: "2026-11-09",
+    ...(check ? { check } : {}),
+  });
+  const claims = [
+    claim("1.", { kind: "rerun" }),
+    claim("2a.", {
+      kind: "puts-expire",
+      symbol: "CRWV",
+      puts: [{ expiry: "2026-11-06", strike: 54 }],
+      unnamed: 2,
+    }),
+    claim("9."),
+  ];
+
+  it("keeps a decided price or lane reading as filed, never restamping its day", () => {
+    const filed = [entry("2a.", "fail", "2026-11-10")];
+    expect(fullPassScores(filed, [entry("2a.", "fail", "2026-11-21")], claims)).toEqual(filed);
+  });
+
+  it("lets the study re-run re-read a decided claim", () => {
+    const fresh = [entry("1.", "fail", "2026-12-01")];
+    expect(fullPassScores([entry("1.", "pass")], fresh, claims)).toEqual(fresh);
+  });
+
+  it("takes a newly decided claim and refreshes a pending line's words", () => {
+    const fresh = [entry("2a.", "fail", "2026-11-21"), entry("9.", "pending")];
+    const filed = [
+      entry("2a.", "pending"),
+      {
+        ...entry("9.", "pending"),
+        score: { outcome: "pending" as const, basis: "Not due.", dueOn: "2026-11-09" },
+      },
+    ];
+    expect(fullPassScores(filed, fresh, claims)).toEqual(fresh);
   });
 });

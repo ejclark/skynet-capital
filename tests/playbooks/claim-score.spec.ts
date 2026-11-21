@@ -61,8 +61,9 @@ const ctx = (today: string, tape: readonly TapeBar[] = []) => ({
 });
 
 describe("scoreClaim — the day has not come", () => {
-  it("is pending until its scoreBy day, naming the day, whatever the tape already shows", () => {
-    const tape = [bar("2026-10-16", 64.72), bar("2026-12-01", 38)];
+  it("is pending until its scoreBy day, naming the day, while the tape leaves it open", () => {
+    // 38 is under the band, but it is the tape's last bar: unsettled, so it decides nothing early.
+    const tape = [bar("2026-10-16", 64.72), bar("2026-11-02", 52), bar("2026-12-01", 38)];
     const score = scoreClaim(claim({ check: WITHIN }), ctx("2027-01-19", tape));
     expect(score).toEqual({
       outcome: "pending",
@@ -164,6 +165,71 @@ describe("scoreClaim — a level the closes must reach", () => {
   it("does not count a close after the window", () => {
     const tape = [bar("2026-10-16", 64.72), bar("2027-02-01", 50), bar("2027-02-02", 90)];
     expect(scoreClaim(claimReach, ctx("2027-02-02", tape)).outcome).toBe("fail");
+  });
+});
+
+describe("scoreClaim — a price check the tape settles before its day", () => {
+  const claimReach = claim({
+    statement: "8. Back above today's price.",
+    scoreBy: "2027-02-02",
+    check: REACH,
+  });
+
+  it("fails a band the moment a settled close lands under its low, naming the lowest such close", () => {
+    const tape = [
+      bar("2026-10-16", 61.39),
+      bar("2026-11-05", 43.66),
+      bar("2026-11-19", 40.5),
+      bar("2026-11-20", 39.51),
+      bar("2026-11-23", 42),
+    ];
+    const score = scoreClaim(claim({ check: WITHIN }), ctx("2026-11-24", tape));
+    expect(score).toEqual({
+      outcome: "fail",
+      basis:
+        "CRWV closed at $39.51 on 2026-11-20, under $41.00: its lowest close 2026-10-16 to 2027-01-19 lands outside $41.00 to $60.90 whatever comes next.",
+      dueOn: "2027-01-20",
+      scoredOn: "2026-11-24",
+    });
+  });
+
+  it("never settles a band off the tape's last bar: it may be a mid-session price", () => {
+    const tape = [bar("2026-10-16", 61.39), bar("2026-11-05", 43.66), bar("2026-11-20", 39.51)];
+    expect(scoreClaim(claim({ check: WITHIN }), ctx("2026-11-21", tape))).toEqual({
+      outcome: "pending",
+      basis: "Not due: scored on 2027-01-20.",
+      dueOn: "2027-01-20",
+    });
+  });
+
+  it("leaves a band open while every settled close is inside it or over its top", () => {
+    const tape = [bar("2026-10-16", 61.39), bar("2026-11-05", 75), bar("2026-11-06", 43)];
+    expect(scoreClaim(claim({ check: WITHIN }), ctx("2026-11-07", tape)).outcome).toBe("pending");
+  });
+
+  it("does not count a close under the band outside its window", () => {
+    const tape = [bar("2026-10-15", 30), bar("2026-10-16", 61.39), bar("2026-11-06", 50)];
+    expect(scoreClaim(claim({ check: WITHIN }), ctx("2026-11-07", tape)).outcome).toBe("pending");
+  });
+
+  it("passes a level the moment a settled close reaches it, in the due day's own words", () => {
+    const tape = [bar("2026-10-16", 61.39), bar("2026-10-28", 63.93), bar("2026-11-20", 39.51)];
+    const early = scoreClaim(claimReach, ctx("2026-11-21", tape));
+    expect(early).toEqual({
+      outcome: "pass",
+      basis: "CRWV closed at $63.93 on 2026-10-28, at or above $63.15.",
+      dueOn: "2027-02-02",
+      scoredOn: "2026-11-21",
+    });
+    const onTheDay = scoreClaim(claimReach, ctx("2027-02-02", [...tape, bar("2027-02-01", 50)]));
+    expect(onTheDay.basis).toBe(early.basis);
+  });
+
+  it("leaves a level open while no settled close after the stated day reaches it", () => {
+    const stated = [bar("2026-10-16", 64.72), bar("2026-11-20", 39.51)];
+    expect(scoreClaim(claimReach, ctx("2026-11-21", stated)).outcome).toBe("pending");
+    const unsettled = [bar("2026-10-16", 61.39), bar("2026-11-20", 70)];
+    expect(scoreClaim(claimReach, ctx("2026-11-21", unsettled)).outcome).toBe("pending");
   });
 });
 

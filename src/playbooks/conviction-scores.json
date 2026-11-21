@@ -67,9 +67,10 @@
     {
       "statement": "8. How long the drop lasts: back above today's price in 3 to 6 months is the base case.",
       "score": {
-        "outcome": "pending",
-        "basis": "Not due: scored on 2027-02-02.",
-        "dueOn": "2027-02-02"
+        "outcome": "pass",
+        "basis": "CRWV closed at $63.93 on 2026-10-28, at or above $63.15.",
+        "dueOn": "2027-02-02",
+        "scoredOn": "2026-11-21"
       }
     },
     {
