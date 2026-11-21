@@ -71,6 +71,10 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"A loaded exclusive back half makes the November UMich final revise by 1.0 point or more: the prices-not-ballot revision call (FT-umich-sentiment-final-2026-11-20-2)"** — added 2026-11-21 from the
+  [umich-sentiment-final-2026-11-20 close-out](events/umich-sentiment-final-2026-11-20.md). The 11-06 prelim printed **51.0** and the publisher's final **51.5**: |Δ| = **0.5**, through a window holding the midterms, a hot CPI and a collapsing pump price. Year-ahead inflation expectations fell **4.3% to 3.7%** in the same window.
+  Do not call a bigger revision off a count of dated events inside a collection window; five of seven 2026 finals revised inside ±1.0, and the two that did not (March, October) were shocks, not event counts.
+
 - **"The 10-year breakeven holds at or above 2.30% into the 2026-11-19 TIPS reopening: the five-week inflation leg is durable (FT-treasury-10y-tips-2026-11-19-2)"** — added 2026-11-20 from the
   [treasury-10y-tips-2026-11-19 close-out](events/treasury-10y-tips-2026-11-19.md). Par 5.04 minus real 2.88 gave **2.16%**, the lowest of 222 paired 2026 sessions; 12 of 13 sessions since 11-02 closed under 2.30% as Brent unwound.
   Do not extrapolate a 24-session breakeven decomposition into a regime call; the quarter-scale read (real-rate-led) was the one that held, and a registration anchored on a five-week leg was a window artefact.
