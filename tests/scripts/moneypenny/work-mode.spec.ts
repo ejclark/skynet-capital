@@ -471,16 +471,32 @@ describe("readWorkMode — REST reads, never a throw on a bad read", () => {
     const { exec, calls } = fakeExec([
       JSON.stringify({ labels: [label("conserve")] }),
       `${JSON.stringify({ body: "older note" })}\n${JSON.stringify(until("2026-10-06"))}\n`,
-      `${JSON.stringify({ label: "work-mode:conserve", createdAt: "2026-09-28T00:00:00Z" })}\n`,
+      `${JSON.stringify({ event: "labeled", label: "work-mode:conserve", createdAt: "2026-09-28T00:00:00Z" })}\n`,
     ]);
     const mode = readWorkMode(exec, CONFIG, NOW);
     expect(calls.map((a) => a.slice(0, 3))).toEqual([
       ["api", "repos/{owner}/{repo}/issues/4153", "--jq"],
-      ["api", "--paginate", "repos/{owner}/{repo}/issues/4153/comments?per_page=100"],
-      ["api", "--paginate", "repos/{owner}/{repo}/issues/4153/events?per_page=100"],
+      ["api", "repos/{owner}/{repo}/issues/4153/comments?per_page=100&page=1", "--jq"],
+      ["api", "repos/{owner}/{repo}/issues/4153/events?per_page=100&page=1", "--jq"],
     ]);
     expect(calls.flat()).not.toContain("view");
+    expect(calls.flat()).not.toContain("--paginate");
     expect(mode.position).toBe("conserve");
+    expect(mode.until).toBe("2026-10-06");
+  });
+
+  it("pages by number past 100 label events, never following the Link header the cloud proxy refuses", () => {
+    const other = `${JSON.stringify({ event: "commented", createdAt: "2026-09-01T00:00:00Z" })}\n`;
+    const { exec, calls } = fakeExec([
+      JSON.stringify({ labels: [label("conserve")] }),
+      `${JSON.stringify(until("2026-10-06"))}\n`,
+      other.repeat(100),
+      `${JSON.stringify({ event: "labeled", label: "work-mode:conserve", createdAt: "2026-09-28T00:00:00Z" })}\n`,
+    ]);
+    const mode = readWorkMode(exec, CONFIG, NOW);
+    expect(calls[3]?.[1]).toBe("repos/{owner}/{repo}/issues/4153/events?per_page=100&page=2");
+    expect(calls).toHaveLength(4);
+    expect(mode.unreadable).toBeUndefined();
     expect(mode.until).toBe("2026-10-06");
   });
 
