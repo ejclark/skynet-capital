@@ -3,6 +3,7 @@ import { AlpacaApiError } from "../alpaca/alpaca-api-error.js";
 import { resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { deskOrdersView } from "./desk-orders-view.js";
+import { orderActionRefusal, replaceRefusal, reviewOrderChange } from "./order-change-review.js";
 import { parseJsonRecord, readJsonPost, requireGet, sendJson } from "./page-shell.js";
 
 /**
@@ -19,9 +20,12 @@ import { parseJsonRecord, readJsonPost, requireGet, sendJson } from "./page-shel
  *                                             rendered explanation, never an error, same as the
  *                                             ticket.
  *
- * Identity is the session's and nowhere else, checked the way every read route on a member's
- * own credentials checks it (`equity-curve-routes.ts`): the target must be in the session's
- * owned set, or the account does not exist as far as this caller is concerned. The client is the
+ * Identity is the session's and nowhere else. The list is checked the way every read route on a
+ * member's own credentials checks it (`equity-curve-routes.ts`): the target must be in the
+ * session's owned set, or the account does not exist as far as this caller is concerned. Cancel
+ * and replace WRITE, so they pass submit's own gate instead, in submit's sentences — trading
+ * switched on, and the account the session's own (`orderActionRefusal`); a replace is then
+ * re-checked against the live account like a fresh order (`order-change-review.ts`). The client is the
  * OWN account's (`config.tradingClientFor`), so a cancel can only ever reach an order that
  * account placed — the broker scopes order ids per account. A cancel writes the same per-order
  * audit line a submit does, tagged `intent: "cancel"`, so "who cancelled this" is answerable
@@ -170,11 +174,9 @@ async function serveCancel(
     sendJson(res, 400, { error: "malformed cancel body" });
     return;
   }
-  if (!ownsAccount(body.participantId, config, session)) {
-    sendJson(res, 200, {
-      ok: false,
-      refusals: ["You can only cancel orders on your own account."],
-    });
+  const gate = orderActionRefusal(body.participantId, config, session);
+  if (gate) {
+    sendJson(res, 200, { ok: false, refusals: [gate] });
     return;
   }
   const client = config.tradingClientFor?.(body.participantId);
@@ -201,22 +203,6 @@ async function serveCancel(
   sendJson(res, 200, { ok: true, orderId: body.orderId });
 }
 
-function replaceRefusal(error: unknown): string {
-  if (error instanceof AlpacaApiError) {
-    const reason = (error.body as { message?: unknown } | null)?.message;
-    if (error.status === 404) return "That order isn't on the broker any more.";
-    if (error.status === 422 || error.status === 403) {
-      return `The broker couldn't change this order${
-        typeof reason === "string" && reason ? `: ${reason}` : "."
-      }`;
-    }
-    return typeof reason === "string" && reason
-      ? `The broker refused the change: ${reason}`
-      : "The broker refused the change.";
-  }
-  return "Couldn't reach the broker to change this order. Try again shortly.";
-}
-
 async function serveReplace(
   req: IncomingMessage,
   res: ServerResponse,
@@ -230,11 +216,9 @@ async function serveReplace(
     sendJson(res, 400, { error: "malformed replace body" });
     return;
   }
-  if (!ownsAccount(body.participantId, config, session)) {
-    sendJson(res, 200, {
-      ok: false,
-      refusals: ["You can only change orders on your own account."],
-    });
+  const gate = orderActionRefusal(body.participantId, config, session);
+  if (gate) {
+    sendJson(res, 200, { ok: false, refusals: [gate] });
     return;
   }
   const client = config.tradingClientFor?.(body.participantId);
@@ -243,6 +227,12 @@ async function serveReplace(
       ok: false,
       refusals: ["This session isn't linked to a trading account, so there is nothing to change."],
     });
+    return;
+  }
+  // The order as changed must pass what a fresh submit of it would — before the PATCH, not after.
+  const refusals = await reviewOrderChange(client, body, config, session);
+  if (refusals.length > 0) {
+    sendJson(res, 200, { ok: false, refusals });
     return;
   }
   let replaced: Awaited<ReturnType<typeof client.replaceOrder>>;

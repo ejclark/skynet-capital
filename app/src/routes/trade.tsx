@@ -422,11 +422,21 @@ function TradePage(): ReactElement {
   // link came back into the page head (#3816 slice 7): the topbar's Profile tab opens the DEFAULT
   // account, so a member trading any other one had no one-tap way back to it.
   const guidanceLink = docked ? <BenchDoors /> : null;
+  // Priority+ on the folded switch (#5072, the Profile switch's own mechanism): at phone width the
+  // sections past the fourth sit behind "More ▾" instead of past the screen's edge. Without it
+  // Watchlist and Orders were cut off at 390px with no cue, and no blind member of the change study
+  // found a working order to change or cancel (OM-01, OM-03, 2026-11-16).
   return (
     <PageFrame
       controls={
         docked ? undefined : (
-          <SectionSwitch sections={SECTIONS} current={section} onSelect={onSection} />
+          <SectionSwitch
+            sections={SECTIONS}
+            current={section}
+            onSelect={onSection}
+            variant="horizontal"
+            fold={4}
+          />
         )
       }
     >

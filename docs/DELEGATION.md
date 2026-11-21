@@ -75,7 +75,10 @@ into separate lint, typecheck and per-suite calls (#5191).
    ten-minute tool ceiling, so start it with `run_in_background` and wait in foreground `until` loops.
    Never end your turn while it runs:** a workflow agent's turn is its whole life, so a background job
    or a Monitor cannot wake it once it has answered (2026-11-01: 3 of 5 builders in one batch came
-   back with no PR that way).
+   back with no PR that way). **The Workflow tool runs `min(16, CPUs − 2)` agents at once: two on a
+   4-CPU cloud session.** A 17-agent census sat 45 minutes with two readers running (2026-11-17), so
+   a wide, independent fan-out there goes out as parallel background `Agent` calls, and a workflow
+   is kept for what needs its control flow.
    **Finished worktrees are swept, not left** (#5548: ten at once filled a cloud session's disk,
    and they were only ever removed by hand). **After an agent's PR merges, the session that
    dispatched it runs `npm run worktree:sweep`** (dry run: each `.claude/worktrees/*` entry,

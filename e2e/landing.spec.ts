@@ -32,9 +32,14 @@ test.describe("landing page", () => {
     expect(before).toBe(true);
     // No text box on Overview any more: the member types in the dock.
     await expect(page.locator(".mctl-window input, .mctl-window textarea")).toHaveCount(0);
-    const chips = await quick.locator(".ask-chip").all();
-    expect(chips.length).toBeGreaterThan(0);
-    const tops = await Promise.all(chips.map(async (c) => (await c.boundingBox())?.y ?? -1));
+    // Every chip's top read in ONE frame: the stage slides in on load (`stage-enter`, motion.css), so
+    // one boundingBox per chip read each at a different point of the slide and called one row two
+    // (CI on #7672, 2026-11-17: two tops, the chips visibly on one row in the failure screenshot; a
+    // local trace of the slide moved both chips 335.9 → 329.5px over ~230ms).
+    const tops = await quick
+      .locator(".ask-chip")
+      .evaluateAll((chips) => chips.map((c) => c.getBoundingClientRect().top));
+    expect(tops.length).toBeGreaterThan(0);
     expect(new Set(tops).size).toBe(1);
     const box = page.locator(".mp-dock").getByRole("textbox", { name: "Message Moneypenny" });
     await expect(box).toBeVisible();

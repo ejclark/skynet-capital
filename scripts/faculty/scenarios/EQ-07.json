@@ -1,0 +1,22 @@
+{
+  "id": "EQ-07",
+  "member": "eric",
+  "viewport": "phone",
+  "start": "/app",
+  "optimal": 10,
+  "scenario": "Your emerging-markets fund EEM is near $43.50. You'd happily sell 50 shares if it reaches $45, and you want that offer to keep standing until it happens, not just for today.",
+  "end": {
+    "orders": [
+      {
+        "symbol": "EEM",
+        "side": "sell",
+        "quantity": 50,
+        "orderType": "limit",
+        "limitPrice": [45, 45],
+        "timeInForce": "gtc",
+        "state": ["working", "filled"]
+      }
+    ]
+  },
+  "note": "A standing take-profit on shares: the seeded limit and GTC default help; the sell form now says what is held."
+}

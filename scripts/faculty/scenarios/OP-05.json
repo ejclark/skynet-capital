@@ -1,0 +1,22 @@
+{
+  "id": "OP-05",
+  "member": "phone-only",
+  "viewport": "phone",
+  "start": "/app",
+  "optimal": 12,
+  "scenario": "You're worried NVIDIA could drop hard this month. Buy one contract of protection that pays off if NVIDIA falls below about $170 in the next month or so, from your phone.",
+  "end": {
+    "orders": [
+      {
+        "underlying": "NVDA",
+        "optionType": "put",
+        "strike": [165, 175],
+        "side": "buy",
+        "quantity": 1,
+        "expiryDays": [18, 50],
+        "state": ["working", "filled"]
+      }
+    ]
+  },
+  "note": "Long put (rung 301)."
+}

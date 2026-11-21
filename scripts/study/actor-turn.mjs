@@ -51,7 +51,10 @@ export function toAction(a) {
     case "type":
       return { kind: "type", text: a.text };
     case "key":
-      return { kind: "key", key: a.key };
+      // A person deletes what a box already holds: Backspace (with a count, so clearing "400" is one
+      // turn, not three) and Tab joined Enter and Escape after the change study's first blind member
+      // could not clear a pre-filled price and typed "400405" (scripts/faculty, 2026-11-16).
+      return { kind: "key", key: a.key, times: Math.min(Math.max(Number(a.times) || 1, 1), 10) };
     case "back":
       return { kind: "back" };
     case "done":

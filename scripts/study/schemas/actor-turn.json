@@ -54,7 +54,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["type"],
-      "description": "Exactly one action. tap/hover: x, y in screenshot pixels. scroll: dir + screens (0.5 or 1). type: text. key: Enter or Escape. done: answer. give_up: why.",
+      "description": "Exactly one action. tap/hover: x, y in screenshot pixels. scroll: dir + screens (0.5 or 1). type: text. key: Enter, Escape, Tab or Backspace (times: how many presses, 1-10). done: answer. give_up: why.",
       "properties": {
         "type": {
           "type": "string",
@@ -65,7 +65,8 @@
         "dir": { "type": "string", "enum": ["up", "down"] },
         "screens": { "type": "number", "enum": [0.5, 1] },
         "text": { "type": "string" },
-        "key": { "type": "string", "enum": ["Enter", "Escape"] },
+        "key": { "type": "string", "enum": ["Enter", "Escape", "Tab", "Backspace"] },
+        "times": { "type": "integer", "minimum": 1, "maximum": 10 },
         "answer": { "type": "string" },
         "why": { "type": "string" }
       }

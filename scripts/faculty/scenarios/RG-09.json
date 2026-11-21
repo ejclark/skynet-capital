@@ -1,0 +1,21 @@
+{
+  "id": "RG-09",
+  "member": "returning-trader",
+  "viewport": "phone",
+  "start": "/app",
+  "optimal": 10,
+  "scenario": "You want your 100 Apple shares to sell automatically if Apple drops 5% from where it is now. If the app can't follow the price up as it rises, a fixed level 5% below today's price is fine.",
+  "end": {
+    "orders": [
+      {
+        "symbol": "AAPL",
+        "side": "sell",
+        "quantity": 100,
+        "orderType": "stop",
+        "stopPrice": [216, 221],
+        "state": ["working", "filled"]
+      }
+    ]
+  },
+  "note": "A trailing stop does not exist (ticket.ts:14); the honest landing is a stop near $218.50. Measures whether a member asking for the missing type lands something safe."
+}

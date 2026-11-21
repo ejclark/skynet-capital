@@ -133,7 +133,9 @@ function validateQuantity(quantity: number, refusals: string[]): void {
   }
 }
 
-function validateSell(
+/** The no-short rule: a sell may never exceed the shares held. Exported for the working-order
+ *  change re-check (`order-change-review.ts`), so a Modify obeys the same sentence as a submit. */
+export function validateSell(
   quantity: number,
   held: TicketHolding | undefined,
   refusals: string[],
@@ -211,7 +213,9 @@ function pricedFields(
   return {};
 }
 
-function validateBuy(
+/** The cash rule: a buy may never cost more than the cash on hand. Exported for the same re-check
+ *  as `validateSell`. */
+export function validateBuy(
   notional: number | undefined,
   cash: number,
   refusals: string[],

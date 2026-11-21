@@ -200,8 +200,28 @@ describe("WorkingOrders", () => {
     fireEvent.change(screen.getByLabelText("Shares"), { target: { value: "8" } });
     fireEvent.click(screen.getByRole("button", { name: "Send change" }));
     await waitFor(() => expect(replaces).toEqual([{ id: "o-1", change: { quantity: 8 } }]));
-    await waitFor(() => expect(screen.getByText(/not replaceable/)).toBeInTheDocument());
+    // The gate's first sentence shows IN the drawer, not only in the pane's notice below the list.
+    const drawerNote = () => document.querySelector(".wo-modify-note")?.textContent;
+    await waitFor(() =>
+      expect(drawerNote()).toBe("The broker couldn't change this order: order is not replaceable"),
+    );
     expect(screen.getByLabelText("Shares")).toBeInTheDocument();
+    // An edit answers it: the note goes back to describing what the form now holds.
+    fireEvent.change(screen.getByLabelText("Shares"), { target: { value: "6" } });
+    expect(drawerNote()).toBe("Will send: 6 shares");
+  });
+
+  it("selects a prefilled amount on focus, so typing replaces it rather than appending (OM-02)", async () => {
+    nextOrders = { available: true, asOf: "t", working: [working], recent: [] };
+    render(withClient(<WorkingOrders deskId="human-eric" />));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Modify" })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "Modify" }));
+    for (const label of ["Shares", "Limit price"]) {
+      const input = screen.getByLabelText(label) as HTMLInputElement;
+      const select = rstest.spyOn(input, "select");
+      fireEvent.focus(input);
+      expect(select).toHaveBeenCalledTimes(1);
+    }
   });
 
   it("offers no Modify on a market order, and words a replaced row's lineage", async () => {

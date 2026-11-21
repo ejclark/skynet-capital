@@ -492,3 +492,9 @@ node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answe
   scrolled the page 563px". The matchers run from `match.mjs`, which asks each one again for the
   findings it skipped and lists any still left out. Whether this was enough shows in the next
   control's `match/coverage.json` (complete, or the ids left out) and in how its matchers read A12.
+- 2026-11-17 · **the actor could not delete.** Its keys were Enter and Escape, so a member facing a
+  pre-filled box typed "400405" where a person would backspace. The change study
+  (`scripts/faculty/`) found it; the actor now has Backspace and Tab, with a count (schema, role,
+  parser and recorder). A reading round run before this date never needed them. Its findings stand,
+  but a session that gave up at a pre-filled box may have been the instrument's fault.
+

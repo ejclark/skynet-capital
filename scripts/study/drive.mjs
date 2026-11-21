@@ -91,8 +91,9 @@ function driveArgs(argv) {
   return opts;
 }
 
-/** The scripted actor: the file's turns in order; a text tap resolved against the live frame. */
-function scriptedActor(file, session) {
+/** The scripted actor: the file's turns in order; a text tap resolved against the live frame.
+ *  Exported for the change study's driver (scripts/faculty/drive.mjs), which plays the same actors. */
+export function scriptedActor(file, session) {
   const { turns, ease } = parseScript(readFileSync(file, "utf8"));
   let next = 0;
   return {
@@ -110,7 +111,7 @@ function scriptedActor(file, session) {
 }
 
 /** The sealed actor: one blind call per turn, one for the ease question. */
-function sealedActor({ card, device, scenario, size, browser, call, rolePath }) {
+export function sealedActor({ card, device, scenario, size, browser, call, rolePath }) {
   const turnSchema = readSchema("actor-turn");
   return {
     async message({ turns, frame, prevFrame, remaining }) {
@@ -158,7 +159,7 @@ function sealedActor({ card, device, scenario, size, browser, call, rolePath }) 
 }
 
 /** Play the actor until done/give_up or the cap; returns the turns and how it ended. */
-async function play(session, actor, cap, turnsPath) {
+export async function play(session, actor, cap, turnsPath) {
   const turns = [];
   let frame = session.opening.frame;
   let prevFrame = null;

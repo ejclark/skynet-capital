@@ -179,6 +179,21 @@ describe("GET /api/quests/taken", () => {
     // one `replaced`, so every fill after a re-price lands under the new id, never the recorded one.
     let nextId: string;
     const broker = {
+      // The reads a change is re-checked against before it is sent (order-change-review.ts): the
+      // working order itself, the account's cash and its holdings — a $400 QQQ buy re-priced lower.
+      getOrder: (id: string) =>
+        Promise.resolve({
+          id,
+          symbol: "QQQ",
+          qty: "10",
+          side: "buy",
+          type: "limit",
+          limit_price: "400",
+          status: "new",
+        }),
+      getAccount: () =>
+        Promise.resolve({ id: "ann", cash: "100000", portfolio_value: "100000", status: "ACTIVE" }),
+      getPositions: () => Promise.resolve([]),
       replaceOrder: (id: string) =>
         Promise.resolve({
           id: nextId,

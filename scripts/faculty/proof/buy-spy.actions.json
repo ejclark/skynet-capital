@@ -1,0 +1,15 @@
+{
+  "purpose": "the harness proof for scripts/faculty/drive.mjs: a scripted finger enters a 3-share SPY market buy, reviews and submits it; the oracle then reads the account",
+  "turns": [
+    { "action": { "type": "scroll", "dir": "down", "screens": 0.5 } },
+    { "action": { "type": "tap", "text": "Symbol" } },
+    { "action": { "type": "type", "text": "SPY" } },
+    { "action": { "type": "tap", "text": "Shares" } },
+    { "action": { "type": "type", "text": "3" } },
+    { "action": { "type": "scroll", "dir": "down", "screens": 0.5 } },
+    { "action": { "type": "tap", "text": "Review order" } },
+    { "action": { "type": "tap", "text": "Submit order" } },
+    { "action": { "type": "done", "answer": "scripted proof run" } }
+  ],
+  "ease": { "score": 6, "reason": "scripted proof" }
+}

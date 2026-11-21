@@ -94,7 +94,10 @@ describe("actionRefusal — the member acts only inside its own frame", () => {
     expect(actionRefusal({ kind: "scroll", dir: "down", screens: 0.5 }, frame)).toBeNull();
     expect(actionRefusal({ kind: "scroll", dir: "left", screens: 1 }, frame)).toMatch(/dir/);
     expect(actionRefusal({ kind: "scroll", dir: "up", screens: 3 }, frame)).toMatch(/screens/);
-    expect(actionRefusal({ kind: "key", key: "Tab" }, frame)).toMatch(/Enter/);
+    // Backspace and Tab joined Enter and Escape (the change study's member could not clear a box).
+    expect(actionRefusal({ kind: "key", key: "Backspace" }, frame)).toBeNull();
+    expect(actionRefusal({ kind: "key", key: "Tab" }, frame)).toBeNull();
+    expect(actionRefusal({ kind: "key", key: "F5" }, frame)).toMatch(/Enter/);
     expect(actionRefusal({ kind: "type", text: "" }, frame)).toMatch(/text/);
     expect(actionRefusal({ kind: "zoom" }, frame)).toMatch(/unknown/);
     expect(actionRefusal({ kind: "give_up", why: "lost" }, frame)).toBeNull();

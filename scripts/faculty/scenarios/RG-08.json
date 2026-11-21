@@ -1,0 +1,20 @@
+{
+  "id": "RG-08",
+  "member": "returning-trader",
+  "viewport": "phone",
+  "start": "/app",
+  "optimal": 9,
+  "scenario": "You want 100 shares of Tesla at whatever price the market gives, from your phone. You haven't checked what that costs. Put it in, and tell us what the app said about the cost before you sent it.",
+  "end": {
+    "orders": [
+      {
+        "symbol": "TSLA",
+        "side": "buy",
+        "quantity": 100,
+        "orderType": "market",
+        "state": ["working", "filled"]
+      }
+    ]
+  },
+  "note": "About $33,000 of $40,000 cash: the review should say it spends nearly all the cash (order-ticket.ts:231). The member's answer shows whether they saw it."
+}
