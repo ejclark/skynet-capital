@@ -33,9 +33,14 @@ test.describe("landing page", () => {
     expect(before).toBe(true);
     // No text box on Overview any more: the member types in the dock.
     await expect(page.locator(".mctl-window input, .mctl-window textarea")).toHaveCount(0);
-    const chips = await quick.locator(".ask-chip").all();
-    expect(chips.length).toBeGreaterThan(0);
-    const tops = await Promise.all(chips.map(async (c) => (await c.boundingBox())?.y ?? -1));
+    // All the tops in ONE layout read (#7903): the page's entrance rise (motion.css) is still
+    // moving the row a fraction of a pixel per frame here, so a boundingBox() per chip could read
+    // each one on a different frame (329.61 vs 329.56) and fail ~1 run in 50. Read together, the
+    // rise moves every chip alike; a real wrap still puts the second chip a whole row lower.
+    const tops = await quick.evaluate((ul) =>
+      [...ul.querySelectorAll(".ask-chip")].map((c) => c.getBoundingClientRect().top),
+    );
+    expect(tops.length).toBeGreaterThan(0);
     expect(new Set(tops).size).toBe(1);
     const box = page.locator(".mp-dock").getByRole("textbox", { name: "Message Moneypenny" });
     await expect(box).toBeVisible();
