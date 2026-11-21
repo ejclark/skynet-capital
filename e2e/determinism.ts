@@ -70,6 +70,16 @@ const SEEDED_RANDOM = `
 export const FIXED_CLOCK = new Date("2026-09-18T14:00:00Z");
 
 /**
+ * The edition's today on the server (`SKYNET_EDITION_NOW`, #7901). `/api/edition` picks the latest
+ * checked-in edition on or before this instant and cuts the dates behind it, so it has to sit after
+ * an edition: FIXED_CLOCK is before the first one. Monday 2026-11-09, 9am New York, keeps the
+ * 2026-11-06 edition with a full week of coming dates ahead (the calendar's event rows). Read
+ * against the real date, those rows all passed on 2026-11-21 and the calendar tests went red on a
+ * docs-only commit. If this moves, keep a weekday with the edition's coming dates in its week.
+ */
+export const EDITION_CLOCK = new Date("2026-11-09T14:00:00Z");
+
+/**
  * The board's live channel (`/events?by=…`, app/src/live/channel.ts) is the third irreproducible
  * input. Once the league card joined the tower column on every Profile section (#4133, #4143), the
  * topbar pill began reading `live · seq N` there instead of `connecting…` — and N is however many
