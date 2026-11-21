@@ -7,7 +7,8 @@ import { money } from "./format-money.js";
 /**
  * SCORING A CLAIM AGAINST ITS OWN DATED FALSIFIER (#5482 slice 5, criterion 6). A claim carries the
  * one dated observation that proves it wrong (`falsifier`) and the day it is read (`scoreBy`). When
- * that day arrives, or the study that backs it is re-run, the claim is scored:
+ * that day arrives, or the study that backs it is re-run, or the tape has already settled a price
+ * check (`settledEarly`), the claim is scored:
  *
  *   pass         the day came, the falsifier did not land: the claim held.
  *   fail         the day came and the falsifier landed: the claim did not hold.
@@ -204,11 +205,17 @@ function scoreWithin(
     : decided("fail", `${read}, outside ${band}.`, dueOn, ctx.today);
 }
 
-function scoreReach(
-  check: Extract<FalsifierCheck, { kind: "closes-reach" }>,
-  dueOn: string,
-  ctx: ScoreContext,
-): ClaimScore {
+type ReachCheck = Extract<FalsifierCheck, { kind: "closes-reach" }>;
+
+/** The first close in the check's window at or above its level. One rule for the due day's reading
+ *  and an early one (`settledEarly`), so the two can never disagree on what counts. */
+const reachedIn = (bars: readonly TapeBar[], check: ReachCheck): TapeBar | undefined =>
+  bars.find((b) => b.date > check.after && b.date <= check.by && b.close >= check.level);
+
+const reachBasis = (check: ReachCheck, hit: TapeBar): string =>
+  `${check.symbol} closed at ${money(hit.close)} on ${hit.date}, at or above ${money(check.level)}.`;
+
+function scoreReach(check: ReachCheck, dueOn: string, ctx: ScoreContext): ClaimScore {
   const w = windowOf(
     ctx.tape?.(check.symbol),
     check.symbol,
@@ -216,14 +223,9 @@ function scoreReach(
     (b) => b.date > check.after && b.date <= check.by,
   );
   if ("wait" in w) return pending(w.wait, dueOn);
-  const hit = w.bars.find((b) => b.close >= check.level);
+  const hit = reachedIn(w.bars, check);
   return hit
-    ? decided(
-        "pass",
-        `${check.symbol} closed at ${money(hit.close)} on ${hit.date}, at or above ${money(check.level)}.`,
-        dueOn,
-        ctx.today,
-      )
+    ? decided("pass", reachBasis(check, hit), dueOn, ctx.today)
     : decided(
         "fail",
         `No ${check.symbol} close from ${check.after} to ${check.by} reached ${money(check.level)}.`,
@@ -334,8 +336,46 @@ function scoreForward(
 }
 
 /**
+ * A PRICE CHECK CAN BE SETTLED BEFORE ITS DAY (#5482, 2026-11-21). One close under a band's low
+ * means the window's lowest close lands outside the band whatever comes next, and one close at a
+ * level means the level was reached: each is already the reading the due day would make, so the
+ * first scoring run that sees it records it, not one weeks later (claim 7's $39.51 close on 11-20
+ * sat under its $41 low, and claim 8's $63.93 on 10-28 over its $63.15 level, both reading
+ * pending). So a band can fail early and a level can pass early; the other half of each check
+ * stays open until the day, because a lowest close inside the band can still fall out of it, and a
+ * level not yet reached can still be. Only a settled close counts, one with a later session on the
+ * tape, the rule `scorePuts` holds: the feed serves the open session's bar live, the research cache
+ * keeps one whole response, and a decided score is final. Before the due day only: from that day
+ * the full reading (`scoreWithin`, `scoreReach`) names the window's own lowest close.
+ */
+function settledEarly(
+  check: FalsifierCheck | undefined,
+  dueOn: string,
+  ctx: ScoreContext,
+): ClaimScore | undefined {
+  if (check?.kind !== "closes-within" && check?.kind !== "closes-reach") return undefined;
+  const settled = (ctx.tape?.(check.symbol) ?? []).slice(0, -1);
+  if (check.kind === "closes-reach") {
+    const hit = reachedIn(settled, check);
+    return hit ? decided("pass", reachBasis(check, hit), dueOn, ctx.today) : undefined;
+  }
+  const under = settled.filter(
+    (b) => b.date >= check.from && b.date <= check.to && b.close < check.low,
+  );
+  if (under.length === 0) return undefined;
+  const low = under.reduce((a, b) => (b.close < a.close ? b : a));
+  return decided(
+    "fail",
+    `${check.symbol} closed at ${money(low.close)} on ${low.date}, under ${money(check.low)}: its lowest close ${check.from} to ${check.to} lands outside ${money(check.low)} to ${money(check.high)} whatever comes next.`,
+    dueOn,
+    ctx.today,
+  );
+}
+
+/**
  * The claim's score as of `ctx.today`. Pure: the tape arrives through the context, so a hit, a
  * miss, a day not yet due and a study that flips on its re-run are each specced without a network.
+ * A price check the tape has already settled is scored before its day (`settledEarly`).
  */
 export function scoreClaim(claim: ConvictionClaim, ctx: ScoreContext): ClaimScore {
   if (claim.bucket === "untestable") {
@@ -343,8 +383,10 @@ export function scoreClaim(claim: ConvictionClaim, ctx: ScoreContext): ClaimScor
   }
   const dueOn = claim.scoreBy;
   if (dueOn === undefined) return pending("No day is set to score it.");
-  if (ctx.today < dueOn) return pending(`Not due: scored on ${dueOn}.`, dueOn);
   const { check } = claim;
+  if (ctx.today < dueOn) {
+    return settledEarly(check, dueOn, ctx) ?? pending(`Not due: scored on ${dueOn}.`, dueOn);
+  }
   if (check === undefined) {
     return pending(
       `Due ${dueOn}; no reading recorded yet. It names no check this pass can read.`,
