@@ -1,0 +1,11 @@
+{
+  "id": "uk-consumer-confidence-2026-12-18",
+  "kind": "macro-print",
+  "title": "GfK/NIQ UK Consumer Confidence Barometer — December 2026: the second edition after the Budget, and the first to say whether the November uptick held",
+  "date": "2026-12-18",
+  "status": "estimate",
+  "source": "EST: nielseniq.com/global/en/news-center/2026/consumer-confidence-up-two-points-to-22-in-november/, fetched direct 2026-11-21 — the November-2026 barometer release lists the remaining 2026 press-release dates as 'October 23rd, November 20th and December 18th' (all Fridays); the list is an October-template carry-over but its November 20 entry was honoured by this very release, so the December date has two listed dates already met. Release time not stated on the page. Filed estimate on the standard counts: this lane may not self-confirm an event it discovered in-sweep, market-events-data.ts's confirmed-prefix taxonomy has no slot for GfK/NIQ, and the schedule is a note inside a press release. Discovered in the close-out sweep of uk-consumer-confidence-2026-11-20, 2026-11-21",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BY THE uk-consumer-confidence-2026-11-20 LANE, 2026-11-21. Entered the research horizon on 2026-11-18 (D-30 = allImpactsWithinDays); at the 2026-11-05 initial research it was D-43 and named in prose only. Why it earns a slot: November printed -22 (up two from -24, in line with consensus), driven by major purchases (+5 to -17) while personal finances kept falling; the December edition (fieldwork expected about Dec 1-12 on the first-fortnight pattern) is the first full read after the BoE's 4.00% hike, October CPI of 3.6% and a Black Friday month, and the second after the Budget. In 2025 the same sequence ran -17, -19, -17. Same-day neighbours already on the calendar: uk-retail-sales-2026-12-18 (the Black Friday print), japan-cpi-2026-12-18, boj-decision-2026-12-18, opex-2026-12-18. Expected LOW on the same measured grounds as every UK sibling: symbols [], no UK-listed name in this book, no sterling- or rates-keyed house playbook. Estimate widens caution only; nothing date-keyed may act on this."
+}
