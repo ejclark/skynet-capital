@@ -193,3 +193,40 @@ from re-run instrument data (cache busted first), never from memory — after wh
 
 **Last assessed:** 2026-11-19
 <!-- probe-ref: {"symbols":{},"vix":24.56,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","consumer-confidence-2026-11-24","durable-goods-2026-11-25","empire-state-mfg-2026-11-16","eurostat-hicp-final-2026-11-18","fhfa-hpi-2026-11-24","fomc-minutes-2026-11-18","gdp-q3-2026-second-2026-11-25","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","industrial-production-annual-revision-2026-11-24","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-1-5y-2026-11-20","jpx-market-closure-2026-11-23","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","new-home-sales-2026-11-25","nvda-2026-11-18-print","ofgem-price-cap-announcement-2026-11-25","opex-2026-11-20","pce-2026-11-25","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","sp-global-flash-us-pmi-2026-11-23","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","nvda-2026-11-18-print","pce-2026-11-25","retail-sales-2026-11-17"],"screenStreak":0,"blocked":[]} -->
+
+## Outcome
+
+**Close-out (2026-11-21, D+1).** Macro-print mode carries no instrument (`symbols: []`); the cache-bust
+command ran regardless and found nothing. "Re-run data" here is the ONS October 2026 bulletin and ONS
+series `J5EC` (m/m), both fetched direct on 2026-11-21. Date label stays `estimate` (taxonomy gap; the
+release did publish on 2026-11-20 as scheduled). BRC and consensus inputs are secondary.
+
+### What printed
+
+| Item | Registered | Printed (ONS, primary) |
+|---|---|---|
+| October volume m/m | centre −0.1%, sd ~1.0pp | **+0.7%** (September revised −0.4% → **−0.6%**) |
+| October volume y/y | **+1.7%** (+0.7 to +2.7%); FT-1 line +0.8% | **+2.3%** |
+| Three months to October vs three months to July | FT-3 line 0.0% | **+0.4%** |
+
+### Scored against the stance
+
+- **Stance held: stand aside.** `symbols: []`; no tracked name's move on 2026-11-20 is attributable to this
+  print. The session's moves (VIX 28.44 → **35.89** on 11-19 → 11-20 per Yahoo `^VIX`) landed on opex Friday
+  with a crowded morning, as leg 7 anticipated; no channel to UK retail volumes.
+- **Base arithmetic was right on direction, light on size.** The +1.77% carry did its work and October
+  cleared +0.7% m/m, a +0.8pp surprise against this ledger's centre (under 1 sd). The single-source
+  consensus of 0.0% m/m seen on 11-19 was also beaten by 0.7pp.
+- **FT-1, FT-2, FT-3 all pass** (cells filled in the fragment). No kill switch fired; no scored kill, so
+  nothing moves to the sweep doc's kill list.
+- **Neighbour note (not scored here).** October m/m **+0.7%** is above the −0.6% line that
+  `uk-retail-sales-2026-12-18`'s FT-3 registered. Leg 5 measured that line as ~60–65% likely without any
+  mechanism, so the pass is weak evidence for the Black-Friday-outside pattern; scoring is that lane's.
+- **Taxonomy gap unchanged:** ONS still has no confirmed source prefix.
+
+**Loop census (docs/process/LEARNING-LOOP.md).** The stage a person still would have done: reading the ONS
+bulletin and series by hand. A scripted ONS `J5EC`/`J5EK` reader would sense and verify this class of
+print for free.
+
+**Last assessed:** 2026-11-21
+<!-- probe-ref: {"symbols":{},"vix":35.89,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","consumer-confidence-2026-11-24","durable-goods-2026-11-25","empire-state-mfg-2026-11-16","eurostat-hicp-final-2026-11-18","fhfa-hpi-2026-11-24","fomc-minutes-2026-11-18","gdp-q3-2026-second-2026-11-25","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","industrial-production-annual-revision-2026-11-24","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-1-5y-2026-11-20","jpx-market-closure-2026-11-23","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","new-home-sales-2026-11-25","nvda-2026-11-18-print","ofgem-price-cap-announcement-2026-11-25","opex-2026-11-20","pce-2026-11-25","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","sp-global-flash-us-pmi-2026-11-23","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","nvda-2026-11-18-print","pce-2026-11-25","retail-sales-2026-11-17"],"screenStreak":0,"blocked":[]} -->
