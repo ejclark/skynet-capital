@@ -181,9 +181,17 @@ describe("fullPassScores", () => {
     expect(fullPassScores(filed, [entry("2a.", "fail", "2026-11-21")], claims)).toEqual(filed);
   });
 
-  it("lets the study re-run re-read a decided claim", () => {
+  it("lets the study re-run re-read a decided claim, even to the same outcome", () => {
     const fresh = [entry("1.", "fail", "2026-12-01")];
     expect(fullPassScores([entry("1.", "pass")], fresh, claims)).toEqual(fresh);
+    expect(fullPassScores([entry("1.", "fail")], fresh, claims)).toEqual(fresh);
+  });
+
+  it("takes a reading that differs from the one filed: a full pass still corrects a score", () => {
+    const flipped = [entry("2a.", "pass", "2026-11-21")];
+    expect(fullPassScores([entry("2a.", "fail")], flipped, claims)).toEqual(flipped);
+    const voided = [entry("2a.", "pending")];
+    expect(fullPassScores([entry("2a.", "fail")], voided, claims)).toEqual(voided);
   });
 
   it("takes a newly decided claim and refreshes a pending line's words", () => {

@@ -225,6 +225,13 @@ describe("scoreClaim — a price check the tape settles before its day", () => {
     expect(onTheDay.basis).toBe(early.basis);
   });
 
+  it("hands over to the full reading from the due day: the window's own lowest close is named", () => {
+    const tape = [bar("2026-10-16", 61.39), bar("2026-11-20", 39.51), bar("2027-01-19", 35)];
+    const score = scoreClaim(claim({ check: WITHIN }), ctx("2027-01-20", tape));
+    expect(score.outcome).toBe("fail");
+    expect(score.basis).toContain("lowest close 2026-10-16 to 2027-01-19 was $35.00 on 2027-01-19");
+  });
+
   it("leaves a level open while no settled close after the stated day reaches it", () => {
     const stated = [bar("2026-10-16", 64.72), bar("2026-11-20", 39.51)];
     expect(scoreClaim(claimReach, ctx("2026-11-21", stated)).outcome).toBe("pending");
