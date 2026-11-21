@@ -71,6 +71,34 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"A loaded exclusive back half makes the November UMich final revise by 1.0 point or more: the prices-not-ballot revision call (FT-umich-sentiment-final-2026-11-20-2)"** — added 2026-11-21 from the
+  [umich-sentiment-final-2026-11-20 close-out](events/umich-sentiment-final-2026-11-20.md). The 11-06 prelim printed **51.0** and the publisher's final **51.5**: |Δ| = **0.5**, through a window holding the midterms, a hot CPI and a collapsing pump price. Year-ahead inflation expectations fell **4.3% to 3.7%** in the same window.
+  Do not call a bigger revision off a count of dated events inside a collection window; five of seven 2026 finals revised inside ±1.0, and the two that did not (March, October) were shocks, not event counts.
+
+- **"The 10-year breakeven holds at or above 2.30% into the 2026-11-19 TIPS reopening: the five-week inflation leg is durable (FT-treasury-10y-tips-2026-11-19-2)"** — added 2026-11-20 from the
+  [treasury-10y-tips-2026-11-19 close-out](events/treasury-10y-tips-2026-11-19.md). Par 5.04 minus real 2.88 gave **2.16%**, the lowest of 222 paired 2026 sessions; 12 of 13 sessions since 11-02 closed under 2.30% as Brent unwound.
+  Do not extrapolate a 24-session breakeven decomposition into a regime call; the quarter-scale read (real-rate-led) was the one that held, and a registration anchored on a five-week leg was a window artefact.
+
+- **"A minutes-collision VIX settlement opens at or above -0.5%: the 2026-11-18 open gap is not the decision-collision signature (FT-vix-expiration-2026-11-18-1)"** — added 2026-11-19 from the
+  [vix-expiration-2026-11-18 close-out](events/vix-expiration-2026-11-18.md). The VIX opened **24.22** against a **25.46** close (**-4.87%**; VRO 24.25), on a day the minutes released on their slot.
+  Do not register a fixed open-gap line on a VIX day without conditioning on the prior day's VIX move; after a +8% day the open gap averages -0.14% (n=602, sd 5.52), so a -0.5% line is a coin flip there, and n=1.
+
+- **"The scheduled 1 October electricity VAT cut pulls UK October 2026 headline CPI to 3.4% or lower (FT-uk-cpi-2026-09-16-3)"** — added 2026-11-19 from the
+  [uk-cpi-2026-09-16 ledger](events/uk-cpi-2026-09-16.md). ONS printed **3.6%** (3.5% in September): electricity fell 0.8% m/m, but motor fuels (+33.2% y/y) and gas (+6.3%) outweighed it.
+  Do not size a pre-announced tax cut against a headline print without netting the energy and fuel base moves first; the 0.10pp government estimate is a counterfactual, not a forecast of the annual rate.
+
+- **"The stacked-morning SPY pre-open lift is live on 2026-11-17: the overnight gap exceeds the 0.3275% clean-baseline median (FT-nahb-hmi-2026-11-17-2)"** — added 2026-11-19 from the
+  [nahb-hmi-2026-11-17 close-out](events/nahb-hmi-2026-11-17.md). The gap was **0.2108%** (739.95 to 738.39) on the quarter's most stacked morning (G.17 09:15, retail sales 08:30, MTIS 10:00 all published), a ~70/30 registration built on a post-hoc n=34 split, after a 1.91% SPY drop and VIX 19.30 to 22.91 the session before.
+  Do not use the HMI+G.17 stacked class as a pre-open predictor without conditioning on the prior session's move and VIX; one observation, and the split was chosen after seeing the headline.
+
+- **"A shut cash bond market does not defer price discovery: TLT's next-session |move| stays at or below 1.5x its trailing-20 median (FT-sifma-bond-market-closure-2026-11-11-3)"** — added 2026-11-19 from the
+  [sifma-bond-market-closure-2026-11-11 ledger](events/sifma-bond-market-closure-2026-11-11.md). TLT's 11-12 |move| was **1.483%** against a **0.459%** median, **3.23x** (2.68x with the closure day dropped from the window).
+  Do not carry the 42-session "the day after a closure is ordinary" base rate (28.6% above 1.5x) into a closure that follows a confirmed high-impact CPI and precedes a refunding auction; the 11-12 session also held the 30Y auction and an NBIS print, so size of the closure's own share is not established.
+
+- **"The 20-Year new-issue slot tops out at a bid-to-cover of 2.58: the 2026-11-18 sale prints at or below it (FT-treasury-20y-bond-2026-11-18-1)"** — added 2026-11-19 from the
+  [treasury-20y-bond-2026-11-18 close-out](events/treasury-20y-bond-2026-11-18.md). It printed **2.63** (high yield 5.459%, 70.87% at the high, direct 26.74%), above all 15 prior new issues (2.34-2.58).
+  Do not carry a ceiling set at a sample's own maximum into the next sale of the slot as a pass-prone bar; n=16 and the registered base rate was 15/15, so the test was weak by design.
+
 - **"The 10-year inflation-indexed JGB keeps its post-2022 demand floor: cover stays at or above 2.73x at the 2026-11-16 auction (FT-jgb-10y-inflation-indexed-auction-2026-11-16-2)"** — added 2026-11-18 from the
   [jgb-10y-inflation-indexed-auction-2026-11-16 close-out](events/jgb-10y-inflation-indexed-auction-2026-11-16.md). Printed **2.696x** (bids ¥673.5bn, accepted ¥249.8bn) as the lowest-accepted yield jumped **+21.2bp** to 1.072%; allotment at the low rose to 44.7% from 21.4%.
   Do not register a floor set at the sample's own minimum without a second, independent reason it holds; one print, and the floor was the range's edge by construction (n=18).
@@ -1255,3 +1283,5 @@ number in this doc that lacks a control clause with suspicion, and prefer the pe
 for the full attack transcripts.
 
 - **"A low-impact G.17 morning ranges under the unconditional 2014-05+ p75 (1.332%) of SPY's close" (FT-industrial-production-2026-11-17-2)** — added 2026-11-18 from the [industrial-production-2026-11-17 close-out](events/industrial-production-2026-11-17.md). Registered 2026-09-06 on 11 of 11 November G.17 sessions under 1.30%; 11-17 ranged **1.742%** (gap −0.21%) with VIX 19.30 → 22.91 the day before and 25.46 at the close. Second same-shape kill in a month, after the 10-16 entry above. Do not register an unconditional range bar for a G.17 print; condition on the prior-day VIX or skip the test.
+
+- **"ITB's session range on an FOMC-minutes day stays under the unconditional 2014+ p75 (2.504%) with no regime condition (FT-pending-home-sales-2026-11-18-2)"** — added 2026-11-20 from the [pending-home-sales-2026-11-18 close-out](events/pending-home-sales-2026-11-18.md). ITB ranged **3.407%** on 11-18 (O 91.28 / H 93.62 / L 90.51) after a 25.46 VIX close the day before. Do not register an unconditional ITB range line on a day whose prior VIX close is ≥ 24: that cohort breaches 2.504% on 66.3% of sessions (n=469), so the line fires on regime alone. The regime-conditional sibling (< 4.062%, FT-…-4) passed. n=1 on the minutes-day claim itself, which the 104-session baseline (p=0.965) does not lose.

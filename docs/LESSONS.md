@@ -35,6 +35,16 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### `integration tests` red on main: pin the edition's today on the e2e server so the calendar keeps its event rows
+- **SHA:** 8189e8b   **DATE:** 2026-11-21   **STATUS:** closed
+- **COVERS:** b77edda
+- **SIGNAL:** 1 failed run(s) of `Pipeline` → `integration tests` on `main`, the first [44908502439](https://github.com/ejclark/skynet-capital/actions/runs/44908502439) at 2026-11-21T13:22:04Z. Repair capsule #7901 filed 2026-11-21T13:26:29Z, closed 21m later by #7902.
+- **ROOT CAUSE:** `integration tests` went red on `main` with a docs-only commit (#7900): two `campaign mission control` tests in `e2e/landing.spec.ts` look for an event row in the Calendar window. The e2e server pins the Council's clock (`SKYNET_FIXED_NOW`, #4683), but `/api/edition` still read `new Date()`. The one checked-in edition (`src/domain/editions/2026-11-06.json`) lists coming dates up to 2026-11-20. From Saturday 2026-11-21 the server cut every one of them, the calendar showed the empty week, and the tests found nothing. Reproduced locally before the fix: 2 failed, the same two. Not a flake: it would stay red until someone wrote a new edition, and go red again whenever an edition's dates run out.
+- **PREVENTION:** spec — `tests/scripts/offline-clocks.spec.ts`, `tests/server/content-api-routes.spec.ts` (#7902).
+- **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
+
+---
+
 ### `release · deploy` red on main: Fly's registry refused the image push for longer than the deploy retry waits
 - **SHA:** d6020bf   **DATE:** 2026-11-11   **STATUS:** closed
 - **SIGNAL:** run 42980060977 failed in `Deploy to Fly`; capsule #7106 reopened (same job, different step from its 11-08 flyctl-download cause) within three minutes. The Depot builder finished the image, then every push to `registry.fly.io` died on `dial tcp [fdaa::3]:5000: connect: connection refused` — six pushes across three attempts, 07:32:47–07:33:43Z. `scripts/fly-deploy.mjs` classified it transient and retried as designed; its 15s + 30s of waiting ran out first. Production stayed behind `main` on #7423 (book-wait on overview), and `deploy-bots` was skipped behind it.

@@ -2,6 +2,8 @@
 // The scripts/ tree is plain ESM with `allowJs` off (see index.d.mts for the same reasoning).
 export function sh(cmd: string, args: string[], opts?: Record<string, unknown>): string;
 export function isTransientGhError(text: unknown): boolean;
+/** True when a failure is a spent hourly budget (REST or GraphQL) rather than a wrong answer. */
+export function isRateLimited(err: unknown): boolean;
 export function sleepSync(ms: number): "ok" | "not-equal" | "timed-out";
 export function withRetry<T>(
   fn: () => T,

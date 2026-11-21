@@ -4,8 +4,9 @@ import { expect, test } from "@playwright/test";
 // Slice 1d: the question box and its canned paths first (AT9 as revised), the whole market under it
 // (#7018 round 3), then R&D's market calendar: its arrows and lens over one-line stories and events
 // under week headers (AT10), with R&D's month grid beside them at desktop width (AT11).
-// Behavioural only: the edition is the latest one checked in, and the server cuts its dated items
-// against the real date, so the words change by design; the shape is what's held here.
+// Behavioural only: the shape is what's held here, not the words. The server reads the edition
+// against EDITION_CLOCK (e2e/determinism.ts, #7901), never the real date: against the real date
+// every coming date passed on 2026-11-21 and the event-row tests below went red with no change.
 // #7487 slice 1 (Campaign mission control): the page is now one window at a time, chosen by `?w=`
 // (Overview the default, never written). The quick questions lead Overview at /app/; the sectors are the
 // Market window (`?w=market`), the calendar the Calendar window (`?w=calendar`) and the account's
@@ -427,7 +428,7 @@ test.describe("campaign mission control", () => {
     page,
   }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
-    // A real key from the fixture edition: the first event row the calendar draws this week.
+    // A real key from the edition: the first event row the calendar draws in EDITION_CLOCK's week.
     await page.goto("/app/?w=calendar");
     const event = page.locator(".ecal li.ecal-event[id^='event-']").first();
     await expect(event).toBeAttached();

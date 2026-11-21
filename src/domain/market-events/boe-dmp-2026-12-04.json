@@ -1,0 +1,11 @@
+{
+  "id": "boe-dmp-2026-12-04",
+  "kind": "macro-print",
+  "title": "Bank of England Decision Maker Panel monthly data (November 2026) — firms' expected own-price growth one year ahead, the last survey read before the 12-16 UK CPI and PPI prints and the 12-17 MPC decision",
+  "date": "2026-12-04",
+  "status": "estimate",
+  "source": "EST: bankofengland.co.uk/decision-maker-panel/2026/november-2026, fetched direct 2026-11-19 (HTTP 200) — the Bank's own November-2026 DMP page states 'Published on 04 December 2026' and 'This monthly Decision Maker Panel data will be published on 4 December 2026'; the October-2026 release (published 30 October) names the same next release date. Primary (the publisher's own schedule, twice); filed estimate per this lane's no-self-confirm limit and the taxonomy gap for non-Fed central banks. Checked 2026-11-19",
+  "impact": "low",
+  "symbols": [],
+  "notes": "CANONICAL FILE WRITTEN BY THE never-assessed INITIAL RESEARCH 2026-11-19, superseding proposals/boe-dmp-2026-12-04.from-uk-ppi-2026-12-16.json (read in full first per docs/process/EVENT-RESEARCH.md). The proposal's date, tier and symbols: [] all stand and are carried. WHAT THE INITIAL RESEARCH ADDED: (1) the date is doubly primary-sourced (November page plus the October release's own next-release line). (2) October data re-read direct: expected own-price 3.8%, CPI 1y 3.3% (from 3.1%), CPI 3y 2.8% (fourth flat print), expected wage growth 3.4%, 68% of firms expect to raise prices, 71% lower margins, 1,945 responses, fieldwork 2-16 October. (3) The cell that can move is one-year CPI expectations, not the damped headline; UK October CPI printed 3.6% (services 3.7%). Corridor on the day: jobs-2026-12-04 (US Employment Situation, 08:30 ET, hours AFTER a London-morning DMP), umich-sentiment-prelim-2026-12-04, sp-rebalance-proforma-2026-12-04; fomc-2026-12-09 five days later. Estimate widens caution only; it licenses no date-keyed action. Ledger: docs/research/events/boe-dmp-2026-12-04.md"
+}

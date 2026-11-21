@@ -86,6 +86,7 @@ import { wireOpsStatus } from "./dashboard-ops-status.js";
 import { wireOptionLifecycleSweep } from "./dashboard-option-lifecycle.js";
 import { bootTelemetry } from "./dashboard-telemetry.js";
 import { startIvClock } from "./iv-clock-wiring.js";
+import { offlineClock } from "./offline-clocks.js";
 import { assertProductionAccess } from "./production-access.js";
 
 const PORT = resolvePort(process.env);
@@ -101,13 +102,12 @@ async function main(): Promise<void> {
   // Before anything resolves a GitHub-backed feature: a token saved from Settings beats the host secret.
   const githubToken = bootGithubToken(process.env);
   const dataSource = resolveDataSource(process.env);
-  // E2E DETERMINISM (#4683): `freezePage` pins the browser's clock, but the Council computes its
-  // week label from the server's own `new Date()`, so every baseline carrying it changed on
-  // Mondays. playwright.config.ts passes its FIXED_CLOCK here. Offline only — a server holding
-  // real accounts never reads a frozen clock, whatever its environment says.
-  const fixedNowMs =
-    dataSource.mode === "offline" ? Date.parse(process.env.SKYNET_FIXED_NOW ?? "") : Number.NaN;
-  const councilClock = Number.isNaN(fixedNowMs) ? {} : { now: () => new Date(fixedNowMs) };
+  // E2E DETERMINISM (#4683, #7901): the server reads that compute "today" themselves take a pinned
+  // instant on an offline boot — the Council's week label and the edition's today. Why each, and
+  // why offline only: offline-clocks.ts.
+  const fixedNow = offlineClock(process.env, dataSource.mode, "SKYNET_FIXED_NOW");
+  const councilClock = fixedNow ? { now: fixedNow } : {};
+  const editionNow = offlineClock(process.env, dataSource.mode, "SKYNET_EDITION_NOW");
   // First, before any slow boot step: read whether the LAST run exited cleanly, then claim the
   // run marker for this one (#4618). The gauge and any incident start once we are listening.
   const telemetry = bootTelemetry(process.env, dataSource.mode);
@@ -410,6 +410,7 @@ async function main(): Promise<void> {
   const dashboardConfig: DashboardServerConfig = {
     hub,
     healthHistory,
+    ...(editionNow ? { editionNow } : {}),
     logLine: (line) => console.log(line),
     // Ceremonies ride the board's seq-numbered patch stream as fire-once cues.
     ceremonies,
