@@ -1,0 +1,11 @@
+{
+  "id": "house-huang-briefing-2026-11-18",
+  "kind": "geopolitical",
+  "title": "House committee chairs' requested closed-door briefing with NVIDIA CEO Jensen Huang (Megaspeed executive / foreign-intelligence questions) — the day after the NVDA print",
+  "date": "2026-11-18",
+  "status": "estimate",
+  "source": "NEWS: three House chairs (Mast, Foreign Affairs; Moolenaar, China Select; Crawford, Intelligence) asked Huang for a joint closed-door briefing on 2026-11-18 and for his acceptance or a counter-date by 2026-11-11, per aiweekly.co, thenextweb.com and implicator.ai summaries read via search 2026-11-10; the letter itself was not fetched. A voluntary request, not a subpoena; no acceptance or counter-proposal found. Filed estimate: the date is the chairs' ask, not an agreed or compelled event",
+  "impact": "high",
+  "symbols": ["NVDA"],
+  "notes": "Discovered during the nvda-2026-11-18-print pulse (2026-11-10). Separate from, but the same story as, NVIDIA's board statement of 2026-11-08 (nvidianews.nvidia.com, 'Statement From NVIDIA Board of Directors'): an independent-director committee with outside counsel is investigating reports that Huang was the target of a foreign intelligence effort; the board says it has no reason to believe national security or company secrets were compromised and has confidence in Huang. NVDA closed 2026-11-09 at $178.67 (-4.27%) on that news while SMH rose 5.1%. The briefing falls the day after the 2026-11-17 after-close print, so the 11-11 reply deadline and any counter-date are the dated tells."
+}
