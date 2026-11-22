@@ -295,6 +295,28 @@ function defaultExec(cmd, args, opts) {
   return execFileSync(cmd, args, { encoding: "utf8", maxBuffer: 16 * 1024 * 1024, ...opts });
 }
 
+const PAGE = 100;
+const MAX_PAGES = 20;
+
+/** Every page of a REST list, one JSON object per row, paged by `&page=N` rather than `gh api
+ *  --paginate`. `--paginate` follows GitHub's `Link` header, which names the repo by numeric id
+ *  (`repositories/<id>/…`), and the cloud session proxy refuses that path with a 403: #4153's label
+ *  events passed 100 rows, so every cloud session read a surge dial as unreadable and fell back to
+ *  conserve, refusing a 6-issue clear-path run mid-surge (2026-11-17). The jq projects every row
+ *  (no `select`), so a short page means the last page. Past MAX_PAGES it throws rather than return
+ *  a truncated list, and the caller's fail-closed branch turns that into conserve plus a warning. */
+function everyPage(exec, path, jq) {
+  const rows = [];
+  for (let page = 1; page <= MAX_PAGES; page++) {
+    const batch = jsonLines(
+      exec("gh", ["api", `${path}?per_page=${PAGE}&page=${page}`, "--jq", jq]),
+    );
+    rows.push(...batch);
+    if (batch.length < PAGE) return rows;
+  }
+  throw new Error(`${path} still had more after ${MAX_PAGES} pages`);
+}
+
 /** Impure: REST reads of the tracking issue, then `resolveWorkMode`. REST, not `gh issue view`: that
  *  is GraphQL, which a Claude Code cloud session is refused with a 403 — so every cloud session read
  *  the dial as unreadable and fell back to conserve whatever the label said (2026-10-18). Every lane
@@ -312,24 +334,16 @@ export function readWorkMode(exec = defaultExec, config = loadWorkModeConfig(), 
     if (!issue || typeof issue !== "object") throw new Error("not a JSON object");
     const dial = dialLabels(issue.labels, config.labelPrefix);
     if (dial.length === 1 && dial[0] !== `${config.labelPrefix}normal`) {
-      issue.comments = jsonLines(
-        exec("gh", [
-          "api",
-          "--paginate",
-          `${path}/comments?per_page=100`,
-          "--jq",
-          ".[] | {body, createdAt: .created_at, author_association, user: {type: .user.type}}",
-        ]),
+      issue.comments = everyPage(
+        exec,
+        `${path}/comments`,
+        ".[] | {body, createdAt: .created_at, author_association, user: {type: .user.type}}",
       );
-      issue.events = jsonLines(
-        exec("gh", [
-          "api",
-          "--paginate",
-          `${path}/events?per_page=100`,
-          "--jq",
-          '.[] | select(.event == "labeled") | {label: .label.name, createdAt: .created_at}',
-        ]),
-      );
+      issue.events = everyPage(
+        exec,
+        `${path}/events`,
+        ".[] | {event, label: .label.name, createdAt: .created_at}",
+      ).filter((e) => e.event === "labeled");
     }
   } catch (err) {
     return {

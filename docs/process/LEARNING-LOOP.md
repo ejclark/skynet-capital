@@ -142,6 +142,20 @@ stable enough to file mechanically.
 Still human: the *act* of merging the protected class (his, by rule), and the *sense* that a
 local wave has gone idle. The measured ceiling was the App's hourly API limit, not tokens.
 
+**2026-11-17 — the third surge**, 55 minutes before the reset ("We have 20% left to burn"). Six
+cloud children and two flip runs: 9 issues closed and 10 code PRs merged in 64 minutes. The
+post-merge audit confirmed 5 defects in those PRs (#7726–#7730).
+
+| Loop | Stage still by hand | Now automated by |
+|---|---|---|
+| Work-mode dial in a cloud session | verify: the session read surge as conserve (the proxy refused `--paginate`'s numeric-id page), and a session noticed only when its own flip run was refused at 6 | #7711 |
+| Flip and audit bookkeeping | remember: the refusal, readied and audit receipts write to `data/pr-review`, which a cloud session may not push, so all three records were lost and the next due-check re-lists the work | not yet |
+| Protected-class merge | act: 2 of the 6 issues (#4479, #4563) end on platter #7424, which waits on Eric's click | his, by rule |
+
+Still human: the *sense* of spare quota (his phrase) and the protected merge. New this time: a
+cloud session cannot write the lanes' bookkeeping branch, so the session-run surge forgets what it
+judged.
+
 ## Starting a new loop
 
 1. Fill fields 1–9 before running anything — if the aim, baseline, prediction, pressure test,

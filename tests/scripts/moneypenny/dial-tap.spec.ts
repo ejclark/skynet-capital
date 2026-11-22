@@ -330,7 +330,8 @@ describe("executeDialTidy", () => {
         else if (path.endsWith("/labels")) labels.push("work-mode:normal");
         return "";
       }
-      if (path.includes("/events")) return events.map((e) => JSON.stringify(e)).join("\n");
+      if (path.includes("/events"))
+        return events.map((e) => JSON.stringify({ event: "labeled", ...e })).join("\n");
       if (path.includes("/comments")) return comments.map((c) => JSON.stringify(c)).join("\n");
       return JSON.stringify({
         title: "Work mode: SURGE",
