@@ -470,8 +470,9 @@ export function statusForIssue({
 // research-queue trackers, an operational log, not product backlog — were being added to the
 // orchestration board alongside real work. This is the one label the board should never carry;
 // unlike Status/Horizon it needs no per-issue judgment, so it lives as a mechanical predicate.
+// #7939 slice 2: the decisions page is the second — Eric's single touch, never work to pull.
 export function isBacklogCandidate({ labels = [] } = {}) {
-  return !labels.includes("ci-failure");
+  return !(labels.includes("ci-failure") || labels.includes(LABELS.decisionsPage.name));
 }
 
 // #3914 — `gh project` DESTROYS ITS OWN ERROR, and that is the whole bug this block exists for.

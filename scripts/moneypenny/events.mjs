@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { campaignRelevance } from "../campaign-links.mjs";
 import { routeAssignments } from "./assignments.mjs";
 import { routeContinuation } from "./continuation.mjs";
+import { routeDecisions } from "./decisions-run.mjs";
 import { FOOTER, LABELS } from "./labels.mjs";
 import { routePlanClose } from "./plan-close.mjs";
 import { routeRelay } from "./relay.mjs";
@@ -191,7 +192,13 @@ export function routeSweep(deps) {
   const closing = new Set(
     sweep.filter((i) => i.kind?.startsWith("close-")).map((i) => i.issueNumber),
   );
-  return [...sweep, ...routeAssignments(deps).filter((i) => !closing.has(i.number))];
+  // The decisions page (#7939 slice 2) reads the same snapshot, so it leaves the closing issues off
+  // too. It goes after the assignment lane: its answers clear asks a read-back there never touched.
+  return [
+    ...sweep,
+    ...routeAssignments(deps).filter((i) => !closing.has(i.number)),
+    ...routeDecisions({ ...deps, closing }),
+  ];
 }
 
 /** `[event-research] <event-id>` — the receipt title this lane writes and reads back. */

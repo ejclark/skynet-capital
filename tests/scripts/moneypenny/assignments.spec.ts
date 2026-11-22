@@ -207,6 +207,7 @@ describe("routeAssignments: the sweep's intents", () => {
     const [intent, ...rest] = routeAssignments({
       assignments: { issues: [issue()], prs: [], markers: new Set() },
       now: NOW,
+      issueCards: true,
     });
     expect(rest).toEqual([]);
     if (!intent) throw new Error("one intent expected");
@@ -220,6 +221,7 @@ describe("routeAssignments: the sweep's intents", () => {
     const intents = routeAssignments({
       assignments: { issues: many, prs: [], markers: new Set() },
       now: NOW,
+      issueCards: true,
     });
     expect(intents).toHaveLength(ASSIGN_CAP);
     expect(intents.map((i) => i.number)).toEqual([1, 3, 5]);
@@ -236,6 +238,7 @@ describe("routeAssignments: the sweep's intents", () => {
         markers: new Set([20, 21, 22, 23]),
       },
       now: NOW,
+      issueCards: true,
     });
     expect(intents.map((i) => [i.kind, i.number])).toEqual([
       ["unassign-eric", 20],
@@ -450,16 +453,27 @@ describe("routeSweep: a close beats an ask on the same issue", () => {
       shippedFeedback: [{ number: 42, title: "shipped but still labelled", pr: 99 }],
       assignments: { issues: [needsEricIssue], prs: [], markers: new Set() },
       now: NOW,
+      issueCards: true,
     }) as { kind: string; number?: number; issueNumber?: number }[];
     expect(intents.map((i) => i.kind)).toEqual(["close-shipped"]);
   });
 
-  it("still asks when nothing in the tick touches that issue", () => {
+  it("still asks when nothing in the tick touches that issue (with per-issue cards on)", () => {
+    const intents = routeSweep({
+      assignments: { issues: [needsEricIssue], prs: [], markers: new Set() },
+      now: NOW,
+      issueCards: true,
+    }) as { kind: string }[];
+    expect(intents.map((i) => i.kind)).toEqual(["assign-eric"]);
+  });
+
+  // #7939 slice 2: the decisions page carries criterion 1's asks, so no card goes out per issue.
+  it("sends no per-issue card for an issue ask by default", () => {
     const intents = routeSweep({
       assignments: { issues: [needsEricIssue], prs: [], markers: new Set() },
       now: NOW,
     }) as { kind: string }[];
-    expect(intents.map((i) => i.kind)).toEqual(["assign-eric"]);
+    expect(intents).toEqual([]);
   });
 });
 
@@ -623,6 +637,7 @@ describe("the batch rhythm", () => {
     routeAssignments({
       assignments: { issues: many, prs: [], markers: new Set(), ...assignments },
       now,
+      issueCards: true,
     });
 
   it("starts a batch at 14:00Z and 21:30Z", () => {
@@ -807,5 +822,56 @@ describe("a read-back and a stale unassign never double up", () => {
     });
     expect(actions.map((a) => a.kind)).toEqual(["readback"]);
     expect(holding).toBe(0);
+  });
+});
+
+// #7939 slice 3: an ask whose class has graduated (docs/process/ALIGNMENT.md rule 3) is decided by a
+// session at its predicted answer and reported in Headlines, never assigned. Rule 4's classes stay
+// his even when a hand-edited table lists them.
+describe("plan: a graduated class is decided, not asked", () => {
+  const ARCHIVE = [
+    "> [!IMPORTANT]",
+    "> **Needs from you**",
+    "> 1. Archive this session? — its PRs are closed",
+    ">    - A (predicted, high): archive",
+    ">    - B: keep it open",
+  ].join("\n");
+  const archiveAsk = issue({ number: 70, title: "archive check", body: ARCHIVE });
+
+  it("routes a fresh ask of a graduated class to a session, with no assignment and no needs-you line", () => {
+    const planned = plan({ issues: [archiveAsk], graduated: ["session housekeeping"], now: NOW });
+    expect(planned.actions).toEqual([]);
+    expect(planned.needsYou).toEqual([]);
+    expect(planned.needsSession).toEqual([
+      expect.objectContaining({
+        number: 70,
+        why: expect.stringContaining('graduated class "session housekeeping"'),
+      }),
+    ]);
+  });
+
+  it("asks as before when the class has not graduated, or the ask carries no prediction", () => {
+    expect(plan({ issues: [archiveAsk], now: NOW }).actions.map((a) => a.number)).toEqual([70]);
+    const unpredicted = issue({ number: 71, title: "archive check", body: CALLOUT });
+    const planned = plan({ issues: [unpredicted], graduated: ["session housekeeping"], now: NOW });
+    expect(planned.actions.map((a) => a.number)).toEqual([71]);
+  });
+
+  it("never lets rule 4's class past him, even listed as graduated", () => {
+    const breaker = issue({ number: 72, body: CALLOUT_WITH_OPTIONS });
+    const planned = plan({ issues: [breaker], graduated: ["bot safety rules"], now: NOW });
+    expect(planned.actions.map((a) => a.number)).toEqual([72]);
+    expect(planned.needsSession).toEqual([]);
+  });
+
+  it("leaves an ask he already holds with him", () => {
+    const held = issue({
+      number: 73,
+      title: "archive check",
+      body: ARCHIVE,
+      assignees: ["ejclark"],
+    });
+    const planned = plan({ issues: [held], graduated: ["session housekeeping"], now: NOW });
+    expect(planned.needsYou.map((n) => n.number)).toEqual([73]);
   });
 });

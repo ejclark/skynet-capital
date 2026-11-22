@@ -22,6 +22,7 @@ alignment has come — and the evidence that lets a class stop asking.
    and no miss in its last five, Claude proposes — as one ready-to-approve PR, per CLAUDE.md's
    *recurring blessing-ask* rule — that the class becomes **decide and report**: Claude makes the
    call, says so in the digest, and he can reverse it. A miss after graduation sends the class back.
+   The check and the PR are mechanical: see *Graduation* below.
 4. **The irreversible class never graduates on predictions alone.** Governance, credentials, spend
    and anything outward-facing and hard to reverse (`envelope.json`) stay his because of
    accountability and recoverability, not because alignment is short. That boundary moves only when
@@ -37,9 +38,49 @@ deferral, "score by hand" when the prediction was prose. Plan and feedback issue
 their own reply path resumes the build with the reply as the answer. Nothing acts on the answer:
 a reply of "merge it" is never read as the merge.
 
+**Since #7939 slice 2 most rows arrive from one page.** Issue asks no longer get a card each: they
+are numbered on the one standing *Decisions for Eric* issue (`decisions-page.mjs`, regenerated on
+every push), and one reply there answers many (`1A 2B 3 not now`, or `7669 A, 7670 B`). The reply
+is read by `decisions-reply.mjs`, which applies only what parses unambiguously and echoes the rest
+in a one-line receipt on the page. Each answer then goes through the same `answer-readback.mjs`
+path as above, so the row lands on the answered issue's own "Read as: … (your reply on #N)"
+comment, keyed to his reply, and is collected the same way. Two differences: the prediction comes
+from the issue's callout as it stands when he answers, and a feedback or plan issue answered with a
+letter or a yes also gets `ready`, as his reply on that issue would have. A merge ask never takes a
+letter there; it is listed as a link, and the merge stays his click.
+
 `node scripts/moneypenny/answer-readback.mjs --ledger [--apply]` collects the last week's rows into
-the table below, once each, with the row's key in a hidden comment. No scheduled lane runs it or
-opens rule 3's graduation PR: a session does both.
+the table below, once each, with the row's key in a hidden comment. The daily loops Routine runs it
+(`docs/process/LOOPS-ROUTINE.md`, step 4, #7939 slice 3), then the graduation check below.
+
+## Graduation — the check, the PR, and what a graduated class does (#7939 slice 3)
+
+`node scripts/alignment-graduation.mjs [--json]` reads the ledger and prints, per class: matches,
+misses, the streak of matches at the end, the misses in the last five, rule 4's verdict, and
+whether the class is eligible. Only `match` and `miss` count; `pending`, `not predicted`, `decided
+on his behalf` and `unclear` neither extend a streak nor break one. Rule 4 is a table in the script
+(`CLASS_MAP`): `reversible` may graduate, `irreversible` never does on predictions, and a class the
+table does not name is not eligible until a PR adds it. The check only reports; it exits 0.
+
+When a class is eligible and no PR from its branch (`alignment/graduate-<class>`) is open, the
+Routine opens **one held PR** adding the class's row below (`--graduate`, body from `--body`).
+Merging it is his one tap; the lane never merges or arms it. A graduated class with a miss dated on
+or after its graduation is flagged *send back*, and a normal PR removes its row (`--send-back`).
+
+**How a graduated class is consumed.** An ask whose class is graduated is not assigned to him:
+the session that owns it decides at the predicted answer, takes `needs-eric` off, and reports the
+decision in the digest's **Headlines** ("decided for you: <ask> → <predicted answer>; reply to
+reverse"), with a ledger row whose Score is filled when he reacts. A reversal is a `miss`, and one
+miss sends the class back. In code: `plan()` in `scripts/moneypenny/assignments.mjs` reads the live
+graduated classes (`activeGraduated`) and routes such an ask to the digest's *needs a session* line
+instead of an assignment, but only when every question on it carries a prediction and every
+question's class (`classOf`, the same one its ledger row would get) is graduated. Rule 4's classes
+are never in that list, whatever this table says.
+
+## Graduated classes
+
+| Class | Graduated | PR |
+|---|---|---|
 
 ## Ledger
 
