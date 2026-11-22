@@ -227,6 +227,27 @@ export function needsYouLines({ needsYou }) {
   );
 }
 
+/**
+ * The "Needs you" list folded for the digest (#7939 slice 2 follow-up b): the asks numbered on the
+ * standing Decisions page collapse to ONE line pointing at it, because one reply there answers all
+ * of them; everything else Eric holds (a held PR, a merge ask, an ask the page cannot number) keeps
+ * its own line. The selector stays `needsYouLines`' (needs-you.spec.ts); this only groups its rows.
+ * `page` is `{ number, entries: [issue numbers on it] }` or null. Pure.
+ */
+export function foldedNeedsYouLines({ needsYou }, page = null) {
+  const onPage = new Set(page?.entries ?? []);
+  const folded = needsYou.filter((n) => onPage.has(n.number));
+  if (!(page && folded.length)) return needsYouLines({ needsYou });
+  const rest = needsYouLines({ needsYou: needsYou.filter((n) => !onPage.has(n.number)) }).filter(
+    (l) => !l.startsWith("_Nothing"),
+  );
+  const nums = folded.map((n) => `#${n.number}`).join(", ");
+  return [
+    `- #${page.number} Decisions for Eric — ${folded.length} ask${folded.length === 1 ? "" : "s"} (${nums}); one reply answers all.`,
+    ...rest,
+  ];
+}
+
 /** The "callout incomplete" line: asks he holds or is about to, whose callout lacks part of the card (#6953 slice 3). */
 export function calloutIncompleteLine({ incomplete = [] }) {
   if (!incomplete.length) return "- Callout incomplete: every ask carries its full card.";
@@ -365,6 +386,20 @@ function validate() {
   console.log(`✓ ${digestFiles().length} digest(s) satisfy the contract.`);
 }
 
+/** The standing Decisions page and the issues numbered on it, or null (none open, or unreadable). */
+async function decisionsPage() {
+  try {
+    const { findPage } = await import("./moneypenny/decisions-run.mjs");
+    const { stateOf } = await import("./moneypenny/decisions-page.mjs");
+    const page = findPage();
+    return page
+      ? { number: page.number, entries: stateOf(page.body).entries.map((e) => e.issue) }
+      : null;
+  } catch {
+    return null; // a failed read costs the fold, never the list
+  }
+}
+
 /** `--needs-you`: the list, the callout-incomplete line, and the unseen line (#6953 slice 4). */
 async function needsYouReport() {
   const { gather, plan } = await import("./moneypenny/assignments.mjs");
@@ -382,7 +417,10 @@ async function needsYouReport() {
       .split("\n")[0]
       .slice(0, 200);
   }
-  const lines = [...needsYouLines(planned), calloutIncompleteLine(planned)];
+  const lines = [
+    ...foldedNeedsYouLines(planned, await decisionsPage()),
+    calloutIncompleteLine(planned),
+  ];
   return [...lines, unseenLine(unseen, why)].join("\n");
 }
 
