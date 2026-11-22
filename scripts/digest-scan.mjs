@@ -233,19 +233,42 @@ export function needsYouLines({ needsYou }) {
  * of them; everything else Eric holds (a held PR, a merge ask, an ask the page cannot number) keeps
  * its own line. The selector stays `needsYouLines`' (needs-you.spec.ts); this only groups its rows.
  * `page` is `{ number, entries: [issue numbers on it] }` or null. Pure.
+ *
+ * A merge ask that names a held PR already on the list rides that PR's line (follow-up e): #7548
+ * asked "Merge held platter #7943?" while #7943 had its own line, so one click read as two items.
  */
 export function foldedNeedsYouLines({ needsYou }, page = null) {
   const onPage = new Set(page?.entries ?? []);
-  const folded = needsYou.filter((n) => onPage.has(n.number));
-  if (!(page && folded.length)) return needsYouLines({ needsYou });
-  const rest = needsYouLines({ needsYou: needsYou.filter((n) => !onPage.has(n.number)) }).filter(
-    (l) => !l.startsWith("_Nothing"),
-  );
+  const folded = page ? needsYou.filter((n) => onPage.has(n.number)) : [];
+  const riders = mergeRiders(needsYou);
+  const rest = needsYou
+    .filter((n) => !(onPage.has(n.number) || riders.has(n.number)))
+    .map((n) => {
+      const also = [...riders].filter(([, pr]) => pr === n.number).map(([i]) => `#${i}`);
+      return also.length
+        ? { ...n, why: `${n.why}; merging it also answers ${also.join(", ")}` }
+        : n;
+    });
+  if (!folded.length) return needsYouLines({ needsYou: rest });
   const nums = folded.map((n) => `#${n.number}`).join(", ");
   return [
     `- #${page.number} Decisions for Eric — ${folded.length} ask${folded.length === 1 ? "" : "s"} (${nums}); one reply answers all.`,
-    ...rest,
+    ...needsYouLines({ needsYou: rest }).filter((l) => !l.startsWith("_Nothing")),
   ];
+}
+
+/** Asks answered by merging a held PR on the same list: `Map<ask number, PR number>`. The word
+ *  test is decisions-page.mjs's MERGE_ASK, kept local so this pure fold imports nothing. Pure. */
+function mergeRiders(needsYou) {
+  const held = new Set(needsYou.filter((n) => n.criterion === 4).map((n) => n.number));
+  const riders = new Map();
+  for (const n of needsYou) {
+    if (n.criterion !== 1 || !/\bmerge\b/i.test(n.decision ?? "")) continue;
+    const pr = [...String(n.decision).matchAll(/#(\d+)/g)].map((m) => Number(m[1]));
+    const target = pr.find((p) => held.has(p));
+    if (target !== undefined) riders.set(n.number, target);
+  }
+  return riders;
 }
 
 /** The "callout incomplete" line: asks he holds or is about to, whose callout lacks part of the card (#6953 slice 3). */
