@@ -73,6 +73,15 @@ export const LABELS = {
     description: "A decision only Eric can make — the irreversible class or a genuine taste fork",
     managed: true,
   },
+  // #7939 slice 2 — the one standing "Decisions for Eric" issue (decisions-page.mjs). Managed so
+  // the page's first create never 404s on its own label, and excluded from the board by
+  // `isBacklogCandidate` so it never reads as work a lane could pull.
+  decisionsPage: {
+    name: "decisions-page",
+    color: "d93f0b",
+    description: "Eric's one page of open decisions, regenerated each push — never built",
+    managed: true,
+  },
   // #1357 — the fifth waiting-room, and deliberately NOT a fifth outcome. A Sliced build whose
   // remainder lands under `.claude/` is finished as far as this lane is concerned (`next-slice`
   // still marks it); this label only names WHO can pick the remainder up, because an unattended

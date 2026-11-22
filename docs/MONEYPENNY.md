@@ -177,6 +177,33 @@ you" tier is a dated snapshot of the same query, never a second list to reconcil
   `needs-info` / `needs-eric` feedback or plan issue restarts the waiting lane without a session
   noticing it (#3959 slices 1–2, `docs/FEEDBACK.md`).
 
+### How an ask reaches Eric — one page, one reply (#7939 slice 2)
+
+The board is where an ask *lives*; the decisions page is how it *reaches him*. Every open
+`needs-eric` ask with a `Needs from you` callout (the one selector, `plan().needsYou` in
+`assignments.mjs`) is numbered on one standing issue, *Decisions for Eric*, labelled
+`decisions-page` and kept off the board (`isBacklogCandidate`). The push sweep rewrites its body
+each tick (`scripts/moneypenny/decisions-page.mjs`, reads and writes in `decisions-run.mjs`); he is
+assigned to that one issue while it holds asks, and a ping comment goes out at most once per batch
+window (14:00Z and 21:30Z) for asks he has not yet been told about. Per-issue assignment cards for
+issue asks stopped here (`routeAssignments`' `issueCards` switch, off); the issue's own callout stays
+the source of truth, and held PRs keep their card, since merges are slice 1's platter.
+
+- **One reply answers many.** `1A 2B 3 not now`, or `7669 A, 7670 B`. `decisions-reply.mjs` reads
+  it purely: whatever parses unambiguously against each ask's card is applied, and the rest is echoed
+  in a one-line receipt on the page with its reason, never guessed. Only unfooted text by `ejclark`
+  counts (`isClaudeComment`), and a number means the ask it named when he wrote it.
+- **Each answer goes through `answer-readback.mjs`.** The issue gets its "Read as:" comment and
+  ledger row, `needs-eric` comes off, and a feedback or plan issue answered with a letter or a yes
+  also gets `ready`, as his reply on the issue would have.
+- **Merges are never read from text.** Held PRs, and an ask whose question is a merge, are listed as
+  links; the click on the PR is the only merge.
+- **No workflow edit.** His reply is read on its own `issue_comment` event (the existing "Run
+  Moneypenny" step routes it), and again on the next push if that run is lost.
+- **Why GitHub-native, not #5056's steer page.** That page needs a live session with Artifact tools
+  to assemble and read back, and has been dormant since 2026-10-12; this one runs on the App token
+  every push. By hand: `node scripts/moneypenny/decisions-run.mjs` prints today's body.
+
 ## Authority — she drives the architecture, within the same fence as everyone else
 
 Eric's own framing: *"the other roles/structures that pre-dated the GitHub App have become sources

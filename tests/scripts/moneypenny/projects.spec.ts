@@ -102,6 +102,8 @@ describe("moneypenny projects: isBacklogCandidate", () => {
   it("excludes ci-failure trackers — the event-research queue, not product backlog", () => {
     expect(isBacklogCandidate({ labels: ["ci-failure"] })).toBe(false);
     expect(isBacklogCandidate({ labels: ["ci-failure", "enhancement"] })).toBe(false);
+    // #7939 slice 2: Eric's decisions page is his single touch, never work on the board.
+    expect(isBacklogCandidate({ labels: ["decisions-page"] })).toBe(false);
   });
 
   it("admits everything else, including an untagged issue", () => {

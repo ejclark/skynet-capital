@@ -429,17 +429,24 @@ export function batchStart(now = Date.now()) {
  * bots or production (rank 1) goes between batches and past the open cap. `lastAskAt` is the newest
  * ask the lane posted; without it nothing is known to have gone out this window.
  *
- * @param deps { assignments: { issues, prs, markers, replies, lastAskAt }, now }
+ * NO PER-ISSUE CARD FOR AN ISSUE ASK (#7939 slice 2). Criterion 1's asks now reach him as numbered
+ * entries on the one decisions page (decisions-page.mjs), answered in one reply, so this lane no
+ * longer assigns him issue by issue: four cards on four issues the same night (#7669–#7673) was
+ * four taps for four letters. `issueCards: true` brings the old card back — the rollback switch,
+ * and what the batch-rhythm specs drive. Held PRs (criterion 4) keep their card: a merge is a
+ * click on the PR, and folding merges into one touch is slice 1's platter, not this page.
+ *
+ * @param deps { assignments: { issues, prs, markers, replies, lastAskAt }, now, issueCards? }
  * @returns Intent[] — `[]` on most pushes, which is the correct answer.
  */
 export function routeAssignments(deps = {}) {
-  const { assignments, now = Date.now() } = deps;
+  const { assignments, now = Date.now(), issueCards = false } = deps;
   if (!assignments) return [];
   const { actions, holding } = plan({ ...assignments, now });
   const removals = actions.filter((a) => a.kind === "unassign");
   const readbacks = actions.filter((a) => a.kind === "readback");
   const asks = actions
-    .filter((a) => a.kind === "assign")
+    .filter((a) => a.kind === "assign" && (issueCards || a.criterion !== 1))
     .sort((a, b) => (a.rank ?? 4) - (b.rank ?? 4) || a.number - b.number);
   const windowOpen = !((assignments.lastAskAt ?? 0) >= batchStart(now));
   const room = Math.max(0, OPEN_CAP - holding);

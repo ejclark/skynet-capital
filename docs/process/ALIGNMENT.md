@@ -37,6 +37,17 @@ deferral, "score by hand" when the prediction was prose. Plan and feedback issue
 their own reply path resumes the build with the reply as the answer. Nothing acts on the answer:
 a reply of "merge it" is never read as the merge.
 
+**Since #7939 slice 2 most rows arrive from one page.** Issue asks no longer get a card each: they
+are numbered on the one standing *Decisions for Eric* issue (`decisions-page.mjs`, regenerated on
+every push), and one reply there answers many (`1A 2B 3 not now`, or `7669 A, 7670 B`). The reply
+is read by `decisions-reply.mjs`, which applies only what parses unambiguously and echoes the rest
+in a one-line receipt on the page. Each answer then goes through the same `answer-readback.mjs`
+path as above, so the row lands on the answered issue's own "Read as: … (your reply on #N)"
+comment, keyed to his reply, and is collected the same way. Two differences: the prediction comes
+from the issue's callout as it stands when he answers, and a feedback or plan issue answered with a
+letter or a yes also gets `ready`, as his reply on that issue would have. A merge ask never takes a
+letter there; it is listed as a link, and the merge stays his click.
+
 `node scripts/moneypenny/answer-readback.mjs --ledger [--apply]` collects the last week's rows into
 the table below, once each, with the row's key in a hidden comment. No scheduled lane runs it or
 opens rule 3's graduation PR: a session does both.

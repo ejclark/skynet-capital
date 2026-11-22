@@ -207,6 +207,7 @@ describe("routeAssignments: the sweep's intents", () => {
     const [intent, ...rest] = routeAssignments({
       assignments: { issues: [issue()], prs: [], markers: new Set() },
       now: NOW,
+      issueCards: true,
     });
     expect(rest).toEqual([]);
     if (!intent) throw new Error("one intent expected");
@@ -220,6 +221,7 @@ describe("routeAssignments: the sweep's intents", () => {
     const intents = routeAssignments({
       assignments: { issues: many, prs: [], markers: new Set() },
       now: NOW,
+      issueCards: true,
     });
     expect(intents).toHaveLength(ASSIGN_CAP);
     expect(intents.map((i) => i.number)).toEqual([1, 3, 5]);
@@ -236,6 +238,7 @@ describe("routeAssignments: the sweep's intents", () => {
         markers: new Set([20, 21, 22, 23]),
       },
       now: NOW,
+      issueCards: true,
     });
     expect(intents.map((i) => [i.kind, i.number])).toEqual([
       ["unassign-eric", 20],
@@ -450,16 +453,27 @@ describe("routeSweep: a close beats an ask on the same issue", () => {
       shippedFeedback: [{ number: 42, title: "shipped but still labelled", pr: 99 }],
       assignments: { issues: [needsEricIssue], prs: [], markers: new Set() },
       now: NOW,
+      issueCards: true,
     }) as { kind: string; number?: number; issueNumber?: number }[];
     expect(intents.map((i) => i.kind)).toEqual(["close-shipped"]);
   });
 
-  it("still asks when nothing in the tick touches that issue", () => {
+  it("still asks when nothing in the tick touches that issue (with per-issue cards on)", () => {
+    const intents = routeSweep({
+      assignments: { issues: [needsEricIssue], prs: [], markers: new Set() },
+      now: NOW,
+      issueCards: true,
+    }) as { kind: string }[];
+    expect(intents.map((i) => i.kind)).toEqual(["assign-eric"]);
+  });
+
+  // #7939 slice 2: the decisions page carries criterion 1's asks, so no card goes out per issue.
+  it("sends no per-issue card for an issue ask by default", () => {
     const intents = routeSweep({
       assignments: { issues: [needsEricIssue], prs: [], markers: new Set() },
       now: NOW,
     }) as { kind: string }[];
-    expect(intents.map((i) => i.kind)).toEqual(["assign-eric"]);
+    expect(intents).toEqual([]);
   });
 });
 
@@ -623,6 +637,7 @@ describe("the batch rhythm", () => {
     routeAssignments({
       assignments: { issues: many, prs: [], markers: new Set(), ...assignments },
       now,
+      issueCards: true,
     });
 
   it("starts a batch at 14:00Z and 21:30Z", () => {
