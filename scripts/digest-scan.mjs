@@ -492,4 +492,14 @@ async function main() {
 }
 
 // CLI only — comms-scan.mjs imports `latestDigestDate` and must not trigger a report.
-if (isMain(import.meta.url)) await main();
+// Not `await main()`: a top-level await keeps this module "evaluating" until main returns, and
+// `--needs-you` dynamically imports assignments → decision-callout → issue-lint → projects → rank,
+// which imports this file back. That import waits on a module that waits on it: node exit 13
+// ("unsettled top-level await") and no list, every time a cloud session ran it (digest 2026-11-22
+// had to be read by hand; #7939). A plain call lets evaluation finish first, so the cycle resolves.
+if (isMain(import.meta.url)) {
+  main().catch((err) => {
+    console.error(err?.stack ?? err);
+    process.exitCode = 1;
+  });
+}
