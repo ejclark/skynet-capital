@@ -84,6 +84,7 @@ are never in that list, whatever this table says.
 
 | Class | Graduated | PR |
 |---|---|---|
+| screen design (taste) | 2026-11-22 | `alignment/graduate-screen-design-taste` |
 
 ## Ledger
 
