@@ -83,7 +83,15 @@ describe("serveTradeApi", () => {
   });
 
   it("refuses a malformed body with 400, never coercing it into an order", async () => {
-    for (const bad of ["not json", { ...ticket, quantity: "5" }, { ...ticket, action: "steal" }]) {
+    for (const bad of [
+      "not json",
+      { ...ticket, quantity: "5" },
+      { ...ticket, action: "steal" },
+      // A type the route does not know must never fall back to the market default — a stop-limit
+      // sent before the server learns it would otherwise sell at market (change-scenarios census).
+      { ...ticket, orderType: "stop_limit", stopPrice: 100, limitPrice: 99 },
+      { ...ticket, orderType: "trailing_stop" },
+    ]) {
       const { res, out } = fakeRes();
       await serveTradeApi(post(bad), res, "/api/trade/review", configWith(), session);
       expect(out.status).toBe(400);

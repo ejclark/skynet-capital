@@ -1924,3 +1924,20 @@ detailed in the backlog somewhere." Not scoped — no shape, no acceptance crite
 here per his own instruction rather than built or planned now. Needs its own interrogation pass
 (what "the feature we're building" changes about it, specifically) before it's a plan issue.
 _(src: Eric · while: #3818 point 3, answering open question 4, 2026-09-27)_
+
+## The faculty's next instruments — a scripted assistant, a nightly round, and variance
+
+Three gaps the change study (`scripts/faculty/`) found in itself, each cheap to try:
+
+- **A recorded assistant in the faculty world.** Offline, Moneypenny has no model, so every member
+  who asked her to act ("stop all bots", "cancel my MSFT order") got a canned reply that the round
+  cannot count. A small replay of real companion answers would let a round measure whether she
+  routes a member to the right control. It is the one surface members reached for in every
+  give-up.
+- **A nightly faculty round.** The `changes` project pins five optimal paths. A scheduled round over
+  the 30 scenarios on `main`, with `regrade.mjs` setting aside its own faults, would catch a member
+  surface regressing before a member does. It costs about 30 blind sessions a night.
+- **Variance per scenario.** One run per scenario cannot tell a 50% path from a 90% one. Rounds 3–4
+  ran twice each and agreed on every pair; three runs on the phone-heavy rows would put an interval
+  on "landed".
+_(src: Claude · while: running faculty rounds 1–4 on the change-scenarios PR, 2026-11-17)_

@@ -20,6 +20,7 @@ import type { DeskOrderRow, OrderChange } from "../live/orders";
 import { useFillFlare } from "./fill-flare";
 import { GateHead } from "./gate-frame";
 import { useNow } from "./market-session";
+import { sellSharesSearch } from "./trade-search";
 import { ModifyForm } from "./working-order-modify";
 import { deskOrdersQuery, FALLBACK_POLL_MS, RowActions, useOrderActions } from "./working-orders";
 
@@ -198,11 +199,7 @@ function NextStep({
   }
   if (order.side !== "buy") return null;
   return (
-    <Link
-      to="/trade"
-      search={{ desk: deskId, symbol: order.symbol, play: "102" }}
-      className="btn receipt-next"
-    >
+    <Link to="/trade" search={sellSharesSearch(deskId, order.symbol)} className="btn receipt-next">
       Sell these shares →
     </Link>
   );

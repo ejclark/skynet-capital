@@ -3,7 +3,7 @@ import { parseOccSymbol } from "../../../src/trading/option-symbols";
 import type { DeskPosition } from "./desk";
 import type { OptionPositionRow } from "./options";
 import { money2, type PriceAxis, type PriceRange, rangeWords, strikeMoney } from "./price-context";
-import { held, parseQuantity } from "./quantity";
+import { held, parseQuantity, sharesHeld } from "./quantity";
 
 /**
  * A POSITION'S PICTURE, AS NUMBERS (#5070 slice 2; round 2 of #5037, R2 "tap opens it in place").
@@ -317,13 +317,6 @@ function spreadPartner(
     const o = parseOccSymbol(p.symbol);
     return o?.underlying === occ.underlying && o.type === occ.type && parseQuantity(p.quantity) > 0;
   });
-}
-
-/** Shares of `symbol` the book holds long. */
-function sharesHeld(book: readonly DeskPosition[], symbol: string): number {
-  const row = book.find((p) => !p.isOption && p.symbol === symbol);
-  const n = row ? parseQuantity(row.quantity) : 0;
-  return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
 /**

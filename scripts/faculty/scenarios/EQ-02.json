@@ -1,0 +1,22 @@
+{
+  "id": "EQ-02",
+  "member": "eric",
+  "viewport": "desktop",
+  "start": "/app",
+  "optimal": 10,
+  "scenario": "Tesla has run up and you'd buy 20 shares on a dip to $320, but not a cent more, and you want the offer to keep standing for weeks if it has to. Set that up.",
+  "end": {
+    "orders": [
+      {
+        "symbol": "TSLA",
+        "side": "buy",
+        "quantity": 20,
+        "orderType": "limit",
+        "limitPrice": [320, 320],
+        "timeInForce": "gtc",
+        "state": ["working", "filled"]
+      }
+    ]
+  },
+  "note": "The time-in-force control sits below the price; the seeded limit is the mid, not $320."
+}

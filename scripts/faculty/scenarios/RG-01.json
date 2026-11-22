@@ -1,0 +1,12 @@
+{
+  "id": "RG-01",
+  "member": "returning-trader",
+  "viewport": "desktop",
+  "start": "/app",
+  "optimal": 9,
+  "scenario": "You want 300 shares of Microsoft at the market price right away. Try to buy them, and tell us what happens.",
+  "end": {
+    "refusal": true
+  },
+  "note": "300 \u00d7 $420 \u2248 $126,000 against $40,000 cash: the review should refuse in words the member understands."
+}

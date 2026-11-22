@@ -1,0 +1,21 @@
+{
+  "id": "OM-04",
+  "member": "returning-trader",
+  "viewport": "phone",
+  "start": "/app",
+  "optimal": 12,
+  "scenario": "Put in an offer to buy 10 shares of XLE, the energy fund, at $85. Then decide you jumped the gun and make sure that new offer can't fill.",
+  "end": {
+    "orders": [
+      {
+        "symbol": "XLE",
+        "side": "buy",
+        "quantity": 10,
+        "orderType": "limit",
+        "limitPrice": [85, 85],
+        "state": ["cancelled"]
+      }
+    ]
+  },
+  "note": "The receipt offers 'Cancel order' beside 'New ticket' (working-orders.tsx:71-74)."
+}

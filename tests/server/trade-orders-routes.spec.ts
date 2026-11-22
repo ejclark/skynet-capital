@@ -1,7 +1,12 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { Readable } from "node:stream";
 import { AlpacaApiError } from "../../src/alpaca/alpaca-api-error.js";
-import type { AlpacaOrder, AlpacaTradingClient } from "../../src/alpaca/alpaca-trading-client.js";
+import type {
+  AlpacaOrder,
+  AlpacaPosition,
+  AlpacaTradingClient,
+} from "../../src/alpaca/alpaca-trading-client.js";
+import { verifyOwnAccount } from "../../src/server/account-identity-gate.js";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
 import type { OrderAuditRecord } from "../../src/server/order-audit-log.js";
 import { serveTradeOrdersApi } from "../../src/server/trade-orders-routes.js";
@@ -50,7 +55,17 @@ function post(url: string, body: unknown): IncomingMessage {
 
 const json = (out: Answer): Record<string, unknown> => JSON.parse(out.body ?? "{}");
 
-function fakeClient(over: Partial<AlpacaTradingClient> = {}): {
+/** The live account a replace is re-checked against: its working order, cash and positions. */
+interface Book {
+  readonly order?: Partial<AlpacaOrder>;
+  readonly cash?: string;
+  readonly positions?: readonly Partial<AlpacaPosition>[];
+}
+
+function fakeClient(
+  over: Partial<AlpacaTradingClient> = {},
+  book: Book = {},
+): {
   client: AlpacaTradingClient;
   cancelled: string[];
   replaced: Array<{ id: string; params: unknown }>;
@@ -67,9 +82,16 @@ function fakeClient(over: Partial<AlpacaTradingClient> = {}): {
     limit_price: "170",
     time_in_force: "gtc",
     submitted_at: new Date().toISOString(),
+    ...book.order,
   };
   const client = {
     listOrders: () => Promise.resolve([working]),
+    getOrder: (id: string) =>
+      id === working.id
+        ? Promise.resolve(working)
+        : Promise.reject(new AlpacaApiError(404, { message: "order not found" })),
+    getAccount: () => Promise.resolve({ cash: book.cash ?? "10000" }),
+    getPositions: () => Promise.resolve(book.positions ?? []),
     cancelOrder: (id: string) => {
       cancelled.push(id);
       return Promise.resolve();
@@ -87,6 +109,7 @@ function configWith(over: Partial<DashboardServerConfig> = {}): DashboardServerC
   return {
     hub: { getState: () => ({ generatedAt: "t", participants: [], collisions: [] }) },
     auth: { providerIds: ["google"] },
+    tradingEnabled: true,
     resolveOwnerId: () => "human-eric",
     ...over,
   } as unknown as DashboardServerConfig;
@@ -345,10 +368,7 @@ describe("POST /api/trade/replace (P1 1b)", () => {
       configWith({ tradingClientFor: () => client }),
       session,
     );
-    expect(json(out)).toEqual({
-      ok: false,
-      refusals: ["You can only change orders on your own account."],
-    });
+    expect(json(out)).toEqual({ ok: false, refusals: ["You can only trade your own account."] });
     expect(replaced).toEqual([]);
   });
 
@@ -395,4 +415,193 @@ describe("POST /api/trade/replace (P1 1b)", () => {
     expect(out.status).toBe(400);
     expect(replaced).toEqual([]);
   });
+});
+
+/**
+ * The change re-check: a replace passes what a fresh submit of the order AS CHANGED would, and a
+ * change that only shrinks the order is never refused. Cancel and replace refuse exactly when
+ * submit would, in submit's own sentences.
+ */
+describe("POST /api/trade/replace — re-checked like a fresh order", () => {
+  const sendChange = async (change: Record<string, unknown>, book: Book, over = {}) => {
+    const { client, replaced } = fakeClient({}, book);
+    const { res, out } = fakeRes();
+    await serveTradeOrdersApi(
+      post("/api/trade/replace", { participantId: "human-eric", orderId: "o-1", ...change }),
+      res,
+      "/api/trade/replace",
+      configWith({ tradingClientFor: () => client, ...over }),
+      session,
+    );
+    return { answer: json(out), replaced };
+  };
+  const nvda = (qty: string) => ({
+    symbol: "NVDA",
+    qty,
+    avg_entry_price: "150",
+    market_value: String(Number(qty) * 175),
+  });
+  const workingSell = { side: "sell" as const, qty: "5", limit_price: "180" };
+
+  it("refuses a sell raised past the shares held — the no-short rule, in the ticket's sentence", async () => {
+    const { answer, replaced } = await sendChange(
+      { quantity: 8 },
+      { order: workingSell, positions: [nvda("6")] },
+    );
+    expect(answer).toEqual({
+      ok: false,
+      refusals: [
+        "You hold 6 shares — selling more would open a short, which this desk doesn't do.",
+      ],
+    });
+    expect(replaced).toEqual([]);
+  });
+
+  it("lets a sell grow up to the shares held, and lets one shrink even past a smaller position", async () => {
+    const upToHeld = await sendChange(
+      { quantity: 6 },
+      { order: workingSell, positions: [nvda("6")] },
+    );
+    expect(upToHeld.answer).toMatchObject({ ok: true });
+    const shrink = await sendChange({ quantity: 3 }, { order: workingSell, positions: [] });
+    expect(shrink.answer).toMatchObject({ ok: true });
+  });
+
+  it.each([
+    ["the quantity", { quantity: 10 }],
+    ["the limit price", { limitPrice: 250 }],
+  ])("refuses a buy whose cost %s raises past cash", async (_label, change) => {
+    // 5 × $170 = $850 working; cash $1,000. 10 × $170 = $1,700 and 5 × $250 = $1,250 both exceed it.
+    const { answer, replaced } = await sendChange(change, { cash: "1000" });
+    expect(answer).toEqual({
+      ok: false,
+      refusals: [
+        "Estimated cost is more than your available cash — trim the quantity or free up cash first.",
+      ],
+    });
+    expect(replaced).toEqual([]);
+  });
+
+  it("passes a buy raised within cash", async () => {
+    const { answer, replaced } = await sendChange(
+      { quantity: 5, limitPrice: 190 },
+      { cash: "1000" },
+    );
+    expect(answer).toMatchObject({ ok: true });
+    expect(replaced).toEqual([{ id: "o-1", params: { qty: 5, limit_price: 190 } }]);
+  });
+
+  it("never refuses lowering a buy's limit or quantity, even with less cash than the order", async () => {
+    const lower = await sendChange({ limitPrice: 160 }, { cash: "100" });
+    expect(lower.answer).toMatchObject({ ok: true, orderId: "o-9" });
+    expect(lower.replaced).toEqual([{ id: "o-1", params: { limit_price: 160 } }]);
+    const fewer = await sendChange({ quantity: 2 }, { cash: "100" });
+    expect(fewer.answer).toMatchObject({ ok: true });
+  });
+
+  it("checks a stop buy against its stop price", async () => {
+    const stop = { type: "stop", limit_price: null, stop_price: "170" };
+    const { answer } = await sendChange({ stopPrice: 300 }, { order: stop, cash: "1000" });
+    expect(answer).toMatchObject({ ok: false });
+  });
+
+  it("refuses a grown buy on a locked rung with the ladder's sentence, and leaves a shrink alone", async () => {
+    const gated = {
+      progression: {
+        view: () =>
+          Promise.resolve({ wheels: true, unlocked: new Set(), ladderGate: "first-message" }),
+      },
+    };
+    const grow = await sendChange({ quantity: 6 }, {}, gated);
+    expect(grow.answer).toMatchObject({
+      ok: false,
+      refusals: [expect.stringContaining("Nothing was sent.")],
+    });
+    expect(grow.replaced).toEqual([]);
+    const shrink = await sendChange({ quantity: 4 }, {}, gated);
+    expect(shrink.answer).toMatchObject({ ok: true });
+  });
+
+  it("names a vanished order plainly and never sends the change", async () => {
+    const { answer, replaced } = await sendChange({ orderId: "gone", quantity: 9 }, {});
+    expect(answer).toEqual({ ok: false, refusals: ["That order isn't on the broker any more."] });
+    expect(replaced).toEqual([]);
+  });
+
+  it("refuses with a fixed sentence when the account can't be read — never sends unchecked", async () => {
+    const { client, replaced } = fakeClient({
+      getAccount: () => Promise.reject(new Error("ECONNRESET broker.internal")),
+    });
+    const { res, out } = fakeRes();
+    await serveTradeOrdersApi(
+      post("/api/trade/replace", { participantId: "human-eric", orderId: "o-1", quantity: 9 }),
+      res,
+      "/api/trade/replace",
+      configWith({ tradingClientFor: () => client }),
+      session,
+    );
+    expect(out.body).not.toContain("broker.internal");
+    expect(json(out)).toEqual({
+      ok: false,
+      refusals: ["Couldn't read the account to check this order. Try again shortly."],
+    });
+    expect(replaced).toEqual([]);
+  });
+});
+
+describe("cancel and replace refuse exactly when submit would", () => {
+  // The sentences are submit's own: `verifyOwnAccount` is the gate `/api/trade/submit` runs.
+  const submitRefusal = (tradingEnabled: boolean, requesterId: string | undefined) => {
+    const verdict = verifyOwnAccount(
+      {
+        tradingEnabled,
+        findParticipant: () => ({ id: "bot-sauron" }) as never,
+        clientFactory: () => ({}) as never,
+        optionsClientFactory: () => ({}) as never,
+      },
+      "bot-sauron",
+      requesterId,
+    );
+    return "refusals" in verdict ? verdict.refusals : [];
+  };
+  const both = [
+    ["/api/trade/cancel", { participantId: "bot-sauron", orderId: "o-1" }],
+    ["/api/trade/replace", { participantId: "bot-sauron", orderId: "o-1", quantity: 1 }],
+  ] as const;
+
+  it.each(both)(
+    "%s: not-your-account refuses in submit's sentence, touching nothing",
+    async (path, body) => {
+      const { client, cancelled, replaced } = fakeClient();
+      const { res, out } = fakeRes();
+      await serveTradeOrdersApi(
+        post(path, body),
+        res,
+        path,
+        configWith({ tradingClientFor: () => client }),
+        session,
+      );
+      expect(json(out)).toEqual({ ok: false, refusals: submitRefusal(true, "human-eric") });
+      expect(json(out).refusals).toEqual(["You can only trade your own account."]);
+      expect([...cancelled, ...replaced]).toEqual([]);
+    },
+  );
+
+  it.each(both)(
+    "%s: open mode (no sign-in configured) refuses as trading switched off",
+    async (path, body) => {
+      const { client, cancelled, replaced } = fakeClient();
+      const { res, out } = fakeRes();
+      await serveTradeOrdersApi(
+        post(path, body),
+        res,
+        path,
+        configWith({ auth: undefined, tradingEnabled: false, tradingClientFor: () => client }),
+        undefined as never,
+      );
+      expect(json(out)).toEqual({ ok: false, refusals: submitRefusal(false, undefined) });
+      expect(json(out).refusals).toEqual(["Trading is switched off for this deployment."]);
+      expect([...cancelled, ...replaced]).toEqual([]);
+    },
+  );
 });

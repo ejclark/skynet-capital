@@ -1,0 +1,20 @@
+{
+  "id": "EQ-04",
+  "member": "returning-trader",
+  "viewport": "desktop",
+  "start": "/app",
+  "optimal": 9,
+  "scenario": "You hold a big block of the emerging-markets fund EEM and want to free up cash. Sell 400 of those shares at whatever the market pays, and keep the rest.",
+  "end": {
+    "orders": [
+      {
+        "symbol": "EEM",
+        "side": "sell",
+        "quantity": 400,
+        "orderType": "market",
+        "state": ["working", "filled"]
+      }
+    ]
+  },
+  "note": "The sell form never shows how many shares are held (trade-gate.tsx:323-399)."
+}

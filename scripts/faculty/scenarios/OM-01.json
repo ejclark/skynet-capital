@@ -1,0 +1,12 @@
+{
+  "id": "OM-01",
+  "member": "eric",
+  "viewport": "phone",
+  "start": "/app",
+  "optimal": 5,
+  "scenario": "Last week you offered to buy 10 Microsoft shares at $400. You've changed your mind about Microsoft entirely. Make sure that offer can no longer go through.",
+  "end": {
+    "cancelled": ["faculty-msft-limit"]
+  },
+  "note": "Cancel is two taps (the button becomes its own confirm, working-orders.tsx:71-110)."
+}

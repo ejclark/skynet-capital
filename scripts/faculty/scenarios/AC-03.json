@@ -1,0 +1,22 @@
+{
+  "id": "AC-03",
+  "member": "invited-friend",
+  "viewport": "desktop",
+  "start": "/app",
+  "optimal": 11,
+  "scenario": "Besides your own account, you look after the Day Trader bot's account. Buy 5 shares of SPY for the Day Trader's account \u2014 not your own \u2014 at whatever the market gives.",
+  "end": {
+    "orders": [
+      {
+        "symbol": "SPY",
+        "side": "buy",
+        "quantity": 5,
+        "orderType": "market",
+        "state": ["working", "filled"]
+      }
+    ]
+  },
+  "note": "Graded on the Day Trader's account; an order placed in the friend's own account instead is invisible here and fails the session (which account an order hits shows only in a small picker, S34).",
+  "email": "friend@example.test",
+  "participant": "day-trader"
+}

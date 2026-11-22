@@ -539,3 +539,6 @@ is expected and fine; the docs are the memory.
   Spell paths out, even long ones. The tool already reports a non-zero exit, so `echo $?` adds
   nothing. Anything longer goes in a script file in your scratchpad, run as `bash <file>`, aimed at
   your own worktree. Rail 2 of [`docs/DELEGATION.md`](docs/DELEGATION.md) has the rest. A workflow agent that ends its turn is done: wait in `until` loops.
+  **Its first call is `bash scripts/wt-start.sh <branch>`**, which installs `node_modules` the safe
+  way (a reflink or hard links, never a symlink: #5548). On 2026-11-17 two agents that skipped it
+  symlinked the primary's install by hand to get biome running.

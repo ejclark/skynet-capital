@@ -147,6 +147,12 @@ A slice that builds on an unmerged PR stacks on it instead of waiting (Eric, 202
 
 ## Mechanics & traps (this skill owns the landing detail)
 
+- **Verify while you work, not at the push.** After a batch of commits, start
+  `bash scripts/verify-locked.sh` with `run_in_background`; it stamps the tree green, and the
+  pre-push hook then skips that exact tree instead of running a 10–15 minute verify at push time.
+  On 2026-11-17 a session pushed 7 times and waited out a fresh verify on every one. Check a push's
+  own exit status: `push; echo EXIT` reports the echo's success, not the push's.
+
 - **No `git stash`, ever.** It has silently dropped stashed edits in this environment (the incident
   is banked in `docs/LESSONS.md`). Branch-first (`git checkout -B <branch> origin/main` *before
   editing*) makes stash unnecessary.

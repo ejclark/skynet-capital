@@ -3,6 +3,7 @@ import type { ReactElement, ReactNode } from "react";
 import { parseOccSymbol } from "../../../src/trading/option-symbols";
 import type { DeskPosition } from "../live/desk";
 import { manageSearch } from "../live/manage-handoff";
+import { held } from "../live/quantity";
 import { withMinus } from "../ui";
 import { greeksParts, type HoldingGreeks } from "./holding-decay";
 import { positionAnchor } from "./position-anchor";
@@ -15,18 +16,25 @@ import {
   PositionSize,
   ROW_KEY,
 } from "./position-row-spec";
+import { sellSharesSearch } from "./trade-search";
 
 /** Trade's search for a held position: an option opens on the HELD contract (the Orders pane, its
  *  Close / Roll row marked — #4947; a strike/expiry preset would seed a new order instead), shares
- *  on their ticker. Trade's `?symbol=` takes tickers only. */
-function tradeSearch(deskId: string, symbol: string) {
+ *  held long on the Sell side of their ticker — the receipt's own "Sell these shares" door
+ *  (`sellSharesSearch`), since closing is what a phone opens a holding for. A short opens on the
+ *  ticker alone, which lands on Buy: a sell would add to it. Trade's `?symbol=` takes tickers only. */
+function tradeSearch(deskId: string, position: DeskPosition) {
+  const { symbol } = position;
   const occ = parseOccSymbol(symbol);
-  return occ
-    ? manageSearch<{ desk: string; symbol: string; section?: string }>(
-        { desk: deskId, symbol: occ.underlying },
-        { occ: symbol },
-      )
-    : { desk: deskId, symbol };
+  if (occ) {
+    return manageSearch<{ desk: string; symbol: string; section?: string }>(
+      { desk: deskId, symbol: occ.underlying },
+      { occ: symbol },
+    );
+  }
+  return held(position.quantity).short
+    ? { desk: deskId, symbol }
+    : sellSharesSearch(deskId, symbol);
 }
 
 /**
@@ -80,7 +88,7 @@ export function PositionCards({
           <li key={p.symbol} className={guide ? "pos-card-guided" : undefined}>
             <Link
               to="/trade"
-              search={tradeSearch(deskId, p.symbol)}
+              search={tradeSearch(deskId, p)}
               className="pos-card"
               // The phone's landing target for `#pos-<symbol>` (#4348): an `id` would duplicate the
               // table row's, which is still in the DOM, only hidden.

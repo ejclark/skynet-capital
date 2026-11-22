@@ -1,0 +1,10 @@
+{
+  "id": "AC-02",
+  "member": "phone-only",
+  "viewport": "phone",
+  "start": "/app",
+  "optimal": 6,
+  "scenario": "You keep hearing about CoreWeave (ticker CRWV) and want to keep an eye on its price without buying anything yet. Set things up on your phone so it's easy to check on it later.",
+  "end": { "watchlist": { "includes": ["CRWV"] } },
+  "note": "The watchlist is a Trade section (behind More on a phone since round 1's fix); a commit on blur never adds (symbol-field.tsx commitOnBlur=false), so the member must press Enter or pick a suggestion."
+}

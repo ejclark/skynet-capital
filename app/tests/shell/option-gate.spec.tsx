@@ -685,6 +685,33 @@ describe("OptionGate — chartSlot (Eric, 2026-09-22)", () => {
     await waitFor(() => expect(screen.getByTestId("fixture-chart")).toBeInTheDocument());
     expect(screen.getByLabelText("Contracts (100 shares)")).toHaveValue(7);
   });
+
+  it("hands its contract count across a Put/Call or Side flip, which remounts it on the new rung", async () => {
+    chainResult = fullChain;
+    const client = new QueryClient();
+    let carried: string | undefined;
+    const ticket = (play: PlayInfo) => (
+      <QueryClientProvider client={client}>
+        <OptionGate
+          key={play.code}
+          deskId="desk-1"
+          play={play}
+          initialSymbol="NVDA"
+          carriedContracts={carried}
+          onContractsCarry={(contracts) => {
+            carried = contracts;
+          }}
+        />
+      </QueryClientProvider>
+    );
+    const { rerender } = render(ticket(unlockedCallPlay));
+    await waitFor(() => expect(fieldsPresent()).toBe(true));
+    fireEvent.change(screen.getByLabelText("Contracts (100 shares)"), { target: { value: "7" } });
+
+    rerender(ticket({ ...unlockedCallPlay, code: "301", id: "301", optionType: "put" }));
+    await waitFor(() => expect(fieldsPresent()).toBe(true));
+    expect(screen.getByLabelText("Contracts (100 shares)")).toHaveValue(7);
+  });
 });
 
 /**

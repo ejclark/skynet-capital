@@ -128,6 +128,16 @@ against the pure decision engines, so no live quote is needed. Known gaps are `i
 same ratchet as `known_gap`. A member adds one by writing the situation in their own words; a
 session turns it into acceptance lines.
 
+## Change scenarios — `change-scenarios.md` and `scripts/faculty/`
+
+A journey proves a member can reach a screen and a study proves they can read it; a **change
+scenario** proves they can change their paper account (place, change, cancel, close, protect) and
+that it lands as they meant. The catalog is [`change-scenarios.md`](change-scenarios.md). Its
+runnable subset is `scripts/faculty/scenarios/*.json`, played by blind members against a faculty
+world whose writes land, and graded by the account diff, unintended writes included
+([`scripts/faculty/README.md`](../../scripts/faculty/README.md)). The core paths also run without a
+model in CI (`e2e/changes.spec.ts`, the `changes` project).
+
 ## Which screens the journeys must reach — `triage.json` and `coverage.md`
 
 [`triage.json`](triage.json) holds one verdict per screen (a page, or one `?section=` of it):
