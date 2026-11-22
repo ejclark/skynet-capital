@@ -28,8 +28,10 @@ import { fetchSymbolSearch, type SymbolHit } from "../live/symbol-search";
  * `mouseup` landed on the Shares input instead — so the browser sent `click` to their common
  * parent, nothing took focus, and the quantity the member typed next went nowhere (desktop and
  * phone alike; the probe that found it is scripts/faculty/README.md → *What it found*). The blur
- * now defers both until that gesture's `click` has been dispatched (the click target is settled by
- * then), so the in-flow list keeps its 390px reason and the tap lands where the member aimed.
+ * now defers both until that gesture's `click` starts dispatching (the click target is settled by
+ * then), so the in-flow list keeps its 390px reason and the tap lands where the member aimed —
+ * and runs them before the click's own handlers, so the commit never overrides what the tap did
+ * (#7954; `whenGestureEnds` below).
  */
 export function SymbolField({
   id,
@@ -83,23 +85,31 @@ export function SymbolField({
       afterGesture.current?.();
     };
   }, []);
-  /** Run `fn` once the tap that blurred the field has finished: on its `click` when a pointer is
-   *  still held (a mouse), else on the next task (a touch's synthesized mouseup/click are already
-   *  queued behind this blur). A 600ms backstop covers a press that never clicks (a drag away). */
+  /** Run `fn` once the tap that blurred the field has picked its target: at the START of that
+   *  tap's `click` (document capture, before the target's own handler), else on the next task when
+   *  no click comes (a Tab away). A 600ms backstop covers a press that never clicks (a drag away).
+   *
+   *  The start, never after (#7954, the post-merge audit of #7672): the click's target is settled
+   *  once `click` dispatches, so the form may move from then on; but a commit that waits until the
+   *  click's handlers have run overrides whatever they did. The Trade route's commit is a `/trade`
+   *  navigate, so a late one bounced a member who tapped a top-bar link back to Trade, and on a
+   *  Buy/Sell flip it wrote `?symbol=` after the new ticket had already mounted without it.
+   *  Running first, the commit lands and the click's own navigation is the last word. The click
+   *  listener is armed for a touch too: its synthesized mousedown blurs the field with no pointer
+   *  held, and its click follows. */
   const whenGestureEnds = (fn: () => void) => {
     afterGesture.current?.();
     let done = false;
     const run = () => {
       if (done) return;
       done = true;
-      document.removeEventListener("click", onClick, true);
+      document.removeEventListener("click", run, true);
       clearTimeout(backstop);
       afterGesture.current = undefined;
       fn();
     };
-    const onClick = () => setTimeout(run, 0);
     const backstop = setTimeout(run, pointerHeld.current ? 600 : 0);
-    if (pointerHeld.current) document.addEventListener("click", onClick, true);
+    document.addEventListener("click", run, true);
     afterGesture.current = run;
   };
 
