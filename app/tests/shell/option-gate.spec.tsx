@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import type { ChainAnswer, ChainData, PlayInfo } from "../../src/live/options";
 import type { ChainPreset } from "../../src/shell/chain-section";
@@ -518,6 +519,74 @@ describe("OptionGate — the chain accordion (Eric, 2026-09-22)", () => {
 
     fireEvent.change(screen.getByLabelText("Symbol"), { target: { value: "AMD" } });
     fireEvent.blur(screen.getByLabelText("Symbol"));
+
+    expect(
+      (await screen.findAllByRole("button", { name: /^Pick the 180 call/ })).length,
+    ).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * The Symbol field's late blur commit (#7955). Since #7672 the field defers its blur commit until
+ * the tap that blurred it has clicked, so a chain tap made while Symbol still has focus runs the
+ * pick FIRST and the symbol commit after it. That commit names the symbol already on the ticket,
+ * and it used to reopen the chain and clear the locked-rung note the pick had just set. Driven with
+ * a real pointer (user-event), since `fireEvent.click` never blurs anything.
+ */
+describe("OptionGate — a chain tap while Symbol still has focus (#7955)", () => {
+  beforeEach(() => {
+    chainResult = fullChain;
+  });
+
+  /** Past the field's 600ms backstop, so any deferred blur commit has certainly run. */
+  const pastTheBackstop = () => new Promise((resolve) => setTimeout(resolve, 750));
+
+  it("typed + Enter, then a strike tap: the strike fills and the chain stays collapsed", async () => {
+    const user = userEvent.setup();
+    render(renderGate(""));
+
+    const symbol = screen.getByLabelText("Symbol");
+    await user.type(symbol, "NVDA{Enter}");
+    expect(symbol).toHaveFocus();
+
+    await user.click(await screen.findByRole("button", { name: "Pick the 180 call bid" }));
+    await pastTheBackstop();
+
+    expect(screen.getByLabelText("Strike")).toHaveValue(180);
+    expect(screen.queryAllByRole("button", { name: /^Pick the 180/ })).toHaveLength(0);
+    expect(screen.getByRole("button", { name: "Change" })).toBeInTheDocument();
+  });
+
+  it("a locked-rung tap keeps the note that explains it", async () => {
+    const user = userEvent.setup();
+    render(renderChainPickGate({ plays: playsWithLockedTarget, onPreset: () => undefined }));
+
+    const symbol = screen.getByLabelText("Symbol");
+    await user.clear(symbol);
+    await user.type(symbol, "NVDA{Enter}");
+    expect(symbol).toHaveFocus();
+
+    await user.click(await screen.findByRole("button", { name: "Pick the 180 put bid" }));
+    await pastTheBackstop();
+
+    expect(screen.getByLabelText("Strike")).toHaveValue(180);
+    expect(
+      screen.getByText(
+        "Strike filled — “Sell a cash-secured put” isn't unlocked yet, so the side didn't change.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("a different symbol left in the field still recommits and reopens the chain", async () => {
+    const user = userEvent.setup();
+    render(renderGateWithStrike("NVDA", "180"));
+    await screen.findByRole("button", { name: "Change" });
+
+    const symbol = screen.getByLabelText("Symbol");
+    await user.clear(symbol);
+    await user.type(symbol, "AMD");
+    await user.click(screen.getByLabelText("Contracts (100 shares)"));
+    await pastTheBackstop();
 
     expect(
       (await screen.findAllByRole("button", { name: /^Pick the 180 call/ })).length,
