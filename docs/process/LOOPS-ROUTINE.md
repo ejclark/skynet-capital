@@ -56,8 +56,9 @@ would have missed a loop.
    - For each class in `eligible`: look for an open PR whose head is its `branch`
      (`gh api "repos/{owner}/{repo}/pulls?state=open&head=ejclark:<branch>"`). One is open → note
      it and skip. None → `git fetch origin main && git checkout -B <branch> origin/main`,
-     `node scripts/alignment-graduation.mjs --graduate "<class>"`,
-     `node scripts/alignment-graduation.mjs --body "<class>" > <scratch>/body.md`, commit
+     `node scripts/alignment-graduation.mjs --body "<class>" > <scratch>/body.md` (first: once the
+     row is written the class is no longer `eligible` and `--body` refuses),
+     `node scripts/alignment-graduation.mjs --graduate "<class>"`, commit
      (`docs(alignment): graduate <class> to decide and report`), then
      `scripts/ship.sh open "<that subject>" --body-file <scratch>/body.md --hold`. One PR per class,
      never two classes in one.
