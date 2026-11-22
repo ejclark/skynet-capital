@@ -1941,3 +1941,12 @@ Three gaps the change study (`scripts/faculty/`) found in itself, each cheap to 
   ran twice each and agreed on every pair; three runs on the phone-heavy rows would put an interval
   on "landed".
 _(src: Claude · while: running faculty rounds 1–4 on the change-scenarios PR, 2026-11-17)_
+
+### A hold that outlives its reason should surface in the digest, not wait for Eric to notice
+#7672 sat five days green under `hold-merge` with nothing protected in it (`docs/LESSONS.md`,
+2026-11-22), and the only signal was Eric asking why. `hold-merge` is already the label query for
+"what waits on Eric?". Joining it with `envelope-scan` and the PR's check state would give one line
+per PR that is held, unprotected, green and over a day old, for `/secretary`'s digest or the steer
+page: "held without a protected path; lift it?". That turns a five-day wait into a one-tap
+question the next morning.
+_(src: Claude · while: clearing #7672's mistaken hold)_

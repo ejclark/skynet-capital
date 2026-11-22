@@ -117,6 +117,12 @@ scripts/ship.sh platter sync                 # re-post the ledger; refuses if th
   `pipeline.yml`'s arm job skips) and the diff is protected (which `checkarm` refuses, exit 5).
 - **`--hold` labels.** Any held PR, platter or not, gets `hold-merge` — so "what is waiting on
   Eric?" is a label query rather than a guess.
+- **A hold needs one of three reasons, said on the PR:** the diff is protected (`envelope-scan`
+  says blocking), Eric asked in his own words to hold *this* PR, or a design call you name on the PR
+  for his eyes before it ships. "Submit it, I'll merge it" is permission, not a hold: ship it on the
+  default. A label added by hand is the same decision as `--hold`. A wrong hold costs more than
+  it looks: the PR drifts into conflicts while it waits, and the session cannot lift its own hold
+  without his word (#7672 sat five days on that misread; `docs/LESSONS.md`, 2026-11-22).
 - **`--hold` waits ~20s after promoting, then checks `verify` once** (#4168). The draft's own run can
   cancel the real `verify` and leave a skipped check, which branch protection reads as a pass. If
   the latest `verify` is skipped or cancelled, ship adds a marker to the PR body. That edit fires an
