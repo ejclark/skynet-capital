@@ -64,6 +64,19 @@ describe("PositionCards — the hand-off to Trade", () => {
     expect(searchOf("SPY")).toEqual({ desk: "eric", symbol: "SPY", play: "102" });
   });
 
+  it("opens shares on an account the viewer does not own on the ticker alone, never Sell (#7956)", () => {
+    // Off an account you don't own, Trade falls back to YOUR account (routes/trade.tsx), so a
+    // Sell preset would offer to sell your own shares, or shares you don't hold at all.
+    render(
+      <PositionCards
+        positions={[position("AAPL", "AAPL", { quantity: "100" })]}
+        deskId="day-trader"
+        canTrade={false}
+      />,
+    );
+    expect(searchOf("AAPL")).toEqual({ desk: "day-trader", symbol: "AAPL" });
+  });
+
   it("opens a short on its ticker alone, where Buy covers it — a sell would add to it", () => {
     render(<PositionCards positions={[position("SPY", "SPY")]} deskId="eric" />);
     expect(searchOf("SPY")).toEqual({ desk: "eric", symbol: "SPY" });
