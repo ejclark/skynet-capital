@@ -69,7 +69,9 @@ whose whole pipeline is green; that's the escape hatch, not `ship.sh merge`. (`s
   "is this a carve-out?" mechanically. "Outward-facing" means reachable by a non-member or changing
   an external contract, NOT "a user can see it"; on a web app the loose reading catches every copy
   change, which is exactly how this gate over-triggered.
-- **Visual/taste work Eric asked to eyeball first.**
+- **Visual/taste work Eric asked to eyeball first.** Say so on the PR: a `Held for taste…` line,
+  `Platter: no`, or the `taste` label. A protected PR held for any other reason is boarded onto
+  the platter by `ship platter adopt` (#7939; `scripts/platter-sweep-decide.mjs` reads those signals).
 
 For these: `scripts/ship.sh open` to create the PR, but do **not** arm auto-merge.
 

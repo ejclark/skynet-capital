@@ -12,7 +12,9 @@ Both loops are event-driven by design: the audit starts at 6 merged code PRs, th
 lanes' pullable queue is below the work dial's cap. What no repository event does is *notice* either
 condition: a merge is not a tick for the flip, and a queue draining is not a tick for the audit. One
 daily read of both due-checks is the cheapest honest notice: a quiet day costs two REST reads and ends
-there (ROUTINES.md → *No-op must be free*).
+there (ROUTINES.md → *No-op must be free*). The platter sweep (step 4, #7939) rides the same clock
+for the same reason: a held PR going green, or main moving under the platter, is no event either; a
+quiet day costs one more read.
 
 **Run time: daily at 10:00 America/Chicago, after the morning steer** (settled 2026-11-11, the
 predicted answer to #7311's open question). The next surge measures whether a weekday-only schedule
@@ -36,12 +38,21 @@ would have missed a loop.
      6), save its returned object as JSON, run `node scripts/clear-path-post.mjs <file> --dry-run`,
      and when that prints no refusal run it again without `--dry-run`. Exit 1 from the post script
      stops the flip and is reported, never retried in a loop.
-4. **Graduate** (#7939 slice 3, rule 3 of [`ALIGNMENT.md`](ALIGNMENT.md)). Run
+4. **Platter** (#7939: every rubber-stamp merge reaches Eric as one platter PR, kept conflict-free).
+   `node scripts/platter-sweep.mjs` prints `rebuild` (an open platter to re-open from main, or null)
+   and `adoptable` (PRs held only because their paths are protected, and protected dependabot
+   patch/minor bumps). Neither → note it, go to step 5. Otherwise, in this order:
+   - `rebuild` set → `scripts/ship.sh platter rebuild <its number>`. Items that will not re-board
+     are left off and named on the new PR and on their issues; nothing is fixed on the platter.
+   - each `adoptable` PR, oldest first → `scripts/ship.sh platter adopt <number>`. A refusal (a
+     red verify on the union, a conflict) is reported and the PR stays as it was; never retried in a
+     loop. `refused` needs no action: those PRs keep their own path.
+5. **Graduate** (#7939 slice 3, rule 3 of [`ALIGNMENT.md`](ALIGNMENT.md)). Run
    `node scripts/moneypenny/answer-readback.mjs --ledger --apply`, then
    `node scripts/alignment-graduation.mjs --json` (advisory: it always exits 0).
    - Rows added by the read-back → commit them on a `docs/` branch off `origin/main` and open a
      normal PR with `/ship`, or carry them in the graduation PR below when there is one.
-   - `eligible` empty and `sendBack` empty → note it, go to step 5.
+   - `eligible` empty and `sendBack` empty → note it, go to step 6.
    - For each class in `eligible`: look for an open PR whose head is its `branch`
      (`gh api "repos/{owner}/{repo}/pulls?state=open&head=ejclark:<branch>"`). One is open → note
      it and skip. None → `git fetch origin main && git checkout -B <branch> origin/main`,
@@ -52,9 +63,9 @@ would have missed a loop.
      never two classes in one.
    - For each class in `sendBack`: the same branch steps with `--send-back "<class>"` and a normal
      `/ship` PR (no `--hold`): sending a class back only returns asks to him, so it needs no tap.
-5. **Report in one line.** `loops: audit <due|not due>[, filed N bugs, M proposals] · flip <due|not
-   due>[, readied N of M] · graduate <none|opened #N for <class>|PR open|sent back <class>>`. A day
-   with both `due: false` and nothing to graduate ends here: that line is the whole run.
+6. **Report in one line.** `loops: audit <due|not due>[, filed N bugs, M proposals] · flip <due|not
+   due>[, readied N of M] · platter <clean|rebuilt #N → #M>[, adopted N] · graduate <none|opened #N for
+   <class>|PR open|sent back <class>>`. A day with nothing due ends here: that line is the whole run.
    The Routine writes no digest of its own.
 
 ## What it may not do
@@ -64,7 +75,13 @@ would have missed a loop.
 - Flip an issue the scripts did not list, or flip past the clear-path workflow's own refusals.
 - Use `fast-track` beyond what `audit-file.mjs` applies (member, money and state findings, five a run,
   #6319).
-- Run on a `due: false` day beyond the two cheap reads and step 4's ledger read and check.
+- Run on a `due: false` day beyond the cheap reads: the two due-checks, the platter sweep, and step
+  5's ledger read and check.
+- Merge, arm or un-hold the platter, or push any branch but the `platter/<date>` it rebuilds or
+  boards onto and step 5's `alignment/graduate-*` or `docs/` branches. It never force-pushes and
+  never resolves a conflict on a platter.
+- Board a PR the sweep did not list as `adoptable` (a taste hold, a major bump, a red PR), or
+  rebuild a platter it did not name.
 - Merge, arm or label-strip a graduation PR, or open one for a class the check did not list as
   `eligible`. The graduation is his tap; `--graduate` refuses a class that is not eligible, and
   rule 4's classes (`CLASS_MAP` in `scripts/alignment-graduation.mjs`) never are.
