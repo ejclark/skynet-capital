@@ -337,6 +337,7 @@ has no instrument that would price one. The rate-path position stays where it wa
 | 2026-11-03 | D-14 | **Date holds; stance and all three tests survive; nothing new proposed.** **Date:** ONS page re-fetched direct (HTTP 200) still *"17 November 2026 7:00am"*, *"This release is not yet published"*, no change notice; gov.uk register still *"17 November 2026 7:00am (confirmed)"*, *"Last updated: 21 January 2026"* — `estimate` stays (taxonomy). **Baseline moved by the sibling's close-out (ONS 10-20 bulletin, read from its Outcome):** private regular pay **3.0%** Jun–Aug (2.9% May–Jul) — already on the July path, so Jul–Sep needs +0.3pp to reach the **≥3.3%** kill; unemployment 4.7%, vacancies 691k. **≥3.3% kill / ≤3.2% expectation unchanged** (FT-1); no Jul–Sep consensus findable (two searches, nothing for 11-17). **Re-anchor still pending:** the November MPR publishes **11-05**, two days out, so the Q3 path this threshold rests on is still the July one (search-relayed); the pulse after 11-05 must move or confirm it. **BoE:** 09-17 held 3.75% 6–3; 11-05 hike ~94–99% priced per the sibling `boe-decision-2026-11-05` row (press-relayed, not re-fetched); the 10-28 Budget did not move that call. **Vol:** VIX **20.41** (11-03 intraday, Yahoo; 21.15 on 11-02, 19.42 on 10-30, 19.99 last row) — no regime step (<3pt), still the elevated band. GBP/USD **1.3416** (1.3306 on 10-28). **Corridor:** the 5-day window now holds the **NVDA print 11-18** (critical), **NBIS print 11-12** and `retail-sales-2026-11-17` (high) as strong adjacents — a risk-off tape into NVDA outranks ONS as the cause of any pre-dawn move, which strengthens the stand-aside and the attribution caveat. Peers none (`symbols: []`). Geo: energy shock by reference only. **Proposals:** none — every UK ONS print in range (GDP 11-12, CPI/PPI 11-18, public finances/retail sales 11-20, consumer confidence 11-20) is already on the calendar per `--on-date`; nothing dated past the horizon seen. Blocked: none. Conviction proposals: none; declared intents: none. No new forward test. | — (no stance change; stand aside holds; corridor now includes NVDA 11-18, noted in the attribution rule) | 2026-11-10 (low, D-7 band: every 7d; the first pulse after the 11-05 Report must re-anchor the ≥3.3% threshold) |
 | 2026-11-10 | D-7 | **Re-anchor done: the ≥3.3% kill stands; date holds; nothing proposed.** **Re-anchor (primary, fetched 11-10 from the Bank's own Nov Report page):** *"Private sector regular AWE growth was 3% in August and is projected to remain around that level over the remainder of 2026"*; chart note: projection diamonds are for the three months to **September** and December 2026, and private wage growth is *"little changed over the coming months"*. So the Jul–Sep path is **~3.0%**, same as July's; the forecast-restatement kill did **not** fire. **≥3.3% kill / ≤3.2% expectation unchanged** (FT-1). Other indicators (HMRC RTI proxy, DMP) point somewhat higher, per the Report. **Date:** ONS page (HTTP 200) still *"17 November 2026 7:00am"*, not yet published, no change notice; gov.uk register *"confirmed"*, last updated 21 Jan — `estimate` stays (taxonomy). **BoE:** hiked to 4% 11-05, 8–1 (sibling close-out). **Vol:** VIX **19.92** (11-09 close; 28.18 on 11-05, 25.64 on 11-06) — off the spike, still elevated; GBP/USD 1.3442. Peers none. No UK consensus findable. **Corridor:** 4 strong (NVDA 11-18, retail sales 11-17, NBIS 11-12, CBRS 11-11) — the attribution rule holds. **Proposals:** none; every UK ONS print in range is already listed (`--on-date` read). Nothing beyond horizon. Blocked: none (BoE PDF not text-extractable here; its HTML page was read). Conviction proposals none; declared intents none. No new forward test. | — (no stance change; stand aside holds; Q3 path re-anchored at ~3.0%, kill unchanged) | 2026-11-17 (D-0: close-out reads the 07:00 London print) |
 | 2026-11-17 | D-0 | **Deterministic screen (no Claude session).** Readings — VIX 22.9 (+3.0pt since last), band unchanged (low:0+), 48 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-11-24 |
+| 2026-11-18 | D+1 | **Close-out.** ONS *Labour market overview: November 2026* printed on date (07:00 London). **Private regular pay 3.1% Jul–Sep** (public 5.4%); whole-economy regular 3.5% (3.7%), total 3.6% (3.8%). Unemployment **4.6%** (−0.3pp q/q), employment 75.4%, inactivity 20.8%; vacancies **690k** Aug–Oct (−22k); October payroll flash −34k m/m. FT-1 **pass**, FT-2 **pass**, FT-3 unscoreable until 2026-12-18. Channel kill neither fired nor cleared: GBP/USD flat across 02:00 ET, no overnight equity tape. VIX 25.46 (22.91 prior close). No consensus findable. Proposals: none (every adjacent ONS print already listed). Conviction proposals none; declared intents none. See `## Outcome`. | — (close-out; stand aside held) | 2026-12-15 successor print (`uk-labour-market-2026-12-15`) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -347,6 +348,64 @@ every row; a dated adjacent event found gets proposed as a new
 (`status: "estimate"`) in the same PR — your own file, never another event's canonical one (#1717).
 Close-out fills `## Outcome` below from re-run instrument data (cache busted first), never from
 memory — after which this doc goes quiet.
+
+## Outcome
+
+**Close-out (2026-11-18, D+1; FT-1 and FT-2 score-by 2026-11-17, FT-3's 2026-12-18 is past the
+`closeOutWithinDays` ceiling).** Macro-print mode with `symbols: []` runs no `earnings-cycle` /
+`intraday-edges` instrument, so the mandated cache bust
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) was performed and had
+no target. Every figure below was fetched **today** from the ONS pages
+(`uklabourmarket/november2026` and `averageweeklyearningsingreatbritain/november2026`, both HTTP 200; the
+`employmentintheuk/november2026` headline page too) and from Yahoo 5-minute bars for `GBPUSD=X`, `NVDA`,
+`AVGO`, `MRVL`, `CRWV` and daily `^VIX` — never recalled from the tape.
+
+**The release, from the primary (Jul–Sep 2026 unless stated).** *"Annual average regular earnings growth
+was 5.4% for the public sector and 3.1% for the private sector."* Whole-economy regular pay **3.5%**
+(3.7% the period before), total pay **3.6%** (3.8%); real regular pay **+0.2%** on CPIH. Unemployment
+**4.6%** (−0.3pp on the quarter and year), employment rate **75.4%**, inactivity **20.8%**. Vacancies
+**690,000** Aug–Oct (*"a decrease of 22,000 (3.0%)"*, largest quarterly fall since May–Jul 2025).
+Payrolled employees: Jul–Sep **−32,000** on the quarter; the October flash **−34,000** m/m, **−95,000**
+y/y (provisional). ONS's own summary: *"regular wage growth slowed, driven by a fall in public sector wage
+growth."* Next release **2026-12-15** (matches `uk-labour-market-2026-12-15`, already canonical).
+
+| Registered test | Verdict | The number |
+|---|---|---|
+| FT-1 (private regular pay ≤3.2%; kill ≥3.3%) | **pass** | **3.1%**, on the Bank's ~3.0% Q3 path; the ≥3.3% kill was 0.2pp away, the 3.2–3.3% partial band not entered |
+| FT-2 (headline reference period is "July to September 2026") | **pass** | LFS and AWE headline both read *"July to September 2026"*; vacancies *"August to October 2026"* and the *"October 2026"* payroll flash, exactly as rolled forward on 2026-09-09 |
+| FT-3 (12-17 MPC Summary and minutes refer to the 12-15 release) | **unscoreable** — settles 2026-12-18 | Settles from the Bank of England's 2026-12-17 MPC Summary and minutes (bankofengland.co.uk); the data do not exist yet and the score-by lies beyond the close-out window by design |
+
+**The stance's own kill switches.** *Window kill* (FT-2): **not fired.** *Forecast-restatement kill*:
+**not fired** (the 11-05 Report held ~3.0%, per the 11-10 row). *Date kill*: **not fired**, it printed
+2026-11-17 07:00 as scheduled. *Staleness kill*: fired as expected and resolved on the print itself.
+*Designation kill*: settled by the sibling (`FT-uk-labour-market-2026-10-20-3`). The Budget premise the
+proposal was filed under stays refuted: the AWE window ended 2026-09-30 and the print carries no
+Budget-driven wage response.
+
+**The channel kill — neither fired nor cleared, and the tape cannot say which.** The kill was a tracked
+name moving >1% in 02:00–09:30 ET in a way the tape attributes to the ONS release. From the last print
+before the release (2026-11-16 23:55 ET) to the 09:25 ET pre-open print: `NVDA` **+0.49%**, `AVGO`
+**+0.75%**, `MRVL` **+3.48%**, `CRWV` **−0.24%**. One name clears 1%, but the first print after 23:55 ET
+is **04:00 ET**, so the 02:00 release sits in a window with no tape at all. From 04:00 to 09:25 ET
+`MRVL` moved **+4.96%**, `NVDA` +1.55%, `AVGO` +1.20%, `CRWV` +1.76%: after the release by two hours, on a
+day with retail sales, industrial production and import prices at 08:30–09:15 ET and the NVDA print a day
+out. Sterling, the instrument the print actually touches, did not move: **1.3197** in the 02:00 ET bar,
+**1.3193** at 02:30 (−0.03%), **1.3187** at 03:00, on a print with unemployment 0.3pp lower, vacancies
+down and pay on the Bank's path. `^VIX` closed 11-16 at **22.91**, 11-17 at **25.46**. **Read:** no
+evidence of a UK-labour price channel into these names, and none that rules one out; the stand-aside
+holds. A gap with no overnight tape is a limit on the test, not a finding about the market. No forward
+test registered.
+
+**What this close-out did not establish.** No November consensus was ever findable (one more search
+today returned nothing for 11-17), so "on the Bank's path" is against the Bank's path, not a survey. The
+Bank's Report PDF stays unextractable; the 3.0% path rests on the HTML page read 11-10. No reaction
+coverage of the print was findable, so no claim is made about gilts.
+
+**Loop census (sense · decide · act · verify · remember).** The step a person would still do is
+**sense** for the channel kill, as in the 10-20 sibling: no tool returns overnight (00:00–04:00 ET)
+equity tape, so a test written against a 02:00 ET minute is not mechanically scoreable. That is the
+second consecutive print; the sibling's note (register against a regular-session window instead) stands
+and a third occurrence should be filed as a `bottleneck`.
 
 **Last assessed:** 2026-10-18
 <!-- probe-ref: {"symbols":{},"vix":19.99,"daysBand":"low:15+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","existing-home-sales-2026-11-12","fomc-minutes-2026-11-18","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-cpi-2026-11-20","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-5y-auction-2026-11-12","jgb-liquidity-enhancement-1-5y-2026-11-20","msft-ignite-2026-11-17","mtis-2026-11-17","mts-october-2026-11-12","nahb-hmi-2026-11-17","opex-2026-11-20","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","ppi-2026-11-13","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","russell-recon-preliminary-2026-11-13","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-30y-bond-2026-11-12","treasury-coupon-announcement-2026-11-12","treasury-coupon-announcement-2026-11-19","uk-cpi-2026-11-18","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["retail-sales-2026-11-17"],"screenStreak":0,"blocked":[]} -->
@@ -359,3 +418,6 @@ memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-11-17
 <!-- probe-ref: {"symbols":{},"vix":22.91,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","cbrs-q3-2026-results-2026-11-11","empire-state-mfg-2026-11-16","erock-q3-2026-results-2026-11-12","eurostat-hicp-final-2026-11-18","existing-home-sales-2026-11-12","fomc-minutes-2026-11-18","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-5y-auction-2026-11-12","jgb-liquidity-enhancement-1-5y-2026-11-20","msft-ignite-2026-11-17","mtis-2026-11-17","mts-october-2026-11-12","nahb-hmi-2026-11-17","nbis-2026-11-12-print","nvda-2026-11-18-print","opex-2026-11-20","pbls-q3-2026-results-2026-11-12","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","ppi-2026-11-13","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","russell-recon-preliminary-2026-11-13","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-30y-bond-2026-11-12","treasury-coupon-announcement-2026-11-12","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-gdp-q3-first-2026-11-12","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["cbrs-q3-2026-results-2026-11-11","nbis-2026-11-12-print","nvda-2026-11-18-print","retail-sales-2026-11-17"],"screenStreak":1} -->
+
+**Last assessed:** 2026-11-18
+<!-- probe-ref: {"symbols":{},"vix":25.46,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","cbrs-q3-2026-results-2026-11-11","empire-state-mfg-2026-11-16","erock-q3-2026-results-2026-11-12","eurostat-hicp-final-2026-11-18","existing-home-sales-2026-11-12","fomc-minutes-2026-11-18","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-5y-auction-2026-11-12","jgb-liquidity-enhancement-1-5y-2026-11-20","msft-ignite-2026-11-17","mtis-2026-11-17","mts-october-2026-11-12","nahb-hmi-2026-11-17","nbis-2026-11-12-print","nvda-2026-11-18-print","opex-2026-11-20","pbls-q3-2026-results-2026-11-12","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","ppi-2026-11-13","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","russell-recon-preliminary-2026-11-13","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-30y-bond-2026-11-12","treasury-coupon-announcement-2026-11-12","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-gdp-q3-first-2026-11-12","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["cbrs-q3-2026-results-2026-11-11","nbis-2026-11-12-print","nvda-2026-11-18-print","retail-sales-2026-11-17"],"screenStreak":0,"blocked":[]} -->

@@ -4,8 +4,9 @@ import { expect, test } from "@playwright/test";
 // Slice 1d: the question box and its canned paths first (AT9 as revised), the whole market under it
 // (#7018 round 3), then R&D's market calendar: its arrows and lens over one-line stories and events
 // under week headers (AT10), with R&D's month grid beside them at desktop width (AT11).
-// Behavioural only: the edition is the latest one checked in, and the server cuts its dated items
-// against the real date, so the words change by design; the shape is what's held here.
+// Behavioural only: the shape is what's held here, not the words. The server reads the edition
+// against EDITION_CLOCK (e2e/determinism.ts, #7901), never the real date: against the real date
+// every coming date passed on 2026-11-21 and the event-row tests below went red with no change.
 // #7487 slice 1 (Campaign mission control): the page is now one window at a time, chosen by `?w=`
 // (Overview the default, never written). The quick questions lead Overview at /app/; the sectors are the
 // Market window (`?w=market`), the calendar the Calendar window (`?w=calendar`) and the account's
@@ -32,13 +33,13 @@ test.describe("landing page", () => {
     expect(before).toBe(true);
     // No text box on Overview any more: the member types in the dock.
     await expect(page.locator(".mctl-window input, .mctl-window textarea")).toHaveCount(0);
-    // Every chip's top read in ONE frame: the stage slides in on load (`stage-enter`, motion.css), so
-    // one boundingBox per chip read each at a different point of the slide and called one row two
-    // (CI on #7672, 2026-11-17: two tops, the chips visibly on one row in the failure screenshot; a
-    // local trace of the slide moved both chips 335.9 → 329.5px over ~230ms).
-    const tops = await quick
-      .locator(".ask-chip")
-      .evaluateAll((chips) => chips.map((c) => c.getBoundingClientRect().top));
+    // All the tops in ONE layout read (#7903): the page's entrance rise (motion.css) is still
+    // moving the row a fraction of a pixel per frame here, so a boundingBox() per chip could read
+    // each one on a different frame (329.61 vs 329.56) and fail ~1 run in 50. Read together, the
+    // rise moves every chip alike; a real wrap still puts the second chip a whole row lower.
+    const tops = await quick.evaluate((ul) =>
+      [...ul.querySelectorAll(".ask-chip")].map((c) => c.getBoundingClientRect().top),
+    );
     expect(tops.length).toBeGreaterThan(0);
     expect(new Set(tops).size).toBe(1);
     const box = page.locator(".mp-dock").getByRole("textbox", { name: "Message Moneypenny" });
@@ -432,7 +433,7 @@ test.describe("campaign mission control", () => {
     page,
   }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
-    // A real key from the fixture edition: the first event row the calendar draws this week.
+    // A real key from the edition: the first event row the calendar draws in EDITION_CLOCK's week.
     await page.goto("/app/?w=calendar");
     const event = page.locator(".ecal li.ecal-event[id^='event-']").first();
     await expect(event).toBeAttached();

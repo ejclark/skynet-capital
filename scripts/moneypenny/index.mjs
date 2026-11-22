@@ -101,7 +101,7 @@ import { executeDialTap, executeDialTidy, routeDial } from "./dial-tap.mjs";
 import { closeStaleDiscovery, flagStaleDiscovery } from "./discovery-pr-sweep.mjs";
 import { dueForResearch, RECEIPT_TITLE_RE, routeSweep } from "./events.mjs";
 import { guardFeedbackOutcome } from "./feedback-guard.mjs";
-import { ghRest, ghRestAll, sh, withRetry } from "./gh.mjs";
+import { ghRest, ghRestAll, isRateLimited, sh, withRetry } from "./gh.mjs";
 import { nudgeHeadless } from "./headless-pr.mjs";
 import {
   boardedReason,
@@ -1047,15 +1047,9 @@ function continueNext(pick, { claims, nowMs, sha, gateDeps }) {
  * harness-engineering research called this the top gap). A dependency that cannot be read is a
  * hard stop, not an empty list.
  */
-/**
- * Is this failure the GraphQL budget running out, rather than a wrong answer?
- *
- * `RATE_LIMIT_EXHAUSTED` in the extensions, or the message GitHub prints for it. Matched on the
- * message too because `gh` surfaces the latter and swallows the former.
- */
-export function isRateLimited(err) {
-  return /rate limit|RATE_LIMITED|RATE_LIMIT_EXCEEDED/i.test(String(err?.message ?? ""));
-}
+// Is this failure a spent budget, rather than a wrong answer? Defined in gh.mjs (#6942) so the
+// capsule stall check can share it; re-exported here for the callers and specs that read it here.
+export { isRateLimited };
 
 /**
  * The shipped sweep, degrading on an exhausted budget ONLY.

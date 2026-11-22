@@ -466,5 +466,31 @@ lane records the observed announcement from Treasury's documents and does not re
 status on a close-out. **What stays open: `FT-…-11-12-1` on 2026-11-19 and `FT-…-11-12-2` on 2026-11-20**, where
 the `forward-test-due` lane scores them. The scanner goes quiet on this event until 11-19.
 
+### Forward-test scoring note — 2026-11-19 (`forward-test-due`, #2884)
+
+**FT-1 scored `pass`** in its fragment, from a fresh pull of Treasury's primaries today: the 11-12 announcement's
+20-Year row is a new issue (`Reopening` N, 912810UZ9) at **$16B**, and the 11-18 auction ran at that size
+(highYield 5.459%, bid-to-cover 2.63; treasurydirect `securities/auctioned`; fiscaldata `auctions_query` still
+returns 0 rows for the week, as on 11-13). Tape for the record, no attribution: Treasury par 20Y 5.48 (11-12) →
+5.51 / 5.50 / 5.44 on the last three prints in the month-to-date feed (11-16 to 11-18); VIX 18.70 (11-12) → 24.56 (11-18). It is a
+weak pass: the number was published on 11-04. **FT-2 stays `_open_` — its Score by is 2026-11-20, not yet arrived**;
+the same lane is re-dispatched then. Conviction proposals and declared intents for this event: none (both printed
+`[]`). No re-assessment, no edit to `## Outcome` above or to any registered prediction.
+
 **Last assessed:** 2026-11-13
 <!-- probe-ref: {"symbols":{},"vix":18.7,"daysBand":"medium:0+","adjacentIds":["asean-summit-manila-2026-11-16","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","empire-state-mfg-2026-11-16","erock-q3-2026-results-2026-11-12","existing-home-sales-2026-11-12","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-balance-of-payments-2026-11-10","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-30y-auction-2026-11-10","jgb-5y-auction-2026-11-12","msft-ignite-2026-11-17","mtis-2026-11-17","mts-october-2026-11-12","nahb-hmi-2026-11-17","nbis-2026-11-12-print","nvda-2026-11-18-print","pbls-q3-2026-results-2026-11-12","ppi-2026-11-13","retail-sales-2026-11-17","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","sp-global-investment-manager-index-2026-11-10","survey-of-professional-forecasters-q4-2026-11-16","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-3y-note-2026-11-09","uk-gdp-q3-first-2026-11-12","uk-gilt-auction-long-2026-11-10","uk-labour-market-2026-11-17","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","nbis-2026-11-12-print","nvda-2026-11-18-print","retail-sales-2026-11-17"],"screenStreak":0,"blocked":[]} -->
+
+**Last assessed:** 2026-11-19
+<!-- probe-ref: {"symbols":{},"vix":24.56,"daysBand":"medium:0+","adjacentIds":["nvda-2026-11-18-print","retail-sales-2026-11-17","treasury-30y-bond-2026-11-12"],"adjacentStrongIds":[],"screenStreak":0,"blocked":[]} -->
+
+### Forward-test scoring note — 2026-11-20 (`forward-test-due`, #2884)
+
+**FT-2 scored `pass`** in its fragment, from a fresh pull of Treasury's primaries today: the 11-12 announcement's
+10-Year TIPS row is a reopening of 91282CRE3 (`Reopening` Y, treasurydirect `A_20261112_4.xml`) at **$19B**, and the
+11-19 auction ran at that size (highYield 2.903%, bid-to-cover 2.43; `securities/auctioned`). Both of this event's
+registered forward tests are now scored `pass`, each disclosed as weak because the sizes were deducible. Tape for the
+record, no attribution: VIX 19.30 (11-13) → 22.91 → 25.46 → 24.56 → 28.44 (11-19). Conviction claims: none read this event (`research:claims` printed `nothing written`).
+No re-assessment, no edit to `## Outcome` above or to any registered prediction.
+
+**Last assessed:** 2026-11-20
+<!-- probe-ref: {"symbols":{},"vix":28.44,"daysBand":"medium:0+","adjacentIds":["nvda-2026-11-18-print","retail-sales-2026-11-17","treasury-30y-bond-2026-11-12"],"adjacentStrongIds":[],"screenStreak":0,"blocked":[]} -->

@@ -1,5 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
-import { FIXED_CLOCK } from "./e2e/determinism";
+import { EDITION_CLOCK, FIXED_CLOCK } from "./e2e/determinism";
 import { facultyProject } from "./e2e/playwright.faculty";
 import { journeysMode } from "./e2e/playwright.journeys";
 import { SHARED_CONFIG } from "./e2e/playwright.shared";
@@ -57,6 +57,7 @@ export default defineConfig({
       // must never move this boot onto theirs.
       env: {
         SKYNET_FIXED_NOW: FIXED_CLOCK.toISOString(),
+        SKYNET_EDITION_NOW: EDITION_CLOCK.toISOString(),
         PORT: "8787",
         SKYNET_DASHBOARD_PORT: "8787",
         SKYNET_INSIGHTS_BRIDGE_PORT: "8788",

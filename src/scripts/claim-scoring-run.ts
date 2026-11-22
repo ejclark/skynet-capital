@@ -14,7 +14,7 @@ import {
   withScores,
 } from "../playbooks/claim-score.js";
 import { type StudyLedgerEntry, withStudies } from "../playbooks/claim-studies.js";
-import type { Conviction } from "../playbooks/conviction-record.js";
+import type { Conviction, ConvictionClaim } from "../playbooks/conviction-record.js";
 
 /**
  * The scoring half of `npm run research:claims` (#5482 slice 5). After the studies are (re)run, each
@@ -135,6 +135,30 @@ export function laneScores(
   return fresh.map((e) => {
     const old = kept.get(e.statement);
     return old && (decidedScore(old) || !decidedScore(e)) ? old : e;
+  });
+}
+
+/**
+ * A full pass's write (2026-11-21): every fresh line, except that a claim decided on file, and read
+ * the same way again, keeps its line, unless its check is the study re-run. A tape, put or
+ * forward-test reading that repeats is a fact already recorded, and rewriting it only restamped
+ * `scoredOn` (the 11-21 pass moved 2a's 11-10 and 4's 11-09 to that day). A reading that differs
+ * (a corrected band or level, a voided forward-test row) is taken, so a full pass stays the way to
+ * correct a score. A `rerun` claim is the one a later pass may re-read, the case `staleAdoptions`
+ * lists, so it always takes the fresh reading. Pending wording refreshes, unlike `laneScores`: no
+ * lane shares a full pass's branch. Pure.
+ */
+export function fullPassScores(
+  onFile: readonly ScoreLedgerEntry[],
+  fresh: readonly ScoreLedgerEntry[],
+  claims: readonly ConvictionClaim[],
+): readonly ScoreLedgerEntry[] {
+  const kept = new Map(onFile.map((e) => [e.statement, e]));
+  const reread = new Set(claims.filter((c) => c.check?.kind === "rerun").map((c) => c.statement));
+  return fresh.map((e) => {
+    const old = kept.get(e.statement);
+    const repeats = old?.score.outcome === e.score.outcome;
+    return old && decidedScore(old) && repeats && !reread.has(e.statement) ? old : e;
   });
 }
 
