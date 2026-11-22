@@ -227,7 +227,7 @@ describe("MoneypennyDock — ✎ tags", () => {
   });
 
   it("an answer a parked card waits on goes as typed, and the tags wait for the next message", async () => {
-    // A drafted filing waits on the exact word "send"; a ✎ prefix would stop it matching.
+    // A drafted filing waits on the exact word "submit"; a ✎ prefix would stop it matching.
     let sentText: string | undefined;
     useMoneypenny.setState({
       send: (text: string) => {
@@ -240,10 +240,10 @@ describe("MoneypennyDock — ✎ tags", () => {
     mount(<Marks />);
     await flush();
     fireEvent.click(markFor(ENERGY));
-    fireEvent.change(box(), { target: { value: "send" } });
+    fireEvent.change(box(), { target: { value: "submit" } });
     fireEvent.keyDown(box(), { key: "Enter" });
     await flush();
-    expect(sentText).toBe("send");
+    expect(sentText).toBe("submit");
     expect(chips()).toEqual([`✎ ${ENERGY.label}×`]);
     expect(pageKeys()?.tagged).toBeUndefined();
   });

@@ -274,7 +274,7 @@ describe("RecentFeedback — what a follow-up says it did", () => {
     fireEvent.change(screen.getByPlaceholderText(/What changed/), {
       target: { value: "still happening" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Send follow-up" }));
+    fireEvent.click(screen.getByRole("button", { name: "Submit follow-up" }));
   };
 
   // One line per outcome the server can answer — each says only what actually happened.

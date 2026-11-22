@@ -28,7 +28,9 @@ describe("MoneypennyDock — the pane opens her answer at its start", () => {
     useMoneypenny.setState({
       flow: "idle",
       streaming: true,
-      messages: [{ role: "mp", text: 'Moneypenny · here\'s the draft — reply "send" to file it.' }],
+      messages: [
+        { role: "mp", text: 'Moneypenny · here\'s the draft — reply "submit" to file it.' },
+      ],
     });
   });
 
