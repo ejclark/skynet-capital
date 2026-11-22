@@ -15,8 +15,16 @@ rstest.mock("../../src/live/desk", () => ({
   fetchDeskActivity: () => Promise.resolve({ available: true, activity: [] }),
 }));
 rstest.mock("@tanstack/react-router", () => ({
-  Link: ({ children, className }: { children: ReactElement; className?: string }) => (
-    <a href="/app/trade" className={className}>
+  Link: ({
+    children,
+    className,
+    search,
+  }: {
+    children: ReactElement;
+    className?: string;
+    search?: unknown;
+  }) => (
+    <a href="/app/trade" className={className} data-search={JSON.stringify(search ?? {})}>
       {children}
     </a>
   ),
@@ -174,6 +182,27 @@ describe("PositionsBlotter", () => {
       );
       expect(screen.queryByText("MSFT")).not.toBeInTheDocument();
     });
+  });
+
+  // #7956: the phone's cards must hear ownership too. Off an account the viewer does not own,
+  // Trade shows the viewer's own account, so a held stock must not open on Sell there.
+  it.each([
+    [true, { desk: "d", symbol: "SPY", play: "102" }],
+    [false, { desk: "d", symbol: "SPY" }],
+  ])("hands the phone card canTrade=%s, so a held stock opens %j", (canTrade, search) => {
+    const { container } = render(
+      withClient(
+        <PositionsBlotter
+          deskId="d"
+          positions={[position({})]}
+          query=""
+          onFilterChange={() => undefined}
+          canTrade={canTrade}
+        />,
+      ),
+    );
+    const card = container.querySelector<HTMLElement>("a.pos-card");
+    expect(JSON.parse(card?.dataset.search ?? "null")).toEqual(search);
   });
 
   it("renders the one New trade card", () => {

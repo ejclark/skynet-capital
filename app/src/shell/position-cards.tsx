@@ -22,8 +22,11 @@ import { sellSharesSearch } from "./trade-search";
  *  Close / Roll row marked — #4947; a strike/expiry preset would seed a new order instead), shares
  *  held long on the Sell side of their ticker — the receipt's own "Sell these shares" door
  *  (`sellSharesSearch`), since closing is what a phone opens a holding for. A short opens on the
- *  ticker alone, which lands on Buy: a sell would add to it. Trade's `?symbol=` takes tickers only. */
-function tradeSearch(deskId: string, position: DeskPosition) {
+ *  ticker alone, which lands on Buy: a sell would add to it. Trade's `?symbol=` takes tickers only.
+ *  Off an account the viewer does not own, shares open on the ticker alone too (#7956): Trade falls
+ *  back to the viewer's OWN account there, so a Sell preset would offer their shares, or shares
+ *  they do not hold at all. */
+function tradeSearch(deskId: string, position: DeskPosition, canTrade: boolean) {
   const { symbol } = position;
   const occ = parseOccSymbol(symbol);
   if (occ) {
@@ -32,7 +35,7 @@ function tradeSearch(deskId: string, position: DeskPosition) {
       { occ: symbol },
     );
   }
-  return held(position.quantity).short
+  return !canTrade || held(position.quantity).short
     ? { desk: deskId, symbol }
     : sellSharesSearch(deskId, symbol);
 }
@@ -63,11 +66,15 @@ export function PositionCards({
   positions,
   deskId,
   greeksBySymbol,
+  canTrade = true,
   guide,
 }: {
   readonly positions: readonly DeskPosition[];
   readonly deskId: string;
   readonly greeksBySymbol?: ReadonlyMap<string, HoldingGreeks>;
+  /** Does the viewer own this account (#3807 slice 2d)? Off it, a held stock never opens on Sell
+   *  (#7956), since Trade shows the viewer's own account instead. */
+  readonly canTrade?: boolean;
   /** Each position's guidance line, drawn under its link in the same card. */
   readonly guide?: (position: DeskPosition) => ReactNode;
 }): ReactElement {
@@ -88,7 +95,7 @@ export function PositionCards({
           <li key={p.symbol} className={guide ? "pos-card-guided" : undefined}>
             <Link
               to="/trade"
-              search={tradeSearch(deskId, p)}
+              search={tradeSearch(deskId, p, canTrade)}
               className="pos-card"
               // The phone's landing target for `#pos-<symbol>` (#4348): an `id` would duplicate the
               // table row's, which is still in the DOM, only hidden.

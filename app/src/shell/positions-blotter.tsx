@@ -291,6 +291,7 @@ export function PositionsBlotter({
                 positions={shown}
                 deskId={deskId}
                 greeksBySymbol={greeks}
+                canTrade={canTrade}
                 guide={guide}
               />
             ) : null}
