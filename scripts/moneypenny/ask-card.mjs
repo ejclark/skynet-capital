@@ -97,7 +97,7 @@ function proseForecast(body, n) {
  *
  * @returns {{ question: string, options: {key: string, text: string, predicted: boolean}[],
  *   predicted: string|null, confidence: string|null, forecast: string|null,
- *   onSilence: string|null, unblocks: string|null }[]}
+ *   onSilence: string|null, unblocks: string|null, cls: string|null }[]}
  */
 export function parseAsk(body = "") {
   const lines = calloutLines(body) ?? [];
@@ -113,6 +113,7 @@ export function parseAsk(body = "") {
       forecast: null,
       onSilence: null,
       unblocks: null,
+      cls: null,
     };
     items.push(cur);
   };
@@ -129,10 +130,12 @@ export function parseAsk(body = "") {
     }
     const silence = SUBLINE("on silence").exec(l);
     const unblocks = SUBLINE("unblocks").exec(l);
+    const cls = SUBLINE("class").exec(l);
     const predicted = SUBLINE("predicted").exec(l);
     const option = OPTION.exec(l);
     if (silence) cur.onSilence = silence[1].trim();
     else if (unblocks) cur.unblocks = unblocks[1].trim();
+    else if (cls) cur.cls = cls[1].replace(/\*+/g, "").trim().toLowerCase();
     else if (predicted) {
       cur.forecast = predicted[1].trim();
       cur.predicted = /^\**([A-F]\d?)\b/.exec(cur.forecast)?.[1] ?? null;
@@ -273,6 +276,7 @@ const parseLoose = (decision) => ({
   forecast: null,
   onSilence: null,
   unblocks: null,
+  cls: null,
 });
 
 /** One question as the card's machine twin carries it — the decisions page reads the same (#7939). */
@@ -282,6 +286,9 @@ export const cardTwin = (it) => ({
   confidence: it.confidence,
   forecast: it.forecast,
   question: it.question.slice(0, 200),
+  // The class the ask states for itself (`- Class:` sub-line); the ledger row and the graduation
+  // check use it over the keyword guess (#7939 follow-up a). Left off when none is stated.
+  ...(it.cls ? { cls: it.cls } : {}),
 });
 
 /** The card an ask comment carries, or `null` (a comment from before this card, or a mangled one). */

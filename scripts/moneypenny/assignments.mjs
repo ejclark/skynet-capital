@@ -379,16 +379,23 @@ function planIssue(
 
 /**
  * The graduated class an ask belongs to, else `null`. Every question must carry a prediction (there
- * is nothing to decide at otherwise) and every question's class — `classOf`, the class its ledger
- * row would get — must be graduated and pass rule 4 here as well, so a hand-edited table can never
- * route a spend or credential ask past him. Pure.
+ * is nothing to decide at otherwise) and every question's class must be graduated and pass rule 4
+ * here as well, so a hand-edited table can never route a spend or credential ask past him. The
+ * class is the one the ask states (`- Class:`), else `classOf`'s guess — its ledger row's class.
+ * A stated class is a claim by the asker, so the keyword guess still has a veto: when the words
+ * land on a rule-4 class, a stated reversible class does not graduate the ask. Pure.
  */
 export function graduatedClass(issue, graduated = []) {
   if (!graduated.length) return null;
   const live = new Set(graduated.map((c) => String(c).trim().toLowerCase()));
   const items = parseAsk(issue.body);
   if (!items.length || items.some((it) => !it.forecast)) return null;
-  const classes = new Set(items.map((it) => classOf(`${it.question} ${issue.title ?? ""}`)));
+  const classes = new Set();
+  for (const it of items) {
+    const guess = classOf(`${it.question} ${issue.title ?? ""}`);
+    if (it.cls && ruleFour(guess).verdict === "irreversible") return null;
+    classes.add(it.cls || guess);
+  }
   for (const c of classes) {
     if (!live.has(c.toLowerCase()) || ruleFour(c).verdict !== "reversible") return null;
   }

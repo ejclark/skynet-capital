@@ -864,6 +864,33 @@ describe("plan: a graduated class is decided, not asked", () => {
     expect(planned.needsSession).toEqual([]);
   });
 
+  it("reads the class the ask states, so an ask the keywords cannot place still graduates", () => {
+    const stated = ARCHIVE.replace(
+      ">    - A (predicted, high)",
+      ">    - Class: session housekeeping\n>    - A (predicted, high)",
+    ).replace("Archive this session?", "Close out the old branch?");
+    const planned = plan({
+      issues: [issue({ number: 74, title: "tidy", body: stated })],
+      graduated: ["session housekeeping"],
+      now: NOW,
+    });
+    expect(planned.needsSession.map((n) => n.number)).toEqual([74]);
+  });
+
+  it("lets the keywords veto a stated reversible class when they land on rule 4", () => {
+    const lie = ARCHIVE.replace(
+      ">    - A (predicted, high)",
+      ">    - Class: session housekeeping\n>    - A (predicted, high)",
+    ).replace("Archive this session?", "Raise the spend cap?");
+    const planned = plan({
+      issues: [issue({ number: 75, title: "tidy", body: lie })],
+      graduated: ["session housekeeping"],
+      now: NOW,
+    });
+    expect(planned.actions.map((a) => a.number)).toEqual([75]);
+    expect(planned.needsSession).toEqual([]);
+  });
+
   it("leaves an ask he already holds with him", () => {
     const held = issue({
       number: 73,

@@ -4,6 +4,7 @@ import {
   askRank,
   assignmentComment,
   cardOf,
+  cardTwin,
   missingParts,
   NO_DEFAULT_SILENCE,
   parseAsk,
@@ -52,6 +53,29 @@ describe("parseAsk: a callout's whole ask", () => {
       ">    - A: re-arm at the next session",
     );
     expect(parseAsk(body2)[0]?.forecast).toBe("A, re-arm (medium)");
+  });
+});
+
+// #7939 follow-up (a): an ask states its own class, so the ledger and graduation need no keyword guess.
+describe("parseAsk: a stated class", () => {
+  const stated = [
+    "> [!IMPORTANT]",
+    "> **Needs from you**",
+    "> 1. Archive this session? — its PRs are closed",
+    ">    - Class: Session Housekeeping",
+    ">    - A (predicted, high): archive",
+  ].join("\n");
+
+  it("reads the `Class:` sub-line, lower-cased, and carries it on the card's machine twin", () => {
+    const [item] = parseAsk(stated);
+    expect(item?.cls).toBe("session housekeeping");
+    expect(item && cardTwin(item).cls).toBe("session housekeeping");
+  });
+
+  it("leaves the class null, and off the twin, when the ask states none", () => {
+    const [item] = parseAsk(FULL);
+    expect(item?.cls).toBeNull();
+    expect(item && "cls" in cardTwin(item)).toBe(false);
   });
 });
 
