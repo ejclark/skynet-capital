@@ -42,8 +42,16 @@
 // writes land — and `digest-scan.mjs --needs-you` prints exactly that list. One selector, two
 // readers; tests/scripts/moneypenny/needs-you.spec.ts fails if they ever disagree.
 
+import { readFileSync } from "node:fs";
+import { activeGraduated, ruleFour } from "../alignment-graduation.mjs";
 import { isMain } from "../is-main.mjs";
-import { executeReadback, ledgerRows, readbackComment, readbackFor } from "./answer-readback.mjs";
+import {
+  classOf,
+  executeReadback,
+  ledgerRows,
+  readbackComment,
+  readbackFor,
+} from "./answer-readback.mjs";
 import {
   ASSIGN_MARKER,
   askRank,
@@ -172,6 +180,7 @@ export function plan({
   patchOnly = new Set(),
   sessionIssues = [],
   replies = [],
+  graduated = [],
   now = Date.now(),
 } = {}) {
   const queue = [];
@@ -208,6 +217,7 @@ export function plan({
       stillHeld,
       holding,
       incomplete,
+      graduated,
     });
   }
   // His reply under an ask the lane stands behind: read it back, clear the ask (answer-readback.mjs).
@@ -319,6 +329,7 @@ function planIssue(
     holding = new Set(),
     incomplete = [],
     reading = new Set(),
+    graduated = [],
   },
 ) {
   const assigned = logins(issue.assignees).some(isEric);
@@ -353,6 +364,7 @@ function planIssue(
     if (assigned) ask({ number: issue.number, title: issue.title, criterion: 1, why, decision });
     return;
   }
+  if (decidedForHim(issue, { decision, fresh: !(marked || assigned), graduated, session })) return;
   if (decision && assigned) holding.add(issue.number);
   if (decision && !marked && !assigned) queueAsk(issue, { decision, why, actions });
   // Needs-you = what he holds after this run: stated, and either his already or about to be. A
@@ -362,6 +374,52 @@ function planIssue(
     ask({ number: issue.number, title: issue.title, criterion: 1, why, decision });
     const missing = missingParts(parseAsk(issue.body));
     if (missing.length) incomplete.push({ number: issue.number, title: issue.title, missing });
+  }
+}
+
+/**
+ * The graduated class an ask belongs to, else `null`. Every question must carry a prediction (there
+ * is nothing to decide at otherwise) and every question's class — `classOf`, the class its ledger
+ * row would get — must be graduated and pass rule 4 here as well, so a hand-edited table can never
+ * route a spend or credential ask past him. Pure.
+ */
+export function graduatedClass(issue, graduated = []) {
+  if (!graduated.length) return null;
+  const live = new Set(graduated.map((c) => String(c).trim().toLowerCase()));
+  const items = parseAsk(issue.body);
+  if (!items.length || items.some((it) => !it.forecast)) return null;
+  const classes = new Set(items.map((it) => classOf(`${it.question} ${issue.title ?? ""}`)));
+  for (const c of classes) {
+    if (!live.has(c.toLowerCase()) || ruleFour(c).verdict !== "reversible") return null;
+  }
+  return [...classes].join(", ");
+}
+
+/**
+ * A graduated class is decided, not asked (ALIGNMENT.md → Graduation, #7939 slice 3): a fresh ask
+ * of one goes to the digest's "needs a session" line, where a session takes the predicted answer
+ * and reports it in Headlines. Only a `fresh` ask: one he already holds or was asked stays his.
+ */
+function decidedForHim(issue, { decision, fresh, graduated, session }) {
+  const grad = decision && fresh ? graduatedClass(issue, graduated) : null;
+  if (!grad) return false;
+  session({
+    number: issue.number,
+    title: issue.title,
+    why: `graduated class "${grad}": decide at the predicted answer and report it in Headlines`,
+    decision,
+  });
+  return true;
+}
+
+/** Live graduated classes from the ledger file, `[]` when it cannot be read (never a failed sweep). */
+function readGraduated() {
+  try {
+    return activeGraduated(
+      readFileSync(new URL("../../docs/process/ALIGNMENT.md", import.meta.url), "utf8"),
+    );
+  } catch {
+    return [];
   }
 }
 
@@ -603,7 +661,7 @@ export function askOnce(
 
 /** The live REST read both the dry run and the digest plan from — one gather, one `plan()`.
  *  `rest` and `now` are injectable so a spec can drive the marker read without GitHub or a clock. */
-export function gather({ rest = ghRestAll, now = Date.now() } = {}) {
+export function gather({ rest = ghRestAll, now = Date.now(), graduated = readGraduated } = {}) {
   // PRs stay in: a held PR can carry `needs-eric` too (#4361), and GitHub lists it as an issue.
   const issues = rest(`issues?state=open&labels=${NEEDS_ERIC}`);
   // Criterion 2's candidates: things Eric holds that may have lost the label or closed since.
@@ -651,7 +709,16 @@ export function gather({ rest = ghRestAll, now = Date.now() } = {}) {
     ...rest(`issues?state=open&labels=${label}`),
     ...rest(`issues?state=closed&labels=${label},${LABELS.ciFailure.name}&since=${closedSince}`),
   ];
-  return { issues, prs, markers, patchOnly, sessionIssues, replies, lastAskAt };
+  return {
+    issues,
+    prs,
+    markers,
+    patchOnly,
+    sessionIssues,
+    replies,
+    lastAskAt,
+    graduated: graduated(),
+  };
 }
 
 function main(argv) {

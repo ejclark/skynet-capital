@@ -809,3 +809,54 @@ describe("a read-back and a stale unassign never double up", () => {
     expect(holding).toBe(0);
   });
 });
+
+// #7939 slice 3: an ask whose class has graduated (docs/process/ALIGNMENT.md rule 3) is decided by a
+// session at its predicted answer and reported in Headlines, never assigned. Rule 4's classes stay
+// his even when a hand-edited table lists them.
+describe("plan: a graduated class is decided, not asked", () => {
+  const ARCHIVE = [
+    "> [!IMPORTANT]",
+    "> **Needs from you**",
+    "> 1. Archive this session? — its PRs are closed",
+    ">    - A (predicted, high): archive",
+    ">    - B: keep it open",
+  ].join("\n");
+  const archiveAsk = issue({ number: 70, title: "archive check", body: ARCHIVE });
+
+  it("routes a fresh ask of a graduated class to a session, with no assignment and no needs-you line", () => {
+    const planned = plan({ issues: [archiveAsk], graduated: ["session housekeeping"], now: NOW });
+    expect(planned.actions).toEqual([]);
+    expect(planned.needsYou).toEqual([]);
+    expect(planned.needsSession).toEqual([
+      expect.objectContaining({
+        number: 70,
+        why: expect.stringContaining('graduated class "session housekeeping"'),
+      }),
+    ]);
+  });
+
+  it("asks as before when the class has not graduated, or the ask carries no prediction", () => {
+    expect(plan({ issues: [archiveAsk], now: NOW }).actions.map((a) => a.number)).toEqual([70]);
+    const unpredicted = issue({ number: 71, title: "archive check", body: CALLOUT });
+    const planned = plan({ issues: [unpredicted], graduated: ["session housekeeping"], now: NOW });
+    expect(planned.actions.map((a) => a.number)).toEqual([71]);
+  });
+
+  it("never lets rule 4's class past him, even listed as graduated", () => {
+    const breaker = issue({ number: 72, body: CALLOUT_WITH_OPTIONS });
+    const planned = plan({ issues: [breaker], graduated: ["bot safety rules"], now: NOW });
+    expect(planned.actions.map((a) => a.number)).toEqual([72]);
+    expect(planned.needsSession).toEqual([]);
+  });
+
+  it("leaves an ask he already holds with him", () => {
+    const held = issue({
+      number: 73,
+      title: "archive check",
+      body: ARCHIVE,
+      assignees: ["ejclark"],
+    });
+    const planned = plan({ issues: [held], graduated: ["session housekeeping"], now: NOW });
+    expect(planned.needsYou.map((n) => n.number)).toEqual([73]);
+  });
+});

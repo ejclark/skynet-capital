@@ -36,8 +36,25 @@ would have missed a loop.
      6), save its returned object as JSON, run `node scripts/clear-path-post.mjs <file> --dry-run`,
      and when that prints no refusal run it again without `--dry-run`. Exit 1 from the post script
      stops the flip and is reported, never retried in a loop.
-4. **Report in one line.** `loops: audit <due|not due>[, filed N bugs, M proposals] · flip <due|not
-   due>[, readied N of M]`. A day with both `due: false` ends here: that line is the whole run.
+4. **Graduate** (#7939 slice 3, rule 3 of [`ALIGNMENT.md`](ALIGNMENT.md)). Run
+   `node scripts/moneypenny/answer-readback.mjs --ledger --apply`, then
+   `node scripts/alignment-graduation.mjs --json` (advisory: it always exits 0).
+   - Rows added by the read-back → commit them on a `docs/` branch off `origin/main` and open a
+     normal PR with `/ship`, or carry them in the graduation PR below when there is one.
+   - `eligible` empty and `sendBack` empty → note it, go to step 5.
+   - For each class in `eligible`: look for an open PR whose head is its `branch`
+     (`gh api "repos/{owner}/{repo}/pulls?state=open&head=ejclark:<branch>"`). One is open → note
+     it and skip. None → `git fetch origin main && git checkout -B <branch> origin/main`,
+     `node scripts/alignment-graduation.mjs --graduate "<class>"`,
+     `node scripts/alignment-graduation.mjs --body "<class>" > <scratch>/body.md`, commit
+     (`docs(alignment): graduate <class> to decide and report`), then
+     `scripts/ship.sh open "<that subject>" --body-file <scratch>/body.md --hold`. One PR per class,
+     never two classes in one.
+   - For each class in `sendBack`: the same branch steps with `--send-back "<class>"` and a normal
+     `/ship` PR (no `--hold`): sending a class back only returns asks to him, so it needs no tap.
+5. **Report in one line.** `loops: audit <due|not due>[, filed N bugs, M proposals] · flip <due|not
+   due>[, readied N of M] · graduate <none|opened #N for <class>|PR open|sent back <class>>`. A day
+   with both `due: false` and nothing to graduate ends here: that line is the whole run.
    The Routine writes no digest of its own.
 
 ## What it may not do
@@ -47,7 +64,11 @@ would have missed a loop.
 - Flip an issue the scripts did not list, or flip past the clear-path workflow's own refusals.
 - Use `fast-track` beyond what `audit-file.mjs` applies (member, money and state findings, five a run,
   #6319).
-- Run on a `due: false` day beyond the two cheap reads.
+- Run on a `due: false` day beyond the two cheap reads and step 4's ledger read and check.
+- Merge, arm or label-strip a graduation PR, or open one for a class the check did not list as
+  `eligible`. The graduation is his tap; `--graduate` refuses a class that is not eligible, and
+  rule 4's classes (`CLASS_MAP` in `scripts/alignment-graduation.mjs`) never are.
+- Edit `CLASS_MAP` to make a class eligible. Adding a class to it is its own reviewed PR.
 
 ## Kill switch
 

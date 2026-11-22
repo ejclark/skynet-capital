@@ -107,8 +107,15 @@ export interface PlanInput {
   replies?: Readback[];
   /** When the lane last posted an ask, ms; 0 when none is known. */
   lastAskAt?: number;
+  /** Live graduated classes (ALIGNMENT.md, `activeGraduated`): their fresh asks go to a session. */
+  graduated?: string[];
   now?: number;
 }
+/** The graduated class an ask belongs to, else null (#7939 slice 3). */
+export function graduatedClass(
+  issue: { title?: string; body?: string | null },
+  graduated?: string[],
+): string | null;
 
 export function decisionLine(body?: string | null): string | null;
 /** Why an ask cannot be completed by his answer yet, or null. */
@@ -135,16 +142,32 @@ export function gather(opts?: {
   /** Injected for specs; production reads through gh.mjs's `ghRestAll` at the wall clock. */
   rest?: (path: string) => unknown[];
   now?: number;
+  /** Injected for specs; production reads docs/process/ALIGNMENT.md's live graduated classes. */
+  graduated?: () => string[];
 }): Required<
   Pick<
     PlanInput,
-    "issues" | "prs" | "markers" | "patchOnly" | "sessionIssues" | "replies" | "lastAskAt"
+    | "issues"
+    | "prs"
+    | "markers"
+    | "patchOnly"
+    | "sessionIssues"
+    | "replies"
+    | "lastAskAt"
+    | "graduated"
   >
 >;
 export function routeAssignments(deps?: {
   assignments?: Pick<
     PlanInput,
-    "issues" | "prs" | "markers" | "patchOnly" | "sessionIssues" | "replies" | "lastAskAt"
+    | "issues"
+    | "prs"
+    | "markers"
+    | "patchOnly"
+    | "sessionIssues"
+    | "replies"
+    | "lastAskAt"
+    | "graduated"
   > | null;
   now?: number;
 }): AssignIntent[];
