@@ -126,7 +126,11 @@ Rules that make it work, in priority order:
    **The callout speaks one more grammar, so the assignment card can carry the whole ask**
    (`scripts/moneypenny/ask-card.mjs`, #6953 slice 3). Under a numbered item, indented sub-lines:
    `- A (predicted, medium): <what happens>`, `- B: <what happens>`, `- On silence: <what the lane
-   will actually do>`, `- Unblocks: <what moves>`. The card shows every numbered item (up to 3),
+   will actually do>`, `- Unblocks: <what moves>`. Add `- Class: <class>` (a name from
+   `CLASS_MAP` in `scripts/alignment-graduation.mjs`, e.g. `screen design (taste)`) so the ledger row and
+   the graduation check use the class you state, not a keyword guess that leaves most asks
+   `unclassified` and so never graduating (#7939). The guess keeps a veto: words that land on a
+   rule-4 class (spend, credentials, bot safety) stop a stated reversible class from graduating. The card shows every numbered item (up to 3),
    each option, the prediction and the silence line; his reply, if its first line is an option
    letter, `yes`, `no` or `not now`, is read back by the lane, which takes the label off and logs a
    scored ledger row (`answer-readback.mjs`). A callout without them still assigns, and the digest

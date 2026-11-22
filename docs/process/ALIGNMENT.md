@@ -74,7 +74,10 @@ reverse"), with a ledger row whose Score is filled when he reacts. A reversal is
 miss sends the class back. In code: `plan()` in `scripts/moneypenny/assignments.mjs` reads the live
 graduated classes (`activeGraduated`) and routes such an ask to the digest's *needs a session* line
 instead of an assignment, but only when every question on it carries a prediction and every
-question's class (`classOf`, the same one its ledger row would get) is graduated. Rule 4's classes
+question's class is graduated. That class is the one the callout states (`- Class:` under the
+numbered item, [`ISSUES.md`](../ISSUES.md) rule 8), else `classOf`'s keyword guess (the same one its
+ledger row would get). The guess keeps a veto: when its words land on a rule-4 class, a stated
+reversible class does not graduate the ask. Rule 4's classes
 are never in that list, whatever this table says.
 
 ## Graduated classes

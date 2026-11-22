@@ -164,7 +164,7 @@ export function ledgerRows({ number, title = "", card, answer, reply }) {
       : "— (no prediction recorded)";
     return {
       date: day(reply.created_at),
-      cls: classOf(`${it.question} ${title}`),
+      cls: it.cls || classOf(`${it.question} ${title}`),
       ask: `#${number} · ${String(it.question ?? title)
         .replace(/\s+/g, " ")
         .slice(0, 140)}`,

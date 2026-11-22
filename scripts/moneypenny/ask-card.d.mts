@@ -22,6 +22,8 @@ export interface AskItem {
   forecast: string | null;
   onSilence: string | null;
   unblocks: string | null;
+  /** The class the ask states for itself (`- Class:` sub-line), lower-cased, else null. */
+  cls: string | null;
 }
 /** The machine twin of a card, read back out of the ask comment. */
 export interface CardTwin {
@@ -31,6 +33,7 @@ export interface CardTwin {
     confidence: string | null;
     forecast: string | null;
     question: string;
+    cls?: string;
   }[];
 }
 
