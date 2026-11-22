@@ -50,3 +50,4 @@ export function assignmentComment(card?: {
   heldPr?: boolean;
 }): string;
 export function cardOf(askBody?: string): CardTwin | null;
+export function cardTwin(item: AskItem): CardTwin["items"][number];

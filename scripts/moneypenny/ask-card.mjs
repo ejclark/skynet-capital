@@ -275,7 +275,8 @@ const parseLoose = (decision) => ({
   unblocks: null,
 });
 
-const cardTwin = (it) => ({
+/** One question as the card's machine twin carries it — the decisions page reads the same (#7939). */
+export const cardTwin = (it) => ({
   keys: it.options.map((o) => o.key),
   predicted: it.predicted,
   confidence: it.confidence,

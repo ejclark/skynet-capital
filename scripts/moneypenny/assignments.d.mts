@@ -170,6 +170,8 @@ export function routeAssignments(deps?: {
     | "graduated"
   > | null;
   now?: number;
+  /** #7939 slice 2: criterion-1 cards are off by default; the decisions page carries those asks. */
+  issueCards?: boolean;
 }): AssignIntent[];
 export const ASK_LEASE_MS: number;
 /** How long a closed capsule's carried ask stays on the needs-session list. */
