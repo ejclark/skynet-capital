@@ -461,6 +461,10 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
   /** Injectable clock — the option gate's zero-DTE check (#1671) reads "today" through this so
    *  tests control it; omit and the wall clock (`new Date()`) is used. */
   readonly now?: () => Date;
+  /** `/api/edition`'s clock — "today" for picking the edition and cutting its passed dates. Pinned
+   *  only on an offline e2e boot (`SKYNET_EDITION_NOW`, src/scripts/offline-clocks.ts, #7901); omit
+   *  and the wall clock is used. */
+  readonly editionNow?: () => Date;
   /**
    * `GET/POST /api/council` — the Sunday Council's weekly thesis line (issue #2224 shape 1). Omit
    * to disable (offline mode) — the shell renders the honest "not switched on yet" state instead

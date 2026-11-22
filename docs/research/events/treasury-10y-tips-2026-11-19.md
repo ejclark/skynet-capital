@@ -358,3 +358,79 @@ proposed as a new `src/domain/market-events/proposals/<id>.from-treasury-10y-tip
 
 **Last assessed:** 2026-11-18
 <!-- probe-ref: {"symbols":{},"vix":25.46,"daysBand":"medium:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","case-shiller-hpi-2026-11-24","consumer-confidence-2026-11-24","empire-state-mfg-2026-11-16","eurostat-hicp-final-2026-11-18","fhfa-hpi-2026-11-24","fomc-minutes-2026-11-18","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","industrial-production-annual-revision-2026-11-24","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-liquidity-enhancement-1-5y-2026-11-20","jpx-market-closure-2026-11-23","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","nvda-2026-11-18-print","opex-2026-11-20","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","philly-fed-nbos-2026-11-24","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","sp-global-flash-us-pmi-2026-11-23","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-20y-bond-2026-11-18","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["nvda-2026-11-18-print","retail-sales-2026-11-17"],"screenStreak":0,"blocked":[]} -->
+
+## Outcome
+
+**Close-out (2026-11-20, D+1).** Rates mode, `symbols: []`: no `earnings-cycle`/`intraday-edges`
+instrument applies (cache busted anyway per the lane's standing instruction). "Re-run" means
+re-fetching every cited source direct: treasurydirect `TA_WS/securities/search?cusip=91282CRE3`
+(Treasury's own result record, `updatedTimestamp` 2026-11-19T13:05:53, result file
+`R_20261119_3`), home.treasury.gov's 2026 daily par and real CMT CSVs through 11-19 (HTTP 200),
+Yahoo `^VIX` and `BZ=F`. **fiscaldata `auctions_query` holds no 11-19 row yet** (empty for every
+auction on or after 11-09 at fetch), so FT-1 is scored from treasurydirect, the same Treasury
+record fiscaldata republishes. **Not read:** a when-issued yield, so the **tail is unknown**
+(search found no write-up of this auction yet); where a human would look is tipswatch's 11-19 post.
+
+**Headline: the second reopening cleared _better_ than the first on demand, at a record real yield,
+while the breakeven this doc's FT-2 rested on fell to a 2026 low.** CUSIP 91282CRE3 sold **$19B**
+(Treasury's own announcement, so the 30-of-30 size rule is now **31 of 31**) at a high yield of
+**2.903%** (low 2.780, median 2.840; **90.74% allotted at the high**), **bid-to-cover 2.43**
+($46.034B recognized / $18.923B competitive awarded). On a competitive-award basis, against the
+09-17 first reopening (2.653%, cover 2.24):
+
+| | 09-17 reopening | 11-19 reopening |
+|---|---|---|
+| Real high yield | 2.653% | **2.903%** (+25bp; highest for the term in this record) |
+| Bid-to-cover | 2.24 | **2.43** (+0.19) |
+| Indirect share | 59.1% | **68.6%** ($12.974B) |
+| Direct share | 28.7% | 25.4% ($4.808B) |
+| Primary-dealer share | 12.2% | **6.0%** ($1.140B) |
+
+The $1.959B SOMA add-on was a non-competitive award outside the offering (passive maturing-holdings
+reinvestment). Stop vs the 10Y real CMT on 11-19 (2.88%) is +2.3bp, a loose reference only: the CMT
+is interpolated and fixed at the close, the auction at 1:00pm ET.
+
+### Forward tests scored
+
+| Test | Prediction | Result | Verdict |
+|---|---|---|---|
+| `FT-treasury-10y-tips-2026-11-19-1` | b/c(11-19) ≥ b/c(09-17) − 0.30 | **2.43 ≥ 1.94** (Δ **+0.19**) | **PASS**, weak by construction |
+| `FT-treasury-10y-tips-2026-11-19-2` | 10Y breakeven ≥ 2.30% on 11-19 | par 5.04 − real 2.88 = **2.16%** | **KILL** |
+
+**FT-1.** The seasoning penalty is again absent from the record: Δ bid-to-cover is positive in
+**9 of 16** pairs now (this one +0.19), still inside the −0.29 → +0.64 range, and the benchmark held
+(the 10-20 row had already shown the floor sat 0.26 under the lowest cover since 2019, so a pass
+carries little evidence). It is one observation about an issuance convention, never a promotion.
+
+**FT-2.** Kill switch 2 had fired on 11-02 and never recovered: **12 of 13** sessions since 11-02
+closed under 2.30%, and 2.16% on 11-19 is the **lowest of 222 paired 2026 sessions** (prior low 2.18
+on 06-24; 11-18 was 2.19). The day's move was all breakeven: nominal 10Y 5.07 → 5.04, real flat at
+2.88. Brent (`BZ=F`) slid 91.95 on 11-18 to 89.83 on 11-20 (no 11-19 bar), consistent with the oil
+driver this doc named running in reverse; cause of the day's move not independently found. The
+five-week inflation leg of 08-05 → 09-08 did not hold; quarter-scale real-rate leadership did
+(real 10Y 2.43% at registration → 2.88%, +45bp).
+
+**Kill switches.** 1 (cover > 0.30 below 09-17) **not fired**, cover rose. 2 **fired** (above). 3
+(policy event inside 11-16 → 11-20) **not fired as worded** (no intermeeting action), but the
+"policy-clean" contrast blurred: Governor Waller's 11-18 interview (a 50bp December hike "probably
+needed", relayed from the [minutes ledger](fomc-minutes-2026-11-18.md)) and a scheduled Jefferson
+speech 11-19 09:25 ET (relayed, not read) both landed in the window. 4 clear ($19B at a reopening).
+5 (2027-01-21 turning out to be a reopening) not re-checked. 6 cleared by the confirmation.
+
+**Volatility.** VIX **28.44** on 11-19 (24.56 on 11-18, +3.9pt), above the 11-05 peak of 28.18;
+cause not identified here. A rising-vol, falling-breakeven session cleared a record real yield on
+strong indirect demand, so the high-real-yield-signals-weak-demand reflex that 09-17 vindicated did
+**not** repeat.
+
+**Verdict vs the stance.** Watch-only held; nothing traded, `symbols: []`. Of the four durable
+outputs, **(a)** the seasoning finding survives (second reopening not weaker), **(b)** the
+policy-clean grade is dented by the Waller and Jefferson voices, **(c)** the size rule extends to
+31/31, **(d)** the terminal-sale fact stands (new issue 2027-01-21 unchanged on the last schedule
+read). The doc's lasting lesson is the *amendment that failed*: "the inflation leg owns the last
+five weeks" was a window artefact, and FT-2's kill is the receipt.
+
+**Loop stage a person still had to do:** *sense*, the tail and when-issued read, because no
+source this lane can fetch publishes it on D+1.
+
+**Last assessed:** 2026-11-20
+<!-- probe-ref: {"symbols":{},"vix":28.44,"daysBand":"medium:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","case-shiller-hpi-2026-11-24","consumer-confidence-2026-11-24","empire-state-mfg-2026-11-16","eurostat-hicp-final-2026-11-18","fhfa-hpi-2026-11-24","fomc-minutes-2026-11-18","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","industrial-production-annual-revision-2026-11-24","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-liquidity-enhancement-1-5y-2026-11-20","jpx-market-closure-2026-11-23","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","nvda-2026-11-18-print","opex-2026-11-20","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","philly-fed-nbos-2026-11-24","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","sp-global-flash-us-pmi-2026-11-23","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-20y-bond-2026-11-18","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["nvda-2026-11-18-print","retail-sales-2026-11-17"],"screenStreak":0,"blocked":[]} -->

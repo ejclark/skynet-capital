@@ -300,6 +300,7 @@ window's energy content is **still unwritten** — it does not open until **2026
 | 2026-10-26 | D-25 | **Deterministic screen (no Claude session).** Readings — VIX 18.4 (+0.6pt since last), band unchanged (low:15+), 51 adjacent event(s) tracked, new in corridor since last pulse: `eurostat-hicp-final-2026-11-18`, `jgb-10y-inflation-indexed-auction-2026-11-16`, `nvda-2026-11-18-print`, `philly-fed-mfg-2026-11-19`, `philly-fed-nbos-2026-11-24`, `sp-global-flash-us-pmi-2026-11-23` +2 more (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-11-25 |
 | 2026-11-06 | D-14 | **Full pulse (screened material: VIX +9.8pt since 18.4 and the band moved low:15+ to low:0+).** **Stance holds; nothing scored (FT-1/FT-2 score-by 11-20).** Read at 9:45 ET, **before the 11-06 prelim** — UMich's page (HTTP 200) shows "Next data release: Friday, November 6, 2026 … at 10am ET" (primary for the prelim's slot; the final's 10:00 stays customary). **Oct final 48.0** (prelim 46.3, +1.7). **(1) Midterm resolved:** press has Democrats winning both chambers (not primary). UMich's own 10-30 special report (docid=82355, 2,129 interviews 8-25 to 10-19) found consumers already expected it (House D+41, Senate D+12; 53% say Democrats better for the economy vs 17% Republicans) — the outcome was largely anticipated, which fits leg 5's null. **(2) Energy channel is reversing mid-window** (Yahoo): Brent 117.64 (10-30) to 98.29 (11-05); RBOB 3.312 to 2.763; AAA regular 4.1239 on 11-04 (sibling-sourced). The "Brent <$95 by 10-20" kill expired unfired (108.79 that day), but the "$3.90 by 11-16" pump kill is now live, unscored. **(3) Vol regime:** VIX 28.18 and S&P 7,353.73 (-4.36%) on 11-05 (Yahoo), the day after 16.61. **Weakness for FT-1:** at VIX near 28 a 0.790% S&P move is ordinary, so a "pass" on 11-20 would say little about opex vs survey; read it against that day's VIX. **(4) Jobs** (BLS API, 08:30 ET): Oct payrolls 159,293k vs Sep 159,128k = +165k (consensus ~+65k, Kitco via sibling), unemployment 4.1%; this lands in the final's exclusive stretch. **Peers/geo:** none new sourced. **Conviction proposals / declared intents:** none (both scripts printed `[]`). **Proposed:** nothing; Dec prelim 12-04 is already on the calendar, Dec final 12-18 is beyond the leash. **Own weaknesses:** the 10-30 report is read from a PDF text layer, the $3.90 call rests on one sibling AAA figure, no consensus for the prelim or final. | — (stance holds; stand aside, revision-not-level base case unchanged) | 2026-11-13 (low 0+ band: every 7d) |
 | 2026-11-13 | D-7 | **Full pulse (screen-material: band/VIX stale since 11-06; interval 7d elapsed).** **Stance holds; nothing scored (FT-1/FT-2 score-by 11-20).** **Slot:** UMich's page (WebFetch, today) reads "Next data release: Friday, November 20, 2026, at 10am ET" — the final's 10:00 is now primary-stated; the prelim printed **51.0** (Oct 48.0), year-ahead 4.3%. **(1) CPI 11-10 ran hot** (`NEWS:`): +0.4% m/m vs ~0.3% consensus, core +0.3%, no y/y (Oct-2025 prices never collected), pump +37.4% y/y; commentary now prices a December Fed hike (secondary, unverified). **(2) Pump channel is unwinding:** EIA weekly regular $4.284 (10-19) → $4.153 (11-02) → **$3.995 (11-09)**; AAA $3.98 on 11-10. The "$3.90 by 11-16" kill is unfired but **$0.095 away**; next EIA print 11-16 decides it. Brent 95.47 (11-13), RBOB 2.620 (Yahoo). **(3) Vol:** VIX 28.18 (11-05) → **18.70** (11-12); S&P 7,592.40 (11-12), above the pre-shock 7,568.92. FT-1's noise concern eases: a 0.790% move is no longer ordinary. **(4) Geo/policy:** US–China truce extended to **2027-01-10** (already canonical as `us-china-truce-expiry-2027-01-10`). **PPI 11-13 08:30 ET not yet read.** Peers: n/a (`symbols: []`); NVDA prints 11-17 (corridor, not a UMich input). No consensus found for the final. Conviction proposals: none; declared intents: none. **Proposed:** nothing — Dec 18 final is past the leash (35d, low); 12-09 FOMC and 12-01 runoff already canonical. **Weakness:** CPI/hike read is one aggregator; no consensus; EIA pull is a fetch summary. | — (stance holds; stand aside, revision-not-level base case unchanged) | 2026-11-20 (event day; close-out 11-21) |
+| 2026-11-20 | D-0 | **Full pulse (screen-material: VIX +9.7pt to 28.44; NVDA print newly in corridor).** **Stance holds; nothing scored (FT-1/FT-2 score the print itself).** Read the evening of 11-19, **before the 10:00 ET final** (UMich page: "Next data release: Friday, November 20, 2026, at 10am ET"; prelim 51.0 vs 48.0 expected, year-ahead 4.3% from 4.7%). **(1) The pump kill fired:** EIA regular **$3.805** (11-16; $3.995 on 11-09, $4.153 on 11-02), below the $3.90 kill inside the window. The price channel the base case leans on closed mid-window; the "revision larger than ±1.0, traced to prices" call is weaker, direction still not called, stand-aside unchanged. **(2) Vol regime reversed:** VIX 18.70 (11-12) to **28.44** (11-19); S&P (Yahoo) 7,592.40 to **7,175.83** (11-19, -2.02%; 11-17 -1.0% on Nvidia/AI selling, `NEWS:`). At VIX 28 a 0.790% move is ordinary again, so FT-1 on 11-20 reads weakly. **(3) Peers:** NVDA print out (reported beat, interim CEO, SEC probe via TheStreet/WSJ, secondary, unverified). No consensus for the final. Conviction proposals / declared intents: none. **Proposed:** nothing (Dec 18 final past the leash). **Weakness:** pump kill read on a dated-11-16 print; news secondary. | — (stance holds; stand aside, revision-not-level base case unchanged) | 2026-11-21 (close-out) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -311,6 +312,94 @@ every row; a dated adjacent event found gets proposed as a new
 Close-out fills `## Outcome` below from re-run instrument data (cache busted first), never from
 memory — after which this doc goes quiet.
 
+## Outcome
+
+**Close-out (2026-11-21, D+1).** Macro-print mode, `symbols: []`: no `earnings-cycle` / `intraday-edges`
+instrument attaches, so the mandated cache bust (`rm -rf node_modules/.cache/earnings-cycle
+node_modules/.cache/intraday-edges`) ran with no target. Every figure was fetched fresh today: the
+publisher's own results page (`www.sca.isr.umich.edu`, HTTP 200; the apex `sca.isr.umich.edu` returned 000
+again, `www.` resolves) and its `tbmics.csv` series, plus Yahoo daily bars for `^GSPC` and `^VIX`. The
+opex ledger's close-out supplied the cause attribution for the session. **No November consensus was found
+for the final** (two searches, nothing for 2026), so the "beat/miss" question is unanswered, not assumed.
+
+### The print: a +0.5 revision, expectations up, inflation expectations sharply down
+
+| Field | Nov final | Nov prelim (11-06) | Revision | Oct final |
+|---|---|---|---|---|
+| Index of Consumer Sentiment | **51.5** | 51.0 | **+0.5** | 48.0 |
+| Current Economic Conditions | 49.4 | n/a here | n/a | 46.7 |
+| Index of Consumer Expectations | 52.9 | n/a here | n/a | 48.8 |
+| Year-ahead inflation expectations | **3.7%** | 4.3% (carried from the 11-13/11-19 rows) | **-0.6** | 4.7% |
+| Long-run inflation expectations | 3.3% | n/a here | n/a | 3.5% |
+
+Director Hsu, verbatim from the primary: *"Consumer sentiment rose about 7% this month, led by substantial
+post-election gains in both short- and long-run expected business conditions."* The release covers
+interviews **October 20th to November 16th**, matching the published window in docid=79629 to the day, and
+`tbmics.csv` agrees (Nov 51.5, Oct 48.0, Sep 48.1, Aug 51.7). Her text names the election as the lift's
+driver for **expectations** (independents swung left, Republicans fell), and falling gas prices for
+low-wealth consumers' finances; stockholders reported worse finances amid "AI-related agitation in stock
+markets". Sentiment is still **9% below February**, before the Iran conflict.
+
+**Market context.** S&P (`^GSPC`) **7,175.83 to 6,910.39, -3.699%** (second-largest absolute move of 224
+2026 sessions, after 11-05's -4.36%); VIX **28.44 to 35.89** (intraday high 40.03). The opex ledger's
+close-out attributes the day to an AI-led selloff (Nvidia -14.0%), reported by press only. The survey's
++0.5 revision was not what moved it.
+
+### Scoring the two forward tests
+
+**FT-umich-sentiment-final-2026-11-20-1: `pass`, on the registered line only.** Predicted an S&P |move|
+of **at least 0.790%** on 2026-11-20. Actual **3.699%**, 4.7x the line and 3.5x the trailing-20 average
+(1.07%). The kill (below 0.790%) did not fire. **What the pass does not say:** the hypothesis was that the
+*expiry* owns the tape, and the opex close-out finds the series trended through its largest strike
+(7000) on an AI-led selloff rather than pinning to it, so the cohort the day resolved to is "large move",
+not "expiry mechanics". It rejects the survey as the driver and nothing more. **Count against the
+pre-stated 2-of-3 on the three opex-and-final dates:** 02-20 moved **+0.694%** (below the line, a miss),
+11-20 **-3.699%** (hit), so **1 of 2 scored, and 12-18 decides it**. Re-verified from the bars today.
+One observation, not a promotion.
+
+**FT-umich-sentiment-final-2026-11-20-2: `kill`.** Predicted a final-versus-prelim revision of
+**|Δ| ≥ 1.0**, magnitude only. Actual **51.0 to 51.5, |Δ| = 0.5**, inside the ±1.0 kill band. The
+mechanism "a loaded exclusive back half means a bigger revision" fails a second time, after the 09-25 test
+(FT-55-umich-sep-revision, also a kill). **The
+ambiguity stated at registration resolves cleanly:** a kill needs no attribution. The registered
+corroborator did move, though, and sharply: year-ahead inflation expectations fell **4.3% to 3.7%**
+inside the window even as CPI ran hot (11-10, +0.4% m/m) and the pump unwound. That is a large
+inflation-expectations revision beside a small headline revision, so the corroborator moved without the
+magnitude the registration paired it with. Filed in
+[`forward-tests/umich-sentiment-final-2026-11-20.md`](../forward-tests/umich-sentiment-final-2026-11-20.md)
+and moved to [`multi-symbol-sweep.md`](../multi-symbol-sweep.md)'s kill list.
+
+### The stance against the tape
+
+Stand aside held: `symbols: []`, `low` impact, never a trade on this print, and the day's move was
+neither keyed to it nor tradeable from it. **The base case missed:** it called a revision larger than
+±1.0 traced to prices; the revision was 0.5, the price channel (the $3.90 pump kill) had already fired,
+and the visible driver was the election in the expectations component. The refusal ("no midterm premium
+priced into any consumer read") **took a hit:** the publisher itself names post-election expectations
+as the lift. Leg 5's null (Nov minus Oct, 12 midterm years) is about the *level* month over month and is
+not contradicted by a +3.5 move in 2026, but the reading "the election does not show up in this survey"
+overreached; the election showed up in *who* moved (independents, Democrats up; Republicans down), not in
+a national average the null measured. Kill switches: pump kill fired (11-16); Brent kill and the
+prelim-distance kill (3.0 vs 6.60) did not; the clock time is now primary-stated on the page (10am ET).
+
+**Revision base rate, n=7 finals this regime** (Mar-Aug from the registration, Sep and Oct from their
+ledgers): Mar -2.2 · Jun +0.6 · Jul +0.8 · Aug +0.7 · Sep +0.3 · Oct +1.7 · **Nov +0.5**. Five of seven are
+inside ±1.0; the two that broke it are March (the Iran shock) and October (a hot CPI and Brent near $109,
+upward). Direction stays un-forecast, and a big back half has not reliably meant a big revision.
+
+### Honest limits
+
+The 51.0 prelim and its 4.3% year-ahead figure are carried from this ledger's own 11-13 and 11-19 rows,
+not re-fetched today (the page now shows only the final). No consensus was found, so no surprise gap is
+scored. The cause of the 11-20 selloff is press-sourced through the opex close-out and was not
+re-opened here. FT-1's pass uses one day of an event with a +7.45-point VIX move; it says nothing about
+12-18.
+
+### What a person still had to do (loop census)
+
+Sense and score were mechanical. One stage stayed manual: **finding the published consensus**. No script
+reads a consensus for a UMich release, so "beat or miss" had to be searched by hand and came back empty.
+
 **Last assessed:** 2026-10-26
 <!-- probe-ref: {"symbols":{},"vix":18.4,"daysBand":"low:15+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","consumer-confidence-2026-11-24","durable-goods-2026-11-25","eurostat-hicp-final-2026-11-18","fhfa-hpi-2026-11-24","fomc-minutes-2026-11-18","gdp-q3-2026-second-2026-11-25","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-cpi-2026-11-20","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-1-5y-2026-11-20","jpx-market-closure-2026-11-23","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","new-home-sales-2026-11-25","nvda-2026-11-18-print","ofgem-price-cap-announcement-2026-11-25","opex-2026-11-20","pce-2026-11-25","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","sp-global-flash-us-pmi-2026-11-23","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25","retail-sales-2026-11-17"],"screenStreak":1} -->
 
@@ -319,3 +408,9 @@ memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-11-13
 <!-- probe-ref: {"symbols":{},"vix":18.7,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","consumer-confidence-2026-11-24","durable-goods-2026-11-25","empire-state-mfg-2026-11-16","eurostat-hicp-final-2026-11-18","fhfa-hpi-2026-11-24","fomc-minutes-2026-11-18","gdp-q3-2026-second-2026-11-25","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","industrial-production-annual-revision-2026-11-24","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-1-5y-2026-11-20","jpx-market-closure-2026-11-23","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","opex-2026-11-20","pce-2026-11-25","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","sp-global-flash-us-pmi-2026-11-23","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25","retail-sales-2026-11-17"],"screenStreak":0} -->
+
+**Last assessed:** 2026-11-20
+<!-- probe-ref: {"symbols":{},"vix":28.44,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","consumer-confidence-2026-11-24","durable-goods-2026-11-25","empire-state-mfg-2026-11-16","eurostat-hicp-final-2026-11-18","fhfa-hpi-2026-11-24","fomc-minutes-2026-11-18","gdp-q3-2026-second-2026-11-25","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","industrial-production-annual-revision-2026-11-24","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-1-5y-2026-11-20","jpx-market-closure-2026-11-23","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","new-home-sales-2026-11-25","nvda-2026-11-18-print","ofgem-price-cap-announcement-2026-11-25","opex-2026-11-20","pce-2026-11-25","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","sp-global-flash-us-pmi-2026-11-23","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","nvda-2026-11-18-print","pce-2026-11-25","retail-sales-2026-11-17"],"screenStreak":0} -->
+
+**Last assessed:** 2026-11-21
+<!-- probe-ref: {"symbols":{},"vix":35.89,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","consumer-confidence-2026-11-24","durable-goods-2026-11-25","empire-state-mfg-2026-11-16","eurostat-hicp-final-2026-11-18","fhfa-hpi-2026-11-24","fomc-minutes-2026-11-18","gdp-q3-2026-second-2026-11-25","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","industrial-production-annual-revision-2026-11-24","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-1-5y-2026-11-20","jpx-market-closure-2026-11-23","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","new-home-sales-2026-11-25","nvda-2026-11-18-print","ofgem-price-cap-announcement-2026-11-25","opex-2026-11-20","pce-2026-11-25","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","sp-global-flash-us-pmi-2026-11-23","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","nvda-2026-11-18-print","pce-2026-11-25","retail-sales-2026-11-17"],"screenStreak":0} -->

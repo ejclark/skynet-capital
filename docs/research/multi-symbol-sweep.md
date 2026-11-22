@@ -71,6 +71,14 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"A loaded exclusive back half makes the November UMich final revise by 1.0 point or more: the prices-not-ballot revision call (FT-umich-sentiment-final-2026-11-20-2)"** — added 2026-11-21 from the
+  [umich-sentiment-final-2026-11-20 close-out](events/umich-sentiment-final-2026-11-20.md). The 11-06 prelim printed **51.0** and the publisher's final **51.5**: |Δ| = **0.5**, through a window holding the midterms, a hot CPI and a collapsing pump price. Year-ahead inflation expectations fell **4.3% to 3.7%** in the same window.
+  Do not call a bigger revision off a count of dated events inside a collection window; five of seven 2026 finals revised inside ±1.0, and the two that did not (March, October) were shocks, not event counts.
+
+- **"The 10-year breakeven holds at or above 2.30% into the 2026-11-19 TIPS reopening: the five-week inflation leg is durable (FT-treasury-10y-tips-2026-11-19-2)"** — added 2026-11-20 from the
+  [treasury-10y-tips-2026-11-19 close-out](events/treasury-10y-tips-2026-11-19.md). Par 5.04 minus real 2.88 gave **2.16%**, the lowest of 222 paired 2026 sessions; 12 of 13 sessions since 11-02 closed under 2.30% as Brent unwound.
+  Do not extrapolate a 24-session breakeven decomposition into a regime call; the quarter-scale read (real-rate-led) was the one that held, and a registration anchored on a five-week leg was a window artefact.
+
 - **"A minutes-collision VIX settlement opens at or above -0.5%: the 2026-11-18 open gap is not the decision-collision signature (FT-vix-expiration-2026-11-18-1)"** — added 2026-11-19 from the
   [vix-expiration-2026-11-18 close-out](events/vix-expiration-2026-11-18.md). The VIX opened **24.22** against a **25.46** close (**-4.87%**; VRO 24.25), on a day the minutes released on their slot.
   Do not register a fixed open-gap line on a VIX day without conditioning on the prior day's VIX move; after a +8% day the open gap averages -0.14% (n=602, sd 5.52), so a -0.5% line is a coin flip there, and n=1.
@@ -1275,6 +1283,8 @@ number in this doc that lacks a control clause with suspicion, and prefer the pe
 for the full attack transcripts.
 
 - **"A low-impact G.17 morning ranges under the unconditional 2014-05+ p75 (1.332%) of SPY's close" (FT-industrial-production-2026-11-17-2)** — added 2026-11-18 from the [industrial-production-2026-11-17 close-out](events/industrial-production-2026-11-17.md). Registered 2026-09-06 on 11 of 11 November G.17 sessions under 1.30%; 11-17 ranged **1.742%** (gap −0.21%) with VIX 19.30 → 22.91 the day before and 25.46 at the close. Second same-shape kill in a month, after the 10-16 entry above. Do not register an unconditional range bar for a G.17 print; condition on the prior-day VIX or skip the test.
+
+- **"ITB's session range on an FOMC-minutes day stays under the unconditional 2014+ p75 (2.504%) with no regime condition (FT-pending-home-sales-2026-11-18-2)"** — added 2026-11-20 from the [pending-home-sales-2026-11-18 close-out](events/pending-home-sales-2026-11-18.md). ITB ranged **3.407%** on 11-18 (O 91.28 / H 93.62 / L 90.51) after a 25.46 VIX close the day before. Do not register an unconditional ITB range line on a day whose prior VIX close is ≥ 24: that cohort breaches 2.504% on 66.3% of sessions (n=469), so the line fires on regime alone. The regime-conditional sibling (< 4.062%, FT-…-4) passed. n=1 on the minutes-day claim itself, which the 104-session baseline (p=0.965) does not lose.
 
 - **"The SPF's 10-year headline CPI projection stays inside a ±0.15pp band of the prior edition: 2.15-2.45% on 2026-11-16 (FT-survey-of-professional-forecasters-q4-2026-11-16-3)"** — added 2026-11-20 from the [survey-of-professional-forecasters-q4-2026-11-16 close-out](events/survey-of-professional-forecasters-q4-2026-11-16.md). The Q4 2026 edition printed **2.49%** (previous 2.30%, **+0.19pp**) after a hot October CPI that landed before the panel's 11-11 deadline, against a 24-year mean quarterly move of 0.062pp; 89 of 94 historical moves sat inside the band, so 92% was reasonable and one observation killed it.
   Do not treat the survey's 10-year line as a frozen anchor in a quarter that follows a headline CPI step; the 10-year breakeven moved 4bp (T10YIE 2.24 to 2.20) on the same release day, so this kills the "anchor" call and not the "tape is unmoved" one.

@@ -538,3 +538,46 @@ memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-11-19
 <!-- probe-ref: {"symbols":{},"vix":24.56,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","case-shiller-hpi-2026-11-24","consumer-confidence-2026-11-24","empire-state-mfg-2026-11-16","eurostat-hicp-final-2026-11-18","fhfa-hpi-2026-11-24","fomc-minutes-2026-11-18","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","industrial-production-annual-revision-2026-11-24","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-liquidity-enhancement-1-5y-2026-11-20","jpx-market-closure-2026-11-23","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","opex-2026-11-20","pending-home-sales-2026-11-18","philly-fed-nbos-2026-11-24","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","sp-global-flash-us-pmi-2026-11-23","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["retail-sales-2026-11-17"],"screenStreak":0,"blocked":[]} -->
+
+## Outcome
+
+**Close-out (2026-11-20, D+1 — inside the `closeOutWithinDays` window).** Macro-print mode carries no
+`earnings-cycle` / `intraday-edges` instrument (`symbols: []` by design); the cache-bust command was run
+regardless and held nothing. "Re-run instrument data" here is the Philadelphia Fed's own file and release
+page, both fetched direct this session (HTTP 200): `bos_history.csv` (581,297 bytes, **703 rows**, May-68 →
+Nov-26) and `mbos-2026-11`. Date label: `FRB:` primary, `confirmed`.
+
+**The verdict: the stand-aside stance was right and cost nothing; both registered forward tests passed.**
+No level was ever registered, so no level call can have missed.
+
+| Reading | Oct-26 | Nov-26 | Read against the ledger |
+|---|---|---|---|
+| Headline (`gacdfsa`) | 20.9 | **6.3** (−14.6) | AR(1) central 18.8, se 10.64: z ≈ −1.2, inside the 90% band 1.3 → 36.3; lowest since May |
+| \|Δ headline\| vs 22.5 line | — | **14.6** | 85.3rd percentile of 702 monthly changes; `FT-…-2` **pass** |
+| Prices paid (`ppcdfsa`) | 43.2 | **58.2** (+15) | above the 11-05 row's 90% band (28.6 → 55.7), z ≈ +1.95; highest since April; no level was registered |
+| Prices received (`prcdfsa`) | 40.1 | **47.0** (+7) | highest since June 2022 per the bank's text |
+| New orders (`nocdfsa`) | 4.3 | **−0.4** | fourth straight decline |
+| No-change share, activity (`gacnsa`) | 27.2 | **32.7** | 2.6th percentile of 703 months (Oct was 0.85th); dispersion regime carried, one more month |
+
+- **Collection window held:** the report says *"collected from November 9 to November 16"*, exactly the window
+  the registered classification used, with Veterans Day (11-11) interior. October is still **20.9** in the new
+  file, so no seasonal re-base voided `FT-…-2`.
+- **Kill switches:** none fired. Switch 5 (prices paid near 55 with a headline above 40) needs both legs and
+  the headline was 6.3; switch 4 (no-change share above the 51.7 median) did not occur at 32.7.
+- **What the stagflation-shaped print did and did not do:** activity fell while both price indexes rose, in a
+  week where VIX closed **28.44** (11-19, Yahoo), +3.88 on 11-18's 24.56, and the 12-09 FOMC is a live hike
+  meeting. That is context, not a read-through: a sub-state survey at R² ≈ 0.20 to national IP never earned a
+  position, and nothing here changes the permanent stand-aside.
+- **Consensus was never primary-sourced:** the only figure seen, 19.2 (Myfxbook, search-grade, 11-19 row),
+  would make this print a miss of about 13 points; today's search found no secondary report of the print at all,
+  so the surprise is stated and not scored.
+- **Next:** [`philly-fed-nbos-2026-11-24`](philly-fed-nbos-2026-11-24.md) (Nonmanufacturing sibling) and the
+  Q4 PIES of 11-25 carry this print as an input; the December control comparison
+  (`FT-philly-fed-mfg-2026-12-17-1`) now has its clean 703-of-703 baseline.
+
+**Loop census (docs/process/LEARNING-LOOP.md):** sense, decide and verify all ran from the bank's own file and
+page. The one stage a machine could not verify is the minute of publication: no primary exposes a timestamp,
+so `FT-…-1`'s pass rests on the bank's printed release line.
+
+**Last assessed:** 2026-11-20
+<!-- probe-ref: {"symbols":{},"vix":28.44,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","case-shiller-hpi-2026-11-24","consumer-confidence-2026-11-24","empire-state-mfg-2026-11-16","eurostat-hicp-final-2026-11-18","fhfa-hpi-2026-11-24","fomc-minutes-2026-11-18","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","industrial-production-annual-revision-2026-11-24","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-liquidity-enhancement-1-5y-2026-11-20","jpx-market-closure-2026-11-23","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","opex-2026-11-20","pending-home-sales-2026-11-18","philly-fed-nbos-2026-11-24","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","sp-global-flash-us-pmi-2026-11-23","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["retail-sales-2026-11-17"],"screenStreak":0,"blocked":[]} -->

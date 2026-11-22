@@ -358,3 +358,74 @@ quiet.
 
 **Last assessed:** 2026-11-19
 <!-- probe-ref: {"symbols":{},"vix":24.56,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","case-shiller-hpi-2026-11-24","consumer-confidence-2026-11-24","empire-state-mfg-2026-11-16","eurostat-hicp-final-2026-11-18","fhfa-hpi-2026-11-24","fomc-minutes-2026-11-18","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","industrial-production-annual-revision-2026-11-24","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-liquidity-enhancement-1-5y-2026-11-20","jpx-market-closure-2026-11-23","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","opex-2026-11-20","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","philly-fed-nbos-2026-11-24","retail-sales-2026-11-17","sp-global-flash-us-pmi-2026-11-23","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["retail-sales-2026-11-17"],"screenStreak":0} -->
+
+## Outcome
+
+**Assessed 2026-11-20 (D+1, inside the close-out window).** `macro-print` event, `symbols: []`: no
+`earnings-cycle`/`intraday-edges` target applies, so the cache bust
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) ran and had nothing to
+clear. Every number below is a fresh pull this session from Census's own release page and its delimited
+tables (`CENSUS:`, `retail/ecommerce.html`, `prectbl1.dat`, `tsadprectbl3.dat`, all HTTP 200, release
+**CB26-183**, 2026-11-19 10:00 ET). The release PDF downloaded (HTTP 200) but this runner has no PDF text
+extractor, so the PDF itself was not read. Yahoo's `^VIX` endpoint returned 429; the VIX reading is the
+sibling `philly-fed-mfg-2026-11-19` ledger's (11-19 close, Yahoo), not a direct pull.
+
+### What printed
+
+| Series (SA) | Q3 2026 (p) | Q2 2026, as revised | Q2 2026, as registered 09-09 |
+|---|---|---|---|
+| E-commerce, $M | **347,322** | 341,748 | 340,244 |
+| Total retail (ex food services), $M | 1,941,858 | 1,919,897 | 1,986,488 |
+| E-commerce share | **17.9%** | 17.8% | 17.1% |
+| E-commerce q/q | **+1.6%** (±0.4pp) | +3.7% | n/a |
+| Total retail q/q | +1.1% (±0.2pp) | +2.8% | n/a |
+| E-commerce y/y | +10.4% (±0.9pp) | +11.2% | +12.2% |
+
+Not adjusted: e-commerce $335.7B, +0.6% q/q, +10.4% y/y, **17.2%** of total.
+
+### Against the stance
+
+- **Stance held: stand aside, no entry was ever licensed.** `symbols: []`, no playbook, nothing to score
+  as a position. Same-day tape (context only): VIX **28.44** on 11-19, +3.88 on 11-18.
+- **A notice of revision landed on this edition, which the stance did not expect.** The initial research
+  said this series benchmarks in April and carries no AIES restatement. CB26-183 says estimates were
+  "revised based on historical corrections and the results of the 2023 and 2024 Annual Integrated Economic
+  Survey." Total retail for Q2 moved **-3.4%** ($1,986,488M to $1,919,897M); e-commerce moved +0.4%. That
+  is the one claim in the ledger that was wrong, and it cost FT-2 its comparison base.
+- **Leg 2 (payback, not settlement): not contradicted, not confirmed.** Q2 (gained Prime Day) grew
+  e-commerce +3.7% against total +2.8%, a +0.9pp gap; Q3 (lost it) grew +1.6% against +1.1%, a +0.5pp gap.
+  The direction fits a payback, but the 0.4pp swing sits inside the report's own ±0.4pp interval, which is
+  the Leg 3 point: a quarterly aggregate cannot attribute a four-day event.
+- **Leg 3 stands, and the revision rewrote its sample.** Q3 2021 SA e-commerce q/q now reads **-2.3%**
+  (it read -1.6% at registration). Q3 q/q across the revised table: 2019 +6.1, 2020 +1.4, 2021 -2.3,
+  2022 +1.2, 2023 +3.1, 2024 +2.6, 2025 +2.3, 2026 **+1.6**. So the registered "+1.6% floor" is no longer
+  the bottom of the Q3 range, and 2020 and 2022 sit below it on the revised data.
+- **Leg 4/5 reading holds.** The y/y fell to +10.4% from +11.2%, a deceleration rather than the proposal's
+  re-acceleration; the nonstore monthly series had already traded Q3 two days earlier (retail sales
+  11-17), and no GDPNow vintage was posted on 11-19.
+
+### Forward tests
+
+- **`FT-retail-ecommerce-q3-2026-11-19-1`: pass**, at the bar. SA e-commerce q/q **+1.6%** against a
+  threshold of +1.6%. Registered as "below +1.6% kills it", so a print of exactly +1.6% passes; the
+  unrounded +1.63% agrees. It says nothing a ±0.4pp error bar would not.
+- **`FT-retail-ecommerce-q3-2026-11-19-2`: VOID**, two registered void conditions fired (benchmark
+  revision on this edition; Q2 share restated from 17.1% to 17.8%). Not scored pass or kill, and not
+  moved to the kill list. The Q3 share of **17.9%** is recorded above for the record; the gasoline
+  denominator hypothesis stays untested, and the proposal's "a share is inflator-neutral" claim stays
+  doubted, not refuted.
+- No scored kill, so nothing moves to `multi-symbol-sweep.md`'s kill list. No conviction reads this
+  event's rows (`npm run research:claims -- --event` printed `nothing written`). No conviction proposals
+  and no declared intents name this event.
+
+### Loop census (what a person still had to do)
+
+- **Sense** the print: automated here, but only via the HTML page plus delimited tables; a PDF-only
+  extraction would have failed on this runner. A standing `pdftotext` or the delimited-table fetch in the
+  instrument set would remove that dependence.
+- **Verify** the registered void conditions against restated bases: done by hand. A forward-test row that
+  names a comparison base could carry a machine-readable base so a revision fires its void mechanically.
+
+
+**Last assessed:** 2026-11-20
+<!-- probe-ref: {"symbols":{},"vix":28.44,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","case-shiller-hpi-2026-11-24","consumer-confidence-2026-11-24","empire-state-mfg-2026-11-16","eurostat-hicp-final-2026-11-18","fhfa-hpi-2026-11-24","fomc-minutes-2026-11-18","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","industrial-production-annual-revision-2026-11-24","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-liquidity-enhancement-1-5y-2026-11-20","jpx-market-closure-2026-11-23","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","opex-2026-11-20","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","philly-fed-nbos-2026-11-24","retail-sales-2026-11-17","sp-global-flash-us-pmi-2026-11-23","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["retail-sales-2026-11-17"],"screenStreak":0,"blocked":[{"url":"https://query1.finance.yahoo.com/v8/finance/chart/%5EVIX","status":"429","at":"2026-11-20"}]} -->
