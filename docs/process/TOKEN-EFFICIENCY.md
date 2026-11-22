@@ -57,6 +57,19 @@ session re-sends the whole history (at 2.5–10% of the input rate when cached, 
 invalidator fired). So lever 3 (smaller CLAUDE.md) multiplies through levers 1, 4, 5 — and lever 2
 decides whether everything else bills at ≤10% or at 100%.
 
+**Account plugins are fixed context the repo never chose** (2026-11-17). A cloud session's first
+call measured 117k tokens, and CLAUDE.md plus the Orient output style came to only about 15k of
+that. The account syncs 17 plugins from claude.ai into every session. Together they add 93 skill
+descriptions (about 27KB, roughly 6.7k tokens by bytes/4) and a dozen MCP servers that mostly fail to authenticate.
+Two of them, superpowers and repo-hygiene, also inject SessionStart instructions that contradict
+this repo: "invoke a skill before any response", and docstrings by default. No file in the repo
+uses any of them, so `.claude/settings.json` turns all 17 off with `enabledPlugins: false` (project
+scope outranks user scope; a person can turn one back on for themselves in
+`.claude/settings.local.json`). **Wrong if**, by 2026-12-01, a cloud session still lists
+`superpowers:` skills, or its first call is not at least 5k tokens lighter. claude.ai connectors
+(Gmail, Calendar, Spotify, a finance server of ~150 tool names) are delivered by the cloud host,
+and no repo setting removes them. They are switched off per account at claude.ai, which is Eric's call.
+
 ## Cache discipline — the session habits
 
 The cache is a strict prefix match, keyed per model **and** per effort level; a hit bills at
