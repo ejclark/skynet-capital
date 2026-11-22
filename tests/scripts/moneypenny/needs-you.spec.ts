@@ -139,6 +139,25 @@ describe("the digest folds the asks on the Decisions page (#7939)", () => {
     );
   });
 
+  // Follow-up (e): the 2026-11-22 digest listed #7548 ("Merge held platter #7943?") and #7943 as two
+  // lines for one click.
+  it("prints a merge ask that names a held PR on the list as part of that PR's line", () => {
+    const rows = [
+      { number: 7548, title: "fix", criterion: 1, why: "w", decision: "Merge held platter #7943?" },
+      { number: 7943, title: "platter", criterion: 4, why: "held PR unmerged 12h (≥12h)" },
+      { number: 5, title: "other", criterion: 1, why: "w", decision: "Merge nothing listed, #8000?" },
+    ];
+    const lines = foldedNeedsYouLines({ needsYou: rows }, null);
+    expect(lines).toEqual([
+      "- #7943 platter — held PR unmerged 12h (≥12h); merging it also answers #7548",
+      "- #5 other — Merge nothing listed, #8000?",
+    ]);
+    expect(foldedNeedsYouLines({ needsYou: rows }, { number: 99, entries: [5] })).toEqual([
+      "- #99 Decisions for Eric — 1 ask (#5); one reply answers all.",
+      "- #7943 platter — held PR unmerged 12h (≥12h); merging it also answers #7548",
+    ]);
+  });
+
   it("does not print an empty-queue line beside the page line", () => {
     const lone = plan({ issues: [issue(1)], now: NOW });
     expect(foldedNeedsYouLines(lone, { number: 99, entries: [1] })).toEqual([

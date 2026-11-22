@@ -14,7 +14,13 @@
      Each item = a numbered, PRE-VERIFIED procedure (commands run, links checked) — and only
      items that could not be automated away belong here at all. Step anatomy:
      "N. <the do> — <the why, trailing, optional read>", then a 1-2 line gist closing the
-     procedure (what the steps accomplish together). -->
+     procedure (what the steps accomplish together).
+     The item set is `digest-scan.mjs --needs-you` and nothing else. An ask it does not print is
+     never carried as a prose item, yesterday's included (#7939 follow-up e: "land it" on #7487
+     rode ten digests that way). Route it first: only he can decide → a Needs-from-you callout
+     on its issue (options, prediction, Class:, On silence) + needs-eric, so the Decisions page
+     takes it on the next push; a session can do it → needs-session or a feedback issue, and it
+     prints on the needs-a-session line. -->
 
 1.
 
