@@ -70,7 +70,11 @@ shape for tooling; without `--file` it drafts and says so, never posts.
    **The item set is `node scripts/digest-scan.mjs --needs-you`** (#4293) — the same query that
    assigns him issues (`scripts/moneypenny/assignments.mjs`), so the digest never lists a
    decision GitHub didn't send him, or misses one it did. Shape each listed item; don't add or
-   drop items by hand — a missing one is a selector bug, fixed there.
+   drop items by hand — a missing one is a selector bug, fixed there. **The asks numbered on the
+   standing *Decisions for Eric* issue print as ONE line** (`foldedNeedsYouLines`, #7939): one
+   reply there answers all of them, so list that line, never the asks it holds. The platter and
+   anything the page cannot number keep their own lines — the target is the platter plus that
+   one issue.
    **Format contract (Eric, 2026-08-15):** a TLDR-style *numbered procedure* per item, never
    prose; every instruction pre-verified before it ships (commands actually run, links resolved,
    states confirmed — it must work on his first try). Before an item enters this tier at all,

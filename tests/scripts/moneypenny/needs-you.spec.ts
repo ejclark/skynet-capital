@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "@rstest/core";
-import { needsYouLines } from "../../../scripts/digest-scan.mjs";
+import { foldedNeedsYouLines, needsYouLines } from "../../../scripts/digest-scan.mjs";
 import { type PlanInput, plan } from "../../../scripts/moneypenny/assignments.mjs";
 import { decisionsFrom, fitBudget } from "../../../scripts/steer/model.mjs";
 
@@ -116,6 +116,34 @@ describe("digest Needs-you == the assignment lane's set (criterion 12)", () => {
     const lines = needsYouLines(plan(INPUT));
     expect(lines).toContain("- #1 issue 1 — decide 1");
     expect(lines.find((l) => l.startsWith("- #21 "))).toMatch(/held PR unmerged \d+h/);
+  });
+});
+
+// #7939 slice 2: the asks numbered on the standing Decisions page print as one line, so the digest's
+// Needs-you list is that page plus what it cannot hold (held PRs, the platter) — never a card per ask.
+describe("the digest folds the asks on the Decisions page (#7939)", () => {
+  const planned = plan(INPUT);
+
+  it("collapses the numbered asks to one line and keeps every other item", () => {
+    const lines = foldedNeedsYouLines(planned, { number: 99, entries: [1, 2, 3] });
+    expect(lines[0]).toBe("- #99 Decisions for Eric — 3 asks (#1, #2, #3); one reply answers all.");
+    expect(lines.some((l) => l.startsWith("- #1 "))).toBe(false);
+    expect(lines.find((l) => l.startsWith("- #21 "))).toMatch(/held PR unmerged/);
+    expect(lines).toHaveLength(needsYouLines(planned).length - 3 + 1);
+  });
+
+  it("is the plain list when there is no page, or no ask on it", () => {
+    expect(foldedNeedsYouLines(planned, null)).toEqual(needsYouLines(planned));
+    expect(foldedNeedsYouLines(planned, { number: 99, entries: [] })).toEqual(
+      needsYouLines(planned),
+    );
+  });
+
+  it("does not print an empty-queue line beside the page line", () => {
+    const lone = plan({ issues: [issue(1)], now: NOW });
+    expect(foldedNeedsYouLines(lone, { number: 99, entries: [1] })).toEqual([
+      "- #99 Decisions for Eric — 1 ask (#1); one reply answers all.",
+    ]);
   });
 });
 
