@@ -242,10 +242,12 @@ export function foldedNeedsYouLines({ needsYou }, page = null) {
   const folded = page ? needsYou.filter((n) => onPage.has(n.number)) : [];
   const riders = mergeRiders(needsYou);
   const rest = needsYou
-    .filter((n) => !onPage.has(n.number) && !riders.has(n.number))
+    .filter((n) => !(onPage.has(n.number) || riders.has(n.number)))
     .map((n) => {
       const also = [...riders].filter(([, pr]) => pr === n.number).map(([i]) => `#${i}`);
-      return also.length ? { ...n, why: `${n.why}; merging it also answers ${also.join(", ")}` } : n;
+      return also.length
+        ? { ...n, why: `${n.why}; merging it also answers ${also.join(", ")}` }
+        : n;
     });
   if (!folded.length) return needsYouLines({ needsYou: rest });
   const nums = folded.map((n) => `#${n.number}`).join(", ");

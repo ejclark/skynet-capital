@@ -142,10 +142,16 @@ describe("the digest folds the asks on the Decisions page (#7939)", () => {
   // Follow-up (e): the 2026-11-22 digest listed #7548 ("Merge held platter #7943?") and #7943 as two
   // lines for one click.
   it("prints a merge ask that names a held PR on the list as part of that PR's line", () => {
-    const rows = [
+    const rows: Parameters<typeof foldedNeedsYouLines>[0]["needsYou"] = [
       { number: 7548, title: "fix", criterion: 1, why: "w", decision: "Merge held platter #7943?" },
       { number: 7943, title: "platter", criterion: 4, why: "held PR unmerged 12h (≥12h)" },
-      { number: 5, title: "other", criterion: 1, why: "w", decision: "Merge nothing listed, #8000?" },
+      {
+        number: 5,
+        title: "other",
+        criterion: 1,
+        why: "w",
+        decision: "Merge nothing listed, #8000?",
+      },
     ];
     const lines = foldedNeedsYouLines({ needsYou: rows }, null);
     expect(lines).toEqual([
