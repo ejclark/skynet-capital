@@ -739,6 +739,15 @@ export function OptionGate({
             maxLength={12}
             onChange={edit(setSymbol)}
             onCommit={(s) => {
+              // A commit naming the symbol already on the ticket changes nothing, so it must not
+              // reopen the chain or clear a locked-pick note (#7955). It arrives late on purpose:
+              // the field defers its blur commit until the tap that blurred it has clicked, so a
+              // chain tap made with Symbol still focused (typed + Enter) runs its pick FIRST, and
+              // this re-commit of the same symbol used to undo that pick's collapse and its note.
+              if (s === chainSym) {
+                setSymbol(s);
+                return;
+              }
               edit(setSymbol)(s);
               setChainSym(s);
               setChainOpen(true);
