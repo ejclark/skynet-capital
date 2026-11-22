@@ -26,7 +26,7 @@ import { ThreadBar, ThreadIndex } from "./rail-threads";
  *      newest reply and stays there while it streams, so reading starts where she starts.
  *   2. YOUR MOVES — her current choices as 44px buttons (`live/moneypenny-moves.ts`). A parked
  *      card's own exits are the one exception: they sit on the card itself, so it is never a
- *      question which card "Send" acts on (#7614, `mp-card.tsx`).
+ *      question which card "Submit" acts on (#7614, `mp-card.tsx`).
  *   3. THE BOX — one line, Enter sends, attach a screenshot beside it (`mp-composer.tsx`, D5). It
  *      never changes width or position.
  *
@@ -303,7 +303,7 @@ export function MoneypennyDock(): ReactElement {
   /** The member's message with its ✎ tags: the subjects in words at the start of their line, and
    *  the calendar ones as keys her request carries for the server's check. They clear once it lands. */
   const sendTagged = async (text: string, screenshots?: readonly string[]): Promise<boolean> => {
-    // A parked card or a scripted question waits on an exact answer ("send", "never mind", "yes"),
+    // A parked card or a scripted question waits on an exact answer ("submit", "never mind", "yes"),
     // so while one does, the line goes as typed and the tags wait for the next message.
     const exact = draft || view || followup || research || (!thread && flow !== "idle");
     if (tags.length === 0 || exact) return send(text, screenshots);

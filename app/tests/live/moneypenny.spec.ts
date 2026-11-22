@@ -27,7 +27,8 @@ describe("formatTranscript", () => {
   });
 
   it("keeps a draft card's own text as-is", () => {
-    const card = '[bug] Title\n\ndetails\n\n— reply "send" to file it, or "never mind" to drop it.';
+    const card =
+      '[bug] Title\n\ndetails\n\n— reply "submit" to file it, or "never mind" to drop it.';
     expect(formatTranscript([msg("draft", card)])).toBe(card);
   });
 });

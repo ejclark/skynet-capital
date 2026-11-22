@@ -70,7 +70,7 @@ export function chipsFor(state: {
 }): readonly Chip[] {
   if (state.draft)
     return [
-      { label: "Send it", msg: "send" },
+      { label: "Submit", msg: "submit" },
       { label: "Never mind", msg: "never mind" },
     ];
   if (!state.connected)
@@ -101,7 +101,7 @@ export function draftCard(draft: {
   readonly title: string;
   readonly details: string;
 }): string {
-  return `[${draft.kind}] ${draft.title}\n\n${draft.details}\n\n— reply "send" to file it, or "never mind" to drop it.`;
+  return `[${draft.kind}] ${draft.title}\n\n${draft.details}\n\n— reply "submit" to file it, or "never mind" to drop it.`;
 }
 
 /** The intro, three beats: who she is, the open question, and the onboarding steer that fits.

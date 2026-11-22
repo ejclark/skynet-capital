@@ -6,7 +6,7 @@ import {
 } from "../../src/live/moneypenny-followup";
 
 // #7286 slice 8: the follow-up card's exits and text. Exact words only act on the card, so a
-// question about it (or "send", the filing draft's word) never posts a follow-up.
+// question about it (or "submit", the filing draft's word) never posts a follow-up.
 describe("followupAnswerFor — exact words only", () => {
   it("reads the two chips, typed in any case with a trailing stop", () => {
     expect(followupAnswerFor("Post the follow-up")).toBe("post");
@@ -15,7 +15,7 @@ describe("followupAnswerFor — exact words only", () => {
   });
 
   it("reads anything else as a normal message", () => {
-    for (const note of ["yes", "send", "post the follow-up on #7286 too", "ready"])
+    for (const note of ["yes", "submit", "post the follow-up on #7286 too", "ready"])
       expect(followupAnswerFor(note)).toBeUndefined();
   });
 

@@ -110,7 +110,7 @@ function FollowupFold({ filing }: { readonly filing: RecentFiling }): ReactEleme
       setNote(
         reply.ok
           ? { ok: true, text: followupSentLine(reply.outcome) }
-          : { ok: false, text: reply.error ?? "Couldn't send that." },
+          : { ok: false, text: reply.error ?? "Couldn't submit that." },
       );
       if (reply.ok) setDetails("");
     } catch (err) {
@@ -142,7 +142,7 @@ function FollowupFold({ filing }: { readonly filing: RecentFiling }): ReactEleme
             disabled={busy || details.trim() === ""}
             onClick={() => void send()}
           >
-            {busy ? "Sending…" : "Send follow-up"}
+            {busy ? "Submitting…" : "Submit follow-up"}
           </button>
           {note ? <InlineResult tone={note.ok ? "ok" : "err"}>{note.text}</InlineResult> : null}
         </div>

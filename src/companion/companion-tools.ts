@@ -591,7 +591,7 @@ export async function runCompanionTool(
         ok: true,
         result: {
           captured: true,
-          status: "held in the chat, not sent — the member's own reply 'send' files it",
+          status: "held in the chat, not sent — the member's own reply 'submit' files it",
           ...(similar.length > 0 ? { similar } : {}),
         },
       };
