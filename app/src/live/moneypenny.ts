@@ -104,6 +104,11 @@ export interface MoneypennyState extends Persisted {
    *  compact by default, expanded on the member's ask. A taste setting, so it survives navigation
    *  and reloads (`localStorage`, best-effort); a link of hers collapses it so her page shows. */
   readonly expanded: boolean;
+  /** The pane folded away to its header, so a phone shows the page (#7933, Eric: "the chat window
+   *  occupies ~50% of the viewport… no way to dismiss or minimize it without leaving the page").
+   *  Only the header and the box stay; never true while `expanded`. Remembered like `expanded`; the
+   *  member's own send or ask, a ✎ tag, or "Talk to Moneypenny" shows the pane again. */
+  readonly minimized: boolean;
   /** Bumps when something outside the dock asks for its box (`meetMoneypenny`) — the dock focuses it. */
   readonly focusSeq: number;
   /** Her typing beat — the indicator before a line lands. */
@@ -159,8 +164,12 @@ export interface MoneypennyState extends Persisted {
   /** The member moved to another page or window: leave a side thread for the main conversation
    *  when no answer is under way. The pane keeps its size: that is the member's taste. */
   readonly leavePage: () => void;
-  /** Compact ↔ expanded, remembered for this browser. */
+  /** Compact ↔ expanded, remembered for this browser. Expanding also un-minimizes. */
   readonly toggleExpanded: () => void;
+  /** Fold the pane to its header (from either size), remembered for this browser. */
+  readonly minimize: () => void;
+  /** Back from minimized to the compact pane; a no-op when it is not minimized. */
+  readonly restore: () => void;
   /** Load the member's saved conversation, so a row's thread shows on page load (#7308) and the
    *  dock's moves read the member's facts; also checks the chat is switched on. Binds only a store nothing else has touched yet, and only to a member the
    *  read named: a failed read must never bind "anon", which would forget the member's own blob. */
@@ -189,8 +198,21 @@ function readExpanded(): boolean {
   }
 }
 function writeExpanded(on: boolean): void {
+  writeFlag(EXPANDED_KEY, on);
+}
+/** Where "minimized" is remembered (#7933) — the same per-browser convenience as the size. */
+export const MINIMIZED_KEY = "mp-dock-minimized";
+function readMinimized(): boolean {
   try {
-    globalThis.localStorage?.setItem(EXPANDED_KEY, on ? "1" : "0");
+    // never both: a remembered expanded pane wins over a stale minimized flag
+    return !readExpanded() && globalThis.localStorage?.getItem(MINIMIZED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+function writeFlag(key: string, on: boolean): void {
+  try {
+    globalThis.localStorage?.setItem(key, on ? "1" : "0");
   } catch {
     // a private window or blocked storage: the size simply is not remembered
   }
@@ -605,6 +627,7 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
   return {
     ...EMPTY,
     expanded: readExpanded(),
+    minimized: readMinimized(),
     focusSeq: 0,
     typing: false,
     streaming: false,
@@ -641,9 +664,20 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
     },
     toggleExpanded: () => {
       const expanded = !get().expanded;
-      set({ expanded });
+      set({ expanded, minimized: false });
       writeExpanded(expanded);
+      writeFlag(MINIMIZED_KEY, false);
       if (expanded) void get().wake({ intro: true });
+    },
+    minimize: () => {
+      set({ expanded: false, minimized: true });
+      writeExpanded(false);
+      writeFlag(MINIMIZED_KEY, true);
+    },
+    restore: () => {
+      if (!get().minimized) return;
+      set({ minimized: false });
+      writeFlag(MINIMIZED_KEY, false);
     },
     hydrate: () => {
       // The dock mounts on every page and reads whether the chat is switched on for its box.
