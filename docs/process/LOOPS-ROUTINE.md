@@ -12,7 +12,9 @@ Both loops are event-driven by design: the audit starts at 6 merged code PRs, th
 lanes' pullable queue is below the work dial's cap. What no repository event does is *notice* either
 condition: a merge is not a tick for the flip, and a queue draining is not a tick for the audit. One
 daily read of both due-checks is the cheapest honest notice: a quiet day costs two REST reads and ends
-there (ROUTINES.md → *No-op must be free*).
+there (ROUTINES.md → *No-op must be free*). The platter sweep (step 4, #7939) rides the same clock
+for the same reason: a held PR going green, or main moving under the platter, is no event either; a
+quiet day costs one more read.
 
 **Run time: daily at 10:00 America/Chicago, after the morning steer** (settled 2026-11-11, the
 predicted answer to #7311's open question). The next surge measures whether a weekday-only schedule
@@ -36,8 +38,18 @@ would have missed a loop.
      6), save its returned object as JSON, run `node scripts/clear-path-post.mjs <file> --dry-run`,
      and when that prints no refusal run it again without `--dry-run`. Exit 1 from the post script
      stops the flip and is reported, never retried in a loop.
-4. **Report in one line.** `loops: audit <due|not due>[, filed N bugs, M proposals] · flip <due|not
-   due>[, readied N of M]`. A day with both `due: false` ends here: that line is the whole run.
+4. **Platter** (#7939: every rubber-stamp merge reaches Eric as one platter PR, kept conflict-free).
+   `node scripts/platter-sweep.mjs` prints `rebuild` (an open platter to re-open from main, or null)
+   and `adoptable` (PRs held only because their paths are protected, and protected dependabot
+   patch/minor bumps). Neither → note it, go to step 5. Otherwise, in this order:
+   - `rebuild` set → `scripts/ship.sh platter rebuild <its number>`. Items that will not re-board
+     are left off and named on the new PR and on their issues; nothing is fixed on the platter.
+   - each `adoptable` PR, oldest first → `scripts/ship.sh platter adopt <number>`. A refusal (a
+     red verify on the union, a conflict) is reported and the PR stays as it was; never retried in a
+     loop. `refused` needs no action: those PRs keep their own path.
+5. **Report in one line.** `loops: audit <due|not due>[, filed N bugs, M proposals] · flip <due|not
+   due>[, readied N of M] · platter <clean|rebuilt #N → #M>[, adopted N]`. A day with nothing due
+   ends here: that line is the whole run.
    The Routine writes no digest of its own.
 
 ## What it may not do
@@ -47,7 +59,11 @@ would have missed a loop.
 - Flip an issue the scripts did not list, or flip past the clear-path workflow's own refusals.
 - Use `fast-track` beyond what `audit-file.mjs` applies (member, money and state findings, five a run,
   #6319).
-- Run on a `due: false` day beyond the two cheap reads.
+- Run on a `due: false` day beyond the three cheap reads (the two due-checks and the platter sweep).
+- Merge, arm or un-hold the platter, or push any branch but the `platter/<date>` it rebuilds or
+  boards onto; it never force-pushes and never resolves a conflict on a platter.
+- Board a PR the sweep did not list as `adoptable` (a taste hold, a major bump, a red PR), or
+  rebuild a platter it did not name.
 
 ## Kill switch
 
