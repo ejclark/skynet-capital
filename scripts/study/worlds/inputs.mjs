@@ -3,26 +3,69 @@
 // until the process clock is pinned.
 //
 // A world may be layered: `"base": "<world>"` takes that world's input and applies this file's
-// overrides — participants by id (fields replaced), `members` wholesale, the bot's own fields (its subscription date), its passes cut
-// to those before `passesBefore` with `prependPasses` on top (a bot that stopped earlier), and
-// the per-account books a layer may rewrite whole (`humanFills`, `watchlists`, `workingOrders`:
-// an account the layer names replaces the base's, the rest are kept). A layer that changes what
-// an account holds changes the fills that bought it too, or the ledger and the position disagree.
+// overrides — participants by id (fields replaced), `members` wholesale, the bot's own fields (its
+// subscription date), its passes cut to those before `passesBefore` with `prependPasses` on top (a
+// bot that stopped earlier), and the per-account books a layer may rewrite whole (`humanFills`,
+// `watchlists`, `workingOrders`: an account the layer names replaces the base's, the rest are
+// kept). A layer that changes what an account holds changes the fills that bought it too, or the
+// ledger and the position disagree.
+//
+// A layer may also MOVE the base world in time (#8005): `"instant"` names its own (instant.mjs),
+// `"corpus"` its own tree facts, and `"shiftDays"` (whole weeks only) moves every calendar fact of
+// the base — an expiry, a listed sale window, a filing date, the date inside an OCC symbol — by
+// that many days, so a book designed around one Thursday holds together on another. Its time
+// tokens are relative to the instant already and move by themselves; a whole number of weeks keeps
+// every weekday, session and fill hour. A date the shift lands on a market holiday moves to the
+// session before it, as an expiry does (OCC); the closures are market-calendar.ts's, pure data.
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { isMarketClosed } from "../../../src/domain/market-calendar.ts";
 import { msOf } from "./instant.mjs";
 
 const INPUTS = join(import.meta.dirname, "inputs");
 
 /** The account-keyed blocks a layer may rewrite one account at a time. */
 const PER_ACCOUNT = ["humanFills", "watchlists", "workingOrders"];
+const DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
+const OCC = /^([A-Z]{1,6})(\d{2})(\d{2})(\d{2})([CP]\d{8})$/;
+
+/** `YYYY-MM-DD` moved by `days`, then back to the session before it if the market is shut. */
+export function shiftDay(date, days) {
+  const at = new Date(`${date}T00:00:00Z`);
+  at.setUTCDate(at.getUTCDate() + days);
+  let out = at.toISOString().slice(0, 10);
+  while (isMarketClosed(out)) {
+    at.setUTCDate(at.getUTCDate() - 1);
+    out = at.toISOString().slice(0, 10);
+  }
+  return out;
+}
+
+/** Every calendar fact in a JSON-shaped value moved by `days` (a whole number of weeks): plain
+ *  `YYYY-MM-DD` strings and the expiry inside OCC symbols. Keys, tokens and prose are untouched. */
+export function shiftCalendar(value, days) {
+  if (!(Number.isInteger(days) && days % 7 === 0)) {
+    throw new Error(`inputs: shiftDays must be whole weeks (got ${days})`);
+  }
+  if (Array.isArray(value)) return value.map((v) => shiftCalendar(v, days));
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, shiftCalendar(v, days)]));
+  }
+  if (typeof value !== "string") return value;
+  if (DAY.test(value)) return shiftDay(value, days);
+  const occ = OCC.exec(value);
+  if (!occ) return value;
+  const moved = shiftDay(`20${occ[2]}-${occ[3]}-${occ[4]}`, days).replace(/-/g, "").slice(2);
+  return `${occ[1]}${moved}${occ[5]}`;
+}
 
 /** A world's input, with a `base` world's input underneath and its overrides applied. */
 export function loadInput(name) {
   const raw = JSON.parse(readFileSync(join(INPUTS, `${name}.json`), "utf8"));
   if (!raw.base) return raw;
-  const base = loadInput(raw.base);
+  const under = loadInput(raw.base);
+  const base = raw.shiftDays ? shiftCalendar(under, raw.shiftDays) : under;
   const participants = base.participants.map((p) => ({
     ...p,
     ...(raw.participants?.[p.id] ?? {}),
@@ -35,6 +78,8 @@ export function loadInput(name) {
   );
   return {
     ...base,
+    ...(raw.instant ? { instant: raw.instant } : {}),
+    ...(raw.corpus ? { corpus: raw.corpus } : {}),
     ...(raw.members ? { members: raw.members } : {}),
     ...byAccount,
     participants,

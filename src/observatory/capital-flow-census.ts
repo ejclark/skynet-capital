@@ -8,20 +8,31 @@ import type { CapitalFlow } from "./capital-flow.js";
  * needs a read that never prints a member's id or a dollar figure — the repo and its run logs are
  * public. This census is that read: counts only.
  *
- * What it grades. Each line already carries its two witnesses (`capital-flow.ts`): the equity move
- * (`amount`) and the cash our fill journal did not explain (`unexplainedCash`). A real top-up or
- * reset moves both the same way, and cash by at least the equity move (a reset that also clears
- * held positions moves cash by more). A false line — a market move that happened to share a
- * five-minute window with an unjournaled cash event (an assignment, an expiry, a fee) — pairs two
- * unrelated numbers, so they disagree in sign or the cash falls well short of the equity move.
+ * What it grades. Each line carries its witnesses (`capital-flow.ts`): the equity move (`amount`),
+ * the cash our fill journal did not explain (`unexplainedCash`) and, since #7729, the net value of
+ * the book carried through the window, fills inside it set aside (`heldAfter`). An Alpaca paper
+ * reset clears every position, so its cash moves by the equity change PLUS the cleared book's net
+ * value: more than equity for a net-long book, less or even the other way for a net-short one
+ * (#7729 — the first cut of this rule assumed cash always moved the same way and further, and
+ * graded those genuine resets "disagree"). What a reset always leaves is a flat book. So a line
+ * agrees when the later book is flat (a reset), or when cash matches the equity move (capital
+ * arriving without touching the book). A false line — a market move that happened to share a
+ * five-minute window with an unjournaled cash event (an assignment, an expiry, a fee) — usually
+ * leaves the book held and pairs two unrelated numbers.
  *
- * The witnesses alone cannot catch the first named source (#7730). An assignment's share leg moves
- * cash by the whole strike notional, which always "covers" a tolerance-sized equity move, and a put
- * is assigned when its underlying fell (a covered call when it rose) — the agreeing sign. So each
- * line is also checked against its window and the fill journal's lifecycle rows (#4563 asked for
- * exactly that): a line with an assignment, exercise or expiry for the same member within
- * `LIFECYCLE_MARGIN_MS` of its window disagrees, whatever its witnesses say. Without the journal the
- * census can still count, but it never prints the all-clear — it cannot rule that source out.
+ * The witnesses alone cannot catch every false line (#7730), so the journal is read FIRST. An
+ * assignment's share leg moves cash by the whole strike notional (the lifecycle row closes at $0, so
+ * the detector leaves that cash unexplained), and a covered call assigned away also flattens the
+ * book: the held-book witness reads it as a reset. So each line is checked against its window and
+ * the fill journal's lifecycle rows before its witnesses (#4563 asked for exactly that): a line with
+ * an assignment, exercise or expiry for the same member within `LIFECYCLE_MARGIN_MS` of its window
+ * disagrees, whatever its witnesses say. Without the journal the census can still count, but it
+ * never prints the all-clear — it cannot rule that source out. What stays uncaught even with the
+ * journal: a book-flattening cash event that leaves no lifecycle row, in a window the market moved.
+ *
+ * A line recorded before `heldAfter` existed can prove only the cash-matches story; when it does
+ * not, and no lifecycle row condemns it, it is `ungraded` — counted and named, never folded into
+ * either side or the floor table.
  *
  * What it can recommend. Only a RAISE: a line under the current rule was never recorded, so the
  * shadow series cannot show what a lower floor would catch. Each line's equity at the time is not
@@ -39,7 +50,7 @@ export const SHADOW_DAYS_WANTED = 7;
  *  0.5% rule at the $1,000,000 starting line. */
 export const CANDIDATE_FLOORS: readonly number[] = [1_000, 5_000, 10_000, 25_000, 50_000];
 
-export type WitnessVerdict = "agree" | "disagree";
+export type WitnessVerdict = "agree" | "disagree" | "ungraded";
 
 /**
  * How far from a line's window a lifecycle row still explains its cash. A row without a time of day
@@ -61,9 +72,14 @@ export function lifecycleNear(flow: CapitalFlow, journal: readonly TradeActivity
 }
 
 /**
- * Do the two witnesses tell the same story? They agree when they share a sign and the unexplained
- * cash covers the equity move, give or take `slack` (the tolerance a rounding or a fee is allowed),
- * and no lifecycle row in the journal sits near the line's window (#7730).
+ * Do the witnesses tell a flow's story? First the journal: a lifecycle row near the line's window
+ * is a known cause that is not capital arriving, so the line disagrees (#7730) — checked before the
+ * held book, which a covered call assigned away would otherwise pass as a reset. Then the line
+ * agrees when the unexplained cash matches the equity move (capital that arrived with the book
+ * untouched) or the later book is flat (a reset, which clears every position whatever the cash then
+ * did), each give or take `slack` (the tolerance a rounding or a fee is allowed). A line with no
+ * `heldAfter` that fails the cash test is `ungraded`: it predates the witness that would tell a
+ * reset from a false line (#7729).
  */
 export function witnesses(
   flow: CapitalFlow,
@@ -71,9 +87,9 @@ export function witnesses(
   slack = 1_000,
 ): WitnessVerdict {
   if (lifecycleNear(flow, journal)) return "disagree";
-  const sameSign = Math.sign(flow.amount) === Math.sign(flow.unexplainedCash);
-  const cashCovers = Math.abs(flow.unexplainedCash) >= Math.abs(flow.amount) - slack;
-  return sameSign && cashCovers ? "agree" : "disagree";
+  if (Math.abs(flow.unexplainedCash - flow.amount) <= slack) return "agree";
+  if (flow.heldAfter === undefined) return "ungraded";
+  return Math.abs(flow.heldAfter) <= slack ? "agree" : "disagree";
 }
 
 export interface FloorRow {
@@ -88,6 +104,9 @@ export interface FlowCensus {
   readonly participants: number;
   readonly agree: number;
   readonly disagree: number;
+  /** Lines recorded before `heldAfter` that only a reset or a false line could explain: out of the
+   *  floor table (#7729). */
+  readonly ungraded: number;
   /** Lines with a lifecycle row near their window — each one counted in `disagree`. */
   readonly lifecycleNear: number;
   /** The fill journal was read. Without it no all-clear is printed (#7730). */
@@ -115,9 +134,10 @@ export function censusFlows(
 ): FlowCensus {
   const rows = journal ?? [];
   const verdicts = flows.map((flow) => ({ flow, verdict: witnesses(flow, rows) }));
-  const agree = verdicts.filter((v) => v.verdict === "agree").length;
+  const graded = verdicts.filter((v) => v.verdict !== "ungraded");
+  const agree = graded.filter((v) => v.verdict === "agree").length;
   const floors = CANDIDATE_FLOORS.map((floor) => {
-    const kept = verdicts.filter((v) => clears(v.flow, floor));
+    const kept = graded.filter((v) => clears(v.flow, floor));
     const keptAgree = kept.filter((v) => v.verdict === "agree").length;
     return { floor, agree: keptAgree, disagree: kept.length - keptAgree };
   });
@@ -130,7 +150,8 @@ export function censusFlows(
     lines: flows.length,
     participants: new Set(flows.map((flow) => flow.participantId)).size,
     agree,
-    disagree: flows.length - agree,
+    disagree: graded.length - agree,
+    ungraded: flows.length - graded.length,
     lifecycleNear: flows.filter((flow) => lifecycleNear(flow, rows)).length,
     journalRead: journal !== undefined,
     shadowDays,
@@ -150,10 +171,15 @@ function verdictLine(census: FlowCensus): string {
   if (census.lines === 0) {
     return "No flows recorded. Nobody topped up or reset, and no false line appeared: keep today's rule.";
   }
+  if (census.agree + census.disagree === 0) {
+    return "No line can be graded yet: every one predates the held-book witness (#7729). Wait for lines recorded since.";
+  }
   if (census.disagree === 0) {
+    // The all-clear needs the journal read (#7730) AND a graded line (checked above, #7729).
+    const every = census.ungraded === 0 ? "Every line's" : "Every graded line's";
     return census.journalRead
-      ? "Every line's witnesses agree: keep today's rule."
-      : "Every line's witnesses agree, but the fill journal was not read, so an assignment or expiry in a line's window is not ruled out: rerun with --activity before keeping today's rule.";
+      ? `${every} witnesses agree: keep today's rule.`
+      : `${every} witnesses agree, but the fill journal was not read, so an assignment or expiry in a line's window is not ruled out: rerun with --activity before keeping today's rule.`;
   }
   if (census.recommendedFloor === undefined) {
     return `A disagreeing line clears every candidate floor up to ${usd(CANDIDATE_FLOORS.at(-1) ?? 0)}: a floor alone will not separate them; read the detector, not the tolerance.`;
@@ -176,6 +202,11 @@ export function censusMarkdown(census: FlowCensus): string {
     census.journalRead
       ? `- Near an assignment, exercise or expiry in the fill journal: ${census.lifecycleNear} line(s), graded disagree.`
       : "- Fill journal: not read; lines were graded on their witnesses alone.",
+    ...(census.ungraded > 0
+      ? [
+          `- Ungraded: ${census.ungraded}, recorded before lines carried the held book (#7729) and not a plain top-up, so only a reset or a false line could explain them. Left out of the floor table.`,
+        ]
+      : []),
     `- Shadow time: ${census.shadowDays} day(s) since recording began.`,
     "",
     "| Floor on both witnesses | Agree kept | Disagree kept |",
@@ -221,7 +252,9 @@ export function parseFlowLines(text: string): CapitalFlow[] {
         typeof value.amount === "number" &&
         typeof value.unexplainedCash === "number"
       ) {
-        flows.push(value as CapitalFlow);
+        // A held book that is not a number would read as a disagreeing line; drop it to ungraded.
+        const { heldAfter, ...rest } = value as CapitalFlow;
+        flows.push(typeof heldAfter === "number" ? { ...rest, heldAfter } : rest);
       }
     } catch {
       // A torn last line from a write in flight: skip it, the rest still counts.

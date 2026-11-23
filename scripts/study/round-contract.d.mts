@@ -16,6 +16,7 @@ export const FILES: Record<
   | "checks"
   | "touches"
   | "struck"
+  | "roots"
   | "control"
   | "grade"
   | "frozen"
