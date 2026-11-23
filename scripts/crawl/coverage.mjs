@@ -81,9 +81,12 @@ const SHELL_PARTS = [
     needle: "<MoneypennyDock />",
   },
   {
-    screen: "shell tower column (the 3D tower beside the stage)",
+    // `/tower` is the frame this column and Sauron's card load (`vantage.tsx` COLUMN_SRC), never a
+    // destination of its own (docs/IA.md §8.3), so a step that opens it lands on this row.
+    screen: "shell tower column (the 3D tower beside the stage; /tower is its frame)",
     file: "app/src/routes/__root.tsx",
     needle: "<Vantage root={app} />",
+    serves: (path) => path === "/tower",
   },
 ];
 
@@ -110,12 +113,6 @@ const SERVER_PAGES = [
     file: "src/server/dashboard-board-routes.ts",
     needle: 'path === "/welcome"',
     serves: (path) => path === "/welcome",
-  },
-  {
-    screen: "server /tower",
-    file: "src/server/dashboard-board-routes.ts",
-    needle: 'path === "/tower"',
-    serves: (path) => path === "/tower",
   },
   {
     screen: "server /research/<slug>",
@@ -335,7 +332,7 @@ function directLanding(path, goto, { routePaths, windows }) {
 /** A path outside the SPA that one of the server's own pages serves → that page's row key. */
 function serverPageOf(pathname) {
   if (/^\/app(\/|$)/.test(pathname)) return undefined;
-  const page = SERVER_PAGES.find((p) => p.serves?.(pathname));
+  const page = [...SERVER_PAGES, ...SHELL_PARTS].find((p) => p.serves?.(pathname));
   return page ? screenKey(page.screen) : undefined;
 }
 
