@@ -26,12 +26,33 @@ export const DEFAULT_INSTANT = "2026-10-08T15:00:00-04:00";
 /** An instant a world may name: an ISO New York wall-clock time with its UTC offset. */
 const INSTANT_SHAPE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/;
 
-/** `value` if it is an instant a world may name; throws otherwise. */
+/** New York's UTC offset on one calendar day ("-04:00" or "-05:00"), read at its noon — the
+ *  clocks change at 2am, so every session hour of that day shares it (#8005, the bot's loop). */
+export function nyOffset(day) {
+  const name = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    timeZoneName: "longOffset",
+  })
+    .formatToParts(new Date(`${day}T12:00:00Z`))
+    .find((p) => p.type === "timeZoneName")?.value;
+  const offset = name?.replace("GMT", "");
+  if (!(offset && /^[+-]\d{2}:\d{2}$/.test(offset))) {
+    throw new Error(`instant: no New York offset for ${day}`);
+  }
+  return offset;
+}
+
+/** `value` if it is an instant a world may name — with New York's own offset for its day, or
+ *  every "@-2d 10:31" it resolves would land off its session; throws otherwise. */
 export function checkInstant(value) {
   if (!(INSTANT_SHAPE.test(String(value)) && !Number.isNaN(Date.parse(value)))) {
     throw new Error(
       `instant: ${value} is not a New York time with its offset (e.g. ${DEFAULT_INSTANT})`,
     );
+  }
+  const day = value.slice(0, 10);
+  if (value.slice(-6) !== nyOffset(day)) {
+    throw new Error(`instant: ${value} is not a New York time: New York is at ${nyOffset(day)}`);
   }
   return value;
 }
@@ -42,7 +63,6 @@ export const INSTANT = checkInstant(process.env.STUDY_INSTANT ?? DEFAULT_INSTANT
 /** A composed world's instant, read from its run's manifest (one per world since #8005). */
 export const worldInstant = (manifest, world) => manifest.instants?.[world] ?? manifest.instant;
 
-const ET_OFFSET = INSTANT.slice(-6);
 const INSTANT_DAY = INSTANT.slice(0, 10);
 const DAY_MS = 86_400_000;
 
@@ -71,7 +91,9 @@ export function resolveToken(value) {
   }
   const wall = /^@(-?\d+)d (\d{2}):(\d{2})$/.exec(value);
   if (wall) {
-    const iso = `${dayFrom(Number(wall[1]))}T${wall[2]}:${wall[3]}:00${ET_OFFSET}`;
+    // That day's own New York offset: a month of history can cross a clock change.
+    const day = dayFrom(Number(wall[1]));
+    const iso = `${day}T${wall[2]}:${wall[3]}:00${nyOffset(day)}`;
     return new Date(Date.parse(iso)).toISOString();
   }
   throw new Error(`instant: unreadable time token ${value}`);
