@@ -5,19 +5,19 @@
 // CLEAR-PATH FLIP — docs/ISSUES.md → "Who may flip it", run by name instead of by hand.
 //
 // A session may apply `ready` when the path is clear and Eric's flip would only be a rubber stamp
-// (Eric, 2026-10-19). *Clear* is four written checks, and the call is *earned*: an independent
+// (Eric, 2026-10-19). *Clear* is five written checks (the fifth, `placed`, #8005), and the call is *earned*: an independent
 // verifier tried to refute it and could not. On 2026-10-26 a surge session ran that by hand over 21
 // issues; the refuters stopped 4 bad calls (#6006, #4458, #5967, #6079) and 2 readied issues that
 // lacked `feedback` sat unbuilt (fixed at the lane by #6219; the post still adds it to a non-plan
 // issue so the label stays honest before the lane claims it). This file is that loop:
 //
-//   judge (one per issue)  → the four checks with evidence + a drafted comment
+//   judge (one per issue)  → the five checks with evidence + a drafted comment
 //   refute (two per positive call, independent, different lenses)
 //     - envelope: derive every path the build would touch and run envelope-scan on each
 //     - thread:   re-read the whole thread for forks, size, live claims and already-shipped work
 //   survives only if BOTH refuters returned and NEITHER refuted.
 //
-// Clear is computed HERE from the four checks, never taken from the judge's own summary, and a
+// Clear is computed HERE from the five checks, never taken from the judge's own summary, and a
 // refuter that died counts as a refutation — an unverified call is not an earned one.
 //
 // Writes nothing. The result goes to `node scripts/clear-path-post.mjs <result.json>`, which posts
@@ -25,10 +25,10 @@
 // exit status, not on a subagent's say-so).
 export const meta = {
   name: 'clear-path-flip',
-  description: 'Judge issues against the four clear-path checks, refute each positive call twice, return survivors for clear-path-post.mjs',
+  description: 'Judge issues against the five clear-path checks, refute each positive call twice, return survivors for clear-path-post.mjs',
   whenToUse: 'When a session wants to apply `ready` itself under docs/ISSUES.md → Who may flip it — a surge pass over the triage backlog, or any batch of issues whose flip would be a rubber stamp. Args: {issues: [number, ...]}, at most 6 per run (launch several runs together for more; #6711). Read-only: it posts nothing. Save the returned object as JSON and run `node scripts/clear-path-post.mjs <file>` (add --dry-run first) to post the footed comment and apply ready (+ feedback when a non-plan issue lacks it) for survivors only.',
   phases: [
-    { title: 'Judge', detail: 'one judge per issue records the four checks and drafts the comment' },
+    { title: 'Judge', detail: 'one judge per issue records the five checks and drafts the comment' },
     { title: 'Refute', detail: 'two independent refuters per positive call: envelope paths, and the thread' },
   ],
 }
@@ -102,8 +102,8 @@ const JUDGE_SCHEMA = {
     labels: { type: 'array', items: { type: 'string' } },
     checks: {
       type: 'object',
-      required: ['criteria', 'size', 'noFork', 'notBlocked'],
-      properties: { criteria: CHECK, size: CHECK, noFork: CHECK, notBlocked: CHECK },
+      required: ['criteria', 'size', 'noFork', 'notBlocked', 'placed'],
+      properties: { criteria: CHECK, size: CHECK, noFork: CHECK, notBlocked: CHECK, placed: CHECK },
     },
     touchedPaths: { type: 'array', items: { type: 'string' }, description: 'repo paths the build would create or edit' },
     comment: { type: 'string', description: 'the drafted flip comment, markdown, no verifier lines and no footer' },
@@ -122,11 +122,12 @@ const judgePrompt = (n) => `You are judging whether issue #${n} in ejclark/skyne
 
 ${READ.replaceAll('{n}', String(n))}
 
-Record the four written checks, each with one line of evidence:
+Record the five written checks, each with one line of evidence:
 1. criteria — acceptance criteria are present (EARS lines, a checklist, or a "done when" that a build can be judged against). A wish with no way to tell it is done fails.
 2. size — S or M, or the next slice a plan's state block already names. Say which. L/XL or "unknown" fails.
 3. noFork — no open fork only Eric can settle (a taste call, a question addressed to him still unanswered, a needs-eric label), AND nothing in envelope.json's protected class: list every path the build would touch in touchedPaths and run \`node scripts/envelope-scan.mjs --check <paths>\`; any "protected": true fails.
 4. notBlocked — no open blocking issue (native blocked-by, "blocked by #N" with #N open, needs-info, or an open parent whose slice comes first).
+5. placed — the build names its IA home first (#8005 slice 2). Read docs/IA.md §5 (the groups) and docs/members/triage.json (each screen's \`home\`). Pass with evidence that starts \`extends <group> (§5.N)\` when the ask adds or changes something in one group's screens, or \`no new place\` when it adds nothing a member sees as a place (a fix on a screen that has a home, tooling, a script). Fail when it adds a page, section, tab, door or chat destination no §5 group holds, or two could each claim: where it lives is Eric's call. Name the candidate groups. A filing carrying \`ia-<row>\` fails here too: it is evidence on that IA ledger row (docs/IA.md §10), fixed as a whole, never built alone.
 
 Then draft the flip comment (markdown, no footer — a script adds the verifier lines and footer). Shape:
 **Clear path — session flip** (docs/ISSUES.md → Who may flip it)

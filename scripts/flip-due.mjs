@@ -24,7 +24,7 @@ import { FLIP_REFUSALS_PATH, recentlyRefused } from "./flip-refusals.mjs";
 //
 // WHAT IS LISTED. Open, `feedback`, not `ready`, not parked, not `in-progress`, not a parent whose
 // work lives in sub-issues, not blocked by an open issue, not a filing matched to a known IA problem
-// (`ia-<row>`: evidence on that row, whose plan owns the fix, #8005), and not refused by a flip in
+// (`ia-<row>`: evidence on that row, which is fixed as a whole, #8005), and not refused by a flip in
 // the last 7 days; ordered as `npm run rank` orders (class, kind, oldest); at most `--max` (6, the workflow's
 // own cap, #6711), halved under `conserve`.
 //

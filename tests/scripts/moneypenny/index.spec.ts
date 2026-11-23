@@ -61,7 +61,7 @@ describe("triageFeedbackDecision — the backlog gate for freshly-filed feedback
   it("keeps a curated filing matched to a known problem in Backlog, as evidence on its row", () => {
     expect(triageFeedbackDecision({ labels: ["feedback", "curated", "ia-U3"] })).toEqual({
       ready: false,
-      reason: "evidence on known problem U3 — its plan owns the fix; stays in Backlog",
+      reason: "evidence on known problem U3 — fixed as a whole, never alone; stays in Backlog",
     });
   });
 

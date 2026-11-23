@@ -99,6 +99,20 @@ describe("a filing matched to a known problem", () => {
     );
   });
 
+  it("never parks a matched filing on the member: no build waits on their answer", () => {
+    const partial = { readiness: "partial" } as unknown as FeedbackInput["spec"];
+    const matched: FeedbackInput = {
+      kind: "idea",
+      title: "One list",
+      details: "d",
+      submitterEmail: email,
+      match: { row: "U3" },
+      spec: partial,
+    };
+    expect(labelsFor(matched)).not.toContain("needs-info");
+    expect(labelsFor({ ...matched, match: undefined })).toContain("needs-info");
+  });
+
   it("keeps a posted area inside its own cell, so it can never forge a row of the table", () => {
     const body = issueBody({
       kind: "idea",
