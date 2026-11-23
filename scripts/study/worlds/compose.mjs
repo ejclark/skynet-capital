@@ -56,7 +56,7 @@ process.env.TZ = "UTC";
 
 import { spawnSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { guardNetwork } from "../no-network.mjs";
 import { canonicalUrl, writeViewer } from "../payloads.mjs";
@@ -202,11 +202,13 @@ async function composeAll(runDir, names) {
   const missing = [];
   const network = {};
   const instants = {};
+  const corpora = {};
   for (const world of chosen) {
     const input = loadInput(world.input);
     const instant = checkInstant(input.instant ?? DEFAULT_INSTANT);
     instants[world.name] = instant;
     const corpus = corpusAt(runDir, input.corpus?.commit, instant);
+    corpora[world.name] = relative(runDir, corpus);
     const env = {
       ...process.env,
       TZ: "UTC",
@@ -233,6 +235,9 @@ async function composeAll(runDir, names) {
     // The first world's, for a reader that predates `instants`; read either with `worldInstant`.
     instant: instants[chosen[0]?.name] ?? DEFAULT_INSTANT,
     instants,
+    // Each world's tree facts (relative to the run): a session serves the research write-ups from
+    // here, as they stood at the world's instant (world-route.mjs).
+    corpora,
     checkout,
     commit,
     worlds: chosen.map((w) => w.name),

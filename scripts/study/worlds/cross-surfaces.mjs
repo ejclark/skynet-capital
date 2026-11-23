@@ -80,6 +80,20 @@ const OWNER = [
     ],
   },
   {
+    id: "research-doc",
+    label: "a research write-up, as the shelf stood at the instant",
+    // Server-rendered by production's own route from the world's corpus (world-route.mjs).
+    route: "/research/events/nvda-2026-11-18-print",
+    expect: [role("heading", "NVDA earnings print")],
+  },
+  {
+    id: "research-doc-back",
+    label: "hop: a research write-up → back to R&D",
+    route: "/research/events/nvda-2026-11-18-print",
+    act: [click("link", "Research")],
+    expect: [{ url: "/app/research" }, role("heading", "R&D", { exact: true })],
+  },
+  {
     id: "bot-page",
     label: "the bot's page",
     route: "/app/u/sauron",
