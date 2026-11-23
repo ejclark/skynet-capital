@@ -62,7 +62,7 @@ itself, and the reader holds any surge to the next weekly reset whatever its com
 
 Eric, 2026-10-26 23:20Z: *"If churn is a concern, improve orchestration to manage WIP, complete
 WIP, then resume making improvements."* **Before every new wave, count agent-owned WIP; if it is
-over 6 (surge's `inFlightCap` in `work-mode.json`), start nothing — finish first.**
+over surge's `inFlightCap` in `work-mode.json` (10 since 2026-11-23), start nothing — finish first.**
 
 | Counts as WIP | How to count it | How to finish it |
 |---|---|---|
