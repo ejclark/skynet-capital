@@ -8,7 +8,7 @@ import { Message } from "./mp-message";
  * A PARKED CARD AND ITS OWN BUTTONS, AS ONE OBJECT (#7614). A card she drafts (a filing, a view, a
  * follow-up, a research question) waits on the member's answer. Its exits used to sit in the dock's
  * moves row, under the conversation and above the box, a scroll away from the card they act on;
- * with two cards in the history it was not clear which one "Send" would file. Now the buttons are
+ * with two cards in the history it was not clear which one "Submit" would file. Now the buttons are
  * the bottom edge of the card itself: one border, one fill, nothing between them.
  *
  * Proximity carries the link, never a tint alone (BRAND.md → Accessibility): the shared border and

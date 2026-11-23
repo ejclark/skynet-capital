@@ -375,3 +375,61 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-11-17
 <!-- probe-ref: {"symbols":{},"vix":22.91,"daysBand":"high:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","cbrs-q3-2026-results-2026-11-11","empire-state-mfg-2026-11-16","erock-q3-2026-results-2026-11-12","eurostat-hicp-final-2026-11-18","existing-home-sales-2026-11-12","fomc-minutes-2026-11-18","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-5y-auction-2026-11-12","jgb-liquidity-enhancement-1-5y-2026-11-20","msft-ignite-2026-11-17","mtis-2026-11-17","mts-october-2026-11-12","nahb-hmi-2026-11-17","nbis-2026-11-12-print","nvda-2026-11-18-print","opex-2026-11-20","pbls-q3-2026-results-2026-11-12","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","ppi-2026-11-13","retail-ecommerce-q3-2026-11-19","russell-recon-preliminary-2026-11-13","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-30y-bond-2026-11-12","treasury-coupon-announcement-2026-11-12","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-gdp-q3-first-2026-11-12","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["cbrs-q3-2026-results-2026-11-11","nbis-2026-11-12-print","nvda-2026-11-18-print"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out (2026-11-18, D+1 — inside the `closeOutWithinDays` window).** Macro-print mode carries no
+`earnings-cycle` / `intraday-edges` instrument (`symbols: []` by design); the cache bust was run
+regardless and held nothing. "Re-run instrument data" here is the release itself, fetched direct on
+2026-11-18 from `census.gov/retail/marts/www/marts_current.pdf` (HTTP 200, 374,045 bytes, text
+decompressed locally; release CB26-181), plus Yahoo daily bars for the tape. `CENSUS:` primary; the
+event stays `confirmed`. **No street consensus was located** (a standard search returned only prior
+years), so no beat/miss is scored — none is invented.
+
+### What printed — Census primary
+
+| Line (SA) | Oct 2026 m/m | Sep 2026 m/m (revised) | Read |
+|---|---|---|---|
+| **Headline** | **+0.2%\*** ($748.2B; ±0.4pp, CI includes zero) | **+0.8%** (*unrevised*, $746.6B) | 0.6pp below September; y/y **+6.8%** |
+| Ex-autos | +0.6% | +1.1% | — |
+| Ex-autos-and-gas | +0.5% | +0.5% | steady |
+| Motor vehicle & parts | −1.6% | −0.2% | the drag |
+| Gasoline stations | +1.5% | +6.0% | pump lift faded as called |
+| Nonstore retailers | +1.2% | +1.1% | no event-month spike |
+
+Census's own text: *"…sales for October 2026 … were $748.2 billion, up 0.2 percent (±0.4 percent)*
+from the previous month, and up 6.8 percent (±0.5 percent) from October 2025 … The August 2026 to
+September 2026 percent change was unrevised from up 0.8 percent (±0.2 percent)."* The leg-5 asterisk rule
+applied: the headline's own CI includes zero, so "+0.2%" is not statistically distinguishable from flat.
+The control group (a construction of this doc, not a Census line) was not recomputed.
+
+### Forward tests, scored
+
+| Test | Bar | Printed | Verdict |
+|---|---|---|---|
+| `FT-46` (legacy: fall Prime is absorbed by the SA factors) | headline m/m − revised Sep m/m ≤ +0.5pp | **−0.6pp** (+0.2% vs +0.8%) | **PASS** — cell filled in `legacy.md`; limits stated there |
+
+### Stance versus the tape
+
+- **"Stop pricing a fall-Prime lift into this print": SUPPORTED.** Headline at-or-below September in all
+  three fall-Prime Octobers now on record, nonstore +1.2% against +1.1% with the event in the month. The
+  mechanism (SA absorption) is consistent but not isolated: September's gasoline-led +0.8% was the harder
+  comp, so a soft October follows either way.
+- **"Never initiate on this print; stand aside": HELD.** The print itself moved little. Treasury ^TNX
+  5.12% → 5.10%. Broad risk-off ran through it and past it: VIX **22.91 → 25.46**, SPY 739.95 → **732.44**
+  (−1.0%, after −1.9% the day before), QQQ −0.7%, XRT 89.59 → **88.29** (−1.5%), HD −2.5%, AMZN flat, AAPL
+  −0.3%. The tape cannot attribute any of that to retail sales: the prior day's selloff was already
+  unexplained at the 11-17 ledger row, and the NVDA after-close print and other same-day items share the
+  session. Nothing here is a trade.
+- **Leg 7 (hawkish reaction function): NOT TESTED.** A soft headline with a flat 10Y is one observation of
+  "muted soft retail", not a regime read; the 12-09 FOMC is the real test.
+- **Funding branch: moot.** A CR was signed 2026-09-02 (PL 119-103) and the release landed on schedule.
+
+### What stayed manual (loop census)
+
+*Sense:* locating a street consensus for a Census print is still a manual search with no free primary
+(none found today). *Act:* decompressing Census's PDF by hand each close-out; a committed MARTS parser
+would automate it. *Remember:* the legacy FT-46 cell is hand-filled.
+
+**Last assessed:** 2026-11-18
+<!-- probe-ref: {"symbols":{},"vix":25.46,"daysBand":"high:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","cbrs-q3-2026-results-2026-11-11","empire-state-mfg-2026-11-16","erock-q3-2026-results-2026-11-12","eurostat-hicp-final-2026-11-18","existing-home-sales-2026-11-12","fomc-minutes-2026-11-18","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-5y-auction-2026-11-12","jgb-liquidity-enhancement-1-5y-2026-11-20","msft-ignite-2026-11-17","mtis-2026-11-17","mts-october-2026-11-12","nahb-hmi-2026-11-17","nbis-2026-11-12-print","nvda-2026-11-18-print","opex-2026-11-20","pbls-q3-2026-results-2026-11-12","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","ppi-2026-11-13","retail-ecommerce-q3-2026-11-19","russell-recon-preliminary-2026-11-13","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-30y-bond-2026-11-12","treasury-coupon-announcement-2026-11-12","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-gdp-q3-first-2026-11-12","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["cbrs-q3-2026-results-2026-11-11","nbis-2026-11-12-print","nvda-2026-11-18-print"],"screenStreak":0} -->

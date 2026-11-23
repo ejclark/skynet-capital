@@ -1,0 +1,20 @@
+{
+  "id": "PM-02",
+  "member": "returning-trader",
+  "viewport": "desktop",
+  "start": "/app",
+  "optimal": 9,
+  "scenario": "Your emerging-markets position (EEM) has grown bigger than you like. Trim about a quarter of it at the market price.",
+  "end": {
+    "orders": [
+      {
+        "symbol": "EEM",
+        "side": "sell",
+        "quantity": [230, 240],
+        "orderType": "market",
+        "state": ["working", "filled"]
+      }
+    ]
+  },
+  "note": "The member must find the held quantity to work out a quarter."
+}

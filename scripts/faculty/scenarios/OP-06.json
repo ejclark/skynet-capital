@@ -1,0 +1,22 @@
+{
+  "id": "OP-06",
+  "member": "returning-trader",
+  "viewport": "desktop",
+  "start": "/app",
+  "optimal": 11,
+  "scenario": "You think the S&P 500 fund SPY will climb past $600 over the next month. Buy 2 call contracts at the $600 strike about a month out.",
+  "end": {
+    "orders": [
+      {
+        "underlying": "SPY",
+        "optionType": "call",
+        "strike": 600,
+        "side": "buy",
+        "quantity": 2,
+        "expiryDays": [18, 50],
+        "state": ["working", "filled"]
+      }
+    ]
+  },
+  "note": "Long call (rung 302)."
+}

@@ -27,7 +27,7 @@ describe("researchAnswerFor — exact words only", () => {
   it("reads anything else as a normal message", () => {
     expect(researchAnswerFor("yes")).toBeUndefined();
     expect(researchAnswerFor("ask the research desk about NVDA too")).toBeUndefined();
-    expect(researchAnswerFor("send")).toBeUndefined();
+    expect(researchAnswerFor("submit")).toBeUndefined();
   });
 
   it("offers the same two exits as chips", () => {

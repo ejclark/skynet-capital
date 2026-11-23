@@ -1,8 +1,10 @@
+import type { TradeActivityRecord } from "../../src/observatory/activity-record.js";
 import { type CapitalFlow, inferCapitalFlow } from "../../src/observatory/capital-flow.js";
 import {
   censusFlows,
   censusMarkdown,
   parseFlowLines,
+  parseJournalLines,
   witnesses,
 } from "../../src/observatory/capital-flow-census.js";
 import type { EquitySample } from "../../src/observatory/history-record.js";
@@ -38,6 +40,14 @@ const legacy = (amount: number, unexplainedCash: number): CapitalFlow => {
 
 const weekIn = new Date("2026-10-27T12:00:00Z");
 
+const sample = (at: string, equity: number, cash: number): EquitySample => ({
+  at,
+  participantId: "human-dana",
+  equity,
+  cash,
+  realizedPl: 0,
+});
+
 describe("witnesses", () => {
   it("agrees when a top-up moves cash and equity together", () => {
     expect(witnesses(flow(300_000, 300_000))).toBe("agree");
@@ -72,6 +82,122 @@ describe("witnesses on a line recorded before the held book", () => {
   });
 });
 
+// #7730 — the detector's own named false-positive source: a 420-strike put assigned ($0 lifecycle
+// line, the share leg's -$42,000 unjournaled) in a window where the book also fell 0.7%. Under the
+// first witness rule both moves pointed down and the cash "covered" the move; the held book (#7729)
+// now gives it away as well, but the journal condemns it first, and alone can for an older line.
+const T0 = "2026-10-05T14:00:00.000Z";
+const T1 = "2026-10-05T14:05:00.000Z";
+const assignment: TradeActivityRecord = {
+  orderId: "lifecycle:act-1",
+  participantId: "human-dana",
+  symbol: "AAPL261016P00420000",
+  side: "buy",
+  quantity: 1,
+  filledQuantity: 1,
+  status: "assigned",
+  at: "2026-10-05T14:02:00.000Z",
+  source: "lifecycle",
+};
+const assignedOnADownDay = (): CapitalFlow => {
+  const line = inferCapitalFlow(sample(T0, 1_000_000, 500_000), sample(T1, 993_000, 458_000), [
+    assignment,
+  ]);
+  if (!line) throw new Error("precondition: the detector records the false line");
+  return line;
+};
+
+describe("an assignment that shares a window with a market move (#7730)", () => {
+  it("is recorded by the detector as a removal, its shares still held (the precondition)", () => {
+    expect(assignedOnADownDay()).toMatchObject({
+      amount: -7_000,
+      unexplainedCash: -42_000,
+      heldAfter: 535_000,
+      direction: "removed",
+    });
+  });
+
+  it("disagrees once the line is read against the journal's lifecycle rows", () => {
+    expect(witnesses(assignedOnADownDay(), [assignment])).toBe("disagree");
+  });
+
+  it("still disagrees when the row is stamped at the end of its date, hours after the window", () => {
+    const timeless = { ...assignment, at: "2026-10-05T23:59:59.999Z" };
+    expect(witnesses(assignedOnADownDay(), [timeless])).toBe("disagree");
+  });
+
+  it("ignores another member's lifecycle row, and one weeks from the window", () => {
+    const line = flow(300_000, 300_000);
+    expect(witnesses(line, [{ ...assignment, participantId: "human-ari" }])).toBe("agree");
+    expect(witnesses(line, [{ ...assignment, at: "2026-10-25T14:02:00.000Z" }])).toBe("agree");
+  });
+
+  it("grades a line recorded before the held book disagree, not ungraded, when a row is near", () => {
+    const near = { ...assignment, at: "2026-10-20T14:02:00.000Z" };
+    expect(witnesses(legacy(-7_000, -42_000))).toBe("ungraded");
+    expect(witnesses(legacy(-7_000, -42_000), [near])).toBe("disagree");
+  });
+
+  it("withholds the all-clear and counts the line as disagreeing at the floors it clears", () => {
+    const census = censusFlows([assignedOnADownDay()], weekIn, [assignment]);
+    expect(census).toMatchObject({ disagree: 1, lifecycleNear: 1 });
+    expect(census.floors.some((row) => row.disagree > 0)).toBe(true);
+    const text = censusMarkdown(census);
+    expect(text).not.toContain("Every line's witnesses agree: keep today's rule.");
+    expect(text).toContain("Near an assignment, exercise or expiry in the fill journal: 1 line(s)");
+  });
+
+  it("never prints the all-clear when the journal was not read", () => {
+    const text = censusMarkdown(censusFlows([flow(300_000, 300_000)], weekIn));
+    expect(text).not.toContain("Every line's witnesses agree: keep today's rule.");
+    expect(text).toContain("rerun with --activity");
+  });
+});
+
+// #7729 × #7730 — why the journal is read BEFORE the held book. A covered call assigned away hands
+// the shares over at the strike (the $0 lifecycle row leaves that cash unexplained) and leaves the
+// book flat, so the held-book witness reads it as a reset. The equity move is the short call's mark
+// vanishing: an earned gain, which a recorded flow would tell the league was capital arriving.
+describe("a covered call assigned away, flattening the book", () => {
+  const calledAway: TradeActivityRecord = {
+    orderId: "lifecycle:act-2",
+    participantId: "human-dana",
+    symbol: "AAPL261016C00400000",
+    side: "sell",
+    quantity: 20,
+    filledQuantity: 20,
+    price: 0,
+    status: "assigned",
+    at: "2026-10-05T14:03:00.000Z",
+    source: "lifecycle",
+  };
+  // 2,000 shares at $400 and 20 short $400 calls marked at -$16,000, then delivered at the strike.
+  const line = (): CapitalFlow => {
+    const recorded = inferCapitalFlow(
+      sample(T0, 1_000_000, 216_000),
+      sample(T1, 1_016_000, 1_016_000),
+      [calledAway],
+    );
+    if (!recorded) throw new Error("precondition: the detector records the false line");
+    return recorded;
+  };
+
+  it("is recorded with a flat book after it (the precondition)", () => {
+    expect(line()).toMatchObject({ amount: 16_000, unexplainedCash: 800_000, heldAfter: 0 });
+  });
+
+  it("passes the witnesses alone: the blind spot the journal exists to cover", () => {
+    expect(witnesses(line())).toBe("agree");
+  });
+
+  it("disagrees once the journal is read, and the census withholds the all-clear", () => {
+    expect(witnesses(line(), [calledAway])).toBe("disagree");
+    const census = censusFlows([line()], weekIn, [calledAway]);
+    expect(census).toMatchObject({ agree: 0, disagree: 1, lifecycleNear: 1 });
+    expect(censusMarkdown(census)).not.toContain("keep today's rule");
+  });
+});
+
 describe("censusFlows", () => {
   it("is not ready before a week of shadow time", () => {
     const census = censusFlows([], new Date("2026-10-22T00:00:00Z"));
@@ -83,6 +209,7 @@ describe("censusFlows", () => {
     const census = censusFlows(
       [flow(300_000, 300_000), flow(50_000, 51_000, { participantId: "human-ari" })],
       weekIn,
+      [],
     );
     expect(census).toMatchObject({ lines: 2, participants: 2, agree: 2, disagree: 0 });
     expect(census.recommendedFloor).toBe(1_000);
@@ -101,16 +228,26 @@ describe("censusFlows", () => {
   });
 
   it("counts an ungraded line apart and keeps it out of the floor table", () => {
-    const census = censusFlows([flow(300_000, 300_000), legacy(90_000, -80_000)], weekIn);
+    const census = censusFlows([flow(300_000, 300_000), legacy(90_000, -80_000)], weekIn, []);
     expect(census).toMatchObject({ lines: 2, agree: 1, disagree: 0, ungraded: 1 });
     expect(census.recommendedFloor).toBe(1_000);
     const text = censusMarkdown(census);
-    expect(text).toContain("Every graded line's witnesses agree");
+    expect(text).toContain("Every graded line's witnesses agree: keep today's rule.");
     expect(text).toContain("Ungraded: 1");
   });
 
+  it("withholds the graded all-clear too when the journal was not read", () => {
+    const text = censusMarkdown(
+      censusFlows([flow(300_000, 300_000), legacy(90_000, -80_000)], weekIn),
+    );
+    expect(text).toContain(
+      "Every graded line's witnesses agree, but the fill journal was not read",
+    );
+    expect(text).not.toContain("keep today's rule.");
+  });
+
   it("says nothing can be graded when every line predates the held book", () => {
-    const text = censusMarkdown(censusFlows([legacy(90_000, -80_000)], weekIn));
+    const text = censusMarkdown(censusFlows([legacy(90_000, -80_000)], weekIn, []));
     expect(text).toContain("No line can be graded yet");
   });
 
@@ -123,9 +260,9 @@ describe("censusFlows", () => {
 describe("censusMarkdown", () => {
   it("prints counts and floors, never a participant id or an amount", () => {
     const text = censusMarkdown(
-      censusFlows([flow(312_345, 312_345, { participantId: "human-secret" })], weekIn),
+      censusFlows([flow(312_345, 312_345, { participantId: "human-secret" })], weekIn, []),
     );
-    expect(text).toContain("keep today's rule");
+    expect(text).toContain("Every line's witnesses agree: keep today's rule.");
     expect(text).not.toContain("human-secret");
     expect(text).not.toContain("312");
   });
@@ -142,17 +279,10 @@ describe("censusMarkdown", () => {
 // for a net-short one. These genuine resets run through the detector itself, so the census grades
 // exactly the line production would record.
 describe("a genuine reset, as the detector records it", () => {
-  const at = (iso: string, equity: number, cash: number): EquitySample => ({
-    at: iso,
-    participantId: "human-dana",
-    equity,
-    cash,
-    realizedPl: 0,
-  });
   const reset = (equity: number, cash: number, to = 1_000_000): CapitalFlow => {
     const line = inferCapitalFlow(
-      at("2026-10-20T14:00:00.000Z", equity, cash),
-      at("2026-10-20T14:05:00.000Z", to, to),
+      sample("2026-10-20T14:00:00.000Z", equity, cash),
+      sample("2026-10-20T14:05:00.000Z", to, to),
       [],
     );
     if (!line) throw new Error("the detector recorded nothing");
@@ -181,9 +311,21 @@ describe("a genuine reset, as the detector records it", () => {
   });
 
   it("never lets a run of genuine resets talk the census into a raised floor", () => {
-    const census = censusFlows([reset(1_300_000, 500_000), reset(700_000, 1_020_000)], weekIn);
+    const census = censusFlows([reset(1_300_000, 500_000), reset(700_000, 1_020_000)], weekIn, []);
     expect(census).toMatchObject({ agree: 2, disagree: 0, recommendedFloor: 1_000 });
-    expect(censusMarkdown(census)).toContain("keep today's rule");
+    expect(censusMarkdown(census)).toContain("Every line's witnesses agree: keep today's rule.");
+  });
+
+  it("stays agreeing when the journal is read and holds no lifecycle row near the reset", () => {
+    const line = reset(1_300_000, 500_000);
+    expect(witnesses(line, [assignment])).toBe("agree");
+  });
+});
+
+describe("parseJournalLines", () => {
+  it("keeps journal rows and skips a blank or torn line", () => {
+    const text = `${JSON.stringify(assignment)}\n\n{"participantId":"x","at`;
+    expect(parseJournalLines(text)).toEqual([assignment]);
   });
 });
 

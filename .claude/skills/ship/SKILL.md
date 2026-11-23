@@ -69,7 +69,9 @@ whose whole pipeline is green; that's the escape hatch, not `ship.sh merge`. (`s
   "is this a carve-out?" mechanically. "Outward-facing" means reachable by a non-member or changing
   an external contract, NOT "a user can see it"; on a web app the loose reading catches every copy
   change, which is exactly how this gate over-triggered.
-- **Visual/taste work Eric asked to eyeball first.**
+- **Visual/taste work Eric asked to eyeball first.** Say so on the PR: a `Held for taste…` line,
+  `Platter: no`, or the `taste` label. A protected PR held for any other reason is boarded onto
+  the platter by `ship platter adopt` (#7939; `scripts/platter-sweep-decide.mjs` reads those signals).
 
 For these: `scripts/ship.sh open` to create the PR, but do **not** arm auto-merge.
 
@@ -117,6 +119,12 @@ scripts/ship.sh platter sync                 # re-post the ledger; refuses if th
   `pipeline.yml`'s arm job skips) and the diff is protected (which `checkarm` refuses, exit 5).
 - **`--hold` labels.** Any held PR, platter or not, gets `hold-merge` — so "what is waiting on
   Eric?" is a label query rather than a guess.
+- **A hold needs one of three reasons, said on the PR:** the diff is protected (`envelope-scan`
+  says blocking), Eric asked in his own words to hold *this* PR, or a design call you name on the PR
+  for his eyes before it ships. "Submit it, I'll merge it" is permission, not a hold: ship it on the
+  default. A label added by hand is the same decision as `--hold`. A wrong hold costs more than
+  it looks: the PR drifts into conflicts while it waits, and the session cannot lift its own hold
+  without his word (#7672 sat five days on that misread; `docs/LESSONS.md`, 2026-11-22).
 - **`--hold` waits ~20s after promoting, then checks `verify` once** (#4168). The draft's own run can
   cancel the real `verify` and leave a skipped check, which branch protection reads as a pass. If
   the latest `verify` is skipped or cancelled, ship adds a marker to the PR body. That edit fires an
@@ -146,6 +154,12 @@ A slice that builds on an unmerged PR stacks on it instead of waiting (Eric, 202
   `stuck-pr-scan.mjs` does not report one as stuck.
 
 ## Mechanics & traps (this skill owns the landing detail)
+
+- **Verify while you work, not at the push.** After a batch of commits, start
+  `bash scripts/verify-locked.sh` with `run_in_background`; it stamps the tree green, and the
+  pre-push hook then skips that exact tree instead of running a 10–15 minute verify at push time.
+  On 2026-11-17 a session pushed 7 times and waited out a fresh verify on every one. Check a push's
+  own exit status: `push; echo EXIT` reports the echo's success, not the push's.
 
 - **No `git stash`, ever.** It has silently dropped stashed edits in this environment (the incident
   is banked in `docs/LESSONS.md`). Branch-first (`git checkout -B <branch> origin/main` *before

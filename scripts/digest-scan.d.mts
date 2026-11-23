@@ -25,6 +25,11 @@ export function quietReason(
 export function digestFiles(): string[];
 export function latestDigestDate(): string | null;
 export function needsYouLines(planned: Pick<Planned, "needsYou">): string[];
+/** The Needs-you list with the asks on the Decisions page folded to one line (#7939). */
+export function foldedNeedsYouLines(
+  planned: Pick<Planned, "needsYou">,
+  page?: { number: number; entries: number[] } | null,
+): string[];
 /** The "needs a session" line for "Noise absorbed" (#6953 slice 2). */
 export function calloutIncompleteLine(planned: Partial<Pick<Planned, "incomplete">>): string;
 export function needsSessionLine(planned: Partial<Pick<Planned, "needsSession">>): string;

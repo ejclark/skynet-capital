@@ -127,8 +127,10 @@ function view(snap) {
   return { ...rest, view: viewKey(snap) };
 }
 
-/** The scripted world's shell, or the composed world's routed page — one handle either way. */
-function openPage(world, vp, out) {
+/** The scripted world's shell, the composed world's routed page, or a live server (a world with
+ *  an `origin`: scripts/faculty/live-world.mjs, whose writes land) — one handle either way. */
+async function openPage(world, vp, out) {
+  if (world.origin) return (await import("../faculty/live-world.mjs")).openLive(world, vp);
   if (world.run) return openComposed(world, vp, out);
   return openShell({
     name: `study-${world.name}`,
@@ -244,7 +246,7 @@ async function perform(session, action, before) {
       await page.keyboard.type(action.text);
       return null;
     case "key":
-      await page.keyboard.press(action.key);
+      for (let i = 0; i < (action.times ?? 1); i++) await page.keyboard.press(action.key);
       return null;
     case "back":
       await page.goBack({ waitUntil: "commit" }).catch(() => null);

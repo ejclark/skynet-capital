@@ -140,7 +140,7 @@ describe("chipsFor", () => {
   it("offers a parked draft's two exits first", () => {
     expect(
       chipsFor({ draft: true, connected: true, firstTradeDone: true }).map((c) => c.msg),
-    ).toEqual(["send", "never mind"]);
+    ).toEqual(["submit", "never mind"]);
   });
   it("follows the next onboarding step, with filing always one tap away", () => {
     expect(chipsFor({ draft: false, connected: false, firstTradeDone: false })[0]?.label).toBe(
@@ -170,7 +170,7 @@ describe("failure and draft lines", () => {
     const card = draftCard({ kind: "bug", title: "Fix it", details: "It breaks." });
     expect(card).toContain("[bug] Fix it");
     expect(card).toContain("It breaks.");
-    expect(card).toMatch(/"send".*"never mind"/);
+    expect(card).toMatch(/"submit".*"never mind"/);
   });
 });
 

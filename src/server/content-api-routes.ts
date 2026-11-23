@@ -243,7 +243,8 @@ export async function serveJsonApi(
     // passed dates cut. Market data only, no member's, so every signed-in member reads one body.
     // Campaigns load on demand, never at import (edition.ts → NOTHING LOADS AT IMPORT).
     const { campaignById } = await import("../domain/campaigns.js");
-    const view = editionView(editions(), new Date(), (id) => campaignById(id)?.title);
+    const now = config.editionNow?.() ?? new Date();
+    const view = editionView(editions(), now, (id) => campaignById(id)?.title);
     res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
     res.end(JSON.stringify(view));
     return true;

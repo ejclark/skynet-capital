@@ -1,0 +1,20 @@
+{
+  "id": "EQ-05",
+  "member": "eric",
+  "viewport": "phone",
+  "start": "/app",
+  "optimal": 8,
+  "scenario": "You're done with Apple. Get out of the whole position at whatever the market pays, from your phone.",
+  "end": {
+    "orders": [
+      {
+        "symbol": "AAPL",
+        "side": "sell",
+        "quantity": 100,
+        "orderType": "market",
+        "state": ["working", "filled"]
+      }
+    ]
+  },
+  "note": "On a phone a held-stock card opens a Buy form (position-cards.tsx:19-30); there is no 'sell all' (trade-gate.tsx)."
+}

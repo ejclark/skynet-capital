@@ -1,0 +1,21 @@
+{
+  "id": "OP-01",
+  "member": "eric",
+  "viewport": "desktop",
+  "start": "/app",
+  "optimal": 8,
+  "scenario": "Your two NVIDIA call options are well up since you bought them, and you entered with no plan to take the profit. Take it now: get out of both contracts.",
+  "end": {
+    "orders": [
+      {
+        "underlying": "NVDA",
+        "optionType": "call",
+        "strike": 180,
+        "side": "sell",
+        "quantity": 2,
+        "state": ["working", "filled"]
+      }
+    ]
+  },
+  "note": "Eric's own 2026-10-18 ask. The ticket and chain only open positions; a bid tap starts a covered-call sale (ticket-nav.tsx:81-82, plays.ts:50-63)."
+}

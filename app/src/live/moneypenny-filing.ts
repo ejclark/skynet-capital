@@ -23,7 +23,7 @@ import {
  * log the retired form used):
  *
  *   - `sendDraft` — Moneypenny drafted the filing herself from the whole thread (the companion's
- *     `draft_feedback` hand-off), the rail showed it, and the member said "send".
+ *     `draft_feedback` hand-off), the rail showed it, and the member said "submit".
  *   - `scripted` — the no-companion path: keyword routing, the coach's questions (or the one
  *     scripted question without a coach), then the member's own words file.
  *
@@ -65,9 +65,11 @@ interface Filing {
   readonly spec?: unknown;
 }
 
-/** The member's word that files a parked draft — and the one that drops it. Short, whole-message
- *  matches only: a sentence that happens to start with "yes" is a message, not consent. */
-export const SEND_AS_IS = /^(send|send it|yes|ok|okay|go|file it|do it|sure|yep|y)[.!]?$/i;
+/** The member's word that files a parked draft — and the ones that drop it. Whole-message matches
+ *  only: a sentence that happens to contain "submit" is a message, not consent. One word files, the
+ *  same one the button and her lines use (#7935, Eric: "supporting both 'send' and 'submit'
+ *  recreates the inconsistency… remove 'send' as a shorthand"), so "send", "yes" or "ok" no longer do. */
+export const SUBMIT = /^submit[.!]?$/i;
 export const NEVER_MIND =
   /^(never ?mind|cancel|drop it|forget it|no|nope|don'?t( file it)?|scrap it)[.!]?$/i;
 
@@ -75,8 +77,8 @@ export const NEVER_MIND =
  *  say what's wrong and where it's fixed (the owner's Settings → GitHub access) instead. */
 export function filingFailedLine(error: string): string {
   return /\b40[13]\b/.test(error)
-    ? `Moneypenny · i can't file right now — my GitHub access has expired or lost permission. your draft is saved: an owner renews it in Settings → GitHub access, then say "send".`
-    : `Moneypenny · i couldn't file that just now (${error}) — say "send" again in a moment and i'll retry.`;
+    ? `Moneypenny · i can't file right now — my GitHub access has expired or lost permission. your draft is saved: an owner renews it in Settings → GitHub access, then say "submit".`
+    : `Moneypenny · i couldn't file that just now (${error}) — say "submit" again in a moment and i'll retry.`;
 }
 
 export function createFilingLane(ctx: FilingContext) {
@@ -94,7 +96,7 @@ export function createFilingLane(ctx: FilingContext) {
     }));
     if (!answer.ok) {
       // The scripted flow resets so the next message is a message again; a parked draft stays
-      // parked in the store, so "send" retries it.
+      // parked in the store, so "submit" retries it.
       ctx.save({ flow: "idle", note: "", coach: [] });
       await ctx.say([filingFailedLine(answer.error)]);
       return;
@@ -141,7 +143,7 @@ export function createFilingLane(ctx: FilingContext) {
       ],
     }).catch(() => undefined);
     // A cut brief (#6205 — #6007 filed one, mid-word) is a failed shaping: the draft the member
-    // already saw and said "send" to is whole, so it files instead of half a capsule.
+    // already saw and said "submit" to is whole, so it files instead of half a capsule.
     if (!(reply?.ok && reply.done) || reply.cut) return draft;
     // No `spec`: a build spec earns the `curated` label downstream (feedback-issue.ts), which the
     // build lane treats as license to build unattended — and this pass never interviewed anyone
@@ -153,7 +155,7 @@ export function createFilingLane(ctx: FilingContext) {
     };
   };
 
-  /** The member said send: the draft they saw, shaped by the coach on the way out. */
+  /** The member said submit: the draft they saw, shaped by the coach on the way out. */
   const sendDraft = async (draft: CompanionDraft): Promise<void> => {
     const raw: Filing = { title: draft.title, details: draft.details };
     const index = await fetchFeedbackIndex().catch(() => undefined);

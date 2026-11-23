@@ -58,7 +58,10 @@ function timeStop(c: HeldLongOption, dte: number): Verdict {
       ...priced,
       why(
         "MANAGE",
-        "Selling is your call — nothing sells from here. Holding on is a bet that the stock moves faster than time decay takes.",
+        // "nothing sells from here" read as "you can't sell this" to the faculty's first blind member,
+        // who gave up taking exactly this profit (change-scenarios OP-01, 2026-11-16). Say what is
+        // true everywhere this line shows: nothing is sold until the member reviews and sends it.
+        "Selling is your call — nothing sells until you review it and send it. Holding on is a bet that the stock moves faster than time decay takes.",
       ),
     ],
     provesWrong: `If the stock jumps before ${dayText(c.expiration)} → holding would have paid; the cost of waiting is time decay on what's left.`,

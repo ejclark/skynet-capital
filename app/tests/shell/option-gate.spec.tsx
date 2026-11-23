@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import type { ChainAnswer, ChainData, PlayInfo } from "../../src/live/options";
 import type { ChainPreset } from "../../src/shell/chain-section";
@@ -526,6 +527,74 @@ describe("OptionGate — the chain accordion (Eric, 2026-09-22)", () => {
 });
 
 /**
+ * The Symbol field's late blur commit (#7955). Since #7672 the field defers its blur commit until
+ * the tap that blurred it has clicked, so a chain tap made while Symbol still has focus runs the
+ * pick FIRST and the symbol commit after it. That commit names the symbol already on the ticket,
+ * and it used to reopen the chain and clear the locked-rung note the pick had just set. Driven with
+ * a real pointer (user-event), since `fireEvent.click` never blurs anything.
+ */
+describe("OptionGate — a chain tap while Symbol still has focus (#7955)", () => {
+  beforeEach(() => {
+    chainResult = fullChain;
+  });
+
+  /** Past the field's 600ms backstop, so any deferred blur commit has certainly run. */
+  const pastTheBackstop = () => new Promise((resolve) => setTimeout(resolve, 750));
+
+  it("typed + Enter, then a strike tap: the strike fills and the chain stays collapsed", async () => {
+    const user = userEvent.setup();
+    render(renderGate(""));
+
+    const symbol = screen.getByLabelText("Symbol");
+    await user.type(symbol, "NVDA{Enter}");
+    expect(symbol).toHaveFocus();
+
+    await user.click(await screen.findByRole("button", { name: "Pick the 180 call bid" }));
+    await pastTheBackstop();
+
+    expect(screen.getByLabelText("Strike")).toHaveValue(180);
+    expect(screen.queryAllByRole("button", { name: /^Pick the 180/ })).toHaveLength(0);
+    expect(screen.getByRole("button", { name: "Change" })).toBeInTheDocument();
+  });
+
+  it("a locked-rung tap keeps the note that explains it", async () => {
+    const user = userEvent.setup();
+    render(renderChainPickGate({ plays: playsWithLockedTarget, onPreset: () => undefined }));
+
+    const symbol = screen.getByLabelText("Symbol");
+    await user.clear(symbol);
+    await user.type(symbol, "NVDA{Enter}");
+    expect(symbol).toHaveFocus();
+
+    await user.click(await screen.findByRole("button", { name: "Pick the 180 put bid" }));
+    await pastTheBackstop();
+
+    expect(screen.getByLabelText("Strike")).toHaveValue(180);
+    expect(
+      screen.getByText(
+        "Strike filled — “Sell a cash-secured put” isn't unlocked yet, so the side didn't change.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("a different symbol left in the field still recommits and reopens the chain", async () => {
+    const user = userEvent.setup();
+    render(renderGateWithStrike("NVDA", "180"));
+    await screen.findByRole("button", { name: "Change" });
+
+    const symbol = screen.getByLabelText("Symbol");
+    await user.clear(symbol);
+    await user.type(symbol, "AMD");
+    await user.click(screen.getByLabelText("Contracts (100 shares)"));
+    await pastTheBackstop();
+
+    expect(
+      (await screen.findAllByRole("button", { name: /^Pick the 180 call/ })).length,
+    ).toBeGreaterThan(0);
+  });
+});
+
+/**
  * The locked-pick note (review fix) — the house rule ("Locked = visible, disabled, explained…
  * never hidden, never silently dead", `ticket-nav.tsx`) applies to a chain-cell click too: a
  * locked-target pick used to be a silent no-op beyond filling strike. It now surfaces a `.tkt-note`
@@ -683,6 +752,33 @@ describe("OptionGate — chartSlot (Eric, 2026-09-22)", () => {
 
     rerender(withChart(<div data-testid="fixture-chart">chart fixture</div>));
     await waitFor(() => expect(screen.getByTestId("fixture-chart")).toBeInTheDocument());
+    expect(screen.getByLabelText("Contracts (100 shares)")).toHaveValue(7);
+  });
+
+  it("hands its contract count across a Put/Call or Side flip, which remounts it on the new rung", async () => {
+    chainResult = fullChain;
+    const client = new QueryClient();
+    let carried: string | undefined;
+    const ticket = (play: PlayInfo) => (
+      <QueryClientProvider client={client}>
+        <OptionGate
+          key={play.code}
+          deskId="desk-1"
+          play={play}
+          initialSymbol="NVDA"
+          carriedContracts={carried}
+          onContractsCarry={(contracts) => {
+            carried = contracts;
+          }}
+        />
+      </QueryClientProvider>
+    );
+    const { rerender } = render(ticket(unlockedCallPlay));
+    await waitFor(() => expect(fieldsPresent()).toBe(true));
+    fireEvent.change(screen.getByLabelText("Contracts (100 shares)"), { target: { value: "7" } });
+
+    rerender(ticket({ ...unlockedCallPlay, code: "301", id: "301", optionType: "put" }));
+    await waitFor(() => expect(fieldsPresent()).toBe(true));
     expect(screen.getByLabelText("Contracts (100 shares)")).toHaveValue(7);
   });
 });

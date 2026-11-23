@@ -227,6 +227,50 @@ export function needsYouLines({ needsYou }) {
   );
 }
 
+/**
+ * The "Needs you" list folded for the digest (#7939 slice 2 follow-up b): the asks numbered on the
+ * standing Decisions page collapse to ONE line pointing at it, because one reply there answers all
+ * of them; everything else Eric holds (a held PR, a merge ask, an ask the page cannot number) keeps
+ * its own line. The selector stays `needsYouLines`' (needs-you.spec.ts); this only groups its rows.
+ * `page` is `{ number, entries: [issue numbers on it] }` or null. Pure.
+ *
+ * A merge ask that names a held PR already on the list rides that PR's line (follow-up e): #7548
+ * asked "Merge held platter #7943?" while #7943 had its own line, so one click read as two items.
+ */
+export function foldedNeedsYouLines({ needsYou }, page = null) {
+  const onPage = new Set(page?.entries ?? []);
+  const folded = page ? needsYou.filter((n) => onPage.has(n.number)) : [];
+  const riders = mergeRiders(needsYou);
+  const rest = needsYou
+    .filter((n) => !(onPage.has(n.number) || riders.has(n.number)))
+    .map((n) => {
+      const also = [...riders].filter(([, pr]) => pr === n.number).map(([i]) => `#${i}`);
+      return also.length
+        ? { ...n, why: `${n.why}; merging it also answers ${also.join(", ")}` }
+        : n;
+    });
+  if (!folded.length) return needsYouLines({ needsYou: rest });
+  const nums = folded.map((n) => `#${n.number}`).join(", ");
+  return [
+    `- #${page.number} Decisions for Eric — ${folded.length} ask${folded.length === 1 ? "" : "s"} (${nums}); one reply answers all.`,
+    ...needsYouLines({ needsYou: rest }).filter((l) => !l.startsWith("_Nothing")),
+  ];
+}
+
+/** Asks answered by merging a held PR on the same list: `Map<ask number, PR number>`. The word
+ *  test is decisions-page.mjs's MERGE_ASK, kept local so this pure fold imports nothing. Pure. */
+function mergeRiders(needsYou) {
+  const held = new Set(needsYou.filter((n) => n.criterion === 4).map((n) => n.number));
+  const riders = new Map();
+  for (const n of needsYou) {
+    if (n.criterion !== 1 || !/\bmerge\b/i.test(n.decision ?? "")) continue;
+    const pr = [...String(n.decision).matchAll(/#(\d+)/g)].map((m) => Number(m[1]));
+    const target = pr.find((p) => held.has(p));
+    if (target !== undefined) riders.set(n.number, target);
+  }
+  return riders;
+}
+
 /** The "callout incomplete" line: asks he holds or is about to, whose callout lacks part of the card (#6953 slice 3). */
 export function calloutIncompleteLine({ incomplete = [] }) {
   if (!incomplete.length) return "- Callout incomplete: every ask carries its full card.";
@@ -365,6 +409,20 @@ function validate() {
   console.log(`✓ ${digestFiles().length} digest(s) satisfy the contract.`);
 }
 
+/** The standing Decisions page and the issues numbered on it, or null (none open, or unreadable). */
+async function decisionsPage() {
+  try {
+    const { findPage } = await import("./moneypenny/decisions-run.mjs");
+    const { stateOf } = await import("./moneypenny/decisions-page.mjs");
+    const page = findPage();
+    return page
+      ? { number: page.number, entries: stateOf(page.body).entries.map((e) => e.issue) }
+      : null;
+  } catch {
+    return null; // a failed read costs the fold, never the list
+  }
+}
+
 /** `--needs-you`: the list, the callout-incomplete line, and the unseen line (#6953 slice 4). */
 async function needsYouReport() {
   const { gather, plan } = await import("./moneypenny/assignments.mjs");
@@ -382,7 +440,10 @@ async function needsYouReport() {
       .split("\n")[0]
       .slice(0, 200);
   }
-  const lines = [...needsYouLines(planned), calloutIncompleteLine(planned)];
+  const lines = [
+    ...foldedNeedsYouLines(planned, await decisionsPage()),
+    calloutIncompleteLine(planned),
+  ];
   return [...lines, unseenLine(unseen, why)].join("\n");
 }
 
@@ -454,4 +515,14 @@ async function main() {
 }
 
 // CLI only — comms-scan.mjs imports `latestDigestDate` and must not trigger a report.
-if (isMain(import.meta.url)) await main();
+// Not `await main()`: a top-level await keeps this module "evaluating" until main returns, and
+// `--needs-you` dynamically imports assignments → decision-callout → issue-lint → projects → rank,
+// which imports this file back. That import waits on a module that waits on it: node exit 13
+// ("unsettled top-level await") and no list, every time a cloud session ran it (digest 2026-11-22
+// had to be read by hand; #7939). A plain call lets evaluation finish first, so the cycle resolves.
+if (isMain(import.meta.url)) {
+  main().catch((err) => {
+    console.error(err?.stack ?? err);
+    process.exitCode = 1;
+  });
+}

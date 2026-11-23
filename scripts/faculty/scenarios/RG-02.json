@@ -1,0 +1,12 @@
+{
+  "id": "RG-02",
+  "member": "phone-only",
+  "viewport": "phone",
+  "start": "/app",
+  "optimal": 9,
+  "scenario": "Sell 150 of your Apple shares at whatever the market pays, from your phone, and tell us what happens.",
+  "end": {
+    "refusal": true
+  },
+  "note": "Holds 100; the desk refuses selling more than held (no shorting)."
+}

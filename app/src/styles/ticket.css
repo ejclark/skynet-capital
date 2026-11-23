@@ -453,6 +453,31 @@
   padding: 5px 8px;
   font-size: var(--text-md);
 }
+/* the price's unit, said beside the box (change-scenarios PM-01: a per-contract reading cost 100×) */
+.tkt-close-price {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.tkt-close-unit {
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+/* how many contracts to close (change-scenarios OP-02: closing 1 of 2 had no control here) */
+.tkt-close-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.tkt-close-count label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.tkt-close-count input {
+  width: 64px;
+  padding: 5px 8px;
+  font-size: var(--text-md);
+}
 /* Roll as one ticket (#3407 P3 slice 3): a second line under a held contract's row — the
    target expiration and strike, Day / GTC, the two legs spelled out, then Review → Confirm.
    Spans the close row's grid so it reads as the row's own drawer, not a sibling contract. */

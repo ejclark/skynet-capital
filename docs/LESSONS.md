@@ -35,6 +35,16 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### `integration tests` red on main: pin the edition's today on the e2e server so the calendar keeps its event rows
+- **SHA:** 8189e8b   **DATE:** 2026-11-21   **STATUS:** closed
+- **COVERS:** b77edda
+- **SIGNAL:** 1 failed run(s) of `Pipeline` → `integration tests` on `main`, the first [44908502439](https://github.com/ejclark/skynet-capital/actions/runs/44908502439) at 2026-11-21T13:22:04Z. Repair capsule #7901 filed 2026-11-21T13:26:29Z, closed 21m later by #7902.
+- **ROOT CAUSE:** `integration tests` went red on `main` with a docs-only commit (#7900): two `campaign mission control` tests in `e2e/landing.spec.ts` look for an event row in the Calendar window. The e2e server pins the Council's clock (`SKYNET_FIXED_NOW`, #4683), but `/api/edition` still read `new Date()`. The one checked-in edition (`src/domain/editions/2026-11-06.json`) lists coming dates up to 2026-11-20. From Saturday 2026-11-21 the server cut every one of them, the calendar showed the empty week, and the tests found nothing. Reproduced locally before the fix: 2 failed, the same two. Not a flake: it would stay red until someone wrote a new edition, and go red again whenever an edition's dates run out.
+- **PREVENTION:** spec — `tests/scripts/offline-clocks.spec.ts`, `tests/server/content-api-routes.spec.ts` (#7902).
+- **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
+
+---
+
 ### `PR #7319 is red` red on main: pin the desk-ideas spec's clock inside the nvda earnings window
 - **SHA:** 9282f4a   **DATE:** 2026-11-10   **STATUS:** closed
 - **COVERS:** 6d9560e
@@ -3278,3 +3288,17 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
 - **ROOT CAUSE:** none new — every line above maps to an existing entry, a closed repair issue, or a designed net (rollback). They were unlearned only because the scan never listed them (see the `allowed_bots` entry's blindness half) or because their entry carried `SHA: n/a` and no `COVERS`.
 - **PREVENTION:** ledger-only, by design: each cause's prevention is already banked where its line points, and the paged scan (this PR) is what stops a fortnight of runs going unlisted again. A lesson per run would be ceremony with no new mechanism behind it.
 - **SIDE QUESTS:** an entry with `SHA: n/a` and no `COVERS` closes nothing in the scan, so its own failing runs stay "unlearned" forever (here: the backfill-sweep entry). A lint warning in `auditLedger()` for that shape is cheap → docs/IDEAS.md.
+
+### A simulated-member round measured its own harness: a mid-round rebuild, a mid-round role edit, and a click a person could never make
+- **SHA:** d3b310a   **DATE:** 2026-11-17   **STATUS:** closed
+- **SIGNAL:** faculty round 1 (`scripts/faculty/`, the change study) reported members refused a Backspace "my instructions list" (EQ-03, PM-01) and a member who "never saw the app load" (OP-06); round 2 repeated the stale page for AC-01 and RG-02. Caught the same hour, by the members' own words in `summary.json`.
+- **ROOT CAUSE:** three faults in the instrument, not the app. (1) The actor's role prompt was edited while the round ran; each blind call reads it fresh, but the recorder's key list was already loaded, so later members were offered a key and then refused it. (2) `app/dist` was rebuilt mid-round to run CI, so open pages asked for chunk hashes that no longer existed. (3) The CI playthrough meant to pin the phone "More ▾" fix passed on the broken build: Playwright scrolled inside the row that clipped the list, which a member cannot do.
+- **PREVENTION:** script. A round copies its role prompt at start (`round.mjs`); a session records the build it ran on and marks itself confounded on a change or a stale chunk (`drive.mjs`); `regrade.mjs` re-detects both faults and a refused offered key from each session's own files, and the round table counts a confounded session neither way. The playthrough asserts `toBeInViewport({ ratio: 1 })` and an `elementFromPoint` hit before clicking (`e2e/changes.spec.ts`). Doctrine in `scripts/faculty/README.md`: never rebuild the app or edit a role while a round runs.
+- **SIDE QUESTS:** none
+
+### A green PR waited five days on a hold nobody needed: "I'll merge it" read as "hold it"
+- **SHA:** 25a6673   **DATE:** 2026-11-22   **STATUS:** closed
+- **SIGNAL:** Eric, the night it was held: "Why is it waiting on me"; five days later: "Waiting on a rubber stamp? Ffs". In between, `main` moved and the conflict lane repaired the PR twice (#7672).
+- **ROOT CAUSE:** the session added `hold-merge` to #7672 after Eric wrote "If it makes sense to eliminate a restricted process, submit the pr, i will merge it". It read an offer to merge as an ask to hold. The PR that shipped removed no restricted step, and none of its 112 files was protected, so the default (auto-merge on green) applied. Once on, the hold could not be undone cheaply: the auto-mode classifier refused the session's own unhold as merging without his say-so, so clearing the mistake also took his word.
+- **PREVENTION:** doctrine. The ship skill's hold rules now name the three reasons a hold may carry (a protected diff, his explicit ask to hold that PR, a design call named on the PR) and say an offer to merge is none of them (`.claude/skills/ship/SKILL.md`). Not a gate: the slip was reading intent, which a script cannot parse. The mechanical net for the cost, a hold that outlives its reason, is the side quest below.
+- **SIDE QUESTS:** list held, unprotected, green PRs older than a day in the digest, so a needless hold costs a day, not five → docs/IDEAS.md.

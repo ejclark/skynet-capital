@@ -66,10 +66,11 @@ const askItem = (ask) => {
 /**
  * The sub-lines a callout speaks so the assignment card can carry the whole ask (ask-card.mjs):
  * `options` ([{key, text, predicted?}]), `predicted` ("A (medium)" when no option is flagged),
- * `onSilence` and `unblocks`. Each is one short line under item 1; a field left out is left out,
- * and the card names the gap in the digest instead of refusing the ask.
+ * `onSilence`, `unblocks` and `cls` (the ask's class, which the ledger row and the graduation check
+ * read over the keyword guess, #7939 follow-up a). Each is one short line under item 1; a field left
+ * out is left out, and the card names the gap in the digest instead of refusing the ask.
  */
-function askDetail({ options = [], predicted, onSilence, unblocks } = {}) {
+function askDetail({ options = [], predicted, onSilence, unblocks, cls } = {}) {
   const one = (t) => askItem(t);
   return [
     ...options.map(
@@ -79,6 +80,7 @@ function askDetail({ options = [], predicted, onSilence, unblocks } = {}) {
     ...(predicted ? [`>    - Predicted: ${one(predicted)}`] : []),
     ...(onSilence ? [`>    - On silence: ${one(onSilence)}`] : []),
     ...(unblocks ? [`>    - Unblocks: ${one(unblocks)}`] : []),
+    ...(cls ? [`>    - Class: ${one(cls)}`] : []),
   ];
 }
 
@@ -119,6 +121,13 @@ export function withoutLaneAsk(body) {
 
 /** A comment that reports work and asks nothing. Lifting one would put a non-question in his queue. */
 const NOT_AN_ASK = /build session has started|^\**(?:Continuing this plan|Sliced|Shipped)\b/i;
+/**
+ * The class both lane-written asks state: whether a build the lane gave up on runs again. Not in
+ * alignment-graduation.mjs's CLASS_MAP, so it is not eligible to graduate until a PR rules on it;
+ * stating it keeps the ledger rows together until then instead of scattering them by keyword.
+ */
+export const LANE_RECOVERY = "lane recovery";
+
 /** Lines that cannot carry the ask: a marker, a code fence, a table row, a rule. */
 const NOT_A_SENTENCE = /^(?:<!--|```|\||---)/;
 /** How recently a lane must have said it for the comment to belong to this label. */

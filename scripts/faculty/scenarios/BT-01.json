@@ -1,0 +1,16 @@
+{
+  "id": "BT-01",
+  "member": "invited-friend",
+  "viewport": "phone",
+  "start": "/app",
+  "optimal": 7,
+  "scenario": "The Day Trader bot you look after has lost money three sessions running. Pause it while you think \u2014 just that one bot.",
+  "end": {
+    "bots": {
+      "suspended": ["day-trader"]
+    }
+  },
+  "note": "The own-bot switch (bot-switch.tsx:32,46); a member who halts every bot fails on an unintended write.",
+  "email": "friend@example.test",
+  "participant": "human-friend"
+}

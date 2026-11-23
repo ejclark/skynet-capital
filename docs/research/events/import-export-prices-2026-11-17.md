@@ -391,3 +391,64 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-11-17
 <!-- probe-ref: {"symbols":{},"vix":22.91,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","cbrs-q3-2026-results-2026-11-11","empire-state-mfg-2026-11-16","erock-q3-2026-results-2026-11-12","eurostat-hicp-final-2026-11-18","existing-home-sales-2026-11-12","fomc-minutes-2026-11-18","housing-starts-2026-11-18","industrial-production-2026-11-17","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-5y-auction-2026-11-12","jgb-liquidity-enhancement-1-5y-2026-11-20","msft-ignite-2026-11-17","mtis-2026-11-17","mts-october-2026-11-12","nahb-hmi-2026-11-17","nbis-2026-11-12-print","nvda-2026-11-18-print","opex-2026-11-20","pbls-q3-2026-results-2026-11-12","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","ppi-2026-11-13","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","russell-recon-preliminary-2026-11-13","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-30y-bond-2026-11-12","treasury-coupon-announcement-2026-11-12","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-gdp-q3-first-2026-11-12","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["cbrs-q3-2026-results-2026-11-11","nbis-2026-11-12-print","nvda-2026-11-18-print","retail-sales-2026-11-17"],"screenStreak":2} -->
+
+**Last assessed:** 2026-11-18
+<!-- probe-ref: {"symbols":{},"vix":25.46,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","cbrs-q3-2026-results-2026-11-11","empire-state-mfg-2026-11-16","erock-q3-2026-results-2026-11-12","eurostat-hicp-final-2026-11-18","existing-home-sales-2026-11-12","fomc-minutes-2026-11-18","housing-starts-2026-11-18","industrial-production-2026-11-17","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-5y-auction-2026-11-12","jgb-liquidity-enhancement-1-5y-2026-11-20","msft-ignite-2026-11-17","mtis-2026-11-17","mts-october-2026-11-12","nahb-hmi-2026-11-17","nbis-2026-11-12-print","nvda-2026-11-18-print","opex-2026-11-20","pbls-q3-2026-results-2026-11-12","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","ppi-2026-11-13","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","russell-recon-preliminary-2026-11-13","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-30y-bond-2026-11-12","treasury-coupon-announcement-2026-11-12","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-gdp-q3-first-2026-11-12","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["cbrs-q3-2026-results-2026-11-11","nbis-2026-11-12-print","nvda-2026-11-18-print","retail-sales-2026-11-17"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out (2026-11-18, D+1).** Macro-print mode runs no `earnings-cycle` / `intraday-edges` instrument
+(`symbols: []` by design); the cache was busted first (`rm -rf node_modules/.cache/earnings-cycle
+node_modules/.cache/intraday-edges`) and nothing here reads it. The *print* is scored from the BLS release
+text (`bls.gov/news.release/ximpim.nr0.htm`, WebFetch, "Tuesday, November 17, 2026" 8:30 a.m. ET,
+USDL-26-1711) and a BLS public-API re-run (`EIUIREXFUELS`, `EIUIR`, `EIUIQ`, `EIUIR10`) that reconciles
+to the release on every m/m headline; the *tape* from Yahoo daily bars pulled today. Date label:
+**confirmed** (BLS:), as in the header. No trade was spent: the standing call was stand aside.
+
+| Measure (Oct 2026) | Printed | Registered expectation | Result |
+|---|---|---|---|
+| **All imports / exports 12-month** | **dash / dash** (Table A, both periods) | FT-28: no 12-month rate printed | **FT-28 pass** |
+| Nonfuel imports m/m | **+0.8%** (138.5 vs Sep revised 137.4 = +0.80%) | no consensus found, none asserted | above the ~+0.4%/mo trailing pace |
+| Nonfuel imports 12-month | **not published**; vs the *interpolated* base 130.15, arithmetic only: **+6.4%** | flat +5.7% · 3-mo pace +6.2% · Sep pace +6.5% | **inside the range, near the top** |
+| All imports m/m | **+1.1%** (153.8 vs 152.2 = +1.05%) | — | — |
+| Fuel imports m/m | **+3.6%** (EIUIR10 355.1 vs 342.9) | modest upward lean on crude | direction right |
+| All exports m/m | **+1.1%** (172.9 vs 171.0 revised) | — | — |
+| China import prices m/m | **+1.4%**, "largest monthly advance since the index began in January 2004" | July's +0.8% was the largest since 2008 | pass-through record extended |
+| September (revised) | nonfuel 137.6 → **137.4**; exports 170.8 → **171.0** | — | small revisions |
+
+**Stance: scored — stand aside was right, and the publication read was right.** `symbols: []`, `low`
+tier, no macro-keyed house playbook, nothing to trade. The deployable content was the three reading
+rules: (1) *expect no 12-month headline* — confirmed, a dash for imports and exports; (2) *read the
+duty-exclusive m/m* — nonfuel +0.8% and China +1.4% say exporters raised pre-duty prices again, not
+absorbed the tax; (3) the corridor guard — covered this print and added nothing. The numeric working
+range (estimate, arithmetic on an interpolated base BLS declined to publish) held: **+6.4%** sat
+inside +5.7% to +6.5% and nearer the top. That figure is ours, not BLS's, and is not a score claim.
+
+**Forward tests scored (terminal verdicts, none left `_open_`).**
+
+- **FT-28 → pass** ([legacy](../forward-tests/legacy.md)): the release printed no 12-month percent change
+  for all imports or all exports. Pass is one observation about a publication convention, never a price
+  template; the 12-17 release (Nov data, base Nov 2025 exists) is unaffected.
+
+**Kill switches, final state.**
+
+- **Existence branch** — retired 2026-09-02 (PL 119-103); the print came on date.
+- **Publication read (a printed 12-month rate)** — not fired; dash printed.
+- **Pass-through read (nonfuel y/y <4.0% at 10-16)** — not fired at 10-16 (6.0%); Oct m/m +0.8% extends it.
+- **Level-shift alternative (Aug and Sep nonfuel m/m ≤ +0.1%)** — not fired; both clearly above (Oct +0.8% too).
+- **Duty-exclusive inversion (Leg 3)** — no methodology change in the release text; the MXP notices page was
+  not re-fetched this session.
+- **Tier read (NDX ≥1% or >5bp front-end move attributable)** — **not fired, not countable.** NDX closed
+  **27,001.79 vs 27,197.15 (−0.72%)**, VIX **22.91 → 25.46**, 10Y (^TNX) **5.12 → 5.10**, but the same
+  morning carried retail sales and industrial production, so no part is attributable to this release.
+  `low` stays `low`; the falsifier stays open for a quieter day.
+
+**What the tape taught (reading habits, not positions).** The record China print (+1.4%, the largest
+since 2004) and a +1.1% all-imports m/m landed with the 10Y down 2bp and the index down under 1% on a
+crowded macro morning, so the market did not trade the release as first-tier. A stronger dollar (DXY
+~103.6, up from ~101.85 on 11-03) is a headwind to dollar import prices, which makes the +0.8% nonfuel
+m/m more, not less, informative about foreign pricing. Oil is lower (Brent ~93 vs ~103 on 11-03) while
+fuel imports still rose +3.6% m/m, so the October reference-week lean was the driver, not spot today.
+Next print (`import-export-prices-2026-12-17`, Nov data) inherits: Nov-2025 base exists (`EIUIREXFUELS`
+130.5, `EIUIR` 141.2), so its 12-month rate should print; a flat Nov nonfuel (138.5) would be about
+**+6.1%** y/y, arithmetic only.

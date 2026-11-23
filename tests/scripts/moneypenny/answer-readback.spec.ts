@@ -177,6 +177,27 @@ describe("the ledger row", () => {
     });
     expect(miss?.score).toBe("miss");
   });
+  it("takes the class the ask states over the keyword guess (#7939 follow-up a)", () => {
+    const stated = card(
+      assignmentComment({
+        items: parseAsk(
+          [
+            "> [!IMPORTANT]",
+            "> **Needs from you**",
+            "> 1. Keep the breaker latched? — a bot rule",
+            ">    - Class: engineering gates",
+            ">    - A (predicted, medium): re-arm",
+          ].join("\n"),
+        ),
+      }),
+    );
+    const [row] = ledgerRows({
+      ...base,
+      card: stated,
+      answer: { kind: "option", picks: [{ item: 0, key: "A" }] },
+    });
+    expect(row?.cls).toBe("engineering gates");
+  });
   it("does not score a deferral as a miss, nor a prose prediction by guess", () => {
     expect(
       ledgerRows({ ...base, card: card(ASK), answer: { kind: "deferred" } })[0]?.score,

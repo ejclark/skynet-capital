@@ -164,7 +164,7 @@ export function ledgerRows({ number, title = "", card, answer, reply }) {
       : "— (no prediction recorded)";
     return {
       date: day(reply.created_at),
-      cls: classOf(`${it.question} ${title}`),
+      cls: it.cls || classOf(`${it.question} ${title}`),
       ask: `#${number} · ${String(it.question ?? title)
         .replace(/\s+/g, " ")
         .slice(0, 140)}`,
@@ -181,8 +181,9 @@ const esc = (s) => String(s).replaceAll("|", "\\|");
 const tableRow = (r) =>
   `| ${r.date} | ${r.cls} | ${esc(r.ask)} | ${esc(r.predicted)} | ${esc(r.given)} | ${r.score} <!-- ledger:${r.key} --> |`;
 
-/** The comment the lane leaves: what it read, what it did, and the rows (visible and machine). */
-export function readbackComment({ answer, rows }) {
+/** The comment the lane leaves: what it read, what it did, and the rows (visible and machine).
+ *  `via` is where he answered when it was not this issue — the decisions page (#7939 slice 2). */
+export function readbackComment({ answer, rows, via = null }) {
   const said =
     answer.kind === "option"
       ? answer.picks.length > 1
@@ -192,7 +193,7 @@ export function readbackComment({ answer, rows }) {
         ? "not now"
         : answer.kind;
   return [
-    `Read as: ${said}. \`${NEEDS_ERIC}\` is off and the assignment is gone; if I misread, reply here and a session reads it.`,
+    `Read as: ${said}${via ? ` (your reply on ${via})` : ""}. \`${NEEDS_ERIC}\` is off and the assignment is gone; if I misread, reply here and a session reads it.`,
     "",
     ...rows.map(
       (r) =>
@@ -227,6 +228,10 @@ export function executeReadback(intent, { run = sh, retry = withRetry, read = gh
   }
   api("DELETE", `issues/${n}/assignees`, "-f", `assignees[]=${ERIC}`);
   api("POST", `issues/${n}/comments`, "-f", `body=${intent.body}`);
+  // #7939 slice 2: an answer from the decisions page to a feedback or plan issue does what his reply
+  // on the issue would have (reply-resume.mjs's unpark): `ready` on, AFTER the answer is on the
+  // thread, so the build the label wakes reads it.
+  if (intent.ready) api("POST", `issues/${n}/labels`, "-f", "labels[]=ready");
   return `📖 read #${n} — ${intent.said}`;
 }
 

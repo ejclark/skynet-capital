@@ -1,0 +1,23 @@
+{
+  "id": "PM-01",
+  "member": "eric",
+  "viewport": "desktop",
+  "start": "/app",
+  "optimal": 10,
+  "scenario": "Set it up so your two NVIDIA calls sell automatically if they ever reach $15 each, and not before.",
+  "end": {
+    "orders": [
+      {
+        "underlying": "NVDA",
+        "optionType": "call",
+        "strike": 180,
+        "side": "sell",
+        "quantity": 2,
+        "orderType": "limit",
+        "limitPrice": [15, 15],
+        "state": ["working", "filled"]
+      }
+    ]
+  },
+  "note": "A standing take-profit on an option: the close row offers Market/Limit (option-positions.tsx)."
+}

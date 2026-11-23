@@ -97,11 +97,13 @@ import {
   withLaneAsk,
   writeIssueBody,
 } from "./decision-callout.mjs";
+import { isDecisionsReply } from "./decisions-page.mjs";
+import { executeDecisions, gatherDecisions, routeDecisions } from "./decisions-run.mjs";
 import { executeDialTap, executeDialTidy, routeDial } from "./dial-tap.mjs";
 import { closeStaleDiscovery, flagStaleDiscovery } from "./discovery-pr-sweep.mjs";
 import { dueForResearch, RECEIPT_TITLE_RE, routeSweep } from "./events.mjs";
 import { guardFeedbackOutcome } from "./feedback-guard.mjs";
-import { ghRest, ghRestAll, sh, withRetry } from "./gh.mjs";
+import { ghRest, ghRestAll, isRateLimited, sh, withRetry } from "./gh.mjs";
 import { nudgeHeadless } from "./headless-pr.mjs";
 import {
   boardedReason,
@@ -184,6 +186,11 @@ export function route(ctx, deps = {}) {
   if (ctx.eventName === "workflow_dispatch" && ctx.inputs?.command === "release-claim") {
     return routeRelease(ctx);
   }
+  // #7939 slice 2: his reply on the decisions page is read the moment he posts it. The "Run
+  // Moneypenny" step already runs on every `issue_comment` with the App token, so this needs no
+  // workflow edit; `gatherDeps` reads the page only when `isDecisionsReply` says it is his reply
+  // there, and the push sweep reads the same replies again if this run is lost (level-based).
+  if (ctx.eventName === "issue_comment") return routeDecisions(deps);
   return [];
 }
 
@@ -1047,15 +1054,9 @@ function continueNext(pick, { claims, nowMs, sha, gateDeps }) {
  * harness-engineering research called this the top gap). A dependency that cannot be read is a
  * hard stop, not an empty list.
  */
-/**
- * Is this failure the GraphQL budget running out, rather than a wrong answer?
- *
- * `RATE_LIMIT_EXHAUSTED` in the extensions, or the message GitHub prints for it. Matched on the
- * message too because `gh` surfaces the latter and swallows the former.
- */
-export function isRateLimited(err) {
-  return /rate limit|RATE_LIMITED|RATE_LIMIT_EXCEEDED/i.test(String(err?.message ?? ""));
-}
+// Is this failure a spent budget, rather than a wrong answer? Defined in gh.mjs (#6942) so the
+// capsule stall check can share it; re-exported here for the callers and specs that read it here.
+export { isRateLimited };
 
 /**
  * The shipped sweep, degrading on an exhausted budget ONLY.
@@ -1220,6 +1221,13 @@ function gatherDeps(ctx) {
   // single-page version cost. Read ONCE here and shared, rather than paged a second time for the
   // reconcile's sake.
   const open = needsScan ? openIssues() : [];
+  // #7939 slice 2: the decisions page reads the assignment gather (one selector), on a sweep and on
+  // his reply there. Fail-open like the assignment read itself, for the reasons recorded below.
+  const pageReply = ctx.eventName === "issue_comment" && isDecisionsReply(ctx.payload);
+  const assignments = needsScan || pageReply ? gatherAssignmentsSafely() : null;
+  const decisions = assignments
+    ? gatherSafely("decisions", () => gatherDecisions({ assignments }))
+    : null;
   return {
     shippedFeedback: needsScan ? shippedSweep("feedback") : [],
     // `event-research` deliberately does NOT get the reference sweep any more (#2968). Its receipts
@@ -1249,7 +1257,8 @@ function gatherDeps(ctx) {
     // lost by skipping a tick, because the next push re-reads the same queue from GitHub — this lane
     // keeps no state of its own. (Contrast `readReceipts`, which refuses outright: there a false
     // empty would CLOSE the whole queue.)
-    assignments: needsScan ? gatherAssignmentsSafely() : null,
+    assignments: needsScan ? assignments : null,
+    decisions,
     // Continuation's stop half (#3818 slice 8, criterion 10). Sweep-only and FAIL-OPEN, for both
     // of the reasons the assignment read above records: only a push can have merged the slice that
     // makes a plan continuable, and this read is chatty enough (a comments page and a run lookup
@@ -1574,6 +1583,12 @@ function executeSweepIntent(i) {
     // The two writes live in assignments.mjs so its own `--apply` CLI reuses them without importing
     // this router — the same cycle-avoidance as the relay below.
     const line = askOnce(i, { lease: ASK_LEASE });
+    console.log(`::notice::${line}`);
+    return line;
+  }
+  if (i.kind.startsWith("decisions-")) {
+    // The writes live in decisions-run.mjs so its own `--apply` CLI reuses them (#7939 slice 2).
+    const line = executeDecisions(i, { lease: ASK_LEASE });
     console.log(`::notice::${line}`);
     return line;
   }

@@ -24,6 +24,7 @@ export function unknownFlags(
 export function dryRunLines(
   ops: Array<{ method: string; path: string; payload?: Record<string, unknown> }>,
 ): string[];
+export function droppedLogLines(liveBody: string | null | undefined, nextBody: string): string[];
 export function csv(s: unknown): string[];
 export function titleWords(title: string): Set<string>;
 export function findDuplicates<T extends IssueLike>(

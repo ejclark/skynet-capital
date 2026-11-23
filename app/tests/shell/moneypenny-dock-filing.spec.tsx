@@ -3,7 +3,7 @@ import { timing, useMoneypenny } from "../../src/live/moneypenny";
 import { flush, inHistory, mount, onboarding, showHistory } from "./moneypenny-dock-harness";
 
 // The rail's filing side (handoff 2026-09-03 §6; P0 of docs/research/moneypenny-chat-ux.md):
-// she drafts from the whole thread, the member sees the draft, and only their "send" files it.
+// she drafts from the whole thread, the member sees the draft, and only their "submit" files it.
 describe("MoneypennyDock — the drafted filing", () => {
   let realFetch: typeof globalThis.fetch;
   beforeEach(() => {
@@ -23,7 +23,7 @@ describe("MoneypennyDock — the drafted filing", () => {
       headers: { "content-type": "application/json" },
     });
 
-  it("holds her draft; 'send' runs it through the coach's capsule shaping and files that, with the link", async () => {
+  it("holds her draft; 'submit' runs it through the coach's capsule shaping and files that, with the link", async () => {
     const sent: { url: string; body: unknown }[] = [];
     globalThis.fetch = ((url: string, init?: RequestInit) => {
       const body = init?.body ? JSON.parse(String(init.body)) : undefined;
@@ -34,7 +34,7 @@ describe("MoneypennyDock — the drafted filing", () => {
           new Response(
             [
               'event: handoff\ndata: {"kind":"bug","title":"Onboarding step 2 never completes","details":"Filed 5 times; step 2 still not done."}\n\n',
-              'event: delta\ndata: {"text":"drafted — reply send to file it."}\n\n',
+              'event: delta\ndata: {"text":"drafted — reply submit to file it."}\n\n',
               "event: done\ndata: {}\n\n",
             ].join(""),
             { status: 200, headers: { "content-type": "text/event-stream" } },
@@ -72,10 +72,10 @@ describe("MoneypennyDock — the drafted filing", () => {
     fireEvent.change(box, { target: { value: "yes, report it" } });
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
     expect(
-      await inHistory().findByText("Moneypenny · drafted — reply send to file it."),
+      await inHistory().findByText("Moneypenny · drafted — reply submit to file it."),
     ).toBeInTheDocument();
 
-    fireEvent.change(box, { target: { value: "send" } });
+    fireEvent.change(box, { target: { value: "submit" } });
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
     const link = await screen.findByRole("link", { name: "https://github.com/x/y/issues/1170" });
     expect(link).toHaveAttribute("href", "https://github.com/x/y/issues/1170");
@@ -97,9 +97,9 @@ describe("MoneypennyDock — the drafted filing", () => {
     expect(filing?.body).not.toHaveProperty("spec");
   });
 
-  // 2026-11-12: one tap filed #7494–#7497, four copies in the same second — every "send" that
+  // 2026-11-12: one tap filed #7494–#7497, four copies in the same second — every "submit" that
   // landed while the first filing was still in flight found the draft still parked.
-  it("files once when 'send' lands again while the first filing is still in flight", async () => {
+  it("files once when 'submit' lands again while the first filing is still in flight", async () => {
     let posts = 0;
     let release: (r: Response) => void = () => undefined;
     globalThis.fetch = ((url: string, init?: RequestInit) => {
@@ -135,12 +135,58 @@ describe("MoneypennyDock — the drafted filing", () => {
     const store = useMoneypenny.getState();
     await store.send("report it");
     expect(await inHistory().findByText("Moneypenny · drafted.")).toBeInTheDocument();
-    const first = store.send("send");
+    const first = store.send("submit");
     await flush();
     // the filing is in flight; the member taps again, twice
-    await Promise.all([store.send("send"), store.send("send")]);
+    await Promise.all([store.send("submit"), store.send("submit")]);
     release(json({ ok: true, url: "u", number: 9 }));
     await first;
+    await flush();
+    expect(posts).toBe(1);
+  });
+
+  // #7935: one word files a draft, the same one the button and her lines use. "send" and the old
+  // yes/ok shorthands are ordinary messages now, so the draft stays parked until "submit".
+  it("files only on 'submit' — 'send', 'yes' and 'ok' leave the draft parked", async () => {
+    let posts = 0;
+    globalThis.fetch = ((url: string, init?: RequestInit) => {
+      if (url === "/api/companion") return Promise.resolve(json({ enabled: true, disclosure: "" }));
+      if (url === "/api/companion/chat")
+        return Promise.resolve(
+          new Response(
+            'event: handoff\ndata: {"kind":"bug","title":"Chips overlap","details":"On the phone."}\n\nevent: delta\ndata: {"text":"drafted."}\n\nevent: done\ndata: {}\n\n',
+            { status: 200, headers: { "content-type": "text/event-stream" } },
+          ),
+        );
+      if (url === "/api/feedback") {
+        if (!init?.body)
+          return Promise.resolve(
+            json({
+              enabled: true,
+              coachEnabled: false,
+              followupEnabled: false,
+              feedbackCount: 1,
+              celebrating: [],
+              recent: [],
+            }),
+          );
+        posts += 1;
+        return Promise.resolve(json({ ok: true, url: "u", number: 11 }));
+      }
+      return Promise.resolve(new Response("{}", { status: 404 }));
+    }) as typeof globalThis.fetch;
+    mount();
+    await showHistory();
+    const store = useMoneypenny.getState();
+    await store.send("report it");
+    expect(await inHistory().findByText("Moneypenny · drafted.")).toBeInTheDocument();
+    for (const word of ["send", "send it", "yes", "ok"]) {
+      await store.send(word);
+      await flush();
+    }
+    expect(posts).toBe(0);
+    expect(useMoneypenny.getState().draft).toBeDefined();
+    await store.send("Submit.");
     await flush();
     expect(posts).toBe(1);
   });
@@ -181,7 +227,7 @@ describe("MoneypennyDock — the drafted filing", () => {
     expect(await inHistory().findByText("Moneypenny · drafted.")).toBeInTheDocument();
     // the draft is shown before anything files
     expect(inHistory().getByText(/\[idea\] Show my rank in the rail/)).toHaveClass("mp-draft");
-    fireEvent.click(screen.getByRole("button", { name: "Send it" }));
+    fireEvent.click(screen.getByRole("button", { name: "Submit" }));
     expect(await inHistory().findByText(/filed as issue #8/)).toBeInTheDocument();
     expect(sent.filter((c) => c.url === "/feedback/coach")).toHaveLength(0);
     expect(sent.find((c) => c.url === "/api/feedback" && c.body)?.body).toMatchObject({
@@ -192,7 +238,7 @@ describe("MoneypennyDock — the drafted filing", () => {
   });
 
   // #6205: #6007 filed a capsule cut mid-word through this pass. A cut shaping reply is a failed
-  // one — the draft she showed and the member said "send" to is whole, so that is what files.
+  // one — the draft she showed and the member said "submit" to is whole, so that is what files.
   it("files her whole draft when the coach's shaping comes back cut", async () => {
     const sent: { url: string; body: unknown }[] = [];
     globalThis.fetch = ((url: string, init?: RequestInit) => {
@@ -238,7 +284,7 @@ describe("MoneypennyDock — the drafted filing", () => {
     fireEvent.change(box, { target: { value: "report it" } });
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
     expect(await inHistory().findByText("Moneypenny · drafted.")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Send it" }));
+    fireEvent.click(screen.getByRole("button", { name: "Submit" }));
     expect(await inHistory().findByText(/filed as issue #9/)).toBeInTheDocument();
     expect(sent.find((c) => c.url === "/api/feedback" && c.body)?.body).toMatchObject({
       kind: "feature",

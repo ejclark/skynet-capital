@@ -1,0 +1,21 @@
+{
+  "id": "EQ-06",
+  "member": "returning-trader",
+  "viewport": "desktop",
+  "start": "/app",
+  "optimal": 10,
+  "scenario": "You're nervous about your Apple shares over the weekend. Arrange for all of them to be sold automatically if Apple falls to $215, without selling anything now.",
+  "end": {
+    "orders": [
+      {
+        "symbol": "AAPL",
+        "side": "sell",
+        "quantity": 100,
+        "orderType": "stop",
+        "stopPrice": [215, 215],
+        "state": ["working", "filled"]
+      }
+    ]
+  },
+  "note": "The form calls this 'Stop-Market'; a stop-limit does not exist (ticket.ts:14)."
+}

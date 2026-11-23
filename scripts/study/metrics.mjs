@@ -30,7 +30,7 @@ const NEAR_PX = 12;
 const FRAME_TOL = 8;
 
 const KINDS = ["tap", "scroll", "type", "key", "back", "hover", "done", "give_up"];
-const KEYS = ["Enter", "Escape"];
+const KEYS = ["Enter", "Escape", "Tab", "Backspace"];
 const TERMINAL = new Set(["done", "give_up"]);
 /** The actions whose own job is to change which screen the member is on. */
 const MEMBER_MOVES = new Set(["scroll", "back"]);

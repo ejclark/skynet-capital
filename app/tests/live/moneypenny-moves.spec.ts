@@ -63,16 +63,16 @@ describe("movesFor — the member's moves, best first", () => {
     expect(labels(parked({ research: true, draft: true }))).toEqual(chipLabels(RESEARCH_ASK_CHIPS));
   });
 
-  it("a parked draft offers Send it and Never mind, sent as the member's words", () => {
+  it("a parked draft offers Submit and Never mind, sent as the member's words", () => {
     expect(movesFor(parked({ draft: true }))).toEqual([
-      { kind: "say", label: "Send it", msg: "send" },
+      { kind: "say", label: "Submit", msg: "submit" },
       { kind: "say", label: "Never mind", msg: "never mind" },
     ]);
   });
 
   it("a parked card's exits show in a side thread too", () => {
     expect(labels(at({ inThread: true, parked: { ...base.parked, draft: true } }))).toEqual([
-      "Send it",
+      "Submit",
       "Never mind",
     ]);
   });

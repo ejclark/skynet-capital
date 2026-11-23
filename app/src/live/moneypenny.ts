@@ -10,7 +10,7 @@ import {
 } from "./companion";
 import { marketIsOpen } from "./market-hours";
 import { answerFor, convictionCardText, createConvictionLane } from "./moneypenny-conviction";
-import { createFilingLane, NEVER_MIND, SEND_AS_IS } from "./moneypenny-filing";
+import { createFilingLane, NEVER_MIND, SUBMIT } from "./moneypenny-filing";
 import {
   createFollowupLane,
   type FollowupDraft,
@@ -44,7 +44,7 @@ import { fetchOnboarding, type Onboarding } from "./onboarding";
  *
  * Three rules this file enforces: the thread belongs to the MEMBER, not the browser (persistence
  * keyed by their opaque id, bound on every open — `moneypenny-storage.ts`); a drafted filing is
- * SHOWN, parked in memory only, and files on "send" alone ("never mind" drops it, anything else
+ * SHOWN, parked in memory only, and files on "submit" alone ("never mind" drops it, anything else
  * is a normal message); and a scripted beat never swallows a real question (the setup offer
  * catches only a clear yes or no). General questions go to Moneypenny herself — the companion
  * chat on the coach's key, streamed in (`companion.ts`); the scripted lines are the fallback
@@ -104,6 +104,11 @@ export interface MoneypennyState extends Persisted {
    *  compact by default, expanded on the member's ask. A taste setting, so it survives navigation
    *  and reloads (`localStorage`, best-effort); a link of hers collapses it so her page shows. */
   readonly expanded: boolean;
+  /** The pane folded away to its header, so a phone shows the page (#7933, Eric: "the chat window
+   *  occupies ~50% of the viewport… no way to dismiss or minimize it without leaving the page").
+   *  Only the header and the box stay; never true while `expanded`. Remembered like `expanded`; the
+   *  member's own send or ask, a ✎ tag, or "Talk to Moneypenny" shows the pane again. */
+  readonly minimized: boolean;
   /** Bumps when something outside the dock asks for its box (`meetMoneypenny`) — the dock focuses it. */
   readonly focusSeq: number;
   /** Her typing beat — the indicator before a line lands. */
@@ -122,7 +127,7 @@ export interface MoneypennyState extends Persisted {
   /** Whether the ladder gate is already lifted — refreshed on every open, never persisted (same
    *  as `connected`/`firstTradeDone`), so a fresh device still shows the celebration once. */
   readonly messaged?: boolean;
-  /** A filing she drafted, parked until the member says send — in memory only, never persisted. */
+  /** A filing she drafted, parked until the member says submit — in memory only, never persisted. */
   readonly draft?: CompanionDraft;
   /** A view she drafted (#5482 criterion 9), parked until the member taps one of its three exits —
    *  in memory only, never persisted, like `draft`. */
@@ -144,7 +149,7 @@ export interface MoneypennyState extends Persisted {
    *  conversation. In memory only: the rail always reopens on the main one after a reload. */
   readonly thread?: MpThread;
   /** The conversation a parked card (`draft`, `conviction`, `researchAsk`) was drafted in — its thread's key, or
-   *  undefined for the main one. Its exits answer only there, so a "send" typed elsewhere never
+   *  undefined for the main one. Its exits answer only there, so a "submit" typed elsewhere never
    *  files a card the member cannot see. */
   readonly parkedIn?: string;
   /** Show `thread` in the dock and its History — the row's "Continue in the chat". */
@@ -159,8 +164,12 @@ export interface MoneypennyState extends Persisted {
   /** The member moved to another page or window: leave a side thread for the main conversation
    *  when no answer is under way. The pane keeps its size: that is the member's taste. */
   readonly leavePage: () => void;
-  /** Compact ↔ expanded, remembered for this browser. */
+  /** Compact ↔ expanded, remembered for this browser. Expanding also un-minimizes. */
   readonly toggleExpanded: () => void;
+  /** Fold the pane to its header (from either size), remembered for this browser. */
+  readonly minimize: () => void;
+  /** Back from minimized to the compact pane; a no-op when it is not minimized. */
+  readonly restore: () => void;
   /** Load the member's saved conversation, so a row's thread shows on page load (#7308) and the
    *  dock's moves read the member's facts; also checks the chat is switched on. Binds only a store nothing else has touched yet, and only to a member the
    *  read named: a failed read must never bind "anon", which would forget the member's own blob. */
@@ -189,8 +198,21 @@ function readExpanded(): boolean {
   }
 }
 function writeExpanded(on: boolean): void {
+  writeFlag(EXPANDED_KEY, on);
+}
+/** Where "minimized" is remembered (#7933) — the same per-browser convenience as the size. */
+export const MINIMIZED_KEY = "mp-dock-minimized";
+function readMinimized(): boolean {
   try {
-    globalThis.localStorage?.setItem(EXPANDED_KEY, on ? "1" : "0");
+    // never both: a remembered expanded pane wins over a stale minimized flag
+    return !readExpanded() && globalThis.localStorage?.getItem(MINIMIZED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+function writeFlag(key: string, on: boolean): void {
+  try {
+    globalThis.localStorage?.setItem(key, on ? "1" : "0");
   } catch {
     // a private window or blocked storage: the size simply is not remembered
   }
@@ -557,7 +579,7 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
   /** A parked card's exits. A view: one of its three exact answers acts on it. A follow-up:
    *  "Post the follow-up" or "Not now", exactly. A research question: "Ask the research desk" or
    *  "Not now", exactly; a failed post parks either again. A filing draft:
-   *  "send" files it, "never mind" drops it. Anything else leaves either parked and is a normal
+   *  "submit" files it, "never mind" drops it. Anything else leaves either parked and is a normal
    *  message (false). */
   const answeredParked = async (note: string): Promise<boolean> => {
     const { conviction, draft, parkedIn, thread } = get();
@@ -578,11 +600,11 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
     // tick it lands (the cards are exclusive — drafting one clears the others). So only the parked
     // card's handler is awaited: an extra await ahead of it would push its busy mark a tick late.
     if (await (get().followup ? answeredFollowup(note) : answeredResearch(note))) return true;
-    if (draft && SEND_AS_IS.test(note)) {
+    if (draft && SUBMIT.test(note)) {
       // Unpark and go busy in the same tick, BEFORE the filing's awaits (the coach's shaping pass
-      // and the GitHub call take seconds): a second "send" in that window used to find the draft
+      // and the GitHub call take seconds): a second "submit" in that window used to find the draft
       // still parked and file it again — one tap filed #7494–#7497, four copies in one second
-      // (2026-11-12). A failed filing parks the same draft again, so "send" still retries it.
+      // (2026-11-12). A failed filing parks the same draft again, so "submit" still retries it.
       const before = get().filedSeq;
       set({ draft: undefined, streaming: true });
       try {
@@ -605,6 +627,7 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
   return {
     ...EMPTY,
     expanded: readExpanded(),
+    minimized: readMinimized(),
     focusSeq: 0,
     typing: false,
     streaming: false,
@@ -641,9 +664,20 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
     },
     toggleExpanded: () => {
       const expanded = !get().expanded;
-      set({ expanded });
+      set({ expanded, minimized: false });
       writeExpanded(expanded);
+      writeFlag(MINIMIZED_KEY, false);
       if (expanded) void get().wake({ intro: true });
+    },
+    minimize: () => {
+      set({ expanded: false, minimized: true });
+      writeExpanded(false);
+      writeFlag(MINIMIZED_KEY, true);
+    },
+    restore: () => {
+      if (!get().minimized) return;
+      set({ minimized: false });
+      writeFlag(MINIMIZED_KEY, false);
     },
     hydrate: () => {
       // The dock mounts on every page and reads whether the chat is switched on for its box.

@@ -55,9 +55,13 @@ export function ledgerRows(input: {
   answer: Answer;
   reply: ReplyComment;
 }): LedgerRow[];
-export function readbackComment(input: { answer: Answer; rows: LedgerRow[] }): string;
+export function readbackComment(input: {
+  answer: Answer;
+  rows: LedgerRow[];
+  via?: string | null;
+}): string;
 export function executeReadback(
-  intent: { number: number; body: string; said?: string },
+  intent: { number: number; body: string; said?: string; ready?: boolean },
   opts?: {
     run?: (cmd: string, args: readonly string[]) => string;
     retry?: <T>(fn: () => T) => T;

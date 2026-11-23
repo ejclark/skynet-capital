@@ -126,6 +126,29 @@ export function orderTypeLabel(orderType: string): string {
   return ORDER_TYPE_LABELS[orderType as TicketOrderType] ?? orderType;
 }
 
+/** What a share ticket hands the next one when the member flips Buy ⇄ Sell (the flip remounts the
+ *  ticket on the other rung). The count always goes. The order type and its limit go once the
+ *  member chose them (`priced`); an untouched ticket re-seeds at the mid, as any fresh one does.
+ *  A stop price never goes: a buy stop sits above the market and a sell stop below it, so the same
+ *  number on the other side would fire at once. */
+export interface TicketCarry {
+  /** The symbol the count and price were typed for — a carry is only ever offered back to a ticket
+   *  for this same symbol (a count and a limit typed for NVDA must never pre-fill an AAPL sell). */
+  readonly symbol: string;
+  readonly quantity: string;
+  readonly priced?: Pick<TicketFields, "orderType" | "limitPrice">;
+  readonly timeInForce?: TicketTimeInForce;
+}
+
+export function carryAcrossSide(fields: TicketFields, priced: boolean): TicketCarry {
+  return {
+    symbol: fields.symbol.trim().toUpperCase(),
+    quantity: fields.quantity,
+    ...(priced ? { priced: { orderType: fields.orderType, limitPrice: fields.limitPrice } } : {}),
+    ...(fields.timeInForce ? { timeInForce: fields.timeInForce } : {}),
+  };
+}
+
 /** Which price this order class needs from the member — undefined when it needs none. */
 export function priceFieldFor(orderType: TicketOrderType): "limitPrice" | "stopPrice" | undefined {
   if (orderType === "limit") return "limitPrice";
@@ -178,4 +201,16 @@ export function buildDraft(participantId: string, fields: TicketFields): TicketD
     ...(field !== undefined && price !== undefined ? { [field]: price } : {}),
     ...(fields.timeInForce ? { timeInForce: fields.timeInForce } : {}),
   };
+}
+
+/** Whether a carry was typed for this ticket's symbol — the only case it may be offered back. */
+export function carryFits(
+  carry: { readonly symbol: string } | undefined,
+  symbol: string | undefined,
+): boolean {
+  return (
+    carry !== undefined &&
+    carry.symbol !== "" &&
+    carry.symbol === (symbol ?? "").trim().toUpperCase()
+  );
 }
