@@ -348,7 +348,7 @@ condition attached to this compression — altitude never means silence.
 
 **A PR-watch status reply is one line**, plus an optional second for why. A wake with nothing new earns silence. Full rule: [`docs/process/WORKING-AGREEMENTS.md`](docs/process/WORKING-AGREEMENTS.md).
 
-**A finished session archives itself once its PRs are closed out and its follow-ups have a home;** a spawned one does so unasked, one opened by hand asks first, and a failed check means it stays open. Full rule: [`docs/process/WORKING-AGREEMENTS.md`](docs/process/WORKING-AGREEMENTS.md).
+**A finished session archives itself, unasked, once `node scripts/archive-audit.mjs` prints `ARCHIVE: yes`** and the turn asks Eric nothing; a red row keeps it open. Full rule: [`docs/process/WORKING-AGREEMENTS.md`](docs/process/WORKING-AGREEMENTS.md).
 
 **Sessions run in the cloud by default; the laptop is the exception** (Eric, 2026-10-13, after a
 Remote Control session on his laptop went `computer_unreachable` and his phone could not wake it:
