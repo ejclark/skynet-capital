@@ -4,7 +4,7 @@
 //   node scripts/study/readout.mjs --grade <grade.json> --round <dir> --study <name>
 //        --next-area <text> --cost <text> [--owner-shot <path>] [--battle <battle.json>]
 //        [--battle-reason <text>] [--job-map <framer output .json|.md>] [--picture <session dir>]
-//        [--reveal --sealed <dir>] [--root <repo root>] [--ia <IA.md>]
+//        [--reveal --sealed <dir>] [--root <repo root>] [--ia <IA.md>] [--silence <text>]
 //
 // Writes <root>/docs/members/study/<study>/readout.md and copies every frame it shows, small
 // (≤ 100KB JPEG), to <root>/docs/shots/study-<study>/. The layout and words are readout-core.mjs.
@@ -55,7 +55,7 @@ const USAGE =
   "usage: readout.mjs --grade <grade.json> --round <dir> --study <name> --next-area <text> " +
   "--cost <text> [--owner-shot <path>] [--battle <file>] [--battle-reason <text>] " +
   "[--job-map <file>] [--picture <session dir>] [--reveal --sealed <dir>] [--root <dir>] " +
-  "[--ia <IA.md>]";
+  "[--ia <IA.md>] [--silence <text>]";
 
 /** The command line, checked; throws the usage line naming what is missing. */
 export function readoutArgs(argv) {
@@ -78,6 +78,9 @@ export function readoutArgs(argv) {
     sealed: get("--sealed"),
     root: get("--root") ?? process.cwd(),
     ia: get("--ia"),
+    // What happens if the owner says nothing, in plain words (#8037: a stop is a readout with a
+    // default, never an open-ended wait); printed under the one question.
+    silence: get("--silence"),
   };
   const missing = ["grade", "round", "study", "nextArea", "cost"].filter((k) => !opts[k]);
   if (missing.length) throw new Error(`missing ${missing.join(", ")}\n${USAGE}`);
@@ -87,7 +90,43 @@ export function readoutArgs(argv) {
   return opts;
 }
 
-/** Copy a frame as a JPEG of at most FRAME_CAP bytes; macOS `sips` shrinks one that is larger. */
+/**
+ * Shrink one frame to a JPEG whose longer side is `side` px: macOS `sips` on the laptop, else
+ * ImageMagick's `convert` (a cloud session's Linux image has it and no sips — sessions run in the
+ * cloud by default, CLAUDE.md). → true when either wrote `dest`.
+ */
+function shrink(src, dest, side, quality) {
+  const tries = [
+    [
+      "sips",
+      [
+        "-s",
+        "format",
+        "jpeg",
+        "-s",
+        "formatOptions",
+        String(quality),
+        "-Z",
+        String(side),
+        src,
+        "--out",
+        dest,
+      ],
+    ],
+    ["convert", [src, "-resize", `${side}x${side}>`, "-quality", String(quality), `jpeg:${dest}`]],
+  ];
+  for (const [cmd, args] of tries) {
+    try {
+      execFileSync(cmd, args, { stdio: "ignore" });
+      return true;
+    } catch {
+      // not installed here, or it could not read the frame: try the next
+    }
+  }
+  return false;
+}
+
+/** Copy a frame as a JPEG of at most FRAME_CAP bytes; `shrink` makes a larger one smaller. */
 export function copySmall(src, dest) {
   if (statSync(src).size <= FRAME_CAP && /\.jpe?g$/i.test(extname(src))) {
     copyFileSync(src, dest);
@@ -100,27 +139,9 @@ export function copySmall(src, dest) {
     [540, 45],
     [400, 40],
   ]) {
-    try {
-      execFileSync(
-        "sips",
-        [
-          "-s",
-          "format",
-          "jpeg",
-          "-s",
-          "formatOptions",
-          String(quality),
-          "-Z",
-          String(side),
-          src,
-          "--out",
-          dest,
-        ],
-        { stdio: "ignore" },
-      );
-    } catch {
+    if (!shrink(src, dest, side, quality)) {
       throw new Error(
-        `${src} is over ${FRAME_CAP / 1024}KB or not a JPEG, and sips could not shrink it`,
+        `${src} is over ${FRAME_CAP / 1024}KB or not a JPEG, and neither sips nor ImageMagick could shrink it`,
       );
     }
     if (statSync(dest).size <= FRAME_CAP) return dest;
@@ -321,6 +342,7 @@ export function buildReadout(opts) {
     jobMap,
     nextArea: opts.nextArea,
     cost: opts.cost,
+    silence: opts.silence,
     plan,
   });
   writeFileSync(page, markdown);

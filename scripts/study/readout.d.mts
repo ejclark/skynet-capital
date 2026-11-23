@@ -14,6 +14,8 @@ export interface ReadoutOptions {
   reveal?: boolean;
   sealed?: string;
   root: string;
+  ia?: string;
+  silence?: string;
 }
 
 export const FRAME_CAP: number;

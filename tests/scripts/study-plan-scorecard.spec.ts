@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "@rstest/core";
@@ -10,7 +10,7 @@ import {
   planScorecard,
   planScorecardLines,
 } from "../../scripts/study/plan-scorecard.mjs";
-import { buildReadout, readoutArgs } from "../../scripts/study/readout.mjs";
+import { buildReadout, copySmall, FRAME_CAP, readoutArgs } from "../../scripts/study/readout.mjs";
 
 // The cross-feature plan's scorecard rows (#8005): phone task success, lostness and backtracks,
 // and chat sensor recall, read from a round's own sessions so slice 8's re-run prints the same rows.
@@ -156,5 +156,68 @@ describe("the readout carries the plan's rows in its scorecard section", () => {
     expect(card).toBeGreaterThan(markdown.indexOf("## Your items, one by one"));
     expect(card).toBeLessThan(markdown.indexOf("## The design battle-test"));
     expect(markdown).toContain("| Row | phone | desktop |");
+  });
+});
+
+describe("the readout's stop says what silence does (#8037)", () => {
+  it("prints the default under the one question when --silence is given", () => {
+    const FIX = join(import.meta.dirname, "../fixtures/study-grade");
+    const grade = gradeRound(
+      loadRound(gradeArgs(["--sealed", join(FIX, "sealed"), "--round", join(FIX, "round")])),
+    );
+    const root = mkdtempSync(join(tmpdir(), "study-silence-"));
+    const gradePath = join(root, "grade.json");
+    writeFileSync(gradePath, JSON.stringify(grade));
+    const args = ["--grade", gradePath, "--round", join(FIX, "round"), "--study", "made-up-house"];
+    args.push("--next-area", "the kitchen", "--cost", "about 90 short sessions", "--root", root);
+    const quiet = buildReadout(readoutArgs(args)).markdown;
+    expect(quiet).not.toContain("If you say nothing");
+    const said = buildReadout(
+      readoutArgs([
+        ...args,
+        "--silence",
+        "the kitchen round starts on Friday\nunless you hold it.",
+      ]),
+    ).markdown;
+    const q = said.indexOf("## One question");
+    expect(
+      said.indexOf(
+        "**If you say nothing:** the kitchen round starts on Friday unless you hold it.",
+      ),
+    ).toBeGreaterThan(q);
+  });
+});
+
+describe("copySmall — a frame over the cap is shrunk where the session runs", () => {
+  it("turns a large non-JPEG frame into a JPEG under 100KB (sips on a Mac, ImageMagick elsewhere)", () => {
+    // A 24-bit BMP gradient, 1600×1000: ~4.8MB, not a JPEG, so it must be shrunk.
+    const w = 1600;
+    const h = 1000;
+    const row = Math.ceil((w * 3) / 4) * 4;
+    const buf = Buffer.alloc(54 + row * h);
+    buf.write("BM", 0);
+    buf.writeUInt32LE(buf.length, 2);
+    buf.writeUInt32LE(54, 10);
+    buf.writeUInt32LE(40, 14);
+    buf.writeInt32LE(w, 18);
+    buf.writeInt32LE(h, 22);
+    buf.writeUInt16LE(1, 26);
+    buf.writeUInt16LE(24, 28);
+    buf.writeUInt32LE(row * h, 34);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const o = 54 + y * row + x * 3;
+        buf[o] = (x * 255) / w;
+        buf[o + 1] = (y * 255) / h;
+        buf[o + 2] = 128;
+      }
+    }
+    const dir = mkdtempSync(join(tmpdir(), "study-shrink-"));
+    const src = join(dir, "big.bmp");
+    writeFileSync(src, buf);
+    const out = copySmall(src, join(dir, "small.jpg"));
+    const bytes = readFileSync(out);
+    expect(bytes.length).toBeLessThanOrEqual(FRAME_CAP);
+    expect(bytes.subarray(0, 3)).toEqual(Buffer.from([0xff, 0xd8, 0xff]));
   });
 });

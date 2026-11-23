@@ -25,7 +25,9 @@ const range = (w) => (w ? `${pct(w.lo)}–${pct(w.hi)}` : "n/a");
 
 /** The middle value of the numbers given (the mean of the two middle ones on an even count). */
 export function median(values) {
-  const xs = values.filter((v) => typeof v === "number" && Number.isFinite(v)).sort((a, b) => a - b);
+  const xs = values
+    .filter((v) => typeof v === "number" && Number.isFinite(v))
+    .sort((a, b) => a - b);
   if (xs.length === 0) return null;
   const mid = xs.length >> 1;
   const m = xs.length % 2 ? xs[mid] : (xs[mid - 1] + xs[mid]) / 2;
@@ -60,7 +62,8 @@ export function chatRecall(sessions, labels) {
   const byKey = new Map(labels.map((l) => [`${l.session}#${l.n}`, l]));
   const caught = (s, n) =>
     (s.chat ?? []).some(
-      (c) => c.kind === "chat" && c.n >= n && (c.drafts ?? []).some((d) => FRICTION_DRAFTS.has(d.kind)),
+      (c) =>
+        c.kind === "chat" && c.n >= n && (c.drafts ?? []).some((d) => FRICTION_DRAFTS.has(d.kind)),
     );
   let voiced = 0;
   let drafted = 0;

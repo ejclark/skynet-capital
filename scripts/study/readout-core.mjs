@@ -455,10 +455,11 @@ function missed({ grade, titles }) {
   return groups.map(([head, gs]) => `- **${head}:** ${list(gs)}`);
 }
 
-function question({ nextArea, cost }) {
+function question({ nextArea, cost, silence }) {
   return [
     `Scale to **${nextArea}** next (predicted cost: ${cost}), revise the method first, or stop?`,
     "",
+    ...(silence ? [`**If you say nothing:** ${oneLine(silence)}`, ""] : []),
     "If you like, sit one short session yourself on the same tasks.",
   ];
 }
