@@ -447,6 +447,9 @@ node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answe
    A world may name its own instant (`instant`, #8010): put it after anything the pin's code
    serves as already true (a scored claim, a stated view), and the pin's own commit can be its
    corpus.
+   What a member wrote before the instant (a stated view, a drafted playbook) is the input's
+   `writes`, replayed through production's own handlers into production's own stores at each
+   write's time (`worlds/member-stores.mjs`, R&D); a write the handler refuses stops the compose.
 3. Run the framer, then the task author, then the lint. Freeze and hash the tasks.
 4. Thin slice: one member, one task, phone width.
 5. Full round, then grade, then the readout. Add what broke to *Lessons* below.

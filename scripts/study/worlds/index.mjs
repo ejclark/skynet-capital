@@ -7,6 +7,7 @@ import crossToday from "./cross-today.mjs";
 import noAccount from "./no-account.mjs";
 import profileBadDay from "./profile-bad-day.mjs";
 import profileToday from "./profile-today.mjs";
+import { RD_WORLDS } from "./rd-worlds.mjs";
 import workbenchExpiry from "./workbench-expiry.mjs";
 import workbenchFirstDay from "./workbench-first-day.mjs";
 import workbenchToday from "./workbench-today.mjs";
@@ -21,4 +22,5 @@ export const WORLDS = [
   workbenchFirstDay,
   botLoopToday,
   botLoopSteered,
+  ...RD_WORLDS,
 ];
