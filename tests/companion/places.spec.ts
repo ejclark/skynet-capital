@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { COMPANION_SYSTEM_PROMPT } from "../../src/companion/companion-system-prompt.js";
 import {
   BOARD_RANKINGS,
@@ -104,6 +105,23 @@ describe("PLACES — the list itself", () => {
     for (const p of PLACES) {
       expect(p.name.trim()).not.toBe("");
       expect(p.what.trim()).not.toBe("");
+    }
+  });
+
+  it("names a place the top bar has a tab for with the tab's own word (#8005: one place, one word)", () => {
+    const root = readFileSync("app/src/routes/__root.tsx", "utf8");
+    const tabs = [...root.matchAll(/<Link\s+to="([^"]+)"[^>]*>\s*([^<{]+?)\s*<\/Link>/g)].map(
+      (m) => ({
+        path: m[1],
+        label: (m[2] ?? "").replace(/&amp;/g, "&"),
+      }),
+    );
+    expect(tabs.map((t) => t.path)).toEqual(
+      expect.arrayContaining(["/", "/accounts", "/trade", "/research"]),
+    );
+    for (const tab of tabs) {
+      const place = PLACES.find((p) => p.path === tab.path);
+      if (place) expect(place.name).toBe(tab.label);
     }
   });
 
