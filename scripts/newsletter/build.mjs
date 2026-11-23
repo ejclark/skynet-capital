@@ -6,6 +6,7 @@
 // the metric reads unknown, and the rest of the object is unaffected.
 import { flipYield } from "../flip-refusals.mjs";
 import { asksDue, openAsks } from "./asks.mjs";
+import { backlogFlow, backlogStock, rework } from "./backlog.mjs";
 import { decisionsReport } from "./decisions.mjs";
 import { knownGaps, memberChanges } from "./member-changes.mjs";
 import {
@@ -115,6 +116,10 @@ export function buildNewsletter(inputs) {
             ? paceReading(tracker.title, tracker.body)
             : inputs.tracker,
       needsEric: over(inputs.needsEric, (r) => needsEric(r, asOfMs)),
+      // Backlog flow and rework (#8037 slice 1): is the pile shrinking, and what does speed cost.
+      backlogStock: over(inputs.openIssues, (i) => backlogStock(i, asOfMs)),
+      backlogFlow: over(inputs.issueActivity, (i) => backlogFlow(i, w)),
+      rework: over(inputs.prs, (prs) => rework(prs, w, asOfMs, inputs.prFiles)),
       playthroughGaps: knownGaps(inputs.journeyGaps),
       memberChanges: memberChanges(inputs.memberPrs, inputs.memberIssues, w),
       fitness: over(inputs.fitness, (f) => fitness(f.contracts, f.issues, w)),

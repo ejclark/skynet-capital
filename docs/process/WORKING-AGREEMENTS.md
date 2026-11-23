@@ -90,6 +90,29 @@ go get it ("craft the right questions to ask… Having the answers to all the ri
 provides the data points to make an informed decision") before it reaches him. The mechanical step
 is `docs/grind/interrogate.instructions.md` → step 8. [`docs/plans/`](docs/plans/README.md) holds only legacy in-flight plans — never add files there.
 
+## A piling backlog is a defect; evidence is enough to move
+
+**A backlog that piles up is a defect in the system, and evidence is enough to move** (Eric,
+2026-11-23, plan #8037). His words: "If backlog piles up, it's indication of problems that this
+session that directly impedes idevelopment, which includes this session", and "When solutions are
+objectively superior as a whole, that should be good enough to proceed given we have systems in
+place like adversarial reviews to ensure gaps are closed. When we have evidence that a path is
+objectively better based on the knowlege we hvae, lean into autonomously moving forward to minimize
+human in the loop.. the thought is that iterations make incremental improvements which effectively
+brute force us to a better/superior solution over time even if it's less token effecient."
+
+- **The pile is a reading, not a feeling.** On 2026-11-23, 92 of 99 open plans had no `ready` and
+  only 4 issues waited on him: the pile waited on machinery that never ran, not on his judgment.
+  The weekly newsletter prints the stock, the week's inflow against outflow, and the rework below
+  (`metrics.backlogStock` · `backlogFlow` · `rework`, `scripts/newsletter/backlog.mjs`).
+- **When one path is better on the evidence, decide.** A scored call sheet, two independent
+  refuters that fail to overturn it, then ship and report. A taste call ships on the predicted pick
+  and is reviewed live, like every merge (`CLAUDE.md` → *Merge posture*). The irreversible class
+  (`envelope.json`) never moves this way.
+- **Rework is the price, so it is metered.** A revert or a fix-forward within 48h counts against the
+  decision it reworks. The falsifier: by 2026-12-21, rework over 15% of autonomous decisions, or Eric
+  reversing more than 1 in 4 calls decided on evidence, narrows this back to his flip.
+
 ## PR-watch status replies
 
 **A PR-watch status reply is one line, plus an optional second for why** (Eric, 2026-09-04, after a
