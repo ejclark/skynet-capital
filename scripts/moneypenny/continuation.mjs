@@ -44,7 +44,13 @@ import { isMain } from "../is-main.mjs";
 // tests/scripts/moneypenny/continuation.spec.ts.
 import { admitBuild, readInFlight } from "./admission.mjs";
 import { ASSIGN_MARKER, executeAssignments, withAskLease } from "./assignments.mjs";
-import { ERIC, NEEDS_ERIC, withLaneAsk, writeIssueBody } from "./decision-callout.mjs";
+import {
+  ERIC,
+  LANE_RECOVERY,
+  NEEDS_ERIC,
+  withLaneAsk,
+  writeIssueBody,
+} from "./decision-callout.mjs";
 import { ghRest, ghRestAll, sh, withRetry } from "./gh.mjs";
 import { FOOTER, LABELS, labelNames, notPullableReason } from "./labels.mjs";
 import { DEFAULT_MODEL } from "./model-tier.mjs";
@@ -339,6 +345,20 @@ export function pickContinuation(deps = {}) {
   );
 }
 
+/**
+ * The stop's ask, answerable by letter on the Decisions page (#7939): born incomplete, every one
+ * landed under the digest's "callout incomplete" until a session lettered it by hand. Resume is the
+ * prediction because a stop is a guard against a loop, not a verdict on the plan (criterion 10).
+ */
+export const STOP_ASK = {
+  options: [
+    { key: "A", text: "resume: build the next slice", predicted: true, confidence: "medium" },
+    { key: "B", text: "park it: take `ready` off until you say what to fix" },
+  ],
+  onSilence: "nothing resumes; the plan stays parked and assigned to you.",
+  cls: LANE_RECOVERY,
+};
+
 /** Carry out one criterion-10 stop: state the ask, park the plan, then assign and say why.
  *
  *  Order matters and is not symmetry. The ask goes first so the `labeled` event's payload already
@@ -366,7 +386,7 @@ export function executeStopContinuation(
     }
     const body = live.body ?? "";
     const ask = `Resume this plan, or say what to fix first? — ${intent.reason}`;
-    const stated = withLaneAsk(body, ask);
+    const stated = withLaneAsk(body, ask, undefined, STOP_ASK);
     if (stated !== body) writeIssueBody(n, stated, { run, retry });
     retry(() => run("gh", ["issue", "edit", String(n), "--add-label", NEEDS_ERIC]));
     (assign ?? executeAssignments)(

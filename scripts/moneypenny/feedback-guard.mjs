@@ -9,7 +9,7 @@
 // SPLIT OUT ON PURPOSE, same doctrine as plan-claim.mjs/audit.mjs: `visibleOutcome` is the PURE
 // decision (fixture-drivable, no network); `guardFeedbackOutcome` is the impure half the workflow
 // step calls once the build step has already run (or been skipped by the oauth gate).
-import { withLaneAsk, writeIssueBody } from "./decision-callout.mjs";
+import { LANE_RECOVERY, withLaneAsk, writeIssueBody } from "./decision-callout.mjs";
 import { sh } from "./gh.mjs";
 import { ensureLabel, FOOTER, LABELS } from "./labels.mjs";
 
@@ -192,7 +192,7 @@ export function guardFeedbackOutcome(
   const ask =
     "Retry this build, or close the issue? — the session ended and said nothing anyone can see.";
   const body = view.body ?? "";
-  const stated = withLaneAsk(body, ask);
+  const stated = withLaneAsk(body, ask, undefined, STALL_ASK);
   // This step runs once per build, so the alarm below must land even when the body write does not:
   // the label then draws the gap comment, which is the smaller failure.
   try {
@@ -204,6 +204,20 @@ export function guardFeedbackOutcome(
   run("gh", ["issue", "edit", String(n), "--add-label", LABELS.needsEric.name]);
   return { visible: false, handedOff, waitingOnMember };
 }
+
+/**
+ * The stall's ask, answerable by letter on the Decisions page (#7939). Retry is the prediction:
+ * the guard cannot see why the session stopped, and a stall is far more often a crash than a
+ * verdict that the ask is not worth building.
+ */
+export const STALL_ASK = {
+  options: [
+    { key: "A", text: "retry: build it again", predicted: true, confidence: "medium" },
+    { key: "B", text: "close it: not worth building" },
+  ],
+  onSilence: "nothing builds; the issue waits on you with `needs-eric`.",
+  cls: LANE_RECOVERY,
+};
 
 /**
  * Apply `needs-session` when this build handed its remainder to an interactive session (#1357).
