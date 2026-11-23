@@ -53,20 +53,79 @@ function capture() {
   return { res, out };
 }
 
-/** The GET-answering families, in the server's own order. */
+/**
+ * A route family the pin may predate (#8005): the landing page's quests and fast track, the
+ * member's convictions, campaigns, chains and authored plays, the book-wait line and the target
+ * split all landed after the profile pin. Imported dynamically, so an older pin composes as before;
+ * where the module or the name is missing the family claims nothing, and a world that asks for its
+ * reads fails compose with them listed, never a silent hole.
+ */
+async function optional(path, name) {
+  const mod = await import(path).catch(() => ({}));
+  const fn = mod[name];
+  return typeof fn === "function" ? fn : async () => false;
+}
+
+const serveQuestsApi = await optional("../../src/server/quests-route.ts", "serveQuestsApi");
+const serveQuestsTakenApi = await optional(
+  "../../src/server/quests-taken-route.ts",
+  "serveQuestsTakenApi",
+);
+const serveBookWaitApi = await optional("../../src/server/book-wait-routes.ts", "serveBookWaitApi");
+const serveFastTrackApi = await optional(
+  "../../src/server/fast-track-route.ts",
+  "serveFastTrackApi",
+);
+const serveDraftOrderApi = await optional(
+  "../../src/server/draft-order-route.ts",
+  "serveDraftOrderApi",
+);
+const serveMemberConvictionsApi = await optional(
+  "../../src/server/member-convictions-api-routes.ts",
+  "serveMemberConvictionsApi",
+);
+const serveMemberCampaignsApi = await optional(
+  "../../src/server/member-campaigns-api-routes.ts",
+  "serveMemberCampaignsApi",
+);
+const serveMemberChainsApi = await optional(
+  "../../src/server/member-chains-api-routes.ts",
+  "serveMemberChainsApi",
+);
+const serveAuthoredPlaysApi = await optional(
+  "../../src/server/authored-plays-api-routes.ts",
+  "serveAuthoredPlaysApi",
+);
+const serveTargetSplitApi = await optional(
+  "../../src/server/target-split-api-routes.ts",
+  "serveTargetSplitApi",
+);
+
+/** The GET-answering families, in the server's own order (`dashboard-server.ts` →
+ *  `serveWriteApis`, its playbook writes and reads inlined). */
 const FAMILIES = [
   serveTradeApi,
   serveTradeOrdersApi,
   serveOptionPositionsApi,
   serveOptionLifecycleApi,
   serveDeskAlertsApi,
+  serveQuestsApi,
+  serveQuestsTakenApi,
+  serveBookWaitApi,
+  serveFastTrackApi,
   serveAlertDeliveryApi,
   serveWatchlistApi,
   serveOptionApi,
+  serveDraftOrderApi,
   servePlaysApi,
   serveSettingsApi,
   serveSubscriptionsApi,
+  serveMemberConvictionsApi,
+  serveMemberCampaignsApi,
+  serveMemberChainsApi,
+  serveAuthoredPlaysApi,
   serveSavedPositionsApi,
+  serveTargetSplitApi,
   serveLearnApi,
   serveOnboardingApi,
   servePlaybooksApi,

@@ -14,12 +14,14 @@ export const RECORD = ".study-pin.json";
 export const RUN = ".study-run";
 
 const USAGE =
-  "usage: pin.mjs prepare --commit <sha> --dir <abs dir>  |  pin.mjs remove --dir <abs dir>";
+  "usage: pin.mjs prepare --commit <sha> --dir <abs dir> [--worlds <a,b>]  |  pin.mjs remove --dir <abs dir>";
 
 /**
  * `prepare --commit <sha> --dir <abs>` or `remove --dir <abs>`. A commit is a hex object name
  * (7–40 chars) — never a branch, so a pin cannot move under a run. The directory is absolute, so
- * the worktree lands where the caller said whatever the working directory is.
+ * the worktree lands where the caller said whatever the working directory is. `--worlds` composes
+ * and checks only those worlds (an area's own, #8005), so a world another area pinned elsewhere
+ * cannot fail this one's parity; without it, every world.
  * @param {string[]} argv  process.argv.slice(2)
  */
 export function pinArgs(argv) {
@@ -28,7 +30,8 @@ export function pinArgs(argv) {
   const flags = {};
   for (let i = 0; i < rest.length; i += 2) {
     const [flag, value] = [rest[i], rest[i + 1]];
-    if (flag !== "--commit" && flag !== "--dir") throw new Error(`pin: unknown flag ${flag}`);
+    if (!["--commit", "--dir", "--worlds"].includes(flag))
+      throw new Error(`pin: unknown flag ${flag}`);
     if (!value || value.startsWith("--")) throw new Error(`pin: ${flag} needs a value`);
     if (flags[flag]) throw new Error(`pin: ${flag} given twice`);
     flags[flag] = value;
@@ -39,7 +42,7 @@ export function pinArgs(argv) {
   const clean = dir.length > 1 ? dir.replace(/\/+$/, "") : dir;
   if (clean === "/") throw new Error("pin: --dir cannot be the filesystem root");
   if (command === "remove") {
-    if (flags["--commit"]) throw new Error("pin: remove takes --dir only");
+    if (flags["--commit"] || flags["--worlds"]) throw new Error("pin: remove takes --dir only");
     return { command, dir: clean };
   }
   const commit = flags["--commit"];
@@ -47,7 +50,8 @@ export function pinArgs(argv) {
   if (!/^[0-9a-f]{7,40}$/i.test(commit)) {
     throw new Error(`pin: --commit must be a hex sha, not a ref (got ${commit})`);
   }
-  return { command, commit: commit.toLowerCase(), dir: clean };
+  const worlds = flags["--worlds"]?.split(",").filter(Boolean);
+  return { command, commit: commit.toLowerCase(), dir: clean, ...(worlds ? { worlds } : {}) };
 }
 
 /** Is this repo-relative path part of the harness overlay? Only files under `scripts/study/`,
