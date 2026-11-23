@@ -1,13 +1,14 @@
 #!/usr/bin/env node
-// ARCHIVE AUDIT — the done-check behind "archive this session?", run instead of asserted.
+// ARCHIVE AUDIT — the done-check behind a session archiving itself, run instead of asserted.
 //
 // Eric, 2026-10-18, answering that question at the end of a 16-session fan-out: "there should be an
 // audit review … to walk through all the steps to give me confidence that when there is a question
 // to ask about archiving, it's a simple yes". CLAUDE.md → "A finished session archives itself" lists
 // the done-check in prose; nothing ran it and nothing showed him the result, so the question arrived
-// as a claim to trust. This script turns each clause into a row with its evidence, and the ask
-// carries the table: all green → the question is a formality; any red → no question, the session
-// stays open (that clause of the rule is unchanged).
+// as a claim to trust. This script turns each clause into a row with its evidence. No session asks
+// (Eric, 2026-11-23: "requiring me to manually give feedback to close sessions that have
+// autonomously opened is not scalable"): all green → the session archives itself and its final
+// report carries the table; any red → no archive, the session stays open.
 //
 // Self-healing (Eric, same day: "Self healing and improving needs to be part of the process"): a
 // failing row carries its `heal` — the safe, reversible action the session takes itself before
@@ -89,7 +90,7 @@ export function audit({ prs = [], children = [], checkins = [], followups = [], 
   return { ok: rows.every((r) => r.ok), rows, heals: rows.filter((r) => !r.ok && r.heal) };
 }
 
-/** The table the ask carries, then one verdict line. */
+/** The table the final report carries, then one verdict line. */
 export function render({ ok, rows }) {
   const lines = ["| | Check | Evidence |", "|---|---|---|"];
   for (const r of rows) lines.push(`| ${r.ok ? "✅" : "❌"} | ${r.check} | ${r.detail} |`);

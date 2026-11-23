@@ -249,6 +249,37 @@ describe("fitness wiring", () => {
     );
   });
 
+  // #6701: he took himself off the thread a bot assigned him two hours ago, which is his documented
+  // answer, and nothing he still holds carries a fresh bot assignment. The read of threads he holds
+  // alone failed here and mailed him a second time, saying no bot had assigned him in 30 days.
+  it("passes when he left the thread a bot assigned him, and files nothing", () => {
+    const left = {
+      number: 7001,
+      title: "[fitness] bots-running",
+      state: "OPEN",
+      timelineItems: {
+        nodes: [
+          {
+            createdAt: iso(Date.now() - 120 * MIN),
+            actor: { __typename: "Bot", login: "skynet-envoy" },
+            assignee: { login: "ejclark" },
+          },
+        ],
+      },
+    };
+    const stub = fixture({ assignedAgoMs: 31 * 24 * 60 * MIN, fitnessThreads: [left] });
+    const res = run(stub, ["--json", "--report"]);
+    expect(results(res)("owner-assignment-path")).toMatchObject({
+      status: "pass",
+      detail: "a bot assigned the owner 0 days ago",
+    });
+    const gh = calls(stub, "gh");
+    expect(gh).toContain("is:issue label:bug in:title fitness updated:>=");
+    expect(gh).not.toContain("[fitness] owner-assignment-path");
+    // His answer stands: the thread he left is not touched.
+    expect(gh).not.toContain("issues/7001/assignees");
+  });
+
   it("re-assigns a person-made assignment through gh: off, then on, then one line", () => {
     const stub = fixture();
     const self = {

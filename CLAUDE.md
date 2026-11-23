@@ -298,6 +298,8 @@ onto the `ready` label (#3818's mechanism) in #4165.
 
 **Plans live in GitHub issues, never in the repo**, in the capsule shape of [`docs/ISSUES.md`](docs/ISSUES.md). Once a plan is `ready`, the next slice starts without a fresh nod. `needs-eric` means exactly one thing, a decision only he can make; remove it when evidence shows none remains, and do not add it to a fork thin on data. Full rule: [`docs/process/WORKING-AGREEMENTS.md`](docs/process/WORKING-AGREEMENTS.md).
 
+**A piling backlog is a defect; evidence is enough to move** (Eric, 2026-11-23: "If backlog piles up, it's indication of problems"; "When solutions are objectively superior as a whole, that should be good enough to proceed"). One path better on the evidence, two refuters fail: decide, ship, report; the irreversible class stays his, and the weekly newsletter meters the pile and the rework (#8037). Full rule: [`docs/process/WORKING-AGREEMENTS.md`](docs/process/WORKING-AGREEMENTS.md).
+
 **Side quests — Claude generates ideas too.** Hunt questions/clues in *proximity* to the current work;
 log the worthy ones to [`docs/IDEAS.md`](docs/IDEAS.md), tagged `_(src: Eric | Claude · while: <context>)_` —
 source sets the weight (directive vs. proposal-to-prune), `while` is the proximity worth revisiting.
@@ -348,7 +350,7 @@ condition attached to this compression — altitude never means silence.
 
 **A PR-watch status reply is one line**, plus an optional second for why. A wake with nothing new earns silence. Full rule: [`docs/process/WORKING-AGREEMENTS.md`](docs/process/WORKING-AGREEMENTS.md).
 
-**A finished session archives itself once its PRs are closed out and its follow-ups have a home;** a spawned one does so unasked, one opened by hand asks first, and a failed check means it stays open. Full rule: [`docs/process/WORKING-AGREEMENTS.md`](docs/process/WORKING-AGREEMENTS.md).
+**A finished session archives itself, unasked, once `node scripts/archive-audit.mjs` prints `ARCHIVE: yes`** and the turn asks Eric nothing; a red row keeps it open. Full rule: [`docs/process/WORKING-AGREEMENTS.md`](docs/process/WORKING-AGREEMENTS.md).
 
 **Sessions run in the cloud by default; the laptop is the exception** (Eric, 2026-10-13, after a
 Remote Control session on his laptop went `computer_unreachable` and his phone could not wake it:

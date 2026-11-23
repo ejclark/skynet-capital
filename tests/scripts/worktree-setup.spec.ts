@@ -25,6 +25,7 @@ import { hermeticGitEnv } from "../support/hermetic-git.js";
 // with a fake `npm` first on PATH, so no network and no real install is involved.
 const SETUP = resolve("scripts/worktree-setup.sh");
 const MATCH = resolve("scripts/worktree-lock-match.mjs");
+const STRAY = resolve("scripts/worktree-stray-links.mjs");
 
 const lockOf = (version: string) =>
   JSON.stringify({ lockfileVersion: 3, packages: { "": {}, "node_modules/foo": { version } } });
@@ -171,6 +172,7 @@ ln -sf ../foo/bin.js "$dir/.bin/biome"; ln -sf ../foo/bin.js "$dir/.bin/rstest"
     put(join(primary, "app/package-lock.json"), lockOf("1.0.0"));
     mkdirSync(join(primary, "scripts"), { recursive: true });
     copyFileSync(MATCH, join(primary, "scripts/worktree-lock-match.mjs"));
+    copyFileSync(STRAY, join(primary, "scripts/worktree-stray-links.mjs"));
     // its direct-run check is the shared helper (#7046), so the helper travels with it
     copyFileSync(resolve("scripts/is-main.mjs"), join(primary, "scripts/is-main.mjs"));
     git(["add", "-A"], primary);
@@ -254,6 +256,32 @@ ln -sf ../foo/bin.js "$dir/.bin/biome"; ln -sf ../foo/bin.js "$dir/.bin/rstest"
     expect(r.status, r.out).toBe(0);
     expect(existsSync(join(wt, "node_modules/mine/index.js"))).toBe(true);
     expect(existsSync(join(wt, "node_modules/foo"))).toBe(false);
+  });
+
+  // #7339: a stray link in the primary's install (2026-11-10: `app/node_modules/node_modules` pointing
+  // at its own parent) was cloned into every worktree, where it pointed back at the primary's React.
+  it("strips a link in the copy that points out of the worktree, and reports the primary's without editing it", () => {
+    const stray = join(primary, "app/node_modules/node_modules");
+    symlinkSync(join(primary, "app/node_modules"), stray);
+    try {
+      const wt = worktree();
+      const r = setup(wt);
+      expect(r.status, r.out).toBe(0);
+      expect(() => lstatSync(join(wt, "app/node_modules/node_modules"))).toThrow();
+      expect(r.out).toContain(
+        `worktree-setup: removed app/node_modules/node_modules -> ${join(primary, "app/node_modules")}`,
+      );
+      expect(
+        r.out.split("\n").filter((l) => l.includes(`${primary}/app/node_modules holds`)),
+      ).toHaveLength(1);
+      // The copy is still the shared install, its own links intact; the primary is untouched.
+      expectShared(r.out, wt, "app/node_modules", "foo/index.js");
+      expect(readlinkSync(join(wt, "app/node_modules/.bin/biome"))).toBe("../foo/bin.js");
+      expect(readlinkSync(stray)).toBe(join(primary, "app/node_modules"));
+      expect(r.out).not.toMatch(/removed node_modules\//);
+    } finally {
+      rmSync(stray);
+    }
   });
 
   it("is a no-op in the primary checkout", () => {

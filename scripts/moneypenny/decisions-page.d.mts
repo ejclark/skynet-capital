@@ -75,6 +75,7 @@ export function renderPage(input: {
   state: PageState;
   asks: Map<number, { issue: number; title: string; items: AskItem[]; rank: number }>;
   held?: readonly { number: number; title?: string }[];
+  answered?: ReadonlySet<number>;
 }): string;
 export function receiptedIds(comments?: readonly ReplyComment[]): Set<number>;
 export function isDecisionsReply(payload: unknown): boolean;

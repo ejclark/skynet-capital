@@ -126,22 +126,24 @@ function entryLines(e, ask) {
   return out;
 }
 
-/** The page body, from the state and the asks it numbers. `held` is the held PRs. Pure. */
-export function renderPage({ state, asks, held = [] }) {
-  const n = state.entries.length;
+/** The page body, from the state and the asks it numbers. `held` is the held PRs; `answered` the
+ *  asks his reply answered this tick, kept in the state but left off the list (#7957). Pure. */
+export function renderPage({ state, asks, held = [], answered = new Set() }) {
+  const listed = state.entries.filter((e) => !answered.has(e.issue));
+  const n = listed.length;
   const out = [PAGE_MARKER];
   if (!n)
     out.push(
       "**Nothing waits on you.** This page fills when an issue needs a decision only you can make.",
     );
   else {
-    const first = state.entries[0];
+    const first = listed[0];
     out.push(
       `**${n} decision${n === 1 ? " waits" : "s wait"} on you. One reply answers ${n === 1 ? "it" : "all of them"}.**`,
       "",
       `Reply with the number and your letter, like \`1A 2B 3 not now\`, or by issue, like \`${first.issue} A\`. Anything I can't read unambiguously is echoed back, never guessed.`,
     );
-    for (const e of state.entries) out.push("", ...entryLines(e, asks.get(e.issue)));
+    for (const e of listed) out.push("", ...entryLines(e, asks.get(e.issue)));
   }
   if (held.length) {
     const links = held.map((p) => `#${p.number}`).join(" · ");
@@ -298,14 +300,19 @@ export function planDecisions({
       intents.push(answerIntent(reply, read, { page, askMap, issueBy, answered }));
     }
   }
-  const waiting = [...askMap.values()].filter((a) => !answered.has(a.issue));
-  const state = nextState(prior, waiting, now);
+  // An ask answered this tick keeps its number in the STATE until it actually leaves the selector:
+  // nothing has confirmed the answer landed yet, and this tick's sync runs even if the answer
+  // intent throws or finds its lease busy. Retiring it here made the next tick read his unreceipted
+  // reply as "cleared before this was read" and lose the answer (#7957). It is only left off the
+  // page he SEES this tick, so his reply clears what he answered at once.
+  const state = nextState(prior, [...askMap.values()], now);
+  const shown = state.entries.filter((e) => !answered.has(e.issue));
   const ericOn = (page?.assignees ?? []).some((u) => isEric(u?.login ?? u));
-  const hasAsks = state.entries.length > 0;
+  const hasAsks = shown.length > 0;
   const assign = hasAsks && !ericOn;
   const unassign = Boolean(page) && !hasAsks && ericOn;
   let ping = null;
-  const newcomers = state.entries.filter((e) => !state.pinged.includes(e.issue));
+  const newcomers = shown.filter((e) => !state.pinged.includes(e.issue));
   if (assign)
     state.pinged = state.entries.map((e) => e.issue); // the assignment is the push
   else if (hasAsks && newcomers.length) {
@@ -317,7 +324,7 @@ export function planDecisions({
     }
   }
   if (assign) state.pingedAt = now;
-  const body = renderPage({ state, asks: askMap, held });
+  const body = renderPage({ state, asks: askMap, held, answered });
   if (!page) {
     if (hasAsks)
       intents.push({
@@ -325,7 +332,7 @@ export function planDecisions({
         title: PAGE_TITLE,
         body,
         number: 0,
-        why: `${state.entries.length} open ask(s)`,
+        why: `${shown.length} open ask(s)`,
       });
   } else if (body !== page.body || assign || unassign || ping) {
     intents.push({
@@ -335,7 +342,7 @@ export function planDecisions({
       assign,
       unassign,
       ping,
-      why: `${state.entries.length} open ask(s), ${held.length} held PR(s)`,
+      why: `${shown.length} open ask(s), ${held.length} held PR(s)`,
     });
   }
   return { intents, body, state };

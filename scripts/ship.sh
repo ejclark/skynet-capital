@@ -1593,6 +1593,7 @@ cmd_platter_revert() {
 # $4 (`item<TAB>sha12<TAB>why<TAB>issues`). Returns 75 when a verify had no result (the caller stops).
 platter_replay() {
   local old="$1" verify="$2" src="$3" drops="$4" plan="/tmp/ship-platter-replay.$$.tsv"
+  local replay_base; replay_base="$(git rev-parse HEAD)"
   : > "$drops"
   PLATTER_HEAD="$old" platter_items_log "Platter-Amends:" | python3 -c '
 import sys
@@ -1663,15 +1664,13 @@ for record in sys.stdin.read().split("\x1e"):
       printf 'Platter-Verify: %s\n' "$evidence"
       if [ -n "$touched" ]; then for p in $touched; do printf 'Platter-Paths: %s\n' "$p"; done
       else printf 'Platter-Paths: none\n'; fi
-      # An issue a left-off item also worked on is only PART done here, so a later item's `Closes`
-      # for it becomes `Part of` (#7106 on 2026-11-22: two items closed it and one was left off).
-      git log -1 --format=%b "$sha" | HELD_OPEN="$held_open" python3 -c '
-import os, re, sys
-held = set(os.environ["HELD_OPEN"].split())
+      # Issue refs are copied as they stand; platter_hold_open demotes them once every drop is known.
+      git log -1 --format=%b "$sha" | python3 -c '
+import re, sys
 for line in sys.stdin.read().splitlines():
     m = re.match(r"^Platter-(Closes|Refs):\s*#?(\d+)\s*$", line.strip())
     if m:
-        print("Platter-%s: #%s" % ("Refs" if m.group(2) in held else m.group(1), m.group(2)))
+        print("Platter-%s: #%s" % (m.group(1), m.group(2)))
 '
       printf 'Platter-Rebuilt-From: pr %s %s\n' "$src" "${sha:0:12}"
     } > "$msg"
@@ -1679,6 +1678,32 @@ for line in sys.stdin.read().splitlines():
     boarded="$boarded$item "
     echo "ship platter: re-boarded $item as $(git rev-parse --short HEAD)."
   done 3< "$plan"
+  platter_hold_open "$replay_base" "$held_open"
+}
+
+# An issue a left-off item also worked on is only PART done on the rebuilt platter, so every
+# re-boarded `Platter-Closes` for it becomes `Platter-Refs` (the body then says `Part of`). This runs
+# after the whole replay, not per item: a drop can come after the item that closes the same issue
+# is already committed (#7958; #7106 on 2026-11-22 came out right only because its drop came first).
+# Each commit since $1 is re-made with the same tree, parents and author, only its message changed.
+platter_hold_open() {
+  local base="$1" held="$2" c tip msg="/tmp/ship-platter-hold.$$.txt"
+  [ -n "${held// /}" ] || return 0
+  tip="$base"
+  for c in $(git rev-list --reverse "$base..HEAD"); do
+    git log -1 --format=%B "$c" | HELD_OPEN="$held" python3 -c '
+import os, re, sys
+held = set(os.environ["HELD_OPEN"].split())
+for line in sys.stdin.read().rstrip("\n").split("\n"):
+    m = re.match(r"^Platter-Closes:\s*#?(\d+)\s*$", line.strip())
+    print("Platter-Refs: #%s" % m.group(1) if m and m.group(1) in held else line)
+' > "$msg"
+    tip="$(GIT_AUTHOR_NAME="$(git log -1 --format=%an "$c")" \
+      GIT_AUTHOR_EMAIL="$(git log -1 --format=%ae "$c")" \
+      GIT_AUTHOR_DATE="$(git log -1 --format=%aI "$c")" \
+      git commit-tree "$c^{tree}" -p "$tip" -F "$msg")"
+  done
+  git reset --quiet --soft "$tip"
 }
 
 # Comment on one issue or PR, with the Claude Code footer (claude.yml wakes on a member comment

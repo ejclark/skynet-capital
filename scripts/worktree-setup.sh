@@ -77,6 +77,19 @@ bin_links_resolve() {
   [ -z "$(find -L "$1/.bin" -maxdepth 1 -type l 2>/dev/null | head -1)" ]
 }
 
+# The clone copies links as links, so a stray one in the primary's install (#7339: on 2026-11-10
+# `app/node_modules/node_modules` pointed at its own parent) would point every worktree back at the
+# primary's packages — two Reacts, "Invalid hook call" in every app spec. Drop each link in the copy
+# that resolves outside this worktree, one line per link; the primary's install is reported, never
+# edited (docs/DELEGATION.md: report shared state, never repair it silently).
+strip_stray_links() {
+  local dir="$1" copy="$2" removed
+  removed="$(node "$HERE/scripts/worktree-stray-links.mjs" "$copy" "$HERE")" || return 1
+  [ -n "$removed" ] || return 0
+  while IFS= read -r line; do echo "worktree-setup: removed $dir/$line"; done <<<"$removed"
+  echo "worktree-setup: $PRIMARY/$dir holds the link(s) above too — left as is; whoever owns that checkout should delete them."
+}
+
 # Give `dir` (node_modules or app/node_modules) an install: the primary's when it is the right
 # one, else a real `npm ci` of this worktree's lock. A symlink — the old arrangement — is removed
 # (the link only, never its target); a directory holding nothing but a tool-created `.cache` is not
@@ -108,12 +121,16 @@ provide() {
         rm -f "$tmp/.package-lock.json"
         cp -p "$PRIMARY/$dir/.package-lock.json" "$tmp/.package-lock.json"
       fi
-      if bin_links_resolve "$tmp"; then
+      # (provide runs on the right of `||`, where set -e is off: every failure is checked by hand.)
+      if ! strip_stray_links "$dir" "$tmp"; then
+        why="checking the copy of $dir for links out of the worktree failed"
+      elif bin_links_resolve "$tmp"; then
         mv "$tmp" "$dir"
         echo "worktree-setup: $dir from $PRIMARY ($how; lockfile matches; npm ci here cannot touch the primary)."
         return 0
+      else
+        why="the copy of $dir came out with dangling .bin links"
       fi
-      why="the copy of $dir came out with dangling .bin links"
     else
       why="copying $dir from the primary failed"
     fi
