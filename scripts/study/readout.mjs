@@ -46,7 +46,9 @@ import {
   worstSeverity,
 } from "./readout-core.mjs";
 import { FILES, findingView } from "./round-contract.mjs";
+import { planScorecard } from "./plan-scorecard.mjs";
 import { findSessions, readJson, readJsonl } from "./round-files.mjs";
+import { CHAT_LOG } from "./world-chat.mjs";
 
 export const FRAME_CAP = 100 * 1024;
 const USAGE =
@@ -291,6 +293,21 @@ export function buildReadout(opts) {
     : null;
   const ownerShot = opts.ownerShot ? link(insideRoot(root, opts.ownerShot)) : null;
 
+  // The plan's rows (#8005): every session's verdict and path, its chat log, and the aware labels
+  // on what members told Moneypenny (chat-labels.json), when that read has been written.
+  const labelsFile = join(round, FILES.chatLabels);
+  const plan = planScorecard({
+    sessions: sessions.map((s) => ({
+      rel: s.rel,
+      viewport: s.summary.viewport,
+      success: Boolean(s.summary.oracle?.success),
+      lostness: s.summary.metrics?.lostness ?? null,
+      backtracks: s.summary.metrics?.backtracks ?? null,
+      chat: existsSync(join(s.dir, CHAT_LOG)) ? readJsonl(join(s.dir, CHAT_LOG)) : [],
+    })),
+    labels: existsSync(labelsFile) ? readJson(labelsFile) : null,
+  });
+
   const markdown = renderReadout({
     study: opts.study,
     grade,
@@ -304,6 +321,7 @@ export function buildReadout(opts) {
     jobMap,
     nextArea: opts.nextArea,
     cost: opts.cost,
+    plan,
   });
   writeFileSync(page, markdown);
   return { page, shots, markdown };

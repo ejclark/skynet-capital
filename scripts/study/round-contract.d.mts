@@ -20,7 +20,8 @@ export const FILES: Record<
   | "control"
   | "grade"
   | "frozen"
-  | "usage",
+  | "usage"
+  | "chatLabels",
   string
 >;
 export const SESSIONS: string;

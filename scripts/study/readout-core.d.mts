@@ -54,6 +54,8 @@ export interface ReadoutModel {
     | null;
   nextArea: string;
   cost: string;
+  /** The cross-feature plan's rows (#8005, plan-scorecard.mjs); absent on an older readout. */
+  plan?: import("./plan-scorecard.mjs").PlanScorecard | null;
 }
 
 export const SECTIONS: string[];

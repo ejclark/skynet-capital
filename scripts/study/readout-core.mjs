@@ -7,6 +7,7 @@
 // Plain words throughout; key items are shown by id, with their wording only when revealed.
 
 import { basename } from "node:path";
+import { planScorecardLines } from "./plan-scorecard.mjs";
 import { SCALE, severityOf } from "./round-findings.mjs";
 
 export const SECTIONS = [
@@ -332,7 +333,7 @@ const mark = (score, primed) =>
   (score >= 1 ? "yes" : score >= 0.5 ? "partly" : "—") +
   (score >= 0.5 && primed ? " (hinted)" : "");
 
-function scorecard({ grade, titles }) {
+function scorecard({ grade, titles, plan }) {
   const rows = grade.gold.filter((g) => g.tier === "main");
   const c = grade.classes;
   const found = (cls) =>
@@ -398,6 +399,8 @@ function scorecard({ grade, titles }) {
         : `Members succeeded in ${pct(e.successRate)} of ${e.sessions} sessions; middle ease ${e.medianEase ?? "n/a"} of 7.`) +
         " (Counted over every session, not only the tasks you found hard, so this is a rough check, not the plan's calibration test.)",
     );
+  // The cross-feature plan's own rows (#8005), when the readout gathered them (plan-scorecard.mjs).
+  if (plan) lines.push("", ...planScorecardLines(plan));
   return lines;
 }
 
