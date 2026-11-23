@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { communityMilestone } from "../domain/community.js";
+import { parseProblemMatch } from "../domain/known-problems.js";
 import { APP_VERSION } from "./auth/app-version.js";
 import type { Session } from "./auth/session.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
@@ -106,6 +107,7 @@ function assembleInput(
 ): FeedbackInput {
   const area = boundedString(body.area, 60);
   const images = typeof body.images === "string" ? parseImages(body.images) : [];
+  const match = parseProblemMatch(body.match);
   return {
     kind,
     title: boundedString(body.title, 200) ?? "",
@@ -115,6 +117,7 @@ function assembleInput(
     ...(session?.name ? { submitterName: session.name } : {}),
     ...(body.spec !== undefined ? { spec: toSpec(body.spec) } : {}),
     ...(images.length ? { images } : {}),
+    ...(match ? { match } : {}),
   };
 }
 

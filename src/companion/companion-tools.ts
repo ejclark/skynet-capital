@@ -43,6 +43,14 @@ import {
   runResearchAskTool,
 } from "./companion-research-ask.js";
 import {
+  checkDraftMatch,
+  type DraftMatch,
+  KNOWN_PROBLEMS_TOOL_DEF,
+  KNOWN_PROBLEMS_TOOL_NAME,
+  knownProblemsResult,
+  type ReadKnownProblemEvidence,
+} from "./known-problems-tool.js";
+import {
   SUGGEST_TRADES_TOOL_DEF,
   SUGGEST_TRADES_TOOL_NAME,
   type SuggestMarketFor,
@@ -107,6 +115,7 @@ export const COMPANION_TOOL_NAMES = [
   "get_research_on",
   "get_upcoming_events",
   "get_what_members_ask",
+  KNOWN_PROBLEMS_TOOL_NAME,
   "draft_feedback",
   ...FOLLOWUP_TOOL_NAMES,
   ...CONVICTION_TOOL_NAMES,
@@ -118,6 +127,9 @@ export interface FeedbackDraft {
   readonly kind: "bug" | "feature" | "idea";
   readonly title: string;
   readonly details: string;
+  /** The known problem she matched it to (#8005 slice 7), checked by `checkDraftMatch`: the rail
+   *  shows its words on the card and the filing POST carries its row and plan. */
+  readonly match?: DraftMatch;
 }
 
 const FEEDBACK_DRAFT_KINDS = new Set(["bug", "feature", "idea"]);
@@ -189,6 +201,7 @@ const DESKLESS_TOOLS: ReadonlySet<CompanionToolName> = new Set([
   "get_work_status",
   "get_roadmap",
   "get_upcoming_events",
+  KNOWN_PROBLEMS_TOOL_NAME,
   "draft_feedback",
   "draft_research_ask",
 ]);
@@ -302,6 +315,7 @@ export const COMPANION_TOOL_DEFS = [
       },
     },
   },
+  KNOWN_PROBLEMS_TOOL_DEF,
   {
     name: "draft_feedback",
     description:
@@ -315,6 +329,16 @@ export const COMPANION_TOOL_DEFS = [
           type: "string",
           description:
             "What / where in the app / expected vs. actual (bug) or what 'done' looks like (feature, idea), in the member's own words where possible. Facts from this conversation only. End with one line starting 'Done when:' saying what the member would see once it is fixed or built.",
+        },
+        known_problem: {
+          type: "string",
+          description:
+            "Optional: the row (e.g. U1) from get_known_problems this ask matches, so the filing counts as evidence on it. Only a row whose problem is the member's own; omit when none fits.",
+        },
+        plan: {
+          type: "integer",
+          description:
+            "Optional: the open plan this ask belongs to — a number a get_known_problems row or get_roadmap gave you, never a guess.",
         },
       },
       required: ["kind", "title", "details"],
@@ -357,6 +381,9 @@ export interface CompanionDeskDeps {
    *  by subject and app filings by kind (`server/what-members-ask.ts`). Optional — without it
    *  `get_what_members_ask` says "not available", never zero. */
   readonly readWhatMembersAsk?: ReadWhatMembersAsk;
+  /** #8005 slice 7: each IA ledger row's evidence so far — members and filings matched to it, off
+   *  the feedback log, counts only. Optional — without it the rows still answer, uncounted. */
+  readonly readKnownProblemEvidence?: ReadKnownProblemEvidence;
   /** #3952 slice 3: what is coming — the open plan queue grouped Now / Next / Later, same token.
    *  Optional — without it `get_roadmap` says "not available", never guesses. */
   readonly readRoadmap?: ReadRoadmap;
@@ -579,8 +606,12 @@ export async function runCompanionTool(
   const snapshot = participantId ? deps.snapshotFor(participantId) : undefined;
   switch (name as CompanionToolName) {
     case "draft_feedback": {
-      const draft = parseFeedbackDraft(input);
-      if (!draft) return { ok: false, error: "a draft needs a title and details" };
+      const parsed = parseFeedbackDraft(input);
+      if (!parsed) return { ok: false, error: "a draft needs a title and details" };
+      // A named match is checked before the card goes out (#8005 slice 7): what fails is dropped
+      // and named in the result, and the draft still goes.
+      const { match, dropped } = await checkDraftMatch(input, deps.readRoadmap);
+      const draft: FeedbackDraft = match ? { ...parsed, match } : parsed;
       deps.onDraft?.(draft);
       // Advisory only (#1867 slice 1) — a search failure or empty match list never blocks or
       // reshapes the draft; `send` still always files it unmodified. `similar` is left OFF the
@@ -592,6 +623,8 @@ export async function runCompanionTool(
         result: {
           captured: true,
           status: "held in the chat, not sent — the member's own reply 'submit' files it",
+          ...(match ? { knownProblem: match.words } : {}),
+          ...(dropped ? { matchDropped: dropped } : {}),
           ...(similar.length > 0 ? { similar } : {}),
         },
       };
@@ -626,6 +659,8 @@ export async function runCompanionTool(
         : { ok: false, error: "no linked desk" };
     case "get_roadmap":
       return roadmapResult(deps.readRoadmap);
+    case KNOWN_PROBLEMS_TOOL_NAME:
+      return knownProblemsResult(deps.readKnownProblemEvidence);
     case "draft_followup":
       return participantId
         ? runFollowupTool(input, deps.followup)

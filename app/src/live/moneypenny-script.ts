@@ -100,8 +100,12 @@ export function draftCard(draft: {
   readonly kind: string;
   readonly title: string;
   readonly details: string;
+  readonly match?: { readonly words: string };
 }): string {
-  return `[${draft.kind}] ${draft.title}\n\n${draft.details}\n\n— reply "submit" to file it, or "never mind" to drop it.`;
+  // A matched draft says what it adds to (#8005 slice 7): the member sees, before "submit", that
+  // this files as one more voice on a problem already recorded, not a new feature.
+  const known = draft.match?.words ? `\n\nAdds to a known problem: ${draft.match.words}` : "";
+  return `[${draft.kind}] ${draft.title}\n\n${draft.details}${known}\n\n— reply "submit" to file it, or "never mind" to drop it.`;
 }
 
 /** The intro, three beats: who she is, the open question, and the onboarding steer that fits.

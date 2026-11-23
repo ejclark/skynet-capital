@@ -8,10 +8,12 @@
  * the same reason `dashboard-feedback.ts` is: keep that file's own complexity budget
  * (`scripts/arch-scan.mjs`).
  */
+
 import { assembleChain } from "../adapters/alpaca-recommend-chain.js";
 import type { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
 import { resolveCompanionChat } from "../companion/companion-chat.js";
 import type { CompanionDeskDeps } from "../companion/companion-tools.js";
+import { evidenceByRow } from "../domain/known-problems.js";
 import { marketDayKey } from "../domain/market-day.js";
 import type { TradeActivityRecord } from "../observatory/activity-store.js";
 import { rankStructures } from "../options/recommend.js";
@@ -123,6 +125,8 @@ export function setupCompanion(env: NodeJS.ProcessEnv, deps: CompanionSetupDeps)
     // League-wide counts only (#7286 slice 4): the research list and question log on the volume,
     // and the feedback log this boot already holds. Never a name, a key or a member's words.
     readWhatMembersAsk: resolveWhatMembersAsk(env, deps.feedbackLog, (m) => console.error(m)),
+    // #8005 slice 7: each IA ledger row's evidence, off the same log — counts only.
+    readKnownProblemEvidence: async () => evidenceByRow(await deps.feedbackLog.list()),
     ...(findSimilarFeedback ? { findSimilarFeedback } : {}),
     ...(readWorkStatus ? { readWorkStatus } : {}),
     ...(readRoadmap ? { readRoadmap } : {}),

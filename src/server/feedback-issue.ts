@@ -14,6 +14,8 @@
  * treat both as the vaguer one. That is what made the lane's triage rules conservative enough to
  * keep landing ordinary member feedback on Eric's queue.
  */
+
+import { matchLine, type ProblemMatch, problemLabel } from "../domain/known-problems.js";
 import {
   CLAUDE_CODE_LINK,
   memberLabelFor,
@@ -48,6 +50,10 @@ export interface FeedbackInput {
   /** Screenshots the member attached, raw off the form — feedback-service.ts uploads these before
    *  filing and hands `issueBody` the resulting URLs, never these data URLs directly. */
   readonly images?: readonly FeedbackImageInput[];
+  /** The known problem the chat matched this ask to (#8005 slice 7) — a ledger row, an open plan
+   *  or both, re-checked by `parseProblemMatch` on the way in. It earns the row's `ia-<row>`
+   *  label and one line in the body, built from the ledger's words, never the POST's. */
+  readonly match?: ProblemMatch;
 }
 
 /** The issue title a submission gets — the tag mirrors the .github/ISSUE_TEMPLATE forms. */
@@ -68,10 +74,13 @@ export function titleFor(input: FeedbackInput): string {
 export function labelsFor(input: FeedbackInput): readonly string[] {
   const spec = input.spec;
   const memberLabel = input.submitterEmail ? [memberLabelFor(input.submitterEmail)] : [];
-  if (!spec) return [...LABELS[input.kind], ...memberLabel];
+  // A filing that matches a ledger row counts on that row: `label:ia-U1` beside `member-<id>`.
+  const rowLabel = input.match?.row ? [problemLabel(input.match.row)] : [];
+  if (!spec) return [...LABELS[input.kind], ...memberLabel, ...rowLabel];
   return [
     ...LABELS[input.kind],
     ...memberLabel,
+    ...rowLabel,
     "curated",
     ...(spec.needsEric ? ["needs-eric"] : []),
     ...(spec.readiness === "partial" ? ["needs-info"] : []),
@@ -128,6 +137,7 @@ export function issueBody(input: FeedbackInput, imageUrls: readonly string[] = [
   if (input.spec) lines.push(...specBlock(input.spec), "");
   const meta: [string, string][] = [["Kind", FEEDBACK_KIND_LABEL[input.kind]]];
   if (input.area) meta.push(["Where", input.area]);
+  if (input.match) meta.push(["Known problem", matchLine(input.match)]);
   lines.push("| | |", "|---|---|", ...meta.map(([k, v]) => `| **${k}** | ${v} |`));
   // The link closes claude.yml's issues gate, which every app filing reaches as OWNER (#7444).
   lines.push(

@@ -1,0 +1,144 @@
+/**
+ * KNOWN PROBLEMS — the IA ledger's rows (`docs/IA.md` §10: problems in how the app fits together
+ * that no single screen can fix), as the app reads them (#8005 slice 7, the member contribution
+ * loop). The rows come from `ia-ledger.json`, which `scripts/ia-ledger.mjs` generates from §10, so
+ * nothing here parses prose at request time.
+ *
+ * WHY THE CHAT NEEDS THEM (#8005, Eric 2026-11-23: chat-born builds are "a feedback mechanism from
+ * users that we can harvest"): before this, a member's change proposal went to the feedback lane
+ * as a new, unplaced feature, so the fastest path into the app was also the fastest path to a
+ * new clash. Matched against a row, the same proposal lands as evidence on a problem already
+ * recorded, and the row's count of members who asked sits beside its count of screens, where
+ * §10's overhaul rule reads it.
+ *
+ * A MATCH IS A CLAIM THE MEMBER CAN EDIT. It rides the draft to the browser and back on the
+ * filing POST, so the server re-checks it here: a row must be one of the ledger's ids, a plan a
+ * plausible issue number. Neither can carry free text into the public issue — the line the issue
+ * gets is built from the ledger's own words (`matchLine`).
+ *
+ * Pure: no network, no node, so the server, the companion tool and the app read one table.
+ */
+import ledgerFile from "./ia-ledger.json";
+
+export type KnownProblemState = "fixed" | "plan filed" | "ready for a plan" | "waiting";
+
+export interface KnownProblemScreen {
+  /** The redesign screen id (`scripts/redesign/screens.json`). */
+  readonly id: string;
+  readonly name: string;
+  /** Where a member opens it — the redesign route with its fixture account dropped. */
+  readonly route: string;
+}
+
+export interface KnownProblem {
+  /** The ledger row, e.g. "U1". Internal: never said to a member as the problem's name. */
+  readonly id: string;
+  /** The row's short title, as §10 writes it. */
+  readonly problem: string;
+  /** What the problem is, in the row's own words with references stripped; may be empty. */
+  readonly detail: string;
+  readonly screens: readonly KnownProblemScreen[];
+  /** How many screens §10 says hit it — the number its overhaul rule (3 or more) reads. */
+  readonly screensCited: number;
+  /** The issues §10 says own the fix ("filed as", "owned by", "joins"). */
+  readonly plans: readonly number[];
+  readonly state: KnownProblemState;
+  /** The PR or issue a fixed row names, when it names one. */
+  readonly fixedBy?: number;
+}
+
+export const KNOWN_PROBLEMS: readonly KnownProblem[] = (
+  ledgerFile as { readonly rows: readonly KnownProblem[] }
+).rows;
+
+const BY_ID = new Map(KNOWN_PROBLEMS.map((row) => [row.id, row]));
+
+export function knownProblem(id: string): KnownProblem | undefined {
+  return BY_ID.get(id);
+}
+
+/** What a filing says it is evidence on: a ledger row, an open plan, or both. */
+export interface ProblemMatch {
+  readonly row?: string;
+  readonly plan?: number;
+}
+
+const ROW_ID = /^U\d{1,3}$/;
+
+/** An issue number off a draft or a POST — a positive integer, "#123" accepted — or undefined. */
+export function planNumber(raw: unknown): number | undefined {
+  const n = typeof raw === "string" ? Number(raw.replace(/^#/, "")) : raw;
+  return typeof n === "number" && Number.isInteger(n) && n > 0 && n < 1e7 ? n : undefined;
+}
+
+/**
+ * A match off a draft or a POST body, or `undefined` when it names nothing real. A row the
+ * ledger does not hold is dropped rather than guessed; a plan is only checked for shape here (the
+ * companion tool checks it against the roadmap before it ever reaches a draft).
+ */
+export function parseProblemMatch(raw: unknown): ProblemMatch | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const r = raw as { row?: unknown; plan?: unknown };
+  const rowId = typeof r.row === "string" ? r.row.trim().toUpperCase() : "";
+  const row = ROW_ID.test(rowId) && BY_ID.has(rowId) ? rowId : undefined;
+  const plan = planNumber(r.plan);
+  if (!(row || plan)) return undefined;
+  return { ...(row ? { row } : {}), ...(plan ? { plan } : {}) };
+}
+
+/** The label a matched filing carries, so GitHub's own search counts a row's evidence
+ *  (`label:ia-U1`) beside the `member-<id>` label that says who asked. */
+export const problemLabel = (row: string): string => `ia-${row}`;
+
+/** The plan a match points at: the one it names, else the row's own when it has exactly one. */
+export function planFor(match: ProblemMatch): number | undefined {
+  if (match.plan) return match.plan;
+  const plans = match.row ? (knownProblem(match.row)?.plans ?? []) : [];
+  return plans.length === 1 ? plans[0] : undefined;
+}
+
+/**
+ * The filed issue's line for a match, built from the ledger's own words — never from text the
+ * POST carried. The `#N` reference puts the filing on the plan's own timeline, so the plan sees
+ * the evidence arrive without anyone copying it there.
+ */
+export function matchLine(match: ProblemMatch): string {
+  const row = match.row ? knownProblem(match.row) : undefined;
+  const plan = planFor(match);
+  const parts = [
+    ...(row ? [`${row.id} in docs/IA.md §10: ${row.problem}`] : []),
+    ...(plan ? [`plan #${plan}`] : []),
+  ];
+  return `${parts.join(" · ")}. Evidence on a known problem, not a new feature.`;
+}
+
+/** What the draft card and the chat say: the problem in plain words, and its plan. */
+export function matchWords(match: ProblemMatch): string {
+  const row = match.row ? knownProblem(match.row) : undefined;
+  const plan = planFor(match);
+  const what = row ? (row.detail ? `${row.problem}: ${row.detail}` : row.problem) : undefined;
+  return [what, plan ? `plan #${plan}` : undefined].filter(Boolean).join(" · ");
+}
+
+export interface ProblemEvidence {
+  /** Distinct members who filed against the row, by their opaque `member-<id>` key. */
+  readonly members: number;
+  readonly filings: number;
+}
+
+/** Each row's evidence from filings that carry a match — keyed by the opaque member id the
+ *  `member-<id>` label carries, never a login or a name. Rows nobody matched are absent. */
+export function evidenceByRow(
+  filings: readonly { readonly opaqueMemberId: string; readonly match?: ProblemMatch }[],
+): ReadonlyMap<string, ProblemEvidence> {
+  const by = new Map<string, { members: Set<string>; filings: number }>();
+  for (const f of filings) {
+    const row = f.match?.row;
+    if (!(row && BY_ID.has(row))) continue;
+    const seen = by.get(row) ?? { members: new Set<string>(), filings: 0 };
+    seen.members.add(f.opaqueMemberId);
+    seen.filings += 1;
+    by.set(row, seen);
+  }
+  return new Map([...by].map(([row, e]) => [row, { members: e.members.size, filings: e.filings }]));
+}

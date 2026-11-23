@@ -195,6 +195,7 @@ describe("no desk linked — only the draft hand-off is on offer, never a desk l
       "get_work_status",
       "get_roadmap",
       "get_upcoming_events",
+      "get_known_problems",
       "draft_feedback",
       "draft_research_ask",
     ]);
@@ -220,6 +221,7 @@ describe("no desk linked — only the draft hand-off is on offer, never a desk l
       "get_work_status",
       "get_roadmap",
       "get_upcoming_events",
+      "get_known_problems",
       "draft_feedback",
       "draft_research_ask",
     ]);

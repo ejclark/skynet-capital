@@ -103,6 +103,8 @@ describe("behavioral: the dispatcher refuses every order-shaped or adversarial a
       "draft_feedback",
       "draft_followup",
       "draft_research_ask",
+      // #8005 slice 7: the IA ledger's rows and their counts; reads only.
+      "get_known_problems",
       "get_my_convictions",
       "get_my_curriculum_progress",
       "get_my_positions",
