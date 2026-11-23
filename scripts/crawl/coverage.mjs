@@ -495,16 +495,18 @@ function modulePath(mod) {
  * The screens the code has, read from the repo: the route tree, each route's sections, the
  * chapters and windows, the hand-listed server pages and shell parts (each needle checked), and
  * the triage index. Exported for the cohesion census (`cohesion.mjs`), which resolves a link to the
- * screen it lands on with the same `landingOf`.
+ * screen it lands on with the same `landingOf`, and through it for the placement check.
  */
-export function readScreens() {
+export function readScreens({ needles = true } = {}) {
   const routes = parseRouteTree(readFileSync(ROUTE_TREE, "utf8"));
   const sections = new Map();
   for (const r of routes) {
     const list = r.modules.flatMap((m) => sectionsOf(modulePath(m), readOrUndefined));
     if (list.length > 0) sections.set(r.path, list);
   }
-  for (const p of [...SERVER_PAGES, ...SHELL_PARTS]) {
+  // `needles: false` is the placement check's base tree (cohesion.mjs memberFacing): a page this
+  // branch adds to the hand list has no needle there yet, and that is the branch's news, not a fault.
+  for (const p of needles ? [...SERVER_PAGES, ...SHELL_PARTS] : []) {
     if (p.file && !readFileSync(p.file, "utf8").includes(p.needle)) {
       throw new Error(`coverage: ${p.screen} — ${p.file} no longer contains ${p.needle}`);
     }

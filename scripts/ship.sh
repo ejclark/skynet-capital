@@ -590,6 +590,11 @@ EOF_SHOTS
   # measured precision and the number that removes this line.
   node scripts/dupe-scan.mjs --diff "origin/$base" 2>/dev/null || true
 
+  # IA placement advisory (#8005 slice 2): every member-facing addition names the IA group it
+  # extends, or is flagged homeless while placing it is one triage line or one docs/IA.md cite.
+  # Silent past one line when the branch adds nothing a member sees; never blocks the push.
+  node scripts/crawl/placement.mjs --base "origin/$base" 2>/dev/null || true
+
   # Braces are load-bearing: stock macOS bash (3.2) reads the ellipsis bytes as identifier
   # characters, so a bare $branch… is the undefined variable "branch…" and set -u kills the run
   # right before the push. Brace any variable followed by a non-ASCII character in this file.

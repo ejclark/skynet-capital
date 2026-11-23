@@ -186,7 +186,7 @@ function collectNames(cov, homeOf, files) {
   }
   for (const p of parsePlaces(read(PLACES)))
     add(p.name, placeOf(p.path, {}, ctx), "Moneypenny's place name");
-  return labelCollisions(names);
+  return names;
 }
 
 // ── 4. homeless ─────────────────────────────────────────────────────────────────────────────────
@@ -252,6 +252,37 @@ function servedNotRendered(appSrc, companionSrc) {
 
 // ── the run ─────────────────────────────────────────────────────────────────────────────────────
 
+/** Every `.tsx` under app/src with its text and its links — the names pass's and row 3's input. */
+const linkFiles = (appFiles) =>
+  appFiles
+    .filter((f) => f.endsWith(".tsx"))
+    .map((file) => {
+      const src = read(file);
+      return { file, src, links: scanLinks(src) };
+    });
+
+/**
+ * The member-facing set, read from the tree under the current directory with no git: every screen
+ * the code has (a route, a section, a chapter, a landing window, a server page, a shell part) with
+ * its triage verdict and IA home, and every name the names pass reads (a tab or door that names a
+ * place, a section, window or chapter label, Moneypenny's place names). The placement check
+ * (`placement.mjs`, #8005 slice 2) diffs this between a branch and its base, so a base tree that
+ * `git archive` unpacked reads the same way: `needles: false` skips coverage's proof that each
+ * hand-listed page still exists, which a base older than the list cannot pass.
+ */
+export function memberFacing({ needles = true } = {}) {
+  const cov = readScreens({ needles });
+  const homeOf = homesOf(cov.triageRows);
+  const names = collectNames(cov, homeOf, linkFiles(walk("app/src", isSource)));
+  const screens = cov.screens.map((s) => ({
+    key: s.key,
+    path: s.path,
+    home: homeOf.get(s.key),
+    verdict: cov.triage.get(s.key)?.verdict,
+  }));
+  return { screens, names };
+}
+
 export function measure() {
   const ia = read(IA);
   checkHomes(ia);
@@ -259,14 +290,9 @@ export function measure() {
   const triageRows = JSON.parse(read(TRIAGE));
   const homeOf = homesOf(triageRows);
   const appFiles = walk("app/src", isSource);
-  const files = appFiles
-    .filter((f) => f.endsWith(".tsx"))
-    .map((file) => {
-      const src = read(file);
-      return { file, src, links: scanLinks(src) };
-    });
+  const files = linkFiles(appFiles);
 
-  const labels = collectNames(cov, homeOf, files);
+  const labels = labelCollisions(collectNames(cov, homeOf, files));
   const concepts = conceptHomes(parseConcepts(ia), homeOf);
   const multiHome = concepts.filter((c) => c.homes.length > 1);
   const drops = keyDrops(files, { appLevel: new Set([ROOT]) });

@@ -56,6 +56,21 @@ describe("triageFeedbackDecision — the backlog gate for freshly-filed feedback
     );
   });
 
+  // #8005: a filing Moneypenny matched to a known IA problem carries `ia-<row>`; the row's plan owns
+  // the fix, so the filing counts as evidence on it instead of starting a second build.
+  it("keeps a curated filing matched to a known problem in Backlog, as evidence on its row", () => {
+    expect(triageFeedbackDecision({ labels: ["feedback", "curated", "ia-U3"] })).toEqual({
+      ready: false,
+      reason: "evidence on known problem U3 — its plan owns the fix; stays in Backlog",
+    });
+  });
+
+  it("still lets a person's bug + fast-track ready a matched filing", () => {
+    expect(
+      triageFeedbackDecision({ labels: ["feedback", "bug", "fast-track", "ia-U3"] }),
+    ).toMatchObject({ ready: true });
+  });
+
   it("defaults to Backlog with no labels at all", () => {
     expect(triageFeedbackDecision()).toMatchObject({ ready: false });
   });
