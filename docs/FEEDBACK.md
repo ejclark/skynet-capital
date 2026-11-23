@@ -119,7 +119,11 @@ refuters on a clear call — and posts one of three outcomes on the issue
 | --- | --- | --- |
 | Clear, and neither refuter could refute it | `ready` | *Up next* (the admission gate still decides when it starts) |
 | Only the acceptance criteria or the size fell short | `needs-info` + plain questions | *Waiting on your answer*. Their **Follow up** re-runs the check automatically |
-| A fork only Eric settles, the protected class, a blocker, or a refuter said no | none, a plain note | *Filed — waiting to be picked*: nothing is asked of the member |
+| A fork only Eric settles, the protected class, a blocker, a new place no IA group holds, or a refuter said no | none, a plain note | *Filed — waiting to be picked*: nothing is asked of the member |
+| Never judged: it carries `ia-<row>`, a known problem fixed as a whole, never one filing at a time | none, and no note | *Filed — waiting to be picked*, then *Fixed — try it* if a fix for that problem ships (#8026) |
+
+The judge's fifth check, `placed`, records the IA home the filing extends (`docs/IA.md` §5) in the
+posted check table, so the build starts from a named home (#8005 slice 2).
 
 Each session runs on its own runner with a read-only token, reads only the thread's member and bot comments, and returns one JSON blob; the post script, on a fresh runner, is the one writer and builds every posted line itself. It runs
 for filings carrying a `member-` label, not `curated` ones (the coach path above), and only while the

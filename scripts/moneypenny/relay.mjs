@@ -158,7 +158,7 @@ function statesRemainder(text) {
  * session that built it took the last slice and left `next-slice` on the issue. The relay filed a
  * capture for work that had shipped a minute earlier, and it took a judge and two refuters to prove
  * it false. The house contract already says how to tell: a build PR says `Closes #n` only on the
- * FINAL slice and `Part of #n` on any earlier one (.github/prompts/feedback-build.md, step 5). So a
+ * FINAL slice and `Part of #n` on any earlier one (.github/prompts/feedback-build.md, step 7). So a
  * merged PR whose body closes `#n`, merging just before `#n` closed, IS the remainder landing.
  *
  * WHY OBSERVE, NOT "THE BUILDER CLEARS IT". docs/MONEYPENNY.md asks the shipping session to remove

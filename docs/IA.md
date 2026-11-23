@@ -1158,7 +1158,7 @@ scenarios asked; 33–36 were added by the red passes; 37 by plan #5496.
     (`statusFromIssue` maps a closed issue to shipped unless it was closed as not planned or still
     carries `next-slice`, `src/domain/feedback-status.ts:51-58`, stamped with
     the running `APP_VERSION`, `feedback-api-routes.ts:69-76`; Moneypenny closes on the push to main
-    before the deploy, `feedback-build.md` → step 1 *Receipt*, and a rollback never reopens it).
+    before the deploy, `feedback-build.md` → step 2 *Receipt*, and a rollback never reopens it).
 32. **The guest list and claims as IA entities** — `GuestEntry` (`admin.ts:9`, `GET /api/admin/invite`)
     and `LinkedAccount`/`ClaimView` (`admin.ts:19`, `GET/POST /api/admin/claim`) render in Settings'
     Guest list and Unclaimed accounts (`settings.tsx:421,441`) with no §2 row; `/api/onboarding`
