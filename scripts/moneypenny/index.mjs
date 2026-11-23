@@ -66,6 +66,7 @@ import {
   readOpenIssues,
   readOpenPlans,
   recheckPullable,
+  recountAfterMark,
   sweepHold,
   waitingPlans,
 } from "./admission.mjs";
@@ -329,6 +330,20 @@ export function releaseBuild(slug) {
 }
 
 /**
+ * THE RECOUNT AFTER THE MARK (#7316, `recountAfterMark` in admission.mjs). Every claim lane runs it
+ * after `in-progress` goes on and before the build gets its `number=`: a claim that finds itself
+ * past the cap takes the mark and the lease back off and leaves `ready` on, so the retry sweep
+ * starts it once a seat frees. `admission` carries the gate's injected reads, for specs.
+ */
+function keepSeat(issue, slug, admission = {}) {
+  const seat = recountAfterMark(issue, admission);
+  if (seat.keep) return seat;
+  setInProgress(issue.number, false);
+  releaseClaim(slug);
+  return seat;
+}
+
+/**
  * READ-ONLY peek at a lease — never claims, never reclaims a stale one, never writes anything.
  * Exists so a caller that only wants to SKIP work Moneypenny already holds (e.g. `/work-issues`,
  * which checks for an open PR but had no visibility into a claim taken before any PR exists) can
@@ -408,12 +423,15 @@ export function claimFeedback(
     console.log(`::notice::not building feedback #${issue.number} — ${result.reason}`);
     return result;
   }
+  // #3960: the board's In Progress column reads this label; the release path takes it back off.
+  // #7316: marked BEFORE the build gets its number, so the recount can still give the seat back.
+  setInProgress(issue.number, true);
+  const seat = keepSeat(issue, `feedback-${issue.number}`, admission);
+  if (!seat.keep) return { claimed: false, reason: seat.reason };
   const tier = modelTier(issue.body ?? "");
   const out = process.env.GITHUB_OUTPUT;
   if (out) appendFileSync(out, `number=${issue.number}\nmodel=${tier.model}\n`);
   console.log(`::notice::claimed feedback issue #${issue.number} — building in this run`);
-  // #3960: the board's In Progress column reads this label; the release path takes it back off.
-  setInProgress(issue.number, true);
   adoptFeedbackLabel(issue);
   console.log(`::notice::feedback #${issue.number} — model tier: ${tier.model} — ${tier.reason}`);
   return { ...result, number: issue.number, model: tier.model };
@@ -495,6 +513,12 @@ export function claimFeedbackReply(
     console.log(`::notice::not resuming feedback #${issue.number} — ${result.reason}`);
     return result;
   }
+  setInProgress(issue.number, true);
+  const seat = keepSeat(issue, `feedback-${issue.number}`, admission); // #7316
+  if (!seat.keep) {
+    unpark(issue.number, intent.answered, edit); // a withdrawal is a refusal: same contract
+    return { claimed: false, reason: seat.reason };
+  }
   const reply = ctx.payload?.comment?.id ?? "";
   // The reply's timestamp is the baseline #1028's stall guard needs on this path: "more than one
   // comment" is trivially true on an issue that already holds a receipt, a question and an answer.
@@ -510,7 +534,6 @@ export function claimFeedbackReply(
   console.log(
     `::notice::resuming feedback #${issue.number} from reply ${reply} — building in this run`,
   );
-  setInProgress(issue.number, true);
   unpark(issue.number, intent.answered, edit);
   console.log(`::notice::feedback #${issue.number} — model tier: ${tier.model} — ${tier.reason}`);
   return { ...result, number: issue.number, model: tier.model, reply, replyAt };
@@ -765,15 +788,18 @@ export function claimPlan(
   // Opus (no plan carries a `skynet-spec` block), which is right for a first slice off a brief and
   // wrong for one whose scope is already written in the state block. `ctx.continuation` is set only
   // by `claimNext`'s continuation branch — never by a label or comment event.
+  // Before `in-progress`: the go outlives this slice, so continuation can carry the next one — and
+  // a slice the recount withdraws stays `ready` for the sweep, as a refused flip does (#5334).
+  recordPlanFlip(ctx, issue, edit);
+  setInProgress(issue.number, true); // #3960 — same in-flight signal as the feedback claim
+  const seat = keepSeat(issue, `plan-${issue.number}`, admission); // #7316
+  if (!seat.keep) return { claimed: false, reason: seat.reason };
   const tier = ctx.continuation
     ? { model: CONTINUED_MODEL, reason: "continued slice — below the top tier (criterion 9)" }
     : modelTier(issue.body ?? "");
   const out = process.env.GITHUB_OUTPUT;
   if (out) appendFileSync(out, `number=${issue.number}\nmodel=${tier.model}\n`);
   console.log(`::notice::claimed plan issue #${issue.number} — building in this run`);
-  // Before `in-progress`: the go outlives this slice, so continuation can carry the next one.
-  recordPlanFlip(ctx, issue, edit);
-  setInProgress(issue.number, true); // #3960 — same in-flight signal as the feedback claim
   console.log(`::notice::plan #${issue.number} — model tier: ${tier.model} — ${tier.reason}`);
   return { ...result, number: issue.number, model: tier.model };
 }
