@@ -153,15 +153,16 @@ comments can never resume this lane — the gate ignores anything carrying the C
    *The state block*, #3765), read that block before building and report into it on finish (the
    slice's new state and one dated log line, edited in place) as well as posting the receipt here.
 1. **Name the IA home before you build** (#8005 slice 2: every build, chat-born ones included).
-   - **A filing carrying `ia-<row>` is evidence, not a build.** Moneypenny matched it to a row of
-     the IA ledger (`docs/IA.md` §10), and that row's plan owns the fix; a standalone patch beside
-     it is the clash plan #8005 exists to stop. Comment in plain words (never the row code) that it
-     counts on a problem already being fixed and reads *Fixed — try it* in the app when that fix
-     ships, take `ready` off, and stop. The one exception is `bug` + `fast-track`, a person's call.
+   - **A filing carrying `ia-<row>` was readied by a person.** Moneypenny matched it to a row of
+     the IA ledger (`docs/IA.md` §10), and no automatic path readies such a filing: the row is
+     fixed as a whole, never one filing at a time. A person's `ready` (or `fast-track`) is their
+     call, so build it, and name the row in the PR body (`Part of` the row's plan when it has one)
+     so the fix counts there.
    - **Otherwise, find the home the filing extends.** The filing check's comment records it in its
      `placed` row; a coach-shaped (`curated`) filing has no such comment, so read `docs/IA.md` §5
-     and `docs/members/triage.json` yourself. Say the group in your receipt ("this extends the
-     workbench").
+     and the `home` values in `docs/members/triage.json` yourself (`book` · `loop` · `workbench` ·
+     `rd` · `ladder` · `me` · `league` · `shell` · `landing` · `pre-auth`). Say the home in your
+     receipt ("this extends the workbench").
    - **A new place no group holds is the one placement stop.** If the narrowest honest build still
      adds a page, section, tab, door or chat destination that no §5 group holds, or that two could
      each claim, take the **Needs Eric** row: two or three candidate groups as named options, your

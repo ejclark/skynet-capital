@@ -44,14 +44,16 @@ Record the five checks, each with `pass` and one line of `evidence`:
    any `"protected": true` fails.
 4. **notBlocked** — no open blocking issue (a native blocker, "blocked by #N" with #N open, or an
    open parent whose slice comes first).
-5. **placed** — the build has an IA home before it is built (#8005 slice 2). Read
-   [`docs/IA.md`](../../docs/IA.md) §5 (the groups) and `docs/members/triage.json` (each screen's
-   `home`). Pass, and start the evidence with what you found: `extends <group> (§5.N)` when the ask
-   adds or changes something inside one group's screens, or `no new place` when it fixes something
-   on a screen that already has a home. Fail when the ask adds a place a member would see (a page, a
-   section, a tab, a door or a chat destination) that no §5 group holds, or that two groups could
-   each claim: where it lives is Eric's call, so it is never queued unattended. Name the candidate
-   groups in the evidence. (A filing carrying `ia-<row>` never reaches you: it is evidence on that
+5. **placed** — the build has an IA home before it is built (#8005 slice 2). An IA home is one of
+   the `home` values `docs/members/triage.json` gives a screen: `book` ([`docs/IA.md`](../../docs/IA.md)
+   §5.1), `loop` (§5.2), `workbench` (§5.3), `rd` (§5.4), `ladder` (§5.5), `me` (§5.6), `league`
+   (§5.7), `shell` (§5.8, the every-page parts), `landing` (§5.9, the landing page) or `pre-auth` (a
+   page before sign-in). Pass, and start the evidence with what you found: `extends <home> (§5.N)`
+   when the ask adds or changes something on that home's screens, or `no new place` when it fixes
+   something on a screen that already has a home. Fail only when the ask adds a place a member
+   would see (a page, a section, a tab, a door or a chat destination) that none of those homes
+   holds, or that two could each claim: where it lives is Eric's call, so it is never queued
+   unattended. Name the candidate homes in the evidence. (A filing carrying `ia-<row>` never reaches you: it is evidence on that
    IA ledger row, whose plan owns the fix.)
 
 Then write, as JSON to the output file:

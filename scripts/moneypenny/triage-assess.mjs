@@ -257,10 +257,13 @@ const checkTable = (judged) => {
   ].join("\n");
 };
 
+// Never a promise of a fix (known-problems-tool.ts): 13 of the ledger's 17 rows had no plan when
+// this was written, so it says what happens IF a fix ships, not that one will.
 const EVIDENCE =
-  "**This matches a problem that is already being fixed, so your filing counts there.** It is " +
-  "not built on its own: the fix for the whole problem lands through its own plan, and this " +
-  "filing reads *Fixed — try it* in the app when that ships. Nothing is needed from you.";
+  "**This matches a problem already on the list of known problems, so your filing counts " +
+  "there.** It is not built on its own: that problem is fixed as a whole, never one filing at a " +
+  "time. If a fix for it ships, this filing reads *Fixed — try it* in the app. Nothing is needed " +
+  "from you.";
 
 const QUEUED =
   "**Queued to build.** This filing passed the automatic check, so it is now in line. " +
@@ -358,6 +361,7 @@ export function liveSkip(issue, mode = "filing") {
   const names = labelNames(issue.labels);
   if (names.includes(LABELS.ready.name)) return "already carries ready";
   if (names.includes(LABELS.inProgress.name)) return "in progress";
+  if (names.some((n) => KNOWN_PROBLEM.test(n))) return "matched to a known problem since judging";
   const parked = parkedBy(names).filter((l) => mode !== "followup" || l !== LABELS.needsInfo.name);
   if (parked.length) return `parked since judging: ${parked.join(", ")}`;
   if (mode === "followup" && !names.includes(LABELS.needsInfo.name)) {

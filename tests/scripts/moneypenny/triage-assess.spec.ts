@@ -282,6 +282,10 @@ describe("assemble + planWrite — the one write each outcome authorizes", () =>
 });
 
 describe("liveSkip — the state at post time still matches what was judged", () => {
+  it("skips a filing matched to a known problem after it was judged", () => {
+    expect(liveSkip(issue([...MEMBER, "ia-U4"]))).toBe("matched to a known problem since judging");
+  });
+
   it("skips closed, ready, in-progress or newly parked filings", () => {
     expect(liveSkip(issue(MEMBER))).toBeNull();
     expect(liveSkip(issue(MEMBER, { state: "closed" }))).toMatch(/closed/);
