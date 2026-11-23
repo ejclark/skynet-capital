@@ -39,6 +39,11 @@ export function fromWords(args: {
   strings: { routes?: Record<string, Record<string, { text: string; viewports: string[] }[]>> };
 }): Finding[];
 export function fromInstruments(raw: Record<string, unknown>[]): Finding[];
+export function fromChat(session: {
+  member: string;
+  viewport: string;
+  records: Record<string, unknown>[];
+}): Finding[];
 export function findingId(f: Pick<Finding, "class" | "surface" | "what">): string;
 export function collectFindings(groups: Finding[][]): {
   findings: Collected[];

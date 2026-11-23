@@ -301,6 +301,34 @@ node scripts/study/drive.mjs --run <run-dir> --world <world> --viewer <viewer> -
   `scripts/study/tasks/proof/picker-*.json`. Date and time inputs get no stand-in yet: none sits on
   the profile's routes.
 
+## Moneypenny in a world (#8005)
+
+A world composed with `chat: true` puts Moneypenny's chat in a member's hands. Production's own
+route and engine answer it (`serveCompanionApi`, `createCompanionChat`) in a child process pinned to
+the world's instant, over the world's book (`world-chat-server.mjs`); only the wire to the model
+differs (`chat-transport.mjs`): a sealed call on the model production asks for, read as a stream
+and stopped at her first tool calls, exactly where the API would hand them back. The engine runs
+the tools over the world and asks again. Drafts are never filed: a sent filing is told it was
+"filed as #90001…" and recorded (`world-chat.mjs`), and each filing she drafts becomes a finding
+of class `chat` — its own column, never blind (round-contract.mjs).
+
+```sh
+node --import tsx scripts/study/world-chat.mjs --probe --run <compose dir> --world <name> \
+  --viewer <who> --out <fresh dir> [--page <path>] [--stub <dir>] --say "<message>" [--say …]
+```
+
+- **Live, recorded, replayable.** A session's chat calls land in its `requests/` beside the
+  member's (`moneypenny-NNN.json`), so `usage.json` counts them and a resumed session replays what
+  it paid for; a stubbed dry run answers from `<stub>/moneypenny/<n>.json`. `drive.mjs --chat
+  live|off|stub:<dir>` overrides the default (the actor's mode; a scripted run spends no model).
+- **What she cannot do in a world**, said rather than faked: the lookups production fills from
+  GitHub or its volume (work status, roadmap, similar filings, what members ask, research
+  questions, sized suggestions) answer "not available" (`worlds/shell-artifacts.mjs`).
+- **Proof, 2026-11-23** (cross-today, eric): she called `get_my_positions` and answered with the
+  world's book (MSFT 45, AAPL 60, $61,480 cash); asked why the bot sold its put, she read positions
+  and round trips, said she could not see the bot's account, and on "yes" drafted a filing that
+  landed in `chat.jsonl` as a `chat` finding.
+
 ## Running a round
 
 `scripts/study/round.mjs` runs every blind role of one round, in order, against a pinned build.
@@ -517,3 +545,8 @@ node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answe
   on the shifted Tuesday CRWV sat inside its print blackout, so the real wheel sold nothing and its
   sale moved one session; the quests read a VIX file and a year of SPY and QQQ the world did not
   hold. Every gap showed up as a compose refusal or a parity "not judged", never as a finding.
+- 2026-11-23 · **a CLI call cannot hand a tool back.** Moneypenny's first world turn said "the
+  lookup failed twice": the model called `get_my_positions` natively, and `claude -p` refused a tool
+  it does not define. Asking for lookups inside the structured answer did not help — she never
+  used the field. The transport now reads the stream and stops at her first native tool calls, as
+  the API would, and the engine runs them (`chat-transport.mjs → toolCatchingCall`).

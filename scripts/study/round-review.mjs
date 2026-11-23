@@ -10,6 +10,7 @@ import { writeControl } from "./round-control.mjs";
 import {
   collectFindings,
   fromAnalyst,
+  fromChat,
   fromExpert,
   fromInstruments,
   fromWords,
@@ -26,6 +27,7 @@ import {
 import { expertCount, isControl, reviewSkip } from "./round-plan.mjs";
 import { pool, readCards, readRoles } from "./round-steps.mjs";
 import { readSchema, userMessage } from "./sealed.mjs";
+import { CHAT_LOG } from "./world-chat.mjs";
 
 const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
 const writeJson = (path, v) => writeFileSync(path, `${JSON.stringify(v, null, 1)}\n`);
@@ -334,6 +336,16 @@ export async function audit(ctx) {
 
 const routeOf = (snap) => (snap ? `${snap.pathname}${snap.search ?? ""}` : null);
 
+/** Every session's chat record (world-chat.mjs), with whose session it was. */
+function chatRecords(ctx) {
+  const plan = readJson(join(ctx.out, SESSIONS, "sessions.json"));
+  return plan.map((s) => ({
+    member: s.member,
+    viewport: s.viewport,
+    records: readLines(join(ctx.out, SESSIONS, s.dir, CHAT_LOG)),
+  }));
+}
+
 /** The recorder's and the census's own findings, with where each fired. */
 function instrumentRaw(ctx) {
   const raw = [];
@@ -392,6 +404,7 @@ export function collect(ctx) {
     groups.push(fromWords({ answer: readJson(wordsFile), strings }));
   }
   groups.push(fromInstruments(instrumentRaw(ctx)));
+  groups.push(...chatRecords(ctx).map(fromChat));
   const { findings, classes } = collectFindings(groups);
   // The graders refuse a finding outside the contract; refuse it here first, where it was made.
   const broken = findings.flatMap((f) => classProblems(f));

@@ -1,6 +1,6 @@
 // Type surface for round-contract.mjs (`allowJs` is off; same arrangement as grade-core.d.mts).
 
-export type EvaluatorClass = "members" | "experts" | "words" | "instruments";
+export type EvaluatorClass = "members" | "experts" | "words" | "instruments" | "chat";
 export type Voice = "member-voiced" | "instrument-only";
 
 export const CLASSES: EvaluatorClass[];

@@ -43,8 +43,13 @@
 //   words        the pass over the harvested words
 //   instruments  the recorder's and the census's own measurements — designed by someone who saw
 //                the key, so reported in their own column and NEVER counted as blind discovery
+//   chat         a filing Moneypenny drafted in a world from what a member told her (#8005,
+//                world-chat.mjs): friction a member voiced, harvested, and NEVER filed as an
+//                issue. Its own column and never blind — she answers from production's prompt,
+//                not a member card, and she is the app, not a member. `member` names whose session it
+//                came from, `detail.sent` whether the member sent the draft on.
 
-export const CLASSES = ["members", "experts", "words", "instruments"];
+export const CLASSES = ["members", "experts", "words", "instruments", "chat"];
 /** The classes that never saw the key. */
 export const BLIND = ["members", "experts", "words"];
 /** How a members-class finding reached the analyst. */
@@ -101,7 +106,8 @@ export function membersClass(voice) {
 /** Problems with one finding's class fields; [] when it keeps the contract. */
 export function classProblems(f, cls = f.class) {
   if (!CLASSES.includes(cls)) return [`finding ${f.id} has no class (${cls ?? "missing"})`];
-  if (cls === "members" && !f.member) return [`members finding ${f.id} names no member`];
+  if ((cls === "members" || cls === "chat") && !f.member)
+    return [`${cls} finding ${f.id} names no member`];
   if (cls === "members" && !VOICES.includes(f.voice))
     return [`members finding ${f.id} has no voice (${VOICES.join(" | ")})`];
   return [];
