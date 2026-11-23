@@ -19,6 +19,7 @@
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 
+import type { ProblemMatch } from "../domain/known-problems.js";
 import { JsonlKeyedStore, type JsonlTail } from "../storage/jsonl-store.js";
 import type { FeedbackKind } from "./feedback-issue.js";
 
@@ -32,6 +33,9 @@ export interface FeedbackLogEntry {
   readonly kind: FeedbackKind;
   readonly title: string;
   readonly filedAt: string;
+  /** The known problem the filing was matched to in the chat (#8005 slice 7): what counts it on
+   *  its ledger row, and what tells the member when that row's fix ships. Absent on most. */
+  readonly match?: ProblemMatch;
 }
 
 /** Where the feedback log is kept. Interface-first (like `ActivityStore`) so tests stay I/O-free. */
@@ -82,7 +86,7 @@ export function createFeedbackLogStore(env: NodeJS.ProcessEnv): FeedbackLogStore
 
 /** One successful filing → one log entry. */
 export function feedbackLogEntry(
-  input: { readonly kind: FeedbackKind; readonly title: string },
+  input: { readonly kind: FeedbackKind; readonly title: string; readonly match?: ProblemMatch },
   opaqueMemberId: string,
   filed: { readonly url: string; readonly number: number },
   filedAt: string,
@@ -95,6 +99,7 @@ export function feedbackLogEntry(
     kind: input.kind,
     title: input.title.trim(),
     filedAt,
+    ...(input.match ? { match: input.match } : {}),
   };
 }
 
@@ -102,7 +107,7 @@ export function feedbackLogEntry(
  *  member their filed issue. Shared by the form route and the JSON API (one door, one discipline). */
 export async function recordFilingSafely(
   record: ((entry: FeedbackLogEntry) => Promise<void>) | undefined,
-  input: { readonly kind: FeedbackKind; readonly title: string },
+  input: { readonly kind: FeedbackKind; readonly title: string; readonly match?: ProblemMatch },
   memberId: string | undefined,
   filed: { readonly url: string; readonly number: number },
 ): Promise<void> {

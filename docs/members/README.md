@@ -61,7 +61,8 @@ same change, and where the two disagree the JSON is right.
           "sees": "the league, no cue to onboard",                // plain words, what a human sees
           "ears": "WHEN a signed-in member with no linked account opens /app/leaderboard, the app shall show a visible next step to onboarding.",
           "expect": [ { "role": "link", "name": "Onboarding" } ],   // the EARS outcome, never the defect
-          "act": { "click": { "role": "link", "name": "Profile" } },     // optional; performed AFTER expect
+          "act": { "click": { "role": "link", "name": "Profile" } },     // optional; performed AFTER expect — one action, or a list (below)
+          "after": [ { "url": "/app/accounts" } ],                        // optional; expects checked AFTER act — where the hand-off landed
           "known_gap": "dead end 1 — lands on the leaderboard with no onboarding cue",  // optional; the step is test.fail() until fixed
           "where": "src/server/auth/oauth-callback.ts:79",             // with known_gap: the ledger's file:line
           "severity": "high", "fix": "S",                               // with known_gap: the ledger's columns (S · M · L)
@@ -81,8 +82,29 @@ holds:
 | `{ "role": "link", "name": "Guidance" }` | an accessible element of that role whose name contains it, case-insensitive (`"exact": true` for a whole name — the calendar's "Week", never the blotter's "Expiring within 3 weeks"); hidden elements never match |
 | `{ "testid": "…" }` | `data-testid` |
 | `… , "within": "nav.rail"` | scoped to a CSS selector — the desk rail, `main`, never the topbar by accident |
-| `… , "href": "/app/accounts"` | (role link) its `href` starts with this — "goes to the right place", not just "exists" |
+| `… , "href": "/app/accounts"` | (role link) its `href` starts with this — "goes to the right place", not just "exists". With no `name`, ANY visible link whose `href` starts with it holds: "some link goes there", for a hand-off whose words are the fix's to choose |
 | `… , "absent": true` | the element is NOT visible — the write control that must not render on someone else's desk |
+
+**`act` and `after` — a hand-off judged where it lands** (#8005 slice 3). A step's `act` is one
+action (the original `{ "click": … }`) or a list run in order, each aimed with the expect grammar
+above:
+
+| action | does |
+|---|---|
+| `{ "click": <expect> }` | clicks it, then waits for the page to load |
+| `{ "fill": <expect>, "value": "where is the leaderboard?" }` | types into it (Moneypenny's box: `{ "role": "textbox", "name": "Message Moneypenny" }`) |
+| `{ "press": <expect>, "key": "Enter" }` | presses a key in it (Enter sends a chat message) |
+| `{ "await": <expect> }` | waits until that expect holds (her reply, a link she gave), so the next action never races the last |
+
+`after` is a list of expects checked once the act has run, with the same grammar and the act's longer
+wait (8 s). It is how a cross-feature journey asserts the member's context survived the hop: the
+URL the click landed on still carries the account, symbol or date (`docs/IA.md` §3, #7167), or
+her answer links the place asked for. Each step is still a fresh page in a fresh browser, so a
+conversation that takes several turns lives inside ONE step's act, never across steps (the
+thread is per browser, `moneypenny-storage.ts`). A step fails at the first action that cannot
+run, named in the failure. The CI boot has no model and no feedback token, so a chat step drives
+the dock's model-free paths (her canned moves, the scripted set-up and filing beats); an answer
+only the model can give is pinned with `known_gap` naming why no model-free path gives it.
 
 **`known_gap`** is the ratchet. `e2e/journeys.spec.ts` marks the step `test.fail(true, known_gap)`,
 so the suite is green while the gap is real and turns **red the day the gap is fixed** — the fix
@@ -91,6 +113,8 @@ same event as a `fixed?` row. Never delete a step to make a run green. A known-g
 assert the OUTCOME its EARS line asks for, never the defect: an expect that requires today's wrong
 URL or today's stale copy fails the natural fix too, so the gap reads as open forever and the
 ratchet never fires (a promise with no target is `{ "text": "<the promise>", "absent": true }`).
+A step with `after` asserts the outcome there too: a pinned hand-off fails at the act or in `after`,
+and either way passes once the hop keeps its context.
 
 ## How the spec and the crawl consume it
 
