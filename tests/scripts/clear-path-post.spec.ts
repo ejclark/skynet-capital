@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -107,10 +107,24 @@ describe("the CLI", () => {
     const dir = mkdtempSync(join(tmpdir(), "clear-path-"));
     const file = join(dir, "result.json");
     writeFileSync(file, JSON.stringify(result));
+    // No credentials reach the CLI: a real run records refusals on the ledger branch, and a spec
+    // must never write there. Emptying the token vars is not enough on a laptop signed in to `gh`:
+    // ensureGhToken (scripts/moneypenny/gh.mjs) falls back to `gh auth token`, and an empty
+    // GH_CONFIG_DIR (#7311) did not stop that login reaching the CLI on Eric's machine (#8052). So
+    // a fake `gh` that refuses sits first on PATH: the fallback finds no login on any machine,
+    // the way CI, which has no keyring, always did.
+    const bin = join(dir, "bin");
+    mkdirSync(bin);
+    writeFileSync(join(bin, "gh"), "#!/bin/sh\necho 'gh: not logged in (spec stub)' >&2\nexit 1\n");
+    chmodSync(join(bin, "gh"), 0o755);
     try {
-      // No credentials reach the CLI: a real run records refusals on the ledger branch, and a spec
-      // must never write there. An empty gh config dir makes `gh auth token` fail too (#7311).
-      const env = { ...process.env, GH_TOKEN: "", GITHUB_TOKEN: "", GH_CONFIG_DIR: dir };
+      const env = {
+        ...process.env,
+        GH_TOKEN: "",
+        GITHUB_TOKEN: "",
+        GH_CONFIG_DIR: dir,
+        PATH: `${bin}:${process.env.PATH}`,
+      };
       const out = execFileSync("node", ["scripts/clear-path-post.mjs", file, ...flags], {
         encoding: "utf8",
         stdio: "pipe",
@@ -144,7 +158,11 @@ describe("the CLI", () => {
   it("a refusal it cannot record (no token) is a warning, never a failed run", () => {
     const { out, code } = run({ survivors: [], refuted: [{ issue: 1 }], notClear: [{ issue: 2 }] });
     expect(code).toBe(0);
-    expect(out).toMatch(/could not record 2 flip refusal\(s\)/);
+    // The warning names the token lookup, so a login that leaked past the stub (a write that then
+    // failed on the network) cannot pass for "no token" (#8052).
+    expect(out).toMatch(
+      /could not record 2 flip refusal\(s\): no GH_TOKEN, GITHUB_TOKEN or `gh auth token`/,
+    );
   });
   it("a dry run says how many refusals it would record, and records none", () => {
     const { out, code } = run({ survivors: [survivor()], refuted: [{ issue: 1 }] }, "--dry-run");
