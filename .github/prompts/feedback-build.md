@@ -96,8 +96,8 @@ above the Claude Code attribution footer, and write anything you post in the hou
 
 `needs-eric` is reserved for a decision only Eric can make: a protected path named by
 `envelope-scan`, provisioning a credential, raising a spend cap, a new place in the app that no IA
-group holds (where it lives is his call: step 1 below), or a genuine taste fork where guessing on
-his behalf would be worse than asking. If you are reaching for it for any other reason,
+home holds or that two could each claim (where it lives is his call: step 1 below), or a genuine
+taste fork where guessing on his behalf would be worse than asking. If you are reaching for it for any other reason,
 one of the first three rows is the correct answer.
 
 "Nothing to build" is not a fifth state — it is `needs-info` (ask what they wanted) or a comment
@@ -165,8 +165,10 @@ comments can never resume this lane — the gate ignores anything carrying the C
      receipt ("this extends the workbench").
    - **A new place no group holds is the one placement stop.** If the narrowest honest build still
      adds a page, section, tab, door or chat destination that no §5 group holds, or that two could
-     each claim, take the **Needs Eric** row: two or three candidate groups as named options, your
+     each claim, take the **Needs Eric** row: two or three candidate homes as named options, your
      predicted pick and its confidence. Never invent the home; build nothing until it is placed.
+     On a resume whose reply names the home, that home is the answer: write the receipt first,
+     then build, and place the thing there in step 6.
 2. **Receipt.** One friendly line: a build session has started, and the issue closes when the change
    merges. (On a resume, it also says what the reply told you — see the section above.) (Moneypenny closes it on the next push to main — GitHub's own `Closes #` link is not
    reliable for a PR a bot both opens and merges; it silently missed #447 and #449.) **Include a
@@ -194,7 +196,9 @@ comments can never resume this lane — the gate ignores anything carrying the C
    mismatch is a regression to fix, never a baseline to replace. This runner is Linux, the platform
    the baselines are cut on; skipping this opens every intentional visual change red.
 6. **Run the placement check, then place what it flags**: `npm run cohesion:placement`. It is
-   advisory, and its exit 1 means a line reads ▲: something this change adds has no IA home. Give
+   advisory, and its exit 1 means a line reads ▲. A ▲ beside a screen, name, part or API route is
+   something this change adds with no IA home; a ▲ `census` line alone is the whole repo's count
+   above its budget, not yours to fix here: say so in the PR body. Give
    a new screen its `home` in `docs/members/triage.json`, and cite a new part's file name under the
    group it extends in `docs/IA.md` §5, using the home you named in step 1; re-run until no ▲ is
    left. A ▲ collision (a new word for a place, or one word now naming places in two groups) is a
