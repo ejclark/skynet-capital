@@ -2,11 +2,24 @@
 // them (#8005) — the shell's rows (shell-artifacts.mjs) plus the bench's own. The checker reads
 // them before it calls a finding real; compose and parity write them beside each run.
 
-import { SHELL_ARTIFACTS } from "./shell-artifacts.mjs";
+import { CROSS_ARTIFACTS, SHELL_ARTIFACTS } from "./shell-artifacts.mjs";
+
+/** The dock's rows once her chat is in hand (`chat: true`), declared once beside the cross world's. */
+const DOCK = CROSS_ARTIFACTS.filter((a) => a.route.startsWith("Moneypenny's dock"));
 
 /** @type {{route: string, sees: string, why: string}[]} */
 export const WORKBENCH_ARTIFACTS = [
   ...SHELL_ARTIFACTS,
+  ...DOCK,
+  {
+    route: "/app/trade?section=guidance (its research recap), the market calendar, R&D",
+    sees:
+      "Research that quotes the real market's prices (AAPL in the $330s) beside the world's own" +
+      " quotes (AAPL at $236.10).",
+    why:
+      "The book's prices are the profile world's sanitized ones; the research shelf is the real" +
+      " one written by the instant (the corpus commit in inputs/profile-today.json).",
+  },
   {
     route: "/app/trade with any symbol but NVDA, CRWV, AAPL, MSFT, SPY or GOOG",
     sees: "No quote, chart, chain or guidance for the symbol typed.",

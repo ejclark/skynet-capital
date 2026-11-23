@@ -6,16 +6,19 @@ import { profileFixtures } from "./fixtures.mjs";
 import { navSurfaces } from "./nav-surfaces.mjs";
 import { WORKBENCH_ARTIFACTS } from "./workbench-artifacts.mjs";
 import { workbenchReads } from "./workbench-reads.mjs";
-import { WORKBENCH_CHAT, workbenchSurfaces } from "./workbench-surfaces.mjs";
+import { workbenchSurfaces } from "./workbench-surfaces.mjs";
 
 export default {
   name: "workbench-first-day",
   input: "workbench-first-day",
   viewers: { casey: "casey@study.world" },
+  // Moneypenny's chat in hand, as in every #8005 round: the chat-in-a-world module (world-chat.mjs,
+  // #8005 slice 4) reads this flag, the cross-feature world's own; until it lands the dock renders
+  // and a sent message is a recorded write (shell-artifacts.mjs).
+  chat: true,
   reads: workbenchReads,
   fixtures: profileFixtures,
   surfaces: workbenchSurfaces("first-day"),
   oneTap: navSurfaces("casey", {}, "/app/trade"),
   artifacts: WORKBENCH_ARTIFACTS,
-  chat: WORKBENCH_CHAT,
 };

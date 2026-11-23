@@ -242,15 +242,6 @@ export const WORKBENCH_LIVE_WRITES = [
   "/api/trade/draft",
 ];
 
-/**
- * Moneypenny's chat in a workbench world (#8005 slice 4). The chat-in-a-world module plugs in
- * HERE — one value every workbench world carries as `chat` — so the bench gets the same chat the
- * cross-feature round does, never a second one. Until it lands the dock renders (parity:
- * `dock-moneypenny`) and a sent message is a recorded write with no reply (shell-artifacts.mjs →
- * "Moneypenny's dock and every form").
- */
-export const WORKBENCH_CHAT = null;
-
 /** The surfaces for one world. */
 export function workbenchSurfaces(kind) {
   if (kind === "today") return [...TODAY, ...FRIEND];

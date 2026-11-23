@@ -9,12 +9,16 @@ import { profileFixtures } from "./fixtures.mjs";
 import { navSurfaces } from "./nav-surfaces.mjs";
 import { WORKBENCH_ARTIFACTS } from "./workbench-artifacts.mjs";
 import { workbenchReads } from "./workbench-reads.mjs";
-import { WORKBENCH_CHAT, workbenchSurfaces } from "./workbench-surfaces.mjs";
+import { workbenchSurfaces } from "./workbench-surfaces.mjs";
 
 export default {
   name: "workbench-today",
   input: "workbench-today",
   viewers: { eric: "eric@study.world", jordan: "jordan@study.world" },
+  // Moneypenny's chat in hand, as in every #8005 round: the chat-in-a-world module (world-chat.mjs,
+  // #8005 slice 4) reads this flag, the cross-feature world's own; until it lands the dock renders
+  // and a sent message is a recorded write (shell-artifacts.mjs).
+  chat: true,
   reads: workbenchReads,
   fixtures: profileFixtures,
   surfaces: workbenchSurfaces("today"),
@@ -22,5 +26,4 @@ export default {
   // status line, the member menu, the dock): parity proves them; the census does not walk them. What the world still cannot show: `artifacts`.
   oneTap: navSurfaces("eric", {}, "/app/trade"),
   artifacts: WORKBENCH_ARTIFACTS,
-  chat: WORKBENCH_CHAT,
 };
