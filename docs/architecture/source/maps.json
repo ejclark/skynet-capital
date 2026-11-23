@@ -1378,6 +1378,12 @@
             "responsibility": "CLAIM_TTL_MS (2h), claimAgeOf, claimStamp, claimFailureReason for the refs/tags/claim/<slug> compare-and-set"
           },
           {
+            "id": "claimrelease",
+            "label": "Early claim release",
+            "path": "scripts/moneypenny/claim-release.mjs",
+            "responsibility": "#7313: hands a feedback lease back before the 2h TTL. The push tick releases claim/feedback-N when the push merged that issue's feedback/N PR, the lease predates the merge and in-progress is off; --guard-feedback-outcome releases at build end when the build's own PR already merged or it opened none on an issue the lane may no longer pull; the push tick also deletes up to 20 expired lane leases on closed issues. Pure verdicts, reads injected by index.mjs; releaseClaim itself is untouched"
+          },
+          {
             "id": "tier",
             "label": "Model tier",
             "path": "scripts/moneypenny/model-tier.mjs",

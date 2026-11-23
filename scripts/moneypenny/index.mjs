@@ -79,6 +79,12 @@ import {
   claimStamp,
   leaseOf,
 } from "./claim-lease.mjs";
+import {
+  buildEndVerdict,
+  EXPIRED_SWEEP_CAP,
+  gatherExpiredClaims,
+  gatherMergeReleases,
+} from "./claim-release.mjs";
 import { closeClockIssue, openClockIssue } from "./clock-watch.mjs";
 import {
   CONTINUED_MODEL,
@@ -113,6 +119,7 @@ import {
   LABELS,
   labelNames,
   MANAGED_LABELS,
+  notPullable,
   setInProgress,
 } from "./labels.mjs";
 import { draftLesson, routeLessonDraft } from "./lesson-draft.mjs";
@@ -178,7 +185,9 @@ export const slugify = (s) =>
  * a second: `in-progress` coming off an issue wakes the build queue — wake.mjs.)
  */
 export function route(ctx, deps = {}) {
-  if (ctx.eventName === "push" || ctx.inputs?.command === "scan") return routeSweep(deps);
+  // #7313: the push tick also hands back the leases whose build is done (claim-release.mjs).
+  if (ctx.eventName === "push" || ctx.inputs?.command === "scan")
+    return [...routeSweep(deps), ...releaseIntents(deps.claimReleases)];
   // #5056 slice 2: `in-progress` coming off is a freed build slot, and wakes the queue (wake.mjs).
   // One tap on the dial clears the others and writes the end time (dial-tap.mjs).
   if (ctx.eventName === "issues")
@@ -193,6 +202,10 @@ export function route(ctx, deps = {}) {
   if (ctx.eventName === "issue_comment") return routeDecisions(deps);
   return [];
 }
+
+/** The early releases `gatherDeps` found (#7313), as intents; a skipped read (`null`) is none. */
+const releaseIntents = (releases) =>
+  (releases ?? []).map((r) => ({ kind: "release-claim-early", slug: r.slug, reason: r.reason }));
 
 /**
  * Break a wedged lease by hand.
@@ -1278,7 +1291,36 @@ function gatherDeps(ctx) {
     // per candidate plan) to meet a transient 5xx. A skipped tick costs nothing — the next push
     // re-reads the same state, and the only thing waiting is a stop that was already late.
     continuations: needsScan ? gatherSafely("continuations", gatherContinuationDeps) : null,
+    // #7313: the leases whose build is done. Push only (a merge is what frees one) and FAIL-OPEN —
+    // a skipped tick costs one tick of delay, and the 2h TTL is still the backstop under it.
+    claimReleases: ctx.eventName === "push" ? gatherClaimReleases(ctx.payload, open) : null,
   };
+}
+
+/** `gatherDeps`' early releases (#7313): the push's merged feedback PRs, then a bounded sweep of
+ *  expired leases on closed issues. Each half fails open on its own, so a refs read that fails
+ *  never costs the merge release this tick exists for. */
+function gatherClaimReleases(payload, open) {
+  const merged = gatherSafely("merge release", () =>
+    gatherMergeReleases(payload, {
+      readPr: (n) => ghRest(`pulls/${n}`),
+      readLease,
+      readIssueLabels: (n) => labelNames(ghRest(`issues/${n}`).labels),
+      log: console.log,
+    }),
+  );
+  const expired = gatherSafely("expired-claim sweep", () =>
+    gatherExpiredClaims({
+      // Not `ghRestAll`: matching-refs answers with the whole list and no paging.
+      readRefs: () => ghRest("git/matching-refs/tags/claim/"),
+      openNumbers: new Set(open.map((i) => i.number)),
+      readLease,
+      nowMs: Date.now(),
+      ttlMs: CLAIM_TTL_MS,
+      cap: EXPIRED_SWEEP_CAP,
+    }),
+  );
+  return [...(merged ?? []), ...(expired ?? [])];
 }
 
 /** `gatherAssignmentDeps` with the fail-open wrapper `gatherDeps` explains above. */
@@ -1667,6 +1709,17 @@ const ONE_CALL_INTENTS = {
   // #6470 — the clock's watcher: the writes live in clock-watch.mjs beside the decision.
   "open-clock-issue": (i) => openClockIssue(i),
   "close-clock-issue": (i) => closeClockIssue(i),
+  // #7313 — `releaseClaim` alone, not `releaseBuild`: a merge release found `in-progress` already
+  // off, and an expired lease's issue is closed, so neither has a label left to take off.
+  "release-claim-early": (i) => {
+    const freed = releaseClaim(i.slug);
+    console.log(
+      `::notice::claim/${i.slug} ${freed ? "released" : "was already gone"} — ${i.reason}`,
+    );
+    return freed
+      ? `🔓 released \`claim/${i.slug}\` — ${i.reason}`
+      : `· \`claim/${i.slug}\` was already gone — ${i.reason}`;
+  },
 };
 
 /**
@@ -1789,9 +1842,13 @@ export function executeOne(i, stallRepairs = []) {
  * so a payload-supplied string is never interpolated into a `run:` block.
  *
  * Then the lease: a build that ended on `needs-info` is WAITING, not running, so its lease goes back
- * — see `guardFeedbackOutcome`'s own note for the two restart paths that unblocks. `releaseClaim`,
- * not `releaseBuild`: the latter also strips `in-progress`, which the session itself already removed
- * at its ending, and this step holds GITHUB_TOKEN, whose label writes start no workflow run.
+ * — see `guardFeedbackOutcome`'s own note for the two restart paths that unblocks. Since #7313 so does
+ * a build that left no open PR on `feedback/<n>` (none opened, or one that already merged): nothing
+ * is left to wait for, and holding the lease only idles a `next-slice` remainder for the TTL
+ * (`buildEndVerdict`, claim-release.mjs). An open PR keeps it; the push tick of its merge releases it.
+ * `releaseClaim`, not `releaseBuild`: the latter also strips `in-progress`, which the session itself
+ * already removed at its ending, and this step holds GITHUB_TOKEN, whose label writes start no
+ * workflow run.
  */
 function guardThenRelease(issueNumber) {
   const runUrl =
@@ -1799,14 +1856,51 @@ function guardThenRelease(issueNumber) {
       ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
       : undefined;
   const guarded = guardFeedbackOutcome(issueNumber, runUrl, process.env.RESUME_SINCE || undefined);
-  if (!guarded.waitingOnMember) return guarded;
-  const slug = `feedback-${Number(issueNumber)}`;
+  const n = Number(issueNumber);
+  const slug = `feedback-${n}`;
+  const verdict = guarded.waitingOnMember
+    ? buildEndVerdict({ waitingOnMember: true })
+    : buildEndVerdict({
+        lanePrs: lanePrsOf(n),
+        leaseTakenMs: readLease(slug)?.takenMs ?? Number.NaN,
+        stillPullable: stillPullable(n),
+      });
+  if (!verdict.release) {
+    console.log(`::notice::keeping ${slug} — ${verdict.reason}`);
+    return guarded;
+  }
   console.log(
     releaseClaim(slug)
-      ? `::notice::released ${slug} — the build ended waiting on the member, not running`
+      ? `::notice::released ${slug} — ${verdict.reason}`
       : `::notice::no lease held for ${slug} — nothing to release`,
   );
   return guarded;
+}
+
+/** The PRs on the feedback lane's own branch for #n, newest first, or null when the read fails — a
+ *  null keeps the lease (`buildEndVerdict`), because an unread PR must never read as "no PR". */
+function lanePrsOf(n) {
+  try {
+    const owner = (process.env.GITHUB_REPOSITORY ?? "ejclark/skynet-capital").split("/")[0];
+    const prs = ghRest(`pulls?state=all&head=${owner}:feedback/${n}&per_page=10`);
+    if (!Array.isArray(prs)) return null;
+    return prs.map((p) => ({ state: p.state, createdMs: Date.parse(p.created_at) }));
+  } catch (err) {
+    console.log(`::warning::feedback #${n} — lane PR read failed: ${String(err).slice(0, 200)}`);
+    return null;
+  }
+}
+
+/** Could the lane pull #n again, setting aside the `in-progress` this build may still carry (its
+ *  `--end-build` step runs after this one)? A failed read answers yes, which keeps the lease. */
+function stillPullable(n) {
+  try {
+    const issue = ghRest(`issues/${n}`);
+    const labels = labelNames(issue.labels).filter((l) => l !== LABELS.inProgress.name);
+    return notPullable({ ...issue, labels }) === null;
+  } catch {
+    return true;
+  }
 }
 
 // The narrow, single-purpose CLI flags — each one does its own thing and exits, never reaching
