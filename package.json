@@ -147,6 +147,7 @@
     "crawl": "tsx scripts/crawl/run.mjs",
     "stability:budget": "tsx scripts/stability/budget-run.mjs",
     "crawl:coverage": "node scripts/crawl/coverage.mjs",
+    "cohesion:census": "node scripts/crawl/cohesion.mjs",
     "phone": "tsx scripts/crawl/phone-one.mjs",
     "study:compose": "tsx scripts/study/worlds/compose.mjs",
     "study:parity": "tsx scripts/study/parity.mjs",

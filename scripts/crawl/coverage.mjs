@@ -494,7 +494,13 @@ function modulePath(mod) {
   return hit;
 }
 
-function collect() {
+/**
+ * The screens the code has, read from the repo: the route tree, each route's sections, the
+ * chapters and windows, the hand-listed server pages and shell parts (each needle checked), and
+ * the triage index. Exported for the cohesion census (`cohesion.mjs`), which resolves a link to the
+ * screen it lands on with the same `landingOf`.
+ */
+export function readScreens() {
   const routes = parseRouteTree(readFileSync(ROUTE_TREE, "utf8"));
   const sections = new Map();
   for (const r of routes) {
@@ -516,14 +522,14 @@ function collect() {
     windows,
     shell: SHELL_PARTS,
   });
-  return coverage({
-    screens,
-    triageRows: JSON.parse(readFileSync(TRIAGE, "utf8")),
-    journeys: loadJourneys(),
-    routePaths: routes.map((r) => r.path),
-    sections,
-    windows,
-  });
+  const triageRows = JSON.parse(readFileSync(TRIAGE, "utf8"));
+  const routePaths = routes.map((r) => r.path);
+  return { screens, triageRows, triage: indexTriage(triageRows), routePaths, sections, windows };
+}
+
+function collect() {
+  const { screens, triageRows, routePaths, sections, windows } = readScreens();
+  return coverage({ screens, triageRows, journeys: loadJourneys(), routePaths, sections, windows });
 }
 
 function main() {

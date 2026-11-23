@@ -186,6 +186,47 @@ what hides or disables it (the fog ledger: `docs/FOG-OF-WAR.md`).
 | Fleet controls | `Fleet` / `FleetBot` `app/src/live/controls.ts:15,9` (`src/observatory/settings-view.ts:14`) | `GET/POST /api/controls` `src/server/controls-api-routes.ts:64` | none — fleet-wide (`allSuspended`, every bot; env-allowlist owner). The per-bot switch is Owned account's `suspended` + `POST /api/settings/bot-control` (§5.2) | — | `MissionControl` `app/src/shell/mission-control.tsx:25` (`settings.tsx:437`) | owner |
 | Persona class (join) | `PersonaClass` / `JoinIndex` `app/src/live/join.ts:10,17` | `GET/POST /api/join` `src/server/join-api-routes.ts:64` | account (the one being created) | — | `onboarding-chapter.tsx:111` (`ConnectStep` `:96`) | `canAddBots` |
 
+### 2f. The member's concepts — the word they read, and every screen that holds it (#8005)
+
+The cohesion census (`npm run cohesion:census`, `docs/members/cohesion.md`) reads this table. One row
+per concept a member meets: the words they read for it, the §2 entities under it, and every screen
+that holds it as a section's or a window's body. A joint — a line, a chip, a link inside another
+section — is never a home (§8's rule), so it is not listed. A screen's IA group is its `home` in
+`docs/members/triage.json` (a §5 group, or none when the IA places it nowhere); a concept whose
+screens sit in two groups has two homes, and slice 6 of #8005 settles each to one name and one home.
+
+| Concept | A member reads | Entities (§2) | Held on |
+|---|---|---|---|
+| `the-book` | Overview · net worth · positions | Net worth · Equity curve · Desk tiles · Position · Option position · Needs-a-decision card | `/accounts ?section=overview` · `/u/$id` |
+| `history` | Ledger · Activity · fills | Activity event · Order · Wire trade (U1: one history, three homes) | `/accounts ?section=ledger` · `/u/$id/ledger` · `/activity` |
+| `balance` | Balance | Book health · Closed trades by who started them | `/accounts ?section=balance` |
+| `pulse` | Pulse | Pulse | `/u/$id/pulse` |
+| `bot-playbooks` | Playbooks (a bot's own) | Heartbeat · Decision cycle · Playbook subscription | `/accounts ?section=playbooks` · `/u/$id/playbooks` |
+| `thesis` | Thesis | Thesis | `/accounts ?section=thesis` · `/u/$id/thesis` |
+| `workbench` | Trade · the ticket · chart · chain | Quote · Bars · Option chain · Ticket / option / spread draft | `/trade ?section=ticket` · `/trade ?section=chart` · `/trade ?section=chain` |
+| `guidance` | Guidance · Outlook · saved positions | Position guidance | `/trade ?section=guidance` · `/trade ?section=outlook` · `/saved-positions` |
+| `watchlist` | Watchlist | none in §2 (#3407) | `/trade ?section=watchlist` |
+| `orders` | Orders · working orders | Order · Order event · Alert | `/trade ?section=orders` |
+| `calendar` | Calendar · Events · Board | Research event · Research call · Day range · Market closure | `/research ?section=board` · `/accounts ?section=events` · `/ ?w=calendar` |
+| `research-docs` | a ledger · a study | Research doc | `server /research/<slug>` |
+| `coverage` | Coverage | none in §2 (#3811) | `/research ?section=coverage` |
+| `house-playbooks` | Playbooks (the catalog) · Your playbooks · Your convictions | Playbook store card · Strategy card · Authored play · Conviction view · Pair conviction | `/research ?section=playbooks` |
+| `ladder` | Milestones · Onboarding · Trading progression | Play / rung · Journey · Onboarding | `/accounts ?section=milestones` · `/accounts ?section=milestones&chapter=onboarding` · `/accounts ?section=milestones&chapter=trading` |
+| `human-playbooks` | Playbooks (the chapter) | Human playbook | `/accounts ?section=milestones&chapter=playbooks` |
+| `filings` | Feedback · your filings | Feedback filing + community earn (the league's feed carries their mirror, #1977) | `/accounts ?section=feedback` · `/activity` |
+| `chat` | Moneypenny | Moneypenny thread | `shell Moneypenny dock` |
+| `standing` | Leaderboard · the party | Leaderboard row + compare | `/leaderboard` · `/ ?w=party` |
+| `whole-market` | Market · the sectors | the edition's sectors (`src/domain/edition-sectors.ts`) | `/ ?w=market` |
+| `where-things-stand` | Where things stand · your next step | the edition · Quest | `/` |
+| `quests` | Quests | Quest | `/ ?w=quests` |
+| `preferences` | Preferences | member preferences (MISSING 24) | `/settings ?section=preferences` |
+| `my-accounts` | Account | Owned account · Fleet controls | `/settings ?section=account` |
+| `owner-tools` | Guests · GitHub | none in §2 (U13) | `/settings ?section=guests` · `/settings ?section=github` |
+| `target-split` | Target | none in §2 (#4607) | `/settings ?section=target` |
+| `status` | the status line | Market session clock · Ops status | `shell status line` |
+| `tower` | the tower | Landmark | `shell tower column` · `server /tower` |
+| `sign-in` | Sign in · welcome | none (before sign-in) | `server /login` · `server /welcome` |
+
 ## 3. The keys table
 
 | Key | Entities that carry it | Pages already keyed on it | URL carrier today |
