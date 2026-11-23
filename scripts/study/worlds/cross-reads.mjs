@@ -48,11 +48,15 @@ const boardReads = (s) => [
   `/api/research/mentions?sym=${s}`,
 ];
 
-/** The chain a held option's Trade page opens on: its underlying and type, with no expiry named and
- *  at its own expiry — read from the input's OCC symbols, never typed. */
+/** The chain a held option's Trade page opens on: its underlying and type, with no expiry named, at
+ *  its own expiry, and at every other expiry its chip row offers (the input's own expiration list,
+ *  on or after the world's day — the full round's desktop census tapped 2027-01-29 and met it
+ *  unanswered, #8005) — read from the input's OCC symbols and expirations, never typed. */
 const OCC = /^([A-Z]{1,6})(\d{2})(\d{2})(\d{2})([CP])\d{8}$/;
 function heldChainReads() {
   const input = loadInput("cross-feature");
+  const day = String(input.instant ?? "").slice(0, 10);
+  const offered = (input.market?.expirations ?? []).filter((e) => e >= day);
   const out = new Set();
   for (const p of input.participants) {
     for (const pos of p.positions ?? []) {
@@ -60,7 +64,9 @@ function heldChainReads() {
       if (!m) continue;
       const type = m[5] === "P" ? "put" : "call";
       out.add(`/api/trade/chain?symbol=${m[1]}&type=${type}`);
-      out.add(`/api/trade/chain?symbol=${m[1]}&type=${type}&exp=20${m[2]}-${m[3]}-${m[4]}`);
+      for (const exp of new Set([`20${m[2]}-${m[3]}-${m[4]}`, ...offered])) {
+        out.add(`/api/trade/chain?symbol=${m[1]}&type=${type}&exp=${exp}`);
+      }
     }
   }
   return [...out];

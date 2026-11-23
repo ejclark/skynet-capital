@@ -129,4 +129,13 @@ describe("what the thin slice's census found unanswered (#8005)", () => {
     expect(reads).toContain("/api/research/outlook?symbol=CRWV");
     expect(reads).toContain("/api/research/fit?symbol=NVDA");
   });
+
+  it("reads the held put's chain at every expiry its chip row offers, from the input's list", () => {
+    const reads = crossReads("eric");
+    // The full round's desktop census tapped the last chip and met it unanswered (#8005).
+    expect(reads).toContain("/api/trade/chain?symbol=CRWV&type=put&exp=2027-01-29");
+    expect(reads).toContain("/api/trade/chain?symbol=CRWV&type=put&exp=2026-11-20");
+    const chains = reads.filter((r) => r.startsWith("/api/trade/chain?symbol=CRWV&type=put&exp="));
+    expect(chains).toHaveLength(8);
+  });
 });
