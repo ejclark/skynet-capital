@@ -50,10 +50,12 @@ export interface CapitalFlow {
   /** The cash change our fill journal did not explain — the second witness, kept for tuning. */
   readonly unexplainedCash: number;
   /**
-   * The net value of the positions the later sample still holds (its equity minus its cash) — the
-   * third witness (#7729). An Alpaca paper reset clears every position, so a genuine reset leaves
-   * this near zero whatever the cleared book was worth, while the cash it moves is the equity change
-   * plus that book's net value (either sign). Absent on lines recorded before #7729.
+   * The net value of the book the later sample carried through the window: its equity minus its
+   * cash, less what journaled fills inside the window opened (their cash, added back) — the third
+   * witness (#7729). An Alpaca paper reset clears every position, so a genuine reset leaves this
+   * near zero whatever the cleared book was worth — even when a bot's next tick trades again before
+   * the later sample — while the cash it moves is the equity change plus that book's net value
+   * (either sign). Absent on lines recorded before #7729.
    */
   readonly heldAfter?: number;
   /** Always inferred: deduced from two of our own records, not reported by the broker. */
@@ -155,7 +157,8 @@ export function inferCapitalFlow(
   if (prev.participantId !== next.participantId) return undefined;
   const tolerance = flowTolerance(prev.equity);
   const equityMove = next.equity - prev.equity;
-  const unexplainedCash = next.cash - prev.cash - fillCashBetween(records, prev.at, next.at);
+  const fillCash = fillCashBetween(records, prev.at, next.at);
+  const unexplainedCash = next.cash - prev.cash - fillCash;
   if (Math.abs(equityMove) <= tolerance || Math.abs(unexplainedCash) <= tolerance) return undefined;
   if (spreadNear(records, prev.at, next.at)) return undefined;
   return {
@@ -165,7 +168,9 @@ export function inferCapitalFlow(
     amount: equityMove,
     direction: equityMove > 0 ? "added" : "removed",
     unexplainedCash,
-    heldAfter: next.equity - next.cash,
+    // A fill in the window swapped its cash for positions worth about as much: add it back, so
+    // only a book carried in from before the window counts as held.
+    heldAfter: next.equity - next.cash + fillCash,
     basis: "inferred",
   };
 }

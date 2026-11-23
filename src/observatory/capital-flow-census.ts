@@ -10,15 +10,15 @@ import type { CapitalFlow } from "./capital-flow.js";
  *
  * What it grades. Each line carries its witnesses (`capital-flow.ts`): the equity move (`amount`),
  * the cash our fill journal did not explain (`unexplainedCash`) and, since #7729, the net value of
- * the book the later sample still holds (`heldAfter`). An Alpaca paper reset clears every
- * position, so its cash moves by the equity change PLUS the cleared book's net value: more than
- * equity for a net-long book, less or even the other way for a net-short one (#7729 — the first
- * cut of this rule assumed cash always moved the same way and further, and graded those genuine
- * resets "disagree"). What a reset always leaves is a flat book. So a line agrees when the later
- * book is flat (a reset), or when cash matches the equity move (capital arriving without touching
- * the book). A false line — a market move that happened to share a five-minute window with an
- * unjournaled cash event (an assignment, an expiry, a fee) — usually leaves the book held and pairs
- * two unrelated numbers.
+ * the book carried through the window, fills inside it set aside (`heldAfter`). An Alpaca paper
+ * reset clears every position, so its cash moves by the equity change PLUS the cleared book's net
+ * value: more than equity for a net-long book, less or even the other way for a net-short one
+ * (#7729 — the first cut of this rule assumed cash always moved the same way and further, and
+ * graded those genuine resets "disagree"). What a reset always leaves is a flat book. So a line
+ * agrees when the later book is flat (a reset), or when cash matches the equity move (capital
+ * arriving without touching the book). A false line — a market move that happened to share a
+ * five-minute window with an unjournaled cash event (an assignment, an expiry, a fee) — usually
+ * leaves the book held and pairs two unrelated numbers.
  *
  * The witnesses alone cannot catch every false line (#7730), so the journal is read FIRST. An
  * assignment's share leg moves cash by the whole strike notional (the lifecycle row closes at $0, so
