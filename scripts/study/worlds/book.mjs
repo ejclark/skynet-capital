@@ -39,7 +39,7 @@ import {
   parseOccSymbol,
 } from "../../../src/trading/option-symbols.ts";
 import { loadInput } from "./inputs.mjs";
-import { INSTANT, msOf, parseInstant, resolveTokens } from "./instant.mjs";
+import { checkInstant, INSTANT, msOf, resolveTokens } from "./instant.mjs";
 
 /** True when a symbol is an option contract. */
 const isOption = (symbol) => parseOccSymbol(symbol) !== undefined;
@@ -278,7 +278,7 @@ const botsOf = (input) => input.bots ?? (input.bot ? [input.bot] : []);
  * and pass weeks off the world's day.
  */
 function onThisInstant(name, raw) {
-  if (raw.instant !== undefined && parseInstant(raw.instant) !== INSTANT) {
+  if (raw.instant !== undefined && checkInstant(raw.instant) !== INSTANT) {
     throw new Error(
       `book: ${name} stands on ${raw.instant}, this process on ${INSTANT} — build it with STUDY_INSTANT=${raw.instant}`,
     );

@@ -2,14 +2,8 @@
   "$comment": "World 'bot-loop-today' (#8005, the bot's loop). Monday 2026-11-23 mid-session — after the pin's own commit (5dadb4923, 08:25 New York), whose tree is the world's corpus, so nothing the pin's code serves (a conviction's scored claims, the research shelf, the day's edition) is from the world's future; prices sit near what that research states (CRWV ~$46, NVDA ~$186). Two bots on one paper league, each with its own owner. Eric's Sauron is running and live and placed paper orders on its own (#6954): a tranche on Wednesday after NVDA's print, and today at 13:42 the house stop sold its CRWV (the stop's own words, book.mjs stopExit). Its CRWV wheel points at the AI-dip view (a conviction stated 2026-10-16); the pin's adoptions ledger holds that pair exits-only after the view's claim 2a failed, so the roll call says so. Jordan — the invited friend, who took over The Day Trader (docs/members/invited-friend.md) — finds its data-gap breaker tripped at the open: every pass since holds its opens (the MSFT momentum long it wants, refused breaker-halt) and still places its exits (an AAPL cut at 12:30). Casey, signed in and owning nothing, watches the league. Values are sanitized; persona order reasons are each persona's own templates or register (the stop's are the code's). Yesterday's closing equity is derived (book.mjs); the day's P/L on positions closed today is each bot's closedToday: 55 × (43.60 − 45.90) for Sauron's CRWV, 500 × (240.40 − 240.10) for the Day Trader's AAPL.",
   "instant": "2026-11-23T15:00:00-05:00",
   "corpus": {
-    "$comment": "The pin itself (5dadb4923, committed 08:25 New York on the instant's day): every tree-sourced fact a page serves — research, market events, and the landing page's editions, campaigns, lessons and symbol facts (`also`) — is the pin's, none later (compose.mjs).",
-    "commit": "5dadb4923a7cbd97df9e03bda375e9967f58f693",
-    "also": [
-      "src/domain/campaigns",
-      "src/domain/campaign-lessons",
-      "src/domain/editions",
-      "src/domain/symbols"
-    ]
+    "$comment": "The pin itself (5dadb4923, committed 08:25 New York on the instant's day): every tree-sourced fact a page serves — research, market events, the landing page's editions, campaigns, lessons and symbol facts — is the pin's, none later (compose.mjs → CORPUS_PATHS).",
+    "commit": "5dadb4923a7cbd97df9e03bda375e9967f58f693"
   },
   "members": [
     {

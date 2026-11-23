@@ -96,8 +96,6 @@ async function main() {
   if (missing.length > 0) throw new Error(`no composed viewer ${missing} (have: ${composed})`);
   const at = composedCheckout(run, manifest);
   const clock = parseClock(opts.clock);
-  // This world's own day (#8005), never the run's default.
-  const instant = worldInstant(manifest, opts.world);
   const fmt = await verdictWords(at);
   const names = new Set();
   const facts = viewers.flatMap((viewer) => {
@@ -106,7 +104,7 @@ async function main() {
     for (const n of dataNames(payloads)) names.add(n);
     return factSheet({
       viewer,
-      instant,
+      instant: worldInstant(manifest, opts.world),
       payloads,
       verdictWords: fmt.words,
       clock,
@@ -118,7 +116,7 @@ async function main() {
   const sheet = {
     world: opts.world,
     run,
-    instant,
+    instant: worldInstant(manifest, opts.world),
     clock,
     formatters: {
       verdictWords: fmt.from,

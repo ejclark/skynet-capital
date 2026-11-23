@@ -10,25 +10,24 @@
 // option's expiry, an earnings date) stay absolute dates; they are facts about the market, not
 // about the world's clock.
 //
-// ONE INSTANT PER WORLD, NOT PER HARNESS (#8005). The profile's worlds stand on DEFAULT_INSTANT, a
-// Thursday mid-session the profile study was cut at. A later area may need a later day — the bot's
-// loop shows a conviction view first stated on 2026-10-16, which a world on 10-08 would show eight
-// days before it existed. So a world's input may name its own `instant` (`parseInstant` holds it to
-// New York's clock), and the composer runs that world's child with it in `STUDY_INSTANT`
-// (compose.mjs), so every module here reads that world's instant and nothing else. A process that
-// serves several worlds (parity, a session, the facts sheet) never reads INSTANT for one: it reads
-// the run's record of each world's instant (`worldInstant`).
-//
 // A Thursday mid-session: the market is open, so a live bot is judged on its pass cadence and a
 // stopped one reads as stopped rather than as "market closed".
+//
+// ONE INSTANT PER WORLD, NOT PER HARNESS (#8005): the profile worlds stand on 2026-10-08, before
+// campaigns, editions, quests and convictions shipped; a world that studies them names its own
+// instant in its input (`"instant"`, inputs.mjs). The composer and the chat child run one process
+// per world with STUDY_INSTANT set to it, so everything below — the tokens, the pinned clock —
+// reads that world's instant. A reader of a run takes it per world from the manifest
+// (`worldInstant`), never from this module.
 
-/** 2026-10-08 15:00 New York (EDT, UTC−4) — every world that names no instant of its own. */
+/** 2026-10-08 15:00 New York (EDT, UTC−4) — the profile worlds' instant, and any world's default. */
 export const DEFAULT_INSTANT = "2026-10-08T15:00:00-04:00";
 
-const SHAPE = /^(\d{4}-\d{2}-\d{2})T\d{2}:\d{2}:\d{2}([+-]\d{2}:\d{2})$/;
+/** An instant a world may name: an ISO New York wall-clock time with its UTC offset. */
+const INSTANT_SHAPE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/;
 
 /** New York's UTC offset on one calendar day ("-04:00" or "-05:00"), read at its noon — the
- *  clocks change at 2am, so every session hour of that day shares it. */
+ *  clocks change at 2am, so every session hour of that day shares it (#8005, the bot's loop). */
 export function nyOffset(day) {
   const name = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/New_York",
@@ -43,35 +42,26 @@ export function nyOffset(day) {
   return offset;
 }
 
-/**
- * A world's instant as written: a New York wall-clock time with New York's own offset for that day
- * ("2026-11-19T15:00:00-05:00"). Anything else is refused — an offset that is not New York's would
- * shift every "@-2d 10:31" the input resolves off its session.
- */
-export function parseInstant(raw) {
-  const m = typeof raw === "string" ? SHAPE.exec(raw) : null;
-  if (!m || Number.isNaN(Date.parse(raw))) {
-    throw new Error(`instant: ${raw} is not a New York wall-clock time with its offset`);
-  }
-  if (m[2] !== nyOffset(m[1])) {
+/** `value` if it is an instant a world may name — with New York's own offset for its day, or
+ *  every "@-2d 10:31" it resolves would land off its session; throws otherwise. */
+export function checkInstant(value) {
+  if (!(INSTANT_SHAPE.test(String(value)) && !Number.isNaN(Date.parse(value)))) {
     throw new Error(
-      `instant: ${raw} carries ${m[2]}, but New York is at ${nyOffset(m[1])} that day`,
+      `instant: ${value} is not a New York time with its offset (e.g. ${DEFAULT_INSTANT})`,
     );
   }
-  return raw;
+  const day = value.slice(0, 10);
+  if (value.slice(-6) !== nyOffset(day)) {
+    throw new Error(`instant: ${value} is not a New York time: New York is at ${nyOffset(day)}`);
+  }
+  return value;
 }
 
-/** This process's instant: the composing world's (`STUDY_INSTANT`), else the default. */
-export const INSTANT =
-  process.env.STUDY_INSTANT === undefined
-    ? DEFAULT_INSTANT
-    : parseInstant(process.env.STUDY_INSTANT);
+/** This process's world instant: STUDY_INSTANT when a world names its own, else the default. */
+export const INSTANT = checkInstant(process.env.STUDY_INSTANT ?? DEFAULT_INSTANT);
 
-/** One world's instant from a compose run's manifest: its own record, else the run's one instant
- *  (a run composed before worlds could name their own). */
-export function worldInstant(manifest, world) {
-  return manifest.instants?.[world] ?? manifest.instant;
-}
+/** A composed world's instant, read from its run's manifest (one per world since #8005). */
+export const worldInstant = (manifest, world) => manifest.instants?.[world] ?? manifest.instant;
 
 const INSTANT_DAY = INSTANT.slice(0, 10);
 const DAY_MS = 86_400_000;
@@ -101,7 +91,7 @@ export function resolveToken(value) {
   }
   const wall = /^@(-?\d+)d (\d{2}):(\d{2})$/.exec(value);
   if (wall) {
-    // That day's own New York offset: a month of history can cross a clock change (#8005).
+    // That day's own New York offset: a month of history can cross a clock change.
     const day = dayFrom(Number(wall[1]));
     const iso = `${day}T${wall[2]}:${wall[3]}:00${nyOffset(day)}`;
     return new Date(Date.parse(iso)).toISOString();

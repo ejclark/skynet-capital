@@ -289,7 +289,7 @@ async function frameAt(open, surfaces, frameName, results, framesDir) {
 }
 
 /** Every surface of one world (its own, then one tap away), phone then desktop, one browser per
- *  viewer, on the world's own instant (`at`, from the run's manifest). */
+ *  viewer. */
 async function checkWorld(world, runDir, at) {
   const rows = [];
   const unstubbed = [];

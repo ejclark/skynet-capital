@@ -5,7 +5,7 @@
 //  - A SCRIPTED world (scripts/study/worlds/smoke.mjs): a module whose `world` export resolves to
 //    `{name, startPath, pinnedInstant, stubs, install?}` — served by scripts/shoot/shell.mjs.
 //  - A COMPOSED world (profile-today, profile-bad-day, no-account): a definition the composer
-//    (worlds/compose.mjs) turns into a run directory — `<run>/manifest.json` (each world's instant) and one
+//    (worlds/compose.mjs) turns into a run directory — `<run>/manifest.json` (its `instant`) and one
 //    `<run>/<world>/<viewer>.json` of payloads per viewer. A session over one serves EXACTLY those
 //    payloads through scripts/study/world-route.mjs (full-URL answers, a live-but-quiet event
 //    stream, writes recorded and never sent, anything uncomposed flagged `unstubbed`), so a member
@@ -48,15 +48,8 @@ function composedWorld(name, run, viewer, clock) {
   if (!viewers.includes(who)) {
     throw new Error(`world ${name} has no viewer ${who} in this run (it has: ${viewers})`);
   }
-  // The world's own instant (#8005): a run may hold worlds pinned to different days.
-  return {
-    name,
-    run: root,
-    viewer: who,
-    viewers,
-    pinnedInstant: worldInstant(manifest, name),
-    clock,
-  };
+  const pinnedInstant = worldInstant(manifest, name);
+  return { name, run: root, viewer: who, viewers, pinnedInstant, clock };
 }
 
 /**

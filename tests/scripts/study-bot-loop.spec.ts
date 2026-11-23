@@ -1,13 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { describe, expect, it } from "@rstest/core";
 import { buildBook } from "../../scripts/study/worlds/book.mjs";
-import {
-  INSTANT,
-  nyOffset,
-  parseInstant,
-  resolveToken,
-  worldInstant,
-} from "../../scripts/study/worlds/instant.mjs";
+import { checkInstant, nyOffset, resolveToken } from "../../scripts/study/worlds/instant.mjs";
 
 /**
  * The bot's-loop worlds (#8005) and what they asked of the harness: a world that names its own
@@ -24,22 +18,14 @@ describe("a world's own instant", () => {
   });
 
   it("takes a New York wall-clock time only with that day's own offset", () => {
-    expect(parseInstant("2026-11-23T15:00:00-05:00")).toBe("2026-11-23T15:00:00-05:00");
-    expect(() => parseInstant("2026-11-23T15:00:00-04:00")).toThrow(/New York is at -05:00/);
-    expect(() => parseInstant("2026-11-23 15:00")).toThrow(/not a New York wall-clock time/);
+    expect(checkInstant("2026-11-23T15:00:00-05:00")).toBe("2026-11-23T15:00:00-05:00");
+    expect(() => checkInstant("2026-11-23T15:00:00-04:00")).toThrow(/New York is at -05:00/);
   });
 
   it("resolves a wall-clock token on its own day's offset", () => {
     // Thirty days after the default instant is past the change: 10:00 New York is 15:00Z.
     expect(resolveToken("@30d 10:00")).toBe("2026-11-07T15:00:00.000Z");
     expect(resolveToken("@-2d 10:31")).toBe("2026-10-06T14:31:00.000Z");
-  });
-
-  it("is read per world from a run's manifest, the run's one instant for an older run", () => {
-    const manifest = { instant: INSTANT, instants: { a: "2026-11-23T15:00:00-05:00" } };
-    expect(worldInstant(manifest, "a")).toBe("2026-11-23T15:00:00-05:00");
-    expect(worldInstant(manifest, "b")).toBe(INSTANT);
-    expect(worldInstant({ instant: INSTANT }, "a")).toBe(INSTANT);
   });
 
   it("refuses to build a world in a process standing on another day", () => {

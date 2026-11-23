@@ -250,11 +250,66 @@ function shown(s, i) {
   ];
 }
 
-/** New structural problems: the top ten ranked with frames, every other one folded below. */
-export function structuralSection({ structural: items, grade }) {
+/** The one sentence a by-root section opens on (#8005): where the groups come from, and the order. */
+export const ROOT_RANKING =
+  "Grouped by where each problem's root sits: a row of the IA ledger (docs/IA.md §10) or a new " +
+  "root named after grading. Roots are ranked by their worst problem, then how many times they " +
+  "were reported, then how many members they reached; the problems under each keep that order.";
+
+const rootHeading = (g) =>
+  g.kind === "ledger"
+    ? `${g.title}${g.status ? ` · on the ledger: ${g.status}` : ""}`
+    : g.kind === "new"
+      ? `New root: ${g.title}`
+      : "Not yet placed under a root";
+
+const rootByline = (g) =>
+  `_${plural(g.items.length, "problem", "problems")} · reported ${plural(g.reports, "time", "times")} · ${plural(g.members, "member", "members")} reached._`;
+
+/** One root shown in full: its heading, its first problem with frames, the rest as lines. */
+function rootShown(g, i) {
+  const [lead, ...others] = g.items;
+  const first = shown(lead, 0).slice(1);
+  return [
+    `### ${i + 1}. ${rootHeading(g)}`,
+    "",
+    rootByline(g),
+    "",
+    `**${lead.finding.what}**`,
+    ...first,
+    ...others.map((s) => `- **${oneLine(s.finding.what)}** — ${foundBy(s)}.`),
+    ...(others.length ? [""] : []),
+  ];
+}
+
+/** Structural problems by IA root: the top ten roots in full, every other root folded below. */
+function byRootSection({ rootGroups: groups }, tail) {
+  const top = groups.slice(0, STRUCTURAL_TOP);
+  const more = groups.slice(STRUCTURAL_TOP);
+  const fold = more.length
+    ? [
+        "<details>",
+        `<summary>The other ${plural(more.length, "root", "roots")}, ranked the same way, text only</summary>`,
+        "",
+        ...more.map(
+          (g) =>
+            `- **${rootHeading(g)}** (${plural(g.items.length, "problem", "problems")}): ${g.items.map((s) => oneLine(s.finding.what)).join("; ")}`,
+        ),
+        "",
+        "</details>",
+        "",
+      ]
+    : [];
+  return [ROOT_RANKING, "", ...top.flatMap(rootShown), ...fold, ...tail];
+}
+
+/** New structural problems: the top ten ranked with frames, every other one folded below — or,
+ *  when the round's problems were placed under IA roots (`rootGroups`), the top ten roots. */
+export function structuralSection({ structural: items, grade, rootGroups }) {
   const rest = notCounted(grade.structural);
   const tail = rest.length ? ["", "Not counted as new:", "", ...rest] : [];
   if (!items.length) return ["None that a checker confirmed.", ...tail];
+  if (rootGroups?.length) return byRootSection({ rootGroups }, tail);
   const ranked = rankStructural(items);
   const top = ranked.slice(0, STRUCTURAL_TOP);
   const more = ranked.slice(STRUCTURAL_TOP);

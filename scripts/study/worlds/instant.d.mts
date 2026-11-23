@@ -2,12 +2,12 @@
 
 export const DEFAULT_INSTANT: string;
 export const INSTANT: string;
+export function checkInstant(value: string): string;
 export function nyOffset(day: string): string;
-export function parseInstant(raw: unknown): string;
 export function worldInstant(
-  manifest: { instant?: string; instants?: Record<string, string> },
+  manifest: { instant: string; instants?: Record<string, string> },
   world: string,
-): string | undefined;
+): string;
 export function dayFrom(days: number): string;
 export function resolveToken<T>(value: T): T | string;
 export function resolveTokens<T>(value: T): T;

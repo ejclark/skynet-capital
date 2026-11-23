@@ -76,8 +76,20 @@ export const RANKING: string;
 export function severityRank(raw: unknown): number;
 export function worstSeverity<T>(list: T[]): T | null;
 export function rankStructural<T extends StructuralItem>(items: T[]): T[];
+export const ROOT_RANKING: string;
 export function structuralSection(model: {
   structural: StructuralItem[];
   grade: { structural: { refound?: Record<string, unknown>; held?: Record<string, unknown> } };
+  rootGroups?:
+    | {
+        key: string;
+        kind: "ledger" | "new" | "unplaced";
+        title: string;
+        status: string | null;
+        items: StructuralItem[];
+        reports: number;
+        members: number;
+      }[]
+    | null;
 }): string[];
 export function renderReadout(model: ReadoutModel): string;

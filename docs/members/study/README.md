@@ -199,6 +199,14 @@ node scripts/study/readout.mjs --grade <round>/grade.json --round <round dir> --
   [--job-map <framer output>] [--reveal --sealed <key dir>]   # → docs/members/study/<name>/readout.md
 ```
 
+- **By IA root (#8005).** After grading, `node scripts/study/root.mjs --round <dir> [--ia
+  docs/IA.md]` asks a sealed rooter (`roles/rooter.md`, aware, never scoring) to place each counted
+  structural group under a row of `docs/IA.md` §10 (`U1`…) or a new root it names in plain words,
+  and writes `<round>/roots.json`. The readout then shows ROOTS, not rows: the top ten ranked by
+  their worst problem, then reports, then members reached, each with its problems under it and its
+  lead problem's frames; the rest folded; anything unplaced under "not yet placed", never hidden
+  (`ia-roots.mjs`, specced in `tests/scripts/study-readout-roots.spec.ts`). Without `roots.json`
+  the page is the flat top-ten list.
 - **The matchers** run from `node scripts/study/match.mjs --sealed <key dir> --round <dir>
   [--expect <file>]` (#5218) over `findings-unlabelled.jsonl`, in chunks of 40: matcher 1 and
   matcher 2 apart, then one tie-break over the findings they disagree on. Each is a sealed call on
@@ -227,7 +235,7 @@ node scripts/study/readout.mjs --grade <round>/grade.json --round <round dir> --
   - Written after it by the aware roles: `matches-1.json` + `matches-2.json` (+ `tiebreak.json`),
     `checks.json` (real · false · world-artifact, with `same_as` to merge one problem reported
     twice), `struck.json` (read when `--struck` is not given), `touches.json` (which key surfaces
-    any trace reached).
+    any trace reached), `roots.json` (each counted structural group's IA root, root.mjs).
   - A control round is a round directory too (`round.mjs --frozen-from`, below), plus the matcher
     files and `control.json` `{kind, source, frozen, pin, sourcePin, expect: [ids]}`. The grader
     holds it to the flag it is passed under (`--negative` takes only a negative control), to
@@ -385,7 +393,12 @@ node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answe
 ## Starting a new area — checklist
 
 1. Write the area's answer key (the owner's or members' own complaints), seal it outside the repo,
-   and post its hash and the pin on the owning issue. Every scored item gets its own id **at sealing**
+   and post its hash and the pin on the owning issue. Between cloud sessions the key travels as a
+   private artifact on the owner's account (#8005): `node scripts/study/seal.mjs pack --key <dir>
+   --name <study> --out <page.html>` prints the bundle hash to post; publish the page with the
+   Artifact tool; the grading session reads it back (Artifact `read`), saves it, and runs
+   `seal.mjs unpack --page <file> --expect <the posted hash> --out <dir outside any checkout>`. Only
+   the sealing and grading sessions open it; blind roles run with no tools and cannot. Every scored item gets its own id **at sealing**
    (a pointer like "the open gaps in the README" cannot be graded), and `primes.json` is written in
    the grader's shape, `{"<member>": ["<id>", …]}`. The controls' `--expect` files name the
    mechanism each fix removed (or each planted defect) beside its id, not only the item.
@@ -397,9 +410,9 @@ node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answe
    world whose header day change is not the sum of its rows' (`worlds/day-change.mjs`, #5052). P/L
    booked today on a position already closed is the one honest gap: declare it as the
    participant's `closedToday` and say so in the input's comment.
-   A world stands on one instant, and may name its own (`instant` in its input, a New York time
-   with that day's offset): put it after anything the pin's code serves as already true (a scored
-   claim, a stated view), and take the pin's own tree as the corpus (#8005, the bot's loop).
+   A world may name its own instant (`instant`, #8010): put it after anything the pin's code
+   serves as already true (a scored claim, a stated view), and the pin's own commit can be its
+   corpus.
 3. Run the framer, then the task author, then the lint. Freeze and hash the tasks.
 4. Thin slice: one member, one task, phone width.
 5. Full round, then grade, then the readout. Add what broke to *Lessons* below.
@@ -502,10 +515,10 @@ node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answe
   but a session that gave up at a pre-filled box may have been the instrument's fault.
 - 2026-11-23 · **the harness had drifted from the app by the bot loop's pin.** The profile's
   worlds, re-run there, missed 16 surfaces: the app nav lost Leaderboard and gained Campaign,
-  Moneypenny became a dock, and the profile's bot chip, calendar head and section tabs had moved. The read chain lacked the
-  newer route families (quests, book waits, target splits, member views), and the owner's
-  switchboard and the per-member stores production always wires were unwired. The bot loop's worlds
-  (#8005) brought the chain to the pin, wired those seams opt-in, and took a dock-era one-tap list;
-  the profile's worlds keep theirs, as their pin served them. Run parity at the pin before writing
-  a new area's surfaces.
+  Moneypenny became a dock, and the profile's bot chip, calendar head and section tabs had moved.
+  The read chain lacked the newer route families (quests, book waits, target splits, member
+  views), and the owner's switchboard and the per-member stores production always wires were
+  unwired. The bot loop's worlds (#8005) brought the chain to the pin, wired those seams opt-in,
+  and took a dock-era one-tap list; the profile's worlds keep theirs, as their pin served them.
+  Run parity at the pin before writing a new area's surfaces.
 
