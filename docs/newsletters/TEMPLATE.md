@@ -12,7 +12,9 @@ as unknown is printed as unknown.
 
 ## Sections, in order
 
-1. **Pictures first** — week-over-week trend lines from the series on the `data/newsletter` branch.
+1. **Pictures first** — while #8005 runs, its scorecard leads: `npm run cohesion:census`'s counts
+   (label collisions · homeless features · …, `docs/members/cohesion.md`) beside last edition's.
+   Then week-over-week trend lines from the series on the `data/newsletter` branch.
    Cloud runs cannot write that branch, so until the generator reads past editions back, the
    picture is this week's numbers alone.
 2. **Numbers** — the metric set, one line each, every line linking to where it came from.
@@ -39,14 +41,23 @@ as unknown is printed as unknown.
    partial or slipped, with the reason, and plan accuracy as a percentage.
 5. **Constraints** — the top 3 things binding progress: what each cost this week, and what would
    remove it, asked as named options.
-6. **Next week** — 3–7 commitments, each with a done line and its Horizon. Written again,
-   machine-readable, in the plan block. Then **the week ahead in markets**: at most five high-
+6. **Next week** — at most 3 commitments, each the next slice of a plan that carries `ready`
+   (a commitment the lanes cannot pull is a forecast, not a plan: W45–W47 scored 0 of 6 with
+   22% of the quota used, #6872). While a cross-feature study runs (#8005), its next slice is
+   commitment 1, and a commitment that serves neither primary outcome (`CLAUDE.md` → *Commander's
+   intent*) is dropped, not carried. A commitment carried twice is dropped or re-cut, said so in
+   one line. Each has a done line and its Horizon, written again, machine-readable, in the plan
+   block. Then **the week ahead in markets**: at most five high-
    and critical-impact research events dated in the coming seven days, each with its stance and
    the PR that set it, and the rest folded with their count.
 7. **Your part this week** — the human steps due, at most 5 asks, plus how many rolled over,
    and the decisions he holds now: `humanSteps.openAsks` (the count, and the oldest by how long it
    has carried `needs-eric`), from the same selector as the digest's Needs you.
-8. **Steering** — up to 3 direction questions with named options.
+8. **Steering** — up to 3 direction questions with named options, each with **the default
+   that applies** (the predicted answer, `docs/process/ALIGNMENT.md`). No reply on #7024 by the
+   next edition means the default was applied, and the next edition says what it changed. Three
+   editions drew no reply (W45–W47), so a question that waits on one stalls the week. The
+   irreversible class never rides a default: it goes to `needs-eric` as before.
 
 ## The numbers block
 
@@ -93,5 +104,5 @@ commitments.
 | `asks.carried` | The loops whose human step this newsletter asked. |
 | `asks.rolledOver` | The asks that did not fit the budget, each with the week it first waited. The next run puts these first. Copy them from the JSON's `humanSteps.rolledOver`. |
 
-Each of `id`, `text` and `done` is required on every commitment. 3–7 commitments is the plan's
-range; fewer or more is the writer's call to explain, not a parse failure.
+Each of `id`, `text` and `done` is required on every commitment. 1–3 commitments is the plan's
+range (section 6); more is the writer's call to explain, not a parse failure.
