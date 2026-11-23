@@ -270,7 +270,8 @@ const OWN_VIEWS = [
     struck:
       "a world has no shadow report: production's bots process writes one each pass and the" +
       " server reads it (`readAuthoredShadow`, the insights bridge); a world composes no bots" +
-      " process, so a play put in its test would read as never checked — the edge stays at a draft",
+      " process, so a play put in its test would read as never checked — the edge stays at a draft" +
+      " (#8049)",
   },
   {
     id: "own-account",
