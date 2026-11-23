@@ -565,3 +565,13 @@ node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answe
   bot loop's worlds (#8005) wired those seams opt-in and prove the November shell
   (`nav-surfaces.mjs`); the profile's worlds keep theirs, as their pin served them. Run parity at
   the pin before writing a new area's surfaces.
+- 2026-11-23 · **the canary voided the cross-feature thin slice: the expert role quoted the owner.**
+  Its three standing checks carried Eric's own words about round pages (2026-10-14: controls that
+  "cover content I need to evaluate", feedback that "doubles the work", a design "free of
+  distraction"), added after the profile round, so no canary had read them. Asked what it knew,
+  the expert recited them: every expert would have started primed. The checks stay; the quotes
+  moved here. A role prompt carries method, never the owner's complaints.
+- 2026-11-23 · **the thin slice's two other catches.** After three lint rewrites the tasks step
+  crashed on a helper it never imported (that path had never run); and the oracle failed a right
+  "down $4 so far today" for a −$4 day, because a sign counted only as a touching minus. Both fixed;
+  rescored, the session passes. Before quoting task success, read one answer by hand.

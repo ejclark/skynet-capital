@@ -235,9 +235,23 @@ export function withinTolerance(n, { value, abs = 0, rel = 0, ignoreSign = false
   return gap <= abs + 1e-9 || gap <= Math.abs(b) * rel + 1e-9;
 }
 
+// A loss said in words: an unsigned amount right after one of these is negative ("down $4", "lost
+// $412", "a loss of $8", "fell by about 3%"). Read only when the answer's sign matters (no
+// `ignoreSign`): the cross-feature thin slice's member answered "down $4 so far today, at $98,479"
+// for a −$4 day and was failed as +4 (2026-11-23).
+const LOSS_BEFORE =
+  /\b(?:down|lost|losing|fell|dropped|declined|loss\s+of)(?:\s+(?:by|of))?(?:\s+(?:about|around|roughly|nearly|almost))?\s*$/i;
+
+/** A hit whose clause says it is a loss, signed so; any other hit as it was written. */
+const withWordSign = (clean, h) =>
+  h.n > 0 && LOSS_BEFORE.test(clean.slice(Math.max(0, h.start - 40), h.start))
+    ? { ...h, n: -h.n }
+    : h;
+
 /** A number answer: one amount within tolerance, not offered as a choice, not among bare rivals. */
 function gradeNumber(given, expected) {
-  const { hits, clean } = numberHits(given);
+  const { hits: written, clean } = numberHits(given);
+  const hits = expected.ignoreSign ? written : written.map((h) => withWordSign(clean, h));
   const found = [...new Set(hits.map((h) => h.n))];
   if (found.length === 0) return { matched: false, why: "no number in the answer" };
   if (hedged(given)) return { matched: false, why: "it offers a choice of numbers — a guess" };
