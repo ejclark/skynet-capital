@@ -12,6 +12,7 @@ import {
   screenKey,
   sectionsOf,
   type TriageRow,
+  windowOf,
 } from "../../scripts/crawl/coverage.mjs";
 
 // The journey coverage table (scripts/crawl/coverage.mjs): which living screen does a member
@@ -322,5 +323,64 @@ describe("coverage", () => {
     expect(() => indexTriage([{ screen: "/x", verdict: "maybe" as TriageRow["verdict"] }])).toThrow(
       /bad triage row/,
     );
+  });
+});
+
+describe("the landing page's windows and the shell's parts (#8005 slice 1)", () => {
+  const WINDOWS = ["overview", "market", "calendar", "quests", "party"];
+  const routes = parseRouteTree(ROUTE_TREE);
+  const screens = buildScreens({
+    routes,
+    sections: SECTIONS,
+    chapters: ["onboarding"],
+    serverPages: [{ screen: "unknown URL" }],
+    windows: WINDOWS,
+    shell: [{ screen: "shell Moneypenny dock (the chat)" }],
+  });
+  const triageRows: TriageRow[] = [
+    ...TRIAGE.filter((r) => !r.screen.startsWith("/ ")),
+    { screen: "/ (Overview window)", verdict: "keep" },
+    { screen: "/ ?w=quests (the quests window)", verdict: "keep" },
+    { screen: "/ ?w=calendar", verdict: "keep" },
+    { screen: "/ ?w=market", verdict: "keep" },
+    { screen: "/ ?w=party", verdict: "keep" },
+    { screen: "shell Moneypenny dock", verdict: "keep" },
+  ];
+
+  it("gives each window past Overview a screen of its own, and each shell part one", () => {
+    const keys = screens.map((s) => s.key);
+    expect(keys).toContain("/");
+    expect(keys).toContain("/ ?w=quests");
+    expect(keys).not.toContain("/ ?w=overview");
+    expect(screens.find((s) => s.key === "shell Moneypenny dock")?.shell).toBe(true);
+  });
+
+  it("opens the window ?w= names, the Calendar for a pivot or an edition anchor, else Overview", () => {
+    expect(windowOf("/app/?w=party", WINDOWS)).toBe("party");
+    expect(windowOf("/app/?w=overview", WINDOWS)).toBeUndefined();
+    expect(windowOf("/app/?w=bogus", WINDOWS)).toBeUndefined();
+    expect(windowOf("/app/?show=story-a,event-b", WINDOWS)).toBe("calendar");
+    expect(windowOf("/app/#event-2026-11-24-cpi", WINDOWS)).toBe("calendar");
+    expect(windowOf("/app/", WINDOWS)).toBeUndefined();
+    const withWindows = { ...ctx(true), windows: WINDOWS };
+    expect(landingOf("/app/?w=quests", withWindows)).toEqual(["/ ?w=quests"]);
+    expect(landingOf("/app/", { ...withWindows, triage: indexTriage(triageRows) })).toEqual(["/"]);
+  });
+
+  it("reads a shell part as on every route — never a gap, never covered, outside the count", () => {
+    const result = coverage({
+      screens,
+      triageRows,
+      journeys: [],
+      routePaths: routes.map((r) => r.path),
+      sections: SECTIONS,
+      windows: WINDOWS,
+    });
+    const dock = result.rows.find((r) => r.key === "shell Moneypenny dock");
+    expect(dock?.status).toBe("every route");
+    expect(result.gaps.map((r) => r.key)).not.toContain("shell Moneypenny dock");
+    expect(result.gaps.map((r) => r.key)).toContain("/ ?w=quests");
+    expect(result.unjudged).toEqual([]);
+    expect(result.stale).toEqual([]);
   });
 });

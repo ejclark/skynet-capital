@@ -134,8 +134,12 @@ triage verdict says nobody needs it. No browser — it reads files:
 
 - **screens** from the code: `app/src/routeTree.gen.ts` (`/u/$id` and `/u/$id/` are one), each
   route's `{ id, label }` section literals (its own file, plus any file it imports that declares a
-  `PageSection<…>[] = [` list), Milestones' `?chapter=` values, and the server's own pages
-  (hand-listed in `coverage.mjs`, each with the line that serves it, checked every run);
+  `PageSection<…>[] = [` list), Milestones' `?chapter=` values, the landing page's `?w=` windows
+  (`app/src/live/mission.ts`; Overview, the default, is the bare `/` row), the server's own pages,
+  and the shell's every-route parts — the status line, Moneypenny's dock, the tower column
+  (hand-listed in `coverage.mjs`, each with the line that serves or mounts it, checked every run).
+  A shell part is judged and placed but reads "every route": no step lands on it, so it is never
+  a gap and never counted as covered;
 - **verdicts** from [`docs/members/triage.json`](../../docs/members/triage.json) — keep · fold ·
   retire · redirect-only · undecided, hand-maintained; retired and redirect-only rows are never gaps;
 - **visits** from the journey files through `steps.mjs`: a step visits the screen its `goto` lands
@@ -160,3 +164,37 @@ account?), not by loading the page — the crawl's `{url}` expects are what chec
 (a human account has no Heartbeat). A `goto` outside `/app` lands on the server page whose
 `serves` test matches it (`/login`, `/research/<slug>` — the same hand list, one predicate each);
 any other path counts as the unknown-URL row.
+
+## Cohesion — `npm run cohesion:census`
+
+Do the features read as one product? Plan #8005's five model-free scorecard rows, written to
+[`docs/members/cohesion.md`](../../docs/members/cohesion.md). No browser, no model — it reads the
+code, `docs/IA.md` and git history since the study (2026-10-09), and resolves every link with
+`coverage.mjs`'s own `landingOf` (via its exported `readScreens()`):
+
+1. **label collisions** — the words that name places (the top tabs, section, window and chapter
+   labels, door links whose words are a name, Moneypenny's place names), each resolved to the screen
+   it lands on and each screen to its IA group (`home` in `docs/members/triage.json`): a word naming
+   places in two groups, or a place named two ways at one level (a page's tab is never compared with
+   its default section);
+2. **concepts with more than one home** — `docs/IA.md` §2f × the screens' homes;
+3. **links that drop the key** — a door into a keyed page (§3) carrying none of a key the code around
+   it holds: candidates, each with file and line. A search built by a helper can't be read, so it is
+   never judged; `navigate()` calls are not read at all;
+4. **features with no IA home** — living screens with no `home`; parts (`app/src/shell|routes/*.tsx`)
+   added since the study that `docs/IA.md` never cites, themselves or by a non-route part above them;
+   member routes added since the study that no screen or chat tool names;
+5. **open IA ledger rows** — `docs/IA.md` §10.
+
+```bash
+npm run cohesion:census                # writes docs/members/cohesion.md; prints the five numbers
+npm run cohesion:census -- --json      # everything on stdout, writes nothing
+npm run cohesion:census -- --update    # also lowers cohesion-budget.json where a count fell
+```
+
+Advisory with a ratchet, never a red gate: a count above `cohesion-budget.json` is flagged ▲ and the
+run still exits 0. Rows 4b and 4c need history back to 2026-10-09; a shallow clone that stops later
+is named in the output (`git fetch --shallow-since=2026-10-01 origin main` deepens it). The study
+harness's harvest (`scripts/study/harvest.mjs`) is not an input: it needs a browser walk of a world
+and its strings carry no link targets, so it cannot say which place a word names.
+
