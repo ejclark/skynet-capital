@@ -6,7 +6,9 @@ export const OUTAGE_DAY_CAP: number;
 export const OUTAGE_PEER_READS: number;
 /** This UTC day's start, in ms: when the retry limit's count begins. */
 export const utcMidnight: (now: number) => number;
-/** When `in-progress` went on, in ms ascending, from `from` on. */
+/** A mark taken back off within this long was a claim withdrawing past the cap, not a build. */
+export const WITHDRAWN_MS: number;
+/** When `in-progress` went on, in ms ascending, from `from` on; withdrawn marks excluded. */
 export const startsFrom: (
   events:
     | ReadonlyArray<{ event?: string; label?: { name?: string }; created_at?: string }>
