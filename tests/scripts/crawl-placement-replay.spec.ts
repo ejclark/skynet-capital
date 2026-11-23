@@ -14,12 +14,9 @@ import { hermeticGitEnv } from "../support/hermetic-git";
 const REPO = process.cwd();
 const SCRIPT = join(REPO, "scripts/crawl/placement.mjs");
 const TREE = ["app/src", "src/server", "src/companion", "docs/IA.md", "docs/members/triage.json"];
-const env = hermeticGitEnv({
-  GIT_AUTHOR_NAME: "t",
-  GIT_AUTHOR_EMAIL: "t@t",
-  GIT_COMMITTER_NAME: "t",
-  GIT_COMMITTER_EMAIL: "t@t",
-});
+// hermeticGitEnv strips every GIT_* variable, an identity included, so the throwaway repo sets its
+// own: a CI runner has no global one (the first CI run of this spec failed exactly there).
+const env = hermeticGitEnv();
 
 let dir = "";
 const git = (...args: string[]) =>
@@ -59,6 +56,8 @@ beforeAll(() => {
   execFileSync("tar", ["-xf", tar, "-C", dir]);
   rmSync(tar);
   git("init", "-q");
+  git("config", "user.email", "spec@example.com");
+  git("config", "user.name", "placement spec");
   // A part that exists but no route imports yet: one branch adds it, a later one mounts it.
   writeFileSync(join(dir, "app/src/shell/zz-later.tsx"), "export const ZzLater = null;\n");
   commit("base");
