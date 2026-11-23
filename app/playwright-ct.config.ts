@@ -19,6 +19,14 @@ export default defineConfig({
   use: {
     trace: "on-first-retry",
     ctPort: 3100,
+    // Motion off, the same pin the route suite takes in `e2e/determinism.ts` (`freezePage`). The
+    // house tokens zero under reduced motion (`styles/theme.css`), so a mounted component renders
+    // straight at its settled frame. Without it every mount starts an entrance animation (the
+    // unlock banner's `fold-open`: translateY(-4px) → none), and Chromium runs transform/opacity
+    // on the compositor: Playwright's `animations: "disabled"` finishes it on the main thread, but
+    // a loaded runner could still capture a layer a subpixel off. That moved the whole top-rung
+    // banner in about one run in four (#8066). A ct shot covers settled layout, never motion.
+    contextOptions: { reducedMotion: "reduce" },
   },
   projects: [
     {
