@@ -129,5 +129,6 @@ are never in that list, whatever this table says.
 | 2026-11-10 | review queue | Merge the 4 green held PRs (#7211, #7030, #7271, #7080) that 5 queued plans wait on? | Yes, merge them (high) | "Merged them": the PRs were still open, so the session merged them on that yes | match |
 | 2026-11-10 | member data sharing | #6007 · do screenshots in Moneypenny's chat stay private to the member and her? | Private (medium) | "user account and trade information is visible to other users for the sake of gameplay. in that light, screenshots of money penny are not private" | miss; inside the invite gate the default is shared, so a privacy question there needs the gate named first |
 | 2026-11-11 | schedule (arming) | #7311 · run the audit-and-flip Routine daily after the morning steer, or weekdays only? | Daily, after the steer (medium) | "Yes, daily" | match |
+| 2026-11-23 | engineering gates | #8005 · scale the blind testing: A, B or C? | B (medium) | C, in chat ("run model C") | miss |
 
 The 2026-11-01 predictions are copied from each issue, where they were written before he answered; the rows themselves were added after, on the day the ledger was caught up.

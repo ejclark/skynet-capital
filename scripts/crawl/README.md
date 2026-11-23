@@ -134,8 +134,12 @@ triage verdict says nobody needs it. No browser — it reads files:
 
 - **screens** from the code: `app/src/routeTree.gen.ts` (`/u/$id` and `/u/$id/` are one), each
   route's `{ id, label }` section literals (its own file, plus any file it imports that declares a
-  `PageSection<…>[] = [` list), Milestones' `?chapter=` values, and the server's own pages
-  (hand-listed in `coverage.mjs`, each with the line that serves it, checked every run);
+  `PageSection<…>[] = [` list), Milestones' `?chapter=` values, the landing page's `?w=` windows
+  (`app/src/live/mission.ts`; Overview, the default, is the bare `/` row), the server's own pages,
+  and the shell's every-route parts — the status line, Moneypenny's dock, the tower column
+  (hand-listed in `coverage.mjs`, each with the line that serves or mounts it, checked every run).
+  A shell part is judged and placed but reads "every route": no step lands on it, so it is never
+  a gap and never counted as covered;
 - **verdicts** from [`docs/members/triage.json`](../../docs/members/triage.json) — keep · fold ·
   retire · redirect-only · undecided, hand-maintained; retired and redirect-only rows are never gaps;
 - **visits** from the journey files through `steps.mjs`: a step visits the screen its `goto` lands

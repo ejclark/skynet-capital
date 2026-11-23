@@ -13,8 +13,8 @@
 // SPA's route paths (`app/src/routeTree.gen.ts`, `/u/$id` and `/u/$id/` are one screen), each
 // route's `{ id: "x", label: "Y" }` section literals (its own file plus any file it imports that
 // declares a `PageSection<…>[] = [` list — that is how `/accounts` and `/settings` get theirs),
-// the Milestones `?chapter=` values, and the server's own pages, hand-listed below with the line
-// that proves each still exists. (2) The verdicts, `docs/members/triage.json` — hand-maintained,
+// the Milestones `?chapter=` values, the landing page's `?w=` windows, and the server's own pages
+// and the shell's every-route parts, hand-listed below with the line that proves each still exists. (2) The verdicts, `docs/members/triage.json` — hand-maintained,
 // seeded from the route triage of 2026-09-26. (3) The journeys, `e2e/journeys/*.journey.json`
 // through `steps.mjs`, the one reading of the schema. A step visits the screen its `goto` LANDS
 // on: the route's default section when the URL names none (a member with no account opens
@@ -52,6 +52,40 @@ const CHAPTERS = {
   file: "app/src/shell/milestone-card.tsx",
   name: "MILESTONE_CHAPTERS",
 };
+
+/** The landing page's windows (#7487): ONE window on its stage at a time, named by `?w=`, so each
+ *  is a screen of its own the way a Milestones chapter is. The default (Overview) is never written
+ *  and stays the bare `/` row; a `?show=` pivot or an `#event-`/`#story-` link opens the Calendar
+ *  (`routes/index.tsx` `openWindow`, mirrored by `windowOf`). */
+const WINDOWS = {
+  path: "/",
+  param: "w",
+  file: "app/src/live/mission.ts",
+  name: "WINDOWS",
+  default: "overview",
+  pivotTo: "calendar",
+};
+
+/** The shell's every-route parts (docs/IA.md §5.8): the root frame mounts each on every page, so no
+ *  journey step lands on one. Each is still judged and placed (triage.json), and reads "every
+ *  route" here, never a gap and never "covered"; the needle proves the frame still mounts it. */
+const SHELL_PARTS = [
+  {
+    screen: "shell status line (the market clock and the fleet's status)",
+    file: "app/src/routes/__root.tsx",
+    needle: "<StatusLine />",
+  },
+  {
+    screen: "shell Moneypenny dock (the chat, under every page)",
+    file: "app/src/routes/__root.tsx",
+    needle: "<MoneypennyDock />",
+  },
+  {
+    screen: "shell tower column (the 3D tower beside the stage)",
+    file: "app/src/routes/__root.tsx",
+    needle: "<Vantage root={app} />",
+  },
+];
 
 /** A route whose default is not its first section — `profile-sections.ts`'s `defaultSection`. */
 const DEFAULTS = {
@@ -188,11 +222,33 @@ const keyFor = (path, section, chapter) =>
     ? path
     : `${path} ?section=${section}${chapter === undefined ? "" : `&chapter=${chapter}`}`;
 
+const windowKey = (window) => `${WINDOWS.path} ?${WINDOWS.param}=${window}`;
+
 /**
- * Every screen the code has: `[{ key, path, section?, chapter? }]`. A route with sections is its
- * sections (never the bare path); Milestones also gets one row per chapter.
+ * The landing window a `goto` opens, or undefined for the default (Overview): `?w=` when it names
+ * a known window, the Calendar for a pivot or an edition anchor — `openWindow`'s own order.
  */
-export function buildScreens({ routes, sections, chapters, serverPages }) {
+export function windowOf(goto, windows) {
+  const u = new URL(goto, "http://x");
+  const asked = u.searchParams.get(WINDOWS.param);
+  if (asked && asked !== WINDOWS.default && windows.includes(asked)) return asked;
+  if (u.searchParams.get("show") || /^#(event|story)-/.test(u.hash)) return WINDOWS.pivotTo;
+  return undefined;
+}
+
+/**
+ * Every screen the code has: `[{ key, path, section?, chapter?, window?, shell? }]`. A route with
+ * sections is its sections (never the bare path); Milestones also gets one row per chapter, the
+ * landing page one row per window past its default, and each shell part one row of its own.
+ */
+export function buildScreens({
+  routes,
+  sections,
+  chapters,
+  serverPages,
+  windows = [],
+  shell = [],
+}) {
   const out = [];
   for (const { path } of routes) {
     const list = sections.get(path) ?? [];
@@ -205,8 +261,18 @@ export function buildScreens({ routes, sections, chapters, serverPages }) {
       }
     }
   }
+  out.push(...windowScreens(routes, windows));
   for (const p of serverPages) out.push({ key: screenKey(p.screen), path: null });
+  for (const p of shell) out.push({ key: screenKey(p.screen), path: null, shell: true });
   return out;
+}
+
+/** The landing page's windows past its default, one screen each — none when there is no `/`. */
+function windowScreens(routes, windows) {
+  if (!routes.some((r) => r.path === WINDOWS.path)) return [];
+  return windows
+    .filter((w) => w !== WINDOWS.default)
+    .map((w) => ({ key: windowKey(w), path: WINDOWS.path, window: w }));
 }
 
 /** The route pattern a concrete path belongs to (`/u/sauron/thesis` → `/u/$id/thesis`). */
@@ -220,28 +286,30 @@ export function matchRoute(pathname, routePaths) {
 /**
  * The screen keys a `goto` lands on, for a member who does (`linked`) or does not own an account.
  * A section the URL does not name (or names wrongly) is the route's default; an open chapter also
- * counts as a visit to the Milestones cards above it; a redirect-only row is recorded and
- * followed to its target (one hop at a time, three at most).
+ * counts as a visit to the Milestones cards above it; a landing window past Overview is its own
+ * screen (`ctx.windows`, the WINDOWS list); a redirect-only row is recorded and followed to its
+ * target (one hop at a time, three at most).
  */
-export function landingOf(goto, { linked, routePaths, sections, triage }, hops = 0) {
+export function landingOf(goto, ctx, hops = 0) {
+  const { linked, routePaths, sections, triage } = ctx;
   const path = new URL(goto, "http://x").pathname;
   // The sign-in hop (`serveHomePage`): a member with no linked account starts on Profile's
   // onboarding chapter, everyone else on `/app/` as before (#6317).
   if (path === "/" || path === "/index.html") {
     const next = linked ? "/app/" : "/app/accounts";
-    return [SIGN_IN_HOP, ...landingOf(next, { linked, routePaths, sections, triage }, hops + 1)];
+    return [SIGN_IN_HOP, ...landingOf(next, ctx, hops + 1)];
   }
-  const server = serverPageOf(path);
-  if (server !== undefined) return [server];
+  const direct = directLanding(path, goto, ctx);
+  if (direct !== undefined) return [direct];
   const [pathname, asked] = routeLabel(goto).split(" · ");
   const route = matchRoute(pathname, routePaths);
   if (route === undefined) return ["unknown URL"];
   const list = sections.get(route) ?? [];
-  if (list.length === 0) return follow(route, { linked, routePaths, sections, triage }, hops);
+  if (list.length === 0) return follow(route, ctx, hops);
 
   const askedKey = asked === undefined ? undefined : keyFor(route, asked);
   if (askedKey !== undefined && triage.get(askedKey)?.verdict === "redirect-only") {
-    return follow(askedKey, { linked, routePaths, sections, triage }, hops);
+    return follow(askedKey, ctx, hops);
   }
   const section = list.some((s) => s.id === asked)
     ? asked
@@ -253,6 +321,15 @@ export function landingOf(goto, { linked, routePaths, sections, triage }, hops =
     if (chapter) keys.push(keyFor(route, section, chapter));
   }
   return keys;
+}
+
+/** A landing with no section to resolve: a server page's row, or a landing window past Overview. */
+function directLanding(path, goto, { routePaths, windows }) {
+  const server = serverPageOf(path);
+  if (server !== undefined) return server;
+  const route = matchRoute(routeLabel(goto).split(" · ")[0], routePaths);
+  const window = route === WINDOWS.path ? windowOf(goto, windows ?? []) : undefined;
+  return window === undefined ? undefined : windowKey(window);
 }
 
 /** A path outside the SPA that one of the server's own pages serves → that page's row key. */
@@ -302,11 +379,12 @@ function visitsOf(journeys, ctx) {
   return visits;
 }
 
-function statusOf(t, inCode, atPhone) {
+function statusOf(t, inCode, atPhone, shell) {
   if (t === undefined) return "unjudged";
   if (NOT_LIVING.has(t.verdict)) return "never a gap";
   if (!inCode) return "stale";
   if (t.verdict === "undecided") return "undecided";
+  if (shell) return "every route";
   return atPhone ? "covered" : "gap";
 }
 
@@ -314,10 +392,11 @@ function statusOf(t, inCode, atPhone) {
  * The join. Returns `{ rows, headline, gaps, unjudged, stale }`; each row carries its phone and
  * desktop step lists. A gap is a living, decided row (keep · fold) no phone step visits.
  */
-export function coverage({ screens, triageRows, journeys, routePaths, sections }) {
+export function coverage({ screens, triageRows, journeys, routePaths, sections, windows }) {
   const triage = indexTriage(triageRows);
-  const visits = visitsOf(journeys, { routePaths, sections, triage });
+  const visits = visitsOf(journeys, { routePaths, sections, triage, windows });
   const screenKeys = new Set(screens.map((s) => s.key));
+  const shellKeys = new Set(screens.filter((s) => s.shell).map((s) => s.key));
   const dockedOf = new Map(
     screens.map((s) => [s.key, s.section !== undefined && DOCKED.has(s.path)]),
   );
@@ -334,13 +413,15 @@ export function coverage({ screens, triageRows, journeys, routePaths, sections }
       docked,
       phone: [...v.phone],
       desktop: docked ? [] : [...v.desktop],
-      status: statusOf(t, screenKeys.has(key), v.phone.size > 0),
+      shell: shellKeys.has(key),
+      status: statusOf(t, screenKeys.has(key), v.phone.size > 0, shellKeys.has(key)),
     };
   };
   const rows = [...triage].map(([key, t]) => row(key, t));
   for (const s of screens) if (!triage.has(s.key)) rows.push(row(s.key, undefined));
 
-  const living = rows.filter((r) => r.living);
+  // A shell part is judged and placed, never measured by a landing: it sits outside the count.
+  const living = rows.filter((r) => r.living && !r.shell);
   const covered = living.filter((r) => r.phone.length > 0).length;
   const gaps = rows.filter((r) => r.status === "gap");
   const undecided = rows.filter((r) => r.verdict === "undecided");
@@ -370,6 +451,7 @@ function statusCell(r) {
   if (r.status === "undecided") return `undecided — ${cell(r.target)}`;
   if (r.status === "unjudged") return "**unjudged — add it to triage.json**";
   if (r.status === "stale") return "**stale — no screen in the code matches**";
+  if (r.status === "every route") return "every route (the shell mounts it; no step lands on it)";
   return r.status === "gap" ? "**gap**" : "covered";
 }
 
@@ -379,7 +461,7 @@ export function renderMarkdown(result) {
     "",
     `**${result.headline}**`,
     "",
-    "_Generated by `npm run crawl:coverage` (`scripts/crawl/coverage.mjs`) from the route tree, each route's sections, the server's own pages, `docs/members/triage.json` (the verdicts, hand-maintained) and `e2e/journeys/*.journey.json`. Never hand-edit this file — change a verdict in `triage.json` or add a journey step, then re-run. A step visits the screen its `goto` lands on; the numbers are steps, not members. Trade's sections read `docked` at desktop: there they share one bench, so only a phone step shows one alone._",
+    "_Generated by `npm run crawl:coverage` (`scripts/crawl/coverage.mjs`) from the route tree, each route's sections, the server's own pages, `docs/members/triage.json` (the verdicts, hand-maintained) and `e2e/journeys/*.journey.json`. Never hand-edit this file — change a verdict in `triage.json` or add a journey step, then re-run. A step visits the screen its `goto` lands on; the numbers are steps, not members. Trade's sections read `docked` at desktop: there they share one bench, so only a phone step shows one alone. The landing page's windows (`?w=`) are screens of their own; the shell's parts are on every route, so they are judged and placed but never counted as covered or as a gap._",
     "",
   ];
   if (result.unjudged.length > 0 || result.stale.length > 0) {
@@ -419,19 +501,28 @@ function collect() {
     const list = r.modules.flatMap((m) => sectionsOf(modulePath(m), readOrUndefined));
     if (list.length > 0) sections.set(r.path, list);
   }
-  for (const p of SERVER_PAGES) {
+  for (const p of [...SERVER_PAGES, ...SHELL_PARTS]) {
     if (p.file && !readFileSync(p.file, "utf8").includes(p.needle)) {
       throw new Error(`coverage: ${p.screen} — ${p.file} no longer contains ${p.needle}`);
     }
   }
   const chapters = parseChapters(readFileSync(CHAPTERS.file, "utf8"), CHAPTERS.name);
-  const screens = buildScreens({ routes, sections, chapters, serverPages: SERVER_PAGES });
+  const windows = parseChapters(readFileSync(WINDOWS.file, "utf8"), WINDOWS.name);
+  const screens = buildScreens({
+    routes,
+    sections,
+    chapters,
+    serverPages: SERVER_PAGES,
+    windows,
+    shell: SHELL_PARTS,
+  });
   return coverage({
     screens,
     triageRows: JSON.parse(readFileSync(TRIAGE, "utf8")),
     journeys: loadJourneys(),
     routePaths: routes.map((r) => r.path),
     sections,
+    windows,
   });
 }
 
