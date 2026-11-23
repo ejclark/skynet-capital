@@ -72,6 +72,15 @@ for, and seeing one would read as "I am in the wrong place".
   same probe findings every member meets (disabled Activity rows with no reason) — the ledger
   carries those.
 
+**Found by the cross-feature journeys (#8005 slice 3, 2026-11-23)** — each pinned as a `known_gap`
+on its step; the line flips to fixed with the fix.
+
+- **Open — j5 s2** (medium): the Party window names every member and links none: no desk, no league.
+- **Open — j5 s3** (medium): "where is the leaderboard?" gets no link unless a model answers.
+- **Open — j5 s4** (medium): a bot's desk is not a place Moneypenny may link.
+- **Open — j6 s2** (medium): "conviction" names two different things on R&D's Playbooks.
+- **Open — j6 s3** (low): R&D's Playbooks names the bot it changes but offers no way back to it.
+
 ## 6. Journeys
 
 ### j1 — my own book, not the owner's
@@ -145,6 +154,73 @@ and is not the owner.)_
 `human-eric` turned j1 s1–s5 red at both widths (Eric's net worth, his EEM row, his desk on the
 ticket, his account card); adding the friend to `SKYNET_ALLOWED_EMAILS` turned s5–s6 red (Mission
 Control, Unclaimed accounts, the Guest list). Neither change was kept.
+
+### j5 — where the standings went (cross-feature, #8005)
+
+_Phone. Crosses the landing page's Party window → Moneypenny's chat → the Leaderboard → a bot's
+desk. The Leaderboard left the tab bar in #7487, so "where did it go" is now a real question._
+
+1. `/app/` — the landing page's rows at a glance; 'The party' opens the members together against The
+   Tower. They tap "The party". **WHEN a member opens the Party row on the landing page, the app
+   shall show the party's members and what they booked.** Judge: can this reader tell how the party
+   is doing?
+2. `/app/?w=party` — Eric, Friend and The Tower by name with what each booked, and none of them a
+   way in: no desk, no league. **WHEN a member reads the Party window, the app shall link each
+   member to their desk and the party to the league's full standing.** _Known gap (medium, fix S,
+   `app/src/shell/mission-windows.tsx:191`) — the Party window lists each member and The Tower by
+   name and links none of them (PartyWindow's rows carry no link), though it reads the same
+   /api/board rows the Leaderboard ranks; with the Leaderboard off the tab bar (#7487) the party is
+   a dead end on the way to the standings._ Judge: can this reader get from the party to a member's
+   book?
+3. `/app/` — she is asked 'where is the leaderboard?' (it left the tab bar) and answers with the
+   general nudge, no link. They type "where is the leaderboard?", then send. **WHEN a member asks
+   Moneypenny where a place is, the app shall answer with that place as a link, with or without a
+   model call.** _Known gap (medium, fix S, `app/src/live/moneypenny-script.ts:146`) — 'Ask, or say
+   where to go' routes a place only through a model call: the scripted path has no branch for a
+   place name, so with the chat's model off or throttled 'where is the leaderboard?' gets the
+   general nudge, though places.ts already holds the Leaderboard's address._ Judge: can this reader
+   get to the standings from here?
+4. `/app/` — she is asked where to see what Sauron traded; a bot's desk is not a place she may link.
+   They type "where can I see what Sauron traded?", then send. **WHEN a member asks Moneypenny where
+   a bot's trades are, the app shall answer with that bot's desk as a link.** _Known gap (medium,
+   fix S, `src/companion/places.ts:29`) — a bot's desk has no address she may link: /u/<id> is not
+   on the chat's place list, so neither her live answer nor a scripted one can send a member to
+   Sauron's trades; this step stays red after s3's routing lands, until the list holds desks._
+   Judge: can this reader get to the bot's trades from here?
+5. `/app/leaderboard` — the league's rows, each a way to that account's desk; Sauron's opens his.
+   They tap "Sauron". **WHEN a member opens a row of the league, the app shall open that account's
+   desk.** Judge: can this reader find what the bot actually did?
+
+### j6 — my bot's playbooks, and the convictions on them (cross-feature, #8005)
+
+_Phone. Crosses my bot's public page → R&D's Playbooks (convictions) → Profile's roll call for the
+same bot._
+
+1. `/app/u/day-trader/playbooks` — my own bot's public Playbooks page; 'Change in R&D ›' takes its
+   account along. They tap "Change in R&D". **WHEN a member opens their own bot's playbooks to
+   change them, the app shall open R&D's Playbooks on that bot's account.** Judge: can this reader
+   tell where to change what the bot runs?
+2. `/app/research?section=playbooks&account=day-trader` — 'Your convictions' (views the member
+   states, #5482) over cards marked '◆ conviction' (a pair that runs on its owner's reason and check
+   day, #4469): one word, two things, one screen. **WHEN a member reads R&D's Playbooks, the app
+   shall use one word for one thing: 'conviction' names the member's stated views, never a pair's
+   status too.** _Known gap (medium, fix S, `app/src/shell/playbook-evidence.tsx:54`) — 'conviction'
+   names two records on one screen: the member's stated views ('Your convictions',
+   your-convictions.tsx) and a pair that runs on its owner's reason and check day ('◆ conviction' on
+   the cards; docs/IA.md §2e and §5.4). This expect assumes the views keep the word; if #8005 slice
+   6's naming call gives it to the pair instead, move the absent check to the views' heading._
+   Judge: can this reader tell what a conviction is?
+3. `/app/research?section=playbooks&account=day-trader` — 'The Day Trader — capital under
+   management' names the bot being changed, as plain words: no way back to its desk or its roll
+   call. **WHEN a member changes a bot's playbooks in R&D, the app shall name that bot as a way back
+   to it.** _Known gap (low, fix S, `app/src/shell/playbooks-section.tsx:192`) — R&D's Playbooks
+   takes the bot's account in and gives no way back: the bot is named in bold text, not linked to
+   its desk or its Profile roll call, so the round trip to see a change take hold is the Back button
+   (docs/IA.md §6 joint 4)._ Judge: can this reader get back to the bot?
+4. `/app/accounts?account=day-trader&section=playbooks` — the bot's roll call on Profile: what each
+   playbook is doing, with 'Change in R&D ›' on the same account. **WHEN a member opens their bot's
+   Playbooks on Profile, the app shall show what each playbook is doing and the way to change it on
+   the same account.** Judge: can this reader tell what the bot is doing?
 
 Journey map: [`maps.md`](maps.md) (after the next full crawl). Findings: [`friction-ledger.md`](friction-ledger.md).
 

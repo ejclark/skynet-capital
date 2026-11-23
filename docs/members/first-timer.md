@@ -46,6 +46,14 @@ and the first button, never the rail. They skip anything that names a concept th
 - **3 (fixed)** — `/trade` with no account said "No accounts are linked to your session yet." with
   nothing to click. The words are now the link (j1 s5).
 
+**Found by the cross-feature journeys (#8005 slice 3, 2026-11-23)** — each pinned as a `known_gap`
+on its step; the line flips to fixed with the fix.
+
+- **Open — j3 s1b** (low): with no account, the landing page still offers "How are my positions
+  doing?".
+- **Open — j3 s2b** (medium): Moneypenny's first reply tells a member with no account to buy a stock
+  on "your account".
+
 ## 6. Journeys
 
 ### j1 — the first ten minutes
@@ -110,6 +118,40 @@ and the first button, never the rail. They skip anything that names a concept th
 1. `/app/accounts?section=milestones&chapter=trading` — One fill unlocks the next rung; 101 first. **WHEN the member opens the
    trading ladder before any fill, the app shall show rung 101 as the next rung and what earns
    it.** Judge: can this reader tell what to do next in ten seconds?
+
+### j3 — hello, and the way in (cross-feature, #8005)
+
+_Phone. Crosses the landing page → Moneypenny's chat → Profile's onboarding chapter. The chat runs
+on its model-free path, as in CI._
+
+1. `/app/` — the landing page with no account: Where things stand, its next step 'Connect your paper
+   account', and Moneypenny's box under the page. **WHEN a signed-in member with no linked account
+   opens the landing page, the app shall lead with connecting a paper account and keep Moneypenny's
+   box on screen.** Judge: can this reader tell what to do next in ten seconds?
+1b. `/app/` — the two canned paths over the next step: 'What's coming up that I should watch?' and
+    'How are my positions doing?', a question about positions this member does not have. **WHILE a
+    member has no linked account, the landing page shall offer only canned paths that can be
+    answered for them.** _Known gap (low, fix S, `app/src/live/landing-ask.ts:42`) — the canned
+    paths are one fixed pair for every member (QUICK_QUESTIONS), so a member with no account is
+    offered 'How are my positions doing?' about a book that does not exist._ Judge: can this reader
+    tell what to do next in ten seconds?
+2. `/app/` — she offers 'Help me get set up'; tapped, she answers with the short path and names the
+   onboarding page as a link. They tap "Help me get set up". **WHEN a member with no account asks
+   Moneypenny how to get set up, the app shall answer with the onboarding page as a link.** Judge:
+   can this reader tell where to go next?
+2b. `/app/` — the desk's line on her first message: 'trading milestone M·02 is now unlocked on your
+    account. buy your first stock (rung 101)', to a member with no account, one line above her steps
+    to connect one. They tap "Help me get set up". **WHEN a member with no linked account first
+    messages Moneypenny, the app shall not tell them to trade on an account they do not have.**
+    _Known gap (medium, fix S, `app/src/live/moneypenny.ts:725`) — her first-message line is the
+    same for every member: any first message appends MESSAGE_OPS_LINE, 'trading milestone M·02 is
+    now unlocked on your account. buy your first stock (rung 101)', so a member with no account is
+    told to trade on one, one line above her steps to connect one._ Judge: does this reader know
+    what to do first?
+3. `/app/` — her link, tapped, lands on Profile's onboarding chapter: the steps to connect a paper
+   account. They tap "Help me get set up", then tap "onboarding page". **WHEN a member taps the
+   place Moneypenny names, the app shall land them on it.** Judge: can this reader tell what to do
+   next in ten seconds?
 
 Journey map: [`maps.md`](maps.md#first-timer). Findings: [`friction-ledger.md`](friction-ledger.md).
 

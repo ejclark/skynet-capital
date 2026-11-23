@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { mintSession } from "../scripts/crawl/mint-session";
 import {
+  afterMisses,
   expectHolds,
   loadJourneys,
   performAct,
@@ -15,9 +16,11 @@ import { journeysTag } from "./playwright.journeys";
  * THE MEMBER JOURNEYS AS ACCEPTANCE TESTS — generated at module load from every
  * `e2e/journeys/*.journey.json` (the machine-readable twin of `docs/members/<member>.md`; schema in
  * `docs/members/README.md`). One `describe` per journey × viewport, one `test` per step titled by
- * its EARS line. A step carrying `known_gap` is `test.fail()` — expected to fail today — so the
- * suite is green while the gaps are real and turns RED the day a gap is fixed. That red is the
- * ratchet: the fix then deletes the `known_gap` line, and the step guards the fix from then on.
+ * its EARS line: its expects, then its act (one action or several), then its `after` entries, which
+ * judge a hand-off where it lands (#8005 slice 3). A step carrying `known_gap` is `test.fail()` —
+ * expected to fail today — so the suite is green while the gaps are real and turns RED the day a
+ * gap is fixed. That red is the ratchet: the fix then deletes the `known_gap` line, and the step
+ * guards the fix from then on.
  *
  * Runs in CI before every merge (#7031 slice 1): the default `npx playwright test` collects it in
  * two projects, `journeys-open` and `journeys-session`, each against its own boot
@@ -50,6 +53,8 @@ for (const member of loadJourneys()) {
               expect(result.ok, result.detail).toBe(true);
             }
             await performAct(page, step.act);
+            const misses = await afterMisses(page, step);
+            expect(misses, misses.join("; ")).toEqual([]);
           });
         }
       });
