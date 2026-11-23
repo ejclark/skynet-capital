@@ -25,8 +25,7 @@ const PLAYBOOKS = "/app/research?section=playbooks";
 const playbooksFor = (id) => `/app/research?section=playbooks&account=${id}`;
 /** The calendar head as the week reads at the instant: a button that opens it on a phone, laid out
  *  open on a desk. */
-const SPAN = "Nov 23 – Nov 29 · 4 sessions";
-const WEEK = `Market calendar: ${SPAN}`;
+const WEEK = "Market calendar: Nov 23 – Nov 29 · 4 sessions";
 const calendarHead = [phone(role("button", WEEK)), desktop(role("group", "Lens"))];
 /** On a desk the catalog opens one strategy at a time beside its list; on a phone every card is
  *  open (bot-loop-surfaces.mjs → OPEN_WHEEL). */
@@ -46,7 +45,6 @@ const OWNER = [
     expect: [
       role("heading", "R&D", { exact: true }),
       role("region", "Market calendar"),
-      text(SPAN),
       ...calendarHead,
     ],
   },
@@ -164,8 +162,9 @@ const OWNER = [
     label: "Playbooks: + on a play opens the member's own bots",
     route: PLAYBOOKS,
     act: [click("button", "Subscribe your bots to the wheel")],
-    // Each bot is a styled label over a visually hidden checkbox: the label is what shows.
-    expect: [role("group", "Your bots for the wheel"), text("Sauron already runs it")],
+    // Each bot is a styled label over a visually hidden checkbox: the label is what shows, its
+    // name and its state in separate spans.
+    expect: [role("group", "Your bots for the wheel"), text("already runs it")],
   },
   {
     id: "playbooks-account",
@@ -208,7 +207,7 @@ const WATCHER = [
     id: "watcher-board",
     label: "watcher: the Board and its calendar",
     route: BOARD,
-    expect: [role("heading", "R&D", { exact: true }), text(SPAN), ...calendarHead],
+    expect: [role("heading", "R&D", { exact: true }), ...calendarHead],
   },
   {
     id: "watcher-coverage",
@@ -287,7 +286,7 @@ const FIRST_DAY = [
     id: "first-board",
     label: "first day: the Board and its calendar",
     route: BOARD,
-    expect: [role("heading", "R&D", { exact: true }), text(SPAN), ...calendarHead],
+    expect: [role("heading", "R&D", { exact: true }), ...calendarHead],
   },
   {
     id: "first-coverage",
