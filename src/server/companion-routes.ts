@@ -21,6 +21,7 @@ import { SCREENSHOT_ID } from "./companion-screenshots-store.js";
 import { resolveCurrentId } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { opaqueMemberId } from "./feedback-issue.js";
+import { knownProblemFixes } from "./known-problem-fixes.js";
 import { onboardingView } from "./onboarding-api-routes.js";
 import { describeOwnerQueue, type OwnerQueue, type ReadOwnerQueue } from "./owner-queue.js";
 import { parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
@@ -140,6 +141,12 @@ async function memberContextFor(
       config.readFeedback ? config.readFeedback(opaqueMemberId(session.email)) : [],
       owner && config.readOwnerQueue ? ownerQueueWithin(config.readOwnerQueue) : undefined,
     ]);
+    // "Try it" (#8005 slice 7): a matched filing whose known problem was fixed since they asked.
+    const fixes = await knownProblemFixes(filings, config.fetchFeedbackStatus);
+    const fixed = filings.flatMap((f) => {
+      const fix = fixes.get(f.issueNumber);
+      return fix ? [{ issueNumber: f.issueNumber, title: f.title, ...fix }] : [];
+    });
     return memberContext({
       now: new Date(),
       onboarding,
@@ -151,6 +158,7 @@ async function memberContextFor(
       ...(holding ? { holding } : {}),
       ...(onScreen ? { onScreen } : {}),
       ...(ownerQueue ? { ownerDesk: describeOwnerQueue(ownerQueue) } : {}),
+      ...(fixed.length > 0 ? { fixed } : {}),
     });
   } catch {
     return undefined;

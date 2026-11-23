@@ -63,6 +63,12 @@ in code — only as a host secret, exactly like the Alpaca keys.
    `src/server/feedback-attribution.ts`) — every issue here is filed by the same bot token, so
    GitHub's own `author:` search can't isolate one member's items; `label:member-<id>` (or clicking
    the label) can, the same way `author:` would on a normal repo.
+   A filing Moneypenny matched to a known problem (#8005 slice 7) also carries `ia-<row>`, the row
+   of the IA ledger (`docs/IA.md` §10) it is evidence on, and a **Known problem** line naming the
+   row and its plan in the ledger's own words. Ask her to file "one list for all my orders" and
+   the issue carries `ia-U1`. `npm run ia:ledger -- --evidence` counts members per row by those
+   two labels into `docs/members/ia-ledger-evidence.md`; regenerate `src/domain/ia-ledger.json`
+   with `npm run ia:ledger` whenever §10 changes.
 5. On the Profile page's Feedback section (`/app/accounts?section=feedback`), "Your recent feedback" shows a live status badge per filing (Filed — waiting to be
    picked · Up next · Being built · Waiting on your answer · Waiting on Eric's decision · First part shipped · Shipped · Closed, not
    built) once

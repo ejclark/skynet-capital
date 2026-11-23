@@ -24,6 +24,7 @@ const CLASS_WORDS = {
   experts: "expert reviews",
   words: "the pass over the words",
   instruments: "the measurements",
+  chat: "filings members asked Moneypenny for",
 };
 
 const pct = (x) => (x === null || x === undefined ? "n/a" : `${Math.round(x * 100)}%`);
@@ -337,17 +338,18 @@ function scorecard({ grade, titles }) {
   const found = (cls) =>
     `${c[cls].thoroughness.found} of ${c[cls].thoroughness.renders} (${range(c[cls].thoroughness.wilson)})`;
   const lines = [
-    "| Your item | Members | Experts | Words | Measurements (not blind) | Note |",
-    "|---|---|---|---|---|---|",
+    "| Your item | Members | Experts | Words | Measurements (not blind) | Chat drafts (not blind) | Note |",
+    "|---|---|---|---|---|---|---|",
     ...rows.map((g) => {
       const note = [g.struck && "struck", g.disputed && "**disputed**"].filter(Boolean).join(", ");
-      if (g.struck) return `| ${cell(label(g.id, titles))} | — | — | — | — | ${note} |`;
+      if (g.struck) return `| ${cell(label(g.id, titles))} | — | — | — | — | — | ${note} |`;
       const s = g.scores;
-      return `| ${cell(label(g.id, titles))} | ${mark(s.members, g.primed)} | ${mark(s.experts)} | ${mark(s.words)} | ${mark(s.instruments)} | ${note} |`;
+      return `| ${cell(label(g.id, titles))} | ${mark(s.members, g.primed)} | ${mark(s.experts)} | ${mark(s.words)} | ${mark(s.instruments)} | ${mark(s.chat ?? 0)} | ${note} |`;
     }),
-    `| **Found** | ${found("members")} | ${found("experts")} | ${found("words")} | ${found("instruments")} | |`,
+    `| **Found** | ${found("members")} | ${found("experts")} | ${found("words")} | ${found("instruments")} | ${c.chat ? found("chat") : "n/a"} | |`,
     "",
     "The measurements were designed after reading your list, so they never count as finding anything.",
+    "A chat draft is a filing Moneypenny wrote from what a member told her; it is counted apart, never as discovery.",
   ];
   const a = grade.agreement;
   lines.push(

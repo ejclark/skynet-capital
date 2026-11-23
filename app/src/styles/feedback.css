@@ -203,6 +203,17 @@
   font-size: 11px;
   color: var(--muted);
 }
+/* "Try it" (#8005 slice 7): the link carries an underline as well as the accent, so it reads as a
+   link without leaning on hue (BRAND → Accessibility), on its own line with a phone-sized tap
+   target, so it never wraps half onto the line above at 390. */
+.fb-try {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  display: block;
+  padding-block: 6px;
+}
 /* The track: three same-size steps (filed · being built · shipped). Filled = done, filled with a
  * halo = underway now (the lit middle step, #6316), striped = paused, half-filled = part shipped,
  * outlined and empty = not yet. Every step keeps a --text outline so an empty one is still a

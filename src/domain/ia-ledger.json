@@ -1,0 +1,345 @@
+{
+  "source": "docs/IA.md §10",
+  "rows": [
+    {
+      "id": "U1",
+      "problem": "One history, three homes",
+      "detail": "the league feed, Profile Activity and /u/<id>/activity each list orders with their own controls and rows",
+      "screens": [
+        {
+          "id": "activity",
+          "name": "Activity",
+          "route": "/app/activity"
+        },
+        {
+          "id": "profile-activity",
+          "name": "Profile: Activity",
+          "route": "/app/accounts?section=ledger"
+        },
+        {
+          "id": "profile-overview",
+          "name": "Profile: Overview",
+          "route": "/app/accounts"
+        }
+      ],
+      "screensCited": 3,
+      "plans": [8008],
+      "state": "plan filed"
+    },
+    {
+      "id": "U2",
+      "problem": "Derived numbers on a log",
+      "detail": "P/L, booked totals and Pulse's headline numbers sit on feeds instead of the book's ledger",
+      "screens": [
+        {
+          "id": "profile-activity",
+          "name": "Profile: Activity",
+          "route": "/app/accounts?section=ledger"
+        },
+        {
+          "id": "member-pulse",
+          "name": "Account page: Pulse",
+          "route": "/app/u/sauron/pulse"
+        },
+        {
+          "id": "activity",
+          "name": "Activity",
+          "route": "/app/activity"
+        }
+      ],
+      "screensCited": 3,
+      "plans": [8008],
+      "state": "plan filed"
+    },
+    {
+      "id": "U3",
+      "problem": "A section switch that can't hold its sections at 390",
+      "detail": "tabs cut off with no cue, a head taking half the first screen",
+      "screens": [
+        {
+          "id": "trade-ticket",
+          "name": "Trade: Ticket",
+          "route": "/app/trade?symbol=NVDA"
+        },
+        {
+          "id": "trade-chain",
+          "name": "Trade: Options chain",
+          "route": "/app/trade?symbol=NVDA&section=chain"
+        },
+        {
+          "id": "member-pulse",
+          "name": "Account page: Pulse",
+          "route": "/app/u/sauron/pulse"
+        },
+        {
+          "id": "saved-positions",
+          "name": "Saved positions",
+          "route": "/app/saved-positions"
+        },
+        {
+          "id": "activity",
+          "name": "Activity",
+          "route": "/app/activity"
+        },
+        {
+          "id": "profile-milestones",
+          "name": "Profile: Milestones",
+          "route": "/app/accounts?section=milestones"
+        },
+        {
+          "id": "settings",
+          "name": "Settings",
+          "route": "/app/settings"
+        }
+      ],
+      "screensCited": 7,
+      "plans": [5206],
+      "state": "plan filed"
+    },
+    {
+      "id": "U4",
+      "problem": "A filing's answer lives away from the conversation that made it",
+      "detail": "",
+      "screens": [
+        {
+          "id": "profile-feedback",
+          "name": "Profile: Feedback",
+          "route": "/app/accounts?section=feedback"
+        },
+        {
+          "id": "moneypenny",
+          "name": "Moneypenny panel",
+          "route": "/app/leaderboard?by=equity"
+        }
+      ],
+      "screensCited": 2,
+      "plans": [],
+      "state": "waiting"
+    },
+    {
+      "id": "U5",
+      "problem": "One play's status, safety stages and stop switch spread over three places",
+      "detail": "Thesis, Playbooks, /settings",
+      "screens": [
+        {
+          "id": "profile-thesis",
+          "name": "Profile: Thesis",
+          "route": "/app/accounts?section=thesis"
+        },
+        {
+          "id": "profile-playbooks",
+          "name": "Profile: Playbooks",
+          "route": "/app/accounts?section=playbooks"
+        }
+      ],
+      "screensCited": 2,
+      "plans": [],
+      "state": "waiting"
+    },
+    {
+      "id": "U6",
+      "problem": "Desktop adds no room",
+      "detail": "the 3D landmark or league rail sits beside content that keeps an 800px column",
+      "screens": [
+        {
+          "id": "research",
+          "name": "R&D: Board",
+          "route": "/app/research"
+        },
+        {
+          "id": "profile-feedback",
+          "name": "Profile: Feedback",
+          "route": "/app/accounts?section=feedback"
+        },
+        {
+          "id": "research-playbooks",
+          "name": "R&D: Playbooks",
+          "route": "/app/research?section=playbooks"
+        },
+        {
+          "id": "saved-positions",
+          "name": "Saved positions",
+          "route": "/app/saved-positions"
+        }
+      ],
+      "screensCited": 4,
+      "plans": [5207],
+      "state": "plan filed"
+    },
+    {
+      "id": "U7",
+      "problem": "R&D as a destination, not a capability",
+      "detail": "research, calls and playbooks live on their own screen while the book, the bot's loop and the workbench are where they're used",
+      "screens": [
+        {
+          "id": "research-playbooks",
+          "name": "R&D: Playbooks",
+          "route": "/app/research?section=playbooks"
+        }
+      ],
+      "screensCited": 1,
+      "plans": [],
+      "state": "waiting"
+    },
+    {
+      "id": "U8",
+      "problem": "The Profile head assumes an account",
+      "detail": "with none linked, the head still renders account rows…",
+      "screens": [
+        {
+          "id": "onboarding",
+          "name": "First visit, no account linked yet",
+          "route": "/app/accounts"
+        }
+      ],
+      "screensCited": 1,
+      "plans": [],
+      "state": "waiting"
+    },
+    {
+      "id": "U9",
+      "problem": "A call's words go stale while its date stays fresh",
+      "detail": "a ledger's horizon row is authored once and each later check appends a new Last assessed stamp without rewording the call, so a card can say \"read the 2026-09-09 September edition\" under \"checked Oct 7\"",
+      "screens": [
+        {
+          "id": "research",
+          "name": "R&D: Board",
+          "route": "/app/research"
+        }
+      ],
+      "screensCited": 1,
+      "plans": [],
+      "state": "waiting"
+    },
+    {
+      "id": "U10",
+      "problem": "The ladder opens every rung for an account that traded before it existed",
+      "detail": "the seed rule turns training wheels off for any account with a filled order when its progression record is first created, so that member climbs nothing",
+      "screens": [
+        {
+          "id": "learn-trading",
+          "name": "Milestones: Trading chapter",
+          "route": "/app/accounts?section=milestones&chapter=trading"
+        },
+        {
+          "id": "trade-chain",
+          "name": "Trade: Options chain",
+          "route": "/app/trade?symbol=NVDA&section=chain"
+        }
+      ],
+      "screensCited": 2,
+      "plans": [],
+      "state": "waiting"
+    },
+    {
+      "id": "U11",
+      "problem": "The human playbook chapter sits apart from the playbook catalog",
+      "detail": "Profile → Milestones carries a Playbooks chapter (\"prove a play by hand, then arm it\") while R&D → Playbooks lists the playbooks a member would prove and arm",
+      "screens": [
+        {
+          "id": "profile-milestones",
+          "name": "Profile: Milestones",
+          "route": "/app/accounts?section=milestones"
+        }
+      ],
+      "screensCited": 1,
+      "plans": [],
+      "state": "waiting"
+    },
+    {
+      "id": "U12",
+      "problem": "A record can't open the trades that made it",
+      "detail": "Pulse's weeks, runs and biggest dip are dated, but the Ledger takes no date in its address, so the Pulse × Activity joint stays unrendered",
+      "screens": [
+        {
+          "id": "member-pulse",
+          "name": "Account page: Pulse",
+          "route": "/app/u/sauron/pulse"
+        }
+      ],
+      "screensCited": 1,
+      "plans": [],
+      "state": "waiting"
+    },
+    {
+      "id": "U13",
+      "problem": "The owner's tools have no home of their own",
+      "detail": "every bot's switches, Moneypenny's model and the unclaimed accounts render inside one member's Account section, under that member's own account card",
+      "screens": [
+        {
+          "id": "settings",
+          "name": "Settings",
+          "route": "/app/settings"
+        }
+      ],
+      "screensCited": 1,
+      "plans": [5462],
+      "state": "waiting"
+    },
+    {
+      "id": "U14",
+      "problem": "Options tools offered before options open, and beside a stock ticket",
+      "detail": "the bench docks the chain under whatever ticket is open, Buy stock included, and the section switch offers Chain and Outlook on every rung; neither reads the member's rungs",
+      "screens": [
+        {
+          "id": "trade-chain",
+          "name": "Trade: Options chain",
+          "route": "/app/trade?symbol=NVDA&section=chain"
+        },
+        {
+          "id": "trade-ticket",
+          "name": "Trade: Ticket",
+          "route": "/app/trade?symbol=NVDA"
+        }
+      ],
+      "screensCited": 2,
+      "plans": [],
+      "state": "waiting"
+    },
+    {
+      "id": "U15",
+      "problem": "Nothing writes the day's edition",
+      "detail": "the landing page's stories, key facts and dated reports are hand-fed; the landscape read is unbuilt",
+      "screens": [
+        {
+          "id": "landing",
+          "name": "The landing page",
+          "route": "/"
+        }
+      ],
+      "screensCited": 1,
+      "plans": [6948],
+      "state": "waiting"
+    },
+    {
+      "id": "U16",
+      "problem": "No reward a quest can carry",
+      "detail": "a quest record has no reward field; the only honest reward today is a ladder rung's first fill; loot and Renown are designed, unbuilt",
+      "screens": [
+        {
+          "id": "landing",
+          "name": "The landing page",
+          "route": "/"
+        }
+      ],
+      "screensCited": 1,
+      "plans": [],
+      "state": "waiting"
+    },
+    {
+      "id": "U17",
+      "problem": "A member's question has no route",
+      "detail": "an ask is stored and read by nothing, and no line says who holds it",
+      "screens": [
+        {
+          "id": "landing",
+          "name": "The landing page",
+          "route": "/"
+        }
+      ],
+      "screensCited": 1,
+      "plans": [],
+      "state": "waiting"
+    }
+  ]
+}

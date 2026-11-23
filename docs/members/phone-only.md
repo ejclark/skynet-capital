@@ -39,6 +39,11 @@ is a second visit. They never read a tooltip because they cannot.
 - **The calendar folded into one chip on R&D (fixed)** — the day lens's fog reason is a visible
   line beside the lens pill, in the same box (`app/src/shell/calendar-head.tsx`), never a hover.
 
+**Found by the cross-feature journeys (#8005 slice 3, 2026-11-23)** — each pinned as a `known_gap`
+on its step; the line flips to fixed with the fix.
+
+- **Open — j2 s2** (low): the journey world holds no quest, so quest → ticket can't be walked.
+
 ## 6. Journeys
 
 ### j1 — the whole app, one thumb
@@ -63,6 +68,38 @@ is a second visit. They never read a tooltip because they cannot.
 6. `/app/research` — R&D with the calendar folded into one chip that names the range and opens it
    in a sheet, the day lens fogged inside. **WHEN R&D renders at 390px, the app shall keep the
    calendar's range control reachable and its fog notice readable.** Judge: can this reader change the week from here?
+
+### j2 — today's quest, from the landing page to the ticket (cross-feature, #8005)
+
+_Phone. Crosses the landing page's Quests and Calendar windows → Trade → Profile's trading ladder._
+
+1. `/app/` — Where things stand, then the rows at a glance; the Quests row opens the account's
+   quests. They tap "for your account, best first". **WHEN a member opens Quests from the landing
+   page, the app shall show their quests, best first.** Judge: can this reader tell what to do next
+   in ten seconds?
+2. `/app/?w=quests` — 'No quest for this account right now' and 'Not judged this time: today's
+   market conditions': no quest to open, so the quest → ticket hand-off never shows. **WHEN a member
+   opens a quest, the app shall open Trade on their account with the quest's symbol and play.**
+   _Known gap (low, fix M, `scripts/crawl/frozen-fixtures.mjs:96`) — this world holds no quest: the
+   frozen fixtures judge no market conditions and price no held call, so no step can walk the quest
+   → ticket hand-off (desk, symbol, play; src/domain/quest.ts:122 withQuest); a study world needs
+   one quest per source to render this hop._ Judge: can this reader tell what the quest asks of
+   them?
+3. `/app/?w=quests` — the window's links: 'Calendar: the stories behind them' opens the edition's
+   stories. They tap "Calendar: the stories behind them". **WHEN a member asks why a quest exists,
+   the app shall open the stories behind it.** Judge: can this reader tell why the quest exists?
+3b. `/app/?w=calendar` — the edition's stories, then the coming days; 'Market: the sectors' opens
+    the whole market. They tap "Market: the sectors". **WHEN a member asks what the stories moved,
+    the app shall open the whole market from the calendar.** Judge: can this reader tell which part
+    of the market the story moved?
+3c. `/app/?w=market` — the 11 sectors and the S&P 500 in one list; 'Calendar: the dates that move
+    these' leads back to the dates. They tap "Calendar: the dates that move these". **WHEN a member
+    asks what moves the market, the app shall open the calendar's dates from the whole market.**
+    Judge: can this reader tell what is coming that moves these?
+4. `/app/trade?desk=human-eric&symbol=EEM&play=201` — the ticket on a play; 'Trading ladder →' opens
+   the rungs on Profile. They tap "Trading ladder". **WHEN a member asks what opens the next play
+   from the ticket, the app shall open the trading chapter of their ladder.** Judge: can this reader
+   tell what opens the next play?
 
 Journey map: [`maps.md`](maps.md#phone-only). Findings: [`friction-ledger.md`](friction-ledger.md).
 
