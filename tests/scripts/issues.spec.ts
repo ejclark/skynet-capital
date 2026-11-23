@@ -7,6 +7,7 @@ import {
   boardStatus,
   commentWrite,
   csv,
+  droppedLogLines,
   dryRunLines,
   findDuplicates,
   followUps,
@@ -41,12 +42,16 @@ describe("issues cli: parseArgs", () => {
 
 // #7352: a stub curl that logs every call and answers like an issue read. A write is the call that
 // carries `-X` (ghWrite); a read (ghRest) never does.
-function runStubbed(argv: string[], files: Record<string, string> = {}) {
+function runStubbed(
+  argv: string[],
+  files: Record<string, string> = {},
+  reply = '{"id":70,"number":7,"title":"t","state":"open","labels":[]}',
+) {
   const dir = mkdtempSync(join(tmpdir(), "issues-7352-"));
   const log = join(dir, "curl.log");
   writeFileSync(
     join(dir, "curl"),
-    `#!/bin/sh\necho "$@" >> "${log}"\ncat >/dev/null\necho '{"id":70,"number":7,"title":"t","state":"open","labels":[]}'\n`,
+    `#!/bin/sh\necho "$@" >> "${log}"\ncat >/dev/null\ncat <<'JSON'\n${reply}\nJSON\n`,
   );
   chmodSync(join(dir, "curl"), 0o755);
   for (const [name, text] of Object.entries(files)) writeFileSync(join(dir, name), text);
@@ -421,5 +426,71 @@ describe("issues cli: search past the list ceiling", () => {
     const read = () => Array.from({ length: 100 }, (_, k) => ({ number: k, title: "other" }));
     const scan = scanIssues("closed", () => false, 5, { read, maxPages: 2 });
     expect(scan).toEqual({ items: [], partial: true, scanned: 200 });
+  });
+});
+
+// #7939: on 2026-11-22 a session wrote a state block it had read 12 hours earlier; four slices' log
+// lines and the next pickup vanished, and the next build was sent after a slice already done.
+describe("issues cli: an in-place edit that drops log lines is a stale write", () => {
+  const block = (...log: string[]) =>
+    [
+      "## State block",
+      "",
+      "**Next pickup:** x",
+      "",
+      "### Log",
+      ...log,
+      "",
+      "### For the builder",
+      "- (a) y",
+    ].join("\n");
+  const live = block("- 2026-11-22 — second", "- 2026-11-22 — first");
+
+  it("names the lines a stale copy would drop", () => {
+    expect(droppedLogLines(live, block("- 2026-11-23 — third", "- 2026-11-22 — first"))).toEqual([
+      "- 2026-11-22 — second",
+    ]);
+  });
+
+  it("passes a write that carries every line forward, and a comment with no log", () => {
+    const next = block("- 2026-11-23 — third", "- 2026-11-22 — second", "- 2026-11-22 — first");
+    expect(droppedLogLines(live, next)).toEqual([]);
+    expect(droppedLogLines("no log here", "anything")).toEqual([]);
+    // the builder notes below the log are not log lines
+    expect(
+      droppedLogLines(
+        live,
+        block("- 2026-11-22 — second", "- 2026-11-22 — first").replace("- (a) y", ""),
+      ),
+    ).toEqual([]);
+  });
+
+  it("refuses before any write, unless --drop-log says the trim is on purpose", () => {
+    const reply = JSON.stringify({
+      id: 70,
+      number: 7,
+      title: "t",
+      state: "open",
+      labels: [],
+      body: live,
+    });
+    const stale = { "c.md": block("- 2026-11-22 — first") };
+    const refused = runStubbed(
+      ["update", "7", "--edit-comment", "99", "--comment-file", "@c.md"],
+      stale,
+      reply,
+    );
+    expect(refused.res.status).not.toBe(0);
+    expect(refused.res.stderr).toContain("- 2026-11-22 — second");
+    expect(refused.writes).toEqual([]);
+
+    const trimmed = runStubbed(
+      ["update", "7", "--edit-comment", "99", "--comment-file", "@c.md", "--drop-log"],
+      stale,
+      reply,
+    );
+    expect(trimmed.res.status).toBe(0);
+    expect(trimmed.writes).toHaveLength(1);
+    expect(trimmed.writes[0]).toMatch(/-X PATCH .*issues\/comments\/99$/);
   });
 });

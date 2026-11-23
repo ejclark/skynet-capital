@@ -24,14 +24,16 @@
 //   node scripts/issues.mjs link <parent> <child…>   (attach existing issues as sub-issues)
 //   node scripts/issues.mjs update 123 [--body-file b.md] [--title "…"] [--add a,b] [--remove c]
 //                                      [--close completed|not_planned] [--reopen] [--comment-file c.md]
-//                                      [--blocked-by a,b] [--edit-comment <id>] [--dry-run]
+//                                      [--blocked-by a,b] [--edit-comment <id>] [--drop-log]
+//                                      [--dry-run]
 //     (--dry-run prints every write it would make, a comment's full text included, and makes none.
 //      Every subcommand refuses a flag it does not read, and an empty --comment-file is refused —
 //      both before any write, #7352.)
 //     (--edit-comment <id> with --comment-file EDITS that comment in place instead of posting a new
 //      one — a state block's "edit in place". Both paths add the footer, so claude.yml's gate skips
 //      the wake: a raw `gh api --method PATCH` edit carried none and woke the interactive lane 28+
-//      times for nothing, #4537.)
+//      times for nothing, #4537. An edit that would drop a line from the comment's `### Log` is
+//      refused as a stale write; --drop-log is for trimming the log on purpose, #7939.)
 //     (--blocked-by on an existing issue: the second build on one surface waits for the first —
 //      every puller honours an open blocker. docs/DELEGATION.md → one build per surface.)
 //   node scripts/issues.mjs search "words" [--label x] [--state open|closed|all] [--limit 20] [--json]
@@ -101,6 +103,7 @@ export const KNOWN_FLAGS = {
     "comment-file",
     "blocked-by",
     "edit-comment",
+    "drop-log",
     "dry-run",
   ],
   search: ["label", "state", "limit", "json"],
@@ -188,6 +191,30 @@ export function updateCommentOp({ n, flags, read = readBody }) {
       `--comment-file ${flags["comment-file"]} is empty — refusing to post a comment`,
     );
   return commentWrite({ n, body, editId });
+}
+
+/** A state block's log: the `- ` lines under its `### Log` heading, trimmed. Pure. */
+function logLines(body) {
+  const lines = String(body ?? "").split("\n");
+  const at = lines.findIndex((l) => /^#{2,4}\s+Log\s*$/.test(l.trim()));
+  if (at === -1) return [];
+  const out = [];
+  for (const l of lines.slice(at + 1)) {
+    if (/^#{1,4}\s/.test(l.trim())) break;
+    if (/^\s*-\s+\S/.test(l)) out.push(l.trim());
+  }
+  return out;
+}
+
+/**
+ * The log lines an in-place edit would drop (#7939). A state block's log only grows, so a write
+ * missing a line the live comment has was drafted from a stale copy: on 2026-11-22 a session wrote
+ * a block read 12 hours earlier, and four slices' log lines and the next pickup vanished, which sent
+ * the next build after a slice already done. Pure.
+ */
+export function droppedLogLines(liveBody, nextBody) {
+  const kept = new Set(logLines(nextBody));
+  return logLines(liveBody).filter((l) => !kept.has(l));
 }
 
 /**
@@ -447,6 +474,18 @@ function link({ positional }) {
   }
 }
 
+/** Throws when an in-place edit would drop a log line the live comment has (#7939). */
+function refuseStaleLog(commentOp, flags) {
+  if (commentOp?.method !== "PATCH" || flags["drop-log"]) return;
+  const dropped = droppedLogLines(ghRest(commentOp.path).body, commentOp.payload.body);
+  if (!dropped.length) return;
+  throw new Error(
+    `the edit drops ${dropped.length} log line(s) the live comment has, so it was drafted from a ` +
+      `stale copy. Re-read the comment and carry them forward (--drop-log trims on purpose):\n` +
+      dropped.join("\n"),
+  );
+}
+
 function update({ positional, flags }) {
   const n = Number(positional[0]);
   if (!n) throw new Error("update needs an issue number");
@@ -469,6 +508,8 @@ function update({ positional, flags }) {
   // Blockers are read before any write, as create does, so a bad number refuses before a PATCH lands.
   const blockers = csv(flags["blocked-by"]).map((b) => ghRest(`issues/${Number(b)}`));
   const links = followUps({ child: current, blockers });
+  // Before any write and before --dry-run's preview, so a stale block refuses first.
+  refuseStaleLog(commentOp, flags);
   if (flags["dry-run"]) {
     const ops = [
       ...(Object.keys(patch).length
