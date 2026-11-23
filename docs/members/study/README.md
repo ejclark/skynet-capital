@@ -146,7 +146,8 @@ npx tsx scripts/study/worlds/facts.mjs --run <compose dir> --world <world> [--vi
   that is on screen at some scroll position — in tree order, nothing hand-picked. Then each one is
   operated once from a fresh load (storage cleared): its screen, a frame before, one tap at the
   centre of its visible part through the recorder's own `act`, the recorder's frame after. A
-  control whose activation would leave the app is recorded as skipped, with why; past the cap
+  control whose activation would leave the app, or that sends Moneypenny a message (the census
+  never asks her; members do, live), is recorded as skipped, with why; past the cap
   (default 60 a route) controls are logged as dropped, never silently. A control the tree holds but
   no screen shows is scrolled into view — a sideways scroller's far end is then listed and operated
   (`reach: "scrolled-into-view"`); one a box a member cannot scroll keeps out of view is `clipped`, a
