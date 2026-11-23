@@ -4,6 +4,9 @@
 
 import { worldReads } from "./reads.mjs";
 
+/** The leaderboard's metrics, as `cross-reads.mjs` lists them for its compare reads. */
+const BOARD_METRICS = ["equity", "month", "pl", "return", "realized"];
+
 const CAST = {
   accounts: ["eric", "sauron", "day-trader", "jordan"],
   bots: ["sauron", "day-trader"],
@@ -28,8 +31,13 @@ const CAST = {
     "/api/convictions/mine",
   ],
   // The book's "Wait until a date…" reads each account's saved wait; R&D Playbooks with an account
-  // picked reads that account's playbook records.
-  extra: (id) => [`/api/book-wait?participantId=${id}`, `/api/outpost/performance?accounts=${id}`],
+  // picked reads that account's playbook records; the leaderboard's compare reads the board with
+  // that account picked (the thin slice's census met it on the league card's leaderboard).
+  extra: (id) => [
+    `/api/book-wait?participantId=${id}`,
+    `/api/outpost/performance?accounts=${id}`,
+    ...BOARD_METRICS.map((m) => `/api/board?a=${id}&by=${m}`),
+  ],
 };
 
 export function botLoopReads() {
