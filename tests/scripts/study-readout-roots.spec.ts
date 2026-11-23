@@ -114,7 +114,7 @@ describe("grouping by root", () => {
       ["unplaced", "", ["E"]],
     ]);
     // One root named twice in two cases is one root; its reports add up.
-    expect(groups[0].reports).toBe(5);
+    expect(groups[0]?.reports).toBe(5);
   });
 
   it("places a group by any of its findings, the lead's first", () => {
@@ -123,7 +123,7 @@ describe("grouping by root", () => {
       rows: ROWS,
       rank: severityRank,
     });
-    expect(groups[0].title).toBe("U2 — Derived numbers on a log");
+    expect(groups[0]?.title).toBe("U2 — Derived numbers on a log");
   });
 });
 
