@@ -379,12 +379,15 @@ export function judgeLiveSilent(tally, nowMs) {
  * assignment, and one exists from the last 30 days. It proves those three links and no more: no API
  * shows a delivered email or a buzzing watch, and #5955 was assigned at +10 minutes and first answered
  * at +90 hours. `issues` are the issues he holds, with their assigned events from GitHub's timeline.
+ * `threads` are the `[fitness]` threads updated in the window whoever holds them: a bot's assignment
+ * on one he has since left still proves the path, and only that (#6701). Leaving is his answer, so a
+ * left thread is never judged self-assigned or re-assigned.
  *
  * A person's own assignment does not count, and on an open fitness issue it fails, because that
  * issue's one notice never went out (#6501). report() re-assigns it under the bot, so that verdict
  * starts on the script rung rather than mailing him twice. Other work he took himself is his business.
  */
-export function judgeAssignmentPath({ assignable, issues }, nowMs) {
+export function judgeAssignmentPath({ assignable, issues, threads = [] }, nowMs) {
   if (!assignable) return fail("the owner cannot be assigned on this repository");
   const toOwner = (issue) =>
     (issue.timelineItems?.nodes ?? [])
@@ -406,7 +409,7 @@ export function judgeAssignmentPath({ assignable, issues }, nowMs) {
     };
   }
   const newestMs = Math.max(
-    ...issues
+    ...[...issues, ...threads]
       .flatMap(toOwner)
       .filter(byBot)
       .map((event) => Date.parse(event.createdAt)),
@@ -584,17 +587,26 @@ function startedOnceWithin(machine, windowMs, nowMs) {
 // One read for the whole assignment path: REST would be one call per issue held, every tick, and the
 // shared bucket has run out twice in a day. A person's assignment and a bot's differ only in the
 // actor's type, which the issues list does not carry.
-const ASSIGNMENTS_QUERY = `query($owner: String!, $name: String!, $who: String!, $since: DateTime!) {
+//
+// GitHub's assignee filter matches who holds an issue now, so it drops a thread he took himself off,
+// which is his documented answer (fitness-rungs.mjs), and the path then failed on his own answer
+// (#6701). The search in the same call finds the `[fitness]` threads updated in the window whoever
+// holds them: about 30 a month, where `bug` issues alone overflow one page of 100.
+const ASSIGNMENTS_QUERY = `query($owner: String!, $name: String!, $who: String!, $since: DateTime!, $threads: String!) {
   repository(owner: $owner, name: $name) {
     issues(first: 100, orderBy: { field: UPDATED_AT, direction: DESC },
            filterBy: { assignee: $who, since: $since, states: [OPEN, CLOSED] }) {
-      nodes {
-        number title state
-        timelineItems(itemTypes: [ASSIGNED_EVENT], last: 10) {
-          nodes { ... on AssignedEvent { createdAt actor { __typename } assignee { ... on User { login } } } }
-        }
-      }
+      nodes { ...assignments }
     }
+  }
+  search(type: ISSUE, first: 100, query: $threads) {
+    nodes { ...assignments }
+  }
+}
+fragment assignments on Issue {
+  number title state
+  timelineItems(itemTypes: [ASSIGNED_EVENT], last: 10) {
+    nodes { ... on AssignedEvent { createdAt actor { __typename } assignee { ... on User { login } } } }
   }
 }`;
 
@@ -803,6 +815,7 @@ export const CONTRACTS = [
         readFailures.push(can.why);
         return unknown("cannot read GitHub");
       }
+      const since = new Date(nowMs - ASSIGNMENT_FRESH_MS).toISOString();
       const reply = json(GH, [
         "api",
         "graphql",
@@ -813,13 +826,20 @@ export const CONTRACTS = [
         "-F",
         `who=${OWNER}`,
         "-F",
-        `since=${new Date(nowMs - ASSIGNMENT_FRESH_MS).toISOString()}`,
+        `since=${since}`,
+        "-F",
+        // gh fills {owner} and {repo} inside a -F value, so the search names this repository.
+        `threads=repo:{owner}/{repo} is:issue label:bug in:title fitness updated:>=${since.slice(0, 10)}`,
         "-f",
         `query=${ASSIGNMENTS_QUERY}`,
       ]);
       if (!reply) return unknown("cannot read GitHub");
       return judgeAssignmentPath(
-        { assignable: can.ok, issues: reply.data.repository.issues.nodes },
+        {
+          assignable: can.ok,
+          issues: reply.data.repository.issues.nodes,
+          threads: reply.data.search.nodes,
+        },
         nowMs,
       );
     },

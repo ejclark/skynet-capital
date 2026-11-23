@@ -159,8 +159,11 @@ export const botsStep = (conclusion: string) =>
 /** A dispatched landing: the dashboard's job is skipped on a dispatch, the bots deploy and smoke pass. */
 export const dispatchLanded = `{"jobs":[{"name":"release · deploy","conclusion":"skipped"},{"name":"release · deploy bots","steps":[{"name":"Deploy bots","conclusion":"success"},{"name":"Smoke test the bots release","conclusion":"success"}]}]}`;
 
-/** The assignment-path reply: one piece of work a bot assigned him at `at`. */
-export function graphqlReply(at: number, extra: unknown[] = []) {
+/**
+ * The assignment-path reply: one piece of work a bot assigned him at `at`, plus `threads`, the
+ * `[fitness]` threads the search finds whoever holds them now (#6701).
+ */
+export function graphqlReply(at: number, extra: unknown[] = [], threads: unknown[] = []) {
   const nodes = [
     {
       number: 4612,
@@ -178,7 +181,7 @@ export function graphqlReply(at: number, extra: unknown[] = []) {
     },
     ...extra,
   ];
-  return { data: { repository: { issues: { nodes } } } };
+  return { data: { repository: { issues: { nodes } }, search: { nodes: threads } } };
 }
 
 export type World = {
@@ -192,6 +195,8 @@ export type World = {
   closed?: unknown[];
   comments?: Record<number, unknown[]>;
   assignedAgoMs?: number;
+  /** `[fitness]` threads the assignment read's search finds, held or left. */
+  fitnessThreads?: unknown[];
 };
 
 /** A stub world. Healthy by default: machine started, fresh stamp, secrets set, deploys current. */
@@ -219,7 +224,9 @@ export function fixture(world: World = {}) {
   }
   writeFileSync(
     join(stub, "graphql"),
-    JSON.stringify(graphqlReply(now - (world.assignedAgoMs ?? 24 * 60 * MIN))),
+    JSON.stringify(
+      graphqlReply(now - (world.assignedAgoMs ?? 24 * 60 * MIN), [], world.fitnessThreads),
+    ),
   );
   const deploy = world.deploy ?? "current";
   if (deploy !== "unreadable") {
