@@ -58,46 +58,55 @@ function capture() {
  * member's convictions, campaigns, chains and authored plays, the book-wait line and the target
  * split all landed after the profile pin. Imported dynamically, so an older pin composes as before;
  * where the module or the name is missing the family claims nothing, and a world that asks for its
- * reads fails compose with them listed, never a silent hole.
+ * reads fails compose with them listed, never a silent hole. Each load is a thunk around a LITERAL
+ * path: a variable-path `import()` is invisible to the spec runner's bundler and resolved by plain
+ * Node, which cannot follow the route modules' `.js` specifiers to their `.ts` files, so under
+ * rstest every such family claimed nothing (#8025's repair brief; study-optional-families.spec.ts).
  */
-async function optional(path, name) {
-  const mod = await import(path).catch(() => ({}));
+async function optional(load, name) {
+  const mod = await load().catch(() => ({}));
   const fn = mod[name];
   return typeof fn === "function" ? fn : async () => false;
 }
 
-const serveQuestsApi = await optional("../../src/server/quests-route.ts", "serveQuestsApi");
+const serveQuestsApi = await optional(
+  () => import("../../src/server/quests-route.ts"),
+  "serveQuestsApi",
+);
 const serveQuestsTakenApi = await optional(
-  "../../src/server/quests-taken-route.ts",
+  () => import("../../src/server/quests-taken-route.ts"),
   "serveQuestsTakenApi",
 );
-const serveBookWaitApi = await optional("../../src/server/book-wait-routes.ts", "serveBookWaitApi");
+const serveBookWaitApi = await optional(
+  () => import("../../src/server/book-wait-routes.ts"),
+  "serveBookWaitApi",
+);
 const serveFastTrackApi = await optional(
-  "../../src/server/fast-track-route.ts",
+  () => import("../../src/server/fast-track-route.ts"),
   "serveFastTrackApi",
 );
 const serveDraftOrderApi = await optional(
-  "../../src/server/draft-order-route.ts",
+  () => import("../../src/server/draft-order-route.ts"),
   "serveDraftOrderApi",
 );
 const serveMemberConvictionsApi = await optional(
-  "../../src/server/member-convictions-api-routes.ts",
+  () => import("../../src/server/member-convictions-api-routes.ts"),
   "serveMemberConvictionsApi",
 );
 const serveMemberCampaignsApi = await optional(
-  "../../src/server/member-campaigns-api-routes.ts",
+  () => import("../../src/server/member-campaigns-api-routes.ts"),
   "serveMemberCampaignsApi",
 );
 const serveMemberChainsApi = await optional(
-  "../../src/server/member-chains-api-routes.ts",
+  () => import("../../src/server/member-chains-api-routes.ts"),
   "serveMemberChainsApi",
 );
 const serveAuthoredPlaysApi = await optional(
-  "../../src/server/authored-plays-api-routes.ts",
+  () => import("../../src/server/authored-plays-api-routes.ts"),
   "serveAuthoredPlaysApi",
 );
 const serveTargetSplitApi = await optional(
-  "../../src/server/target-split-api-routes.ts",
+  () => import("../../src/server/target-split-api-routes.ts"),
   "serveTargetSplitApi",
 );
 
