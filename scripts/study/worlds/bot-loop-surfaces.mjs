@@ -12,7 +12,7 @@
 // These lists name surfaces, never problems: parity proves a world can show a surface, not what a
 // member will make of it.
 
-import { dockShellSurfaces, NO_ACCOUNT_SETTINGS } from "./shell-surfaces.mjs";
+import { navSurfaces } from "./nav-surfaces.mjs";
 
 const role = (r, name, extra = {}) => ({ role: r, name, ...extra });
 const text = (t, extra = {}) => ({ text: t, ...extra });
@@ -300,24 +300,9 @@ export function botLoopSurfaces(kind) {
   throw new Error(`bot-loop surfaces: no world kind ${kind}`);
 }
 
-/** One viewer's one-tap list, its ids and labels marked with who, so three can share a table. */
-const tapsFor = (viewer, adjust) =>
-  dockShellSurfaces(viewer, adjust).map((s) => ({
-    ...s,
-    id: `${viewer}-${s.id}`,
-    label: `${viewer}: ${s.label}`,
-  }));
-
-/** Casey owns nothing: Profile is the no-account door, and the league card lives on a bot's page. */
-const NO_ACCOUNT_DOCK = {
-  ...NO_ACCOUNT_SETTINGS,
-  "nav-profile": {
-    expect: [{ url: "/app/accounts" }, text("No account linked yet")],
-  },
-  "league-leaderboard": { route: SAURON },
-};
-
-/** Every destination one tap from the area, for each of the three viewers. */
+/** Every destination one tap from the area, for each of the three viewers: the pin's shell as
+ *  nav-surfaces.mjs draws it. The leaderboard, one tap from a bot's league card, is the watcher's
+ *  own surface above. */
 export function botLoopOneTap() {
-  return [...tapsFor("eric"), ...tapsFor("jordan"), ...tapsFor("casey", NO_ACCOUNT_DOCK)];
+  return [...navSurfaces("eric"), ...navSurfaces("jordan"), ...navSurfaces("casey")];
 }

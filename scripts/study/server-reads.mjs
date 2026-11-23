@@ -7,13 +7,6 @@
 // directly, which is exactly what the gate would have handed each route. Streams and posts are
 // left out: a study world composes reads, and records writes without sending them. The admin
 // family answers its GETs (the owner's cards read `{owner:false}` for a member).
-//
-// FAMILIES NEWER THAN THE FIRST STUDY (#8005): quests, book waits, target splits, member views and
-// the conviction records landed after the profile's pin. A pin is studied with TODAY's harness
-// (pin.mjs), so each is imported dynamically and a pin without the module simply has no such
-// family — exactly what that pin's server served. They sit where the pin's own dispatcher
-// (`dashboard-server.ts` → `serveWriteApis`) puts them, so a read two families could claim goes
-// to the one production asks first.
 
 import { serveAdminApi } from "../../src/server/admin-api-routes.ts";
 import { serveAlertDeliveryApi } from "../../src/server/alert-delivery-route.ts";
@@ -40,61 +33,6 @@ import { serveTradeApi } from "../../src/server/trade-api-routes.ts";
 import { serveTradeOrdersApi } from "../../src/server/trade-orders-routes.ts";
 import { serveWatchlistApi } from "../../src/server/watchlist-route.ts";
 
-/** A route module a pin may predate: its namespace, or an empty one when THAT file is missing.
- *  Any other failure (a module that throws as it loads) is a real fault and is thrown. */
-const later = (path) =>
-  import(path).catch((err) => {
-    const file = path.split("/").at(-1) ?? path;
-    if (err?.code === "ERR_MODULE_NOT_FOUND" && String(err.message).includes(file)) return {};
-    throw err;
-  });
-const [
-  quests,
-  questsTaken,
-  bookWait,
-  fastTrack,
-  draftOrder,
-  memberConvictions,
-  memberCampaigns,
-  memberChains,
-  authoredPlays,
-  targetSplit,
-  convictions,
-  handOver,
-] = await Promise.all([
-  later("../../src/server/quests-route.ts"),
-  later("../../src/server/quests-taken-route.ts"),
-  later("../../src/server/book-wait-routes.ts"),
-  later("../../src/server/fast-track-route.ts"),
-  later("../../src/server/draft-order-route.ts"),
-  later("../../src/server/member-convictions-api-routes.ts"),
-  later("../../src/server/member-campaigns-api-routes.ts"),
-  later("../../src/server/member-chains-api-routes.ts"),
-  later("../../src/server/authored-plays-api-routes.ts"),
-  later("../../src/server/target-split-api-routes.ts"),
-  later("../../src/server/convictions-api-routes.ts"),
-  later("../../src/server/conviction-hand-over.ts"),
-]);
-
-/** A family a pin may lack, as one entry of the chain: claims nothing when it is missing. */
-const family = (fn) => (typeof fn === "function" ? fn : async () => false);
-
-/** `/api/convictions` as the pin's dispatcher serves it: the seeded records plus the members'
- *  views handed over (`servePlaybookReads`). */
-const convictionRecords =
-  typeof convictions.serveConvictionsApi === "function" &&
-  typeof handOver.heldConvictions === "function"
-    ? (req, res, path, config) =>
-        path === "/api/convictions"
-          ? convictions.serveConvictionsApi(
-              req,
-              res,
-              path,
-              handOver.heldConvictions(config.memberConvictions),
-            )
-          : false
-    : async () => false;
-
 /** A response that records what a handler wrote instead of sending it. */
 function capture() {
   const out = { status: 0, text: "" };
@@ -115,34 +53,82 @@ function capture() {
   return { res, out };
 }
 
-/** The GET-answering families, in the server's own order. */
+/**
+ * A route family the pin may predate (#8005): the landing page's quests and fast track, the
+ * member's convictions, campaigns, chains and authored plays, the book-wait line and the target
+ * split all landed after the profile pin. Imported dynamically, so an older pin composes as before;
+ * where the module or the name is missing the family claims nothing, and a world that asks for its
+ * reads fails compose with them listed, never a silent hole.
+ */
+async function optional(path, name) {
+  const mod = await import(path).catch(() => ({}));
+  const fn = mod[name];
+  return typeof fn === "function" ? fn : async () => false;
+}
+
+const serveQuestsApi = await optional("../../src/server/quests-route.ts", "serveQuestsApi");
+const serveQuestsTakenApi = await optional(
+  "../../src/server/quests-taken-route.ts",
+  "serveQuestsTakenApi",
+);
+const serveBookWaitApi = await optional("../../src/server/book-wait-routes.ts", "serveBookWaitApi");
+const serveFastTrackApi = await optional(
+  "../../src/server/fast-track-route.ts",
+  "serveFastTrackApi",
+);
+const serveDraftOrderApi = await optional(
+  "../../src/server/draft-order-route.ts",
+  "serveDraftOrderApi",
+);
+const serveMemberConvictionsApi = await optional(
+  "../../src/server/member-convictions-api-routes.ts",
+  "serveMemberConvictionsApi",
+);
+const serveMemberCampaignsApi = await optional(
+  "../../src/server/member-campaigns-api-routes.ts",
+  "serveMemberCampaignsApi",
+);
+const serveMemberChainsApi = await optional(
+  "../../src/server/member-chains-api-routes.ts",
+  "serveMemberChainsApi",
+);
+const serveAuthoredPlaysApi = await optional(
+  "../../src/server/authored-plays-api-routes.ts",
+  "serveAuthoredPlaysApi",
+);
+const serveTargetSplitApi = await optional(
+  "../../src/server/target-split-api-routes.ts",
+  "serveTargetSplitApi",
+);
+
+/** The GET-answering families, in the server's own order (`dashboard-server.ts` →
+ *  `serveWriteApis`, its playbook writes and reads inlined). */
 const FAMILIES = [
   serveTradeApi,
   serveTradeOrdersApi,
   serveOptionPositionsApi,
   serveOptionLifecycleApi,
   serveDeskAlertsApi,
-  family(quests.serveQuestsApi),
-  family(questsTaken.serveQuestsTakenApi),
-  family(bookWait.serveBookWaitApi),
-  family(fastTrack.serveFastTrackApi),
+  serveQuestsApi,
+  serveQuestsTakenApi,
+  serveBookWaitApi,
+  serveFastTrackApi,
   serveAlertDeliveryApi,
   serveWatchlistApi,
   serveOptionApi,
-  family(draftOrder.serveDraftOrderApi),
+  serveDraftOrderApi,
   servePlaysApi,
   serveSettingsApi,
   serveSubscriptionsApi,
-  family(memberConvictions.serveMemberConvictionsApi),
-  family(memberCampaigns.serveMemberCampaignsApi),
-  family(memberChains.serveMemberChainsApi),
-  family(authoredPlays.serveAuthoredPlaysApi),
+  serveMemberConvictionsApi,
+  serveMemberCampaignsApi,
+  serveMemberChainsApi,
+  serveAuthoredPlaysApi,
   serveSavedPositionsApi,
-  family(targetSplit.serveTargetSplitApi),
+  serveTargetSplitApi,
   serveLearnApi,
   serveOnboardingApi,
   servePlaybooksApi,
-  convictionRecords,
   serveControlsApi,
   (req, res, path, config, session) => serveCouncilApi(req, res, path, config.council, session),
   (req, res, path, config, session) =>

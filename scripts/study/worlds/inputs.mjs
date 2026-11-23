@@ -10,7 +10,7 @@
 // `subscribed` replaces that bot's list.
 //
 // A layer may also MOVE the base world in time (#8005): `"instant"` names its own (instant.mjs),
-// `"corpus"` its own tree facts, and `"shiftDays"` (whole weeks only) moves every calendar fact of
+// `"corpus"` its own tree facts, `"vix"` the last VIX close its quests read, `"market"` symbols added to the base's, and `"shiftDays"` (whole weeks only) moves every calendar fact of
 // the base — an expiry, a listed sale window, a filing date, the date inside an OCC symbol — by
 // that many days, so a book designed around one Thursday holds together on another. Its time
 // tokens are relative to the instant already and move by themselves; a whole number of weeks keeps
@@ -83,6 +83,16 @@ export function loadInput(name) {
     ...base,
     ...(raw.instant ? { instant: raw.instant } : {}),
     ...(raw.corpus ? { corpus: raw.corpus } : {}),
+    ...(raw.vix ? { vix: raw.vix } : {}),
+    ...(raw.market
+      ? {
+          market: {
+            ...base.market,
+            ...raw.market,
+            symbols: { ...base.market?.symbols, ...raw.market.symbols },
+          },
+        }
+      : {}),
     ...(raw.members ? { members: raw.members } : {}),
     ...(raw.controls ? { controls: raw.controls } : {}),
     ...(raw.wired ? { wired: raw.wired } : {}),
@@ -91,6 +101,30 @@ export function loadInput(name) {
       ? { bots: base.bots.map((b) => layerBot(b, raw.bots?.[b.id])) }
       : { bot: layerBot(base.bot, raw.bot) }),
   };
+}
+
+/** Cboe's VIX history, which the quests read for its last close (src/server/vix-feed.ts), answered
+ *  from the input's `vix` block (one session's close, cited) as the CSV Cboe serves. */
+export function vixAnswer(input) {
+  const vix = input.vix;
+  return (url) => {
+    if (!vix || url !== "https://cdn.cboe.com/api/global/us_indices/daily_prices/VIX_History.csv") {
+      return undefined;
+    }
+    const [y, m, d] = vix.session.split("-");
+    const c = Number(vix.close).toFixed(2);
+    return {
+      raw: `DATE,OPEN,HIGH,LOW,CLOSE\n${m}/${d}/${y},${c},${c},${c},${c}\n`,
+      contentType: "text/csv",
+    };
+  };
+}
+
+/** Everything off the machine a world's inputs answer: EDGAR, then the VIX history. */
+export function worldNetwork(input) {
+  const edgar = edgarAnswer(input);
+  const vix = vixAnswer(input);
+  return (url) => edgar(url) ?? vix(url);
 }
 
 /** SEC EDGAR's two documents the guidance route reads, answered from the input's `edgar` block. */

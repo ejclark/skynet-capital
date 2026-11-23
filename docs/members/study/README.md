@@ -94,7 +94,7 @@ main's fixes. A study of the pin runs in a worktree **at the pin**, with only to
 (`scripts/study/**`) copied over it:
 
 ```sh
-node scripts/study/pin.mjs prepare --commit <sha> --dir <abs dir>   # worktree, harness, installs, build, compose, parity
+node scripts/study/pin.mjs prepare --commit <sha> --dir <abs dir> [--worlds <a,b>]   # worktree, harness, installs, build, compose, parity
 node scripts/study/pin.mjs remove  --dir <abs dir>                  # only a worktree prepare made
 ```
 
@@ -106,6 +106,8 @@ node scripts/study/pin.mjs remove  --dir <abs dir>                  # only a wor
 - **Reuse is strict:** a re-run reuses only a worktree `prepare` made, still at the commit, with no
   changes outside `scripts/study/`; the main and the running checkout are always refused.
 - **The parity table** lands in `<dir>/.study-run/parity.txt`; the run exits with parity's status.
+  `--worlds` composes and checks only an area's own worlds, so a world built for another pin (the
+  profile worlds keep the October shell, `worlds/shell-surfaces.mjs`) cannot fail this area's run.
 - **One tap away is part of the world.** Members and experts leave the area through the app nav and
   the header's icons, so each world also lists those destinations (`oneTap`,
   `worlds/shell-surfaces.mjs`) and parity proves them: a page stuck on a loading line, a service
@@ -404,7 +406,10 @@ node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answe
    mechanism each fix removed (or each planted defect) beside its id, not only the item.
    Write the area config's `roles`: one plain line per member, never a quote from a card.
 2. `scripts/study/worlds/<area>-*.mjs`: compose payloads from the real builders at the pin, one pinned
-   instant, full-URL stubs. Run `scripts/study/parity.mjs` and strike anything that cannot render, out loud.
+   instant, full-URL stubs. A world stands on the instant its input names (`"instant"`, default
+   2026-10-08); a feature dated after it renders empty, so pick a day the area's features exist,
+   move a proven book there by whole weeks (`"shiftDays"`, `worlds/inputs.mjs`) and name a corpus
+   commit from that morning. A November pin's one-tap list is `worlds/nav-surfaces.mjs`. Run `scripts/study/parity.mjs` and strike anything that cannot render, out loud.
    Derive, never type, any figure the page shows two ways: yesterday's closing equity is cash plus
    each position at its `lastday` (`worlds/book.mjs` → `yesterdayEquity`), and compose refuses a
    world whose header day change is not the sum of its rows' (`worlds/day-change.mjs`, #5052). P/L
@@ -513,12 +518,17 @@ node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answe
   (`scripts/faculty/`) found it; the actor now has Backspace and Tab, with a count (schema, role,
   parser and recorder). A reading round run before this date never needed them. Its findings stand,
   but a session that gave up at a pre-filled box may have been the instrument's fault.
+- 2026-11-23 · **every world stood on 2026-10-08, before the features a cross-feature round walks.**
+  At that instant the landing page had no edition, and the pinned build's campaign code failed on
+  a corpus with no campaigns folder. A world now names its own instant (#8005); the cross-feature
+  world is the profile book moved six weeks to Thursday 2026-11-19. Moving a book is not free:
+  on the shifted Tuesday CRWV sat inside its print blackout, so the real wheel sold nothing and its
+  sale moved one session; the quests read a VIX file and a year of SPY and QQQ the world did not
+  hold. Every gap showed up as a compose refusal or a parity "not judged", never as a finding.
 - 2026-11-23 · **the harness had drifted from the app by the bot loop's pin.** The profile's
   worlds, re-run there, missed 16 surfaces: the app nav lost Leaderboard and gained Campaign,
   Moneypenny became a dock, and the profile's bot chip, calendar head and section tabs had moved.
-  The read chain lacked the newer route families (quests, book waits, target splits, member
-  views), and the owner's switchboard and the per-member stores production always wires were
-  unwired. The bot loop's worlds (#8005) brought the chain to the pin, wired those seams opt-in,
-  and took a dock-era one-tap list; the profile's worlds keep theirs, as their pin served them.
-  Run parity at the pin before writing a new area's surfaces.
-
+  The owner's switchboard and the per-member stores production always wires were unwired too. The
+  bot loop's worlds (#8005) wired those seams opt-in and prove the November shell
+  (`nav-surfaces.mjs`); the profile's worlds keep theirs, as their pin served them. Run parity at
+  the pin before writing a new area's surfaces.

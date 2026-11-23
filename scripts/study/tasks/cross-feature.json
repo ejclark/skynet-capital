@@ -1,0 +1,109 @@
+{
+  "area": "cross-feature",
+  "about": "The area config for the cross-feature round (#8005 slice 4): goals that cross features — the front page and its windows, placing a paper order, research and the automated strategies, a bot's page, the league, and the chat assistant in every member's hands. Read by scripts/study/round.mjs; the world is scripts/study/worlds/cross-today.mjs (Thursday 2026-11-19, the profile league moved six weeks). Phone first: every member is on a phone but the first-timer, whose card puts them on a laptop; the owner has a desktop pairing too. Every member starts on the front page, the app's entry point. `roles` is who each member is here, in plain words, never a card's (#5099). The framer and the task author write the tasks later, blind.",
+  "cutoff": "2026-11-23",
+  "tasksPer": 3,
+  "runs": 3,
+  "censusCap": 100,
+  "concurrency": 3,
+  "experts": 3,
+  "matrix": [
+    {
+      "member": "eric",
+      "world": "cross-today",
+      "viewer": "eric",
+      "viewports": ["phone", "desktop"],
+      "start": "/app/"
+    },
+    {
+      "member": "phone-only",
+      "world": "cross-today",
+      "viewer": "eric",
+      "viewports": ["phone"],
+      "start": "/app/"
+    },
+    {
+      "member": "bot-watcher",
+      "world": "cross-today",
+      "viewer": "eric",
+      "viewports": ["phone"],
+      "start": "/app/"
+    },
+    {
+      "member": "returning-trader",
+      "world": "cross-today",
+      "viewer": "eric",
+      "viewports": ["phone"],
+      "start": "/app/"
+    },
+    {
+      "member": "invited-friend",
+      "world": "cross-today",
+      "viewer": "jordan",
+      "viewports": ["phone"],
+      "start": "/app/",
+      "note": "a non-owner: their own small account, the league, and the owner's bot by the app's own links"
+    },
+    {
+      "member": "first-timer",
+      "world": "cross-today",
+      "viewer": "casey",
+      "viewports": ["desktop"],
+      "start": "/app/"
+    }
+  ],
+  "roles": {
+    "eric": "Runs the league and the automated accounts in it. Checks the whole picture daily, mostly on a phone between other things, at a desk when there is time.",
+    "returning-trader": "Holds one paper account and knows the trading words, and is back after a few weeks away to act on something they hold. On a phone this time.",
+    "bot-watcher": "Places few trades; follows the automated accounts and the standings the way a fan follows a season. On a phone.",
+    "phone-only": "Uses the app only on a phone, with one hand, a few minutes at a time.",
+    "invited-friend": "Was invited by the owner; has a small account of their own and comes to see it and how the league is going. On a phone.",
+    "first-timer": "Signed in for the first time today, with no account linked and nothing of their own in the app yet. On a laptop."
+  },
+  "pages": [
+    "the front page: the day's market news, a box to ask a question, and short paths to explore",
+    "the front page's views: the whole market by sector, a calendar of stories and reports, suggested next moves for your account, and how everyone in the league is doing",
+    "the page for placing a paper order on one stock or option, with its chart, its options, advice about a holding, and a list of names to watch",
+    "your accounts: what everything is worth, what you hold, and your history",
+    "research: the house's notes and calls, how each market sector is covered, the automated strategies a bot can run, and your own views on a stock",
+    "a bot account's own page: how it is doing, what it did, the strategies it runs and its reasoning",
+    "the league: a ranking of every account, and a feed of everyone's trades",
+    "a chat assistant on every page that answers questions, takes you to a page, and can write up a request to change the app for you to send"
+  ],
+  "census": [
+    {
+      "world": "cross-today",
+      "viewer": "eric",
+      "for": ["experts", "labels"]
+    },
+    {
+      "world": "cross-today",
+      "viewer": "jordan",
+      "for": ["experts", "labels"]
+    },
+    {
+      "world": "cross-today",
+      "viewer": "casey",
+      "for": ["experts", "labels"]
+    },
+    {
+      "world": "cross-today",
+      "viewer": "eric",
+      "routes": [
+        "/app/trade?desk=sauron&symbol=NVDA",
+        "/app/research?section=playbooks",
+        "/app/u/sauron/playbooks",
+        "/app/leaderboard",
+        "/app/activity"
+      ],
+      "for": ["handoff", "labels"]
+    }
+  ],
+  "thin": {
+    "member": "eric",
+    "world": "cross-today",
+    "viewport": "phone",
+    "task": 1,
+    "expertRoute": "/app/"
+  }
+}

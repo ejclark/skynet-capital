@@ -1,0 +1,143 @@
+{
+  "$comment": "World 'cross-today' (#8005 slice 4), layered over profile-today and moved six weeks to Thursday 2026-11-19, 15:00 New York: the same owner, bot, friend and books, so the cross-feature round meets a league the profile round already proved, on a day the campaigns, the landing edition (2026-11-06, 13 days old, as production shows it this week), quests and convictions exist. shiftDays moves every expiry, sale window, filing date and OCC symbol by 42 days (a holiday expiry goes to the session before it); the time tokens are relative and keep their weekdays. One more member, signed in, owns no account (the first-timer's door). The prices stay the profile book's sanitized ones, so the research shelf at this corpus describes a market the book does not (shell-artifacts.mjs → CROSS_ARTIFACTS).",
+  "base": "profile-today",
+  "instant": "2026-11-19T15:00:00-05:00",
+  "shiftDays": 42,
+  "corpus": {
+    "$comment": "The last commit before the instant to touch the corpus paths (compose.mjs → CORPUS_PATHS): docs/research and the app's dated content as they stood that morning.",
+    "commit": "3c02e68313766d9ce3bf1646680c4e06e13e750b"
+  },
+  "members": [
+    {
+      "email": "eric@study.world",
+      "name": "Eric",
+      "owns": ["eric", "sauron"]
+    },
+    {
+      "email": "jordan@study.world",
+      "name": "Jordan",
+      "owns": ["jordan"]
+    },
+    {
+      "email": "casey@study.world",
+      "name": "Casey",
+      "owns": []
+    }
+  ],
+  "participants": {
+    "sauron": {
+      "positions": [
+        {
+          "symbol": "NVDA",
+          "quantity": 130,
+          "avgPrice": 223.98,
+          "mark": 232.1,
+          "lastday": 230.6
+        },
+        {
+          "symbol": "CRWV",
+          "quantity": 55,
+          "avgPrice": 90.1,
+          "mark": 82.6,
+          "lastday": 84.1
+        },
+        {
+          "symbol": "CRWV261231P00080000",
+          "quantity": -1,
+          "fromWheelSale": true,
+          "mark": 5.5,
+          "lastday": 4.9
+        }
+      ],
+      "$comment": "The sold put is the one the wheel sells on Wednesday (bot below): CRWV $80, 2026-12-31."
+    }
+  },
+  "bot": {
+    "$comment": "The wheel's sale moves one session later than six weeks would put it. On Tuesday 2026-11-17 CRWV is still inside its print blackout (src/domain/earnings-calendar.ts: the estimate window runs to 11-16, plus the session after), so the real CRWV-WHEEL sells nothing that day; on Wednesday it sells the latest listed expiry 14-45 days out before the next blackout, 2026-12-31. The passes after the sale are profile-today's, unchanged.",
+    "passesBefore": "@-2d 10:31",
+    "prependPasses": [
+      {
+        "at": "@-20s",
+        "verdicts": true
+      },
+      {
+        "at": "@0d 12:00",
+        "verdicts": true
+      },
+      {
+        "at": "@0d 09:31",
+        "verdicts": true
+      },
+      {
+        "at": "@-1d 15:59",
+        "verdicts": true
+      },
+      {
+        "at": "@-1d 10:31",
+        "verdicts": true,
+        "wheelSale": {
+          "playbookId": "CRWV-WHEEL",
+          "mode": "aggressive",
+          "orderId": "sauron-crwv-put-1",
+          "filled": 1,
+          "spot": 88.4,
+          "listed": ["2026-12-11", "2026-12-18", "2026-12-31"],
+          "book": {
+            "cash": 968950,
+            "positions": [
+              {
+                "symbol": "NVDA",
+                "quantity": 90,
+                "avgPrice": 222.97
+              },
+              {
+                "symbol": "CRWV",
+                "quantity": 55,
+                "avgPrice": 90.1
+              }
+            ]
+          },
+          "chain": [
+            {
+              "strike": 75,
+              "bid": 1.35,
+              "ask": 1.5,
+              "delta": -0.09,
+              "openInterest": 3100
+            },
+            {
+              "strike": 80,
+              "bid": 2.5,
+              "ask": 2.75,
+              "delta": -0.15,
+              "openInterest": 2400
+            },
+            {
+              "strike": 85,
+              "bid": 4.3,
+              "ask": 4.6,
+              "delta": -0.26,
+              "openInterest": 1900
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "vix": {
+    "$comment": "The quests read Cboe's VIX history for its last close (src/server/vix-feed.ts). The session before the instant, as this world's corpus records it: docs/research/events/apec-leaders-shenzhen-2026-11-18.md, \"Tape through 11-18 close: VIX 24.56\".",
+    "session": "2026-11-18",
+    "close": 24.56
+  },
+  "market": {
+    "$comment": "QQQ, which the quests' conditions check reads beside SPY (src/server/quests-route.ts: a half-cash account reads both indexes' bars). Sanitized like every price in this book, at about the ratio to SPY the two keep; the expirations and the base's symbols are profile-today's, moved six weeks. barDays 400: the conditions check reads a year of each index against its high (market.mjs), sessions only.",
+    "symbols": {
+      "QQQ": {
+        "spot": 618.4,
+        "prevClose": 621.0,
+        "iv": 0.2
+      }
+    },
+    "barDays": 400
+  }
+}

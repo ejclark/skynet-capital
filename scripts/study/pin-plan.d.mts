@@ -5,7 +5,7 @@ export const RECORD: ".study-pin.json";
 export const RUN: ".study-run";
 
 export type PinArgs =
-  | { command: "prepare"; commit: string; dir: string }
+  | { command: "prepare"; commit: string; dir: string; worlds?: string[] }
   | { command: "remove"; dir: string };
 
 export function pinArgs(argv: string[]): PinArgs;

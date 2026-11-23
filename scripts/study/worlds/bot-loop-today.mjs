@@ -7,7 +7,6 @@
 // inputs/bot-loop-today.json (values sanitized).
 
 import { botLoopArtifacts } from "./bot-loop-artifacts.mjs";
-import { chatHook } from "./bot-loop-chat.mjs";
 import { botLoopReads } from "./bot-loop-reads.mjs";
 import { botLoopOneTap, botLoopSurfaces } from "./bot-loop-surfaces.mjs";
 import { profileFixtures } from "./fixtures.mjs";
@@ -20,6 +19,9 @@ export default {
     jordan: "jordan@study.world",
     casey: "casey@study.world",
   },
+  // Moneypenny's dock with her chat in hand, as the cross-feature world holds it: the named hook
+  // the chat-in-a-world module reads (world-chat.mjs, #8005 slice 4).
+  chat: true,
   reads: botLoopReads,
   fixtures: profileFixtures,
   surfaces: botLoopSurfaces("today"),
@@ -27,6 +29,4 @@ export default {
   // them. What the world still cannot show: `artifacts`.
   oneTap: botLoopOneTap(),
   artifacts: botLoopArtifacts,
-  // Moneypenny's dock, world-backed once the chat module lands (bot-loop-chat.mjs).
-  chat: chatHook("bot-loop-today"),
 };

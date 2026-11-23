@@ -3,8 +3,16 @@
 
 import botLoopSteered from "./bot-loop-steered.mjs";
 import botLoopToday from "./bot-loop-today.mjs";
+import crossToday from "./cross-today.mjs";
 import noAccount from "./no-account.mjs";
 import profileBadDay from "./profile-bad-day.mjs";
 import profileToday from "./profile-today.mjs";
 
-export const WORLDS = [profileToday, profileBadDay, noAccount, botLoopToday, botLoopSteered];
+export const WORLDS = [
+  profileToday,
+  profileBadDay,
+  noAccount,
+  crossToday,
+  botLoopToday,
+  botLoopSteered,
+];

@@ -542,8 +542,13 @@
     }
   },
   "wired": ["targetSplits", "bookWaits", "takenQuests", "exitPlans"],
+  "vix": {
+    "$comment": "The quests read Cboe's VIX history for its last close (src/server/vix-feed.ts). The session before the instant, as this world's corpus records it: docs/research/events/aruoba-inflation-term-structure-2026-11-20.md, \"Tape 11-20: VIX 35.89 (Yahoo bar)\".",
+    "session": "2026-11-20",
+    "close": 35.89
+  },
   "market": {
-    "$comment": "Implied vols per underlying; spot and previous close come from a held position's mark when one exists, else from here. Option prices are the house model's at these vols (market.mjs).",
+    "$comment": "Implied vols per underlying; spot and previous close come from a held position's mark when one exists, else from here. Option prices are the house model's at these vols (market.mjs). QQQ is what the quests' conditions check reads beside SPY, sanitized at about the ratio to SPY the two keep; barDays 400: that check reads a year of each index (market.mjs).",
     "expirations": [
       "2026-11-27",
       "2026-12-04",
@@ -577,8 +582,14 @@
         "spot": 281.4,
         "prevClose": 280.2,
         "iv": 0.29
+      },
+      "QQQ": {
+        "spot": 636.3,
+        "prevClose": 635.0,
+        "iv": 0.2
       }
-    }
+    },
+    "barDays": 400
   },
   "edgar": {
     "$comment": "What SEC EDGAR answers the guidance route in this world: each held company's public CIK and its last earnings 8-K. The composer refuses every other network request.",

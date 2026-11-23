@@ -363,6 +363,10 @@ export function buildBook(name) {
     history,
     lastEquity,
     closedToday,
-    market: { expirations: input.market?.expirations ?? [], symbols },
+    market: {
+      expirations: input.market?.expirations ?? [],
+      symbols,
+      ...(input.market?.barDays ? { barDays: input.market.barDays } : {}),
+    },
   };
 }
