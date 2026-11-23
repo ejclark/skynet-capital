@@ -34,6 +34,13 @@ function viewersIn(dir) {
     .sort();
 }
 
+/** A world's research shelf as it stood at its instant: `<run>/<corpus>/docs/research`, or null for
+ *  a run composed before the manifest kept each world's corpus. */
+export function researchRootOf(run, manifest, name) {
+  const corpus = manifest.corpora?.[name];
+  return corpus ? join(run, corpus, "docs", "research") : null;
+}
+
 /** A composed world, read from its compose run directory, on a member's clock. */
 function composedWorld(name, run, viewer, clock) {
   const root = resolve(run);
@@ -49,7 +56,16 @@ function composedWorld(name, run, viewer, clock) {
     throw new Error(`world ${name} has no viewer ${who} in this run (it has: ${viewers})`);
   }
   const pinnedInstant = worldInstant(manifest, name);
-  return { name, run: root, viewer: who, viewers, pinnedInstant, clock };
+  const researchRoot = researchRootOf(root, manifest, name);
+  return {
+    name,
+    run: root,
+    viewer: who,
+    viewers,
+    pinnedInstant,
+    clock,
+    ...(researchRoot ? { researchRoot } : {}),
+  };
 }
 
 /**
@@ -86,6 +102,7 @@ export async function openComposed(world, frame, out, chat) {
     out,
     clock: world.clock ?? DEFAULT_CLOCK,
     ...(chat ? { chat } : {}),
+    ...(world.researchRoot ? { researchRoot: world.researchRoot } : {}),
   });
   // signIn rides along: a census fresh load clears cookies and must land the member signed in again.
   return {

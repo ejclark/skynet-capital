@@ -3,6 +3,7 @@
 // windows, R&D's playbooks and convictions, Trade's watchlist, the league. Grown like the profile
 // list: parity run with nothing stubbed, and each `/api` request the pages made added here.
 
+import { loadInput } from "./inputs.mjs";
 import { profileReads } from "./profile-reads.mjs";
 
 const ACCOUNTS = ["eric", "sauron", "jordan"];
@@ -38,6 +39,40 @@ function perAccount(id) {
   ];
 }
 
+/** The symbols R&D's board narrows to, each with its outlook, fit and mentions (the census met the
+ *  first two unanswered, #8005 thin slice). */
+const BOARD_SYMBOLS = ["NVDA", "CRWV", "AMZN", "TSLA", "META", "AAPL", "MSFT", "SPY"];
+const boardReads = (s) => [
+  `/api/research/outlook?symbol=${s}`,
+  `/api/research/fit?symbol=${s}`,
+  `/api/research/mentions?sym=${s}`,
+];
+
+/** The chain a held option's Trade page opens on: its underlying and type, with no expiry named and
+ *  at its own expiry — read from the input's OCC symbols, never typed. */
+const OCC = /^([A-Z]{1,6})(\d{2})(\d{2})(\d{2})([CP])\d{8}$/;
+function heldChainReads() {
+  const input = loadInput("cross-feature");
+  const out = new Set();
+  for (const p of input.participants) {
+    for (const pos of p.positions ?? []) {
+      const m = OCC.exec(pos.symbol);
+      if (!m) continue;
+      const type = m[5] === "P" ? "put" : "call";
+      out.add(`/api/trade/chain?symbol=${m[1]}&type=${type}`);
+      out.add(`/api/trade/chain?symbol=${m[1]}&type=${type}&exp=20${m[2]}-${m[3]}-${m[4]}`);
+    }
+  }
+  return [...out];
+}
+
 export function crossReads(viewer) {
-  return [...profileReads(viewer), ...LANDING, ...RESEARCH, ...ACCOUNTS.flatMap(perAccount)];
+  return [
+    ...profileReads(viewer),
+    ...LANDING,
+    ...RESEARCH,
+    ...ACCOUNTS.flatMap(perAccount),
+    ...BOARD_SYMBOLS.flatMap(boardReads),
+    ...heldChainReads(),
+  ];
 }

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "@rstest/core";
 import { guardNetwork } from "../../scripts/study/no-network.mjs";
 import { pinArgs } from "../../scripts/study/pin-plan.mjs";
+import { researchRootOf } from "../../scripts/study/session-world.mjs";
+import { crossReads } from "../../scripts/study/worlds/cross-reads.mjs";
 import crossToday from "../../scripts/study/worlds/cross-today.mjs";
 import { loadInput, vixAnswer, worldNetwork } from "../../scripts/study/worlds/inputs.mjs";
 import { marketClient } from "../../scripts/study/worlds/market.mjs";
@@ -109,5 +111,22 @@ describe("the world's definition", () => {
       pinArgs(["prepare", "--commit", "5dadb49", "--dir", "/tmp/pin", "--worlds", "cross-today"]),
     ).toEqual({ command: "prepare", commit: "5dadb49", dir: "/tmp/pin", worlds: ["cross-today"] });
     expect(() => pinArgs(["remove", "--dir", "/tmp/pin", "--worlds", "x"])).toThrow(/--dir only/);
+  });
+});
+
+describe("what the thin slice's census found unanswered (#8005)", () => {
+  it("serves a world's research write-ups from its own corpus, not today's tree", () => {
+    const manifest = { corpora: { "cross-today": ".corpus/3c02e6831376" } };
+    expect(researchRootOf("/run", manifest, "cross-today")).toBe(
+      "/run/.corpus/3c02e6831376/docs/research",
+    );
+    expect(researchRootOf("/run", {}, "cross-today")).toBeNull();
+  });
+
+  it("reads the held put's chain at its own expiry, and the board's outlook per symbol", () => {
+    const reads = crossReads("eric");
+    expect(reads).toContain("/api/trade/chain?symbol=CRWV&type=put&exp=2026-12-31");
+    expect(reads).toContain("/api/research/outlook?symbol=CRWV");
+    expect(reads).toContain("/api/research/fit?symbol=NVDA");
   });
 });
