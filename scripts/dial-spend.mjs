@@ -99,7 +99,7 @@ const inWindow = (w, at) => at >= w.from && at < w.to;
 
 /** Pure: one row per position and lane, so a lane that spent nothing reads $0.00 rather than being
  *  absent, which is what a reading that never reached it would look like. `unread` are runs the
- *  budget did not reach. */
+ *  budget did not reach; one carrying `day` is a day whose listing went unread. */
 export function summarize(legs, windows, { unread = [] } = {}) {
   const hoursOf = {};
   for (const w of windows)
@@ -125,11 +125,17 @@ export function summarize(legs, windows, { unread = [] } = {}) {
     if (leg.usd === null) row.unpriced += 1;
     else row.usd += leg.usd;
   }
+  // A day whose listing went unread counts against every position open that day: its noon stamp
+  // can fall outside the span, and then it floored no row and every row printed exact (#6535).
+  const positionsOf = (u) => {
+    if (!u.day) return [positionOf(u.at)].filter(Boolean);
+    const from = Date.parse(u.day);
+    const open = windows.filter((w) => w.from < from + DAY_MS && w.to > from);
+    return [...new Set(open.map((w) => w.position))];
+  };
   const unreadOf = {};
-  for (const u of unread) {
-    const position = positionOf(u.at);
-    if (position) unreadOf[position] = (unreadOf[position] ?? 0) + 1;
-  }
+  for (const u of unread)
+    for (const position of positionsOf(u)) unreadOf[position] = (unreadOf[position] ?? 0) + 1;
   return [...rows.values()].map(({ runIds, ...row }) => {
     const hours = hoursOf[row.position];
     return {

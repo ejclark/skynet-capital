@@ -22,6 +22,9 @@ export const SESSION_FLOOR_SEC = 40;
  * Events whose runs have carried a lane job (every priced job on record, 10-25 to 11-01). A push
  * run only routes, a schedule run only scans, and reading their logs was 161 of the first 184
  * zips for nothing. A cancelled run has never carried a price: the session's envelope is lost.
+ * claude.yml also starts on a PR review comment, which no listing read, so the lane total printed
+ * as the week without those runs (#6520, #6694); the partial-input spec checks every trigger of a
+ * lane workflow is here or in NON_LANE_EVENTS.
  */
 export const LANE_EVENTS = new Set([
   "workflow_dispatch",
@@ -29,7 +32,10 @@ export const LANE_EVENTS = new Set([
   "issues",
   "pull_request",
   "workflow_run",
+  "pull_request_review_comment",
 ]);
+/** Triggers of a lane workflow whose runs never carry a lane job: a push routes, a schedule scans. */
+export const NON_LANE_EVENTS = new Set(["push", "schedule"]);
 /** GitHub's listing returns at most 1,000 runs per query; past that the oldest vanish silently. */
 const LIST_PAGE_CAP = 10;
 /** Lane by job-name prefix; a matrix leg is "<job> (<event id>)" and still matches. */
