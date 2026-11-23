@@ -181,6 +181,94 @@ describe("ship platter rebuild — the replay re-boards what applies and names w
   });
 });
 
+/**
+ * #7958: the order the items board in must not decide whether an issue closes. Item 1 closes #7106
+ * and boards; item 2 also works on #7106 and is left off AFTER item 1 is already committed. The
+ * rebuilt platter must still say `Part of #7106` — merging it must not close an issue whose other
+ * half is not on main (the comment the rebuild posts on #7106 tells it to catch up and re-board).
+ */
+describe("ship platter rebuild — an item left off late still holds open an issue an earlier item closed", () => {
+  let dir: string;
+  let drops: string;
+  const git = (args: string[]) =>
+    execFileSync("git", args, { cwd: dir, encoding: "utf8", env, stdio: "pipe" });
+  const write = (file: string, text: string) => writeFileSync(join(dir, file), text);
+  const commit = (subject: string, trailers: string[] = []) => {
+    git(["add", "-A"]);
+    git(["commit", "-q", "-m", subject, ...(trailers.length ? ["-m", trailers.join("\n")] : [])]);
+  };
+  const item = (name: string, ref: string) => [
+    `Platter-Item: ${name}`,
+    "Platter-Sha: 0123456789ab",
+    "Platter-Verify: verify green 2026-11-22T07:46Z",
+    "Platter-Paths: none",
+    ref,
+  ];
+
+  beforeAll(() => {
+    dir = mkdtempSync(join(TMP, "ship-platter-rebuild-order-"));
+    drops = join(dir, "..", `${dir.split("/").pop()}-drops.tsv`);
+    git(["init", "-q", "-b", "main", "."]);
+    git(["config", "user.email", "spec@example.com"]);
+    git(["config", "user.name", "spec"]);
+    write("lessons.md", "# Lessons\n");
+    write("envelope.json", readFileSync(resolve("envelope.json"), "utf8"));
+    commit("chore: seed");
+
+    git(["checkout", "-q", "-b", "platter/2026-11-22"]);
+    write("a.txt", "a\n");
+    commit("fix(ship): the first half", item("fix/7106-a", "Platter-Closes: #7106"));
+    write("lessons.md", "# Lessons\n\n- the item's lesson\n");
+    commit("fix(ship): the second half", item("fix/7106-b", "Platter-Refs: #7106"));
+    const old = git(["rev-parse", "HEAD"]).trim();
+
+    git(["checkout", "-q", "main"]);
+    write("lessons.md", "# Lessons\n\n- main's own lesson\n");
+    commit("docs(lessons): main's lesson");
+
+    git(["checkout", "-q", "-b", "platter/2026-11-23"]);
+    execFileSync(
+      "bash",
+      [
+        "-c",
+        `source "${SCRIPTS}/ship.sh"\nPLATTER_BASE=main\nplatter_replay ${old} 0 7943 "${drops}"`,
+        `${SCRIPTS}/./ship.sh`,
+      ],
+      { cwd: dir, encoding: "utf8", env, stdio: "pipe" },
+    );
+  });
+  afterAll(() => {
+    rmSync(dir, { recursive: true, force: true });
+    rmSync(drops, { force: true });
+  });
+
+  it("leaves off the later item", () => {
+    expect(readFileSync(drops, "utf8")).toMatch(
+      /^fix\/7106-b\t[0-9a-f]{12}\tconflicts with main\t7106\n$/,
+    );
+  });
+
+  it("turns the earlier item's Closes into Refs, so the body says Part of", () => {
+    expect(git(["log", "-1", "--format=%b", "HEAD"])).toContain("Platter-Refs: #7106");
+    const body = execFileSync(
+      "bash",
+      [`${SCRIPTS}/ship.sh`, "platter", "ledger", "--base", "main", "--body"],
+      { cwd: dir, encoding: "utf8", env, stdio: "pipe" },
+    );
+    expect(body).toContain("- Part of #7106 — boarded as item 1.");
+    expect(body).not.toContain("Closes #7106");
+  });
+
+  it("keeps the earlier item's change and its other trailers untouched", () => {
+    expect(readFileSync(join(dir, "a.txt"), "utf8")).toBe("a\n");
+    const msg = git(["log", "-1", "--format=%B", "HEAD"]);
+    expect(msg.startsWith("fix(ship): the first half\n")).toBe(true);
+    expect(msg).toContain("Platter-Item: fix/7106-a");
+    expect(msg).toMatch(/Platter-Rebuilt-From: pr 7943 [0-9a-f]{12}/);
+    expect(git(["status", "--porcelain"]).trim()).toBe("");
+  });
+});
+
 describe("ship platter rebuild / adopt — refusals before anything moves", () => {
   it("asks for a PR number", () => {
     expect(run(["platter", "rebuild"]).stderr).toContain(
