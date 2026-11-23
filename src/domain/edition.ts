@@ -43,6 +43,7 @@ import {
 } from "./edition-sectors.js";
 import { daysBetween } from "./market-calendar.js";
 import { marketDayKey } from "./market-day.js";
+import { DATE_RE } from "./time.js";
 
 /** How a line knows what it says. `reported` renders as unconfirmed, `modeled` says so. */
 export const EDITION_MARKS = ["measured", "reported", "modeled", "call"] as const;
@@ -143,7 +144,6 @@ const BUY_FRAMING_RE =
 const FRANCHISE_RE =
   /\b(?:captain'?s log|stardate|star ?fleet|uss enterprise|make it so|final frontier|boldly go|beam (?:me|us) up|warp speed|resistance is futile|live long and prosper|may the force|jedi|wookiee|klingon)\b/i;
 
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
 const SYMBOL_RE = /^[A-Z][A-Z0-9.]{0,9}$/;
 const MAX_NARRATOR = 160;

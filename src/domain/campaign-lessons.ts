@@ -32,6 +32,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { campaignById, isText, SLUG_RE, SYMBOL_RE } from "./campaigns.js";
+import { DATE_RE } from "./time.js";
 
 export const LESSON_KINDS = ["tested", "killed", "on-watch"] as const;
 export type LessonKind = (typeof LESSON_KINDS)[number];
@@ -143,7 +144,6 @@ export function proposable(
 
 // ── The loader ────────────────────────────────────────────────────────────────────────────────
 
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 /** An ask id (`askId` in discovery-queue.ts): `[<campaign>/]<kind>:<subject>`. */
 const ANSWERS_RE = /^([a-z0-9~-]+\/)?(sector|market|name):\S.{0,59}$/;
 
