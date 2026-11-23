@@ -4,8 +4,8 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { hermeticGitEnv } from "../support/hermetic-git.js";
 
-// "Archive this session?" should be a simple yes because the done-check ran, not because the
-// session says it did (Eric, 2026-10-18). Driven through the real entrypoint with `--explain`, which
+// A session archives itself because the done-check ran, not because it says it did (Eric,
+// 2026-10-18; no session asks since 2026-11-23). Driven through the real entrypoint with `--explain`, which
 // takes every fact from the manifest, so this runs offline and touches neither GitHub nor git.
 const run = (manifest: unknown, ...flags: string[]): { out: string; code: number } => {
   try {
