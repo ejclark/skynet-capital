@@ -40,8 +40,14 @@ import { serveTradeApi } from "../../src/server/trade-api-routes.ts";
 import { serveTradeOrdersApi } from "../../src/server/trade-orders-routes.ts";
 import { serveWatchlistApi } from "../../src/server/watchlist-route.ts";
 
-/** A route module a pin may predate: its namespace, or an empty one when the file is missing. */
-const later = (path) => import(path).catch(() => ({}));
+/** A route module a pin may predate: its namespace, or an empty one when THAT file is missing.
+ *  Any other failure (a module that throws as it loads) is a real fault and is thrown. */
+const later = (path) =>
+  import(path).catch((err) => {
+    const file = path.split("/").at(-1) ?? path;
+    if (err?.code === "ERR_MODULE_NOT_FOUND" && String(err.message).includes(file)) return {};
+    throw err;
+  });
 const [
   quests,
   questsTaken,

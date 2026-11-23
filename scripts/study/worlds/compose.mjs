@@ -37,9 +37,12 @@
 // research commit, confounding the before/after comparison it exists for. So each world names a
 // `corpus` commit (dated at or before its instant, refused otherwise); its child runs with those
 // paths extracted from that commit as its working directory, and reads nothing of them from the
-// tree. The pin's landing page reads more of the tree the same way — the day's editions, the campaigns,
-// their lessons, the symbol facts — so a world that serves it names those too (`corpus.also`,
-// #8005); the profile's worlds name none, so their corpus, and so their payloads, stay as frozen.
+// tree. The pin's landing page reads more of the tree the same way — the day's editions, the
+// campaigns, their lessons, the symbol facts — so a world that serves it names those too
+// (`corpus.also`, #8005). Any of those a world does not name, or its corpus commit lacks, is an
+// EMPTY folder: a module that reads one when it loads (the campaigns list does) then reads none
+// rather than crashing the compose, and the profile's worlds, which name none, serve what they
+// were frozen with.
 //
 // ENDPOINTS WITH NO PURE BUILDER: none today — every read the profile pages make is claimed by a
 // real handler. A world's `fixtures` hook (fixtures.mjs) is where one would go, recorded in the
@@ -147,6 +150,7 @@ function corpusAt(runDir, { commit, also = [] } = {}, instant) {
   run("git", ["archive", "--format=tar", "-o", tar, commit, ...CORPUS_PATHS, ...also]);
   run("tar", ["-xf", tar, "-C", dir]);
   rmSync(tar);
+  for (const path of CORPUS_ALSO) mkdirSync(join(dir, path), { recursive: true });
   copyFileSync("package.json", join(dir, "package.json"));
   return dir;
 }
