@@ -8,7 +8,9 @@
 // bot that stopped earlier), and the per-account books a layer may rewrite whole (`humanFills`,
 // `watchlists`, `workingOrders`: an account the layer names replaces the base's, the rest are
 // kept). A layer that changes what an account holds changes the fills that bought it too, or the
-// ledger and the position disagree.
+// ledger and the position disagree. `controls` and `wired` replace the base's whole. A base that
+// names several `bots` (#8005, the bot's loop) takes the bot layering per bot, keyed by id under
+// `bots` (`{ "<id>": { passesBefore, prependPasses, …fields } }`).
 //
 // A layer may also MOVE the base world in time (#8005): `"instant"` names its own (instant.mjs),
 // `"corpus"` its own tree facts, `"vix"` the last VIX close its quests read, `"market"` symbols added to the base's, and `"shiftDays"` (whole weeks only) moves every calendar fact of
@@ -70,9 +72,6 @@ export function loadInput(name) {
     ...p,
     ...(raw.participants?.[p.id] ?? {}),
   }));
-  const passes = raw.bot?.passesBefore
-    ? base.bot.passes.filter((p) => msOf(p.at) < msOf(raw.bot.passesBefore))
-    : base.bot.passes;
   const byAccount = Object.fromEntries(
     PER_ACCOUNT.filter((k) => raw[k] || base[k]).map((k) => [k, { ...base[k], ...raw[k] }]),
   );
@@ -91,14 +90,22 @@ export function loadInput(name) {
         }
       : {}),
     ...(raw.members ? { members: raw.members } : {}),
+    ...(raw.controls ? { controls: raw.controls } : {}),
+    ...(raw.wired ? { wired: raw.wired } : {}),
     ...byAccount,
     participants,
-    bot: {
-      ...base.bot,
-      ...botFields(raw.bot),
-      passes: [...(raw.bot?.prependPasses ?? []), ...passes],
-    },
+    ...(base.bots
+      ? { bots: base.bots.map((b) => layerBot(b, raw.bots?.[b.id])) }
+      : { bot: layerBot(base.bot, raw.bot) }),
   };
+}
+
+/** One bot with a layer's overrides: its own fields, its passes cut and prepended. */
+function layerBot(bot, over = {}) {
+  const passes = over.passesBefore
+    ? bot.passes.filter((p) => msOf(p.at) < msOf(over.passesBefore))
+    : bot.passes;
+  return { ...bot, ...botFields(over), passes: [...(over.prependPasses ?? []), ...passes] };
 }
 
 /** A layer's own bot fields (its subscription date, say) — everything but the pass controls. */

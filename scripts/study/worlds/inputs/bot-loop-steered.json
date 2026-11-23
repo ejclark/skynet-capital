@@ -1,0 +1,182 @@
+{
+  "$comment": "World 'bot-loop-steered' (#8005, the bot's loop), layered over bot-loop-today: the same people, the same Monday, but each owner is steering their bot from Settings instead of a breaker holding one (#6954 slice 5b), and quotes came through today, so no breaker trips. Since 09:20 today Eric has Sauron on \"stop opening, keep exits\": the NVDA tranche it wanted at 10:05 is refused opens-held, and the house stop still sold its CRWV at 13:42 — an owner's hold is a choice, not a stop, so its passes carry no `halted`. Since Friday 14:50 Jordan has The Day Trader on \"watch only\": every pass is recorded as observed, so the MSFT long and the 12:30 AAPL cut it decided were never sent and it still holds its AAPL. Each switch is a line in its bot's change log, by its owner.",
+  "base": "bot-loop-today",
+  "participants": {
+    "day-trader": {
+      "cash": 759340,
+      "realizedPl": -2640,
+      "closedToday": 0,
+      "positions": [
+        {
+          "symbol": "AAPL",
+          "quantity": 500,
+          "avgPrice": 238.6,
+          "mark": 241.2,
+          "lastday": 240.1
+        },
+        {
+          "symbol": "AVGO",
+          "quantity": 320,
+          "avgPrice": 371.0,
+          "mark": 366.4,
+          "lastday": 368.9
+        }
+      ]
+    }
+  },
+  "bots": {
+    "sauron": {
+      "passesBefore": "@0d 09:00",
+      "prependPasses": [
+        {
+          "at": "@-20s",
+          "verdicts": true
+        },
+        {
+          "at": "@0d 14:00",
+          "verdicts": true
+        },
+        {
+          "at": "@0d 13:42",
+          "verdicts": true,
+          "stopExit": {
+            "orderId": "sauron-crwv-2",
+            "symbol": "CRWV",
+            "filled": 43.6,
+            "bids": {
+              "CRWV": 43.6
+            },
+            "book": {
+              "cash": 963503.5,
+              "positions": [
+                {
+                  "symbol": "NVDA",
+                  "quantity": 130,
+                  "avgPrice": 191.35
+                },
+                {
+                  "symbol": "AVGO",
+                  "quantity": 25,
+                  "avgPrice": 372.6
+                },
+                {
+                  "symbol": "CRWV",
+                  "quantity": 55,
+                  "avgPrice": 52.3
+                }
+              ]
+            }
+          }
+        },
+        {
+          "at": "@0d 10:05",
+          "verdicts": true,
+          "refused": [
+            {
+              "symbol": "NVDA",
+              "side": "buy",
+              "quantity": 40,
+              "playbookId": "SAURON",
+              "mode": "aggressive",
+              "strategy": "sauron-panic-claim",
+              "reason": "NVDA panic −0.77 has stopped falling and rebound momentum turned up; claiming a tranche.",
+              "rule": "opens-held"
+            }
+          ]
+        },
+        {
+          "at": "@0d 09:31",
+          "verdicts": true
+        }
+      ]
+    },
+    "day-trader": {
+      "passesBefore": "@-3d 15:00",
+      "prependPasses": [
+        {
+          "at": "@-20s",
+          "verdicts": true,
+          "mode": "observe"
+        },
+        {
+          "at": "@0d 14:00",
+          "verdicts": true,
+          "mode": "observe"
+        },
+        {
+          "at": "@0d 12:30",
+          "verdicts": true,
+          "mode": "observe",
+          "placed": [
+            {
+              "symbol": "AAPL",
+              "side": "sell",
+              "quantity": 500,
+              "reason": "Cutting weakness: AAPL momentum -0.01 <= -0.01"
+            }
+          ]
+        },
+        {
+          "at": "@0d 09:31",
+          "verdicts": true,
+          "mode": "observe",
+          "placed": [
+            {
+              "symbol": "MSFT",
+              "side": "buy",
+              "quantity": 246,
+              "reason": "Momentum long: MSFT momentum 0.02 >= 0.015"
+            }
+          ]
+        },
+        {
+          "at": "@-3d 15:59",
+          "verdicts": true,
+          "mode": "observe"
+        }
+      ]
+    }
+  },
+  "controls": {
+    "$comment": "Sauron: its hardcore build, and \"stop opening, keep exits\" on since 09:20 today (Eric). The Day Trader: \"watch only\" since Friday 14:50 (Jordan). Each change by its bot's owner, in that bot's log.",
+    "bots": {
+      "sauron": {
+        "hardcore": true,
+        "holdOpens": true
+      },
+      "day-trader": {
+        "mode": "observe"
+      }
+    },
+    "changes": {
+      "sauron": [
+        {
+          "at": "@-18d 09:00",
+          "setting": "conviction:CRWV-WHEEL",
+          "before": null,
+          "after": "AI-dip view",
+          "proposedBy": "eric@study.world",
+          "approvedBy": "eric@study.world"
+        },
+        {
+          "at": "@0d 09:20",
+          "setting": "holdOpens",
+          "before": false,
+          "after": true,
+          "proposedBy": "eric@study.world",
+          "approvedBy": "eric@study.world"
+        }
+      ],
+      "day-trader": [
+        {
+          "at": "@-3d 14:50",
+          "setting": "mode",
+          "before": null,
+          "after": "observe",
+          "proposedBy": "jordan@study.world",
+          "approvedBy": "jordan@study.world"
+        }
+      ]
+    }
+  }
+}

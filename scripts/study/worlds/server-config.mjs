@@ -12,6 +12,11 @@
 // ledger, the order audit log (so a human row's origin reads `unknown`), the bot
 // funnel/expectancy, the alert store, and the fund owner's stores (shell-artifacts.mjs says so).
 // The 3M and 1Y windows read the same month the world holds — its history is a month long.
+//
+// The owner's switchboard (`controls`, #8005): production wires it whenever sign-in is on, so a
+// world whose input declares a controls file serves it — each bot's stored switches, the last
+// breaker reset and the settings change log — read-only, as `controlsSeam` below. A world that
+// declares none (the profile's) leaves it unwired, as it was frozen.
 
 import { DELIVERY_OFF } from "../../../src/alerts/alert-delivery.ts";
 import {
@@ -186,6 +191,46 @@ function checkWeek(records, cadenceMs) {
   return { checks: asked.map((r) => r.at), verdicts: [...verdicts.values()], trades };
 }
 
+const refuseControls = (what) => () => {
+  throw new Error(`study world: ${what} is a write — the world records writes, never applies them`);
+};
+
+/**
+ * The controls file and the settings change log, as the book declares them (`controls`): the
+ * stored switches per bot (`ControlsState`), and each bot's change lines oldest first — the log's
+ * own order, read newest first as `SettingsChangeLog.list` reads it. Nobody here is the fund owner
+ * (shell-artifacts.mjs), so Mission Control still answers `{owner:false}`; the per-bot switches are
+ * ownership's, read by the real settings routes. Every write refuses: a world never applies one.
+ */
+function controlsSeam(book) {
+  const { changes = {}, ...state } = book.controls;
+  const stored = { bots: {}, ...state };
+  return {
+    store: {
+      load: () => stored,
+      loadIfReadable: () => stored,
+      seedBots: refuseControls("seeding the controls"),
+      setBot: refuseControls("a bot switch"),
+      replaceBot: refuseControls("a bot's settings"),
+      setAllSuspended: refuseControls("the fleet switch"),
+      stampBreakerReset: refuseControls("a breaker reset"),
+      restoreBreakerReset: refuseControls("restoring a breaker reset"),
+      setCompanionModel: refuseControls("Moneypenny's model"),
+    },
+    changes: {
+      readable: () => true,
+      list: (id, limit = 200) => [...(changes[id] ?? [])].slice(-limit).reverse(),
+      record: refuseControls("a settings change"),
+    },
+    isOwner: () => false,
+    bots: () =>
+      book.participants
+        .filter((p) => p.kind === "bot")
+        .map((p) => ({ id: p.id, displayName: p.displayName })),
+    now: () => new Date(AT),
+  };
+}
+
 /** The world's server config. `auth` is configured, so every ownership gate is live. */
 export function serverConfig(book) {
   const owners = new Map(book.members.map((m) => [m.email, m.owns]));
@@ -260,6 +305,7 @@ export function serverConfig(book) {
       listMembers: async () => [],
     },
     optionsClientFor: () => marketClient(book.market),
+    ...(book.controls ? { controls: controlsSeam(book) } : {}),
     ...leagueServices(book),
   };
 }

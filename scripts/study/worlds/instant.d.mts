@@ -3,6 +3,7 @@
 export const DEFAULT_INSTANT: string;
 export const INSTANT: string;
 export function checkInstant(value: string): string;
+export function nyOffset(day: string): string;
 export function worldInstant(
   manifest: { instant: string; instants?: Record<string, string> },
   world: string,

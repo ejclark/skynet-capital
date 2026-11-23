@@ -443,6 +443,9 @@ node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answe
    world whose header day change is not the sum of its rows' (`worlds/day-change.mjs`, #5052). P/L
    booked today on a position already closed is the one honest gap: declare it as the
    participant's `closedToday` and say so in the input's comment.
+   A world may name its own instant (`instant`, #8010): put it after anything the pin's code
+   serves as already true (a scored claim, a stated view), and the pin's own commit can be its
+   corpus.
 3. Run the framer, then the task author, then the lint. Freeze and hash the tasks.
 4. Thin slice: one member, one task, phone width.
 5. Full round, then grade, then the readout. Add what broke to *Lessons* below.
@@ -555,3 +558,10 @@ node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answe
   it does not define. Asking for lookups inside the structured answer did not help — she never
   used the field. The transport now reads the stream and stops at her first native tool calls, as
   the API would, and the engine runs them (`chat-transport.mjs → toolCatchingCall`).
+- 2026-11-23 · **the harness had drifted from the app by the bot loop's pin.** The profile's
+  worlds, re-run there, missed 16 surfaces: the app nav lost Leaderboard and gained Campaign,
+  Moneypenny became a dock, and the profile's bot chip, calendar head and section tabs had moved.
+  The owner's switchboard and the per-member stores production always wires were unwired too. The
+  bot loop's worlds (#8005) wired those seams opt-in and prove the November shell
+  (`nav-surfaces.mjs`); the profile's worlds keep theirs, as their pin served them. Run parity at
+  the pin before writing a new area's surfaces.

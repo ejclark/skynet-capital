@@ -116,11 +116,11 @@ describe("the world's definition", () => {
 
 describe("what the thin slice's census found unanswered (#8005)", () => {
   it("serves a world's research write-ups from its own corpus, not today's tree", () => {
-    const manifest = { instant: "x", corpora: { "cross-today": ".corpus/3c02e6831376" } };
+    const manifest = { corpora: { "cross-today": ".corpus/3c02e6831376" } };
     expect(researchRootOf("/run", manifest, "cross-today")).toBe(
       "/run/.corpus/3c02e6831376/docs/research",
     );
-    expect(researchRootOf("/run", { instant: "x" }, "cross-today")).toBeNull();
+    expect(researchRootOf("/run", {}, "cross-today")).toBeNull();
   });
 
   it("reads the held put's chain at its own expiry, and the board's outlook per symbol", () => {
