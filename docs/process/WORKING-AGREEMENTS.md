@@ -101,27 +101,33 @@ already said; a wake with nothing new to report earns silence (re-arm the check-
 
 ## A finished session archives itself
 
-**A finished session archives itself — it asks first only when a human opened it** (Eric,
-2026-09-28: "The point is to reduce the pileup of open sessions" — and sessions marked finished still
-"look like they have follow-up actions"; 2026-10-01, after 46 spawned sessions in one day left 35
-finished but open: archiving "should be the default path as a clean up activity"). Done is checked,
-not assumed: every PR it opened is merged or closed; every follow-up it produced (an open question, a
-parked item, a watch date) has a home — an issue, `docs/IDEAS.md`, or its plan issue — never only the
-chat; its plan issue's state block is current; no PR watch or scheduled check-in is pending. Then
-`get_session` (no id) decides the shape:
-- **Spawned** (`origin: claude_code_mcp_seed` — another session's `create_session`) → no ask. Write
-  the final report, then `archive_session` on its own id as the last tool call **of that same turn**.
-  An ask costs a whole extra turn (a full context re-read) for a decision already made, and archiving
-  is reversible (Unarchive).
-- **Opened by hand** (any other origin — app, phone, CLI) → ask **"archive this session?"** as a
-  yes/no `AskUserQuestion` form (Eric, 2026-09-29: "makes this process easier to navigate"); on yes,
-  archive as the final action. **The ask carries its proof** (Eric, 2026-10-18: "give me confidence
-  that when there is a question to ask about archiving, it's a simple yes"): run
-  `scripts/archive-audit.mjs` on a manifest of the session's PRs, children, check-ins and follow-up
-  homes, and put its table in the question; ask only on `ARCHIVE: yes`. A red row carrying a
+**A finished session archives itself, unasked, whoever opened it** (Eric, 2026-09-28: "The point
+is to reduce the pileup of open sessions" — and sessions marked finished still "look like they have
+follow-up actions"; 2026-10-01, after 46 spawned sessions in one day left 35 finished but open:
+archiving "should be the default path as a clean up activity"; 2026-11-23, asked to archive a
+finished cloud session: "requiring me to manually give feedback to close sessions that have
+autonomously opened is not scalable"). Done is checked, not assumed: every PR it opened is merged or
+closed; every follow-up it produced (an open question, a parked item, a watch date) has a home — an
+issue, `docs/IDEAS.md`, or its plan issue — never only the chat; its plan issue's state block is
+current; no PR watch or scheduled check-in is pending; and the turn does not end on a question or
+a fork for Eric (what next, continue here?) — a session he is still talking to is not finished, and
+archives at the end of the turn that settles it.
+- **The proof, then the archive.** Run `scripts/archive-audit.mjs` on a manifest of the session's
+  PRs, children, check-ins and follow-up homes (Eric, 2026-10-18: "give me confidence"). Fill its
+  PRs from GitHub (the branches this session pushed), never from memory: an empty manifest reads
+  all-clear, and the written checks the table has no row for (the state block above, a loop's own
+  "done") still apply. On `ARCHIVE: yes`, write the final report with the audit's table under it,
+  then `archive_session` on its own id (`get_session`, no id) as the last tool call **of that same
+  turn**. A red row carrying a
   `HEAL:` is the session's to fix and re-run, never his to answer (Eric, same day: "Self healing and
   improving needs to be part of the process"); say which heals ran, and send one that recurs to
   `/retro` for a prevention.
+- **Origin does not decide:** a session another session starts from the app's suggested-task card
+  arrives as `desktop_app` with no parent, so `origin` cannot tell spawned from hand-opened. An ask
+  costs a whole extra turn and his tap for a decision already made. An archived session takes no
+  new messages; any session can bring it back with `unarchive_session` (he asks one), or the work
+  reopens in a new session. Wrong if, by 2026-12-21, he has had three self-archived sessions
+  brought back: then the guard above misses what "finished" means to him.
 - **Done-check fails** (blocked, PR open, watch pending) → never archive: the open session is the
   signal that it still needs someone.
 - **Spawned sessions carry `issue:<n>`** (Eric, 2026-10-01: "if grouped, we could archive the
