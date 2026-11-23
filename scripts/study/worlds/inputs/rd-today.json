@@ -1,0 +1,81 @@
+{
+  "$comment": "World 'rd-today' (#8005, R&D: docs/IA.md §5.4), layered over bot-loop-today: the same league on the same Monday, 2026-11-23 15:00 New York, with the pin as corpus, so the research shelf, the market calendar and the closures are the pin's own. It is Thanksgiving week: the calendar holds Wednesday's PCE and GDP, Thursday's closure and Friday's 1:00 p.m. close. What is R&D's own here: Eric keeps three names on his watchlist (R&D's research symbols are the watchlist plus each name's next print), and his bot's CRWV wheel is the pair the house's AI-dip view steers. Jordan and Casey watch nothing.",
+  "base": "bot-loop-today",
+  "watchlists": {
+    "$comment": "Keyed by the account a member's session resolves to (the watchlist route's key): Eric's first account. Names the world quotes (bot-loop-today's market).",
+    "eric": [
+      {
+        "symbol": "AVGO",
+        "at": "@-14d 20:05"
+      },
+      {
+        "symbol": "GOOG",
+        "at": "@-7d 08:40"
+      },
+      {
+        "symbol": "NVDA",
+        "at": "@-5d 21:15"
+      }
+    ]
+  },
+  "market": {
+    "$comment": "The 11 sector funds R&D's Coverage reads a month of (coverage-route.ts → sectorFunds), added to bot-loop-today's market so the column renders as production's does with a linked account. Levels and vols are sanitized; each fund's month is market.mjs's deterministic walk, no claim to be a real tape (rd-artifacts.mjs says so).",
+    "symbols": {
+      "XLK": {
+        "spot": 288.4,
+        "prevClose": 287.1,
+        "iv": 0.24
+      },
+      "XLC": {
+        "spot": 112.6,
+        "prevClose": 112.2,
+        "iv": 0.21
+      },
+      "XLV": {
+        "spot": 146.3,
+        "prevClose": 146.0,
+        "iv": 0.16
+      },
+      "XLF": {
+        "spot": 53.2,
+        "prevClose": 53.0,
+        "iv": 0.18
+      },
+      "XLE": {
+        "spot": 88.7,
+        "prevClose": 89.4,
+        "iv": 0.26
+      },
+      "XLY": {
+        "spot": 231.5,
+        "prevClose": 230.2,
+        "iv": 0.22
+      },
+      "XLP": {
+        "spot": 80.9,
+        "prevClose": 81.0,
+        "iv": 0.13
+      },
+      "XLI": {
+        "spot": 151.2,
+        "prevClose": 150.6,
+        "iv": 0.17
+      },
+      "XLU": {
+        "spot": 84.1,
+        "prevClose": 84.4,
+        "iv": 0.15
+      },
+      "XLRE": {
+        "spot": 42.3,
+        "prevClose": 42.1,
+        "iv": 0.19
+      },
+      "XLB": {
+        "spot": 91.8,
+        "prevClose": 91.5,
+        "iv": 0.2
+      }
+    }
+  }
+}

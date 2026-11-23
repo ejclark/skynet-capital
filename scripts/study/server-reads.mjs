@@ -4,10 +4,14 @@
 //
 // The chain is `dashboard-server.ts`'s own dispatch order for the families that answer GETs
 // (`serveJsonApi`, then its `serveWriteApis` families), minus the auth gate — the session is handed in
-// directly, which is exactly what the gate would have handed each route. Streams and posts are
-// left out: a study world composes reads, and records writes without sending them. The admin
-// family answers its GETs (the owner's cards read `{owner:false}` for a member).
+// directly, which is exactly what the gate would have handed each route. Streams are left out: a
+// study world composes reads, and records a member's writes without sending them. The one POST is
+// a world's own history (`serverWrite`, #8005 R&D): what a member saved before the instant, put
+// through the same handlers into the world's member stores at compose time, so a saved view or a
+// drafted playbook is the code's own record, never one typed into a fixture. The admin family
+// answers its GETs (the owner's cards read `{owner:false}` for a member).
 
+import { Readable } from "node:stream";
 import { serveAdminApi } from "../../src/server/admin-api-routes.ts";
 import { serveAlertDeliveryApi } from "../../src/server/alert-delivery-route.ts";
 import { serveCompanionApi } from "../../src/server/companion-routes.ts";
@@ -150,15 +154,13 @@ const FAMILIES = [
   serveJoinApi,
 ];
 
-/**
- * Ask the real handlers for one GET as one session.
- * @returns {Promise<{status: number, body: unknown} | undefined>} undefined when nothing claims it
- */
-export async function serverRead(url, config, channel, session) {
+/** Ask the real handlers for one request as one session: the server's dispatch order, GETs first
+ *  through `serveJsonApi` (which answers no write), then the families. */
+async function dispatch(req, url, config, channel, session) {
   const path = url.split("?")[0];
   const { res, out } = capture();
-  const req = { method: "GET", url, headers: {} };
-  let claimed = await serveJsonApi(res, path, url, config, channel, session);
+  let claimed =
+    req.method === "GET" && (await serveJsonApi(res, path, url, config, channel, session));
   for (const family of FAMILIES) {
     if (claimed) break;
     claimed = await family(req, res, path, config, session);
@@ -171,4 +173,27 @@ export async function serverRead(url, config, channel, session) {
     body = { text: out.text };
   }
   return { status: out.status || 200, body };
+}
+
+/**
+ * Ask the real handlers for one GET as one session.
+ * @returns {Promise<{status: number, body: unknown} | undefined>} undefined when nothing claims it
+ */
+export function serverRead(url, config, channel, session) {
+  return dispatch({ method: "GET", url, headers: {} }, url, config, channel, session);
+}
+
+/**
+ * One POST a member made before the world's instant, through the same handlers (#8005): the body
+ * as the page sends it (JSON), the session the member's. Compose-time only — a world's browser
+ * never reaches this (world-route.mjs records its writes and answers a stub).
+ * @returns {Promise<{status: number, body: unknown} | undefined>} undefined when nothing claims it
+ */
+export function serverWrite(url, payload, config, channel, session) {
+  const req = Object.assign(Readable.from([Buffer.from(JSON.stringify(payload))]), {
+    method: "POST",
+    url,
+    headers: { "content-type": "application/json" },
+  });
+  return dispatch(req, url, config, channel, session);
 }
