@@ -13,12 +13,16 @@ const CAST = {
   chainSymbols: ["NVDA"],
   // Reads the pin's pages make that the profile's list predates: the landing page's edition and
   // quests (the app nav's first tab), Settings' target split, a held name's outlook on Trade, and
-  // R&D Playbooks' member plays, chains and views.
+  // R&D Playbooks' member plays, chains and views. The bot-loop thin slice's census (2026-11-23)
+  // found two more, both reached only by operating a control: Sauron's page opens AVGO's outlook,
+  // and R&D Playbooks reads the research coverage.
   shared: [
     "/api/edition",
     "/api/quests",
     "/api/target-split",
     "/api/research/outlook?symbol=NVDA",
+    "/api/research/outlook?symbol=AVGO",
+    "/api/research/coverage",
     "/api/authored-plays",
     "/api/playbook-chains",
     "/api/convictions/mine",
