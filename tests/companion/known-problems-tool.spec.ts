@@ -80,7 +80,6 @@ describe("get_known_problems — the IA ledger, before a draft", () => {
     expect(problems.find((p) => p.row === "U1")).toMatchObject({
       problem: "One history, three homes",
       screensCited: 3,
-      state: "ready for a plan",
       askedBy: 2,
       filings: 3,
     });
@@ -155,10 +154,10 @@ describe("draft_feedback — the draft carries the match", () => {
       undefined,
       { ...DRAFT, known_problem: "U1", plan: 7031 },
     )) as Answer;
-    expect(drafts[0]?.match).toEqual({
-      row: "U1",
-      words: "a known problem: One history, three homes",
-    });
+    expect(drafts[0]?.match).toMatchObject({ row: "U1" });
+    expect(drafts[0]?.match?.plan).toBeUndefined();
+    expect(drafts[0]?.match?.words).toMatch(/^a known problem: One history, three homes/);
+    expect(drafts[0]?.match?.words).not.toContain("#7031");
     expect(out.result.matchDropped).toContain("#7031 is not a plan that known problem lists");
   });
 

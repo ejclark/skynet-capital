@@ -23,8 +23,8 @@
         }
       ],
       "screensCited": 3,
-      "plans": [],
-      "state": "ready for a plan"
+      "plans": [8008],
+      "state": "plan filed"
     },
     {
       "id": "U2",
@@ -48,8 +48,8 @@
         }
       ],
       "screensCited": 3,
-      "plans": [],
-      "state": "ready for a plan"
+      "plans": [8008],
+      "state": "plan filed"
     },
     {
       "id": "U3",
@@ -308,7 +308,7 @@
         }
       ],
       "screensCited": 1,
-      "plans": [6949, 6948],
+      "plans": [6948],
       "state": "waiting"
     },
     {
@@ -338,7 +338,7 @@
         }
       ],
       "screensCited": 1,
-      "plans": [7034, 6952],
+      "plans": [],
       "state": "waiting"
     }
   ]

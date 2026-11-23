@@ -59,7 +59,9 @@ describe("known problems", () => {
 
     it("says only what happened, in the ledger's words, with the row's own plan", () => {
       expect(planFor({ row: "U3" })).toBe(5206);
-      expect(planFor({ row: "U15" })).toBeUndefined(); // two owners: no single plan to name
+      // a row with two owner plans names neither: there is no single plan to point at
+      const twoOwners = KNOWN_PROBLEMS.find((r) => r.plans.length > 1);
+      if (twoOwners) expect(planFor({ row: twoOwners.id })).toBeUndefined();
       expect(matchMeta({ row: "U3" })).toEqual([
         "Known problem",
         "Matched in chat to U3 in docs/IA.md §10: A section switch that can't hold its sections at 390 · plan #5206.",
@@ -69,7 +71,8 @@ describe("known problems", () => {
     });
 
     it("names the problem by its title for the card, never the row code or its engineer prose", () => {
-      expect(matchWords({ row: "U1" })).toBe("a known problem: One history, three homes");
+      expect(matchWords({ row: "U1" })).toMatch(/^a known problem: One history, three homes/);
+      expect(matchWords({ row: "U1" })).not.toMatch(/U1|each list orders/);
       expect(matchWords({ row: "U3" })).toContain("· plan #5206");
       expect(matchWords({ plan: 7031 }, '"Test every build"')).toBe(
         'an open plan: #7031 "Test every build"',

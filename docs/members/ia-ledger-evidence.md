@@ -10,8 +10,8 @@ opaque `member-<id>` label.
 
 | Row | Problem | Screens | Members who asked | Filings | Status | Live list |
 |---|---|---|---|---|---|---|
-| U1 | One history, three homes | 3 | 0 | 0 | **ready for a plan** | [label:ia-U1](https://github.com/ejclark/skynet-capital/issues?q=label%3Aia-U1) |
-| U2 | Derived numbers on a log | 3 | 0 | 0 | **ready for a plan** | [label:ia-U2](https://github.com/ejclark/skynet-capital/issues?q=label%3Aia-U2) |
+| U1 | One history, three homes | 3 | 0 | 0 | plan filed (#8008) | [label:ia-U1](https://github.com/ejclark/skynet-capital/issues?q=label%3Aia-U1) |
+| U2 | Derived numbers on a log | 3 | 0 | 0 | plan filed (#8008) | [label:ia-U2](https://github.com/ejclark/skynet-capital/issues?q=label%3Aia-U2) |
 | U3 | A section switch that can't hold its sections at 390 | 7 | 0 | 0 | plan filed (#5206) | [label:ia-U3](https://github.com/ejclark/skynet-capital/issues?q=label%3Aia-U3) |
 | U4 | A filing's answer lives away from the conversation that made it | 2 | 0 | 0 | waiting | [label:ia-U4](https://github.com/ejclark/skynet-capital/issues?q=label%3Aia-U4) |
 | U5 | One play's status, safety stages and stop switch spread over three places | 2 | 0 | 0 | waiting | [label:ia-U5](https://github.com/ejclark/skynet-capital/issues?q=label%3Aia-U5) |
@@ -24,6 +24,6 @@ opaque `member-<id>` label.
 | U12 | A record can't open the trades that made it | 1 | 0 | 0 | waiting | [label:ia-U12](https://github.com/ejclark/skynet-capital/issues?q=label%3Aia-U12) |
 | U13 | The owner's tools have no home of their own | 1 | 0 | 0 | waiting (#5462) | [label:ia-U13](https://github.com/ejclark/skynet-capital/issues?q=label%3Aia-U13) |
 | U14 | Options tools offered before options open, and beside a stock ticket | 2 | 0 | 0 | waiting | [label:ia-U14](https://github.com/ejclark/skynet-capital/issues?q=label%3Aia-U14) |
-| U15 | Nothing writes the day's edition | 1 | 0 | 0 | waiting (#6949, #6948) | [label:ia-U15](https://github.com/ejclark/skynet-capital/issues?q=label%3Aia-U15) |
+| U15 | Nothing writes the day's edition | 1 | 0 | 0 | waiting (#6948) | [label:ia-U15](https://github.com/ejclark/skynet-capital/issues?q=label%3Aia-U15) |
 | U16 | No reward a quest can carry | 1 | 0 | 0 | waiting | [label:ia-U16](https://github.com/ejclark/skynet-capital/issues?q=label%3Aia-U16) |
-| U17 | A member's question has no route | 1 | 0 | 0 | waiting (#7034, #6952) | [label:ia-U17](https://github.com/ejclark/skynet-capital/issues?q=label%3Aia-U17) |
+| U17 | A member's question has no route | 1 | 0 | 0 | waiting | [label:ia-U17](https://github.com/ejclark/skynet-capital/issues?q=label%3Aia-U17) |
