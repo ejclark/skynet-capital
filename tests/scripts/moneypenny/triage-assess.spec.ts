@@ -53,6 +53,7 @@ describe("assessIntent — who starts an assessment", () => {
     ["already ready", filed([...MEMBER, "ready"])],
     ["a plan", filed([...MEMBER, "plan"])],
     ["in progress", filed([...MEMBER, "in-progress"])],
+    ["a filing matched to a known IA problem (evidence on its row)", filed([...MEMBER, "ia-U3"])],
   ])("does not assess: %s", (_why, ctx) => {
     expect(assessIntent(ctx, GO).assess).toBe(false);
   });
@@ -139,7 +140,14 @@ const judged = (checks: Record<string, unknown> = {}, over: Record<string, unkno
   title: "Auto-trigger build workflow",
   state: "open",
   labels: MEMBER,
-  checks: { criteria: PASS, size: PASS, noFork: PASS, notBlocked: PASS, ...checks },
+  checks: {
+    criteria: PASS,
+    size: PASS,
+    noFork: PASS,
+    notBlocked: PASS,
+    placed: { pass: true, evidence: "extends the workbench (§5.3): a column on Trade → Chain" },
+    ...checks,
+  },
   touchedPaths: ["scripts/x.mjs"],
   comment: "**Clear path — session flip**",
   memberAsks: [],
@@ -148,11 +156,22 @@ const judged = (checks: Record<string, unknown> = {}, over: Record<string, unkno
 });
 const yes = (line: string) => ({ refuted: false, line });
 
-describe("failedChecks — clear is computed from the four checks, never a summary", () => {
-  it("is empty only when all four pass on an open, unparked issue", () => {
+describe("failedChecks — clear is computed from the checks, never a summary", () => {
+  it("is empty only when every check passes on an open, unparked issue", () => {
     expect(failedChecks(judged())).toEqual([]);
     expect(failedChecks(judged({ size: FAIL }))).toEqual(["size"]);
     expect(failedChecks(null)).toEqual(["judge: no result"]);
+  });
+
+  // #8005 slice 2: every build names its IA home first, and a homeless one never self-readies.
+  it("fails a filing whose judge named no IA home, or found it adds a place no group holds", () => {
+    expect(failedChecks(judged({ placed: undefined }))).toEqual(["placed"]);
+    const homeless = { pass: false, evidence: "adds a 'Signals' tab no §5 group holds" };
+    expect(failedChecks(judged({ placed: homeless }))).toEqual(["placed"]);
+  });
+
+  it("reads a known-problem match that landed after the intent as evidence, not clear", () => {
+    expect(failedChecks(judged({}, { labels: [...MEMBER, "ia-U1"] }))).toEqual(["evidence"]);
   });
 
   it("treats needs-info as the open question in followup mode, a blocker otherwise", () => {
@@ -212,6 +231,35 @@ describe("assemble + planWrite — the one write each outcome authorizes", () =>
     const w = planWrite(assemble({ number: 7544, judged: j }), j);
     expect(w).toMatchObject({ kind: "backlog", add: [], remove: [] });
     expect(w.body).toContain("only Eric changes");
+  });
+
+  it("records the IA home the filing extends in the flip comment", () => {
+    const j = judged();
+    const r = assemble({
+      number: 7544,
+      judged: j,
+      envelope: yes("envelope — 1 path, none protected"),
+      thread: yes("thread — 0 comments; clear"),
+    });
+    expect(planWrite(r, j).body).toContain("| placed | pass | extends the workbench (§5.3)");
+  });
+
+  it("leaves a homeless filing for a person's look, never ready and never a member question", () => {
+    const j = judged(
+      { placed: { pass: false, evidence: "adds a Signals tab no IA group holds" } },
+      { plainReason: "It adds a new place to the app, and where it lives is Eric's call." },
+    );
+    const w = planWrite(assemble({ number: 7544, judged: j }), j);
+    expect(w).toMatchObject({ kind: "backlog", add: [], remove: [] });
+    expect(w.body).toContain("| placed | **fail** | adds a Signals tab");
+  });
+
+  it("tells a matched filing it counts on a problem already being fixed, with no label", () => {
+    const j = judged({}, { labels: [...MEMBER, "ia-U1"] });
+    const w = planWrite(assemble({ number: 7544, judged: j }), j);
+    expect(w).toMatchObject({ kind: "evidence", add: [], remove: [] });
+    expect(w.body).toContain("Fixed — try it");
+    expect(w.body).not.toMatch(/U1|ia-/);
   });
 
   it("does not ask when the judge wrote no question, even if only criteria failed", () => {

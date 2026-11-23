@@ -33,7 +33,7 @@ included**: `needs-info` itself is the question being answered, not a blocker.
 
 ## Role: `judge`
 
-Record the four checks, each with `pass` and one line of `evidence`:
+Record the five checks, each with `pass` and one line of `evidence`:
 
 1. **criteria** — acceptance criteria are present: a "how we would know it worked", a checklist, or
    a done-when a build can be judged against. A wish with no way to tell it is done fails.
@@ -44,6 +44,15 @@ Record the four checks, each with `pass` and one line of `evidence`:
    any `"protected": true` fails.
 4. **notBlocked** — no open blocking issue (a native blocker, "blocked by #N" with #N open, or an
    open parent whose slice comes first).
+5. **placed** — the build has an IA home before it is built (#8005 slice 2). Read
+   [`docs/IA.md`](../../docs/IA.md) §5 (the groups) and `docs/members/triage.json` (each screen's
+   `home`). Pass, and start the evidence with what you found: `extends <group> (§5.N)` when the ask
+   adds or changes something inside one group's screens, or `no new place` when it fixes something
+   on a screen that already has a home. Fail when the ask adds a place a member would see (a page, a
+   section, a tab, a door or a chat destination) that no §5 group holds, or that two groups could
+   each claim: where it lives is Eric's call, so it is never queued unattended. Name the candidate
+   groups in the evidence. (A filing carrying `ia-<row>` never reaches you: it is evidence on that
+   IA ledger row, whose plan owns the fix.)
 
 Then write, as JSON to the output file:
 
@@ -57,7 +66,8 @@ Then write, as JSON to the output file:
     "criteria": { "pass": true, "evidence": "" },
     "size": { "pass": true, "evidence": "" },
     "noFork": { "pass": true, "evidence": "" },
-    "notBlocked": { "pass": true, "evidence": "" }
+    "notBlocked": { "pass": true, "evidence": "" },
+    "placed": { "pass": true, "evidence": "" }
   },
   "touchedPaths": [],
   "memberAsks": [],
@@ -71,9 +81,10 @@ Then write, as JSON to the output file:
   in a sentence or two, in plain words. Ask what they would see when it works, or which one piece
   matters most when it is too big to build at once. No repo jargon, no file paths, no label names,
   no invented feature names: describe screens by what they do.
-- **plainReason** — only when `noFork` or `notBlocked` fails: one sentence a member understands,
-  saying why it needs a person's look (for example "It changes how builds are started, which only
-  Eric changes."). Never blame the member.
+- **plainReason** — only when `noFork`, `notBlocked` or `placed` fails: one sentence a member
+  understands, saying why it needs a person's look (for example "It changes how builds are started,
+  which only Eric changes.", or "It adds a new place to the app, and where it lives is Eric's
+  call."). Never blame the member.
 
 Be strict: a check you cannot evidence is a fail.
 
