@@ -15,7 +15,7 @@
  * keep landing ordinary member feedback on Eric's queue.
  */
 
-import { matchLine, type ProblemMatch, problemLabel } from "../domain/known-problems.js";
+import { matchMeta, type ProblemMatch, problemLabel } from "../domain/known-problems.js";
 import {
   CLAUDE_CODE_LINK,
   memberLabelFor,
@@ -52,7 +52,7 @@ export interface FeedbackInput {
   readonly images?: readonly FeedbackImageInput[];
   /** The known problem the chat matched this ask to (#8005 slice 7) — a ledger row, an open plan
    *  or both, re-checked by `parseProblemMatch` on the way in. It earns the row's `ia-<row>`
-   *  label and one line in the body, built from the ledger's words, never the POST's. */
+   *  label and one table row in the body, built from the ledger's words, never the POST's. */
   readonly match?: ProblemMatch;
 }
 
@@ -124,6 +124,13 @@ const TITLE_TAG: Record<FeedbackKind, string> = {
   idea: "[idea]",
 };
 
+/** One table cell's text: a posted `area` is member text, and a newline or a pipe in it would
+ *  end the cell and forge a row of its own, a fake "Known problem" line included (red-team,
+ *  2026-11-23). */
+function tableCell(text: string): string {
+  return text.replace(/[\r\n]+/g, " ").replace(/\|/g, "\\|");
+}
+
 /**
  * The filed issue's body: the member's words first (the ask is what a human reads first), then the
  * metadata as a small table rather than a run of `**Key:** value` lines — repeated key/value facts
@@ -137,8 +144,8 @@ export function issueBody(input: FeedbackInput, imageUrls: readonly string[] = [
   if (input.spec) lines.push(...specBlock(input.spec), "");
   const meta: [string, string][] = [["Kind", FEEDBACK_KIND_LABEL[input.kind]]];
   if (input.area) meta.push(["Where", input.area]);
-  if (input.match) meta.push(["Known problem", matchLine(input.match)]);
-  lines.push("| | |", "|---|---|", ...meta.map(([k, v]) => `| **${k}** | ${v} |`));
+  if (input.match) meta.push([...matchMeta(input.match)]);
+  lines.push("| | |", "|---|---|", ...meta.map(([k, v]) => `| **${k}** | ${tableCell(v)} |`));
   // The link closes claude.yml's issues gate, which every app filing reaches as OWNER (#7444).
   lines.push(
     "",

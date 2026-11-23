@@ -12,7 +12,7 @@ import {
   evidenceByRow,
   KNOWN_PROBLEMS,
   knownProblem,
-  matchLine,
+  matchMeta,
   matchWords,
   parseProblemMatch,
   planFor,
@@ -40,6 +40,12 @@ describe("known problems", () => {
       expect(parseProblemMatch({ row: "U99" })).toBeUndefined();
       expect(parseProblemMatch({ row: "U1; drop table" })).toBeUndefined();
       expect(parseProblemMatch({ row: "U1", plan: -4 })).toEqual({ row: "U1" });
+    });
+
+    it("keeps a plan beside a row only when the row lists it (red-team, 2026-11-23)", () => {
+      expect(parseProblemMatch({ row: "U3", plan: 1 })).toEqual({ row: "U3" });
+      expect(parseProblemMatch({ row: "U1", plan: 7000 })).toEqual({ row: "U1" });
+      expect(parseProblemMatch({ row: "U3", plan: 5206 })).toEqual({ row: "U3", plan: 5206 });
       expect(parseProblemMatch({ plan: 1.5 })).toBeUndefined();
       expect(parseProblemMatch("U1")).toBeUndefined();
       expect(parseProblemMatch(undefined)).toBeUndefined();
@@ -51,23 +57,23 @@ describe("known problems", () => {
       expect(problemLabel("U1")).toBe("ia-U1");
     });
 
-    it("says what it is evidence on in the ledger's words, with the row's own plan", () => {
+    it("says only what happened, in the ledger's words, with the row's own plan", () => {
       expect(planFor({ row: "U3" })).toBe(5206);
       expect(planFor({ row: "U15" })).toBeUndefined(); // two owners: no single plan to name
-      expect(planFor({ row: "U1", plan: 7000 })).toBe(7000);
-      expect(matchLine({ row: "U3" })).toBe(
-        "U3 in docs/IA.md §10: A section switch that can't hold its sections at 390 · plan #5206. Evidence on a known problem, not a new feature.",
-      );
-      expect(matchLine({ plan: 6948 })).toBe(
-        "plan #6948. Evidence on a known problem, not a new feature.",
-      );
+      expect(matchMeta({ row: "U3" })).toEqual([
+        "Known problem",
+        "Matched in chat to U3 in docs/IA.md §10: A section switch that can't hold its sections at 390 · plan #5206.",
+      ]);
+      expect(matchMeta({ plan: 6948 })).toEqual(["Open plan", "Matched in chat to plan #6948."]);
+      expect(matchMeta({ row: "U1" }).join(" ")).not.toMatch(/not a new feature|evidence/i);
     });
 
-    it("names the problem in plain words for the card, never the row code", () => {
-      const words = matchWords({ row: "U1" });
-      expect(words).toContain("One history, three homes");
-      expect(words).toContain("each list orders with their own controls");
-      expect(words).not.toContain("U1");
+    it("names the problem by its title for the card, never the row code or its engineer prose", () => {
+      expect(matchWords({ row: "U1" })).toBe("a known problem: One history, three homes");
+      expect(matchWords({ row: "U3" })).toContain("· plan #5206");
+      expect(matchWords({ plan: 7031 }, '"Test every build"')).toBe(
+        'an open plan: #7031 "Test every build"',
+      );
     });
   });
 

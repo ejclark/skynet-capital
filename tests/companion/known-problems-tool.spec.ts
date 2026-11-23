@@ -54,7 +54,9 @@ type Answer = { ok: true; result: Record<string, unknown> };
 describe("get_known_problems — the IA ledger, before a draft", () => {
   it("is in the rule for build and change requests, before draft_feedback", () => {
     expect(ROUTING_RULE).toContain("call get_known_problems, then draft_feedback");
-    expect(ROUTING_RULE).toContain("call get_known_problems and get_roadmap first");
+    expect(ROUTING_RULE).toContain(
+      "call get_known_problems and get_roadmap first, together in one step",
+    );
     expect(ROUTING_RULE).toContain("MATCH BEFORE YOU DRAFT");
     expect(ROUTING_RULE).toContain('"this is a known problem: what it is, plan #N"');
   });
@@ -107,13 +109,14 @@ describe("draft_feedback — the draft carries the match", () => {
       { ...DRAFT, known_problem: "U3" },
     )) as Answer;
     expect(drafts[0]?.match).toMatchObject({ row: "U3" });
-    expect(drafts[0]?.match?.words).toContain("A section switch that can't hold its sections");
-    expect(drafts[0]?.match?.words).toContain("plan #5206");
+    expect(drafts[0]?.match?.words).toBe(
+      "a known problem: A section switch that can't hold its sections at 390 · plan #5206",
+    );
     expect(out.result.knownProblem).toBe(drafts[0]?.match?.words);
     expect(out.result).not.toHaveProperty("matchDropped");
   });
 
-  it("keeps a plan the roadmap lists, and drops one nothing names, saying why", async () => {
+  it("keeps a plan the roadmap lists, named by its title, and drops one it does not", async () => {
     const drafts: FeedbackDraft[] = [];
     const kept = (await runCompanionTool(
       "draft_feedback",
@@ -121,7 +124,7 @@ describe("draft_feedback — the draft carries the match", () => {
       undefined,
       { ...DRAFT, plan: 7031 },
     )) as Answer;
-    expect(drafts[0]?.match).toEqual({ plan: 7031, words: "plan #7031" });
+    expect(drafts[0]?.match).toEqual({ plan: 7031, words: 'an open plan: #7031 "x"' });
     expect(kept.result).not.toHaveProperty("matchDropped");
 
     const dropped = (await runCompanionTool(
@@ -132,7 +135,31 @@ describe("draft_feedback — the draft carries the match", () => {
     )) as Answer;
     expect(drafts[1]?.match).toMatchObject({ row: "U1" });
     expect(drafts[1]?.match).not.toHaveProperty("plan");
-    expect(dropped.result.matchDropped).toContain("#4242 is not a plan");
+    expect(dropped.result.matchDropped).toContain("#4242 is not a plan that known problem lists");
+
+    const alone = (await runCompanionTool(
+      "draft_feedback",
+      deps({ onDraft: (d) => drafts.push(d), readRoadmap: roadmapWith(7031) }),
+      undefined,
+      { ...DRAFT, plan: 4242 },
+    )) as Answer;
+    expect(drafts[2]).not.toHaveProperty("match");
+    expect(alone.result.matchDropped).toContain("#4242 is not a plan get_roadmap lists");
+  });
+
+  it("keeps only a known problem's own plan beside it, even one the roadmap lists", async () => {
+    const drafts: FeedbackDraft[] = [];
+    const out = (await runCompanionTool(
+      "draft_feedback",
+      deps({ onDraft: (d) => drafts.push(d), readRoadmap: roadmapWith(7031) }),
+      undefined,
+      { ...DRAFT, known_problem: "U1", plan: 7031 },
+    )) as Answer;
+    expect(drafts[0]?.match).toEqual({
+      row: "U1",
+      words: "a known problem: One history, three homes",
+    });
+    expect(out.result.matchDropped).toContain("#7031 is not a plan that known problem lists");
   });
 
   it("drops a row the ledger does not hold and still hands the draft over", async () => {

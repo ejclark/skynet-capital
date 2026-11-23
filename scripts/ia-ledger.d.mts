@@ -41,6 +41,7 @@ export function stateOf(status: string): LedgerRow["state"];
 export function plansIn(status: string): number[];
 export function rowOf(cells: string[], registry: RegistryScreen[]): LedgerRow;
 export function buildLedger(iaText: string, registry?: RegistryScreen[]): Ledger;
+export function ledgerText(ledger: Ledger): string;
 export function readLedgerInputs(): { ia: string; registry: RegistryScreen[] };
 export function evidenceOf(
   issues: { pull_request?: unknown; labels?: (string | { name?: string })[] }[],

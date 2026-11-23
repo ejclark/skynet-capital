@@ -184,7 +184,7 @@
     {
       "id": "U8",
       "problem": "The Profile head assumes an account",
-      "detail": "with none linked, the head still renders account rows (a \"No account linked yet — connect one in Onboarding\" line pointing at the page it sits on, \"Net worth shows once an account is linked\", a section switch offering Activity and Events,…",
+      "detail": "with none linked, the head still renders account rows…",
       "screens": [
         {
           "id": "onboarding",
@@ -249,7 +249,7 @@
     {
       "id": "U12",
       "problem": "A record can't open the trades that made it",
-      "detail": "Pulse's weeks, runs and biggest dip are dated, but the Ledger takes no date in its address, so the Pulse × Activity joint (13/13, §5.1) stays unrendered",
+      "detail": "Pulse's weeks, runs and biggest dip are dated, but the Ledger takes no date in its address, so the Pulse × Activity joint stays unrendered",
       "screens": [
         {
           "id": "member-pulse",

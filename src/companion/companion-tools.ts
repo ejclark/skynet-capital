@@ -196,7 +196,8 @@ export function parseOutlook(input: unknown): Outlook | { readonly error: string
 
 export type CompanionToolName = (typeof COMPANION_TOOL_NAMES)[number];
 
-/** The tools that read no member data — declared even when the session has no linked desk. */
+/** The tools that read no one member's data (the IA ledger's evidence is league-wide counts,
+ *  never who) — declared even when the session has no linked desk. */
 const DESKLESS_TOOLS: ReadonlySet<CompanionToolName> = new Set([
   "get_work_status",
   "get_roadmap",
@@ -338,7 +339,7 @@ export const COMPANION_TOOL_DEFS = [
         plan: {
           type: "integer",
           description:
-            "Optional: the open plan this ask belongs to — a number a get_known_problems row or get_roadmap gave you, never a guess.",
+            "Optional: with known_problem, only that problem's own plan (from its plans); with no known problem, an open plan get_roadmap listed. Never a guess.",
         },
       },
       required: ["kind", "title", "details"],

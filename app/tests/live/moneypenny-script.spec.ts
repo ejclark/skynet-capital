@@ -177,7 +177,7 @@ describe("failure and draft lines", () => {
       kind: "idea",
       title: "One list",
       details: "d",
-      match: { words: "One history, three homes · plan #5206" },
+      match: { words: "a known problem: One history, three homes · plan #5206" },
     });
     expect(card).toContain("Adds to a known problem: One history, three homes · plan #5206");
     expect(card.indexOf("Adds to a known problem")).toBeLessThan(card.indexOf('"submit"'));

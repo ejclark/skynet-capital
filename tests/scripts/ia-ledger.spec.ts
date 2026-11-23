@@ -5,6 +5,7 @@ import {
   evidenceOf,
   evidenceTable,
   LEDGER_JSON_PATH,
+  ledgerText,
   memberRoute,
   plansIn,
   readLedgerInputs,
@@ -76,11 +77,37 @@ describe("the IA ledger generator", () => {
       expect(stateOf("**fixed in #8100** (3 screens)")).toBe("fixed");
     });
 
+    it("reads fixed only from a cell that opens with it, never from the word elsewhere", () => {
+      // The reviewer's probes (2026-11-23): each would have had her tell members it was fixed.
+      expect(stateOf("waiting (1 screen; #5176 closed without a decision)")).toBe("waiting");
+      expect(stateOf("waiting (2 screens; not fixed by #5448)")).toBe("waiting");
+      expect(stateOf("half done in #7077")).toBe("waiting");
+      expect(stateOf("**done in #8101**")).toBe("fixed");
+    });
+
+    it("writes the JSON the way biome formats it, so a regenerate never trips lint", () => {
+      const text = ledgerText({
+        source: "s",
+        rows: [
+          { ...rowOf(["U1", "**t**", "trade-ticket", "", "", "**filed as #5206**"], REGISTRY) },
+        ],
+      });
+      expect(text).toContain('"plans": [5206]');
+      expect(text.endsWith("}\n")).toBe(true);
+    });
+
+    it("sends no committed screen route to a fixture account by query", () => {
+      const { ia, registry } = readLedgerInputs();
+      for (const row of buildLedger(ia, registry).rows) {
+        for (const screen of row.screens) expect(screen.route, row.id).not.toContain("account=");
+      }
+    });
+
     it("builds a row from the table's own columns, with the gloss in plain words", () => {
       const row = rowOf(
         [
           "U9",
-          "**A thing** — the `ledger` row (§5.4; `docs/x.md`) goes *stale* (src/a.ts:3)",
+          "**A thing** — the `ledger` row (§5.4; `docs/x.md`) goes *stale* (13/13, §5.1) (src/a.ts:3)",
           "profile-activity (round 1), trade-ticket",
           "why",
           "none",

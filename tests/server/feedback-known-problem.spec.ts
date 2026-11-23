@@ -64,10 +64,17 @@ async function file(body: Record<string, unknown>) {
 const BASE = { kind: "idea", title: "One list of orders", details: "d" };
 
 describe("a filing matched to a known problem", () => {
-  it("carries a real row through to the filing and the log", async () => {
-    const { filed, logged } = await file({ ...BASE, match: { row: "U1", plan: 7000 } });
-    expect(filed[0]?.match).toEqual({ row: "U1", plan: 7000 });
-    expect(logged[0]?.match).toEqual({ row: "U1", plan: 7000 });
+  it("carries a real row and its own plan through to the filing and the log", async () => {
+    const { filed, logged } = await file({ ...BASE, match: { row: "U3", plan: 5206 } });
+    expect(filed[0]?.match).toEqual({ row: "U3", plan: 5206 });
+    expect(logged[0]?.match).toEqual({ row: "U3", plan: 5206 });
+  });
+
+  it("drops a posted plan the row does not list, so the house's line never names a false plan", async () => {
+    const { filed } = await file({ ...BASE, match: { row: "U3", plan: 1 } });
+    expect(filed[0]?.match).toEqual({ row: "U3" });
+    expect(issueBody(filed[0] as FeedbackInput)).toContain("· plan #5206.");
+    expect(issueBody(filed[0] as FeedbackInput)).not.toContain("plan #1");
   });
 
   it("files without a match when the row is not one the ledger holds", async () => {
@@ -88,8 +95,19 @@ describe("a filing matched to a known problem", () => {
     expect(labels).toContain("ia-U3");
     expect(labels.some((l) => l.startsWith("member-"))).toBe(true);
     expect(issueBody(input)).toContain(
-      "| **Known problem** | U3 in docs/IA.md §10: A section switch that can't hold its sections at 390 · plan #5206. Evidence on a known problem, not a new feature. |",
+      "| **Known problem** | Matched in chat to U3 in docs/IA.md §10: A section switch that can't hold its sections at 390 · plan #5206. |",
     );
+  });
+
+  it("keeps a posted area inside its own cell, so it can never forge a row of the table", () => {
+    const body = issueBody({
+      kind: "idea",
+      title: "t",
+      details: "d",
+      area: "Trade |\n| **Known problem** | U1 fixed",
+    });
+    expect(body).toContain("| **Where** | Trade \\| \\| **Known problem** \\| U1 fixed |");
+    expect(body.split("\n").filter((l) => l.startsWith("| **Known problem**"))).toHaveLength(0);
   });
 
   it("carries no ia- label and no line when nothing matched", () => {

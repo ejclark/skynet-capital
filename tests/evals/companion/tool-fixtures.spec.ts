@@ -21,12 +21,14 @@ const SAMPLE_INPUT: Record<string, unknown> = {
   get_roadmap: {},
   get_my_positions: {},
   get_sized_suggestions: { underlying: "NVDA" },
+  get_known_problems: {},
+  draft_feedback: { kind: "idea", title: "One list of orders", details: "d", known_problem: "U1" },
 };
 
 describe("COMPANION_TOOL_FIXTURES", () => {
   describe("when read as a suite", () => {
-    it("holds six fixtures, each declaring tool use", () => {
-      expect(COMPANION_TOOL_FIXTURES).toHaveLength(6);
+    it("holds seven fixtures, each declaring tool use", () => {
+      expect(COMPANION_TOOL_FIXTURES).toHaveLength(7);
       for (const f of COMPANION_TOOL_FIXTURES) expect(f.toolUse).toBeDefined();
     });
 

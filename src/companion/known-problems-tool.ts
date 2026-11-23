@@ -43,8 +43,15 @@ const STATE_WORDS: Record<KnownProblem["state"], string> = {
   fixed: "fixed: say so, and that the member can try it on the screens listed",
   "plan filed": "a plan to fix it is filed",
   "ready for a plan": "enough screens hit it that it is ready for a plan; none is filed yet",
-  waiting: "recorded, waiting for more evidence",
+  waiting: "recorded; no plan to fix it yet",
 };
+
+/** A waiting row whose status names owner plans is not "no plan": those plans own it. */
+function stateWords(row: KnownProblem): string {
+  return row.state === "waiting" && row.plans.length > 0
+    ? "recorded; the plans listed own it"
+    : STATE_WORDS[row.state];
+}
 
 export const KNOWN_PROBLEMS_TOOL_DEF = {
   name: KNOWN_PROBLEMS_TOOL_NAME,
@@ -71,7 +78,7 @@ export async function knownProblemsResult(
           screensCited: row.screensCited,
           plans: row.plans,
           state: row.state,
-          stateWords: STATE_WORDS[row.state],
+          stateWords: stateWords(row),
           ...(seen ? { askedBy: seen.members, filings: seen.filings } : {}),
         };
       }),
@@ -92,10 +99,19 @@ export interface CheckedMatch {
   readonly dropped?: string;
 }
 
-async function onRoadmap(read: ReadRoadmap | undefined, plan: number): Promise<boolean> {
+/** The roadmap's own quoted title for an open plan, or undefined when the roadmap lists no such
+ *  plan (or could not be read). */
+async function roadmapTitle(
+  read: ReadRoadmap | undefined,
+  plan: number,
+): Promise<string | undefined> {
   const roadmap = read ? await read().catch(() => undefined) : undefined;
-  if (!roadmap?.available) return false;
-  return roadmap.groups.some((g) => g.items.some((item) => item.number === plan));
+  if (!roadmap?.available) return undefined;
+  for (const group of roadmap.groups) {
+    const item = group.items.find((i) => i.number === plan);
+    if (item) return item.title;
+  }
+  return undefined;
 }
 
 /**
@@ -114,17 +130,26 @@ export async function checkDraftMatch(
   const reasons: string[] = [];
   const row = named ? knownProblem(named.toUpperCase()) : undefined;
   if (named && !row) reasons.push(`${named} is not a row get_known_problems lists`);
+  // With a known problem, only its own plan rides along (the filing POST holds the same line);
+  // alone, a plan must be one get_roadmap lists, and its quoted title names it on the card.
   let plan: number | undefined;
+  let planTitle: string | undefined;
   if (raw.plan !== undefined && raw.plan !== null) {
     if (!askedPlan) reasons.push("plan must be an issue number");
-    else if (row?.plans.includes(askedPlan) || (await onRoadmap(readRoadmap, askedPlan))) {
-      plan = askedPlan;
+    else if (row) {
+      if (row.plans.includes(askedPlan)) plan = askedPlan;
+      else reasons.push(`#${askedPlan} is not a plan that known problem lists`);
     } else {
-      reasons.push(`#${askedPlan} is not a plan the known problem or get_roadmap names`);
+      planTitle = await roadmapTitle(readRoadmap, askedPlan);
+      if (planTitle) plan = askedPlan;
+      else reasons.push(`#${askedPlan} is not a plan get_roadmap lists`);
     }
   }
   const dropped = reasons.length > 0 ? `${reasons.join("; ")}: left off the draft` : undefined;
   if (!(row || plan)) return dropped ? { dropped } : {};
   const match: ProblemMatch = { ...(row ? { row: row.id } : {}), ...(plan ? { plan } : {}) };
-  return { match: { ...match, words: matchWords(match) }, ...(dropped ? { dropped } : {}) };
+  return {
+    match: { ...match, words: matchWords(match, planTitle) },
+    ...(dropped ? { dropped } : {}),
+  };
 }

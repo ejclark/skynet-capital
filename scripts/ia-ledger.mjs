@@ -20,8 +20,10 @@
  *   - `plans`: the issue numbers the status cell says own the fix ("filed as #N", "owned by #N",
  *     "joins #N");
  *   - `state`: fixed · plan filed · ready for a plan · waiting, from the status cell's words.
- *     "fixed" reads a status that says fixed, done or closed (e.g. "**fixed in #N**"); `fixedBy`
- *     keeps that number.
+ *     "fixed" reads only a cell that OPENS with it in bold — "**fixed in #N**" or "**done in #N**"
+ *     — because the word turns up in other statuses ("not fixed by #5448", "#5176 closed without
+ *     a decision") and a loose read would have Moneypenny tell members a problem is fixed. `fixedBy`
+ *     keeps that number. §10 does not name this spelling yet; #8005's log proposes it.
  *
  * `npm run ia:ledger` rewrites the JSON; `--check` exits 1 when it is stale (the spec runs the
  * same comparison, so an edit to §10 without a regenerate fails with this command in the message).
@@ -55,7 +57,8 @@ const DETAIL_CHARS = 240;
 const EXTRA_SCREENS = [{ id: "landing", name: "The landing page", route: "/" }];
 
 /** A redesign route is drawn for one viewer's fixture account; a member trying the fix should
- *  land on their own, so the fixture's `account=` goes. */
+ *  land on their own, so the fixture's `account=` goes. A league page's path (`/app/u/sauron`)
+ *  stays: it is a bot's public page every member can open. */
 export function memberRoute(route) {
   const [path, query = ""] = route.split("?");
   const kept = query
@@ -79,7 +82,7 @@ export function cellsOf(line) {
 /** Markdown to plain words: code ticks, bold and § references go; whitespace collapses. */
 export function plainWords(text) {
   return text
-    .replace(/\s*\((?:§[^()]*|the shell)\)/g, "")
+    .replace(/\s*\((?:[^()]*§[^()]*|the shell)\)/g, "")
     .replace(/`([^`]*)`/g, "$1")
     .replace(/\s*\((?:#\d+|[^()]*\b(?:src|app|docs)\/)[^()]*\)/g, "")
     .replace(/\*\*([^*]*)\*\*/g, "$1")
@@ -88,10 +91,14 @@ export function plainWords(text) {
     .trim();
 }
 
+/** Clipped at a word, and never inside an aside it cannot close (U8's long quote). */
 function clip(text, max) {
   if (text.length <= max) return text;
-  const cut = text.slice(0, max);
-  return `${cut.slice(0, cut.lastIndexOf(" "))}…`;
+  let cut = text.slice(0, max);
+  cut = cut.slice(0, cut.lastIndexOf(" "));
+  const open = cut.lastIndexOf("(");
+  if (open > cut.lastIndexOf(")")) cut = cut.slice(0, open);
+  return `${cut.trimEnd().replace(/[,;:]$/, "")}…`;
 }
 
 /** The text with every parenthesised aside removed, nesting included — a screen id is never
@@ -122,7 +129,7 @@ export function screensIn(cell, registry) {
 
 export function stateOf(status) {
   const words = status.toLowerCase();
-  if (/\b(fixed|done|closed)\b/.test(words)) return "fixed";
+  if (FIXED_CELL.test(status)) return "fixed";
   if (/filed as #\d+/.test(words)) return "plan filed";
   if (/ready for an overhaul plan/.test(words)) return "ready for a plan";
   return "waiting";
@@ -136,8 +143,11 @@ export function plansIn(status) {
   return [...new Set(plans)];
 }
 
+const FIXED_CELL = /^\s*\*\*\s*(?:fixed|done)\b/i;
+
 function fixedByIn(status) {
-  const m = status.match(/\b(?:fixed|done|closed)\b[^#]{0,12}#(\d+)/i);
+  if (!FIXED_CELL.test(status)) return undefined;
+  const m = status.match(/^\s*\*\*\s*(?:fixed|done)\b[^#*]{0,12}#(\d+)/i);
   return m ? Number(m[1]) : undefined;
 }
 
@@ -265,9 +275,18 @@ function writeEvidence(ledger) {
   console.log(`wrote ${ledger.rows.length} rows to docs/members/ia-ledger-evidence.md`);
 }
 
+/** The JSON as biome formats it (number arrays on one line), so a regenerate never trips lint. */
+export function ledgerText(ledger) {
+  const pretty = JSON.stringify(ledger, null, 2).replace(
+    /\[\s*(\d+(?:,\s*\d+)*)\s*\]/g,
+    (_, nums) => `[${nums.split(/,\s*/).join(", ")}]`,
+  );
+  return `${pretty}\n`;
+}
+
 function main(argv) {
   const { ia, registry } = readLedgerInputs();
-  const fresh = `${JSON.stringify(buildLedger(ia, registry), null, 2)}\n`;
+  const fresh = ledgerText(buildLedger(ia, registry));
   if (argv.includes("--check")) {
     const committed = readFileSync(LEDGER_JSON_PATH, "utf8");
     if (JSON.stringify(JSON.parse(committed)) !== JSON.stringify(JSON.parse(fresh))) {

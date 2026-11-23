@@ -7,14 +7,19 @@
  * WHY THE CHAT NEEDS THEM (#8005, Eric 2026-11-23: chat-born builds are "a feedback mechanism from
  * users that we can harvest"): before this, a member's change proposal went to the feedback lane
  * as a new, unplaced feature, so the fastest path into the app was also the fastest path to a
- * new clash. Matched against a row, the same proposal lands as evidence on a problem already
- * recorded, and the row's count of members who asked sits beside its count of screens, where
- * §10's overhaul rule reads it.
+ * new clash. Matched against a row, the same proposal files carrying the problem it belongs to
+ * (`ia-<row>` and one line naming it), and the row's count of members who asked sits beside its
+ * count of screens, where §10's overhaul rule reads it. What the build lane does with a matched
+ * filing is the clear-path check's call (protected; proposed on #8005), so nothing here claims it
+ * is "not a new feature" before that lands.
  *
  * A MATCH IS A CLAIM THE MEMBER CAN EDIT. It rides the draft to the browser and back on the
- * filing POST, so the server re-checks it here: a row must be one of the ledger's ids, a plan a
- * plausible issue number. Neither can carry free text into the public issue — the line the issue
- * gets is built from the ledger's own words (`matchLine`).
+ * filing POST, so the server re-checks it here: a row must be one of the ledger's ids, and a plan
+ * sent with a row must be one the row itself lists (red-team, 2026-11-23: a posted `{row: "U3",
+ * plan: 1}` otherwise printed a false plan in the house's own line). A plan sent alone is checked
+ * for shape only: it carries no more than a member typing "#N" in their details. Neither can
+ * carry free text into the public issue — the line is built from the ledger's own words
+ * (`matchMeta`).
  *
  * Pure: no network, no node, so the server, the companion tool and the app read one table.
  */
@@ -26,7 +31,8 @@ export interface KnownProblemScreen {
   /** The redesign screen id (`scripts/redesign/screens.json`). */
   readonly id: string;
   readonly name: string;
-  /** Where a member opens it — the redesign route with its fixture account dropped. */
+  /** Where a member opens it — the redesign route with its `account=` fixture dropped. A league
+   *  page (`/app/u/sauron/pulse`) keeps its bot, which every member can open. */
   readonly route: string;
 }
 
@@ -73,15 +79,17 @@ export function planNumber(raw: unknown): number | undefined {
 
 /**
  * A match off a draft or a POST body, or `undefined` when it names nothing real. A row the
- * ledger does not hold is dropped rather than guessed; a plan is only checked for shape here (the
- * companion tool checks it against the roadmap before it ever reaches a draft).
+ * ledger does not hold is dropped rather than guessed. A plan beside a row must be one the row
+ * lists; a plan alone is checked for shape (the companion tool checks it against the roadmap
+ * before it ever reaches a draft).
  */
 export function parseProblemMatch(raw: unknown): ProblemMatch | undefined {
   if (!raw || typeof raw !== "object") return undefined;
   const r = raw as { row?: unknown; plan?: unknown };
   const rowId = typeof r.row === "string" ? r.row.trim().toUpperCase() : "";
   const row = ROW_ID.test(rowId) && BY_ID.has(rowId) ? rowId : undefined;
-  const plan = planNumber(r.plan);
+  const asked = planNumber(r.plan);
+  const plan = row && asked && !BY_ID.get(row)?.plans.includes(asked) ? undefined : asked;
   if (!(row || plan)) return undefined;
   return { ...(row ? { row } : {}), ...(plan ? { plan } : {}) };
 }
@@ -98,26 +106,31 @@ export function planFor(match: ProblemMatch): number | undefined {
 }
 
 /**
- * The filed issue's line for a match, built from the ledger's own words — never from text the
- * POST carried. The `#N` reference puts the filing on the plan's own timeline, so the plan sees
- * the evidence arrive without anyone copying it there.
+ * The filed issue's metadata row for a match — its label and its words, built from the ledger's
+ * own text and a plan number, never from text the POST carried. It says only what happened: the
+ * chat matched the ask. The `#N` reference puts the filing on the plan's own timeline.
  */
-export function matchLine(match: ProblemMatch): string {
+export function matchMeta(match: ProblemMatch): readonly [string, string] {
   const row = match.row ? knownProblem(match.row) : undefined;
   const plan = planFor(match);
-  const parts = [
-    ...(row ? [`${row.id} in docs/IA.md §10: ${row.problem}`] : []),
-    ...(plan ? [`plan #${plan}`] : []),
+  if (!row) return ["Open plan", `Matched in chat to plan #${plan}.`];
+  const onPlan = plan ? ` · plan #${plan}` : "";
+  return [
+    "Known problem",
+    `Matched in chat to ${row.id} in docs/IA.md §10: ${row.problem}${onPlan}.`,
   ];
-  return `${parts.join(" · ")}. Evidence on a known problem, not a new feature.`;
 }
 
-/** What the draft card and the chat say: the problem in plain words, and its plan. */
-export function matchWords(match: ProblemMatch): string {
+/**
+ * What the draft card says it adds to, after "Adds to": the problem's title (never the row code,
+ * never the ledger's engineer prose — she explains it in her own words) and its plan; or, for a
+ * plan alone, the plan and the title the roadmap quoted for it.
+ */
+export function matchWords(match: ProblemMatch, planTitle?: string): string {
   const row = match.row ? knownProblem(match.row) : undefined;
   const plan = planFor(match);
-  const what = row ? (row.detail ? `${row.problem}: ${row.detail}` : row.problem) : undefined;
-  return [what, plan ? `plan #${plan}` : undefined].filter(Boolean).join(" · ");
+  if (row) return `a known problem: ${row.problem}${plan ? ` · plan #${plan}` : ""}`;
+  return `an open plan: #${plan}${planTitle ? ` ${planTitle}` : ""}`;
 }
 
 export interface ProblemEvidence {

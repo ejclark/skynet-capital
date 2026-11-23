@@ -104,7 +104,7 @@ export function draftCard(draft: {
 }): string {
   // A matched draft says what it adds to (#8005 slice 7): the member sees, before "submit", that
   // this files as one more voice on a problem already recorded, not a new feature.
-  const known = draft.match?.words ? `\n\nAdds to a known problem: ${draft.match.words}` : "";
+  const known = draft.match?.words ? `\n\nAdds to ${draft.match.words}` : "";
   return `[${draft.kind}] ${draft.title}\n\n${draft.details}${known}\n\n— reply "submit" to file it, or "never mind" to drop it.`;
 }
 
