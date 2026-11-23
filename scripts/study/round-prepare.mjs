@@ -89,7 +89,9 @@ function checkPin(ctx, step, dir) {
     if (!existsSync(join(ctx.run, "manifest.json"))) throw new Error("prepare composed no run");
   }
   const manifest = readJson(join(ctx.run, "manifest.json"));
-  ctx.log(step, "pin", { pin: record.pin, harness: tree, instant: manifest.instant });
+  // Each world's own instant (#8005); a run composed before worlds named theirs has only `instant`.
+  const instants = manifest.instants ?? { all: manifest.instant };
+  ctx.log(step, "pin", { pin: record.pin, harness: tree, instants });
 }
 
 /** Census every planned (world, viewer, routes) not already taken. */

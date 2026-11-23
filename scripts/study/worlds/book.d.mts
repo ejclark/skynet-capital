@@ -36,6 +36,8 @@ export interface Book {
   lastEquity: Record<string, number>;
   /** P/L booked today on positions already closed, as the input declares it. */
   closedToday: Record<string, number>;
+  /** The owner's controls file and change log, when the world declares one (#8005). */
+  controls?: { bots: Record<string, Record<string, unknown>>; changes?: Record<string, unknown[]> };
   market: {
     expirations: string[];
     symbols: Record<string, { spot: number; prevClose: number; iv: number }>;

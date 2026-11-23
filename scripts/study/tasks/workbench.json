@@ -1,0 +1,110 @@
+{
+  "area": "workbench",
+  "about": "The area config for one study round over the workbench (#8005 slice 5): Trade with its ticket, chart, chain, guidance, outlook, watchlist and orders (docs/IA.md §5.3), the area the profile readout named next. Read by scripts/study/round.mjs; everything area-specific lives here or in scripts/study/worlds/workbench-*.mjs. Phone first: on the profile, members got 21 of 45 tasks right on a phone against 36 of 42 at a desk, and every give-up was on a phone, so 7 of the 10 rows are phone rows. Members start where the app nav's Trade link lands. Census routes are links the app builds or writes (the profile's position cards, the bench's section switch, Trade's own back and ladder links), never composed by hand (README → Lessons, 2026-10-09). `roles` is who each member is here, in plain words; it never quotes a card (#5099).",
+  "cutoff": "2026-11-23",
+  "tasksPer": 3,
+  "runs": 3,
+  "runsByWorld": { "workbench-expiry": 2 },
+  "censusCap": 100,
+  "concurrency": 3,
+  "experts": 3,
+  "matrix": [
+    {
+      "member": "eric",
+      "world": "workbench-today",
+      "viewer": "eric",
+      "viewports": ["phone", "desktop"],
+      "start": "/app/trade"
+    },
+    {
+      "member": "eric",
+      "world": "workbench-expiry",
+      "viewer": "eric",
+      "viewports": ["phone"],
+      "start": "/app/trade"
+    },
+    {
+      "member": "returning-trader",
+      "world": "workbench-today",
+      "viewer": "eric",
+      "viewports": ["phone", "desktop"],
+      "start": "/app/trade"
+    },
+    {
+      "member": "phone-only",
+      "world": "workbench-today",
+      "viewer": "eric",
+      "viewports": ["phone"],
+      "start": "/app/trade"
+    },
+    {
+      "member": "phone-only",
+      "world": "workbench-expiry",
+      "viewer": "eric",
+      "viewports": ["phone"],
+      "start": "/app/trade"
+    },
+    {
+      "member": "invited-friend",
+      "world": "workbench-today",
+      "viewer": "jordan",
+      "viewports": ["phone"],
+      "start": "/app/trade",
+      "note": "a non-owner: their own small account only; a link naming the owner's bot falls back to it"
+    },
+    {
+      "member": "bot-watcher",
+      "world": "workbench-today",
+      "viewer": "eric",
+      "viewports": ["phone"],
+      "start": "/app/trade"
+    },
+    {
+      "member": "first-timer",
+      "world": "workbench-first-day",
+      "viewer": "casey",
+      "viewports": ["desktop"],
+      "start": "/app/trade"
+    }
+  ],
+  "roles": {
+    "eric": "The owner of the league and of its automated accounts. Places his own paper orders and steps in on positions his bot opened; mostly on a phone during the day, at a desk in the evening.",
+    "returning-trader": "Has one paper account with a few past fills and returns after some weeks away to place one order against a holding they already own. Knows the options vocabulary. Uses a phone and a desk.",
+    "phone-only": "Uses the app only on a phone, one-handed, a minute or two at a time.",
+    "invited-friend": "A friend the owner invited, with one small account of their own; trades from it and from nobody else's. On a phone.",
+    "bot-watcher": "Trades little themselves; looks up the names the automated accounts trade, to see what was done in them and why. On a phone.",
+    "first-timer": "Invited yesterday and signed in for the first time today, with no account linked and nothing owned yet. On a laptop."
+  },
+  "pages": [
+    "a page for placing one order: which account it comes from, a symbol, shares or an option contract, the kind of order, and a review before anything is sent",
+    "a symbol's current price and how it moved today, beside every view of that symbol",
+    "a daily price chart of one symbol, with lines that can be laid over it",
+    "the option contracts listed on one symbol: each strike at each expiry, with its prices and risk figures",
+    "advice on one symbol: the house research call, the windows ahead such as an earnings report, and what the member holds of it",
+    "a way to state where a symbol may go and over how long, and see option structures that fit that view with what each can make or lose",
+    "the names the member keeps an eye on, with their prices, and a way to add or drop one",
+    "orders that have not filled yet with ways to change or cancel them, alerts about what the member holds or watches, and contracts that expired or were assigned",
+    "a held option contract opened from the member's positions, to manage or close",
+    "a ladder of trade kinds a member unlocks by trading, from buying stock to spreads",
+    "where these pages send the member next: the account's own page and the member's milestones"
+  ],
+  "census": [
+    { "world": "workbench-today", "viewer": "eric", "for": ["experts", "labels"] },
+    { "world": "workbench-today", "viewer": "jordan", "for": ["experts", "labels"] },
+    { "world": "workbench-expiry", "viewer": "eric", "for": ["experts", "labels"] },
+    {
+      "world": "workbench-today",
+      "viewer": "eric",
+      "routes": ["/app/accounts?account=eric", "/app/accounts?section=milestones&chapter=trading"],
+      "for": ["handoff", "labels"]
+    },
+    { "world": "workbench-first-day", "viewer": "casey", "for": ["labels"] }
+  ],
+  "thin": {
+    "member": "eric",
+    "world": "workbench-today",
+    "viewport": "phone",
+    "task": 1,
+    "expertRoute": "/app/trade?desk=eric&symbol=AAPL&section=chain"
+  }
+}

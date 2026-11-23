@@ -1,6 +1,11 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "@rstest/core";
+import { cardEchoes, memberCard, rolesPacket } from "../../scripts/study/packets.mjs";
+import { type AreaConfig, profileProblems } from "../../scripts/study/round-plan.mjs";
 import { serverRead } from "../../scripts/study/server-reads.mjs";
 import { buildBook, derivedFields } from "../../scripts/study/worlds/book.mjs";
+import { WORLDS } from "../../scripts/study/worlds/index.mjs";
 import { loadInput } from "../../scripts/study/worlds/inputs.mjs";
 import { marketClient, modelMarks } from "../../scripts/study/worlds/market.mjs";
 import { serverConfig, sessionFor } from "../../scripts/study/worlds/server-config.mjs";
@@ -128,5 +133,55 @@ describe("the trade page's stores, as production wires them", () => {
   it("quotes every chain strike from the feed, so the chain never reads as unquoted", async () => {
     const chain = await read("/api/trade/chain?symbol=AAPL&type=call");
     expect((chain.quotes as { source: string }).source).toBe("indicative");
+  });
+});
+
+// The workbench's area config (#8005 slice 5): what scripts/study/round.mjs reads to run Trade's
+// round. Checked against the worlds it names, so it can never point a member at a world, a viewer
+// or a route the worlds do not serve, and its roles never carry a member card's words.
+describe("the workbench area config", () => {
+  const ROOT = join(import.meta.dirname, "../..");
+  const config = JSON.parse(
+    readFileSync(join(ROOT, "scripts/study/tasks/workbench.json"), "utf8"),
+  ) as AreaConfig & { census: { world: string; viewer: string; for: string[] }[] };
+  const world = (name: string) => WORLDS.find((w) => w.name === name);
+
+  it("passes its own checks", () => {
+    expect(profileProblems(config)).toEqual([]);
+  });
+
+  it("puts every member and every census on a workbench world, as one of its viewers", () => {
+    for (const r of [...config.matrix, ...config.census]) {
+      expect(r.world).toMatch(/^workbench-/);
+      expect(Object.keys(world(r.world)?.viewers ?? {})).toContain(r.viewer);
+    }
+  });
+
+  it("runs phone first, the thin cut included", () => {
+    const frames = config.matrix.flatMap((r) => r.viewports);
+    expect(frames.filter((v) => v === "phone").length).toBeGreaterThan(frames.length / 2);
+    expect(config.thin.viewport).toBe("phone");
+  });
+
+  it("starts the thin cut's experts on a route its world's own surfaces name", () => {
+    const viewer = config.matrix.find((r) => r.member === config.thin.member)?.viewer;
+    const routes = (world(config.thin.world)?.surfaces ?? [])
+      .filter((s) => s.viewer === viewer && !s.struck)
+      .map((s) => s.route);
+    expect(routes).toContain(config.thin.expertRoute);
+  });
+
+  it("ships roles that repeat no member card", () => {
+    const members = [...new Set(config.matrix.map((r) => r.member))];
+    const cards = Object.fromEntries(
+      members.map((m) => [
+        m,
+        memberCard(readFileSync(join(ROOT, "docs/members", `${m}.md`), "utf8"), {
+          cutoff: config.cutoff,
+          name: m,
+        }).text,
+      ]),
+    );
+    expect(cardEchoes(rolesPacket(config.roles, members).text, cards)).toEqual([]);
   });
 });
