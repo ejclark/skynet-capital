@@ -83,7 +83,9 @@ export function labelsFor(input: FeedbackInput): readonly string[] {
     ...rowLabel,
     "curated",
     ...(spec.needsEric ? ["needs-eric"] : []),
-    ...(spec.readiness === "partial" ? ["needs-info"] : []),
+    // A matched filing is evidence on its row, never built alone (#8005), so no build waits on the
+    // member's answer: parking it `needs-info` would read "Waiting on your answer" forever.
+    ...(spec.readiness === "partial" && rowLabel.length === 0 ? ["needs-info"] : []),
   ];
 }
 

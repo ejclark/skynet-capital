@@ -23,8 +23,9 @@ import { FLIP_REFUSALS_PATH, recentlyRefused } from "./flip-refusals.mjs";
 // a flip nobody needed.
 //
 // WHAT IS LISTED. Open, `feedback`, not `ready`, not parked, not `in-progress`, not a parent whose
-// work lives in sub-issues, not blocked by an open issue, and not refused by a flip in the last 7
-// days; ordered as `npm run rank` orders (class, kind, oldest); at most `--max` (6, the workflow's
+// work lives in sub-issues, not blocked by an open issue, not a filing matched to a known IA problem
+// (`ia-<row>`: evidence on that row, which is fixed as a whole, #8005), and not refused by a flip in
+// the last 7 days; ordered as `npm run rank` orders (class, kind, oldest); at most `--max` (6, the workflow's
 // own cap, #6711), halved under `conserve`.
 //
 // A FAILED READ IS NEVER `due: false`. The dial, the issue list or the refusals file failing to read
@@ -62,6 +63,7 @@ export function pickCandidates(issues, { refused = new Set(), now = Date.now() }
     if (!labels.includes("feedback") || labels.includes("ready") || labels.includes("in-progress"))
       continue;
     if (parkedBy(labels).length) continue;
+    if (labels.some((l) => /^ia-U\d+$/.test(l))) continue;
     if (Number(issue.issue_dependencies_summary?.blocked_by) > 0) continue;
     const row = rankRow(issue, { blocks: blocksOf(issue), now });
     if (!row) continue;
