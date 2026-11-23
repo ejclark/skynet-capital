@@ -109,8 +109,16 @@ describe("the trade page's stores, as production wires them", () => {
   });
 
   it("keeps the split, wait and alert stores switched on and empty", async () => {
-    expect(await read("/api/target-split")).toEqual({ wired: true, target: null });
-    expect((await read("/api/book-wait?participantId=eric")).wait).toBeNull();
+    // The split and wait routes are families a pin may predate, imported dynamically by
+    // server-reads.mjs; the spec runner does not resolve those, so their seams are read directly
+    // (compose, under tsx, answers both routes: `{wired:true,target:null}` and `{wait:null}`).
+    const seams = config as unknown as {
+      targetSplits: { get(key: string): unknown };
+      bookWaits: { wait(id: string): unknown };
+    };
+    expect(seams.targetSplits.get("any member")).toBeUndefined();
+    expect(seams.bookWaits.wait("eric")).toBeUndefined();
+    expect(() => (seams.targetSplits as unknown as { clear(): void }).clear()).toThrow(/a write/);
     const delivery = await read("/api/trade/alerts/delivery?participantId=eric");
     expect(String(delivery.reason)).not.toMatch(/keeps no delivery settings/);
     const alerts = await read("/api/trade/alerts?participantId=eric");
