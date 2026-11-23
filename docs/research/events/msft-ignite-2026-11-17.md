@@ -248,3 +248,47 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-11-17
 <!-- probe-ref: {"symbols":{"MSFT":517.99},"vix":22.91,"daysBand":"medium:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","cbrs-q3-2026-results-2026-11-11","empire-state-mfg-2026-11-16","erock-q3-2026-results-2026-11-12","eurostat-hicp-final-2026-11-18","existing-home-sales-2026-11-12","fomc-minutes-2026-11-18","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-5y-auction-2026-11-12","jgb-liquidity-enhancement-1-5y-2026-11-20","mtis-2026-11-17","mts-october-2026-11-12","nahb-hmi-2026-11-17","nbis-2026-11-12-print","nvda-2026-11-18-print","opex-2026-11-20","pbls-q3-2026-results-2026-11-12","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","ppi-2026-11-13","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","russell-recon-preliminary-2026-11-13","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-30y-bond-2026-11-12","treasury-coupon-announcement-2026-11-12","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-gdp-q3-first-2026-11-12","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["cbrs-q3-2026-results-2026-11-11","nbis-2026-11-12-print","nvda-2026-11-18-print","retail-sales-2026-11-17"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out (2026-11-23, after the 11-20 close).** Instrument cache busted first
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`); every number below
+comes from `scripts/research/market-data.mjs` split/dividend-adjusted daily bars for MSFT, QQQ, NVDA
+and ^VIX fetched cold, never from memory of the tape. `product-launch` kind: the earnings-keyed
+studies have no event list for it, so the bar series underneath them is the instrument.
+
+**The call: stance held, the measured-lag forward test was killed.** The stance (watch-only, no
+position) was right, since nothing was at risk and no entry was licensed. The registered no-alpha
+claim was not: [FT-msft-ignite-2026-11-17-1](../forward-tests/msft-ignite-2026-11-17.md) scored
+**KILLED**.
+
+| Window 2026-11-13 close → | MSFT | QQQ | MSFT − QQQ |
+|---|---|---|---|
+| 11-16 (pre-day) | −1.12% | −2.67% | +1.54pp |
+| 11-17 (keynote) | −3.37% | −3.37% | +0.01pp |
+| 11-18 | −2.98% | −3.00% | +0.02pp |
+| 11-19 | −4.88% | −5.13% | +0.24pp |
+| **11-20 (week)** | **−7.33%** (adj. $522.87 → $484.52) | **−10.51%** ($679.89 → $608.45) | **+3.17pp** |
+
+- **Verdict basis:** +3.17pp is past the +2.0pp kill bar (raw MSFT closes give −7.51%, +3.00pp,
+  same verdict). No void applied: all five sessions were full, Ignite ran as scheduled (the site read
+  Nov 16–20 at Moscone on 11-17), and search found no MSFT-specific shock dated 11-13..11-20.
+- **Read it honestly:** through 11-19 the difference was **+0.24pp**, inside the declared void
+  band. **11-20 alone** (MSFT −2.77%, QQQ −5.67%) supplied +2.99pp, a rout day with VIX 28.44 → 35.89
+  and NVDA −14.0%. That is MSFT's lower beta, not an Ignite effect; the keynote session itself was
+  flat against QQQ (+0.01pp), as the n=3 study found (noise). The kill is on the letter of the
+  registered bar; the lesson is regime dependence, not a conference edge.
+- **Prior update:** MSFT trailed QQQ in 3 of 4 Ignite weeks by the old measure, but the 2026 week
+  does not fit it. Still not a base rate. Every contaminant the stance named landed (retail sales,
+  minutes, APEC, opex, NVDA's 11-17 print).
+- **Stance changes:** none; MSFT stays watch-only (shorting stays locked; a drift cell is no edge).
+  The kill is recorded in the sweep doc's kill list.
+- **Unassessed, not passed:** the no-alpha leg's "materially market-moving announcement" kill
+  switch. The announcement detail was not read (TechRepublic returned 403 to the fetcher, and search
+  found no keynote content), so a person would still have to do that *sense* step.
+
+**This document is now closed.** `scripts/event-scan.mjs` goes silent on `msft-ignite-2026-11-17`
+once `## Outcome` exists.
+
+**Last assessed:** 2026-11-23
+<!-- probe-ref: {"symbols":{"MSFT":484.52},"vix":35.89,"daysBand":"medium:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","cbrs-q3-2026-results-2026-11-11","empire-state-mfg-2026-11-16","erock-q3-2026-results-2026-11-12","eurostat-hicp-final-2026-11-18","existing-home-sales-2026-11-12","fomc-minutes-2026-11-18","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-5y-auction-2026-11-12","jgb-liquidity-enhancement-1-5y-2026-11-20","mtis-2026-11-17","mts-october-2026-11-12","nahb-hmi-2026-11-17","nbis-2026-11-12-print","nvda-2026-11-18-print","opex-2026-11-20","pbls-q3-2026-results-2026-11-12","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","ppi-2026-11-13","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","russell-recon-preliminary-2026-11-13","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-30y-bond-2026-11-12","treasury-coupon-announcement-2026-11-12","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-gdp-q3-first-2026-11-12","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["cbrs-q3-2026-results-2026-11-11","nbis-2026-11-12-print","nvda-2026-11-18-print","retail-sales-2026-11-17"],"screenStreak":0} -->
