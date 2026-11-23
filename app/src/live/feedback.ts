@@ -22,6 +22,12 @@ export interface RecentFiling {
   /** The server's one mapping (`statusFromIssue`); absent when the status fetch failed, so the
    *  row shows no badge rather than a wrong one. */
   readonly status?: FeedbackStatus;
+  /** Present once the known problem this filing was matched to is fixed (#8005 slice 7): what
+   *  was fixed, in the ledger's words, and the screen to try it on. */
+  readonly fixed?: {
+    readonly problem: string;
+    readonly tryAt?: { readonly name: string; readonly route: string };
+  };
 }
 
 /** One unclaimed community-track earn (#567), ready for its one-time fanfare — the fill-earned

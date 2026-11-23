@@ -34,6 +34,12 @@ import { Toggle } from "./toggle";
  * An open filing is in one of three places (#6316): filed and waiting to be picked, up next
  * (`ready`), or being built (`in-progress`) — the only one that lights the middle step. Their
  * words are the server's own (`FEEDBACK_STATUS_LABEL`), so Moneypenny answers with the same ones.
+ *
+ * TRY IT (#8005 slice 7; #7031's "the member who asked plays it"). A filing Moneypenny matched to
+ * a known problem is evidence on that problem, so its own issue can stay open while the fix lands
+ * through the problem's plan. Once the server reads that fix as shipped (`fixed`), the row says
+ * so in its own words and links the screen to try it on, with the shipped row's wash: the
+ * member's ask going right is the thing worth celebrating.
  */
 
 const RECENT_FILTERS = [
@@ -91,6 +97,27 @@ function StatusTrack({ steps }: { readonly steps: readonly Step[] }): ReactEleme
       {steps.map((step, i) => (
         <span key={STEP_NAMES[i]} className={`fb-step fb-step-${step}`} />
       ))}
+    </span>
+  );
+}
+
+type Fixed = NonNullable<RecentFiling["fixed"]>;
+
+/** The fixed row's words: "try it" only when there is a screen to try it on. */
+const fixedWords = (fixed: Fixed): string => (fixed.tryAt ? "Fixed — try it" : "Fixed");
+
+/** "Profile: Activity" reads as the place it is: Profile → Activity, the house's way to say it. */
+const placeName = (name: string): string => name.replace(": ", " → ");
+
+function FixedLine({ fixed }: { readonly fixed: Fixed }): ReactElement {
+  return (
+    <span className="fb-meta fb-shipped-version fb-fixed-line">
+      Fixed as part of “{fixed.problem}”
+      {fixed.tryAt ? (
+        <a className="fb-try" href={fixed.tryAt.route}>
+          Try it on {placeName(fixed.tryAt.name)}
+        </a>
+      ) : null}
     </span>
   );
 }
@@ -183,9 +210,18 @@ export function RecentFeedback({
         <ul className="fb-list">
           {visible.map((filing) => {
             const shipped = filing.status === "shipped";
-            const view = filing.status ? STATUS_VIEW[filing.status] : undefined;
+            const fixed = filing.fixed;
+            const view = fixed
+              ? { words: fixedWords(fixed), track: STATUS_VIEW.shipped.track }
+              : filing.status
+                ? STATUS_VIEW[filing.status]
+                : undefined;
+            const celebrated = shipped || fixed !== undefined;
             return (
-              <li key={filing.issueNumber} className={shipped ? "fb-row fb-row-shipped" : "fb-row"}>
+              <li
+                key={filing.issueNumber}
+                className={celebrated ? "fb-row fb-row-shipped" : "fb-row"}
+              >
                 <a className="fb-title" href={filing.url} target="_blank" rel="noopener noreferrer">
                   #{filing.issueNumber} · {filing.title}
                 </a>
@@ -194,12 +230,13 @@ export function RecentFeedback({
                 </span>
                 {view?.track ? <StatusTrack steps={view.track} /> : null}
                 {view ? (
-                  <span className={`fb-status fb-${filing.status}`}>
-                    {shipped ? <span aria-hidden="true">🚀 </span> : null}
+                  <span className={`fb-status fb-${fixed ? "shipped" : filing.status}`}>
+                    {celebrated ? <span aria-hidden="true">🚀 </span> : null}
                     {view.words}
                   </span>
                 ) : null}
-                {shipped && appVersion ? (
+                {fixed ? <FixedLine fixed={fixed} /> : null}
+                {shipped && appVersion && !fixed ? (
                   <span className="fb-meta fb-shipped-version num">
                     confirmed live in v{appVersion}
                   </span>
