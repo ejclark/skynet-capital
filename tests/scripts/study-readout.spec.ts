@@ -340,7 +340,7 @@ describe("buildReadout — the made-up round, rendered", () => {
 
   it("keeps the measurements in their own column and marks disputed rows", () => {
     expect(markdown).toContain("| Measurements (not blind) |");
-    expect(markdown).toContain("| A5 | — | — | — | yes | **disputed** |");
+    expect(markdown).toContain("| A5 | — | — | — | yes | — | **disputed** |");
     expect(markdown).toContain("| A4 | yes (hinted) |");
   });
 

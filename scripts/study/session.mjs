@@ -129,9 +129,9 @@ function view(snap) {
 
 /** The scripted world's shell, the composed world's routed page, or a live server (a world with
  *  an `origin`: scripts/faculty/live-world.mjs, whose writes land) — one handle either way. */
-async function openPage(world, vp, out) {
+async function openPage(world, vp, out, chat) {
   if (world.origin) return (await import("../faculty/live-world.mjs")).openLive(world, vp);
-  if (world.run) return openComposed(world, vp, out);
+  if (world.run) return openComposed(world, vp, out, chat);
   return openShell({
     name: `study-${world.name}`,
     stubs: world.stubs ?? {},
@@ -141,13 +141,22 @@ async function openPage(world, vp, out) {
   });
 }
 
-/** Open a world at a viewport, pin the clock, instrument the page and land on the start path. */
-export async function open({ world, viewport = "phone", pinnedInstant, startPath, runDir, watch }) {
+/** Open a world at a viewport, pin the clock, instrument the page and land on the start path.
+ *  `chat`: Moneypenny in a composed world (world-chat.mjs → startWorldChat), or none. */
+export async function open({
+  world,
+  viewport = "phone",
+  pinnedInstant,
+  startPath,
+  runDir,
+  watch,
+  chat,
+}) {
   const vp = VIEWPORTS[viewport];
   if (!vp) throw new Error(`unknown viewport ${viewport} — one of ${Object.keys(VIEWPORTS)}`);
   const out = runDir ?? join(tmpdir(), `skynet-study-${world.name}-${Date.now()}`);
   mkdirSync(join(out, "frames"), { recursive: true });
-  const shell = await openPage(world, vp, out);
+  const shell = await openPage(world, vp, out, chat);
   const { page } = shell;
   // Frames and waits get twice Playwright's 30s: a study batch runs many sessions on one machine.
   page.setDefaultTimeout(60_000);

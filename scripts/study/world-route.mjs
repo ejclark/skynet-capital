@@ -140,6 +140,11 @@ function startServer(dist, streams, session) {
  * @param {{viewport: {width: number, height: number}, hasTouch: boolean}} opts.frame  a VIEWPORTS entry
  * @param {string} [opts.out]           where `shoot(tag)` writes frames
  * @param {{timeZone: string, locale: string}} [opts.clock]  the member's clock (./clock.mjs)
+ * @param {{handles: (req: {method: string, path: string}) => boolean,
+ *          respond: (req: {method: string, path: string, body: string | null})
+ *            => Promise<{status: number, contentType: string, body: string}>}} [opts.chat]
+ *   Moneypenny's chat in this world (world-chat.mjs): the writes it handles are still recorded in
+ *   `session.writes`, then answered by it — her streamed reply, a draft recorded and never filed.
  * @returns {Promise<{page, origin, shoot,
  *                    session: {unstubbed: string[], writes: object[], offsite: string[]},
  *                    reframe: (frame) => Promise<void>, signIn: () => Promise<void>,
@@ -152,6 +157,7 @@ export async function openWorld({
   out = ".",
   colorScheme = "dark",
   clock = DEFAULT_CLOCK,
+  chat,
 }) {
   const dist = resolve("app/dist");
   if (!existsSync(join(dist, "index.html"))) {
@@ -194,6 +200,17 @@ export async function openWorld({
       // The gate stands in front of `/api` too: signed out, every read and write is its 302.
       if (!signedIn(await request.headerValue("cookie"))) {
         return route.fulfill({ status: 302, headers: { location: "/login" } });
+      }
+      // The chat's writes (world-chat.mjs): recorded like any write, then answered by the chat.
+      if (chat?.handles({ method: request.method(), path: url.pathname })) {
+        const body = request.postData() ?? null;
+        session.writes.push({ method: request.method(), url: url.pathname + url.search, body });
+        const answered = await chat.respond({ method: request.method(), path: url.pathname, body });
+        return route.fulfill({
+          status: answered.status,
+          contentType: answered.contentType,
+          body: answered.body,
+        });
       }
       const decided = routeRequest(
         { method: request.method(), url, accept: request.headers().accept },

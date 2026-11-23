@@ -64,6 +64,13 @@ import { worldArtifacts } from "../world-artifacts.mjs";
 import { loadInput, worldNetwork } from "./inputs.mjs";
 import { checkInstant, DEFAULT_INSTANT, pinProcessClock } from "./instant.mjs";
 
+/** The companion a chat world composes with: on, but never called — the composer only reads. */
+const chatAnsweredElsewhere = () => {
+  throw new Error(
+    "compose: a chat turn is a write — world-chat.mjs answers it, never the composer",
+  );
+};
+
 /** Compose one world into `<runDir>/<world>/`; returns its manifest rows and any missing reads. */
 async function composeWorld(world, runDir, server) {
   const book = server.buildBook(world.input);
@@ -81,7 +88,11 @@ async function composeWorld(world, runDir, server) {
       `compose: ${world.name} fills outside a New York session:\n  ${offSession.map(server.describeFill).join("\n  ")}`,
     );
   }
-  const config = server.serverConfig(book);
+  // A world with Moneypenny's chat in members' hands (`chat: true`, #8005) composes her index as
+  // production's with the companion on; a member's turns are answered by world-chat.mjs, never here.
+  const config = world.chat
+    ? { ...server.serverConfig(book), companion: chatAnsweredElsewhere }
+    : server.serverConfig(book);
   // A pinned boot id: the payloads are hashed, and a random one would make every compose differ.
   const channel = server.createBoardChannel("study");
   const fixtures = world.fixtures(book);
