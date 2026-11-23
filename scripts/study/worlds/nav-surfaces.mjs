@@ -102,13 +102,15 @@ const SURFACES = [
 
 /**
  * The one-tap surfaces for one viewer, ids suffixed with the viewer so two viewers' rows stay apart.
- * `adjust` replaces fields of a surface for this viewer (see shell-surfaces.mjs).
+ * `adjust` replaces fields of a surface for this viewer (see shell-surfaces.mjs); `from` is the
+ * area's own page the taps start on (the profile by default, Trade for the workbench, #8005).
  * @param {string} viewer
  * @param {Record<string, object>} [adjust]  surface id → overrides
+ * @param {string} [from]  the route each surface starts on, unless the surface names its own
  */
-export function navSurfaces(viewer, adjust = {}) {
+export function navSurfaces(viewer, adjust = {}, from = FROM) {
   return SURFACES.map((s) => ({
-    route: FROM,
+    route: from,
     viewer,
     ...s,
     ...(adjust[s.id] ?? {}),

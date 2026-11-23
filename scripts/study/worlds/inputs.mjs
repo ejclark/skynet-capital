@@ -3,8 +3,12 @@
 // until the process clock is pinned.
 //
 // A world may be layered: `"base": "<world>"` takes that world's input and applies this file's
-// overrides — participants by id (fields replaced), `members` wholesale, and the bot's passes cut
-// to those before `passesBefore` with `prependPasses` on top (a bot that stopped earlier).
+// overrides — participants by id (fields replaced), `members` wholesale, the bot's own fields (its
+// subscription date), its passes cut to those before `passesBefore` with `prependPasses` on top (a
+// bot that stopped earlier), and the per-account books a layer may rewrite whole (`humanFills`,
+// `watchlists`, `workingOrders`: an account the layer names replaces the base's, the rest are
+// kept). A layer that changes what an account holds changes the fills that bought it too, or the
+// ledger and the position disagree.
 //
 // A layer may also MOVE the base world in time (#8005): `"instant"` names its own (instant.mjs),
 // `"corpus"` its own tree facts, `"vix"` the last VIX close its quests read, `"market"` symbols added to the base's, and `"shiftDays"` (whole weeks only) moves every calendar fact of
@@ -21,6 +25,8 @@ import { msOf } from "./instant.mjs";
 
 const INPUTS = join(import.meta.dirname, "inputs");
 
+/** The account-keyed blocks a layer may rewrite one account at a time. */
+const PER_ACCOUNT = ["humanFills", "watchlists", "workingOrders"];
 const DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
 const OCC = /^([A-Z]{1,6})(\d{2})(\d{2})(\d{2})([CP]\d{8})$/;
 
@@ -67,6 +73,9 @@ export function loadInput(name) {
   const passes = raw.bot?.passesBefore
     ? base.bot.passes.filter((p) => msOf(p.at) < msOf(raw.bot.passesBefore))
     : base.bot.passes;
+  const byAccount = Object.fromEntries(
+    PER_ACCOUNT.filter((k) => raw[k] || base[k]).map((k) => [k, { ...base[k], ...raw[k] }]),
+  );
   return {
     ...base,
     ...(raw.instant ? { instant: raw.instant } : {}),
@@ -82,9 +91,20 @@ export function loadInput(name) {
         }
       : {}),
     ...(raw.members ? { members: raw.members } : {}),
+    ...byAccount,
     participants,
-    bot: { ...base.bot, passes: [...(raw.bot?.prependPasses ?? []), ...passes] },
+    bot: {
+      ...base.bot,
+      ...botFields(raw.bot),
+      passes: [...(raw.bot?.prependPasses ?? []), ...passes],
+    },
   };
+}
+
+/** A layer's own bot fields (its subscription date, say) — everything but the pass controls. */
+function botFields(bot = {}) {
+  const { passesBefore: _before, prependPasses: _prepend, ...fields } = bot;
+  return fields;
 }
 
 /** Cboe's VIX history, which the quests read for its last close (src/server/vix-feed.ts), answered
