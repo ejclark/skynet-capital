@@ -505,11 +505,15 @@ export function readScreens({ needles = true } = {}) {
     if (list.length > 0) sections.set(r.path, list);
   }
   // `needles: false` is the placement check's base tree (cohesion.mjs memberFacing): a page this
-  // branch adds to the hand list has no needle there yet, and that is the branch's news, not a fault.
+  // branch adds to the hand list has no serving line there yet, so the base holds only the pages
+  // whose line it has — the new one then reads as the branch's addition, not a fault.
+  const serves = (p) =>
+    !p.file || (existsSync(p.file) && readFileSync(p.file, "utf8").includes(p.needle));
+  const serverPages = needles ? SERVER_PAGES : SERVER_PAGES.filter(serves);
+  const shell = needles ? SHELL_PARTS : SHELL_PARTS.filter(serves);
   for (const p of needles ? [...SERVER_PAGES, ...SHELL_PARTS] : []) {
-    if (p.file && !readFileSync(p.file, "utf8").includes(p.needle)) {
+    if (!serves(p))
       throw new Error(`coverage: ${p.screen} — ${p.file} no longer contains ${p.needle}`);
-    }
   }
   const chapters = parseChapters(readFileSync(CHAPTERS.file, "utf8"), CHAPTERS.name);
   const windows = parseChapters(readFileSync(WINDOWS.file, "utf8"), WINDOWS.name);
@@ -517,9 +521,9 @@ export function readScreens({ needles = true } = {}) {
     routes,
     sections,
     chapters,
-    serverPages: SERVER_PAGES,
+    serverPages,
     windows,
-    shell: SHELL_PARTS,
+    shell,
   });
   const triageRows = JSON.parse(readFileSync(TRIAGE, "utf8"));
   const routePaths = routes.map((r) => r.path);

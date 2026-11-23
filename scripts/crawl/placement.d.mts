@@ -15,6 +15,7 @@ export interface Screen {
 export interface Snapshot {
   screens: Screen[];
   names: Name[];
+  api?: { served: string[]; unread: string[] };
 }
 export interface Part {
   file: string;
@@ -23,7 +24,7 @@ export interface Part {
   routes?: string[];
 }
 export interface Row {
-  kind: "screen" | "name" | "part" | "collision";
+  kind: "screen" | "name" | "part" | "api" | "collision";
   what: string;
   status: string;
   home?: string;

@@ -229,6 +229,20 @@ function addedParts() {
     .sort((a, b) => (a.file < b.file ? -1 : 1));
 }
 
+/** A path counts as named only as a whole: `/api/convictions` is not named by `/api/convictions/mine`. */
+const namesPath = (src, p) =>
+  new RegExp(`${p.replace(/[/-]/g, "\\$&")}(?![a-z0-9/_-])`, "i").test(src);
+
+/** The member routes src/server serves, and those no screen or chat tool names (row 4c's test,
+ *  without its history: the placement check diffs this between a base and its branch). */
+function apiReach(appSrc, companionSrc) {
+  const served = apiPaths(walk("src/server", isSource).map(read).join("\n")).sort();
+  return {
+    served,
+    unread: served.filter((p) => !(namesPath(appSrc, p) || namesPath(companionSrc, p))),
+  };
+}
+
 /** Member routes added to src/server since the study that nothing in the app or the chat names. */
 function servedNotRendered(appSrc, companionSrc) {
   const diff = git(["log", `--since=${SINCE}`, "-p", "--format=", "HEAD", "--", "src/server"]);
@@ -241,12 +255,9 @@ function servedNotRendered(appSrc, companionSrc) {
     ),
   );
   const server = walk("src/server", isSource).map(read).join("\n");
-  // A path counts as named only as a whole: `/api/convictions` is not named by `/api/convictions/mine`.
-  const names = (src, p) =>
-    new RegExp(`${p.replace(/[/-]/g, "\\$&")}(?![a-z0-9/_-])`, "i").test(src);
   return [...added]
-    .filter((p) => names(server, p))
-    .filter((p) => !(names(appSrc, p) || names(companionSrc, p)))
+    .filter((p) => namesPath(server, p))
+    .filter((p) => !(namesPath(appSrc, p) || namesPath(companionSrc, p)))
     .sort();
 }
 
@@ -273,14 +284,19 @@ const linkFiles = (appFiles) =>
 export function memberFacing({ needles = true } = {}) {
   const cov = readScreens({ needles });
   const homeOf = homesOf(cov.triageRows);
-  const names = collectNames(cov, homeOf, linkFiles(walk("app/src", isSource)));
+  const appFiles = walk("app/src", isSource);
+  const names = collectNames(cov, homeOf, linkFiles(appFiles));
+  const api = apiReach(
+    appFiles.map(read).join("\n"),
+    walk("src/companion", isSource).map(read).join("\n"),
+  );
   const screens = cov.screens.map((s) => ({
     key: s.key,
     path: s.path,
     home: homeOf.get(s.key),
     verdict: cov.triage.get(s.key)?.verdict,
   }));
-  return { screens, names };
+  return { screens, names, api };
 }
 
 export function measure() {

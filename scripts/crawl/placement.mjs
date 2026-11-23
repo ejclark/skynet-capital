@@ -12,10 +12,11 @@
 // list kept here: a new SCREEN (a route, a section, a Milestones chapter, a landing window, a server
 // page, a shell part — coverage.mjs's screens), a new NAME (the names pass: a top tab or a door whose
 // words name a place, a section, window or chapter label, a place Moneypenny can send a member to),
-// and a new PART (a shell or route component file, the census's parts pass). A nav label is a door
-// in the names pass; a dock entry is a landing window or one of Moneypenny's place names. Each is
-// read at the base and at the head; only what the head adds is judged, so standing debt never
-// re-fires on an unrelated branch.
+// a new PART (a shell or route component file the branch adds, or one it first mounts on a route —
+// the census's parts pass), and a new member API route no screen or chat tool reads (its row 4c).
+// A nav label is a door in the names pass; a dock entry is a landing window or one of Moneypenny's
+// place names. Each is read at the base and at the head; only what the head adds is judged, so
+// standing debt never re-fires on an unrelated branch.
 //
 // HOW EACH IS PLACED, by the same rules the census counts homeless with — so a build this check
 // passes cannot be one the census then counts homeless (the plan's falsifier, 2026-12-14):
@@ -27,6 +28,7 @@
 //     and the homes of those routes' screens. A part the root frame mounts is the shell's.
 //   - a new word that now names places in two IA groups, or a second word for one place, is a new
 //     label collision (census row 1) — flagged beside the placement, never instead of it.
+//   - a member route src/server serves that nothing in the app or the chat names is homeless.
 //
 // ADVISORY WITH A RATCHET, NEVER A RED BUILD (CLAUDE.md: a gate is a momentum breaker unless it
 // protects a constraint). Exit 1 when an addition is homeless, unjudged or collides, or the census's
@@ -38,7 +40,15 @@
 // take paths relative to the working directory). Git objects only, so any landed commit replays.
 
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -110,10 +120,14 @@ function statusOf(home) {
 export function placementRows(base, head, { parts = [] } = {}) {
   const screens = screenRows(base.screens, head.screens);
   const byKey = new Map(screens.map((r) => [r.what, r]));
+  const served = new Set(base.api?.served ?? []);
   return [
     ...screens,
     ...nameRows(base.names, head.names, byKey),
     ...parts.map((p) => partRow(p, head.screens)),
+    ...(head.api?.unread ?? [])
+      .filter((p) => !served.has(p))
+      .map((p) => ({ kind: "api", what: p, status: "homeless" })),
     ...newCollisions(base.names, head.names),
   ];
 }
@@ -228,6 +242,7 @@ function line(r, group) {
     case "unjudged":
       return `${r.what}${words} → no triage row: add one to docs/members/triage.json with its home`;
     case "homeless":
+      if (r.kind === "api") return `${r.what} → served, but no screen or chat tool reads it`;
       return r.kind === "part"
         ? `${r.what} → homeless: docs/IA.md cites neither it nor a part above it`
         : `${r.kind === "name" ? `"${r.what}" → ${r.place} (${r.source})` : `${r.what}${words}`} → homeless: its screen has no home in triage.json`;
@@ -290,19 +305,42 @@ function routesReaching(file, graph) {
   return [];
 }
 
-/** `--snapshot`: the member-facing set of the tree in the working directory, and the given parts
- *  placed against it with the routes that reach each. The child half of reading a base. */
-function snapshot(partFiles, { needles }) {
+/** The parts (shell and route files) some route's imports reach: what a member can see. */
+function mountedParts(graph) {
+  const seen = new Set([...graph.keys()].filter((f) => f.includes("/routes/")));
+  const queue = [...seen];
+  while (queue.length > 0) {
+    for (const d of graph.get(queue.shift()) ?? []) {
+      if (!seen.has(d)) {
+        seen.add(d);
+        queue.push(d);
+      }
+    }
+  }
+  return [...seen].filter((f) => PART.test(f)).sort();
+}
+
+/**
+ * `--snapshot`: the member-facing set of the tree in the working directory, the parts a route
+ * mounts, and the parts to judge placed against it with the routes nearest each. The parts to judge
+ * are the given ones plus, when `baseMounted` is known, every part mounted here and not there: a
+ * part one branch adds unmounted and a later branch mounts is judged by the later one.
+ */
+function snapshot(partFiles, { needles, baseMounted }) {
   const facing = memberFacing({ needles });
-  if (partFiles.length === 0) return { ...facing, parts: [] };
   const files = walk("app/src");
   const graph = new Map(files.map((f) => [f, importsOf(f, readFileSync(f, "utf8"), existsSync)]));
-  const added = partFiles.filter((f) => existsSync(f)).map((file) => ({ file, scope: "" }));
-  const parts = placeParts(added, graph, readFileSync(IA, "utf8")).map((p) => ({
-    ...p,
-    routes: routesReaching(p.file, graph),
-  }));
-  return { ...facing, parts };
+  const mounted = mountedParts(graph);
+  const had = new Set(baseMounted ?? mounted);
+  const judge = [...new Set([...partFiles, ...mounted.filter((f) => !had.has(f))])]
+    .filter((f) => existsSync(f))
+    .sort();
+  const parts = placeParts(
+    judge.map((file) => ({ file, scope: "" })),
+    graph,
+    readFileSync(IA, "utf8"),
+  ).map((p) => ({ ...p, routes: routesReaching(p.file, graph) }));
+  return { ...facing, mounted, parts };
 }
 
 /** Unpack `ref`'s copy of the readers' inputs into a fresh temp dir. */
@@ -314,19 +352,22 @@ function unpack(ref) {
   return dir;
 }
 
-/** Run this script's `--snapshot` inside `dir` and read its JSON. */
-function snapshotIn(dir, partFiles) {
+/** Run this script's `--snapshot` inside `dir` and read its JSON. `baseMounted` travels as a file
+ *  in that dir (a few hundred paths is too long for an argument list on some shells). */
+function snapshotIn(dir, partFiles, baseMounted) {
   const self = fileURLToPath(import.meta.url);
-  const out = execFileSync(
-    "node",
-    [
-      self,
-      "--snapshot",
-      "--no-needles",
-      ...(partFiles.length ? ["--parts", partFiles.join(",")] : []),
-    ],
-    { cwd: dir, encoding: "utf8", maxBuffer: 64 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] },
-  );
+  const args = [self, "--snapshot", "--no-needles"];
+  if (partFiles.length) args.push("--parts", partFiles.join(","));
+  if (baseMounted) {
+    writeFileSync(join(dir, ".base-mounted.json"), JSON.stringify(baseMounted));
+    args.push("--base-mounted", ".base-mounted.json");
+  }
+  const out = execFileSync("node", args, {
+    cwd: dir,
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
   return JSON.parse(out);
 }
 
@@ -360,7 +401,9 @@ async function main(argv) {
   if (argv.includes("--snapshot")) {
     const parts = flag(argv, "--parts")?.split(",").filter(Boolean) ?? [];
     const needles = !argv.includes("--no-needles");
-    process.stdout.write(JSON.stringify(snapshot(parts, { needles })));
+    const file = flag(argv, "--base-mounted");
+    const baseMounted = file ? JSON.parse(readFileSync(file, "utf8")) : undefined;
+    process.stdout.write(JSON.stringify(snapshot(parts, { needles, baseMounted })));
     return 0;
   }
   const commit = flag(argv, "--commit");
@@ -374,9 +417,14 @@ async function main(argv) {
     console.log(`placement (#8005 slice 2): nothing changed against ${short}`);
     return 0;
   }
-  const added = git(["diff", "--diff-filter=A", "--name-only", base, ...(commit ? [commit] : [])])
-    .split("\n")
-    .filter((f) => PART.test(f));
+  // Run by hand before a commit, a new file is untracked: `git diff` alone would miss it.
+  const untracked = commit ? "" : git(["ls-files", "--others", "--exclude-standard", "app/src"]);
+  const added = [
+    ...git(["diff", "--diff-filter=A", "--name-only", base, ...(commit ? [commit] : [])]).split(
+      "\n",
+    ),
+    ...untracked.split("\n"),
+  ].filter((f) => PART.test(f));
 
   const dirs = [];
   try {
@@ -387,9 +435,9 @@ async function main(argv) {
     if (commit) {
       const headDir = unpack(commit);
       dirs.push(headDir);
-      after = snapshotIn(headDir, added);
+      after = snapshotIn(headDir, added, before.mounted);
     } else {
-      after = snapshot(added, { needles: true });
+      after = snapshot(added, { needles: true, baseMounted: before.mounted });
     }
     const iaSrc = commit ? git(["show", `${commit}:${IA}`]) : readFileSync(IA, "utf8");
     const rows = placementRows(before, after, { parts: after.parts });
