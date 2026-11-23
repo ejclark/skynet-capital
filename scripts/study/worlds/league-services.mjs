@@ -130,6 +130,43 @@ function progression(book) {
   });
 }
 
+/**
+ * Per-member stores production wires on every boot (`serve-dashboard.ts`), served EMPTY — nobody in
+ * the world has saved a target split, named a day to look at a book again, taken a quest or
+ * carried an exit plan (#8005). Opt-in by name (`wired` in a world's input), so a world composed
+ * before these pages existed keeps the payloads it was frozen with; absent, a page says the store
+ * "isn't wired", which production never says.
+ */
+const EMPTY_STORES = {
+  targetSplits: () => ({
+    get: () => undefined,
+    set: refuse("a target split"),
+    clear: refuse("clearing a target split"),
+  }),
+  bookWaits: () => ({
+    wait: () => undefined,
+    set: refuse("a book wait"),
+    clear: refuse("clearing a book wait"),
+  }),
+  takenQuests: () => ({
+    taken: () => [],
+    record: refuse("taking a quest"),
+    replace: refuse("re-pointing a taken quest"),
+  }),
+  exitPlans: () => ({
+    carried: () => new Set(),
+    carry: refuse("carrying an exit plan"),
+    drop: refuse("dropping an exit plan"),
+  }),
+};
+
+/** The empty stores a world names (`wired`); an unknown name is refused. */
+function emptyStores(names = []) {
+  const unknown = names.filter((n) => !Object.hasOwn(EMPTY_STORES, n));
+  if (unknown.length > 0) throw new Error(`study world: no empty store ${unknown.join(", ")}`);
+  return Object.fromEntries(names.map((n) => [n, EMPTY_STORES[n]()]));
+}
+
 /** The seams to spread into a world's server config. */
 export function leagueServices(book) {
   const allActivity = () => Object.values(book.activity).flat();
@@ -181,5 +218,6 @@ export function leagueServices(book) {
     },
     opsStatus: opsStatus(book),
     progression: progression(book),
+    ...emptyStores(book.wired),
   };
 }

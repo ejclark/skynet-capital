@@ -23,6 +23,7 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { clockArg, parseClock } from "../clock.mjs";
 import { dataNames, factSheet, VERDICT_WORDS_MIRROR } from "./facts-sheet.mjs";
+import { worldInstant } from "./instant.mjs";
 
 const USAGE =
   "usage: facts.mjs --run <compose dir> --world <name> [--viewer <who> …] [--clock <zone>,<locale>] --out <facts.json>";
@@ -95,6 +96,8 @@ async function main() {
   if (missing.length > 0) throw new Error(`no composed viewer ${missing} (have: ${composed})`);
   const at = composedCheckout(run, manifest);
   const clock = parseClock(opts.clock);
+  // This world's own day (#8005), never the run's default.
+  const instant = worldInstant(manifest, opts.world);
   const fmt = await verdictWords(at);
   const names = new Set();
   const facts = viewers.flatMap((viewer) => {
@@ -103,7 +106,7 @@ async function main() {
     for (const n of dataNames(payloads)) names.add(n);
     return factSheet({
       viewer,
-      instant: manifest.instant,
+      instant,
       payloads,
       verdictWords: fmt.words,
       clock,
@@ -115,7 +118,7 @@ async function main() {
   const sheet = {
     world: opts.world,
     run,
-    instant: manifest.instant,
+    instant,
     clock,
     formatters: {
       verdictWords: fmt.from,

@@ -3,14 +3,28 @@
 // until the process clock is pinned.
 //
 // A world may be layered: `"base": "<world>"` takes that world's input and applies this file's
-// overrides — participants by id (fields replaced), `members` wholesale, and the bot's passes cut
-// to those before `passesBefore` with `prependPasses` on top (a bot that stopped earlier).
+// overrides — participants by id (fields replaced), `members` and `controls` wholesale, and the
+// bot's passes cut to those before `passesBefore` with `prependPasses` on top (a bot that stopped
+// earlier). A base that names `bots` takes the same per bot, keyed by id under `bots`
+// (`{ "<id>": { passesBefore, prependPasses, subscribed } }`); `subscribed` replaces that bot's list.
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { msOf } from "./instant.mjs";
 
 const INPUTS = join(import.meta.dirname, "inputs");
+
+/** One bot with a layer's overrides: passes cut and prepended, its subscriptions replaced. */
+function layerBot(bot, over = {}) {
+  const passes = over.passesBefore
+    ? bot.passes.filter((p) => msOf(p.at) < msOf(over.passesBefore))
+    : bot.passes;
+  return {
+    ...bot,
+    ...(over.subscribed ? { subscribed: over.subscribed } : {}),
+    passes: [...(over.prependPasses ?? []), ...passes],
+  };
+}
 
 /** A world's input, with a `base` world's input underneath and its overrides applied. */
 export function loadInput(name) {
@@ -21,14 +35,15 @@ export function loadInput(name) {
     ...p,
     ...(raw.participants?.[p.id] ?? {}),
   }));
-  const passes = raw.bot?.passesBefore
-    ? base.bot.passes.filter((p) => msOf(p.at) < msOf(raw.bot.passesBefore))
-    : base.bot.passes;
   return {
     ...base,
     ...(raw.members ? { members: raw.members } : {}),
+    ...(raw.controls ? { controls: raw.controls } : {}),
+    ...(raw.wired ? { wired: raw.wired } : {}),
     participants,
-    bot: { ...base.bot, passes: [...(raw.bot?.prependPasses ?? []), ...passes] },
+    ...(base.bots
+      ? { bots: base.bots.map((b) => layerBot(b, raw.bots?.[b.id])) }
+      : { bot: layerBot(base.bot, raw.bot) }),
   };
 }
 

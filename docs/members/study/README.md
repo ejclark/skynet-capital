@@ -397,6 +397,9 @@ node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answe
    world whose header day change is not the sum of its rows' (`worlds/day-change.mjs`, #5052). P/L
    booked today on a position already closed is the one honest gap: declare it as the
    participant's `closedToday` and say so in the input's comment.
+   A world stands on one instant, and may name its own (`instant` in its input, a New York time
+   with that day's offset): put it after anything the pin's code serves as already true (a scored
+   claim, a stated view), and take the pin's own tree as the corpus (#8005, the bot's loop).
 3. Run the framer, then the task author, then the lint. Freeze and hash the tasks.
 4. Thin slice: one member, one task, phone width.
 5. Full round, then grade, then the readout. Add what broke to *Lessons* below.
@@ -497,4 +500,12 @@ node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answe
   (`scripts/faculty/`) found it; the actor now has Backspace and Tab, with a count (schema, role,
   parser and recorder). A reading round run before this date never needed them. Its findings stand,
   but a session that gave up at a pre-filled box may have been the instrument's fault.
+- 2026-11-23 · **the harness had drifted from the app by the bot loop's pin.** The profile's
+  worlds, re-run there, missed 16 surfaces: the app nav lost Leaderboard and gained Campaign,
+  Moneypenny became a dock, and the profile's bot chip, calendar head and section tabs had moved. The read chain lacked the
+  newer route families (quests, book waits, target splits, member views), and the owner's
+  switchboard and the per-member stores production always wires were unwired. The bot loop's worlds
+  (#8005) brought the chain to the pin, wired those seams opt-in, and took a dock-era one-tap list;
+  the profile's worlds keep theirs, as their pin served them. Run parity at the pin before writing
+  a new area's surfaces.
 

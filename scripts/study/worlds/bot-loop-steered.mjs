@@ -1,0 +1,30 @@
+// World "bot-loop-steered" (#8005, the bot's loop) — the same people on the same Monday as
+// bot-loop-today, with each owner steering instead of a breaker holding: Eric's Sauron on "stop
+// opening, keep exits" since the morning (an open it wanted refused, its stop-loss exit still
+// placed), Jordan's Day Trader on "watch only" since Friday (what it decides is recorded, nothing
+// is sent). Held by a breaker, held by its owner, only watching: a member's to tell apart, so the
+// two worlds show all three. Inputs: inputs/bot-loop-steered.json, layered over bot-loop-today's.
+
+import { botLoopArtifacts } from "./bot-loop-artifacts.mjs";
+import { chatHook } from "./bot-loop-chat.mjs";
+import { botLoopReads } from "./bot-loop-reads.mjs";
+import { botLoopOneTap, botLoopSurfaces } from "./bot-loop-surfaces.mjs";
+import { profileFixtures } from "./fixtures.mjs";
+
+export default {
+  name: "bot-loop-steered",
+  input: "bot-loop-steered",
+  viewers: {
+    eric: "eric@study.world",
+    jordan: "jordan@study.world",
+    casey: "casey@study.world",
+  },
+  reads: botLoopReads,
+  fixtures: profileFixtures,
+  surfaces: botLoopSurfaces("steered"),
+  // One tap from the area: parity proves them; the census does not walk them.
+  oneTap: botLoopOneTap(),
+  artifacts: botLoopArtifacts,
+  // Moneypenny's dock, world-backed once the chat module lands (bot-loop-chat.mjs).
+  chat: chatHook("bot-loop-steered"),
+};
