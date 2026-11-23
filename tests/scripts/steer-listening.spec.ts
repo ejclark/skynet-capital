@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { afterEach, describe, expect, it, rstest } from "@rstest/core";
 import { answered, claudeWith, commentsWith, META, open, openWith } from "./steer-client-harness";
 
@@ -196,11 +198,14 @@ describe("Done says received once a session has read it (#6606)", () => {
     expect(v.told()).toBe(ACK);
   });
 
-  it("shows that ack on a page opened later, beside the stale ackFor", async () => {
+  // #7727: the relaxed rule is for a landed ack only. A page opened later can't see a landing, and
+  // the earlier press's own ack, its guessed clock minutes ahead, reads the same on the doc — so a
+  // reload must not turn an unread Done into Received; the not-received line stays.
+  it("says not received on a reload beside the press before's ack, its guessed clock ahead", async () => {
     const doneAt = ago(10 * MIN);
-    const v = await openWith(answered({ doneAt, ackAt: ago(9 * MIN), ackFor: ago(20 * MIN) }));
-    await new Promise((r) => setTimeout(r, 5));
-    expect(v.told()).toBe(ACK);
+    const v = await openWith(answered({ doneAt, ackAt: ago(7 * MIN), ackFor: ago(12 * MIN) }));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(v.told()).toBe(UNHEARD);
   });
 
   it("stays quiet on a guessed clock ahead of the press once he reopens and presses again", async () => {
@@ -364,5 +369,45 @@ describe("the page never writes or erases the session's stamps", () => {
     expect(docs[META]).toMatchObject({ listening: { lost: true } });
     expect(typeof (docs[META] as Record<string, unknown>).openedAt).toBe("string");
     expect(ear(v)).toBe(LOST);
+  });
+});
+
+// #6734: #6729 and #6730 had one cause. The writers disagreed about what a stamp carries, and the page
+// judged "received" from one field. The cases above pin the page; this one pins the writers. Every
+// passage that tells a session to stamp `ackAt` must also name `ackFor`, so no session learns the
+// ackAt-only stamp again. It reads whole paragraphs and list items, so a line wrap can't split the
+// pair. Process-change entries dated before 2026-11-01 are history: that day's entry (#6606)
+// introduced `ackFor` and supersedes them, and they keep their wording.
+describe("every instruction to stamp ackAt also names ackFor (#6734)", () => {
+  const ACKFOR_SINCE = "2026-11-01";
+  const STAMPS_ACKAT = /\bstamp\w*\s+`ackAt`|\{\s*ackAt\s*:/i;
+  const passages = (path: string) =>
+    readFileSync(join(process.cwd(), path), "utf8")
+      .split(/\n\s*\n|\n(?=\s*(?:[-*]|\d+\.)\s)/)
+      .filter((p) => {
+        const dated = p.match(/^\s*-\s+(\d{4}-\d{2}-\d{2})\s+·/);
+        return !dated || (dated[1] ?? "") >= ACKFOR_SINCE;
+      })
+      .map((p) => ({ path, text: p.replace(/\s+/g, " ").trim() }));
+
+  const all = [".claude/skills/steer/SKILL.md", "docs/process/REDESIGN.md"].flatMap(passages);
+  const told = all.filter((p) => STAMPS_ACKAT.test(p.text));
+
+  it("finds the instructions in both writers, so the check is never vacuous", () => {
+    expect(told.filter((p) => p.path.endsWith("SKILL.md")).length).toBeGreaterThanOrEqual(1);
+    expect(told.filter((p) => p.path.endsWith("REDESIGN.md")).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("names ackFor in each one", () => {
+    expect(told.filter((p) => !p.text.includes("ackFor"))).toEqual([]);
+  });
+
+  it("would catch an ackAt-only stamp, wrapped or not", () => {
+    const lone = [
+      "- Stamp `ackAt` on `tp/<id>`.",
+      "Woken by done, stamp\n  `ackAt` first.",
+      "{ ackAt: <now> }",
+    ];
+    for (const text of lone) expect(STAMPS_ACKAT.test(text.replace(/\s+/g, " "))).toBe(true);
   });
 });

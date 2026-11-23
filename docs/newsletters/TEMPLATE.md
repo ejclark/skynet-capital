@@ -36,6 +36,17 @@ as unknown is printed as unknown.
    week, the volume line the member-facing slices wait on (2 a week). Unread PRs, and a count that
    reads as words, are printed as unknown, never as zero. The open `needs-eric` count and its
    median age are `metrics.needsEric`.
+   **Backlog flow and rework** (#8037 slice 1) is three lines, the meter for letting sessions
+   decide on evidence. *The pile:* `metrics.backlogStock`, the open plans without `ready` (and how
+   many of those are over `thresholds.planOldDays` days old), the un-readied `feedback` with its
+   oldest age, and `metrics.needsEric`'s count with its oldest age. *The flow:*
+   `metrics.backlogFlow`, issues opened against closed in the week, and the same for plans; a
+   positive `net` is the pile growing. *The rework:* `metrics.rework`, reverts plus fix-forwards
+   within 48h of `decisions` (every merged PR but dependabot's), with `rate` beside #8037's
+   falsifier (over 0.15 by 2026-12-21 narrows the plan back to Eric's flip). `open` decisions are
+   still inside their 48h; list each `items` pair as a link so a reader can check it, since a fix
+   that only mentions a recent PR counts too. The pile is read at the moment of the run, so an
+   edition written late prints it as unknown.
 3. **Milestones** — closed sub-issues and plan Log lines dated in the week.
 4. **Last week's plan, checked** — each commitment from the previous plan block marked done,
    partial or slipped, with the reason, and plan accuracy as a percentage.

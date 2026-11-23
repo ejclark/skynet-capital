@@ -196,6 +196,59 @@ describe("his reply fans out through answer-readback's path", () => {
     expect(kinds(planDecisions(deps([footed, stranger])).intents)).toEqual([]);
   });
 
+  // #7957: tick 1's sync used to retire an answered ask before the answer was applied. When the
+  // answer intent then failed (a 502, or a busy lease), tick 2 read his reply against the retired
+  // entry as "cleared before this was read", receipted it, and lost the answer.
+  describe("an answer that did not land (#7957)", () => {
+    const tick1 = planDecisions(deps([his(55, "1A")]));
+    const sync = tick1.intents[1] as Extract<DecisionsIntent, { kind: "decisions-sync" }>;
+
+    it("keeps the answered ask's number in the page's state until the ask leaves", () => {
+      expect(stateOf(sync.body ?? "").entries.map((e) => [e.n, e.issue])).toEqual([
+        [1, 7669],
+        [2, 7670],
+      ]);
+      expect(stateOf(sync.body ?? "").retired).toEqual([]);
+    });
+
+    it("still draws the page without it, the tick he answered", () => {
+      expect(sync.body).toContain("**1 decision waits on you.");
+      expect(sync.body).not.toContain("**1 · #7669**");
+      expect(sync.body).toContain("**2 · #7670**");
+    });
+
+    it("re-reads the unreceipted reply next tick and answers it again", () => {
+      const tick2 = planDecisions({
+        ...deps([his(55, "1A")]),
+        page: page({ body: sync.body ?? "" }),
+        now: NOW + 60_000,
+      });
+      const ans = tick2.intents[0] as Extract<DecisionsIntent, { kind: "decisions-answer" }>;
+      expect(ans.kind).toBe("decisions-answer");
+      expect(ans.readbacks.map((r) => r.number)).toEqual([7669]);
+      expect(ans.unread).toEqual([]);
+      expect(tick2.state.entries.map((e) => [e.n, e.issue])).toEqual([
+        [1, 7669],
+        [2, 7670],
+      ]);
+    });
+
+    it("retires the number once the answer landed and the ask left", () => {
+      const receipt = { body: receiptComment({ replyId: 55 }), user: BOT };
+      const tick2 = planDecisions({
+        needsYou: [row(7670)],
+        issues: [issue(7670)],
+        page: page({ body: sync.body ?? "" }),
+        comments: [his(55, "1A"), receipt] as never[],
+        now: NOW + 60_000,
+      });
+      expect(tick2.state.entries.map((e) => e.issue)).toEqual([7670]);
+      expect(tick2.state.retired.map((r) => [r.n, r.issue, r.until])).toEqual([
+        [1, 7669, NOW + 60_000],
+      ]);
+    });
+  });
+
   it("never answers a reply twice, and says nothing to a note with no number in it", () => {
     const receipt = {
       body: receiptComment({ replyId: 55 }),
