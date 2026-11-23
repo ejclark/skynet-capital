@@ -572,6 +572,13 @@ node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answe
   distraction"), added after the profile round, so no canary had read them. Asked what it knew,
   the expert recited them: every expert would have started primed. The checks stay; the quotes
   moved here. A role prompt carries method, never the owner's complaints.
+- 2026-11-23 · **the canary voided the thin slice's planted-defect control: the words role named
+  what its own prompt held.** Its picture-label rule carried three of this app's labels as examples
+  and the retro it came from (#5160 retro, 2026-10-14); asked what it knew, it listed them. The same
+  role had passed the main round's canary minutes before, so the risk is a die roll every round,
+  not a fixed fault. The rule stays in plain method words; the examples and the cite moved here, and
+  the actor role's line on easily-distracted members dropped the owner's words it quoted (Eric,
+  2026-10-14: "a good attribute to factor into personas in our user studies").
 - 2026-11-23 · **the thin slice's two other catches.** After three lint rewrites the tasks step
   crashed on a helper it never imported (that path had never run); and the oracle failed a right
   "down $4 so far today" for a −$4 day, because a sign counted only as a touching minus. Both fixed;
