@@ -71,6 +71,16 @@
   gap: 4px;
   padding: 0 6px 0 10px;
   border-bottom: 1px solid var(--border);
+  /* the header is the pane's swipe handle (#7933): a vertical drag on it changes the size, so the
+     browser must not claim it as a page scroll */
+  touch-action: none;
+}
+/* minimized (#7933): only the header and the box stay, so a phone shows the page above them */
+.mp-convo[data-size="minimized"] .mp-convo-head {
+  border-bottom: 0;
+}
+.mp-convo .mp-list[hidden] {
+  display: none;
 }
 .mp-dock-disc {
   flex: none;

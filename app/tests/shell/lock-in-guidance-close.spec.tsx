@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import type { DeskPosition } from "../../src/live/desk";
 import * as actualTicket from "../../src/live/ticket" with { rstest: "importActual" };
@@ -88,7 +88,11 @@ afterEach(() => {
   (globalThis as { EventSource?: unknown }).EventSource = undefined;
 });
 
-async function sellAllAndFill(position: DeskPosition): Promise<void> {
+/** `watched`: the close is one the app celebrates, so its fill listener mounts with the receipt.
+ *  The receipt's text commits before that listener's effect opens its stream, and under a loaded
+ *  suite the fill could be emitted into the gap and missed (a red `verify` on #7940); waiting for
+ *  the stream to open first is what a real fill always gets. */
+async function sellAllAndFill(position: DeskPosition, watched: boolean): Promise<void> {
   render(
     <QueryClientProvider client={new QueryClient()}>
       <PositionActs deskId="human-eric" position={position} positions={[position]} />
@@ -99,8 +103,12 @@ async function sellAllAndFill(position: DeskPosition): Promise<void> {
   fireEvent.change(screen.getByLabelText("Limit $"), { target: { value: "130" } });
   fireEvent.click(screen.getByRole("button", { name: "Review sale" }));
   const recap = await screen.findByRole("dialog");
+  const opened = FakeEventSource.instances.length;
   fireEvent.click(within(recap).getByRole("button", { name: "Place sale" }));
   await screen.findByText(/Order g-1 accepted/);
+  if (watched) {
+    await waitFor(() => expect(FakeEventSource.instances.length).toBeGreaterThan(opened));
+  }
   act(() => {
     for (const source of FakeEventSource.instances) {
       source.emit(
@@ -120,14 +128,14 @@ async function sellAllAndFill(position: DeskPosition): Promise<void> {
 
 describe("PositionActs — a close from the guidance sheet", () => {
   it("celebrates a position marked Consider once its close fills at a gain", async () => {
-    await sellAllAndFill(amd({}));
-    const dialog = screen.getByRole("dialog", { name: /Profit locked in \+\$300/ });
+    await sellAllAndFill(amd({}), true);
+    const dialog = await screen.findByRole("dialog", { name: /Profit locked in \+\$300/ });
     expect(dialog).toHaveTextContent("on 10 shares of AMD");
     expect(dialog).toHaveTextContent("winners can give it back");
   });
 
   it("stays quiet for a position that was never marked Consider", async () => {
-    await sellAllAndFill(amd({ returnPct: "+3.0%", totalPlRaw: 30 }));
+    await sellAllAndFill(amd({ returnPct: "+3.0%", totalPlRaw: 30 }), false);
     expect(screen.queryByRole("dialog", { name: /Profit locked in/ })).not.toBeInTheDocument();
   });
 });

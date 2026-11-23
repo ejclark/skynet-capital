@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter, useRouterState } from "@tanstack/react-router";
-import type { ReactElement } from "react";
+import type { PointerEvent, ReactElement } from "react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { myConvictionsKey } from "../live/member-convictions";
 import { formatTranscript, type MpMessage, useMoneypenny } from "../live/moneypenny";
@@ -21,7 +21,9 @@ import { ThreadBar, ThreadIndex } from "./rail-threads";
  *   1. THE CONVERSATION — always in the dock, never a sheet over it (Eric, 2026-11-13: "i have to
  *      scroll up through the history to read the beginning of the response most all of the time…
  *      Consolidate the chat and history windows. The ability to expand/collapse window size is
- *      enough"). Compact by default; expanded on the member's ask, remembered per browser. When her
+ *      enough"). Compact by default; expanded on the member's ask, remembered per browser; and on a
+ *      phone, minimized to its header so the page shows (#7933: Hide, or a swipe down the header).
+ *      When her
  *      answer lands, the pane shows its FIRST line, not its last: the list anchors the top of her
  *      newest reply and stays there while it streams, so reading starts where she starts.
  *   2. YOUR MOVES — her current choices as 44px buttons (`live/moneypenny-moves.ts`). A parked
@@ -44,21 +46,113 @@ const dayOf = (at: number | undefined) => (at ? new Date(at).toDateString() : un
 /** Where a new reply's first line should sit: its entry's top, less a breath of the list's padding. */
 export const anchorTop = (entryTop: number): number => Math.max(0, entryTop - 8);
 
+/** How far a finger travels on the header before it counts as a swipe, not a tap (#7933). */
+export const SWIPE_PX = 32;
+
+/** A vertical swipe on the header, as a step between sizes: down folds the pane one step (expanded →
+ *  compact → minimized), up opens it one step. Anything shorter than SWIPE_PX is a tap. */
+export function swipeStep(dy: number): "down" | "up" | undefined {
+  if (dy >= SWIPE_PX) return "down";
+  if (dy <= -SWIPE_PX) return "up";
+  return undefined;
+}
+
+type PaneSize = "minimized" | "compact" | "expanded";
+
+interface SizeActions {
+  /** Compact ↔ expanded. */
+  readonly onToggle: () => void;
+  /** Fold to the header only (#7933). */
+  readonly onMinimize: () => void;
+  /** Minimized → compact. */
+  readonly onRestore: () => void;
+}
+
+/** Which size action one swipe step takes from `size`; undefined at either end. */
+function stepAction(size: PaneSize, step: "down" | "up", a: SizeActions): (() => void) | undefined {
+  if (step === "down")
+    return { expanded: a.onToggle, compact: a.onMinimize, minimized: undefined }[size];
+  return { minimized: a.onRestore, compact: a.onToggle, expanded: undefined }[size];
+}
+
+/** The header's size controls, each a word and a chevron, never a tint alone (#7933): minimized
+ *  offers Show; compact offers Hide and Expand; expanded offers Collapse back to compact. */
+function SizeButtons({
+  size,
+  onToggle,
+  onMinimize,
+  onRestore,
+}: SizeActions & { readonly size: PaneSize }): ReactElement {
+  if (size === "minimized")
+    return (
+      <button
+        type="button"
+        className="mp-convo-act mp-convo-size"
+        aria-expanded={false}
+        onClick={onRestore}
+      >
+        Show <span aria-hidden="true">⌃</span>
+      </button>
+    );
+  const expanded = size === "expanded";
+  return (
+    <>
+      {expanded ? null : (
+        <button type="button" className="mp-convo-act" onClick={onMinimize}>
+          Hide <span aria-hidden="true">⌄</span>
+        </button>
+      )}
+      <button
+        type="button"
+        className="mp-convo-act mp-convo-size"
+        aria-expanded={expanded}
+        onClick={onToggle}
+      >
+        {expanded ? "Collapse" : "Expand"} <span aria-hidden="true">{expanded ? "⌄" : "⌃"}</span>
+      </button>
+    </>
+  );
+}
+
+/** THE SWIPE (#7933): the header is the pane's handle, the way a phone's bottom sheet is. A tap on
+ *  one of its buttons stays a tap; a drag past SWIPE_PX moves one size. */
+function useSizeSwipe(size: PaneSize, actions: SizeActions) {
+  const from = useRef<number | undefined>(undefined);
+  return {
+    onPointerDown: (e: PointerEvent) => {
+      from.current = e.clientY;
+    },
+    onPointerUp: (e: PointerEvent) => {
+      const start = from.current;
+      from.current = undefined;
+      const step = start === undefined ? undefined : swipeStep(e.clientY - start);
+      if (step) stepAction(size, step, actions)?.();
+    },
+    onPointerCancel: () => {
+      from.current = undefined;
+    },
+  };
+}
+
 function Conversation({
   messages,
   waiting,
   busy,
   pending,
-  expanded,
+  size,
   onToggle,
+  onMinimize,
+  onRestore,
   card,
 }: {
   readonly messages: readonly MpMessage[];
   readonly waiting: boolean;
   readonly busy: boolean;
   readonly pending: string | undefined;
-  readonly expanded: boolean;
-  readonly onToggle: () => void;
+  readonly size: PaneSize;
+  readonly onToggle: SizeActions["onToggle"];
+  readonly onMinimize: SizeActions["onMinimize"];
+  readonly onRestore: SizeActions["onRestore"];
   /** The parked card's index in `messages` and its exits, drawn on the card (#7614). */
   readonly card: {
     readonly at: number;
@@ -74,8 +168,11 @@ function Conversation({
   const atEnd = useRef(true);
   // 0, so the first render anchors too: a page load opens on the start of her latest reply
   const seen = useRef(0);
-  const sizeWas = useRef(expanded);
+  const sizeWas = useRef(size);
   const last = messages.at(-1);
+  const expanded = size === "expanded";
+  const minimized = size === "minimized";
+  const swipe = useSizeSwipe(size, { onToggle, onMinimize, onRestore });
 
   // WHERE THE LIST SITS (Eric, 2026-11-13). A new reply of hers: its first line goes to the top of
   // the pane, and it stays put while the reply streams in, so the member reads from the start
@@ -89,8 +186,8 @@ function Conversation({
     const grew = messages.length > seen.current;
     seen.current = messages.length;
     // a size change re-anchors too: the list's height moved under the member's reading position
-    const resized = sizeWas.current !== expanded;
-    sizeWas.current = expanded;
+    const resized = sizeWas.current !== size;
+    sizeWas.current = size;
     if ((grew || resized) && last?.role === "mp") {
       const entries = el.querySelectorAll<HTMLElement>(".mp-entry");
       const newest = entries[messages.length - 1];
@@ -101,7 +198,7 @@ function Conversation({
     // the member just sent, or she is typing: their own line and her beat are at the end
     if (waiting || pending !== undefined) el.scrollTop = el.scrollHeight;
     else if (grew && atEnd.current) el.scrollTop = el.scrollHeight;
-  }, [messages.length, waiting, pending, expanded]);
+  }, [messages.length, waiting, pending, size]);
   const onScroll = () => {
     const el = list.current;
     // a couple of px of slack: fractional layouts rarely land the end on an exact zero
@@ -120,12 +217,9 @@ function Conversation({
   };
 
   return (
-    <section
-      className="mp-convo"
-      data-size={expanded ? "expanded" : "compact"}
-      aria-label="Conversation with Moneypenny"
-    >
-      <header className="mp-convo-head">
+    <section className="mp-convo" data-size={size} aria-label="Conversation with Moneypenny">
+      {/* a swipe is a shortcut only: every size also has its own button */}
+      <header className="mp-convo-head" {...swipe}>
         <span className="mp-dock-disc" aria-hidden="true">
           ✦
         </span>
@@ -155,21 +249,19 @@ function Conversation({
             </button>
           </>
         ) : null}
-        <button
-          type="button"
-          className="mp-convo-act mp-convo-size"
-          aria-expanded={expanded}
-          onClick={onToggle}
-        >
-          {expanded ? "Collapse" : "Expand"} <span aria-hidden="true">{expanded ? "⌄" : "⌃"}</span>
-        </button>
+        <SizeButtons
+          size={size}
+          onToggle={onToggle}
+          onMinimize={onMinimize}
+          onRestore={onRestore}
+        />
       </header>
-      {thread ? (
+      {minimized ? null : thread ? (
         <ThreadBar thread={thread} disabled={busy} />
       ) : expanded ? (
         <ThreadIndex disabled={busy} />
       ) : null}
-      <div className="mp-list" ref={list} aria-live="polite" onScroll={onScroll}>
+      <div className="mp-list" ref={list} aria-live="polite" onScroll={onScroll} hidden={minimized}>
         {messages.length === 0 && pending === undefined && !waiting ? (
           <p className="mp-convo-empty">
             Ask me anything about the market, your account or this page.
@@ -231,6 +323,9 @@ export function MoneypennyDock(): ReactElement {
   const [tagNews, setTagNews] = useState("");
   const hydrate = useMoneypenny((s) => s.hydrate);
   const toggleExpanded = useMoneypenny((s) => s.toggleExpanded);
+  const minimized = useMoneypenny((s) => s.minimized && !s.expanded);
+  const minimize = useMoneypenny((s) => s.minimize);
+  const restore = useMoneypenny((s) => s.restore);
   const collapse = useMoneypenny((s) => s.collapse);
   const leavePage = useMoneypenny((s) => s.leavePage);
   const closeThread = useMoneypenny((s) => s.closeThread);
@@ -286,15 +381,26 @@ export function MoneypennyDock(): ReactElement {
     };
   }, []);
 
-  // "Talk to Moneypenny" from a page: the box takes focus (`meetMoneypenny`).
+  // A minimized pane shows again when the member reaches for her (#7933): their own send or an ask
+  // from a page (her answer must land where they can read it), "Talk to Moneypenny", or a ✎ tag. Her
+  // own unprompted lines never reopen it — hiding her is the member's call.
   useEffect(() => {
-    if (focusSeq > 0) box.current?.focus();
+    if (waiting) restore();
+  }, [waiting, restore]);
+
+  // "Talk to Moneypenny" from a page: the box takes focus (`meetMoneypenny`).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `focusSeq` IS the trigger
+  useEffect(() => {
+    if (focusSeq === 0) return;
+    restore();
+    box.current?.focus();
   }, [focusSeq]);
 
   // ✎ on a window or a row: the box takes focus with that subject tagged above it (#7487 slice 3).
   // biome-ignore lint/correctness/useExhaustiveDependencies: `tagSeq` IS the trigger; tags are read as of it
   useEffect(() => {
     if (tagSeq === 0) return;
+    restore();
     box.current?.focus();
     const newest = tags.at(-1);
     if (newest) setTagNews(`Tagged ${newest.label}, ${String(tags.length)} of 3`);
@@ -364,14 +470,17 @@ export function MoneypennyDock(): ReactElement {
           waiting={waiting}
           busy={busy}
           pending={pending}
-          expanded={expanded}
+          size={expanded ? "expanded" : minimized ? "minimized" : "compact"}
           onToggle={toggleExpanded}
+          onMinimize={minimize}
+          onRestore={restore}
           card={{ at: cardAt, moves: cardAt >= 0 ? moves : [], run }}
         />
         <p className="visually-hidden" aria-live="polite">
           {tagNews}
         </p>
-        {rowMoves.length > 0 || tags.length > 0 ? (
+        {/* minimized keeps only the header and the box: her moves wait with the pane (#7933) */}
+        {!minimized && (rowMoves.length > 0 || tags.length > 0) ? (
           <ul className="mp-moves" aria-label="Your moves">
             {/* The tags lead the row, then her moves; the box below never moves for either. */}
             {tags.map((t) => (
