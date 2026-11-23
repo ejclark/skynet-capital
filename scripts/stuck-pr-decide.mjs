@@ -106,6 +106,29 @@ export function latestRequired(checkRuns, required) {
   return byName;
 }
 
+/**
+ * Is this head green, and since when? `{ at, unfinished }` when every required check passed (a
+ * skip counts, as branch protection counts it) and no arm-gate check is red, else `null`. `at` is
+ * the latest of those runs' finish times: the moment the last one went green. A cancelled gate
+ * still reads green — the arm job did not run and nothing has said the code is bad — and is named
+ * in `unfinished` (stuck-branch-update reads armed PRs, stranded-pr a failed arm job). Shared with
+ * held-pr.mjs, which times a held PR's wait from `at` (#7317). Pure.
+ */
+export function greenHead(checkRuns = [], required = REQUIRED_CHECKS) {
+  const latest = latestRequired(checkRuns ?? [], required);
+  const runs = [...latest.values()];
+  const gates = [...latestRequired(checkRuns ?? [], ARM_GATE_CHECKS).values()];
+  const allGreen =
+    required.every((name) => latest.has(name)) &&
+    runs.every(({ run }) => run.status === "completed" && PASSING.has(run.conclusion ?? "")) &&
+    gates.every(({ run }) => run.status === "completed" && !RED.has(run.conclusion ?? ""));
+  if (!allGreen) return null;
+  const unfinished = gates
+    .filter(({ run }) => !PASSING.has(run.conclusion ?? ""))
+    .map(({ run }) => run.name);
+  return { at: Math.max(...[...runs, ...gates].map((v) => v.at)), unfinished };
+}
+
 const FIX_REAL_IDENTITY =
   "give the head a new commit from a real identity — `gh api -X PUT repos/{owner}/{repo}/pulls/<n>/update-branch` " +
   "(or `git merge origin/main` on the branch and a plain push; never a force push). That is what cleared #5221 in 10 minutes.";
@@ -149,24 +172,14 @@ export function judgePr({
   if (pr.draft) return null;
   if ((pr.labels ?? []).some((l) => l.name === "hold-merge")) return null; // held on purpose
   const ghosts = (suites ?? []).filter(isGhostSuite);
-  const latest = latestRequired(checkRuns ?? [], required);
-  const runs = [...latest.values()];
-  const gates = [...latestRequired(checkRuns ?? [], ARM_GATE_CHECKS).values()];
+  const runs = [...latestRequired(checkRuns ?? [], required).values()];
 
   // Red is somebody else's signal and a running check is in flight; only two heads are ours: every
-  // required check green, or none reported at all with a ghost sitting on the head. A cancelled
-  // gate stays ours: the arm job did not run and nothing has said the code is bad, so the report is
-  // the one place left to say so (stuck-branch-update reads armed PRs, stranded-pr a failed arm job).
-  const allGreen =
-    required.every((name) => latest.has(name)) &&
-    runs.every(({ run }) => run.status === "completed" && PASSING.has(run.conclusion ?? "")) &&
-    gates.every(({ run }) => run.status === "completed" && !RED.has(run.conclusion ?? ""));
-  if (allGreen) {
-    const greenAt = Math.max(...[...runs, ...gates].map((v) => v.at));
-    const unfinished = gates
-      .filter(({ run }) => !PASSING.has(run.conclusion ?? ""))
-      .map(({ run }) => run.name);
-    return judgeGreen({ pr, ghosts, age: (now - greenAt) / 3.6e6, hours, unfinished });
+  // required check green, or none reported at all with a ghost sitting on the head.
+  const green = greenHead(checkRuns, required);
+  if (green) {
+    const { at, unfinished } = green;
+    return judgeGreen({ pr, ghosts, age: (now - at) / 3.6e6, hours, unfinished });
   }
   if (ghosts.length && runs.length === 0) {
     const oldest = Math.min(...ghosts.map((g) => Date.parse(g.created_at ?? 0) || now));
