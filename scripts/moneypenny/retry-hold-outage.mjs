@@ -50,15 +50,29 @@ export const utcMidnight = (now) => {
 };
 
 /**
- * When `in-progress` went on, in ms ascending, from `from` on. One definition of a build start, for
- * the limit and for the outage reading: every claim path writes that label.
+ * A mark taken back off within this long was a claim withdrawing past the cap (#7316's recount,
+ * admission.mjs), never a build: the recount waits 2 s and reads for a few more, while a real build
+ * runs in a later job that must start a runner and the build action before its release can land.
  */
-export const startsFrom = (events, from) =>
+export const WITHDRAWN_MS = 20_000;
+
+const atOf = (events, kind) =>
   (events ?? [])
-    .filter((e) => e?.event === "labeled" && e.label?.name === LABELS.inProgress.name)
-    .map((e) => Date.parse(e?.created_at ?? ""))
+    .filter((e) => e?.event === kind && e.label?.name === LABELS.inProgress.name)
+    .map((e) => Date.parse(e?.created_at ?? ""));
+
+/**
+ * When `in-progress` went on, in ms ascending, from `from` on. One definition of a build start, for
+ * the limit and for the outage reading: every claim path writes that label. A mark withdrawn within
+ * `WITHDRAWN_MS` is not a start: it queued, and three of them must not bar an issue until midnight.
+ */
+export const startsFrom = (events, from) => {
+  const offs = atOf(events, "unlabeled");
+  return atOf(events, "labeled")
     .filter((at) => at >= from)
+    .filter((at) => !offs.some((off) => off >= at && off - at <= WITHDRAWN_MS))
     .sort((a, b) => a - b);
+};
 
 /** When a lane branch's PR merged, in ms ascending, from the closed PR list. Pure. */
 export function laneLandings(closedPrs = []) {
