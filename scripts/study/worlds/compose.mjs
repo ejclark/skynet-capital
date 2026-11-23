@@ -61,7 +61,7 @@ import { fileURLToPath } from "node:url";
 import { guardNetwork } from "../no-network.mjs";
 import { canonicalUrl, writeViewer } from "../payloads.mjs";
 import { worldArtifacts } from "../world-artifacts.mjs";
-import { edgarAnswer, loadInput } from "./inputs.mjs";
+import { loadInput, worldNetwork } from "./inputs.mjs";
 import { checkInstant, DEFAULT_INSTANT, pinProcessClock } from "./instant.mjs";
 
 /** Compose one world into `<runDir>/<world>/`; returns its manifest rows and any missing reads. */
@@ -156,8 +156,8 @@ async function composeOne(runDir, name) {
   const corpus = process.env.STUDY_CORPUS;
   if (!corpus) throw new Error("compose: --one runs only as a child of compose.mjs");
   process.chdir(corpus);
-  let edgar = () => undefined;
-  const network = guardNetwork((url) => edgar(url));
+  let answer = () => undefined;
+  const network = guardNetwork((url) => answer(url));
   const { WORLDS } = await import("./index.mjs");
   const world = WORLDS.find((w) => w.name === name);
   if (!world) throw new Error(`compose: no world named ${name}`);
@@ -169,7 +169,7 @@ async function composeOne(runDir, name) {
     ...(await import("../server-reads.mjs")),
     ...(await import("../../../src/server/board-patch-routes.ts")),
   };
-  edgar = edgarAnswer(loadInput(world.input));
+  answer = worldNetwork(loadInput(world.input));
   const result = await composeWorld(world, runDir, server);
   mkdirSync(join(runDir, name), { recursive: true });
   const part = {

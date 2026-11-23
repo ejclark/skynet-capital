@@ -5,7 +5,7 @@
 // Inputs: inputs/workbench-expiry.json, layered over workbench-today's.
 
 import { profileFixtures } from "./fixtures.mjs";
-import { shellSurfaces } from "./shell-surfaces.mjs";
+import { navSurfaces } from "./nav-surfaces.mjs";
 import { WORKBENCH_ARTIFACTS } from "./workbench-artifacts.mjs";
 import { workbenchReads } from "./workbench-reads.mjs";
 import { WORKBENCH_CHAT, workbenchSurfaces } from "./workbench-surfaces.mjs";
@@ -17,7 +17,7 @@ export default {
   reads: workbenchReads,
   fixtures: profileFixtures,
   surfaces: workbenchSurfaces("expiry"),
-  oneTap: shellSurfaces("eric", {}, "/app/trade"),
+  oneTap: navSurfaces("eric", {}, "/app/trade"),
   artifacts: WORKBENCH_ARTIFACTS,
   chat: WORKBENCH_CHAT,
 };

@@ -4,7 +4,7 @@
 // such holes (Activity stuck on "Tuning in…", the Status panel's "No ops panel is wired", a bare
 // "not the shell" after Sign out); each expect below would have failed on them.
 //
-// Each surface starts on the area's page (where a study member starts), taps the control the way a
+// Each surface starts on the profile (where a study member starts), taps the control the way a
 // member does, and proves the landing rendered: a heading or region a screen reader announces,
 // plus the absence of the copy a page prints when the world left its service off. That copy is
 // quoted from the app; if production itself prints it, it belongs in shell-artifacts.mjs instead.
@@ -34,19 +34,11 @@ const UNWIRED = [
 ];
 
 const SURFACES = [
-  // The app nav at #8005's pin: Campaign · Profile · Trade · Activity · R&D. The Leaderboard left
-  // it (reached from the league card now), and Campaign, the landing page, joined it.
   {
-    id: "nav-campaign",
-    label: "app nav: Campaign (the landing page)",
-    act: [click("link", "Campaign", { exact: true, within: VIEWS })],
-    expect: [{ url: "/app/" }, ...UNWIRED.map(off)],
-  },
-  {
-    id: "nav-profile",
-    label: "app nav: Profile",
-    act: [click("link", "Profile", { within: VIEWS })],
-    expect: [{ url: "/app/accounts" }, ...UNWIRED.map(off)],
+    id: "nav-leaderboard",
+    label: "app nav: Leaderboard",
+    act: [click("link", "Leaderboard", { exact: true, within: VIEWS })],
+    expect: [{ url: "/app/leaderboard" }, role("heading", "Leaderboard", { exact: true })],
   },
   {
     id: "nav-trade",
@@ -99,11 +91,10 @@ const SURFACES = [
     expect: [role("button", "Rotate Alpaca credentials"), ...UNWIRED.map(off)],
   },
   {
-    // Docked on every page since the header's toggle retired (#8003 folds it to its head on a
-    // phone): no tap opens it, so the surface is that it is there.
-    id: "dock-moneypenny",
-    label: "Moneypenny's dock",
-    expect: [role("complementary", "Moneypenny"), role("textbox", "Message Moneypenny")],
+    id: "header-moneypenny",
+    label: "header: Moneypenny",
+    act: [click("button", "Moneypenny — learning & feedback", { within: ACTIONS })],
+    expect: [role("complementary", "Moneypenny")],
   },
   {
     id: "header-sign-out",
@@ -114,15 +105,14 @@ const SURFACES = [
 ];
 
 /**
- * The one-tap surfaces for one viewer, starting from `from` (the area's own page: the profile by
- * default, Trade for the workbench). `adjust` replaces fields of a surface for this viewer's
+ * The one-tap surfaces for one viewer. `adjust` replaces fields of a surface for this viewer's
  * world: its `expect` where the app honestly shows that viewer something else (a member with no
  * account), or `struck: "<why>"` where the world cannot show it — kept and printed, never dropped.
  * @param {string} viewer
  * @param {Record<string, {expect?: object[], struck?: string}>} [adjust]  surface id → overrides
  */
-export function shellSurfaces(viewer, adjust = {}, from = FROM) {
-  return SURFACES.map((s) => ({ route: from, viewer, ...s, ...(adjust[s.id] ?? {}) }));
+export function shellSurfaces(viewer, adjust = {}) {
+  return SURFACES.map((s) => ({ route: FROM, viewer, ...s, ...(adjust[s.id] ?? {}) }));
 }
 
 /** A member with no account: Settings' Account section says so instead of an account card. */

@@ -302,7 +302,11 @@ export function buildBook(name) {
     history,
     lastEquity,
     closedToday,
-    market: { expirations: input.market?.expirations ?? [], symbols },
+    market: {
+      expirations: input.market?.expirations ?? [],
+      symbols,
+      ...(input.market?.barDays ? { barDays: input.market.barDays } : {}),
+    },
     // What each member watches, keyed by the account their session resolves to (the watchlist
     // route's own key), and each account's working orders — both empty unless the input says.
     watchlists: perAccount(input.watchlists),

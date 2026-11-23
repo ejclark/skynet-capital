@@ -6,7 +6,7 @@
 // Inputs: inputs/workbench-today.json, layered over profile-today's.
 
 import { profileFixtures } from "./fixtures.mjs";
-import { shellSurfaces } from "./shell-surfaces.mjs";
+import { navSurfaces } from "./nav-surfaces.mjs";
 import { WORKBENCH_ARTIFACTS } from "./workbench-artifacts.mjs";
 import { workbenchReads } from "./workbench-reads.mjs";
 import { WORKBENCH_CHAT, workbenchSurfaces } from "./workbench-surfaces.mjs";
@@ -18,9 +18,9 @@ export default {
   reads: workbenchReads,
   fixtures: profileFixtures,
   surfaces: workbenchSurfaces("today"),
-  // One tap from the bench (app nav, header icons, the dock): parity proves them; the census does
-  // not walk them (they are not this area). What the world still cannot show: `artifacts`.
-  oneTap: shellSurfaces("eric", {}, "/app/trade"),
+  // One tap from the bench as the November build draws it (nav-surfaces.mjs: the Views nav, the
+  // status line, the member menu, the dock): parity proves them; the census does not walk them. What the world still cannot show: `artifacts`.
+  oneTap: navSurfaces("eric", {}, "/app/trade"),
   artifacts: WORKBENCH_ARTIFACTS,
   chat: WORKBENCH_CHAT,
 };

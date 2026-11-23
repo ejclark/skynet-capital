@@ -3,7 +3,7 @@
 // trade from. The league around them is workbench-today's. Inputs: inputs/workbench-first-day.json.
 
 import { profileFixtures } from "./fixtures.mjs";
-import { NO_ACCOUNT_SETTINGS, shellSurfaces } from "./shell-surfaces.mjs";
+import { navSurfaces } from "./nav-surfaces.mjs";
 import { WORKBENCH_ARTIFACTS } from "./workbench-artifacts.mjs";
 import { workbenchReads } from "./workbench-reads.mjs";
 import { WORKBENCH_CHAT, workbenchSurfaces } from "./workbench-surfaces.mjs";
@@ -15,7 +15,7 @@ export default {
   reads: workbenchReads,
   fixtures: profileFixtures,
   surfaces: workbenchSurfaces("first-day"),
-  oneTap: shellSurfaces("casey", NO_ACCOUNT_SETTINGS, "/app/trade"),
+  oneTap: navSurfaces("casey", {}, "/app/trade"),
   artifacts: WORKBENCH_ARTIFACTS,
   chat: WORKBENCH_CHAT,
 };

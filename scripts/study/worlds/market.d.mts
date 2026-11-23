@@ -20,6 +20,7 @@ export function modelMarks(
 export function marketClient(market: {
   expirations: string[];
   symbols: Record<string, { spot: number; prevClose: number; iv: number }>;
+  barDays?: number;
 }): {
   getUnderlyingPrice(sym: string): Promise<number | undefined>;
   getExpirations(u: string, onOrAfter: string, limit?: number): Promise<string[]>;
