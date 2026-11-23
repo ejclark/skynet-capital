@@ -186,7 +186,7 @@ function collectNames(cov, homeOf, files) {
   }
   for (const p of parsePlaces(read(PLACES)))
     add(p.name, placeOf(p.path, {}, ctx), "Moneypenny's place name");
-  return labelCollisions(names);
+  return names;
 }
 
 // ── 4. homeless ─────────────────────────────────────────────────────────────────────────────────
@@ -229,6 +229,20 @@ function addedParts() {
     .sort((a, b) => (a.file < b.file ? -1 : 1));
 }
 
+/** A path counts as named only as a whole: `/api/convictions` is not named by `/api/convictions/mine`. */
+const namesPath = (src, p) =>
+  new RegExp(`${p.replace(/[/-]/g, "\\$&")}(?![a-z0-9/_-])`, "i").test(src);
+
+/** The member routes src/server serves, and those no screen or chat tool names (row 4c's test,
+ *  without its history: the placement check diffs this between a base and its branch). */
+function apiReach(appSrc, companionSrc) {
+  const served = apiPaths(walk("src/server", isSource).map(read).join("\n")).sort();
+  return {
+    served,
+    unread: served.filter((p) => !(namesPath(appSrc, p) || namesPath(companionSrc, p))),
+  };
+}
+
 /** Member routes added to src/server since the study that nothing in the app or the chat names. */
 function servedNotRendered(appSrc, companionSrc) {
   const diff = git(["log", `--since=${SINCE}`, "-p", "--format=", "HEAD", "--", "src/server"]);
@@ -241,16 +255,49 @@ function servedNotRendered(appSrc, companionSrc) {
     ),
   );
   const server = walk("src/server", isSource).map(read).join("\n");
-  // A path counts as named only as a whole: `/api/convictions` is not named by `/api/convictions/mine`.
-  const names = (src, p) =>
-    new RegExp(`${p.replace(/[/-]/g, "\\$&")}(?![a-z0-9/_-])`, "i").test(src);
   return [...added]
-    .filter((p) => names(server, p))
-    .filter((p) => !(names(appSrc, p) || names(companionSrc, p)))
+    .filter((p) => namesPath(server, p))
+    .filter((p) => !(namesPath(appSrc, p) || namesPath(companionSrc, p)))
     .sort();
 }
 
 // ── the run ─────────────────────────────────────────────────────────────────────────────────────
+
+/** Every `.tsx` under app/src with its text and its links — the names pass's and row 3's input. */
+const linkFiles = (appFiles) =>
+  appFiles
+    .filter((f) => f.endsWith(".tsx"))
+    .map((file) => {
+      const src = read(file);
+      return { file, src, links: scanLinks(src) };
+    });
+
+/**
+ * The member-facing set, read from the tree under the current directory with no git: every screen
+ * the code has (a route, a section, a chapter, a landing window, a server page, a shell part) with
+ * its triage verdict and IA home, and every name the names pass reads (a tab or door that names a
+ * place, a section, window or chapter label, Moneypenny's place names). The placement check
+ * (`placement.mjs`, #8005 slice 2) diffs this between a branch and its base, so a base tree that
+ * `git archive` unpacked reads the same way: `needles: false` skips coverage's proof that each
+ * hand-listed page still exists, which a base older than the list cannot pass.
+ */
+export function memberFacing({ needles = true } = {}) {
+  const cov = readScreens({ needles });
+  const homeOf = homesOf(cov.triageRows);
+  const appFiles = walk("app/src", isSource);
+  const names = collectNames(cov, homeOf, linkFiles(appFiles));
+  const api = apiReach(
+    appFiles.map(read).join("\n"),
+    walk("src/companion", isSource).map(read).join("\n"),
+  );
+  const screens = cov.screens.map((s) => ({
+    key: s.key,
+    path: s.path,
+    home: homeOf.get(s.key),
+    verdict: cov.triage.get(s.key)?.verdict,
+  }));
+  return { screens, names, api };
+}
 
 export function measure() {
   const ia = read(IA);
@@ -259,14 +306,9 @@ export function measure() {
   const triageRows = JSON.parse(read(TRIAGE));
   const homeOf = homesOf(triageRows);
   const appFiles = walk("app/src", isSource);
-  const files = appFiles
-    .filter((f) => f.endsWith(".tsx"))
-    .map((file) => {
-      const src = read(file);
-      return { file, src, links: scanLinks(src) };
-    });
+  const files = linkFiles(appFiles);
 
-  const labels = collectNames(cov, homeOf, files);
+  const labels = labelCollisions(collectNames(cov, homeOf, files));
   const concepts = conceptHomes(parseConcepts(ia), homeOf);
   const multiHome = concepts.filter((c) => c.homes.length > 1);
   const drops = keyDrops(files, { appLevel: new Set([ROOT]) });

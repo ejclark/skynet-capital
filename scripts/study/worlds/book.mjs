@@ -389,6 +389,9 @@ export function buildBook(name) {
     ...(input.controls ? { controls: input.controls } : {}),
     // The per-member stores production always wires, served empty (league-services.mjs).
     ...(input.wired ? { wired: input.wired } : {}),
+    // A member's own R&D records (#8005): the stores production keeps them in, and what each member
+    // saved before the instant, replayed through the real handlers at compose (member-stores.mjs).
+    ...(input.stores ? { stores: input.stores, writes: input.writes ?? [] } : {}),
     subscriptions,
     history,
     lastEquity,

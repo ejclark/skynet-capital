@@ -90,6 +90,7 @@ describe("which unready feedback issues are worth judging", () => {
       issue(19, { pr: true }),
       issue(20, { state: "closed" }),
       issue(21, { subs: { total: 3, completed: 1 } }), // its work lives in sub-issues
+      issue(22, { labels: ["feedback", "curated", "ia-U3"] }), // evidence on a known IA problem
     ];
     expect(pickCandidates(rows, { now: NOW }).ranked).toEqual([13, 12, 11, 10]);
   });
@@ -152,6 +153,14 @@ describe("the pile of feedback waiting for ready (#8037 slice 2)", () => {
       issue(5, { ageDays: 2 }),
     ];
     expect(feedbackPile(rows, NOW)).toEqual({ unready: 1, oldestDays: 2, piled: false });
+  });
+
+  it("does not count a filing matched to a known IA problem", () => {
+    const rows = [
+      issue(7, { labels: ["feedback", "ia-U12"], ageDays: 40 }),
+      issue(8, { ageDays: 1 }),
+    ];
+    expect(feedbackPile(rows, NOW)).toEqual({ unready: 1, oldestDays: 1, piled: false });
   });
 
   it("reads an age it was not given as unknown, never as old", () => {

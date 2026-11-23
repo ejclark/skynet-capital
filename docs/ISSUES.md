@@ -279,15 +279,17 @@ unclaimed until `feedback` was hand-added, the same gap #5332 closed for `bug` a
 filing at capture (`FEEDBACK.md` → *What the lane will build*). **Beyond that, a session applies
 `ready` when the path is clear and Eric's flip would only be a rubber stamp** (Eric, 2026-10-19:
 "if there's a clear path forward and moving forward boils down to … me rubber stamping.. fuck the
-red tape"). *Clear* means all four, written down: acceptance criteria present; size S or M, or the
+red tape"). *Clear* means all five, written down: acceptance criteria present; size S or M, or the
 next slice a plan's state block already names; no open fork only he can settle and nothing in
-`envelope.json`'s protected class; not blocked by an open issue. And it is *earned*, never asserted:
+`envelope.json`'s protected class; not blocked by an open issue; and an IA home, written first —
+the `docs/IA.md` §5 group the build extends, or "no new place" (#8005 slice 2; a new place no group
+holds is Eric's to place). And it is *earned*, never asserted:
 an independent verifier tried to refute the call and could not. The flip is a footed comment (the
-four checks, the verifier's line) and then the label, so the label stays an authorization with a
-paper trail rather than a formality — what it never becomes is a way to keep a loop fed. **A pile is a reason too** (Eric, 2026-11-23: "If backlog piles up, it's indication of problems that ... directly impedes development"; #8037): the flip is also due when more than 20 `feedback` issues wait for `ready` or the oldest has waited over 14 days, with the lanes fed, and it then lists `plan` issues nobody has touched for 14 days beside them. That is the same judgment on a different clock, never a lower bar: the four checks and both refuters still decide each issue. Falsifier:
+five checks, the verifier's line) and then the label, so the label stays an authorization with a
+paper trail rather than a formality — what it never becomes is a way to keep a loop fed. **A pile is a reason too** (Eric, 2026-11-23: "If backlog piles up, it's indication of problems that ... directly impedes development"; #8037): the flip is also due when more than 20 `feedback` issues wait for `ready` or the oldest has waited over 14 days, with the lanes fed, and it then lists `plan` issues nobody has touched for 14 days beside them. That is the same judgment on a different clock, never a lower bar: the five checks and both refuters still decide each issue. Falsifier:
 if by 2026-11-19 three session-readied issues end `needs-eric`, closed `not_planned`, or in a
 reverted build, narrow this back to his flip. **Run it by name:** `.claude/workflows/clear-path-flip.js`
-(`{issues: [...]}`) judges the four checks, sends each positive call to two independent refuters
+(`{issues: [...]}`) judges the five checks, sends each positive call to two independent refuters
 (envelope paths · the thread) and returns survivors; `node scripts/clear-path-post.mjs <result.json>`
 posts only those, adding `feedback` to a non-plan issue that lacks it. `node scripts/flip-due.mjs` says when a run is due (the lanes' pullable count is under the dial's `inFlightCap`, or the pile is over the line above) and which up to 6 issues to hand it; `clear-path-post` records each refusal so they sit out 7 days (#7311). A member's freeform filing gets the same judgment the moment it lands, one issue at a time, from `moneypenny-events.yml`'s `assess-*` jobs (#7544; `FEEDBACK.md` → *What the lane will build*): starvation is the batch's clock, and a member waiting to hear where they stand is this one's. A `plan` issue has a second, equivalent door: a ready-shaped comment from
 an OWNER/MEMBER/COLLABORATOR (`isReadySignal()` in `scripts/moneypenny/plan-claim.mjs` — "ready",

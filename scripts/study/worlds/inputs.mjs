@@ -6,9 +6,12 @@
 // overrides — participants by id (fields replaced), `members` wholesale, the bot's own fields (its
 // subscription date), its passes cut to those before `passesBefore` with `prependPasses` on top (a
 // bot that stopped earlier), and the per-account books a layer may rewrite whole (`humanFills`,
-// `watchlists`, `workingOrders`: an account the layer names replaces the base's, the rest are
+// `watchlists`, `workingOrders`, equity `history`: an account the layer names replaces the base's, the rest are
 // kept). A layer that changes what an account holds changes the fills that bought it too, or the
-// ledger and the position disagree. `controls` and `wired` replace the base's whole. A base that
+// ledger and the position disagree. `controls` and `wired` replace the base's whole; `stores` too,
+// and a layer's `writes` (a member's saved history, member-stores.mjs) follow the base's. A layer may
+// add an account the base does not hold (a participant with a new id: a member who linked one
+// today). A base that
 // names several `bots` (#8005, the bot's loop) takes the bot layering per bot, keyed by id under
 // `bots` (`{ "<id>": { passesBefore, prependPasses, …fields } }`).
 //
@@ -28,7 +31,7 @@ import { msOf } from "./instant.mjs";
 const INPUTS = join(import.meta.dirname, "inputs");
 
 /** The account-keyed blocks a layer may rewrite one account at a time. */
-const PER_ACCOUNT = ["humanFills", "watchlists", "workingOrders"];
+const PER_ACCOUNT = ["humanFills", "watchlists", "workingOrders", "history"];
 const DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
 const OCC = /^([A-Z]{1,6})(\d{2})(\d{2})(\d{2})([CP]\d{8})$/;
 
@@ -68,10 +71,13 @@ export function loadInput(name) {
   if (!raw.base) return raw;
   const under = loadInput(raw.base);
   const base = raw.shiftDays ? shiftCalendar(under, raw.shiftDays) : under;
-  const participants = base.participants.map((p) => ({
-    ...p,
-    ...(raw.participants?.[p.id] ?? {}),
-  }));
+  const held = new Set(base.participants.map((p) => p.id));
+  const participants = [
+    ...base.participants.map((p) => ({ ...p, ...(raw.participants?.[p.id] ?? {}) })),
+    ...Object.entries(raw.participants ?? {})
+      .filter(([id]) => !(held.has(id) || id.startsWith("$")))
+      .map(([id, p]) => ({ id, ...p })),
+  ];
   const byAccount = Object.fromEntries(
     PER_ACCOUNT.filter((k) => raw[k] || base[k]).map((k) => [k, { ...base[k], ...raw[k] }]),
   );
@@ -92,6 +98,8 @@ export function loadInput(name) {
     ...(raw.members ? { members: raw.members } : {}),
     ...(raw.controls ? { controls: raw.controls } : {}),
     ...(raw.wired ? { wired: raw.wired } : {}),
+    ...(raw.stores ? { stores: raw.stores } : {}),
+    ...(raw.writes ? { writes: [...(base.writes ?? []), ...raw.writes] } : {}),
     ...byAccount,
     participants,
     ...(base.bots

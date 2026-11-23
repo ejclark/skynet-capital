@@ -32,11 +32,13 @@ import { FLIP_REFUSALS_PATH, recentlyRefused } from "./flip-refusals.mjs";
 // a flip nobody needed.
 //
 // WHAT IS LISTED. Open, not `ready`, not parked, not `in-progress`, not a parent whose work lives in
-// sub-issues, not blocked by an open issue, and not refused by a flip in the last 7 days; either a
-// `feedback` issue, or (#8037 slice 2) a `plan` that nobody has touched for PLAN_UNTOUCHED_DAYS (a
-// plan someone is still shaping is not yet a flip's to judge; the clear-path-flip workflow reads a
-// plan's state block for its next slice). Ordered as `npm run rank` orders (class, kind, oldest); at
-// most `--max` (6, the workflow's own cap, #6711), halved under `conserve`.
+// sub-issues, not blocked by an open issue, not a filing matched to a known IA problem (`ia-<row>`:
+// evidence on that row, which is fixed as a whole, #8005), and not refused by a flip in the last 7
+// days; either a `feedback` issue, or (#8037 slice 2) a `plan` that nobody has touched for
+// PLAN_UNTOUCHED_DAYS (a plan someone is still shaping is not yet a flip's to judge; the
+// clear-path-flip workflow reads a plan's state block for its next slice). Ordered as `npm run rank`
+// orders (class, kind, oldest); at most `--max` (6, the workflow's own cap, #6711), halved under
+// `conserve`.
 //
 // A FAILED READ IS NEVER `due: false`. The dial, the issue list or the refusals file failing to read
 // exits 1 with the reason, the way scripts/audit-due.mjs does: an unread queue must not pass for a
@@ -60,6 +62,9 @@ export const DEFAULT_MAX = 6;
 const names = (issue) => (issue.labels ?? []).map((l) => (typeof l === "string" ? l : l.name));
 const openIssues = (rows) => rows.filter((i) => !i.pull_request && i.state === "open");
 
+/** A filing matched to a known IA problem is fixed with its row, never judged on its own (#8005). */
+const isIaMatch = (label) => /^ia-U\d+$/.test(label);
+
 /** Pure. How many of these open issues a lane may pull right now. */
 export const pullableCount = (issues) => openIssues(issues).filter((i) => !notPullable(i)).length;
 
@@ -73,12 +78,15 @@ export const batchSize = (max, position) =>
  * REST row gave no dates for reads as age unknown, never as old.
  */
 export function feedbackPile(issues, now = Date.now()) {
-  const rows = openIssues(issues).map((i) => ({
-    number: i.number,
-    labels: names(i),
-    createdAt: i.created_at,
-    updatedAt: i.updated_at,
-  }));
+  // An IA-matched filing is never listed, so it is not part of a pile the flip could clear either.
+  const rows = openIssues(issues)
+    .filter((i) => !names(i).some(isIaMatch))
+    .map((i) => ({
+      number: i.number,
+      labels: names(i),
+      createdAt: i.created_at,
+      updatedAt: i.updated_at,
+    }));
   const { unready, oldestDays } = backlogStock(rows, now).feedback;
   const oldest = Number.isFinite(oldestDays) ? oldestDays : null;
   const big = unready > FEEDBACK_PILE_MAX;
@@ -101,6 +109,7 @@ export function pickCandidates(issues, { refused = new Set(), now = Date.now() }
     const isPlan = labels.includes("plan") && !labels.includes("feedback");
     if (!(labels.includes("feedback") || (isPlan && idle(issue)))) continue;
     if (parkedBy(labels).length) continue;
+    if (labels.some(isIaMatch)) continue;
     if (Number(issue.issue_dependencies_summary?.blocked_by) > 0) continue;
     const row = rankRow(issue, { blocks: blocksOf(issue), now });
     if (!row) continue;
