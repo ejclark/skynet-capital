@@ -58,6 +58,29 @@ describe("witnesses", () => {
     expect(witnesses(flow(300_000, -20_000, { heldAfter: 0 }))).toBe("agree");
   });
 
+  it("agrees on a genuine reset when a bot filled before it in the same window (#8064)", () => {
+    // Flat at $700k, a bot buys $50,000 of SPY, then a reset to $1M clears that position.
+    const buy: TradeActivityRecord = {
+      orderId: "o1",
+      participantId: "human-dana",
+      symbol: "SPY",
+      side: "buy",
+      quantity: 100,
+      filledQuantity: 100,
+      price: 500,
+      status: "filled",
+      at: "2026-10-05T14:01:00.000Z",
+      source: "stream",
+    };
+    const line = inferCapitalFlow(
+      sample("2026-10-05T14:00:00.000Z", 700_000, 700_000),
+      sample("2026-10-05T14:05:00.000Z", 1_000_000, 1_000_000),
+      [buy],
+    );
+    if (!line) throw new Error("precondition: the detector records the reset");
+    expect(witnesses(line, [buy])).toBe("agree");
+  });
+
   it("disagrees when the book is still held and cash does not match the equity move", () => {
     expect(witnesses(flow(-200_000, -650_000))).toBe("disagree");
   });
