@@ -11,6 +11,7 @@ import {
   decisionLine,
   executeAssignments,
   gather,
+  graduatedClass,
   lastAskedAt,
   markedByComments,
   OPEN_CAP,
@@ -888,6 +889,24 @@ describe("plan: a graduated class is decided, not asked", () => {
       now: NOW,
     });
     expect(planned.actions.map((a) => a.number)).toEqual([75]);
+    expect(planned.needsSession).toEqual([]);
+  });
+
+  // #7959: the keyword guess reaches only three of the seven rule-4 classes, so a merge ask guessed
+  // `unclassified` and its stated reversible class graduated it. The ask's own words now veto too.
+  it("lets rule 4's own words veto a stated reversible class the keyword guess cannot place", () => {
+    const merge = [
+      "> [!IMPORTANT]",
+      "> **Needs from you**",
+      "> 1. Merge the platter PR #8100 now?",
+      ">    - Class: screen design (taste)",
+      ">    - A (predicted, high): merge it",
+      ">    - B: hold it",
+    ].join("\n");
+    const ask = issue({ number: 76, title: "weekly tidy", body: merge });
+    expect(graduatedClass(ask, ["screen design (taste)"])).toBeNull();
+    const planned = plan({ issues: [ask], graduated: ["screen design (taste)"], now: NOW });
+    expect(planned.actions.map((a) => a.number)).toEqual([76]);
     expect(planned.needsSession).toEqual([]);
   });
 

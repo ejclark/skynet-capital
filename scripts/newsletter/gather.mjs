@@ -24,6 +24,7 @@ import { askRank, decisionLine } from "../moneypenny/ask-card.mjs";
 import { trustedComment } from "../moneypenny/gh.mjs";
 import { readLedgerFile } from "../pr-review/ledger.mjs";
 import { readCorpus, scorecard } from "../research-scorecard.mjs";
+import { candidatePrs, refsOf, reworkCandidates } from "./backlog.mjs";
 import { ciCapsules, decisionsSnapshot, labelHistory, seriesRead } from "./decision-reads.mjs";
 import { journeyGaps, memberSurfacePrs, reactionIssues } from "./member-reads.mjs";
 import { previousWeek, windowOf } from "./week.mjs";
@@ -81,7 +82,50 @@ function mergedPrs(rest, w) {
     author: pr.user?.login ?? null,
     headRef: pr.head?.ref ?? null,
     mergedAt: pr.merged_at,
+    // The numbers it names, so rework (#8037) can tell a revert or fix-forward of an earlier merge.
+    refs: refsOf(pr.title, pr.body),
   }));
+}
+
+const labelNames = (i) => (i.labels ?? []).map((l) => (typeof l === "string" ? l : l.name));
+
+/** Every open issue now (about 3 pages): the backlog stock (#8037). A snapshot, like needs-eric. */
+function openIssues(rest) {
+  return pages(rest, `repos/${REPO}/issues?state=open`)
+    .filter((i) => !i.pull_request)
+    .map((i) => ({
+      number: i.number,
+      labels: labelNames(i),
+      createdAt: i.created_at,
+      updatedAt: i.updated_at,
+    }));
+}
+
+/**
+ * The changed files of the PRs in a rework candidate pair (#8037): only those, a handful a week.
+ * A PR past the listing cap (2,000 files) throws, and rework reads unknown rather than guess.
+ */
+function prFiles(rest, prs, w, asOfMs) {
+  const files = {};
+  for (const n of candidatePrs(reworkCandidates(prs, w, asOfMs)))
+    files[n] = pages(rest, `repos/${REPO}/pulls/${n}/files`).map((f) => f.filename);
+  return files;
+}
+
+/**
+ * Every issue updated since the week began: opening or closing one updates it, so this holds the
+ * week's inflow and outflow (#8037), and still does when a past week is read later.
+ */
+function issueActivity(rest, w) {
+  return pages(rest, `repos/${REPO}/issues?state=all&since=${w.since}`)
+    .filter((i) => !i.pull_request)
+    .map((i) => ({
+      number: i.number,
+      labels: labelNames(i),
+      createdAt: i.created_at,
+      closedAt: i.closed_at,
+      stateReason: i.state_reason ?? null,
+    }));
 }
 
 // The repo is public, so anyone can comment, file an issue or post text shaped like a state block
@@ -215,6 +259,10 @@ export function gather(week, asOfMs, nowMs = Date.now()) {
         .map((r) => ({ event: r.event, conclusion: r.conclusion })),
     ),
     needsEric: snapshot(() => needsEric(rest)),
+    // Backlog flow and rework (#8037 slice 1): the open stock now, and the week's issue activity.
+    openIssues: snapshot(() => openIssues(rest)),
+    issueActivity: attempt(() => issueActivity(rest, w)),
+    prFiles: Array.isArray(prs) ? attempt(() => prFiles(rest, prs, w, asOfMs)) : prs,
     // Playthroughs and reactions (#7031 slice 3): the steps still expected to fail, the member-facing
     // merges, and the Revisit and in-app filings that name them.
     journeyGaps: attempt(() => journeyGaps(ROOT)),

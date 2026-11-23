@@ -196,11 +196,14 @@ describe("Done says received once a session has read it (#6606)", () => {
     expect(v.told()).toBe(ACK);
   });
 
-  it("shows that ack on a page opened later, beside the stale ackFor", async () => {
+  // #7727: the relaxed rule is for a landed ack only. A page opened later can't see a landing, and
+  // the earlier press's own ack, its guessed clock minutes ahead, reads the same on the doc — so a
+  // reload must not turn an unread Done into Received; the not-received line stays.
+  it("says not received on a reload beside the press before's ack, its guessed clock ahead", async () => {
     const doneAt = ago(10 * MIN);
-    const v = await openWith(answered({ doneAt, ackAt: ago(9 * MIN), ackFor: ago(20 * MIN) }));
-    await new Promise((r) => setTimeout(r, 5));
-    expect(v.told()).toBe(ACK);
+    const v = await openWith(answered({ doneAt, ackAt: ago(7 * MIN), ackFor: ago(12 * MIN) }));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(v.told()).toBe(UNHEARD);
   });
 
   it("stays quiet on a guessed clock ahead of the press once he reopens and presses again", async () => {
