@@ -52,6 +52,13 @@ export interface CompanionDraft {
   readonly kind: "bug" | "feature" | "idea";
   readonly title: string;
   readonly details: string;
+  /** The known problem she matched it to (#8005 slice 7): `words` for the card, the row and plan
+   *  for the filing, which counts it as evidence there. The server checks it again on filing. */
+  readonly match?: {
+    readonly row?: string;
+    readonly plan?: number;
+    readonly words: string;
+  };
 }
 
 /** The page the member is asking from — `pathname + search`, e.g. `/trade?symbol=NVDA`. The server

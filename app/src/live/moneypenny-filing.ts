@@ -63,6 +63,9 @@ interface Filing {
   readonly details: string;
   readonly area?: string;
   readonly spec?: unknown;
+  /** The known problem a chat draft matched (#8005 slice 7) — row and plan only; the server
+   *  rebuilds the words from the ledger. */
+  readonly match?: { readonly row?: string; readonly plan?: number };
 }
 
 /** The member's word that files a parked draft — and the ones that drop it. Whole-message matches
@@ -152,12 +155,15 @@ export function createFilingLane(ctx: FilingContext) {
       title: reply.title || draft.title,
       details: reply.details || draft.details,
       ...(reply.area ? { area: reply.area } : {}),
+      // The coach rewrites the words, never what the ask is evidence on.
+      ...(draft.match ? { match: draft.match } : {}),
     };
   };
 
   /** The member said submit: the draft they saw, shaped by the coach on the way out. */
   const sendDraft = async (draft: CompanionDraft): Promise<void> => {
-    const raw: Filing = { title: draft.title, details: draft.details };
+    const match = draft.match ? { row: draft.match.row, plan: draft.match.plan } : undefined;
+    const raw: Filing = { title: draft.title, details: draft.details, ...(match ? { match } : {}) };
     const index = await fetchFeedbackIndex().catch(() => undefined);
     await file(await shape(raw, index?.coachEnabled === true));
   };

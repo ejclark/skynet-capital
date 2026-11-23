@@ -183,6 +183,7 @@ describe("toolsFor — what the turn is allowed to call", () => {
     expect(names(undefined).sort()).toEqual([
       "draft_feedback",
       "draft_research_ask",
+      "get_known_problems",
       "get_roadmap",
       "get_upcoming_events",
       "get_work_status",
