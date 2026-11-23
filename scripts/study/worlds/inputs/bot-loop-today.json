@@ -541,7 +541,7 @@
       ]
     }
   },
-  "wired": ["targetSplits", "bookWaits", "takenQuests", "exitPlans"],
+  "wired": ["takenQuests", "exitPlans"],
   "vix": {
     "$comment": "The quests read Cboe's VIX history for its last close (src/server/vix-feed.ts). The session before the instant, as this world's corpus records it: docs/research/events/aruoba-inflation-term-structure-2026-11-20.md, \"Tape 11-20: VIX 35.89 (Yahoo bar)\".",
     "session": "2026-11-20",

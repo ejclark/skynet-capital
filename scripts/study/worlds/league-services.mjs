@@ -132,22 +132,12 @@ function progression(book) {
 
 /**
  * Per-member stores production wires on every boot (`serve-dashboard.ts`), served EMPTY — nobody in
- * the world has saved a target split, named a day to look at a book again, taken a quest or
- * carried an exit plan (#8005). Opt-in by name (`wired` in a world's input), so a world composed
- * before these pages existed keeps the payloads it was frozen with; absent, a page says the store
- * "isn't wired", which production never says.
+ * the world has taken a quest or carried an exit plan (#8005). Opt-in by name (`wired` in a world's
+ * input), so a world composed before these pages existed keeps the payloads it was frozen with.
+ * (Target splits, book waits, the watchlist and the alert stores are wired for every world in
+ * server-config.mjs, #8022 — one source per store.)
  */
 const EMPTY_STORES = {
-  targetSplits: () => ({
-    get: () => undefined,
-    set: refuse("a target split"),
-    clear: refuse("clearing a target split"),
-  }),
-  bookWaits: () => ({
-    wait: () => undefined,
-    set: refuse("a book wait"),
-    clear: refuse("clearing a book wait"),
-  }),
   takenQuests: () => ({
     taken: () => [],
     record: refuse("taking a quest"),

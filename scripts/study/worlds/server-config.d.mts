@@ -17,7 +17,7 @@ export interface WorldConfig {
   tradingClientFor(id: string):
     | {
         isMarketOpen(): Promise<boolean>;
-        listOrders(): Promise<{ id: string; submitted_at: string }[]>;
+        listOrders(): Promise<{ id: string; status: string; submitted_at: string }[]>;
         getPortfolioHistory(period: string): Promise<PortfolioHistory>;
       }
     | undefined;

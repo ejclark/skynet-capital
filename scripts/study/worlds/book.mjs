@@ -40,6 +40,7 @@ import {
 } from "../../../src/trading/option-symbols.ts";
 import { loadInput } from "./inputs.mjs";
 import { checkInstant, INSTANT, msOf, resolveTokens } from "./instant.mjs";
+import { modelMarks } from "./market.mjs";
 
 /** True when a symbol is an option contract. */
 const isOption = (symbol) => parseOccSymbol(symbol) !== undefined;
@@ -222,6 +223,31 @@ function botRecords(bot, runner = false) {
   return { records, fills, saleFill };
 }
 
+/**
+ * What a position's input leaves out, derived rather than typed (#8005): an option's mark and
+ * yesterday's close from the house model at the world's quotes (market.mjs → `modelMarks`, the same
+ * price the chain shows), and a share position's cost from the buys that opened it — so the
+ * position row, the chain and the ledger can never tell one figure two ways.
+ */
+export function derivedFields(pos, fills, symbols) {
+  if (isOption(pos.symbol)) {
+    if (pos.mark !== undefined) return pos;
+    const marks = modelMarks(symbols, pos.symbol);
+    if (!marks) throw new Error(`book: the world quotes no underlying for ${pos.symbol}`);
+    return { ...pos, ...marks };
+  }
+  if (pos.avgPrice !== undefined) return pos;
+  const buys = fills.filter((f) => f.symbol === pos.symbol && f.side === "buy");
+  const shares = buys.reduce((n, f) => n + f.quantity, 0);
+  if (shares !== pos.quantity) {
+    throw new Error(
+      `book: ${pos.symbol} holds ${pos.quantity} but its buys add to ${shares} — type avgPrice or fix the fills`,
+    );
+  }
+  const cost = buys.reduce((s, f) => s + f.quantity * f.price, 0) / shares;
+  return { ...pos, avgPrice: Math.round(cost * 10_000) / 10_000 };
+}
+
 /** A broker snapshot from an input participant: marks → market values, equity derived. */
 function snapshotOf(p, saleFill) {
   const positions = p.positions.map((pos) => {
@@ -288,13 +314,25 @@ function onThisInstant(name, raw) {
 
 /** Everything a world's server would hold, from one input file. */
 export function buildBook(name) {
-  const input = resolveTokens(onThisInstant(name, loadInput(name)));
+  const raw = resolveTokens(onThisInstant(name, loadInput(name)));
+  const symbols = quotedSymbols(raw);
+  // Every figure an input leaves out is derived before anything reads it (derivedFields).
+  const input = {
+    ...raw,
+    participants: raw.participants.map((p) => ({
+      ...p,
+      positions: p.positions.map((pos) =>
+        derivedFields(pos, raw.humanFills?.[p.id] ?? [], symbols),
+      ),
+    })),
+  };
   const runner = Array.isArray(input.bots);
   const bots = botsOf(input).map((b) => ({ input: b, ...botRecords(b, runner) }));
   const botById = new Map(bots.map((b) => [b.input.id, b]));
   const participants = input.participants.map((p) => snapshotOf(p, botById.get(p.id)?.saleFill));
   const activity = {};
   for (const [id, fills] of Object.entries(input.humanFills ?? {})) {
+    if (id.startsWith("$")) continue;
     activity[id] = fills.map((f) => ({
       ...f,
       participantId: id,
@@ -333,14 +371,6 @@ export function buildBook(name) {
     const h = history[p.id];
     if (h?.length > 1) p.monthReturnPct = (h[h.length - 1].equity / h[0].equity - 1) * 100;
   }
-  const symbols = { ...(input.market?.symbols ?? {}) };
-  for (const p of input.participants) {
-    for (const pos of p.positions) {
-      if (symbols[pos.symbol] && !isOption(pos.symbol)) {
-        symbols[pos.symbol] = { spot: pos.mark, prevClose: pos.lastday, ...symbols[pos.symbol] };
-      }
-    }
-  }
   return {
     generatedAt: new Date(INSTANT).toISOString(),
     members: input.members,
@@ -368,5 +398,27 @@ export function buildBook(name) {
       symbols,
       ...(input.market?.barDays ? { barDays: input.market.barDays } : {}),
     },
+    // What each member watches, keyed by the account their session resolves to (the watchlist
+    // route's own key), and each account's working orders — both empty unless the input says.
+    watchlists: perAccount(input.watchlists),
+    working: perAccount(input.workingOrders),
   };
+}
+
+/** An input's account-keyed block without its `$comment`. */
+const perAccount = (block = {}) =>
+  Object.fromEntries(Object.entries(block).filter(([id]) => !id.startsWith("$")));
+
+/** The world's quoted underlyings: the market input, with spot and previous close taken from a
+ *  held share position's mark where one exists (an option's marks derive from these). */
+function quotedSymbols(input) {
+  const symbols = { ...(input.market?.symbols ?? {}) };
+  for (const p of input.participants) {
+    for (const pos of p.positions) {
+      if (symbols[pos.symbol] && !isOption(pos.symbol)) {
+        symbols[pos.symbol] = { spot: pos.mark, prevClose: pos.lastday, ...symbols[pos.symbol] };
+      }
+    }
+  }
+  return symbols;
 }

@@ -7,7 +7,15 @@ export interface ChainRow {
   ask: number;
   delta: number;
   quotedAt: string;
+  closePrice: number;
+  quoteSource: "indicative";
 }
+
+/** A held contract's mark and yesterday's close, both the house model's; undefined if unquoted. */
+export function modelMarks(
+  symbols: Record<string, { spot: number; prevClose: number; iv: number }>,
+  occ: string,
+): { mark: number; lastday: number } | undefined;
 
 export function marketClient(market: {
   expirations: string[];
