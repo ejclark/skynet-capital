@@ -180,6 +180,209 @@
           "judge": "does the reader know which Playbooks this is?"
         }
       ]
+    },
+    {
+      "id": "j5",
+      "name": "a fix, from the screen where it bites (cross-feature, #8005)",
+      "viewports": ["phone"],
+      "steps": [
+        {
+          "id": "s1",
+          "goto": "/app/trade?desk=human-eric&symbol=EEM",
+          "sees": "EEM on Trade, Moneypenny's dock under it; 'File feedback' asks what is wrong",
+          "ears": "WHEN a member asks to file a fix from the screen where it bites, Moneypenny shall ask what is wrong, on that screen.",
+          "expect": [
+            { "role": "heading", "name": "Trade" },
+            {
+              "role": "button",
+              "name": "File feedback",
+              "within": "aside[aria-label='Moneypenny']"
+            }
+          ],
+          "act": {
+            "click": {
+              "role": "button",
+              "name": "File feedback",
+              "within": "aside[aria-label='Moneypenny']"
+            }
+          },
+          "after": [{ "text": "happy to file it", "within": "aside[aria-label='Moneypenny']" }],
+          "judge": "does this reader know how to report it?"
+        },
+        {
+          "id": "s2",
+          "goto": "/app/trade?desk=human-eric&symbol=EEM",
+          "sees": "the note and the answer to her one question, then the filing goes at once: no draft to read, no Submit",
+          "ears": "WHEN Moneypenny has what she needs to file a fix, the app shall show the draft with Submit and Never mind before anything files.",
+          "expect": [
+            {
+              "role": "button",
+              "name": "File feedback",
+              "within": "aside[aria-label='Moneypenny']"
+            }
+          ],
+          "act": [
+            {
+              "click": {
+                "role": "button",
+                "name": "File feedback",
+                "within": "aside[aria-label='Moneypenny']"
+              }
+            },
+            { "await": { "text": "happy to file it", "within": "aside[aria-label='Moneypenny']" } },
+            {
+              "fill": { "role": "textbox", "name": "Message Moneypenny" },
+              "value": "The chart pane goes blank when I switch back from Guidance"
+            },
+            { "press": { "role": "textbox", "name": "Message Moneypenny" }, "key": "Enter" },
+            {
+              "await": {
+                "text": "where in the app does this bite you",
+                "within": "aside[aria-label='Moneypenny']"
+              }
+            },
+            {
+              "fill": { "role": "textbox", "name": "Message Moneypenny" },
+              "value": "Here on the ticket, on my phone. A good outcome: the chart stays drawn."
+            },
+            { "press": { "role": "textbox", "name": "Message Moneypenny" }, "key": "Enter" }
+          ],
+          "after": [
+            {
+              "role": "button",
+              "name": "Submit",
+              "exact": true,
+              "within": "aside[aria-label='Moneypenny']"
+            },
+            { "role": "button", "name": "Never mind", "within": "aside[aria-label='Moneypenny']" }
+          ],
+          "known_gap": "with no model call the filing skips its draft: the scripted path files the member's words the moment they answer her one question, with no card to read and no Submit, while the live path parks a draft and waits for the member's own Submit",
+          "where": "app/src/live/moneypenny-filing.ts:187",
+          "severity": "medium",
+          "fix": "S",
+          "judge": "does this reader know what will be filed?"
+        },
+        {
+          "id": "s3",
+          "goto": "/app/trade?desk=human-eric&symbol=EEM",
+          "sees": "she asks 'where in the app does this bite you' on the screen that knows: Trade, EEM, Eric's account",
+          "ears": "WHEN a member files from a screen, the draft shall carry the screen and the symbol on it, so the member never retypes where it bites.",
+          "expect": [
+            {
+              "role": "button",
+              "name": "File feedback",
+              "within": "aside[aria-label='Moneypenny']"
+            }
+          ],
+          "act": [
+            {
+              "click": {
+                "role": "button",
+                "name": "File feedback",
+                "within": "aside[aria-label='Moneypenny']"
+              }
+            },
+            { "await": { "text": "happy to file it", "within": "aside[aria-label='Moneypenny']" } },
+            {
+              "fill": { "role": "textbox", "name": "Message Moneypenny" },
+              "value": "The chart pane goes blank when I switch back from Guidance"
+            },
+            { "press": { "role": "textbox", "name": "Message Moneypenny" }, "key": "Enter" },
+            {
+              "await": {
+                "text": "where in the app does this bite you",
+                "within": "aside[aria-label='Moneypenny']"
+              }
+            },
+            {
+              "fill": { "role": "textbox", "name": "Message Moneypenny" },
+              "value": "Here on the ticket, on my phone. A good outcome: the chart stays drawn."
+            },
+            { "press": { "role": "textbox", "name": "Message Moneypenny" }, "key": "Enter" }
+          ],
+          "after": [{ "text": "EEM", "within": "aside[aria-label='Moneypenny']" }],
+          "known_gap": "a filing drops the page it was filed from: the draft carries only the member's words and the request no route, account or symbol (only the landing page publishes its keys, app/src/live/page-keys.ts; docs/IA.md §5.6, MISSING 31), so she asks where it bites on the very screen that knows",
+          "where": "src/server/feedback-api-routes.ts:102",
+          "severity": "medium",
+          "fix": "M",
+          "judge": "does this reader have to explain where they are?"
+        },
+        {
+          "id": "s4",
+          "goto": "/app/trade?desk=human-eric&symbol=EEM",
+          "sees": "Submit on the draft; she says it is filed and links where its status shows",
+          "ears": "WHEN a member submits a drafted fix, Moneypenny shall say it is filed and link where its status shows.",
+          "expect": [
+            {
+              "role": "button",
+              "name": "File feedback",
+              "within": "aside[aria-label='Moneypenny']"
+            }
+          ],
+          "act": [
+            {
+              "click": {
+                "role": "button",
+                "name": "File feedback",
+                "within": "aside[aria-label='Moneypenny']"
+              }
+            },
+            { "await": { "text": "happy to file it", "within": "aside[aria-label='Moneypenny']" } },
+            {
+              "fill": { "role": "textbox", "name": "Message Moneypenny" },
+              "value": "The chart pane goes blank when I switch back from Guidance"
+            },
+            { "press": { "role": "textbox", "name": "Message Moneypenny" }, "key": "Enter" },
+            {
+              "await": {
+                "text": "where in the app does this bite you",
+                "within": "aside[aria-label='Moneypenny']"
+              }
+            },
+            {
+              "fill": { "role": "textbox", "name": "Message Moneypenny" },
+              "value": "Here on the ticket, on my phone. A good outcome: the chart stays drawn."
+            },
+            { "press": { "role": "textbox", "name": "Message Moneypenny" }, "key": "Enter" },
+            {
+              "await": {
+                "role": "button",
+                "name": "Submit",
+                "exact": true,
+                "within": "aside[aria-label='Moneypenny']"
+              }
+            },
+            {
+              "click": {
+                "role": "button",
+                "name": "Submit",
+                "exact": true,
+                "within": "aside[aria-label='Moneypenny']"
+              }
+            }
+          ],
+          "after": [
+            { "text": "filed as issue", "within": "aside[aria-label='Moneypenny']" },
+            { "role": "link", "name": "Feedback", "within": "aside[aria-label='Moneypenny']" }
+          ],
+          "known_gap": "where filing works, the desk's line after it says 'Profile → Feedback shows where it stands' in words, never a link (OPS_LINE); and this world files nothing: the offline boot sets no feedback token by design (scripts/crawl/server.mjs: a filing would open a real issue), so a sent fix never comes back with its number here",
+          "where": "app/src/live/moneypenny-script.ts:191",
+          "severity": "low",
+          "fix": "M",
+          "judge": "can this reader find out what happens to it?"
+        },
+        {
+          "id": "s5",
+          "goto": "/app/accounts?section=feedback",
+          "sees": "Profile → Feedback: the member's filings with where each stands, and 'Talk to Moneypenny' back to the conversation that files them",
+          "ears": "WHEN a member opens their filings, the app shall show where each filing stands and a way back to the conversation that files them.",
+          "expect": [
+            { "role": "heading", "name": "Your feedback" },
+            { "role": "button", "name": "Talk to Moneypenny", "within": "main" }
+          ],
+          "judge": "can this reader tell where their filing stands?"
+        }
+      ]
     }
   ]
 }

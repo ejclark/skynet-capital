@@ -54,6 +54,14 @@ assumptions never. They skip the chart. They trust a prefilled ticket and distru
   (`app/src/shell/playbooks-chapter.tsx`) and R&D's subscribe-able store
   (`app/src/shell/playbooks-section.tsx`).
 
+**Found by the cross-feature journeys (#8005 slice 3, 2026-11-23)** — each pinned as a `known_gap`
+on its step; the line flips to fixed with the fix.
+
+- **Open — j5 s2** (medium): with no model, a filing goes without a draft to read or a Submit.
+- **Open — j5 s3** (medium): a filing drops the screen and symbol it came from, so she asks where it
+  bites.
+- **Open — j5 s4** (low): after filing, "Profile → Feedback" is named in words, never linked.
+
 ## 6. Journeys
 
 ### j1 — sell a covered call on a position I hold
@@ -118,6 +126,48 @@ assumptions never. They skip the chart. They trust a prefilled ticket and distru
 2. `/app/research?section=playbooks` — the store, "Subscribe as" in the rail. **WHEN the member
    opens R&D → Playbooks, the app shall show the store with a subscribe-as account picker.** Judge:
    does the reader know which Playbooks this is?
+
+### j5 — a fix, from the screen where it bites (cross-feature, #8005)
+
+_Phone. Crosses Trade → Moneypenny's chat (note, draft, Submit) → Profile → Feedback._
+
+1. `/app/trade?desk=human-eric&symbol=EEM` — EEM on Trade, Moneypenny's dock under it; 'File
+   feedback' asks what is wrong. They tap "File feedback". **WHEN a member asks to file a fix from
+   the screen where it bites, Moneypenny shall ask what is wrong, on that screen.** Judge: does this
+   reader know how to report it?
+2. `/app/trade?desk=human-eric&symbol=EEM` — the note and the answer to her one question, then the
+   filing goes at once: no draft to read, no Submit. They tap "File feedback", then type "The chart
+   pane goes blank when I switch back from Guidance", then send, then type "Here on the ticket, on
+   my phone. A good outcome: the chart stays drawn.", then send. **WHEN Moneypenny has what she
+   needs to file a fix, the app shall show the draft with Submit and Never mind before anything
+   files.** _Known gap (medium, fix S, `app/src/live/moneypenny-filing.ts:187`) — with no model call
+   the filing skips its draft: the scripted path files the member's words the moment they answer her
+   one question, with no card to read and no Submit, while the live path parks a draft and waits for
+   the member's own Submit._ Judge: does this reader know what will be filed?
+3. `/app/trade?desk=human-eric&symbol=EEM` — she asks 'where in the app does this bite you' on the
+   screen that knows: Trade, EEM, Eric's account. They tap "File feedback", then type "The chart
+   pane goes blank when I switch back from Guidance", then send, then type "Here on the ticket, on
+   my phone. A good outcome: the chart stays drawn.", then send. **WHEN a member files from a
+   screen, the draft shall carry the screen and the symbol on it, so the member never retypes where
+   it bites.** _Known gap (medium, fix M, `src/server/feedback-api-routes.ts:102`) — a filing drops
+   the page it was filed from: the draft carries only the member's words and the request no route,
+   account or symbol (only the landing page publishes its keys, app/src/live/page-keys.ts;
+   docs/IA.md §5.6, MISSING 31), so she asks where it bites on the very screen that knows._ Judge:
+   does this reader have to explain where they are?
+4. `/app/trade?desk=human-eric&symbol=EEM` — Submit on the draft; she says it is filed and links
+   where its status shows. They tap "File feedback", then type "The chart pane goes blank when I
+   switch back from Guidance", then send, then type "Here on the ticket, on my phone. A good
+   outcome: the chart stays drawn.", then send, then tap "Submit". **WHEN a member submits a drafted
+   fix, Moneypenny shall say it is filed and link where its status shows.** _Known gap (low, fix M,
+   `app/src/live/moneypenny-script.ts:191`) — where filing works, the desk's line after it says
+   'Profile → Feedback shows where it stands' in words, never a link (OPS_LINE); and this world
+   files nothing: the offline boot sets no feedback token by design (scripts/crawl/server.mjs: a
+   filing would open a real issue), so a sent fix never comes back with its number here._ Judge: can
+   this reader find out what happens to it?
+5. `/app/accounts?section=feedback` — Profile → Feedback: the member's filings with where each
+   stands, and 'Talk to Moneypenny' back to the conversation that files them. **WHEN a member opens
+   their filings, the app shall show where each filing stands and a way back to the conversation
+   that files them.** Judge: can this reader tell where their filing stands?
 
 Journey map: [`maps.md`](maps.md#returning-trader). Findings: [`friction-ledger.md`](friction-ledger.md).
 
