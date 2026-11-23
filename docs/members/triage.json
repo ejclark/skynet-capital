@@ -181,6 +181,7 @@
   {
     "screen": "/research ?section=coverage",
     "verdict": "keep",
+    "home": "rd",
     "mustBeSeenBy": "anyone signed in (holdings and sector-fund numbers need an owned, linked account)"
   },
   {
@@ -224,6 +225,7 @@
   {
     "screen": "/trade ?section=watchlist",
     "verdict": "keep",
+    "home": "workbench",
     "target": "an auxiliary entry into the bench, never its home (#3407's IA decision) — the names a member keeps an eye on, their prices streaming over one connection, and one tap from any row onto the bench; it never docks on its own, because a bench is several tools for ONE symbol and this is what you pick that symbol with",
     "mustBeSeenBy": "member with an account"
   },
@@ -255,6 +257,7 @@
   {
     "screen": "/settings ?section=target",
     "verdict": "keep",
+    "home": "me",
     "mustBeSeenBy": "member (their own target split, keyed to their sign-in; #4607)"
   },
   {
@@ -310,7 +313,7 @@
     "mustBeSeenBy": "member, on every route, while the companion is enabled (#7487 slice 2)"
   },
   {
-    "screen": "shell tower column (the 3D tower beside the stage)",
+    "screen": "shell tower column (the 3D tower beside the stage; /tower is its frame)",
     "verdict": "keep",
     "home": "shell",
     "mustBeSeenBy": "member at desktop width, on every route but Settings (docs/IA.md §8.1; #7487 slice 4a)"
@@ -323,16 +326,9 @@
   },
   {
     "screen": "server /welcome",
-    "verdict": "undecided",
+    "verdict": "keep",
     "home": "pre-auth",
-    "target": "public page the invite email links to; its /learn and /feedback links reach the new sections in one hop",
-    "mustBeSeenBy": "no account / invitee (public)"
-  },
-  {
-    "screen": "server /tower",
-    "verdict": "undecided",
-    "mustBeSeenBy": "anyone (public 3D scene)",
-    "target": "nobody needs this — no page links it; members see the scene only framed inside app pages (the shell's crest, Sauron's card); standalone it is a deploy-eyeball page: off the member list, or retire?"
+    "mustBeSeenBy": "invitee before sign-in: the invite email's link, whose /learn and /feedback links reach the Profile sections in one hop (docs/IA.md §8.3)"
   },
   {
     "screen": "server /research/<slug>",
@@ -342,8 +338,8 @@
   },
   {
     "screen": "server /feedback/preview",
-    "verdict": "undecided",
-    "target": "no caller in app/src; candidate for removal (/feedback/coach is in use and stays)"
+    "verdict": "retire",
+    "target": "not a screen: the feedback form's markdown-preview JSON endpoint, no caller in app/src since the classic form retired; removing it is /bury's (docs/IA.md §8.3)"
   },
   {
     "screen": "server / and /index.html",
@@ -407,8 +403,8 @@
   },
   {
     "screen": "unknown URL",
-    "verdict": "undecided",
+    "verdict": "keep",
     "home": "shell",
-    "target": "/app/*: router's default Not Found; other paths: plain-text 404"
+    "mustBeSeenBy": "anyone who follows a dead link: /app/* gets the router's Not Found, other paths a plain-text 404 (docs/IA.md §5.8, §8.3)"
   }
 ]

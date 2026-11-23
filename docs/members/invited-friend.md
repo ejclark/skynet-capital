@@ -183,7 +183,7 @@ desk. The Leaderboard left the tab bar in #7487, so "where did it go" is now a r
 4. `/app/` — she is asked where to see what Sauron traded; a bot's desk is not a place she may link.
    They type "where can I see what Sauron traded?", then send. **WHEN a member asks Moneypenny where
    a bot's trades are, the app shall answer with that bot's desk as a link.** _Known gap (medium,
-   fix S, `src/companion/places.ts:29`) — a bot's desk has no address she may link: /u/<id> is not
+   fix S, `src/companion/places.ts:32`) — a bot's desk has no address she may link: /u/<id> is not
    on the chat's place list, so neither her live answer nor a scripted one can send a member to
    Sauron's trades; this step stays red after s3's routing lands, until the list holds desks._
    Judge: can this reader get to the bot's trades from here?

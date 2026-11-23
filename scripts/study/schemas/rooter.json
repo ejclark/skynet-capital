@@ -1,0 +1,32 @@
+{
+  "title": "Rooter — the IA root each structural problem grows from",
+  "description": "docs/members/study/roles/rooter.md (an aware role, after grading). The answers become roots.json, which readout.mjs groups by (ia-roots.mjs).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["placings"],
+  "properties": {
+    "placings": {
+      "type": "array",
+      "description": "One entry for every finding you were given, none skipped.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["finding", "root", "why"],
+        "properties": {
+          "finding": {
+            "type": "string",
+            "description": "The finding's id, exactly as given (F-…)."
+          },
+          "root": {
+            "type": "string",
+            "description": "A ledger row's id (U1, U2 …) when the problem grows from that row's root; otherwise \"new: \" and the root in a few plain words, reusing a new root's name word for word when it is the same root."
+          },
+          "why": {
+            "type": "string",
+            "description": "One short line: what the problem and the root share."
+          }
+        }
+      }
+    }
+  }
+}

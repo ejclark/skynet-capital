@@ -21,18 +21,29 @@ import { CALENDAR_ANCHOR, landingRow } from "../domain/edition-keys.js";
 export interface Place {
   /** The route, without the `/app` basepath — what the router navigates by. */
   readonly path: string;
-  /** The name she uses for it, and what's there — the prompt's list is built from these. */
+  /** The name she uses for it, and what's there — the prompt's list is built from these. A place
+   *  the top bar has a tab for takes the tab's own word, so a member never meets one place under
+   *  two names (#8005 slice 1: the cohesion census found "the landing page" beside the "Campaign"
+   *  tab and "Research" beside "R&D"; docs/IA.md §8.3). */
   readonly name: string;
   readonly what: string;
 }
 
 export const PLACES: readonly Place[] = [
-  { path: "/", name: "the landing page", what: "the day's market news and its calendar" },
+  {
+    path: "/",
+    name: "Campaign",
+    what: "the landing page: the day's market news, the calendar, quests and the party",
+  },
   { path: "/trade", name: "Trade", what: "the ticket" },
   { path: "/leaderboard", name: "Leaderboard", what: "the standings, bots and humans" },
   { path: "/accounts", name: "Profile", what: "the member's own page" },
   { path: "/activity", name: "Activity", what: "the Wire — every fill, as it lands" },
-  { path: "/research", name: "Research", what: "the research desk" },
+  {
+    path: "/research",
+    name: "R&D",
+    what: "the research desk: the calendar, the calls, the playbooks",
+  },
   { path: "/saved-positions", name: "Saved positions", what: "ideas the member parked" },
   { path: "/settings", name: "Settings", what: "preferences, key rotation, sign-out" },
   { path: "/onboarding", name: "the onboarding page", what: "the setup steps, on Profile" },

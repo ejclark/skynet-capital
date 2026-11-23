@@ -199,6 +199,14 @@ node scripts/study/readout.mjs --grade <round>/grade.json --round <round dir> --
   [--job-map <framer output>] [--reveal --sealed <key dir>]   # → docs/members/study/<name>/readout.md
 ```
 
+- **By IA root (#8005).** After grading, `node scripts/study/root.mjs --round <dir> [--ia
+  docs/IA.md]` asks a sealed rooter (`roles/rooter.md`, aware, never scoring) to place each counted
+  structural group under a row of `docs/IA.md` §10 (`U1`…) or a new root it names in plain words,
+  and writes `<round>/roots.json`. The readout then shows ROOTS, not rows: the top ten ranked by
+  their worst problem, then reports, then members reached, each with its problems under it and its
+  lead problem's frames; the rest folded; anything unplaced under "not yet placed", never hidden
+  (`ia-roots.mjs`, specced in `tests/scripts/study-readout-roots.spec.ts`). Without `roots.json`
+  the page is the flat top-ten list.
 - **The matchers** run from `node scripts/study/match.mjs --sealed <key dir> --round <dir>
   [--expect <file>]` (#5218) over `findings-unlabelled.jsonl`, in chunks of 40: matcher 1 and
   matcher 2 apart, then one tie-break over the findings they disagree on. Each is a sealed call on
@@ -227,7 +235,7 @@ node scripts/study/readout.mjs --grade <round>/grade.json --round <round dir> --
   - Written after it by the aware roles: `matches-1.json` + `matches-2.json` (+ `tiebreak.json`),
     `checks.json` (real · false · world-artifact, with `same_as` to merge one problem reported
     twice), `struck.json` (read when `--struck` is not given), `touches.json` (which key surfaces
-    any trace reached).
+    any trace reached), `roots.json` (each counted structural group's IA root, root.mjs).
   - A control round is a round directory too (`round.mjs --frozen-from`, below), plus the matcher
     files and `control.json` `{kind, source, frozen, pin, sourcePin, expect: [ids]}`. The grader
     holds it to the flag it is passed under (`--negative` takes only a negative control), to
