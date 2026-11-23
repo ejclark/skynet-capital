@@ -388,6 +388,20 @@ describe("the communication row", () => {
     expect(row.notes.join(" ")).toMatch(/undercount/);
   });
 
+  it("names the sessions the share is of, and whether the baseline is comparable (#6702)", () => {
+    const row = flowJob({
+      verdict: "read",
+      typed: 40,
+      managing: 10,
+      share: 25,
+      read: { laptop: 0, cloud: 2, sessions: "cloud" },
+      baseline: { verdict: "unknown", line: "2 of the 2 sessions read ran in the cloud" },
+    });
+    const notes = row.notes.join(" ");
+    expect(notes).toContain("sessions read: cloud (0 laptop, 2 cloud)");
+    expect(notes).toContain("against the baseline: unknown");
+  });
+
   it("reads unknown when the flow meter does", () => {
     const row = flowJob({
       verdict: "unknown",

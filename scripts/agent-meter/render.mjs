@@ -1,5 +1,6 @@
 // The meter's text form. One line per number, each saying what it leaves out (#6470).
 import { formatDuration, formatStage } from "./failure-to-fix.mjs";
+import { BASELINE } from "./flow.mjs";
 
 export const k = (n) =>
   n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(1)}k` : String(n);
@@ -207,7 +208,7 @@ export function flowSection(f) {
   // Whatever it is handed: with no typed message there is nothing to state a share of.
   if (!f.typed) return [...lines, "  unknown: no typed message was read in this window"];
   lines.push(
-    `  ${f.managing} of ${f.typed} typed messages (${f.share}%), over ${f.sessions} session(s)`,
+    `  ${f.managing} of ${f.typed} typed messages (${f.share}%), over ${sessionsLine(f)}`,
     `  ${counts(f.byKind)}`,
     `  the same status question repeated in a session: ${f.repeatedStatus}`,
   );
@@ -216,7 +217,20 @@ export function flowSection(f) {
   lines.push(
     `  hand read ${hand.date}: ${hand.managing} of ${hand.typed} (${Math.round((hand.managing / hand.typed) * 100)}%). These rules undercount: on those same messages they caught ${hand.rulesCaught} of ${hand.typed}, so compare a reading with an earlier reading, never with the hand read`,
   );
+  if (f.baseline) {
+    const b = BASELINE;
+    lines.push(
+      `  against the ${b.date} baseline (${b.managing} of ${b.typed}, ${Math.round((b.managing / b.typed) * 100)}%): ${f.baseline.verdict}, ${f.baseline.line}`,
+    );
+  }
   return lines;
+}
+
+/** How many sessions, and where they ran: the population a share is of (#6702). */
+function sessionsLine(f) {
+  const n = `${f.sessions} session${f.sessions === 1 ? "" : "s"}`;
+  if (!f.read) return n;
+  return `${n} (${f.read.sessions}: ${f.read.laptop} laptop, ${f.read.cloud} cloud)`;
 }
 
 /** `--flow` alone: this section, with no REST read. */
