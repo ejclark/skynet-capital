@@ -18,6 +18,13 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **Reword `.claude/skills/steer/SKILL.md`'s "The bar says whether Claude is listening" bullet to
+  name `ackFor` beside `ackAt` and quote today's bar text ("✓ Received — Claude is reading your
+  answers back…").** It describes the page, not a stamp, so #6734's writer check passes it, but it
+  still teaches the old ackAt-only shape and the old wording. The feedback lane's harness refused the
+  write under `.claude/` twice (#7724, #6734) — needs an interactive session.
+  _(src: Claude · while: #6734 feedback build)_
+
 - **Count how many suggested tickets get placed, then decide the ticket's *Suggested* section.**
   #7547 shipped Moneypenny's three sized options for all four strategies; its falsifier (by
   2026-12-13, under 1 in 10 suggested tickets placed → revisit the tier thresholds before more
