@@ -71,6 +71,10 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"Microsoft Ignite week carries no MSFT alpha: MSFT minus QQQ stays at or below 0.0pp from the 2026-11-13 to the 2026-11-20 close, the post-print lag holds (FT-msft-ignite-2026-11-17-1)"** — added 2026-11-23 from the
+  [msft-ignite-2026-11-17 close-out](events/msft-ignite-2026-11-17.md). MSFT **−7.33%** vs QQQ **−10.51%**, **+3.17pp**, past the +2.0pp kill bar, in a week the Nasdaq-wide AI selloff took VIX from 19.30 to 35.89.
+  Do not re-propose a conference-week lag off three Ignite weeks plus a drift cell; the 2026 margin was a single rout day (11/20: +2.99pp) and reads as lower beta, not a conference effect.
+
 - **"A loaded exclusive back half makes the November UMich final revise by 1.0 point or more: the prices-not-ballot revision call (FT-umich-sentiment-final-2026-11-20-2)"** — added 2026-11-21 from the
   [umich-sentiment-final-2026-11-20 close-out](events/umich-sentiment-final-2026-11-20.md). The 11-06 prelim printed **51.0** and the publisher's final **51.5**: |Δ| = **0.5**, through a window holding the midterms, a hot CPI and a collapsing pump price. Year-ahead inflation expectations fell **4.3% to 3.7%** in the same window.
   Do not call a bigger revision off a count of dated events inside a collection window; five of seven 2026 finals revised inside ±1.0, and the two that did not (March, October) were shocks, not event counts.
