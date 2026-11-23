@@ -6,6 +6,8 @@ export interface EdgarCompany {
 }
 
 export function loadInput(name: string): Record<string, unknown>;
+export function shiftDay(date: string, days: number): string;
+export function shiftCalendar<T>(value: T, days: number): T;
 export function edgarAnswer(input: {
   edgar?: Record<string, EdgarCompany>;
 }): (url: string) => unknown;
