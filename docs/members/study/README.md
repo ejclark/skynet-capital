@@ -423,7 +423,12 @@ node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answe
 ## Starting a new area — checklist
 
 1. Write the area's answer key (the owner's or members' own complaints), seal it outside the repo,
-   and post its hash and the pin on the owning issue. Every scored item gets its own id **at sealing**
+   and post its hash and the pin on the owning issue. Between cloud sessions the key travels as a
+   private artifact on the owner's account (#8005): `node scripts/study/seal.mjs pack --key <dir>
+   --name <study> --out <page.html>` prints the bundle hash to post; publish the page with the
+   Artifact tool; the grading session reads it back (Artifact `read`), saves it, and runs
+   `seal.mjs unpack --page <file> --expect <the posted hash> --out <dir outside any checkout>`. Only
+   the sealing and grading sessions open it; blind roles run with no tools and cannot. Every scored item gets its own id **at sealing**
    (a pointer like "the open gaps in the README" cannot be graded), and `primes.json` is written in
    the grader's shape, `{"<member>": ["<id>", …]}`. The controls' `--expect` files name the
    mechanism each fix removed (or each planted defect) beside its id, not only the item.

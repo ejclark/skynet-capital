@@ -76,6 +76,8 @@ export const submitFeedbackRequest = (input: {
   readonly area?: string;
   readonly spec?: unknown;
   readonly images?: readonly AttachedImage[];
+  /** The known problem a chat draft matched (#8005 slice 7); re-checked server-side. */
+  readonly match?: { readonly row?: string; readonly plan?: number };
 }): Promise<SubmitAnswer> =>
   postJson("/api/feedback", {
     ...input,

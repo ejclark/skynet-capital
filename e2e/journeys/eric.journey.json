@@ -229,6 +229,58 @@
           "judge": "can this reader tell who can sign in?"
         }
       ]
+    },
+    {
+      "id": "j7",
+      "name": "EEM, from the book to the ticket and back (cross-feature, #8005)",
+      "viewports": ["phone"],
+      "steps": [
+        {
+          "id": "s1",
+          "goto": "/app/accounts",
+          "sees": "the Overview's cards; EEM's opens it on Trade with the account and the symbol",
+          "ears": "WHEN the owner opens a position from his book, the app shall open Trade on that account and that symbol.",
+          "expect": [{ "role": "link", "name": "EEM", "within": ".pos-cards" }],
+          "act": { "click": { "role": "link", "name": "EEM", "within": ".pos-cards" } },
+          "after": [{ "url": "/app/trade?desk=human-eric&symbol=EEM" }],
+          "judge": "can this reader tell which position to act on?"
+        },
+        {
+          "id": "s2",
+          "goto": "/app/trade?desk=human-eric&symbol=EEM",
+          "sees": "'← Back to Eric' over the ticket: it goes to the account's Overview, not to the EEM row he came from",
+          "ears": "WHEN the owner goes back from a position's ticket, the app shall land on that position's row in his book.",
+          "expect": [{ "role": "link", "href": "/app/accounts?account=human-eric#pos-EEM" }],
+          "known_gap": "the ticket's way back drops the symbol: '← Back to <account>' links /accounts?account=<id> with no #pos-<symbol>, so the member lands on the Overview's top instead of the row they left (docs/IA.md §3 position key, #7167)",
+          "where": "app/src/routes/trade.tsx:448",
+          "severity": "medium",
+          "fix": "S",
+          "judge": "can this reader get back to where they were?"
+        },
+        {
+          "id": "s3",
+          "goto": "/app/accounts?section=events",
+          "sees": "Events on his book: the range's dates on what he holds, and 'The full board on R&D →', which opens R&D on its own default range, not his",
+          "ears": "WHEN the owner opens the full board from his book's Events, the app shall open R&D's calendar on the same range.",
+          "expect": [{ "role": "link", "href": "/app/research?q=", "within": "main" }],
+          "known_gap": "Events' way to R&D drops the range: the foot links /research with no on: or lens: token, so R&D opens on its own week and the member re-picks the dates they were reading (R&D's date carrier is ?q=, docs/IA.md §3; #7167)",
+          "where": "app/src/shell/events-section.tsx:163",
+          "severity": "medium",
+          "fix": "S",
+          "judge": "does this reader land on the same days?"
+        },
+        {
+          "id": "s4",
+          "goto": "/app/research",
+          "sees": "R&D: the calendar's range in one chip, and the board under it",
+          "ears": "WHEN the owner opens R&D, the app shall show the calendar's range and the board's calls in it.",
+          "expect": [
+            { "role": "heading", "name": "R&D" },
+            { "role": "button", "name": "Market calendar:" }
+          ],
+          "judge": "can this reader tell which events matter to their book?"
+        }
+      ]
     }
   ]
 }

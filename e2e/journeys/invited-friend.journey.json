@@ -190,6 +190,164 @@
           "judge": "can this reader tell what their bot believes right now?"
         }
       ]
+    },
+    {
+      "id": "j5",
+      "name": "where the standings went (cross-feature, #8005)",
+      "viewports": ["phone"],
+      "steps": [
+        {
+          "id": "s1",
+          "goto": "/app/",
+          "sees": "the landing page's rows at a glance; 'The party' opens the members together against The Tower",
+          "ears": "WHEN a member opens the Party row on the landing page, the app shall show the party's members and what they booked.",
+          "expect": [{ "role": "button", "name": "The party" }],
+          "act": { "click": { "role": "button", "name": "The party" } },
+          "after": [{ "url": "/app/?w=party" }, { "role": "heading", "name": "The party" }],
+          "judge": "can this reader tell how the party is doing?"
+        },
+        {
+          "id": "s2",
+          "goto": "/app/?w=party",
+          "sees": "Eric, Friend and The Tower by name with what each booked, and none of them a way in: no desk, no league",
+          "ears": "WHEN a member reads the Party window, the app shall link each member to their desk and the party to the league's full standing.",
+          "expect": [
+            { "role": "heading", "name": "The party" },
+            { "role": "link", "name": "Eric", "href": "/app/u/human-eric", "within": "main" },
+            { "role": "link", "href": "/app/leaderboard", "within": "main" }
+          ],
+          "known_gap": "the Party window lists each member and The Tower by name and links none of them (PartyWindow's rows carry no link), though it reads the same /api/board rows the Leaderboard ranks; with the Leaderboard off the tab bar (#7487) the party is a dead end on the way to the standings",
+          "where": "app/src/shell/mission-windows.tsx:191",
+          "severity": "medium",
+          "fix": "S",
+          "judge": "can this reader get from the party to a member's book?"
+        },
+        {
+          "id": "s3",
+          "goto": "/app/",
+          "sees": "she is asked 'where is the leaderboard?' (it left the tab bar) and answers with the general nudge, no link",
+          "ears": "WHEN a member asks Moneypenny where a place is, the app shall answer with that place as a link, with or without a model call.",
+          "expect": [{ "role": "textbox", "name": "Message Moneypenny" }],
+          "act": [
+            {
+              "fill": { "role": "textbox", "name": "Message Moneypenny" },
+              "value": "where is the leaderboard?"
+            },
+            { "press": { "role": "textbox", "name": "Message Moneypenny" }, "key": "Enter" }
+          ],
+          "after": [
+            {
+              "role": "link",
+              "href": "/app/leaderboard",
+              "within": "aside[aria-label='Moneypenny']"
+            }
+          ],
+          "known_gap": "'Ask, or say where to go' routes a place only through a model call: the scripted path has no branch for a place name, so with the chat's model off or throttled 'where is the leaderboard?' gets the general nudge, though places.ts already holds the Leaderboard's address",
+          "where": "app/src/live/moneypenny-script.ts:146",
+          "severity": "medium",
+          "fix": "S",
+          "judge": "can this reader get to the standings from here?"
+        },
+        {
+          "id": "s4",
+          "goto": "/app/",
+          "sees": "she is asked where to see what Sauron traded; a bot's desk is not a place she may link",
+          "ears": "WHEN a member asks Moneypenny where a bot's trades are, the app shall answer with that bot's desk as a link.",
+          "expect": [{ "role": "textbox", "name": "Message Moneypenny" }],
+          "act": [
+            {
+              "fill": { "role": "textbox", "name": "Message Moneypenny" },
+              "value": "where can I see what Sauron traded?"
+            },
+            { "press": { "role": "textbox", "name": "Message Moneypenny" }, "key": "Enter" }
+          ],
+          "after": [
+            { "role": "link", "href": "/app/u/sauron", "within": "aside[aria-label='Moneypenny']" }
+          ],
+          "known_gap": "a bot's desk has no address she may link: /u/<id> is not on the chat's place list, so neither her live answer nor a scripted one can send a member to Sauron's trades; this step stays red after s3's routing lands, until the list holds desks",
+          "where": "src/companion/places.ts:32",
+          "severity": "medium",
+          "fix": "S",
+          "judge": "can this reader get to the bot's trades from here?"
+        },
+        {
+          "id": "s5",
+          "goto": "/app/leaderboard",
+          "sees": "the league's rows, each a way to that account's desk; Sauron's opens his",
+          "ears": "WHEN a member opens a row of the league, the app shall open that account's desk.",
+          "expect": [{ "role": "link", "name": "Sauron", "href": "/app/u/sauron" }],
+          "act": { "click": { "role": "link", "name": "Sauron" } },
+          "after": [{ "url": "/app/u/sauron" }, { "role": "heading", "name": "Sauron" }],
+          "judge": "can this reader find what the bot actually did?"
+        }
+      ]
+    },
+    {
+      "id": "j6",
+      "name": "my bot's playbooks, and the convictions on them (cross-feature, #8005)",
+      "viewports": ["phone"],
+      "steps": [
+        {
+          "id": "s1",
+          "goto": "/app/u/day-trader/playbooks",
+          "sees": "my own bot's public Playbooks page; 'Change in R&D ›' takes its account along",
+          "ears": "WHEN a member opens their own bot's playbooks to change them, the app shall open R&D's Playbooks on that bot's account.",
+          "expect": [
+            {
+              "role": "link",
+              "name": "Change in R&D",
+              "href": "/app/research?section=playbooks&account=day-trader"
+            }
+          ],
+          "act": { "click": { "role": "link", "name": "Change in R&D" } },
+          "after": [
+            { "url": "/app/research?section=playbooks&account=day-trader" },
+            { "role": "heading", "name": "Playbooks" }
+          ],
+          "judge": "can this reader tell where to change what the bot runs?"
+        },
+        {
+          "id": "s2",
+          "goto": "/app/research?section=playbooks&account=day-trader",
+          "sees": "'Your convictions' (views the member states, #5482) over cards marked '◆ conviction' (a pair that runs on its owner's reason and check day, #4469): one word, two things, one screen",
+          "ears": "WHEN a member reads R&D's Playbooks, the app shall use one word for one thing: 'conviction' names the member's stated views, never a pair's status too.",
+          "expect": [
+            { "role": "heading", "name": "Your convictions" },
+            { "text": "◆ conviction", "absent": true, "within": "main" }
+          ],
+          "known_gap": "'conviction' names two records on one screen: the member's stated views ('Your convictions', your-convictions.tsx) and a pair that runs on its owner's reason and check day ('◆ conviction' on the cards; docs/IA.md §2e and §5.4). This expect assumes the views keep the word; if #8005 slice 6's naming call gives it to the pair instead, move the absent check to the views' heading",
+          "where": "app/src/shell/playbook-evidence.tsx:54",
+          "severity": "medium",
+          "fix": "S",
+          "judge": "can this reader tell what a conviction is?"
+        },
+        {
+          "id": "s3",
+          "goto": "/app/research?section=playbooks&account=day-trader",
+          "sees": "'The Day Trader — capital under management' names the bot being changed, as plain words: no way back to its desk or its roll call",
+          "ears": "WHEN a member changes a bot's playbooks in R&D, the app shall name that bot as a way back to it.",
+          "expect": [{ "role": "link", "name": "Day Trader", "within": "main" }],
+          "known_gap": "R&D's Playbooks takes the bot's account in and gives no way back: the bot is named in bold text, not linked to its desk or its Profile roll call, so the round trip to see a change take hold is the Back button (docs/IA.md §6 joint 4)",
+          "where": "app/src/shell/playbooks-section.tsx:192",
+          "severity": "low",
+          "fix": "S",
+          "judge": "can this reader get back to the bot?"
+        },
+        {
+          "id": "s4",
+          "goto": "/app/accounts?account=day-trader&section=playbooks",
+          "sees": "the bot's roll call on Profile: what each playbook is doing, with 'Change in R&D ›' on the same account",
+          "ears": "WHEN a member opens their bot's Playbooks on Profile, the app shall show what each playbook is doing and the way to change it on the same account.",
+          "expect": [
+            {
+              "role": "link",
+              "name": "Change in R&D",
+              "href": "/app/research?section=playbooks&account=day-trader"
+            }
+          ],
+          "judge": "can this reader tell what the bot is doing?"
+        }
+      ]
     }
   ]
 }
