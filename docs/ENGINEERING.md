@@ -57,7 +57,8 @@ post-deploy.
 
 1. **Determinism is a precondition, not a tolerance setting.** Every screenshot spec calls
    `freezePage()` from `e2e/determinism.ts` before `page.goto` — seeded `Math.random`, pinned
-   clock, reduced motion. A render that does not reproduce cannot be adjudicated by a diff, by a
+   clock, reduced motion, and a bundled mono face (`e2e/fonts`) under every named family in the
+   mono stacks, so the OS's installed fonts never choose the glyphs (#8014). A render that does not reproduce cannot be adjudicated by a diff, by a
    human *or* by an AI reviewer; the tolerance is not the fix. The tell that this rule is being
    broken is a screenshot scoped small "because it's flaky", or a `maxDiffPixelRatio` that keeps
    creeping up. `/login` had both: clipping to one text element kept the corruption under a 0.02
