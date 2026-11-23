@@ -45,7 +45,7 @@ export function legFromLog(fileName: string, text: string, run: number): Leg | n
 export function summarize(
   legs: readonly Leg[],
   windows: readonly DialWindow[],
-  opts?: { unread?: ReadonlyArray<{ at: string }> },
+  opts?: { unread?: ReadonlyArray<{ at: string; day?: string }> },
 ): SpendRow[];
 export function renderTable(rows: readonly SpendRow[]): string;
 export function readLegs(opts: {
@@ -56,4 +56,4 @@ export function readLegs(opts: {
   exec?: Exec;
   unzip?: (zip: string | Buffer) => ReadonlyArray<{ name: string; text: string }>;
   now?: number;
-}): { legs: Leg[]; unread: Array<{ at: string }>; calls: number };
+}): { legs: Leg[]; unread: Array<{ at: string; day?: string }>; calls: number };

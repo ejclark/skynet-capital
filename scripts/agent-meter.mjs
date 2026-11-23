@@ -157,6 +157,10 @@ export function mergeMinutes(prs, sinceMs, untilMs = Number.POSITIVE_INFINITY) {
   return { n: minutes.length, p50: quantile(minutes, 0.5), p90: quantile(minutes, 0.9) };
 }
 
+/** What local verify prints when this machine holds no ship.sh log. It names no home path. */
+export const NO_VERIFY_LOG =
+  "unknown: no ship.sh verify log on this machine; run it where ship.sh ran";
+
 /** Counts of local verify outcomes from ship.sh's log, failures named by the step that failed. */
 export function localVerify(rows, sinceMs, untilMs = Number.POSITIVE_INFINITY) {
   const recent = rows.filter((row) => inWindow(row.at, sinceMs, untilMs));
@@ -340,7 +344,10 @@ async function measure(w, { maxRest }) {
           : { ...defectsFromIssues(issues, w.sinceMs, w.untilMs), audited },
       mainFailures: typeof pipeline === "string" ? pipeline : mainFailuresByJob(pipeline.main),
       ci: typeof pipeline === "string" ? pipeline : ciByTrigger(pipeline.all),
-      localVerify: localVerify(readJsonl(join(runsDir, "ship-verify.jsonl")), w.sinceMs, w.untilMs),
+      // No log on this machine is no reading (#6694): "0 of 0 failed" would read as nothing failed.
+      localVerify: existsSync(join(runsDir, "ship-verify.jsonl"))
+        ? localVerify(readJsonl(join(runsDir, "ship-verify.jsonl")), w.sinceMs, w.untilMs)
+        : NO_VERIFY_LOG,
       note: "pull_request CI is a floor; local verify is the other half; defects without an audit receipt read unknown, not zero",
     },
     lanes: typeof lanes === "string" ? lanes : { ...lanes, floorSec: SESSION_FLOOR_SEC },

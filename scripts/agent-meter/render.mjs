@@ -13,6 +13,12 @@ const counts = (obj) =>
 const REPEATED_HOUR_NOTE =
   "  note: the window crosses the repeated hour of 2026-11-01 (06:00 to 08:00Z); the API's times there read an hour late, so a figure near that edge can sit on either side";
 
+/** A string is no reading (no ship.sh log on this machine, #6694); 0 of 0 is a quiet window. */
+function localVerifyLine(lv) {
+  if (typeof lv === "string") return `  local verify: ${lv}`;
+  return `  local verify: ${lv.failed} of ${lv.runs} failed${lv.failed ? ` — ${counts(lv.bySteps)}` : ""}`;
+}
+
 function firstPass(fp) {
   const lines = ["", "first-pass"];
   const d = fp.defects;
@@ -36,10 +42,7 @@ function firstPass(fp) {
   else
     for (const [event, row] of Object.entries(fp.ci))
       if (event !== "push") lines.push(`  ci ${event}: ${row.failed} of ${row.runs} failed`);
-  const lv = fp.localVerify;
-  lines.push(
-    `  local verify: ${lv.failed} of ${lv.runs} failed${lv.failed ? ` — ${counts(lv.bySteps)}` : ""}`,
-  );
+  lines.push(localVerifyLine(fp.localVerify));
   lines.push(`  ${fp.note}`);
   return lines;
 }
