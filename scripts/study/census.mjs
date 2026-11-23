@@ -35,6 +35,7 @@ import {
   capControls,
   censusArgs,
   censusFindings,
+  chatReason,
   leaveReason,
   MAX_SCREENS,
   nearest,
@@ -122,9 +123,12 @@ async function operate(session, cdp, route, c, viewport, out) {
     };
   await remark(session);
   const before = await frame(session);
+  const wrote = session.worldLog?.writes?.length ?? 0;
   const record = await act(session, { kind: "tap", ...point });
   if (record.refused)
     return { ...base, ...loadBlocked, status: "refused", why: record.refused, findings: [] };
+  const asked = chatReason(session.worldLog?.writes, wrote);
+  if (asked) return { ...base, ...loadBlocked, status: "skipped", reason: asked, findings: [] };
   const { action: _a, findings, frame: after, seen: _s, ...measurements } = record;
   return {
     ...base,
