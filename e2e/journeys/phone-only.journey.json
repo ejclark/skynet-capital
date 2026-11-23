@@ -66,6 +66,76 @@
           "judge": "can this reader change the week from here?"
         }
       ]
+    },
+    {
+      "id": "j2",
+      "name": "today's quest, from the landing page to the ticket (cross-feature, #8005)",
+      "steps": [
+        {
+          "id": "s1",
+          "goto": "/app/",
+          "sees": "Where things stand, then the rows at a glance; the Quests row opens the account's quests",
+          "ears": "WHEN a member opens Quests from the landing page, the app shall show their quests, best first.",
+          "expect": [{ "role": "button", "name": "for your account, best first" }],
+          "act": { "click": { "role": "button", "name": "for your account, best first" } },
+          "after": [{ "url": "/app/?w=quests" }, { "role": "heading", "name": "Your quests" }],
+          "judge": "can this reader tell what to do next in ten seconds?"
+        },
+        {
+          "id": "s2",
+          "goto": "/app/?w=quests",
+          "sees": "'No quest for this account right now' and 'Not judged this time: today's market conditions': no quest to open, so the quest → ticket hand-off never shows",
+          "ears": "WHEN a member opens a quest, the app shall open Trade on their account with the quest's symbol and play.",
+          "expect": [
+            { "role": "link", "href": "/app/trade?desk=human-eric&symbol=", "within": "main" }
+          ],
+          "known_gap": "this world holds no quest: the frozen fixtures judge no market conditions and price no held call, so no step can walk the quest → ticket hand-off (desk, symbol, play; src/domain/quest.ts:122 withQuest); a study world needs one quest per source to render this hop",
+          "where": "scripts/crawl/frozen-fixtures.mjs:96",
+          "severity": "low",
+          "fix": "M",
+          "judge": "can this reader tell what the quest asks of them?"
+        },
+        {
+          "id": "s3",
+          "goto": "/app/?w=quests",
+          "sees": "the window's links: 'Calendar: the stories behind them' opens the edition's stories",
+          "ears": "WHEN a member asks why a quest exists, the app shall open the stories behind it.",
+          "expect": [{ "role": "button", "name": "Calendar: the stories behind them" }],
+          "act": { "click": { "role": "button", "name": "Calendar: the stories behind them" } },
+          "after": [{ "url": "/app/?w=calendar" }, { "role": "heading", "name": "The calendar" }],
+          "judge": "can this reader tell why the quest exists?"
+        },
+        {
+          "id": "s3b",
+          "goto": "/app/?w=calendar",
+          "sees": "the edition's stories, then the coming days; 'Market: the sectors' opens the whole market",
+          "ears": "WHEN a member asks what the stories moved, the app shall open the whole market from the calendar.",
+          "expect": [{ "role": "heading", "name": "The calendar" }],
+          "act": { "click": { "role": "button", "name": "Market: the sectors" } },
+          "after": [{ "url": "/app/?w=market" }, { "role": "heading", "name": "The whole market" }],
+          "judge": "can this reader tell which part of the market the story moved?"
+        },
+        {
+          "id": "s3c",
+          "goto": "/app/?w=market",
+          "sees": "the 11 sectors and the S&P 500 in one list; 'Calendar: the dates that move these' leads back to the dates",
+          "ears": "WHEN a member asks what moves the market, the app shall open the calendar's dates from the whole market.",
+          "expect": [{ "role": "heading", "name": "The whole market" }],
+          "act": { "click": { "role": "button", "name": "Calendar: the dates that move these" } },
+          "after": [{ "url": "/app/?w=calendar" }, { "role": "heading", "name": "The calendar" }],
+          "judge": "can this reader tell what is coming that moves these?"
+        },
+        {
+          "id": "s4",
+          "goto": "/app/trade?desk=human-eric&symbol=EEM&play=201",
+          "sees": "the ticket on a play; 'Trading ladder →' opens the rungs on Profile",
+          "ears": "WHEN a member asks what opens the next play from the ticket, the app shall open the trading chapter of their ladder.",
+          "expect": [{ "role": "link", "name": "Trading ladder" }],
+          "act": { "click": { "role": "link", "name": "Trading ladder" } },
+          "after": [{ "url": "/app/accounts?section=milestones&chapter=trading" }],
+          "judge": "can this reader tell what opens the next play?"
+        }
+      ]
     }
   ]
 }

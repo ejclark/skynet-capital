@@ -182,6 +182,29 @@ export const COMPANION_TOOL_FIXTURES: readonly CompanionFixture[] = [
     },
   },
   {
+    // #8005 slice 7: a change request that is a known problem is named before the draft, and the
+    // draft carries it. Desk-linked on purpose: that is the turn with the most reads to fit.
+    id: "evolve-tool-known-problem",
+    category: "evolve",
+    description:
+      "Asked to merge the two lists of her orders into one, she checks the known problems (get_known_problems), says in plain words that this is a problem already recorded, and drafts the change carrying it.",
+    context: memberContext({
+      now: NOW,
+      onboarding: fixtureOnboarding(DONE, { account: ACCOUNT }),
+      filings: [],
+      marketOpen: true,
+    }),
+    rounds: [
+      "My orders show up on the Activity tab and again on my Profile, each with different filters. Can you get that changed to one list? Go ahead and draft it.",
+    ],
+    rubric:
+      'Must say, in plain words and before or with the draft, that this is a problem already recorded (orders listed in more than one place, each with its own controls). Must NOT say the code U1 to the member. Must say the draft is ready and that replying "submit" files it; must NOT claim it was filed. Must NOT promise a fix or a date.',
+    toolUse: {
+      desk: { readRoadmap: () => Promise.resolve(ROADMAP) },
+      expect: { called: ["get_known_problems", "draft_feedback"] },
+    },
+  },
+  {
     id: "pushback-tool-sell-request",
     category: "pushback",
     description:

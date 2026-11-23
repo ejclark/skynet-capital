@@ -31,6 +31,7 @@ import { writePhoneLedger } from "./phone-ledger.mjs";
 import { linksIntoRedirects, probeDeadEnds, sameOriginLinks } from "./probes.mjs";
 import { bootServer, CRAWL_SECRET } from "./server.mjs";
 import {
+  afterMisses,
   expectHolds,
   loadJourneys,
   performAct,
@@ -83,7 +84,7 @@ async function settle(page) {
   await page.waitForTimeout(400);
 }
 
-/** One step: expects → frame → probes → contrast → act. Returns the ledger rows it produced. */
+/** One step: expects → frame → probes → contrast → act → after. Returns its ledger rows. */
 async function walkStep({
   page,
   member,
@@ -110,38 +111,6 @@ async function walkStep({
   for (const e of step.expect ?? []) {
     const r = await expectHolds(page, e);
     if (!r.ok) misses.push(r.detail);
-  }
-  if (step.known_gap && misses.length > 0) {
-    rows.push(
-      row({
-        kind: "known gap",
-        what: `known gap — ${step.known_gap}`,
-        where: step.where ?? "—",
-        severity: step.severity ?? "high",
-        fix: step.fix ?? "?",
-      }),
-    );
-  } else if (step.known_gap) {
-    tally.fixed.push([`${member.member}/${journey.id}-${step.id}`, true]);
-    rows.push(
-      row({
-        kind: "fixed?",
-        what: `fixed? — known gap passed, remove its known_gap: ${step.known_gap}`,
-        where: step.where ?? "—",
-        severity: "low",
-        fix: "S",
-      }),
-    );
-  } else if (misses.length > 0) {
-    rows.push(
-      row({
-        kind: "NEW",
-        what: `NEW — ${misses.join("; ")}`,
-        where: step.where ?? "—",
-        severity: "high",
-        fix: "?",
-      }),
-    );
   }
 
   await frame(page, dir, `${journey.id}-${step.id}-${viewport}`);
@@ -171,10 +140,53 @@ async function walkStep({
 
   if (opts.phoneAudit && viewport === "phone") await phoneAudit(page, at, step, tally.phone);
 
-  if (step.act)
-    await performAct(page, step.act).catch((err) =>
-      console.warn(`crawl: act failed on ${step.goto}: ${err.message}`),
+  // The act, then its `after` entries: a hand-off is judged where it lands (#8005 slice 3). A
+  // step with `after` counts a failed act as a miss; one without only logs it, as before.
+  if (step.act) {
+    await performAct(page, step.act).catch((err) => {
+      if (step.after) misses.push(`act ${err.message}`);
+      else console.warn(`crawl: act failed on ${step.goto}: ${err.message}`);
+    });
+  }
+  if (step.after && !misses.some((m) => m.startsWith("act "))) {
+    misses.push(...(await afterMisses(page, step)));
+  }
+
+  const verdict = [];
+  if (step.known_gap && misses.length > 0) {
+    verdict.push(
+      row({
+        kind: "known gap",
+        what: `known gap — ${step.known_gap}`,
+        where: step.where ?? "—",
+        severity: step.severity ?? "high",
+        fix: step.fix ?? "?",
+      }),
     );
+  } else if (step.known_gap) {
+    tally.fixed.push([`${member.member}/${journey.id}-${step.id}`, true]);
+    verdict.push(
+      row({
+        kind: "fixed?",
+        what: `fixed? — known gap passed, remove its known_gap: ${step.known_gap}`,
+        where: step.where ?? "—",
+        severity: "low",
+        fix: "S",
+      }),
+    );
+  } else if (misses.length > 0) {
+    verdict.push(
+      row({
+        kind: "NEW",
+        what: `NEW — ${misses.join("; ")}`,
+        where: step.where ?? "—",
+        severity: "high",
+        fix: "?",
+      }),
+    );
+  }
+
+  rows.unshift(...verdict);
   return rows;
 }
 

@@ -15,7 +15,7 @@ export type RecordedBlock =
 
 export const ROLES: string;
 export function readSchema(name: string): string;
-export function sealedArgs(opts: { rolePath: string; schema: string }): string[];
+export function sealedArgs(opts: { rolePath: string; schema: string; model?: string }): string[];
 export function imageBlock(b64: string): Block;
 export function userMessage(text: string, images?: { label?: string; b64: string }[]): UserMessage;
 export function parseResult(
@@ -44,6 +44,7 @@ export function sealedCall(args: {
   rolePath: string;
   schema: string;
   message: UserMessage;
+  model?: string;
   timeoutMs?: number;
 }): Promise<{ answer: Record<string, unknown>; usage: CallUsage | null }>;
 export function stubPick(present: number[], n: number): { n: number; repeated: boolean } | null;
@@ -56,8 +57,16 @@ export type Call = (args: {
   rolePath: string;
   schema: string;
   message: UserMessage;
+  model?: string;
   timeoutMs?: number;
+  toolNames?: string[];
   n?: number;
 }) => Promise<Record<string, unknown>>;
-export function makeCaller(opts?: { stub?: string; record?: string }): Call;
+export function makeCaller(opts?: {
+  stub?: string;
+  record?: string;
+  exec?: (
+    args: Record<string, unknown>,
+  ) => Promise<{ answer: Record<string, unknown>; usage: unknown }>;
+}): Call;
 export function halfFrame(browser: unknown, jpeg: Uint8Array): Promise<string>;

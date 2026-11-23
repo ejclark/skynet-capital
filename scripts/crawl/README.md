@@ -55,7 +55,7 @@ journey's "Arm · soon" step has a control to read (`frozen-fixtures.mjs` says w
 | frame | a JPEG ≤100KB via `scripts/shoot/lib.mjs`'s shooter, quality stepped down until it fits | `run.mjs` → `docs/shots/crawl-<date>/<member>/<journey>-<step>-<viewport>.jpg` |
 | dead ends | DOM probes: a disabled control whose reason is only in `title`/`aria-label` · a note that tells you to click/pick/connect with no control in it · a `#hash` link with no target · the same sentence three times · a house term with no gloss · a link the server answers with a 3xx | `probes.mjs` |
 | contrast | `@axe-core/playwright`, colour-contrast and control-name rules only (BRAND.md → Accessibility) | `contrast.mjs` |
-| act | the step's `act` (a click), after everything above | `steps.mjs` |
+| act · after | the step's `act` (one action or a list: click · fill · press · await), after everything above; then its `after` entries, where the hand-off landed. A pinned step that holds through `after` is a `fixed?` row (#8005 slice 3) | `steps.mjs` |
 
 Then `ledger.mjs` writes `docs/members/friction-ledger.md` (one row per finding: member ·
 journey/step · what · where `file:line` · severity · fix size · judge) and `maps.mjs` writes

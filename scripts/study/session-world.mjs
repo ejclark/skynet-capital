@@ -73,10 +73,11 @@ export async function loadWorld(name, { run, viewer, clock = DEFAULT_CLOCK } = {
 
 /**
  * Open a composed world's page: world-route's server and router over the viewer's payloads, with
- * the page clock at the run's instant. Returns the shell-shaped handle `open` drives, plus `log` —
+ * the page clock at the run's instant, and Moneypenny's chat when the session started one
+ * (`chat`, world-chat.mjs). Returns the shell-shaped handle `open` drives, plus `log` —
  * the world's own record of unstubbed reads, recorded writes and refused off-origin requests.
  */
-export async function openComposed(world, frame, out) {
+export async function openComposed(world, frame, out, chat) {
   const { openWorld } = await import("./world-route.mjs");
   const handle = await openWorld({
     answer: answerFrom(join(world.run, world.name), world.viewer),
@@ -84,6 +85,7 @@ export async function openComposed(world, frame, out) {
     frame,
     out,
     clock: world.clock ?? DEFAULT_CLOCK,
+    ...(chat ? { chat } : {}),
   });
   // signIn rides along: a census fresh load clears cookies and must land the member signed in again.
   return {

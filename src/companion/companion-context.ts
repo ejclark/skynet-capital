@@ -39,6 +39,33 @@ export interface MemberContextInput {
    *  server's owner check (`config.isOwnerEmail`); every other member's context never carries it.
    *  The titles inside are quoted project text, never instructions. */
   readonly ownerDesk?: string;
+  /** Their filings matched to a known problem whose fix has shipped (#8005 slice 7, "try it"):
+   *  the problem in the ledger's words and the screen to try it on — server-built, never client
+   *  text, beside the member's own quoted title. */
+  readonly fixed?: readonly FixedFiling[];
+}
+
+export interface FixedFiling {
+  readonly issueNumber: number;
+  readonly title: string;
+  readonly problem: string;
+  readonly tryAt?: { readonly name: string; readonly route: string };
+}
+
+/** One line per fixed filing, at most two: the member who asked hears the fix shipped, once, and
+ *  is offered the screen to try it on. Glad and brief — the fanfare goes to what went right. */
+function fixedLine(fixed: readonly FixedFiling[]): string | undefined {
+  if (fixed.length === 0) return undefined;
+  const each = fixed
+    .slice(0, 2)
+    .map(
+      (f) =>
+        `#${f.issueNumber} ${quoteTitle(f.title)} counted toward a known problem (${quoteTitle(f.problem)}), and its fix has shipped${
+          f.tryAt ? `: they can try it on ${f.tryAt.name} (${f.tryAt.route})` : ""
+        }`,
+    )
+    .join("; ");
+  return `Fixed since they asked: ${each}. If you have not said so in this conversation, open your reply by telling them gladly in one short line and offering the screen; never claim more than that the fix shipped.`;
 }
 
 const MAX_FILINGS_NAMED = 3;
@@ -113,6 +140,7 @@ export function memberContext(input: MemberContextInput): string {
     `Onboarding (M·01, ${onboarding.done} of ${onboarding.total} done) — ${steps}.`,
     `${account}${graduation}`,
     feedback,
+    ...(input.fixed ? [fixedLine(input.fixed)].filter((l): l is string => Boolean(l)) : []),
     `Market: the regular session is ${marketOpen ? "OPEN right now" : "CLOSED right now (9:30 AM–4:00 PM ET, weekdays); an order placed now is queued and fills at the open"}.`,
   ].join("\n");
 }

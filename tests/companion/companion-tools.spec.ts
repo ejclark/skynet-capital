@@ -356,12 +356,13 @@ describe("runCompanionTool — the closed allow-list (the structural half of 'ne
     expect(result).toEqual({
       ok: false,
       error:
-        "no such tool: bogus (the declared tools are get_work_status, get_roadmap, get_upcoming_events, draft_feedback, draft_research_ask)",
+        "no such tool: bogus (the declared tools are get_work_status, get_roadmap, get_upcoming_events, get_known_problems, draft_feedback, draft_research_ask)",
     });
     expect(declaredToolNames(undefined)).toEqual([
       "get_work_status",
       "get_roadmap",
       "get_upcoming_events",
+      "get_known_problems",
       "draft_feedback",
       "draft_research_ask",
     ]);

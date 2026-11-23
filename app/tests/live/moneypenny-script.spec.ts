@@ -172,6 +172,17 @@ describe("failure and draft lines", () => {
     expect(card).toContain("It breaks.");
     expect(card).toMatch(/"submit".*"never mind"/);
   });
+  it("a draft matched to a known problem says what it adds to, before the exits (#8005)", () => {
+    const card = draftCard({
+      kind: "idea",
+      title: "One list",
+      details: "d",
+      match: { words: "a known problem: One history, three homes · plan #5206" },
+    });
+    expect(card).toContain("Adds to a known problem: One history, three homes · plan #5206");
+    expect(card.indexOf("Adds to a known problem")).toBeLessThan(card.indexOf('"submit"'));
+    expect(draftCard({ kind: "idea", title: "t", details: "d" })).not.toContain("known problem");
+  });
 });
 
 describe("filing helpers", () => {
