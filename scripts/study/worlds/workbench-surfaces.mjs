@@ -29,8 +29,8 @@ const MANAGE_EXPIRY =
 /** Why a ticket's Review cannot be scored yet: a world answers every write `{ok:true}`. */
 const REVIEW_STRUCK =
   "a world answers every write with {ok:true} (routing.mjs), and the ticket's Review reads a" +
-  " `preview` from it, so the page errors — reviews need the real handler answered live (#8005" +
-  " slice 4's live-write path, `WORKBENCH_LIVE_WRITES` below)";
+  " `preview` from it, so the page errors — reviews need the real handler answered live (#8017," +
+  " `WORKBENCH_LIVE_WRITES` below)";
 
 /** The owner on a normal Thursday: his own account, his bot's, every pane of the bench. */
 const TODAY = [
@@ -233,8 +233,8 @@ const FIRST_DAY = [
 /**
  * The writes a workbench world needs answered by the real handlers, live, at the pinned instant:
  * the ticket's reviews, which change nothing and whose answer depends on what the member typed, so
- * no composed payload can stand in. The live-write path is #8005 slice 4's (the chat-in-a-world
- * module, session `i8005-s4prep`); until it can take this list, `ticket-review` stays STRUCK.
+ * no composed payload can stand in. Answering them live is #8017, one path shared with the
+ * chat-in-a-world module (#8005 slice 4); until it lands, `ticket-review` stays STRUCK.
  */
 export const WORKBENCH_LIVE_WRITES = [
   "/api/trade/review",
