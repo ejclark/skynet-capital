@@ -22,6 +22,7 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DEFAULT_CLOCK } from "./clock.mjs";
 import { answerFrom } from "./payloads.mjs";
+import { worldInstant } from "./worlds/instant.mjs";
 
 const NAME = /^[a-z0-9-]+$/;
 
@@ -47,7 +48,8 @@ function composedWorld(name, run, viewer, clock) {
   if (!viewers.includes(who)) {
     throw new Error(`world ${name} has no viewer ${who} in this run (it has: ${viewers})`);
   }
-  return { name, run: root, viewer: who, viewers, pinnedInstant: manifest.instant, clock };
+  const pinnedInstant = worldInstant(manifest, name);
+  return { name, run: root, viewer: who, viewers, pinnedInstant, clock };
 }
 
 /**

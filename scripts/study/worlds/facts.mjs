@@ -23,6 +23,7 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { clockArg, parseClock } from "../clock.mjs";
 import { dataNames, factSheet, VERDICT_WORDS_MIRROR } from "./facts-sheet.mjs";
+import { worldInstant } from "./instant.mjs";
 
 const USAGE =
   "usage: facts.mjs --run <compose dir> --world <name> [--viewer <who> …] [--clock <zone>,<locale>] --out <facts.json>";
@@ -103,7 +104,7 @@ async function main() {
     for (const n of dataNames(payloads)) names.add(n);
     return factSheet({
       viewer,
-      instant: manifest.instant,
+      instant: worldInstant(manifest, opts.world),
       payloads,
       verdictWords: fmt.words,
       clock,
@@ -115,7 +116,7 @@ async function main() {
   const sheet = {
     world: opts.world,
     run,
-    instant: manifest.instant,
+    instant: worldInstant(manifest, opts.world),
     clock,
     formatters: {
       verdictWords: fmt.from,

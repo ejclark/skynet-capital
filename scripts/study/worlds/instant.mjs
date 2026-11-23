@@ -12,9 +12,35 @@
 //
 // A Thursday mid-session: the market is open, so a live bot is judged on its pass cadence and a
 // stopped one reads as stopped rather than as "market closed".
+//
+// ONE INSTANT PER WORLD, NOT PER HARNESS (#8005): the profile worlds stand on 2026-10-08, before
+// campaigns, editions, quests and convictions shipped; a world that studies them names its own
+// instant in its input (`"instant"`, inputs.mjs). The composer and the chat child run one process
+// per world with STUDY_INSTANT set to it, so everything below — the tokens, the pinned clock —
+// reads that world's instant. A reader of a run takes it per world from the manifest
+// (`worldInstant`), never from this module.
 
-/** 2026-10-08 15:00 New York (EDT, UTC−4). */
-export const INSTANT = "2026-10-08T15:00:00-04:00";
+/** 2026-10-08 15:00 New York (EDT, UTC−4) — the profile worlds' instant, and any world's default. */
+export const DEFAULT_INSTANT = "2026-10-08T15:00:00-04:00";
+
+/** An instant a world may name: an ISO New York wall-clock time with its UTC offset. */
+const INSTANT_SHAPE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/;
+
+/** `value` if it is an instant a world may name; throws otherwise. */
+export function checkInstant(value) {
+  if (!(INSTANT_SHAPE.test(String(value)) && !Number.isNaN(Date.parse(value)))) {
+    throw new Error(
+      `instant: ${value} is not a New York time with its offset (e.g. ${DEFAULT_INSTANT})`,
+    );
+  }
+  return value;
+}
+
+/** This process's world instant: STUDY_INSTANT when a world names its own, else the default. */
+export const INSTANT = checkInstant(process.env.STUDY_INSTANT ?? DEFAULT_INSTANT);
+
+/** A composed world's instant, read from its run's manifest (one per world since #8005). */
+export const worldInstant = (manifest, world) => manifest.instants?.[world] ?? manifest.instant;
 
 const ET_OFFSET = INSTANT.slice(-6);
 const INSTANT_DAY = INSTANT.slice(0, 10);
