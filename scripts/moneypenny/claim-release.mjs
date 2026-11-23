@@ -163,7 +163,14 @@ export function gatherMergeReleases(
 ) {
   const out = [];
   for (const prNumber of mergedPrNumbers(payload)) {
-    const pr = readPr(prNumber);
+    // One unreadable number (a direct push citing an issue, a transient 5xx) costs only itself.
+    let pr;
+    try {
+      pr = readPr(prNumber);
+    } catch (err) {
+      log(`::warning::merge release — #${prNumber} unreadable: ${String(err).slice(0, 160)}`);
+      continue;
+    }
     const issue = feedbackIssueOf(pr?.head?.ref);
     if (!(issue && pr?.merged_at)) continue;
     const slug = `feedback-${issue}`;

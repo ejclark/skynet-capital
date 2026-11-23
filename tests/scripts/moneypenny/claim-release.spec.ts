@@ -84,6 +84,21 @@ describe("criterion 1 — a lane build's PR merges: its claim goes within one ti
     );
     expect(releases).toEqual([]);
   });
+
+  it("an unreadable number costs only itself, not the other merges on the push", () => {
+    const releases = gatherMergeReleases(
+      { commits: [{ message: "docs: cite an issue (#42)" }, { message: "feat: part (#8100)" }] },
+      {
+        readPr: (n) => {
+          if (n === 42) throw new Error("HTTP 404");
+          return { head: { ref: "feedback/7216" }, merged_at: "2026-11-09T05:10:00Z" };
+        },
+        readLease: () => lane("03:12"),
+        readIssueLabels: () => ["ready"],
+      },
+    );
+    expect(releases.map((r) => r.slug)).toEqual(["feedback-7216"]);
+  });
 });
 
 describe("criterion 3 — while a build of the issue runs, its claim stays (#4357)", () => {
