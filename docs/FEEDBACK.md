@@ -67,8 +67,9 @@ in code — only as a host secret, exactly like the Alpaca keys.
    of the IA ledger (`docs/IA.md` §10) it is evidence on, and a **Known problem** line naming the
    row and its plan in the ledger's own words. Ask her to file "one list for all my orders" and
    the issue carries `ia-U1`. Such a filing is evidence, not a build (#8005 slice 2): it never
-   self-readies, even curated (`triageFeedbackDecision`), the daily flip never lists it, and it is
-   never parked on the member, because the row is fixed as a whole, never one filing at a time.
+   self-readies, even curated (`triageFeedbackDecision`; a person's `bug` + `fast-track` still
+   readies it), the daily flip never lists it, and it is never parked on the member, because the
+   row is fixed as a whole, never one filing at a time.
    `npm run ia:ledger -- --evidence` counts members per row by those
    two labels into `docs/members/ia-ledger-evidence.md`; regenerate `src/domain/ia-ledger.json`
    with `npm run ia:ledger` whenever §10 changes.
