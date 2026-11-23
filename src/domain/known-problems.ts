@@ -155,3 +155,44 @@ export function evidenceByRow(
   }
   return new Map([...by].map(([row, e]) => [row, { members: e.members.size, filings: e.filings }]));
 }
+
+/** A matched filing's fix, once it has shipped: what was fixed, and the screen to try it on. */
+export interface ProblemFix {
+  readonly problem: string;
+  /** The first screen the ledger says the problem showed up on; absent for a plan-only match. */
+  readonly tryAt?: KnownProblemScreen;
+}
+
+/**
+ * The plans whose shipping fixes a match. For a row, only the overhaul plan the row says was filed
+ * for it: an owner plan closes without fixing the row (U17's owner #7034 closed as built while
+ * U17 still waited, 2026-11-23), and a plan the row does not list never got past
+ * `parseProblemMatch`. For a plan matched alone, that plan.
+ */
+export function fixPlansFor(match: ProblemMatch): readonly number[] {
+  const row = match.row ? knownProblem(match.row) : undefined;
+  if (row) return row.state === "plan filed" && row.plans.length === 1 ? row.plans : [];
+  return match.plan ? [match.plan] : [];
+}
+
+/**
+ * THE "TRY IT" TRIGGER (#8005 slice 7; #7031's "the member who asked plays it"): a matched
+ * filing's fix has shipped when its ledger row reads fixed, or when a plan `fixPlansFor` names
+ * closed as built (`planShipped`, the Feedback badge's own "shipped" reading of that issue). A
+ * closed plan that shipped only its first slice is not a fix, and neither is one closed as not
+ * planned: the caller's status mapping already reads those apart from "shipped".
+ */
+export function fixFor(
+  match: ProblemMatch | undefined,
+  planShipped: (plan: number) => boolean,
+): ProblemFix | undefined {
+  if (!match) return undefined;
+  const row = match.row ? knownProblem(match.row) : undefined;
+  const fixed = row?.state === "fixed" || fixPlansFor(match).some(planShipped);
+  if (!fixed) return undefined;
+  const tryAt = row?.screens[0];
+  return {
+    problem: row ? row.problem : `plan #${match.plan}`,
+    ...(tryAt ? { tryAt } : {}),
+  };
+}

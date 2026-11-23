@@ -11,6 +11,7 @@ import { opaqueMemberId } from "./feedback-issue.js";
 import { recordFilingSafely } from "./feedback-log.js";
 import { feedbackThrottled } from "./feedback-routes.js";
 import type { FeedbackInput } from "./feedback-service.js";
+import { knownProblemFixes } from "./known-problem-fixes.js";
 import { boundedString, parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
 
 /** Community-track milestone celebration ids, mirroring `/api/learn/claim`'s bounded shape. */
@@ -62,6 +63,9 @@ async function serveIndex(
     config.fetchFeedbackStatus && recent.length
       ? await config.fetchFeedbackStatus(recent.map((e) => e.issueNumber))
       : undefined;
+  // A filing matched to a known problem is fixed when that problem's fix ships (#8005 slice 7):
+  // the row says so here, with the screen to try it on.
+  const fixes = await knownProblemFixes(recent, config.fetchFeedbackStatus);
   // The community milestone track — same identity, same "never trust the client" posture
   // as everything else on this route: the view is derived server-side from the same log.
   const community =
@@ -93,6 +97,7 @@ async function serveIndex(
       filedAt: e.filedAt,
       url: e.url,
       ...(statuses?.get(e.issueNumber) ? { status: statuses.get(e.issueNumber) } : {}),
+      ...(fixes.get(e.issueNumber) ? { fixed: fixes.get(e.issueNumber) } : {}),
     })),
   });
 }

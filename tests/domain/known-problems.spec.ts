@@ -10,6 +10,8 @@
  */
 import {
   evidenceByRow,
+  fixFor,
+  fixPlansFor,
   KNOWN_PROBLEMS,
   knownProblem,
   matchMeta,
@@ -95,5 +97,41 @@ describe("known problems", () => {
       expect(evidence.get("U3")).toEqual({ members: 1, filings: 1 });
       expect([...evidence.keys()].sort()).toEqual(["U1", "U3"]);
     });
+  });
+});
+
+describe("known problems — try it, once the fix ships", () => {
+  const never = () => false;
+
+  it("reads a matched filing as fixed when its row's plan closed as built, with the row's first screen", () => {
+    const fix = fixFor({ row: "U3" }, (plan) => plan === 5206);
+    expect(fix?.problem).toBe("A section switch that can't hold its sections at 390");
+    expect(fix?.tryAt).toEqual(knownProblem("U3")?.screens[0]);
+    expect(fix?.tryAt?.route).not.toContain("account=");
+  });
+
+  it("reads a plan-only match as fixed once that plan ships, with no screen to offer", () => {
+    expect(fixFor({ plan: 7000 }, (plan) => plan === 7000)).toEqual({ problem: "plan #7000" });
+  });
+
+  it("is not fixed when only an owner plan of a waiting row closed", () => {
+    const owned = KNOWN_PROBLEMS.find((r) => r.state === "waiting" && r.plans.length > 0);
+    expect(owned, "a waiting row with an owner plan to test against").toBeDefined();
+    if (!owned) return;
+    expect(fixPlansFor({ row: owned.id, plan: owned.plans[0] })).toEqual([]);
+    expect(fixFor({ row: owned.id, plan: owned.plans[0] }, () => true)).toBeUndefined();
+  });
+
+  it("reads a row through the one overhaul plan filed for it", () => {
+    for (const row of KNOWN_PROBLEMS.filter((r) => r.state === "plan filed")) {
+      expect(fixPlansFor({ row: row.id })).toEqual(row.plans);
+    }
+  });
+
+  it("is not fixed while the plan is open, and nothing is fixed without a match", () => {
+    expect(fixFor({ row: "U3" }, never)).toBeUndefined();
+    const bare = KNOWN_PROBLEMS.find((r) => r.state === "waiting" && r.plans.length === 0);
+    if (bare) expect(fixFor({ row: bare.id }, () => true)).toBeUndefined();
+    expect(fixFor(undefined, () => true)).toBeUndefined();
   });
 });
