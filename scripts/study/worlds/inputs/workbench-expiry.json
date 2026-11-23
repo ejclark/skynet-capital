@@ -1,0 +1,45 @@
+{
+  "$comment": "World 'workbench-expiry' (#8005, the workbench area), layered over workbench-today: the same people on the same Thursday, a day before an expiry. Five weeks ago, with CRWV near $101, the bot's wheel sold a CRWV $80 put that expires tomorrow (the playbook's own choice from the chain below, book.mjs → wheelIntent); CRWV has since fallen to $79.20, ~12% under the cost of the shares the bot bought on Monday, so the put is in the money by about $0.80 with one session left. The put's mark and yesterday's close are the house model's (market.mjs → modelMarks), so the position and the chain quote one price. The bot's newer passes are kept, minus Tuesday's sale, which this world's bot never made. Eric's own account is workbench-today's.",
+  "base": "workbench-today",
+  "participants": {
+    "sauron": {
+      "positions": [
+        { "symbol": "NVDA", "quantity": 130, "avgPrice": 223.98, "mark": 232.1, "lastday": 230.6 },
+        { "symbol": "CRWV", "quantity": 55, "avgPrice": 90.1, "mark": 79.2, "lastday": 80.4 },
+        { "symbol": "CRWV261009P00080000", "quantity": -1, "fromWheelSale": true }
+      ]
+    }
+  },
+  "bot": {
+    "$comment": "Subscribed early enough for the sale: the wheel sells the latest expiry 30–45 days out, so tomorrow's was sold on the 31st of August.",
+    "subscribedAt": "@-40d 09:00",
+    "passesBefore": "@-2d 10:31",
+    "prependPasses": [
+      { "at": "@-20s", "verdicts": true },
+      { "at": "@0d 12:00", "verdicts": true },
+      { "at": "@0d 09:31", "verdicts": true },
+      { "at": "@-1d 15:59", "verdicts": true },
+      { "at": "@-2d 10:31", "verdicts": true },
+      {
+        "at": "@-38d 10:31",
+        "verdicts": true,
+        "wheelSale": {
+          "playbookId": "CRWV-WHEEL",
+          "mode": "aggressive",
+          "orderId": "sauron-crwv-put-0",
+          "filled": 1,
+          "spot": 101.5,
+          "listed": ["2026-09-18", "2026-09-25", "2026-10-02", "2026-10-09"],
+          "book": { "cash": 1000000, "positions": [] },
+          "$comment": "The house model's chain at that spot, 39 days out, at the world's CRWV vol (src/options/pricing.ts → priceOption) — the playbook chooses the strike from it.",
+          "chain": [
+            { "strike": 75, "bid": 1.04, "ask": 1.08, "delta": -0.09, "openInterest": 2400 },
+            { "strike": 80, "bid": 1.83, "ask": 1.9, "delta": -0.13, "openInterest": 2400 },
+            { "strike": 85, "bid": 2.96, "ask": 3.08, "delta": -0.2, "openInterest": 2400 },
+            { "strike": 90, "bid": 4.48, "ask": 4.67, "delta": -0.27, "openInterest": 2400 }
+          ]
+        }
+      }
+    ]
+  }
+}

@@ -38,6 +38,9 @@ function quoteOf(m, underlying, expiration, type, strike) {
     openInterest: 1800,
     volume: 240,
     quotedAt: STAMP,
+    // Every strike carries a quote from the feed production reads (`alpaca-options-client.ts`
+    // marks each snapshot-backed row "indicative"); without it the chain says nothing is live.
+    quoteSource: "indicative",
     delta: v.delta,
     gamma: v.gamma,
     theta: v.theta,
@@ -98,6 +101,27 @@ function snapshots(m, occs) {
     });
   }
   return out;
+}
+
+/**
+ * A held contract's mark and yesterday's close, both the house model's — so the position row, its
+ * day change and the chain's quote for the same contract are one price, never two typed figures.
+ * Today's is the chain's own close price at the instant (`quoteOf`); yesterday's is the model at the
+ * underlying's previous close, one session earlier (`@-1d 16:00`: the instant is mid-week, so the
+ * calendar day before is a session). Undefined for an underlying the world does not quote.
+ */
+export function modelMarks(symbols, occ) {
+  const p = parseOccSymbol(occ);
+  const s = p && symbols[p.underlying];
+  if (!s) return undefined;
+  const at = (when) => daysToExpiryFrom(p.expiration, when) ?? 1;
+  const price = (spot, when) =>
+    priceOption({ spot, strike: p.strike, daysToExpiry: at(when), volatility: s.iv, type: p.type });
+  const today = quoteOf(symbols, p.underlying, p.expiration, p.type, p.strike)?.closePrice;
+  const close = new Date(`${dayFrom(-1)}T16:00:00${INSTANT.slice(-6)}`);
+  const yesterday = price(s.prevClose, close)?.price;
+  if (today === undefined || yesterday === undefined) return undefined;
+  return { mark: today, lastday: Math.round(yesterday * 100) / 100 };
 }
 
 /** The options client a world hands every route that asks for one. */

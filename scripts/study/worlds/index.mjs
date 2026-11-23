@@ -4,5 +4,15 @@
 import noAccount from "./no-account.mjs";
 import profileBadDay from "./profile-bad-day.mjs";
 import profileToday from "./profile-today.mjs";
+import workbenchExpiry from "./workbench-expiry.mjs";
+import workbenchFirstDay from "./workbench-first-day.mjs";
+import workbenchToday from "./workbench-today.mjs";
 
-export const WORLDS = [profileToday, profileBadDay, noAccount];
+export const WORLDS = [
+  profileToday,
+  profileBadDay,
+  noAccount,
+  workbenchToday,
+  workbenchExpiry,
+  workbenchFirstDay,
+];

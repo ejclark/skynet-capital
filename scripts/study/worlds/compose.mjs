@@ -33,7 +33,8 @@
 // a world would serve research written after its instant and would change with every later
 // research commit, confounding the before/after comparison it exists for. So each world names a
 // `corpus` commit (dated at or before INSTANT, refused otherwise); its child runs with those paths
-// extracted from that commit as its working directory, and reads nothing of them from the tree.
+// extracted from that commit as its working directory, and reads nothing of them from the tree;
+// a path the commit did not have yet is extracted as an empty folder (no campaign existed then).
 //
 // ENDPOINTS WITH NO PURE BUILDER: none today — every read the profile pages make is claimed by a
 // real handler. A world's `fixtures` hook (fixtures.mjs) is where one would go, recorded in the
@@ -97,8 +98,16 @@ async function composeWorld(world, runDir, server) {
   return { manifest, missing };
 }
 
-/** The tree-sourced paths a world reads from its pinned corpus commit, never from the tree. */
-const CORPUS_PATHS = ["docs/research", "src/domain/market-events"];
+/** The tree-sourced paths a world reads from its pinned corpus commit, never from the tree. The
+ *  campaign folders load when the server's modules do (`CAMPAIGNS` and its kin read the folder at
+ *  import) and throw on a missing one; a world before they existed honestly has none (#8005). */
+const CORPUS_PATHS = [
+  "docs/research",
+  "src/domain/market-events",
+  "src/domain/campaigns",
+  "src/domain/campaign-lessons",
+  "src/domain/editions",
+];
 
 function run(cmd, args) {
   const out = spawnSync(cmd, args, { encoding: "utf8", maxBuffer: 1 << 26 });
@@ -117,8 +126,11 @@ function corpusAt(runDir, commit) {
   const dir = join(runDir, ".corpus", commit.slice(0, 12));
   if (existsSync(join(dir, "package.json"))) return dir;
   mkdirSync(dir, { recursive: true });
+  // A path the commit did not have yet is an empty folder: nothing of that kind existed then.
+  const present = CORPUS_PATHS.filter((p) => run("git", ["ls-tree", commit, p]) !== "");
+  for (const p of CORPUS_PATHS) mkdirSync(join(dir, p), { recursive: true });
   const tar = join(dir, "corpus.tar");
-  run("git", ["archive", "--format=tar", "-o", tar, commit, ...CORPUS_PATHS]);
+  run("git", ["archive", "--format=tar", "-o", tar, commit, ...present]);
   run("tar", ["-xf", tar, "-C", dir]);
   rmSync(tar);
   copyFileSync("package.json", join(dir, "package.json"));

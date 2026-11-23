@@ -3,14 +3,20 @@
 // until the process clock is pinned.
 //
 // A world may be layered: `"base": "<world>"` takes that world's input and applies this file's
-// overrides — participants by id (fields replaced), `members` wholesale, and the bot's passes cut
-// to those before `passesBefore` with `prependPasses` on top (a bot that stopped earlier).
+// overrides — participants by id (fields replaced), `members` wholesale, the bot's own fields (its subscription date), its passes cut
+// to those before `passesBefore` with `prependPasses` on top (a bot that stopped earlier), and
+// the per-account books a layer may rewrite whole (`humanFills`, `watchlists`, `workingOrders`:
+// an account the layer names replaces the base's, the rest are kept). A layer that changes what
+// an account holds changes the fills that bought it too, or the ledger and the position disagree.
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { msOf } from "./instant.mjs";
 
 const INPUTS = join(import.meta.dirname, "inputs");
+
+/** The account-keyed blocks a layer may rewrite one account at a time. */
+const PER_ACCOUNT = ["humanFills", "watchlists", "workingOrders"];
 
 /** A world's input, with a `base` world's input underneath and its overrides applied. */
 export function loadInput(name) {
@@ -24,12 +30,26 @@ export function loadInput(name) {
   const passes = raw.bot?.passesBefore
     ? base.bot.passes.filter((p) => msOf(p.at) < msOf(raw.bot.passesBefore))
     : base.bot.passes;
+  const byAccount = Object.fromEntries(
+    PER_ACCOUNT.filter((k) => raw[k] || base[k]).map((k) => [k, { ...base[k], ...raw[k] }]),
+  );
   return {
     ...base,
     ...(raw.members ? { members: raw.members } : {}),
+    ...byAccount,
     participants,
-    bot: { ...base.bot, passes: [...(raw.bot?.prependPasses ?? []), ...passes] },
+    bot: {
+      ...base.bot,
+      ...botFields(raw.bot),
+      passes: [...(raw.bot?.prependPasses ?? []), ...passes],
+    },
   };
+}
+
+/** A layer's own bot fields (its subscription date, say) — everything but the pass controls. */
+function botFields(bot = {}) {
+  const { passesBefore: _before, prependPasses: _prepend, ...fields } = bot;
+  return fields;
 }
 
 /** SEC EDGAR's two documents the guidance route reads, answered from the input's `edgar` block. */

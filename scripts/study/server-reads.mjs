@@ -10,6 +10,7 @@
 
 import { serveAdminApi } from "../../src/server/admin-api-routes.ts";
 import { serveAlertDeliveryApi } from "../../src/server/alert-delivery-route.ts";
+import { serveBookWaitApi } from "../../src/server/book-wait-routes.ts";
 import { serveCompanionApi } from "../../src/server/companion-routes.ts";
 import { serveJsonApi } from "../../src/server/content-api-routes.ts";
 import { serveControlsApi } from "../../src/server/controls-api-routes.ts";
@@ -26,9 +27,11 @@ import { serveOptionLifecycleApi } from "../../src/server/option-lifecycle-route
 import { serveOptionPositionsApi } from "../../src/server/option-positions-route.ts";
 import { servePlaybooksApi } from "../../src/server/playbooks-api-routes.ts";
 import { servePlaysApi } from "../../src/server/plays-api-routes.ts";
+import { serveQuestsApi } from "../../src/server/quests-route.ts";
 import { serveSavedPositionsApi } from "../../src/server/saved-positions-api-routes.ts";
 import { serveSettingsApi } from "../../src/server/settings-api-routes.ts";
 import { serveSubscriptionsApi } from "../../src/server/subscriptions-api-routes.ts";
+import { serveTargetSplitApi } from "../../src/server/target-split-api-routes.ts";
 import { serveTradeApi } from "../../src/server/trade-api-routes.ts";
 import { serveTradeOrdersApi } from "../../src/server/trade-orders-routes.ts";
 import { serveWatchlistApi } from "../../src/server/watchlist-route.ts";
@@ -60,6 +63,8 @@ const FAMILIES = [
   serveOptionPositionsApi,
   serveOptionLifecycleApi,
   serveDeskAlertsApi,
+  serveQuestsApi,
+  serveBookWaitApi,
   serveAlertDeliveryApi,
   serveWatchlistApi,
   serveOptionApi,
@@ -67,6 +72,7 @@ const FAMILIES = [
   serveSettingsApi,
   serveSubscriptionsApi,
   serveSavedPositionsApi,
+  serveTargetSplitApi,
   serveLearnApi,
   serveOnboardingApi,
   servePlaybooksApi,
