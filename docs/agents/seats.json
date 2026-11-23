@@ -1445,7 +1445,7 @@
       "department": "staff",
       "name": "Clear-path readiness judge",
       "kind": "workflow",
-      "job": "Judges issues against four clear-path checks, refutes each positive twice, returns survivors; posts nothing",
+      "job": "Judges issues against five clear-path checks, refutes each positive twice, returns survivors; posts nothing",
       "wakesOn": "surge pass over the triage backlog, or a session batch",
       "speaksOn": "a JSON result a session feeds to scripts/clear-path-post.mjs (ready label + footed comment)",
       "cadence": "per surge wave",

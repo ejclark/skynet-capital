@@ -586,6 +586,19 @@ export function triageFeedbackDecision({ labels = [] } = {}) {
       reason: "flagged needs-eric/needs-info/needs-design — stays in Backlog",
     };
   }
+  // A FILING MATCHED TO A KNOWN PROBLEM IS EVIDENCE, NOT A BUILD (#8005; #8019 files it, #8026
+  // tells the member if its fix ships). Moneypenny files a member's ask that matches a row of the IA
+  // ledger (docs/IA.md §10) with `ia-<row>`; the row is fixed as a whole (by its plan, once one is
+  // filed: 4 of 17 rows had one on 2026-11-23), and its evidence counts the members who asked.
+  // Self-readying it would start one screen's patch beside that fix: the clash plan #8005 exists to
+  // stop. A person who applies `fast-track` to a bug has decided otherwise, and wins.
+  const row = labels.find((l) => /^ia-U\d+$/.test(l));
+  if (row && !(has("bug") && has("fast-track"))) {
+    return {
+      ready: false,
+      reason: `evidence on known problem ${row.slice(3)} — fixed as a whole, never alone; stays in Backlog`,
+    };
+  }
   if (has("curated")) {
     return { ready: true, reason: "coach-shaped filing (curated) — self-readying" };
   }

@@ -182,9 +182,6 @@ describe("npm run meter in a checkout that is not the laptop's", () => {
         .map((row) => JSON.stringify(row))
         .join("\n"),
     );
-
-    // The laptop's folder, which a cloud checkout must not read as its own.
-    mkdirSync(join(dir, "laptop", "-Users-eric-Developer-skynet-capital"), { recursive: true });
   });
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
@@ -197,17 +194,5 @@ describe("npm run meter in a checkout that is not the laptop's", () => {
     expect(section(res.stdout, "startup")).toMatch(/recent first calls: 15000 tokens/);
     expect(res.stdout).toMatch(/memory index: 2 of 200 lines, 2 files/);
   });
-
-  it("says unknown in every transcript section when no folder is this checkout's", () => {
-    const res = meter({
-      AGENT_CHECKOUT_DIR: CLOUD,
-      AGENT_PROJECTS_DIR: join(dir, "laptop"),
-    });
-    expect(res.status).toBe(0);
-    expect(res.stdout).not.toMatch(/none in the window/);
-    expect(section(res.stdout, "workflow agents")).toMatch(/unknown: no transcripts/);
-    expect(section(res.stdout, "startup")).toMatch(/unknown: no transcripts/);
-    expect(section(res.stdout, "flow")).toMatch(/unknown/);
-    expect(res.stdout).toMatch(/memory index: unknown/);
-  });
+  // The no-folder case (every section unknown) lives in meter-partial-input.spec.ts (#6694).
 });

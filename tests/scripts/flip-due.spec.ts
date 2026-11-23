@@ -81,6 +81,7 @@ describe("which unready feedback issues are worth judging", () => {
       issue(19, { pr: true }),
       issue(20, { state: "closed" }),
       issue(21, { subs: { total: 3, completed: 1 } }), // its work lives in sub-issues
+      issue(22, { labels: ["feedback", "curated", "ia-U3"] }), // evidence on a known IA problem
     ];
     expect(pickCandidates(rows, { now: NOW }).ranked).toEqual([13, 12, 11, 10]);
   });
