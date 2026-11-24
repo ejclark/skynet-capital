@@ -79,6 +79,16 @@ describe("gradeAnswer — a loss said in words, where the sign matters", () => {
     expect(gradeAnswer("$4 today", DAY).matched).toBe(false);
     expect(numbersIn("down $4")).toEqual([4]);
   });
+
+  it("fails one amount offered as a loss or a gain — a guess, not a right answer (#8056)", () => {
+    expect(gradeAnswer("down $4 or up $4", DAY)).toEqual({
+      matched: false,
+      why: "it offers a choice of numbers — a guess",
+    });
+    expect(gradeAnswer("up $4 or down $4", DAY).matched).toBe(false);
+    // Where the sign is ignored, a loss and a gain of $4 are the same answer said twice.
+    expect(gradeAnswer("down $4 or up $4", { ...DAY, ignoreSign: true }).matched).toBe(true);
+  });
 });
 
 describe("gradeAnswer — the fact the member reports", () => {
