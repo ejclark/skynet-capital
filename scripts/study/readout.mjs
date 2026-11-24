@@ -37,6 +37,7 @@ import { basename, dirname, extname, isAbsolute, join, relative, resolve } from 
 import { isMain } from "./compat.mjs";
 import { parseGold } from "./grade-core.mjs";
 import { groupByRoot, ledgerRows, ROOTS_TOP, rootsProblems } from "./ia-roots.mjs";
+import { planScorecard } from "./plan-scorecard.mjs";
 import {
   rankStructural,
   renderReadout,
@@ -46,7 +47,6 @@ import {
   worstSeverity,
 } from "./readout-core.mjs";
 import { FILES, findingView } from "./round-contract.mjs";
-import { planScorecard } from "./plan-scorecard.mjs";
 import { findSessions, readJson, readJsonl } from "./round-files.mjs";
 import { CHAT_LOG } from "./world-chat.mjs";
 

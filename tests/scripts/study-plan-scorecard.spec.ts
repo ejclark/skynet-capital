@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "@rstest/core";
 import { gradeArgs, loadRound } from "../../scripts/study/grade.mjs";
 import { gradeRound } from "../../scripts/study/grade-round.mjs";
+import type { PlanScorecard, PlanSession } from "../../scripts/study/plan-scorecard.mjs";
 import {
   chatRecall,
   median,
@@ -22,34 +23,40 @@ const chat = (n: number, said: string, drafts: string[] = []) => ({
   drafts: drafts.map((kind) => ({ kind })),
 });
 
-const SESSIONS = [
-  {
-    rel: "5-sessions/a/w/phone/t1/run-1",
-    viewport: "phone",
-    success: true,
-    answered: true,
-    lostness: 0.2,
-    backtracks: 1,
-    chat: [chat(0, "where is my history?"), chat(1, "this page keeps losing my place", ["filing"])],
-  },
-  {
-    rel: "5-sessions/a/w/phone/t2/run-1",
-    viewport: "phone",
-    success: false,
-    answered: true,
-    lostness: 0.6,
-    backtracks: 4,
-    chat: [chat(0, "nothing here works the way I expect"), { kind: "sent", n: 1 }],
-  },
-  {
-    rel: "5-sessions/b/w/desktop/t1/run-1",
-    viewport: "desktop",
-    success: true,
-    lostness: 0,
-    backtracks: 0,
-    chat: [],
-  },
-];
+const A: PlanSession = {
+  rel: "5-sessions/a/w/phone/t1/run-1",
+  viewport: "phone",
+  success: true,
+  answered: true,
+  lostness: 0.2,
+  backtracks: 1,
+  chat: [chat(0, "where is my history?"), chat(1, "this page keeps losing my place", ["filing"])],
+};
+const B: PlanSession = {
+  rel: "5-sessions/a/w/phone/t2/run-1",
+  viewport: "phone",
+  success: false,
+  answered: true,
+  lostness: 0.6,
+  backtracks: 4,
+  chat: [chat(0, "nothing here works the way I expect"), { kind: "sent", n: 1 }],
+};
+const C: PlanSession = {
+  rel: "5-sessions/b/w/desktop/t1/run-1",
+  viewport: "desktop",
+  success: true,
+  lostness: 0,
+  backtracks: 0,
+  chat: [],
+};
+const SESSIONS = [A, B, C];
+
+/** One viewport's row, which the card must hold. */
+function rowOf(card: PlanScorecard, viewport: string) {
+  const row = card.byViewport[viewport];
+  if (!row) throw new Error(`no ${viewport} row`);
+  return row;
+}
 
 describe("median — the middle session's value", () => {
   it("takes the middle of an odd count and the mean of the two middles of an even one", () => {
@@ -66,18 +73,18 @@ describe("planScorecard — success, lostness and backtracks by viewport, phone 
   const card = planScorecard({ sessions: SESSIONS });
   it("counts the oracle's verdicts per viewport with a Wilson range", () => {
     expect(Object.keys(card.byViewport)).toEqual(["phone", "desktop"]);
-    expect(card.byViewport.phone).toMatchObject({
+    expect(rowOf(card, "phone")).toMatchObject({
       sessions: 2,
       succeeded: 1,
       answered: 2,
       rate: 0.5,
     });
-    expect(card.byViewport.phone.wilson?.lo).toBeGreaterThan(0);
-    expect(card.byViewport.desktop).toMatchObject({ sessions: 1, succeeded: 1, rate: 1 });
+    expect(rowOf(card, "phone").wilson?.lo).toBeGreaterThan(0);
+    expect(rowOf(card, "desktop")).toMatchObject({ sessions: 1, succeeded: 1, rate: 1 });
   });
   it("reports the middle session's lostness and backtracks", () => {
-    expect(card.byViewport.phone.lostness).toBe(0.4);
-    expect(card.byViewport.phone.backtracks).toBe(2.5);
+    expect(rowOf(card, "phone").lostness).toBe(0.4);
+    expect(rowOf(card, "phone").backtracks).toBe(2.5);
   });
 });
 
@@ -87,9 +94,9 @@ describe("chatRecall — friction a member voiced to Moneypenny that became a dr
   });
   it("counts a voiced message caught by a filing in that exchange or a later one, and only those", () => {
     const labels = [
-      { session: SESSIONS[0].rel, n: 0, friction: true },
-      { session: SESSIONS[0].rel, n: 1, friction: true },
-      { session: SESSIONS[1].rel, n: 0, friction: true },
+      { session: A.rel, n: 0, friction: true },
+      { session: A.rel, n: 1, friction: true },
+      { session: B.rel, n: 0, friction: true },
     ];
     expect(chatRecall(SESSIONS, labels)).toMatchObject({
       messages: 3,
@@ -101,12 +108,12 @@ describe("chatRecall — friction a member voiced to Moneypenny that became a dr
     });
   });
   it("leaves a lookup out of the count and an unlabelled message apart", () => {
-    const labels = [{ session: SESSIONS[0].rel, n: 0, friction: false }];
+    const labels = [{ session: A.rel, n: 0, friction: false }];
     expect(chatRecall(SESSIONS, labels)).toMatchObject({ unlabelled: 2, voiced: 0, drafted: 0 });
   });
   it("never counts a view or research question as a caught friction", () => {
-    const viewOnly = [{ ...SESSIONS[1], chat: [chat(0, "I think NVDA goes up", ["view"])] }];
-    const labels = [{ session: SESSIONS[1].rel, n: 0, friction: true }];
+    const viewOnly = [{ ...B, chat: [chat(0, "I think NVDA goes up", ["view"])] }];
+    const labels = [{ session: B.rel, n: 0, friction: true }];
     expect(chatRecall(viewOnly, labels)).toMatchObject({ voiced: 1, drafted: 0 });
   });
 });
