@@ -74,6 +74,32 @@ describe("gradeAnswer — a loss said in words, where the sign matters", () => {
     expect(gradeAnswer("a loss of about $4", DAY).matched).toBe(true);
   });
 
+  it("reads a hedged, trailing or 'in the red' loss as −4 too (#8057)", () => {
+    for (const given of [
+      "down approximately $4",
+      "down approx. $4",
+      "down approx $4",
+      "a $4 loss today",
+      "$4 down so far today",
+      "in the red by $4",
+      "in the red by about $4",
+    ]) {
+      expect(gradeAnswer(given, DAY), given).toMatchObject({ matched: true, why: "-4 ≈ -4" });
+    }
+  });
+
+  it("keeps a gain a gain beside a trailing loss word, and a price move unsigned", () => {
+    expect(gradeAnswer("up $4", DAY).matched).toBe(false);
+    expect(gradeAnswer("up $4", { ...DAY, value: 4 }).matched).toBe(true);
+    expect(gradeAnswer("a $4 gain today", DAY).matched).toBe(false);
+    // A comma stands between the amount and "down": the +4 is still a gain.
+    expect(gradeAnswer("up $4, down from $10 yesterday", { ...DAY, value: 4 }).matched).toBe(true);
+    // "down to" moves a price, it does not sign the amount before it as a loss.
+    expect(gradeAnswer("it went from $4 down to $2", { ...DAY, value: 4 }).matched).toBe(true);
+    // Where the sign is ignored, a trailing loss word changes nothing.
+    expect(gradeAnswer("a $4 loss", { ...DAY, value: 4, ignoreSign: true }).matched).toBe(true);
+  });
+
   it("keeps a gain a gain, and leaves numbersIn as written", () => {
     expect(gradeAnswer("up $4 today", DAY).matched).toBe(false);
     expect(gradeAnswer("$4 today", DAY).matched).toBe(false);
