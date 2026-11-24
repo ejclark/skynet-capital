@@ -40,7 +40,7 @@ export function useOpenWindow(cur: MissionWindow): (next: MissionWindow) => void
     if (next === cur) return;
     step(cur, next);
     void navigate({
-      to: "/",
+      to: "/campaign",
       // A pivot (`?show=`) belongs to the calendar; leaving it leaves the pivot behind, so the
       // address never names a window and a pivot that would open a different one.
       search: (prev: { readonly show?: string }) => ({

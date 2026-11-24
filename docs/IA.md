@@ -207,7 +207,7 @@ screens sit in two groups has two homes, and slice 6 of #8005 settles each to on
 | `guidance` | Guidance · Outlook · saved positions | Position guidance | `/trade ?section=guidance` · `/trade ?section=outlook` · `/saved-positions` |
 | `watchlist` | Watchlist | none in §2 (#3407) | `/trade ?section=watchlist` |
 | `orders` | Orders · working orders | Order · Order event · Alert | `/trade ?section=orders` |
-| `calendar` | Calendar · Events · Board | Research event · Research call · Day range · Market closure | `/research ?section=board` · `/accounts ?section=events` · `/ ?w=calendar` |
+| `calendar` | Calendar · Events · Board | Research event · Research call · Day range · Market closure | `/research ?section=board` · `/accounts ?section=events` · `/campaign ?w=calendar` |
 | `research-docs` | a ledger · a study | Research doc | `server /research/<slug>` |
 | `coverage` | Coverage | none in §2 (#3811) | `/research ?section=coverage` |
 | `house-playbooks` | Playbooks (the catalog) · Your playbooks · Your convictions | Playbook store card · Strategy card · Authored play · Conviction view · Pair conviction | `/research ?section=playbooks` |
@@ -215,10 +215,10 @@ screens sit in two groups has two homes, and slice 6 of #8005 settles each to on
 | `human-playbooks` | Playbooks (the chapter) | Human playbook | `/accounts ?section=milestones&chapter=playbooks` |
 | `filings` | Feedback · your filings | Feedback filing + community earn (the league's feed carries their mirror, #1977) | `/accounts ?section=feedback` · `/activity` |
 | `chat` | Moneypenny | Moneypenny thread | `shell Moneypenny dock` |
-| `standing` | Leaderboard · the party | Leaderboard row + compare | `/leaderboard` · `/ ?w=party` |
-| `whole-market` | Market · the sectors | the edition's sectors (`src/domain/edition-sectors.ts`) | `/ ?w=market` |
-| `where-things-stand` | Where things stand · your next step | the edition · Quest | `/` |
-| `quests` | Quests | Quest | `/ ?w=quests` |
+| `standing` | Leaderboard · the party | Leaderboard row + compare | `/leaderboard` · `/campaign ?w=party` |
+| `whole-market` | Market · the sectors | the edition's sectors (`src/domain/edition-sectors.ts`) | `/campaign ?w=market` |
+| `where-things-stand` | Where things stand · your next step | the edition · Quest | `/campaign` |
+| `quests` | Quests | Quest | `/campaign ?w=quests` |
 | `preferences` | Preferences | member preferences (MISSING 24) | `/settings ?section=preferences` |
 | `my-accounts` | Account | Owned account · Fleet controls | `/settings ?section=account` |
 | `owner-tools` | Guests · GitHub | none in §2 (U13) | `/settings ?section=guests` · `/settings ?section=github` |
@@ -884,7 +884,7 @@ tests are its slices 1b (#7144, AT1–AT5) and 1c (AT3 revised, AT5b, AT8, AT9).
 | | |
 |---|---|
 | **Job** | An entry point whose first job is the member's goal (`.claude/rules/member-surfaces.md`): take the mission in their own words or a canned path, then show the whole market and what's coming as avenues to explore, and send them where they want to go. What belongs follows from that job: the mission box with its canned paths · the whole market · the event calendar, R&D's own, with its grid at desktop width (#7077 AT10, AT11). Anything that restates what the page already shows does not belong, a chat answer included (#7167). Eric, 2026-11-09: *"The first objective is to understand the goal; present options. This shoudl help outline features that do/don't belong to help us shape the page template"*. He first kept the overview above the mission box, then reversed it the same day on seeing it drawn (below) |
-| **Home** | `/app/` (`app/src/routes/index.tsx`; a member with no account still lands on onboarding). The first tab, labelled **"Campaign"** since #7487 ("Chronicles", his name on #7018 fork d, until then; `__root.tsx`). The Leaderboard leaves the tab bar and keeps its route, reached from Profile's league card ("Full leaderboard ›") |
+| **Home** | `/app/campaign` (`app/src/routes/campaign.tsx`) since #8189: `/app/` is the home screen now (§8.4), and Campaign is one app among its tiles; every old Campaign address (`/?w=`, `/?show=`, Moneypenny's `/#story-`/`#event-`/`#calendar` links) forwards here with its search and hash. A member with no account still lands on onboarding. The first tab, labelled **"Campaign"** since #7487 ("Chronicles", his name on #7018 fork d, until then; `__root.tsx`). The Leaderboard leaves the tab bar and keeps its route, reached from Profile's league card ("Full leaderboard ›") |
 | **Keys** | date (today's edition) · campaign (#6949) · symbol (a story's cast) · member (your account → quests) · what the party asked in a campaign: each question, who asked it by display name and what its research found, for every member who can read the campaign (#6949 slice 6, `GET /api/campaigns/questions`) |
 | **Holds, each with one owner** | the whole market: all 11 GICS sectors and the S&P 500, one SPDR fund each, with each one's move over Day · Week · Month · YTD and where its price sits in its 20-day range, as Lines or Tiles (round 3, AT1–AT3 and AT8; closes checked in beside the edition, `src/domain/edition-sectors.ts`) · the calendar: the edition's stories one line each, then each coming trading day's events under week headers that name closures, ◆ on one a story waits on (AT4–AT5b) · the edition: each story, opened from its line, leads with the reports that bear on it, then works back to what moved (a ▲ ▼ ∿ shape on each line), the rest on tap, one narrator line in a mission voice (#6948 slice 4, sources #6949 slices 4–5) · your own question first, its canned paths under it, an ask beside each story (#7034; discovery #6952) · quests by their source: a market quest under its story, your account's quests after the news (#7028) · who holds an open question (#7034 criterion 9) · on desktop, the tower in the right margin whose Eye lights what Moneypenny points to (`eye-light-layer.tsx`; #7167 criterion 10; right since #7487 slice 4a — superseded 2026-11-12, Eric: "Move it right"; it stood in a left rail from #7018 round 9 / #7216, 2026-11-09, while Moneypenny's rail opened on the right) |
 | **Hands on** | the owner-fired ticket with exits → Trade · a story's ledger → R&D · who you are → the character sheet (#7019) · standings → the Leaderboard |
@@ -1309,6 +1309,24 @@ call is made where the code or an issue already settles it; a taste or placement
 | `/trade ?section=orders` | **held for slice 6** — shapes: (A) stays on Trade (#674) · (B) working orders move to Profile → Overview, Trade keeps this ticket's own · (C) a "working" filter on top of the one history (#8008) · (D) a count on Trade that links into the book | moving it reverses Eric's #674 / 2026-09-22 workbench call (§8.1); only he reverses it, on the round's evidence |
 | `/saved-positions` | **held for slice 6** — shapes: (A) fold into Trade → Guidance beside live positions · (B) an "outside Skynet" group on Profile → Overview · (C) its own route with a door from Guidance · (D) retire | Eric's own testbed (#3968, closed): "to learn what belongs before deciding placement" |
 | Two words, one place | Moneypenny names the landing page "the landing page" and R&D "Research", while the tabs say "Campaign" (#7487) and "R&D" (§8's copy rule) | her place names follow the tabs: built in its own small PR |
+
+### 8.4 The home screen — the app shell is the page template (#8161, #8189), 2026-11-24
+
+Eric placed it on #8161 (point 18): *"the tower … on the home screen above the app tiles"*; inside
+an app, the app picks its own page template. Written here in the slice that builds it (#895).
+
+| | |
+|---|---|
+| **What it is** | A new place, not a group's page and not a fourth dimension: the app's front door. It holds no group's section; each row is a door into the app that owns the data |
+| **Job** | An entry point (`.claude/rules/member-surfaces.md`): show the member what needs them, then every app one tap away. The tower is the identity, so it leads, but it is a picture (`aria-hidden`), never a control |
+| **Address** | `/app/` (`app/src/routes/index.tsx`). Campaign moves to `/app/campaign` (§5.9). Routes follow the IA: `/` was Campaign only because Campaign was the front door |
+| **At 390, in order** | the tower as a committed still (≤200px tall; no WebGL on a phone until #3977's real-device recheck) · **Needs you**, at most 3 rows: connect a paper account when there is none · positions under Review, counted in words · the best quest (→ Campaign's Quests) · "Nothing needs you right now" when none apply · one tile per app, two to a row: Campaign · Profile · Trade · Activity · R&D, each a glyph, its name and one plain line on what the place does |
+| **Desktop adds room** | from 861px the session's one moving tower frame lays over the home's box (`shell/vantage.tsx`), taller; the five tiles sit in one row. No new concept |
+| **Reads** | only what the app already reads, under the same keys: `["settings"]`, `["desks", ids]` (Profile's All-accounts read), `["quests"]` (Campaign's). No endpoint, no broker read |
+| **The way home** | the topbar's brand is a link named "Home" from every page; the Campaign tab points at `/campaign` |
+| **Old addresses** | Campaign's own (`?w=`, `?show=`, `#story-`/`#event-`/`#calendar`) forward to `/campaign` with search and hash, replacing the entry; the board's `?by=`/`?a=`/`?b=` still open `/leaderboard`. Moneypenny keeps writing `/#…`; the dock forwards it before navigating, so a row on the open Campaign lands in place (`shell/campaign-forward.ts`) |
+| **Slice 2 of #8189** | the tower leaves every other page (the frame's column, the boxed cards), and a fresh load at bare `/app/` reopens the last of the five apps used (its root, never its last exact address); a Home tap always shows the home |
+| **Falsifier** | by 2026-12-21, Eric or a blind round (#8005 slice 4) reads the home as a tap standing between a member and trading: then `/app/` opens Trade by default and the home is reached from the brand alone |
 
 ## 9. What the model contradicts in the plan
 

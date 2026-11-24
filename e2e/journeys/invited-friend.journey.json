@@ -198,17 +198,17 @@
       "steps": [
         {
           "id": "s1",
-          "goto": "/app/",
+          "goto": "/app/campaign",
           "sees": "the landing page's rows at a glance; 'The party' opens the members together against The Tower",
           "ears": "WHEN a member opens the Party row on the landing page, the app shall show the party's members and what they booked.",
           "expect": [{ "role": "button", "name": "The party" }],
           "act": { "click": { "role": "button", "name": "The party" } },
-          "after": [{ "url": "/app/?w=party" }, { "role": "heading", "name": "The party" }],
+          "after": [{ "url": "/app/campaign?w=party" }, { "role": "heading", "name": "The party" }],
           "judge": "can this reader tell how the party is doing?"
         },
         {
           "id": "s2",
-          "goto": "/app/?w=party",
+          "goto": "/app/campaign?w=party",
           "sees": "Eric, Friend and The Tower by name with what each booked, and none of them a way in: no desk, no league",
           "ears": "WHEN a member reads the Party window, the app shall link each member to their desk and the party to the league's full standing.",
           "expect": [
