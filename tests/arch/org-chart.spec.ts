@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { LABEL_NAMES } from "../../scripts/moneypenny/labels.mjs";
+import { BUILD_DEPTS, cast, render, UNNAMED } from "../../scripts/org-chart.mjs";
 
 // The org chart is generated from the seat registry (docs/agents/seats.json, #6886 slice 1) and is
 // the compact context workflows read (Eric, 2026-11-07). Four contracts keep it a true claim:
@@ -18,6 +19,8 @@ type Seat = {
   codeRoots: string[];
   role?: string;
   pulls?: string[];
+  /** How a member meets the seat (#8161): a plain job line, and a lore name or null until #6616. */
+  character?: { job: string; name: string | null };
 };
 type Registry = {
   depts: { id: string }[];
@@ -101,6 +104,51 @@ describe("the org chart — generated from the seat registry, grounded", () => {
       (s.pulls ?? []).filter((l) => !LABEL_NAMES.includes(l)).map((l) => `${s.id}: ${l}`),
     );
     expect(unknown).toEqual([]);
+  });
+
+  // #8161: one registry draws the build view and the member view. A character is the member-facing
+  // half, so its shape is fixed and the build org never gets one (#6948: the game never explains
+  // how the app gets built).
+  describe("the cast", () => {
+    it("every character is a plain job line and a name or null, and no seat keeps a station", () => {
+      const bad = registry.seats.filter((s) => {
+        if ("station" in s) return true;
+        if (s.character === undefined) return false;
+        const c = s.character as unknown as Record<string, unknown>;
+        const keys = Object.keys(c).sort().join(",");
+        const jobOk = typeof c.job === "string" && c.job.trim() !== "";
+        const nameOk = c.name === null || (typeof c.name === "string" && c.name.trim() !== "");
+        return !(keys === "job,name" && jobOk && nameOk);
+      });
+      expect(bad.map((s) => s.id)).toEqual([]);
+    });
+
+    it("no seat in Builders, Quality, Chief of staff or Platform carries a character", () => {
+      const leaked = registry.seats.filter(
+        (s) => s.character && BUILD_DEPTS.includes(s.department),
+      );
+      expect(leaked.map((s) => s.id)).toEqual([]);
+    });
+
+    it("cast() returns every seat with a character, in registry order, as the member meets it", () => {
+      const rows = cast(registry);
+      expect(rows.map((r) => r.id)).toEqual(
+        registry.seats.filter((s) => s.character).map((s) => s.id),
+      );
+      expect(rows.find((r) => r.id === "game-design")).toEqual({
+        id: "game-design",
+        department: "front-desk",
+        job: "The game designer: the rules of the game and the story it tells",
+        name: null,
+      });
+    });
+
+    it("the crew table says an unnamed character in words, never a blank", () => {
+      const page = render(registry);
+      expect(page).toContain("| Name | Job | Seat behind it |");
+      expect(page).toContain(`| ${UNNAMED} | The layout desk:`);
+      expect(page).not.toMatch(/^\|\s*\|/m);
+    });
   });
 
   it("every friction row carries a number, a source and where its change is tracked", () => {

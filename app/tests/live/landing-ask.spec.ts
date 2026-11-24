@@ -161,12 +161,12 @@ describe("what other members asked", () => {
     }
   });
 
-  it("words the holder from a station the crew page really lists", () => {
+  it("words the holder from a character the crew page really lists", () => {
     const seats = JSON.parse(readFileSync("../docs/agents/seats.json", "utf8")) as {
-      seats: { station?: string }[];
+      seats: { character?: { job: string } }[];
     };
-    const stations = seats.seats.flatMap((s) => (s.station ? [s.station.toLowerCase()] : []));
-    expect(stations.some((st) => st.startsWith(HOLDER.toLowerCase()))).toBe(true);
+    const jobs = seats.seats.flatMap((s) => (s.character ? [s.character.job.toLowerCase()] : []));
+    expect(jobs.some((job) => job.startsWith(HOLDER.toLowerCase()))).toBe(true);
   });
 
   it("leaves the server's own sentence under the form", () => {

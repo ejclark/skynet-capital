@@ -546,6 +546,10 @@ describe("event-material-scan --screen-due reads declared intents", () => {
     `export const UPCOMING_PRINTS: readonly EarningsPrint[] = [\n  { symbol: "ZZZZ", date: "2026-11-10", status: "confirmed" },\n];\n`,
   );
   writeFileSync(join(root, "cadence.json"), JSON.stringify(CADENCE));
+  // The widened pass (#8202) reads from fixtures, never the real main: nothing else is due.
+  writeFileSync(join(root, "due.json"), "[]");
+  writeFileSync(join(root, "main.log"), "");
+  writeFileSync(join(root, "heads.txt"), "");
   const stub = join(root, "stub-fetch.mjs");
   const stamp = Date.parse("2026-10-30T13:30:00Z") / 1000;
   writeFileSync(
@@ -594,6 +598,9 @@ describe("event-material-scan --screen-due reads declared intents", () => {
         `--events-dir=${eventsDir}`,
         `--calendar-file=${join(root, "calendar.ts")}`,
         `--cadence-file=${join(root, "cadence.json")}`,
+        `--due-file=${join(root, "due.json")}`,
+        `--main-log-file=${join(root, "main.log")}`,
+        `--research-heads-file=${join(root, "heads.txt")}`,
       ],
       { encoding: "utf8", env, input: JSON.stringify([{ id: ID, reason: "interval-elapsed" }]) },
     );

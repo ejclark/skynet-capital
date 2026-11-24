@@ -67,7 +67,7 @@ letter there; it is listed as a link, and the merge stays his click.
 
 `node scripts/moneypenny/answer-readback.mjs --ledger [--apply]` collects the last week's rows into
 the table below, once each, with the row's key in a hidden comment. The daily loops Routine runs it
-(`docs/process/LOOPS-ROUTINE.md`, step 4, #7939 slice 3), then the graduation check below.
+(`docs/process/LOOPS-ROUTINE.md`, step 5, #7939 slice 3), then the graduation check below.
 
 ## Graduation — the check, the PR, and what a graduated class does (#7939 slice 3)
 
