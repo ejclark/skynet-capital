@@ -404,4 +404,27 @@ describe("OptionPositionsCard — a failed broker read with no rows to list (#83
     await Promise.resolve();
     expect(container).toBeEmptyDOMElement();
   });
+
+  it("drops the failed-read sentence once the account reads fine again (#8414)", async () => {
+    nextStatement = readFailed;
+    const client = new QueryClient();
+    const card = (readError?: string) => (
+      <QueryClientProvider client={client}>
+        <OptionPositionsCard
+          deskId="human-eric"
+          positions={[]}
+          {...(readError ? { readError } : {})}
+        />
+      </QueryClientProvider>
+    );
+    const { container, rerender } = render(card("Error: broker read timed out after 8000ms"));
+    await waitFor(() =>
+      expect(screen.getByText(/The broker read for this account failed/)).toBeInTheDocument(),
+    );
+    // The account recovers: same client, so the cached read-failed answer is still there, and
+    // the query is now disabled, so invalidating it does not refetch.
+    rerender(card());
+    await client.invalidateQueries({ queryKey: ["option-positions", "human-eric"] });
+    expect(container).toBeEmptyDOMElement();
+  });
 });

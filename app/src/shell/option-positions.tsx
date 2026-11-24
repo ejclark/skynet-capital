@@ -455,7 +455,9 @@ export function OptionPositionsCard({
     !statement.data.available &&
     statement.data.reason === "read-failed";
   if (held.length === 0) {
-    if (!readFailed) return null;
+    // The live `readError` gates the sentence, not the cached answer alone (#8414): once the read
+    // recovers the query is disabled, so a cached `read-failed` would never be refetched away.
+    if (!(readError && readFailed)) return null;
     return (
       <section className="panel gate-panel" aria-label="Option positions">
         <h2 className="panel-title">Option positions</h2>
