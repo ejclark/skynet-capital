@@ -72,7 +72,7 @@ export function convictionCardText(drafted: ChatConvictionDraft): string {
 }
 
 const problemsOf = (answer: DraftAnswer | SteerAnswer): string =>
-  answer.ok ? "" : (answer.problems?.join("; ") ?? answer.error ?? "the desk said no");
+  answer.ok ? "" : (answer.problems?.join("; ") ?? answer.error ?? "the server said no");
 
 export interface ConvictionLaneDeps {
   readonly say: (lines: readonly string[]) => Promise<void>;

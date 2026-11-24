@@ -108,7 +108,8 @@ dock under the page since #7487 slice 2), and the bar still asks its own width (
   **It failed again on 2026-11-24:** the #8161 redesign named its apps Desk, Cast, Garage and Film Room,
   and Eric: "'desk' verbiage still gives 'wtf is that' vibes.. which I've articulated multiple times".
   The plain names: Desk → Trade · Cast → Who's who · Garage → Bots · Film Room → Practice. A prose
-  rule didn't hold across sessions, so #8290 makes the rejected names a list that lint reads.
+  rule didn't hold across sessions, so the rejected names are now a list that lint reads:
+  [`docs/plain-names.json`](plain-names.json) (#8290). Add a row the moment he rejects a name.
 
 ## Core metaphors & motifs
 
