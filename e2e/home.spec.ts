@@ -21,9 +21,11 @@ test.describe("the home screen", () => {
     const needs = page.getByRole("region", { name: "Needs you" });
     await expect(needs).toBeVisible();
     const apps = page.getByRole("navigation", { name: "Apps" }).getByRole("link");
-    await expect(apps).toHaveCount(6);
+    await expect(apps).toHaveCount(7);
     // By position, so the order holds too, and a word in another tile's line can't match.
     for (const [i, [, href]] of [
+      // #8253: the Scoreboard's tile opens the board whether or not the viewer has a seat yet.
+      ["Scoreboard", "/app/leaderboard?by=equity"],
       ["Campaign", "/app/campaign"],
       ["Profile", "/app/accounts"],
       ["Trade", "/app/trade"],

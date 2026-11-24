@@ -31,11 +31,41 @@ test.describe("leaderboard", () => {
     await expect(page).toHaveURL(/\/app\/leaderboard\?by=return$/);
   });
 
-  test("renders the match bar and ranked rows", async ({ page }) => {
+  test("renders the party's table and ranked rows", async ({ page }) => {
     await page.goto("/app/leaderboard");
-    await expect(page.locator(".match")).toBeVisible();
+    await expect(page.locator("section.party")).toBeVisible();
     await expect(page.getByText("The Day Trader")).toBeVisible();
   });
+
+  // #8253: the opening is the party's table, members together against the house bot. At 390 the
+  // lead line (or why there is none), the house bot's line and the seat line clear the dock, and no
+  // Humans vs Bots bar, cohort card or versus line renders at any width.
+  for (const width of [390, 1280]) {
+    test(`opens on the party's table, the race gone, at ${String(width)}`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto("/app/leaderboard");
+      const party = page.locator("section.party");
+      await expect(party).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1, name: "Scoreboard" })).toBeVisible();
+      await expect(page.locator(".match, .cohort, .versus, .versus-read")).toHaveCount(0);
+      await expect(page.getByText(/Humans vs|Bots vs/)).toHaveCount(0);
+      const lead = party.locator(".party-lead");
+      const house = party.locator(".party-sides > div").nth(1);
+      await expect(house).toContainText("The house bot");
+      // The offline viewer owns no seated account, so the seat line shows and opens Trade.
+      const seat = party.getByRole("link", {
+        name: "Your seat opens with your first filled paper order",
+      });
+      await expect(seat).toHaveAttribute("href", "/app/trade");
+      if (width !== 390) return;
+      const dock = await page.locator(".mp-dock").boundingBox();
+      for (const el of [lead, house, seat]) {
+        const box = await el.boundingBox();
+        expect(box && dock).toBeTruthy();
+        if (box && dock) expect(box.y + box.height).toBeLessThanOrEqual(dock.y);
+      }
+    });
+  }
 
   // #4944's filter-chip promise, broken here until #5057: the new metric's snapshot was a fresh
   // query, the page swapped to "Reading the board…", and the shorter page threw the scroll to 0.

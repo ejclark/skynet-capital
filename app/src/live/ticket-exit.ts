@@ -8,7 +8,7 @@ import { money } from "./ticket";
  *
  * Honesty rules: every price and dollar figure is the server's — the review's come from
  * `previewOrder` (`src/trading/order-exit.ts`), the receipt's from the broker's own echo — and
- * nothing here computes one. The two exits are told apart by their words ("Take-profit", "Stop")
+ * nothing here computes one. The two exits are told apart by their words ("Take-profit", "Stop-Market": never a bare "Stop", the ticket's own rule in `ticket.ts`)
  * and their signed dollars, never by a colour: a standing reader is red/green colourblind.
  */
 
@@ -40,7 +40,7 @@ export function exitPreviewLines(exit: {
     exit.stopDollars === undefined
       ? ""
       : ` · about ${signedDollars(exit.stopDollars)} against your limit (a triggered stop sells at the market)`;
-  return [`Take-profit ${money(exit.takeProfit)}${tp}`, `Stop ${money(exit.stop)}${stop}`];
+  return [`Take-profit ${money(exit.takeProfit)}${tp}`, `Stop-Market ${money(exit.stop)}${stop}`];
 }
 
 /** The receipt's exit line, at the prices the broker echoed. It states the order as the broker
@@ -50,11 +50,11 @@ export function exitReceiptLine(exits: {
   readonly takeProfit: number;
   readonly stop: number;
 }): string {
-  return `Sent with its exits: Take-profit ${money(exits.takeProfit)} · Stop ${money(exits.stop)}. The broker holds them until the entry fills; when one fills the other is cancelled, and cancelling the entry cancels both.`;
+  return `Sent with its exits: Take-profit ${money(exits.takeProfit)} · Stop-Market ${money(exits.stop)}. The broker holds them until the entry fills; when one fills the other is cancelled, and cancelling the entry cancels both.`;
 }
 
 /** An orders-list row's name for a bracket exit, by its job (`exitRole`, `desk-orders-view.ts`). */
 export const EXIT_ROLE_LABELS: Record<"take-profit" | "stop", string> = {
   "take-profit": "Take-profit",
-  stop: "Stop",
+  stop: "Stop-Market",
 };
