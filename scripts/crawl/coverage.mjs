@@ -53,12 +53,13 @@ const CHAPTERS = {
   name: "MILESTONE_CHAPTERS",
 };
 
-/** The landing page's windows (#7487): ONE window on its stage at a time, named by `?w=`, so each
- *  is a screen of its own the way a Milestones chapter is. The default (Overview) is never written
- *  and stays the bare `/` row; a `?show=` pivot or an `#event-`/`#story-` link opens the Calendar
- *  (`routes/index.tsx` `openWindow`, mirrored by `windowOf`). */
+/** Campaign's windows (#7487): ONE window on its stage at a time, named by `?w=`, so each is a
+ *  screen of its own the way a Milestones chapter is. The default (Overview) is never written and
+ *  stays the bare `/campaign` row (at `/` until the home screen took it, #8189); a `?show=` pivot or
+ *  an `#event-`/`#story-` link opens the Calendar (`routes/campaign.tsx` `openWindow`, mirrored by
+ *  `windowOf`). */
 const WINDOWS = {
-  path: "/",
+  path: "/campaign",
   param: "w",
   file: "app/src/live/mission.ts",
   name: "WINDOWS",

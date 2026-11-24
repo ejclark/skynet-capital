@@ -107,19 +107,26 @@ function RootShell(): ReactElement {
           Skip to content
         </a>
         <header className="topbar" ref={publishTopbarHeight}>
-          <span className="brand">
+          {/* The brand is the way home (#8189): one tap from anywhere to the home screen. */}
+          <Link
+            to="/"
+            className="brand"
+            aria-label="Home"
+            activeOptions={{ exact: true, includeSearch: false }}
+            activeProps={{ "aria-current": "page" }}
+          >
             <span className="brand-mark" aria-hidden="true">
               SC
             </span>
             <BrandEye />
             <span className="brand-name">Skynet Capital</span>
-          </span>
+          </Link>
           <nav className="topnav" aria-label="Views">
             <Link
-              to="/"
+              to="/campaign"
               className="topnav-link"
               activeProps={{ "aria-current": "page" }}
-              activeOptions={{ exact: true, includeSearch: false }}
+              activeOptions={{ includeSearch: false }}
             >
               Campaign
             </Link>
