@@ -29,6 +29,7 @@ import { createBootCapitalFlowStore } from "../observatory/capital-flow-store.js
 import { CapitalFlowWatch, restartBaseline } from "../observatory/capital-flow-watch.js";
 import { CeremonyChannel } from "../observatory/ceremony-channel.js";
 import { buildDashboardData } from "../observatory/dashboard-data.js";
+import { gapRecovery } from "../observatory/gap-recovery.js";
 import {
   createBootHistoryStore,
   rehydrateHistory,
@@ -45,7 +46,7 @@ import { mergeRoster } from "../participants/participant.js";
 import { createParticipantStore } from "../participants/participant-store.js";
 import { createIvHistoryStore } from "../research/iv-sampler.js";
 import { createSpotChecks } from "../research/spot-checks.js";
-import { resolveDataSource, type StreamResumeSink } from "../runtime/data-source.js";
+import { resolveDataSource } from "../runtime/data-source.js";
 import { accountPersonasFrom } from "../server/account-personas-fold.js";
 import { ownerEmails } from "../server/auth/resolve-auth.js";
 import { createBookHealthHistoryStore } from "../server/book-health-history-store.js";
@@ -218,21 +219,29 @@ async function main(): Promise<void> {
 
   // The stream-gap net (#8251): a fill stream that reopens after a drop re-reads that account's
   // recent orders into the ledger, so a fill in the gap still reaches the ledger, its bus and a
-  // watched order's email — once. A failed read is logged; the next boot's reconcile still covers it.
-  const onResume: StreamResumeSink = (participant, droppedAt) => {
-    const client = dataSource.clientFactory(participant);
-    void recoverStreamGap({
-      participantId: participant.id,
-      store: activity,
-      listOrders: (params) => client.listOrders(params),
-      droppedAt,
-    }).then(
-      (r) =>
-        r.appended > 0 &&
-        console.log(`[activity] banked ${r.appended} order update(s) from ${participant.id}'s gap`),
-      (e) => console.error(`[activity] gap re-read failed for ${participant.id}:`, e),
-    );
-  };
+  // watched order's email — once. Re-reads wait for the boot reconcile and run one at a time per
+  // account; resumes that arrive while one runs coalesce into a single follow-up from the earliest
+  // drop, so a flapping socket can't stack broker reads or race two stale dedupe snapshots.
+  const onResume = gapRecovery({
+    after: reconciled,
+    recover: (participant, droppedAt) => {
+      const client = dataSource.clientFactory(participant);
+      return recoverStreamGap({
+        participantId: participant.id,
+        store: activity,
+        listOrders: (params) => client.listOrders(params),
+        droppedAt,
+      }).then(
+        (r) => {
+          if (r.appended === 0) return;
+          console.log(
+            `[activity] banked ${r.appended} order update(s) from ${participant.id}'s gap`,
+          );
+        },
+        (e) => console.error(`[activity] gap re-read failed for ${participant.id}:`, e),
+      );
+    },
+  });
 
   dataSource.startStreams({ participants: roster, sink, onActivity, onStatus, onResume });
 

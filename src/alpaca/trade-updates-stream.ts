@@ -107,6 +107,13 @@ export class AlpacaTradeUpdatesStream {
     if (this.socket !== socket) return;
     this.socket = undefined;
     this.listening = false;
+    // An error need not be followed by a close; a half-open socket would still count against the
+    // broker's connection limit when the reopen signs in. Retired first, so this close is a no-op.
+    try {
+      socket.close();
+    } catch {
+      // already closing
+    }
     this.droppedAt ??= new Date().toISOString();
     const delayMs = Math.min(MAX_RECONNECT_DELAY_MS, 1000 * 2 ** this.reconnectAttempts);
     this.reconnectAttempts += 1;

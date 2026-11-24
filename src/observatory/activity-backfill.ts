@@ -102,7 +102,7 @@ export async function backfillParticipantActivity(opts: {
   readonly source?: ActivitySource;
 }): Promise<BackfillResult> {
   const pageSize = opts.pageSize ?? PAGE_SIZE;
-  const known = await knownOrders(opts.store, opts.participantId);
+  let known = await knownOrders(opts.store, opts.participantId);
   let fetched = 0;
   let appended = 0;
   let pages = 0;
@@ -119,6 +119,9 @@ export async function backfillParticipantActivity(opts: {
       const row = recordFromOrder(order, opts.participantId, opts.source ?? "backfill");
       if (row) rows.push(row);
     }
+    // A gap re-read runs beside the live stream, which may have journaled one of these orders
+    // while the page was in flight: dedupe against the ledger as it is now, not as it was.
+    if (opts.since) known = await knownOrders(opts.store, opts.participantId);
     appended += await appendAdvancing(opts.store, rows, known);
 
     // `until` is exclusive on submission time, so the oldest row seen is the next page's cursor.

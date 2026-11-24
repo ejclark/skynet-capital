@@ -225,6 +225,34 @@ describe("recoverStreamGap", () => {
     expect(held[0]).toMatchObject({ status: "filled", filledQuantity: 10, source: "broker" });
   });
 
+  it("does not re-journal a fill the live stream wrote while the page was in flight", async () => {
+    const store = new InMemoryActivityStore();
+    const filled = order("o1", "2026-11-24T14:00:00Z", { filled_at: "2026-11-24T14:31:00Z" });
+    const result = await recoverStreamGap({
+      participantId: "day-trader",
+      store,
+      listOrders: async () => {
+        // The reopened stream journals the fill before the broker page comes back.
+        await store.record({
+          orderId: "o1",
+          participantId: "day-trader",
+          symbol: "NVDA",
+          side: "buy",
+          quantity: 10,
+          filledQuantity: 10,
+          price: 120,
+          status: "filled",
+          at: "2026-11-24T14:31:00Z",
+          source: "stream",
+        });
+        return [filled];
+      },
+      droppedAt: DROP,
+    });
+    expect(result.appended).toBe(0);
+    expect(await store.list("day-trader")).toHaveLength(1);
+  });
+
   it("reads one recent window when its oldest order is already older than the drop", async () => {
     const calls: Array<{ limit: number; until?: string }> = [];
     const window = Array.from({ length: 15 }, (_, i) =>
