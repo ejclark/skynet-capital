@@ -211,6 +211,56 @@ describe("the exit plan on submit", () => {
     expect(exitPlans.carried("human-ann").size).toBe(0);
   });
 
+  describe("WHEN the desk's positions read failed (#8336)", () => {
+    // The hub's degraded row: `positions: []` beside an `error`, which means "unknown", not "none".
+    const unread = (exitPlans: ExitPlanStore) =>
+      ({
+        ...config({ exitPlans }),
+        hub: {
+          getState: () => ({
+            participants: [
+              {
+                id: "human-ann",
+                cash: 0,
+                positions: [],
+                error: "broker read timed out after 8000ms",
+              },
+            ],
+          }),
+        },
+      }) as unknown as DashboardServerConfig;
+
+    it("a counted close SHALL keep the plan — the read can't say whether it sold the whole holding", async () => {
+      const exitPlans = new ExitPlanStore(path);
+      exitPlans.carry("human-ann", OCC, NOW);
+      const result = await call(
+        "/api/trade/option/submit",
+        { kind: "close", participantId: "human-ann", occSymbol: OCC, contracts: 1 },
+        unread(exitPlans),
+      );
+      expect(result.ok).toBe(true);
+      expect([...exitPlans.carried("human-ann")]).toEqual([OCC]);
+    });
+
+    it("a purchase without the plan SHALL keep an earlier day's plan — unread is not 'not held'", async () => {
+      const exitPlans = new ExitPlanStore(path);
+      exitPlans.carry("human-ann", OCC, new Date("2026-10-20T15:00:00Z"));
+      await call("/api/trade/option/submit", buyCall(), unread(exitPlans));
+      expect([...exitPlans.carried("human-ann")]).toEqual([OCC]);
+    });
+
+    it("a close with no count still drops it — that order sells the whole holding by its own terms", async () => {
+      const exitPlans = new ExitPlanStore(path);
+      exitPlans.carry("human-ann", OCC, NOW);
+      await call(
+        "/api/trade/option/submit",
+        { kind: "close", participantId: "human-ann", occSymbol: OCC },
+        unread(exitPlans),
+      );
+      expect(exitPlans.carried("human-ann").size).toBe(0);
+    });
+  });
+
   it("adding to a held call without the plan keeps the plan it already carries", async () => {
     const exitPlans = new ExitPlanStore(path);
     exitPlans.carry("human-ann", OCC, NOW);
