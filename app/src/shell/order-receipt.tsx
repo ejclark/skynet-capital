@@ -5,7 +5,7 @@ import { useRef, useState } from "react";
 import { parseOccSymbol } from "../../../src/trading/option-symbols";
 import { useOrderFill } from "../live/desk-events";
 import { manageSearch } from "../live/manage-handoff";
-import { marketSession } from "../live/market-session";
+import { marketSession, viewerTimeZone } from "../live/market-session";
 import {
   followRow,
   isLive,
@@ -125,7 +125,7 @@ export function OrderReceipt({
         <div className="gate-body">
           <p className="receipt-what">{words.instrument}</p>
           <p className="receipt-terms">{words.terms}</p>
-          <p className="gate-note">{receiptNote(read, market)}</p>
+          <p className="gate-note">{receiptNote(read, market, viewerTimeZone())}</p>
           {children}
           <p className="receipt-ref">
             Order ref <span className="num">{now.orderId.slice(0, 8)}</span>

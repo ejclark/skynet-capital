@@ -1,9 +1,12 @@
 import { type KeyboardEvent, type ReactElement, useId, useRef, useState } from "react";
 import {
+  localTimeSuffix,
+  type MarketSessionView,
   marketSession,
   nextOpenLabel,
   sessionSentence,
   statusLineCue,
+  viewerTimeZone,
 } from "../live/market-session";
 import { FleetHealth, useFleet } from "./fleet-health";
 import {
@@ -11,6 +14,7 @@ import {
   SessionTrack,
   SessionWords,
   sessionTrackStyle,
+  useMarketClockFeed,
   useNow,
 } from "./market-session";
 
@@ -42,6 +46,7 @@ import {
  * it from inside, and the shell remounts it per route (`__root.tsx`), so a new page starts folded.
  */
 export function SessionStatus({ now }: { readonly now?: Date }): ReactElement {
+  useMarketClockFeed();
   const ticking = useNow();
   const at = now ?? ticking;
   const view = marketSession(at);
@@ -120,10 +125,49 @@ export function SessionStatus({ now }: { readonly now?: Date }): ReactElement {
           <MarketSession now={at} />
           <p className="status-panel-row">
             <span>Next open</span>
-            <span className="num">{nextOpenLabel(at)}</span>
+            <span className="num">
+              {nextOpenLabel(at)}
+              {localTimeSuffix(view.nextOpenAt, viewerTimeZone())}
+            </span>
           </p>
+          <HoursNotes view={view} />
           <FleetHealth fleet={fleet} />
         </section>
+      ) : null}
+    </>
+  );
+}
+
+/**
+ * The opened panel's facts one tap down (#8248 criteria 9–10): a half day in words — today's, or
+ * the next session's while the market is shut — and, when the broker's calendar didn't answer,
+ * where the hours came from instead. Words, never a tint: a standing reader is red/green
+ * colourblind (docs/BRAND.md → Accessibility).
+ */
+function HoursNotes({ view }: { readonly view: MarketSessionView }): ReactElement | null {
+  const today = view.halfDay && view.state !== "closed";
+  const next = view.nextHalfDayClose && view.nextOpen ? view.nextOpen.split(" ")[0] : undefined;
+  if (!(today || next) && view.source !== "table") return null;
+  return (
+    <>
+      {today ? (
+        <p className="status-panel-row" data-note="half-day">
+          <span>Half day: closes {view.closeLabel} PM ET</span>
+        </p>
+      ) : null}
+      {next ? (
+        <p className="status-panel-row" data-note="half-day">
+          <span>
+            Half day {next}: closes {view.nextHalfDayClose} PM ET
+          </span>
+        </p>
+      ) : null}
+      {view.source === "table" ? (
+        <p className="status-panel-row" data-note="source">
+          <span>
+            Hours from the exchange's published table: the broker's calendar didn't answer.
+          </span>
+        </p>
       ) : null}
     </>
   );

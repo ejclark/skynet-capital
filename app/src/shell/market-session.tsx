@@ -1,4 +1,11 @@
+import { useQuery } from "@tanstack/react-query";
 import { type CSSProperties, type ReactElement, useEffect, useState } from "react";
+import {
+  fetchMarketClock,
+  onMarketClock,
+  refetchDelay,
+  setMarketClock,
+} from "../live/market-clock";
 import {
   formatMinutes,
   type MarketSessionView,
@@ -19,21 +26,46 @@ import {
  *     labels — "the bigger version in the after, line tapped widget", kept as it was.
  *
  * Deliberately NOT here: a "decisions today" counter (rejected in review as overly prescriptive).
- * The clock is local (`live/market-session.ts`), not a query: the session is a pure function of
- * the time, so a 30s tick is all it needs. The knob moves without transition, so no motion
- * budget is spent on a clock.
+ * The tick is local (`live/market-session.ts`): between fetches the session is a pure function of
+ * the time and the day's hours, so a 30s tick is all it needs. The HOURS are the broker's
+ * (`useMarketClockFeed`, #8248). The knob moves without transition, so no motion budget is spent
+ * on a clock.
  */
 
 const TICK_MS = 30_000;
 
-/** The wall clock, re-read every 30s — the status line and the opened clock share one tick rate. */
+/** The wall clock, re-read every 30s — the status line and the opened clock share one tick rate.
+ *  A fresh broker answer redraws at once, so a clock never waits a tick to correct itself. */
 export function useNow(): Date {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     const id = window.setInterval(() => setNow(new Date()), TICK_MS);
-    return () => window.clearInterval(id);
+    const off = onMarketClock(() => setNow(new Date()));
+    return () => {
+      window.clearInterval(id);
+      off();
+    };
   }, []);
   return now;
+}
+
+/**
+ * The broker's market hours, fetched for every clock the shell draws (#8248 criteria 8–9): on load,
+ * again when the broker's phase ends or 15 minutes pass, whichever is first. A failed fetch clears
+ * the store, so the clock draws from the bundled table and the opened panel says so — never a
+ * guessed hour. Mounted once, by the status line every page shows.
+ */
+export function useMarketClockFeed(): void {
+  const clock = useQuery({
+    queryKey: ["market-clock"],
+    queryFn: fetchMarketClock,
+    refetchInterval: (q) => refetchDelay(q.state.data, Date.now()),
+    retry: 1,
+  });
+  // A failed refetch keeps the last good answer (react-query holds it); only no answer at all
+  // falls to the table, said in words.
+  const view = clock.data ?? (clock.isError ? "failed" : undefined);
+  useEffect(() => setMarketClock(view), [view]);
 }
 
 const pct = (x: number) => `${(x * 100).toFixed(2)}%`;

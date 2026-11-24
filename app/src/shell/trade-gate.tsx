@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { FocusEvent, ReactElement } from "react";
 import { useEffect, useId, useState } from "react";
-import { marketSession } from "../live/market-session";
+import { marketSession, viewerTimeZone } from "../live/market-session";
 import type { PlayInfo } from "../live/options";
 import type { SentOrder } from "../live/order-receipt";
 import { quoteQuery } from "../live/quote-query";
@@ -435,7 +435,7 @@ export function TradeGate({
           {money(seed.ask)} ask. Edit it, or switch the order type to Market.
         </p>
       ) : null}
-      <p className="gate-note">{orderTypeNote(fields.orderType, market)}</p>
+      <p className="gate-note">{orderTypeNote(fields.orderType, market, viewerTimeZone())}</p>
 
       {/* Instrument-agnostic (task 3a, unlike the options-chain-only earnings badge/wire-row) —
           this stock ticket gets its own compact "here's what you've done" strip, same relative
