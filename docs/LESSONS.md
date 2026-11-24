@@ -35,6 +35,16 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### `route` red on main: skip route, peek and wake reads on a spent api budget, not fail route (#6942)
+- **SHA:** 454741f   **DATE:** 2026-11-24   **STATUS:** closed
+- **COVERS:** 26bd132 866a7ae d0211ed 619e2d8 bf3b0b6 a37c46e cc6e9fe 02ac1d5 5659e49 ba57c50 5244473 14c0624 53c7cdc 24d6233 bef1015 0ed233c a5d384a 7d4ed05 48e15e8
+- **SIGNAL:** 30 failed run(s) of `Moneypenny Events (event-research automation)` → `route` on `main`, the first [42185658675](https://github.com/ejclark/skynet-capital/actions/runs/42185658675) at 2026-11-06T08:09:22Z. Repair capsule #6942 filed 2026-11-06T08:13:44Z, closed 426h later by #8159.
+- **ROOT CAUSE:** `route` no longer goes red when the App's hourly REST budget is spent during a read; it warns and skips the tick Same rule the audit already follows (#6998, #7773); writes still fail loudly
+- **PREVENTION:** spec — `tests/scripts/moneypenny/budget.spec.ts`, `tests/scripts/moneypenny/night-chain.spec.ts` (#8159).
+- **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
+
+---
+
 ### `integration tests` red on main: pin the edition's today on the e2e server so the calendar keeps its event rows
 - **SHA:** 8189e8b   **DATE:** 2026-11-21   **STATUS:** closed
 - **COVERS:** b77edda
