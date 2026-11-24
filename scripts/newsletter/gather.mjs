@@ -90,7 +90,7 @@ function mergedPrs(rest, w) {
 const labelNames = (i) => (i.labels ?? []).map((l) => (typeof l === "string" ? l : l.name));
 
 /** Every open issue now (about 3 pages): the backlog stock (#8037). A snapshot, like needs-eric. */
-function openIssues(rest) {
+export function openIssues(rest) {
   return pages(rest, `repos/${REPO}/issues?state=open`)
     .filter((i) => !i.pull_request)
     .map((i) => ({
@@ -149,7 +149,7 @@ export function tracker(rest, w) {
  * `rank` is the assignment card's (askRank), so the oldest ask between watching and trading bots
  * can be named (#6953 slice 4).
  */
-function needsEric(rest) {
+export function needsEric(rest) {
   return pages(rest, `repos/${REPO}/issues?labels=needs-eric&state=open`)
     .filter((i) => !i.pull_request)
     .map((i) => {
