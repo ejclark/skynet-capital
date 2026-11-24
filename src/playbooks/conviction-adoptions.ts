@@ -79,16 +79,19 @@ export interface AdoptedHold {
 export type HoldLookup = (convictionId: string, pairId: string) => AdoptedHold | undefined;
 
 /** The hold a ledger puts on one view's pair, or undefined. A line naming any other change holds
- *  nothing (`adoptionProblems` keeps such a line out of the build). Read once into a map. */
+ *  nothing (`adoptionProblems` keeps such a line out of the build). Read once into a map.
+ *  When several failed claims hold one pair, the earliest adoption names it: the pair has opened
+ *  nothing new since that day, and a later line only adds a reason (claim 7 joined 2a on
+ *  CRWV-WHEEL, #5482). Last-wins said "held since 11-24" of a pair shut on 11-09. */
 export function holdIn(ledger: AdoptionLedger): HoldLookup {
   const holds = new Map<string, AdoptedHold>();
   for (const [key, adoption] of Object.entries(ledger)) {
     const parts = splitKey(key);
     if (!parts || adoption.change !== "stop-new-entries") continue;
-    holds.set(`${parts.conviction}/${parts.pair}`, {
-      claim: parts.claim,
-      adoptedOn: adoption.adoptedOn,
-    });
+    const at = `${parts.conviction}/${parts.pair}`;
+    const held = holds.get(at);
+    if (held && held.adoptedOn <= adoption.adoptedOn) continue;
+    holds.set(at, { claim: parts.claim, adoptedOn: adoption.adoptedOn });
   }
   return (convictionId, pairId) => holds.get(`${convictionId}/${pairId}`);
 }
