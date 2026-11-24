@@ -1,12 +1,16 @@
 # The returning trader — one account, wants to sell a covered call
 
-_A proto-member: no quotes; the description is the plan's (2026-09-26) and the fixture's. Twin:
-`e2e/journeys/returning-trader.journey.json`._
+_A proto-member grounded in one real member's production counts (#8161 comment 7120379211,
+2026-11-23): counts and dates only, no name, words or message text. The shape is the plan's
+(2026-09-26) and the fixture's. Twin: `e2e/journeys/returning-trader.journey.json`._
 
 ## 1. Who
 
-A member who linked a paper account weeks ago, has a few fills behind them, and comes back on a
-Tuesday with one intention: sell a covered call on the shares they hold. They know the words
+A member who traded paper stocks for about six weeks after joining: dozens of trades across about
+a dozen names, mostly shares. They sent the app several wishes in their first month and none
+since, then stopped trading with every position still open. The account kept moving without them
+and now sits below its high. They are back now after weeks away, on a Tuesday: first to see what
+happened while they were gone, then to do one thing with it: sell a covered call on shares they hold. They know the words
 (strike, expiry, premium) and the house shape of the app (Profile is my book, Trade is where
 orders go, Activity is what happened). They do not want to learn anything new today; they want
 the path from "my position" to "the order is in" to be four taps and a review.
@@ -17,21 +21,27 @@ the path from "my position" to "the order is in" to be four taps and a review.
   `scripts/crawl/fixtures/owner-links.json`) — one account, SIM-HUMAN-ERIC, one EEM position
   (shares). The same fixture Eric's own file uses; what differs is the intention, not the book.
 - Rungs: whatever the fixture's fills earn. Device: desktop mostly; a phone for the fill check.
+- The real member (#8161 comment 7120379211): joined 08-25, 62 paper trades across 12 symbols,
+  mostly stock, the last on 10-05; 6 filings, all in August; still holds those positions, down
+  about 12% from the account's peak. The fixture holds one EEM position where the real member
+  holds positions from about twelve names.
 
 ## 3. What they are trying to do
 
-1. See the position (Cockpit → Positions).
-2. Read its guidance: is a covered call reasonable now, at which strike, until when.
-3. Draft the order on Trade, prefilled from the guidance.
-4. See the fill on Activity.
-5. Get back to where they started.
+1. See what each holding did while they were away.
+2. See the position (Cockpit → Positions).
+3. Read its guidance: is a covered call reasonable now, at which strike, until when.
+4. Draft the order on Trade, prefilled from the guidance.
+5. See the fill on Activity.
+6. Get back to where they started.
 
-Needs: *"Take me from the row to the ticket."* · *"Tell me the strike and why."* · *"Put me back
-on my book when I'm done."*
+Needs: *"What did my holdings do while I was gone?"* · *"Take me from the row to the ticket."* ·
+*"Tell me the strike and why."* · *"Put me back on my book when I'm done."*
 
 ## 4. How they decide
 
-By the guidance's call line and its confidence; they read "what would change this" second and the
+By their own book first: which holdings moved while they were gone, and by how much, in dollars.
+Then by the guidance's call line and its confidence; they read "what would change this" second and the
 assumptions never. They skip the chart. They trust a prefilled ticket and distrust a blank one.
 
 ## 5. What frustrates them

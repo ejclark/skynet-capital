@@ -9,16 +9,9 @@ import {
 } from "./participant-card.js";
 import type { ParticipantSnapshot } from "./participant-snapshot.js";
 import { formatCurrency, formatSigned, formatSignedPercent, plClass } from "./render-atoms.js";
-import { cohortStats } from "./standings-cohort.js";
 import type { LeaderMetric } from "./standings-metric.js";
-import {
-  cohortView,
-  matchView,
-  rowViews,
-  type TextMap,
-  type ToneMap,
-  versusView,
-} from "./standings-patch.js";
+import { type PartyView, partyView } from "./standings-party.js";
+import { rowViews } from "./standings-patch.js";
 
 /**
  * THE BOARD AS DATA — the JSON views `/api/board` serves the React shell.
@@ -65,36 +58,33 @@ interface BoardViewRow {
   readonly flow?: FlowMark;
 }
 
-/** One keyed display block (cohort card / match bar / versus line), same shape as a `field` op. */
-interface BoardViewBlock {
-  readonly text: TextMap;
-  readonly tone?: ToneMap;
-  readonly bar?: Record<string, number>;
-}
-
 export interface StandingsBoardView {
   readonly rows: readonly BoardViewRow[];
-  readonly blocks: Readonly<Record<string, BoardViewBlock>>;
+  /** The party's table (#8253): members together against the house bot. Live ops address it as
+   *  the `party` field key (`partyFields`); a change of who is seated reframes. */
+  readonly party: PartyView;
 }
 
 /**
  * The initial JSON snapshot for a patch-consuming client (`/api/board`). Every value is formatted
- * by the SAME helpers `standingsFieldOps` uses, and the blocks carry the SAME keys the `field` ops
- * address — so a client renders this once and then applies ops verbatim, never re-deriving a
+ * by the SAME helpers `standingsFieldOps` uses, and the party's table carries the SAME keys the
+ * `party` field op addresses (`partyFields`) — so a client renders this once and then applies ops verbatim, never re-deriving a
  * number (the doctrine at the top of this file, extended over JSON).
  *
  * `flowsFor` reads the capital-flow ledger (#4563): a row with a recorded top-up or reset carries a
  * mark saying so. The mark never moves a row's value, rank or place — the record says what
  * happened and does not judge it.
+ *
+ * `isSeated` answers "has this account's first fill landed in our journal?" (#8253) — the server's
+ * read, injected the same way, so the party's table seats a member on evidence and never on a claim.
  */
 export function standingsBoardView(
   data: DashboardData,
   metric: LeaderMetric,
   flowsFor?: (participantId: string) => readonly CapitalFlow[],
+  isSeated?: (participantId: string) => boolean,
 ): StandingsBoardView {
   const byId = new Map(data.participants.map((p) => [p.id, p]));
-  const humans = cohortStats(data.participants, "human", "Humans");
-  const bots = cohortStats(data.participants, "bot", "Bots");
   return {
     rows: rowViews(data, metric).map((row) => {
       const flow = flowMark(flowsFor?.(row.key) ?? []);
@@ -105,12 +95,7 @@ export function standingsBoardView(
         ...(flow ? { flow } : {}),
       };
     }),
-    blocks: {
-      "cohort:human": cohortView(humans),
-      "cohort:bot": cohortView(bots),
-      match: matchView(humans, bots),
-      versus: { text: versusView(humans, bots) },
-    },
+    party: partyView(data, isSeated),
   };
 }
 

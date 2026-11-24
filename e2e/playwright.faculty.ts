@@ -21,12 +21,17 @@ import { facultyBootEnv, facultyFixturesDir } from "../scripts/faculty/world.mjs
 
 export const FACULTY_PORTS = { port: 8794, bridgePort: 8795 } as const;
 export const ORDERS_PORTS = { port: 8810, bridgePort: 8811 } as const;
+/** The same guard with the exit-at-entry setting on (#8249): `orders-exit`, 8812 + bridge 8813. */
+export const ORDERS_EXIT_PORTS = { port: 8812, bridgePort: 8813 } as const;
 
 type Project = NonNullable<PlaywrightTestConfig["projects"]>[number];
 type WebServer = Extract<NonNullable<PlaywrightTestConfig["webServer"]>, { command: string }>;
 
-function fixtures(): string {
-  const key = "SKYNET_FACULTY_FIXTURES";
+/** One fixtures dir PER BOOT, made once per run. A shared dir meant a shared `data/` dir, and two
+ *  servers writing `progression.json` through the same `.tmp` path raced: one rename found the
+ *  other's file already moved, and a review answered 500 (#8249, seen once a third boot joined). */
+function fixtures(name: string): string {
+  const key = `SKYNET_FACULTY_FIXTURES_${name.toUpperCase().replace(/[^A-Z0-9]/g, "_")}`;
   const dir = process.env[key] ?? facultyFixturesDir();
   process.env[key] = dir;
   return dir;
@@ -40,6 +45,8 @@ export interface FacultyBoot {
   readonly bridgePort: number;
   /** Pins the market and the broker (`SKYNET_FIXED_NOW`); absent, the boot runs on the wall clock. */
   readonly fixedNow?: Date;
+  /** More boot env, e.g. `SKYNET_EXIT_AT_ENTRY` (read only on this offline writes boot, #8249). */
+  readonly env?: Readonly<Record<string, string>>;
 }
 
 const CHANGES: FacultyBoot = { name: "changes", spec: "changes.spec.ts", ...FACULTY_PORTS };
@@ -64,10 +71,11 @@ export function facultyProject(boot: FacultyBoot = CHANGES): {
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,
       env: {
-        // Each boot reads the same fixtures dir; the paper account is in memory, per server.
-        ...facultyBootEnv({ port, bridgePort, fixtures: fixtures() }),
+        // Each boot its own fixtures (and data) dir; the paper account is in memory, per server.
+        ...facultyBootEnv({ port, bridgePort, fixtures: fixtures(boot.name) }),
         SKYNET_RESEARCH_DIR: "e2e/fixtures/research",
         ...(boot.fixedNow ? { SKYNET_FIXED_NOW: boot.fixedNow.toISOString() } : {}),
+        ...boot.env,
       },
     },
   };

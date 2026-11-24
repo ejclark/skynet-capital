@@ -1,6 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactElement } from "react";
+import { brokerClock, calendarDays, marketClockView } from "../../../src/domain/market-clock";
+import {
+  THANKSGIVING_CALENDAR,
+  THANKSGIVING_CLOCK,
+} from "../../../tests/fixtures/alpaca-market-clock";
+import { setMarketClock } from "../../src/live/market-clock";
 import { SessionStatus } from "../../src/shell/session-status";
 import statusCss from "../../src/styles/session-status.css?raw";
 
@@ -45,12 +51,22 @@ const alarmed = {
 
 let ops: unknown = healthy;
 let opsFails = false;
+/** `GET /api/market/clock`'s body, or undefined to answer 502 (#8248). */
+let clock: unknown;
 const realFetch = globalThis.fetch;
 beforeEach(() => {
   ops = healthy;
   opsFails = false;
+  clock = undefined;
   globalThis.fetch = ((input: RequestInfo | URL) => {
     const url = String(input);
+    if (url.includes("/api/market/clock")) {
+      return Promise.resolve(
+        clock === undefined
+          ? new Response("down", { status: 502 })
+          : new Response(JSON.stringify(clock), { status: 200 }),
+      );
+    }
     if (url.includes("/api/ops-status")) {
       return Promise.resolve(
         opsFails
@@ -63,6 +79,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   globalThis.fetch = realFetch;
+  setMarketClock(undefined);
 });
 
 function mount(at: string = OPEN): void {
@@ -327,5 +344,45 @@ describe("the status line beside a fleet alarm on a 390 phone", () => {
     mount(SATURDAY);
     await screen.findByText("fleet status unknown");
     expect(shownWords()).toBe("Market closed | opens Mon 9:30 | fleet status unknown");
+  });
+});
+
+describe("the broker's hours in the status line (#8248)", () => {
+  const days = calendarDays(THANKSGIVING_CALENDAR) ?? [];
+  const served = (at: string) =>
+    marketClockView(days, new Date(at), "broker", brokerClock(THANKSGIVING_CLOCK));
+  const THANKSGIVING = "2026-11-26T15:00:00Z"; // Thu 10:00 ET, the market shut
+  const HALF_DAY = "2026-11-27T17:30:00Z"; // Fri 12:30 ET
+
+  it("on Thanksgiving: closed, opens Fri 9:30, and Friday's half day one tap down", async () => {
+    clock = served(THANKSGIVING);
+    mount(THANKSGIVING);
+    fireEvent.click(line());
+    const panel = screen.getByRole("region", { name: "Market clock and fleet health" });
+    expect(await within(panel).findByText("Half day Fri: closes 1:00 PM ET")).toBeInTheDocument();
+    expect(within(panel).getByText(/Fri Nov 27 · 9:30 ET/)).toBeInTheDocument();
+    expect(within(panel).queryByText(/published table/)).toBeNull();
+  });
+
+  it("on the half day: 30 minutes left, the track ending at 1:00, the half day in words", async () => {
+    clock = served(HALF_DAY);
+    mount(HALF_DAY);
+    expect(widgetWords()).toBe("Market open | 30m left today");
+    fireEvent.click(line());
+    const panel = screen.getByRole("region", { name: "Market clock and fleet health" });
+    expect(await within(panel).findByText("Half day: closes 1:00 PM ET")).toBeInTheDocument();
+    expect(within(panel).getByText(/→ 1:00 ET/)).toBeInTheDocument();
+  });
+
+  it("when the clock can't be fetched: the table answers, and the panel says so", async () => {
+    mount(THANKSGIVING);
+    expect(widgetWords()).toBe("Market closed | opens Fri 9:30");
+    fireEvent.click(line());
+    const panel = screen.getByRole("region", { name: "Market clock and fleet health" });
+    expect(
+      await within(panel).findByText(
+        "Hours from the exchange's published table: the broker's calendar didn't answer.",
+      ),
+    ).toBeInTheDocument();
   });
 });

@@ -1,0 +1,153 @@
+/**
+ * The dated record of the paper checks (#8256): each run appends to
+ * `docs/research/alpaca-paper-checks/<ET date>.json`, and the folder's README is regenerated from
+ * every file there — one row per check, its latest answer in words, the date of that answer, and
+ * the step that reads it. Four columns, so the table reads on a 390px phone; the answer is words,
+ * never a colour or an emoji. `not in window` stays `not in window` until a run answers it.
+ */
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import type { Outcome } from "./answer.js";
+import { type CheckId, PAPER_CHECKS } from "./catalog.js";
+import type { Attempt } from "./desk.js";
+import type { Phase } from "./windows.js";
+
+export interface CheckRow {
+  readonly check: CheckId;
+  readonly ranAt: string;
+  readonly phase: Phase;
+  readonly outcome: Outcome;
+  readonly answer: string;
+  readonly attempts: readonly Attempt[];
+  readonly orderIds: readonly string[];
+  /** `nothing placed` · `cancelled` · `still open` — filled in after cleanup. */
+  readonly cleanup: string;
+  readonly nextWindow?: string;
+}
+
+export interface RunRecord {
+  readonly runId: string;
+  readonly startedAt: string;
+  readonly finishedAt: string;
+  readonly exitCode: number;
+  readonly rows: readonly CheckRow[];
+  /** Order ids still open after cleanup; non-empty means the run exited 1. */
+  readonly stillOpen: readonly string[];
+  readonly positionsLeft: readonly string[];
+}
+
+export interface ResultsFile {
+  readonly date: string;
+  readonly runs: readonly RunRecord[];
+}
+
+export const RESULTS_DIR = join("docs", "research", "alpaca-paper-checks");
+
+const DATE_FILE = /^\d{4}-\d{2}-\d{2}\.json$/;
+
+function readFile(path: string, date: string): ResultsFile {
+  if (!existsSync(path)) return { date, runs: [] };
+  const parsed = JSON.parse(readFileSync(path, "utf8")) as Partial<ResultsFile>;
+  return { date, runs: Array.isArray(parsed.runs) ? parsed.runs : [] };
+}
+
+/** Every dated results file in `dir`, oldest first. */
+export function readResults(dir: string): ResultsFile[] {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir)
+    .filter((f) => DATE_FILE.test(f))
+    .sort()
+    .map((f) => readFile(join(dir, f), f.slice(0, 10)));
+}
+
+/** Append one run to `<date>.json` and regenerate the README; `scrub` runs over both texts. */
+export function writeResults(
+  dir: string,
+  date: string,
+  run: RunRecord,
+  scrub: (text: string) => string,
+): void {
+  mkdirSync(dir, { recursive: true });
+  const path = join(dir, `${date}.json`);
+  const file = readFile(path, date);
+  writeFileSync(path, scrub(`${JSON.stringify({ date, runs: [...file.runs, run] }, null, 2)}\n`));
+  writeFileSync(join(dir, "README.md"), scrub(renderReadme(readResults(dir))));
+}
+
+const MAX_CELL = 240;
+
+const cell = (text: string): string => {
+  const flat = text.replace(/\s+/g, " ").replace(/\|/g, "\\|");
+  return flat.length > MAX_CELL ? `${flat.slice(0, MAX_CELL - 1)}…` : flat;
+};
+
+interface Latest {
+  readonly answer: string;
+  readonly date: string;
+}
+
+type Tier = 0 | 1 | 2;
+
+/**
+ * A row as the README says it, and how much it outranks: a broker answer (2) beats an error (1),
+ * which beats a wait (0) — so a later transient error or `not in window` never hides an earlier
+ * real answer. A dry run is never on the record.
+ */
+function entryOf(row: CheckRow): { tier: Tier; answer: string } | undefined {
+  if (row.outcome === "dry run") return undefined;
+  if (row.outcome === "not in window") {
+    const next = row.nextWindow ? `; next window ${row.nextWindow}` : "";
+    return { tier: 0, answer: `not in window yet${next}` };
+  }
+  return { tier: row.outcome === "error" ? 1 : 2, answer: `${row.outcome}: ${row.answer}` };
+}
+
+/** The latest row of the highest tier for each check (files oldest first, runs in order). */
+export function latestAnswers(files: readonly ResultsFile[]): Map<CheckId, Latest> {
+  const best = new Map<CheckId, Latest & { tier: Tier }>();
+  const rows = files.flatMap((file) =>
+    file.runs.flatMap((run) => run.rows.map((row) => ({ row, date: file.date }))),
+  );
+  for (const { row, date } of rows) {
+    const entry = entryOf(row);
+    const held = best.get(row.check);
+    if (entry && (!held || entry.tier >= held.tier)) best.set(row.check, { ...entry, date });
+  }
+  return new Map([...best].map(([check, { answer, date }]) => [check, { answer, date }]));
+}
+
+/** The README: what this is, how to run it, and one row per check. */
+export function renderReadme(files: readonly ResultsFile[]): string {
+  const latest = latestAnswers(files);
+  const rows = PAPER_CHECKS.map((spec) => {
+    const found = latest.get(spec.id);
+    const answer = spec.notScriptable
+      ? `not scriptable: ${spec.notScriptable}`
+      : (found?.answer ?? "not run yet");
+    return `| \`${spec.id}\` ${cell(spec.question)} | ${cell(answer)} | ${found?.date ?? "-"} | ${cell(spec.reader)} |`;
+  });
+  return `<!-- Generated by \`npm run paper:checks\` (src/alpaca/paper-checks/results.ts); edits are overwritten. -->
+# Alpaca paper limits, checked on a test account
+
+Nine broker limits #8161's build order leans on, each answered by one real paper test (#8256).
+Every answer is the broker's own response, dated; a refusal is an answer. The full requests and
+responses for each run are in the dated \`.json\` files beside this one.
+
+| Check | Latest answer | Date | Read by |
+|---|---|---|---|
+${rows.join("\n")}
+
+## Running it
+
+- \`npm run paper:checks\` runs every check whose window is open now; the rest are recorded
+  \`not in window\` with the next window's start. \`--only <ids>\` (comma-separated) picks checks,
+  \`--dry-run\` prints every order body and sends no POST, PATCH or DELETE (and writes no results),
+  \`--same-day-qty <n>\` sets check 7's second order (default 25).
+- It reads its key from \`SKYNET_PAPER_CHECK_KEY\` and \`SKYNET_PAPER_CHECK_SECRET\` only: a paper
+  account used for nothing else. It exits 2 before placing anything when either is missing, when the
+  key matches a bot's or a member's, or when the account isn't an empty \`PA\` paper account.
+- Every order carries a \`paperchk-<run>-<check>-<n>\` client order id and is a limit that can't
+  fill (check 4's 0.5-share market buy and sell-back excepted). Cleanup cancels them all however the
+  run ends; anything still open after it is named here and the run exits 1.
+`;
+}

@@ -5,6 +5,7 @@ import {
   normalizeSymbol,
   previewOrder,
   type TicketAction,
+  type TicketExit,
   type TicketOrderType,
   type TicketPreview,
   type TicketTimeInForce,
@@ -40,6 +41,9 @@ interface DeskTradeRequest {
   readonly limitPrice?: number;
   readonly stopPrice?: number;
   readonly timeInForce?: TicketTimeInForce;
+  /** A take-profit and stop sent with the entry as one bracket (#8249) — the route admits it only
+   *  for a session the setting allows; this seam re-reviews it like every other field. */
+  readonly exit?: TicketExit;
 }
 
 export type DeskTradeResult =
@@ -51,6 +55,8 @@ export type DeskTradeResult =
       /** The broker's own echo of what it was told (#3407 P1) — absent only on a transport
        *  double that doesn't echo it. */
       readonly timeInForce?: string;
+      /** A bracket's take-profit and stop as the broker echoed them (#8249). */
+      readonly exits?: { readonly takeProfit: number; readonly stop: number };
     }
   | { readonly ok: false; readonly refusals: string[] };
 
@@ -92,6 +98,7 @@ async function reviewLive(
       ...(request.limitPrice !== undefined ? { limitPrice: request.limitPrice } : {}),
       ...(request.stopPrice !== undefined ? { stopPrice: request.stopPrice } : {}),
       ...(request.timeInForce ? { timeInForce: request.timeInForce } : {}),
+      ...(request.exit ? { exit: request.exit } : {}),
     },
     {
       cash: Number(account.cash),
@@ -131,6 +138,11 @@ export function createTradeService(deps: TradeServiceDeps): SubmitDeskTrade {
           ...(preview.limitPrice !== undefined ? { limit_price: preview.limitPrice } : {}),
           ...(preview.stopPrice !== undefined ? { stop_price: preview.stopPrice } : {}),
           time_in_force: preview.timeInForce,
+          // Built from the re-reviewed preview, never the request: what reaches the broker is what
+          // passed the rules against live numbers.
+          ...(preview.exit
+            ? { bracket: { takeProfit: preview.exit.takeProfit, stop: preview.exit.stop } }
+            : {}),
         }),
       access.participant,
       deps,

@@ -50,7 +50,11 @@ export const PLACES: readonly Place[] = [
   { path: "/learn", name: "Milestones", what: "the ladder's chapters, on Profile" },
   { path: "/learn/trading", name: "the Trading chapter", what: "the trading rungs" },
   { path: "/playbooks", name: "Playbooks", what: "the playbooks chapter, on Profile" },
-  { path: "/feedback", name: "Feedback", what: "the member's own filings, on Profile" },
+  {
+    path: "/feedback",
+    name: "Journal",
+    what: "the member's wishes, filings and private notes, on Profile",
+  },
 ];
 
 /** The Leaderboard's rankings as `?by=` values — `app/src/live/board.ts`'s `BOARD_METRICS`,

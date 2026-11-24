@@ -26,6 +26,7 @@ import type { AlertDismissalsPort } from "../ports/alert-dismissals.js";
 import type { WatchlistPort } from "../ports/watchlist.js";
 import type { IvHistoryPort } from "../research/iv-record.js";
 import type { SpotCheckPort } from "../research/spot-checks.js";
+import type { ExitAtEntry } from "../trading/exit-at-entry-flag.js";
 import type { AccountAdmin } from "./account-forms.js";
 import type { AlpacaConnect } from "./alpaca-connect-routes.js";
 import type { Authenticator } from "./auth/authenticator.js";
@@ -49,6 +50,7 @@ import type { FixAnnouncementStore } from "./fix-announcement-store.js";
 import type { GithubTokenDeps } from "./github-token.js";
 import type { InviteDeps } from "./invite-form.js";
 import type { JournalStore } from "./journal-store.js";
+import type { ReadMarketClock } from "./market-clock.js";
 import type { MemberCampaignStore } from "./member-campaign-store.js";
 import type { MemberChainStore } from "./member-chain-store.js";
 import type { MemberConvictionStore } from "./member-conviction-store.js";
@@ -64,6 +66,7 @@ import type {
   RotateCredentialsInput,
   RotateResult,
 } from "./participant-service.js";
+import type { PartySeats } from "./party-seats.js";
 import type { PlayMilestoneLedger } from "./play-milestone-ledger.js";
 import type { ProgressionService } from "./progression-service.js";
 import type { QuoteStreamPort } from "./quote-stream-hub.js";
@@ -97,6 +100,11 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * or curve carries a mark.
    */
   readonly capitalFlows?: CapitalFlowReader;
+  /**
+   * Who sits at the party's table (#8253): a member's first filled paper order, read from our own
+   * journal. Omit (tests, offline) and nobody is seated — the table shows open seats only.
+   */
+  readonly partySeats?: PartySeats;
   /**
    * Legacy shared-password gate. Used only when `auth` is not configured (localhost/offline).
    * When set, every request must carry ?key=<password>.
@@ -319,6 +327,9 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
   /** The transport that carries an alert off this machine — the one half that needs Eric's
    *  credential. Absent: delivery reads as unconfigured IN WORDS, never a silent drop. */
   readonly alertDelivery?: AlertDeliveryPort;
+  /** Run one delivery pass for this account now — the fill-watch route calls it after a tap, so an
+   *  order that ended a moment before still gets its one email (#8251). Absent: no transport. */
+  readonly alertDeliveryNudge?: (participantId: string) => void;
   /** Where a member's watchlist is kept (`watchlist-route.ts`, #4332). Absent: the route says the
    *  list isn't stored on this deployment rather than accepting names into memory. */
   readonly watchlist?: WatchlistPort;
@@ -353,6 +364,10 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
   /** The game-master pilot's setting (#8191) — specs only. Absent, the committed
    *  `GAME_MASTER_PILOT` in `companion/game-master-flag.ts` is the setting; boot never sets this. */
   readonly gameMasterPilot?: GameMasterPilot;
+  /** The exit-at-entry setting (#8249). Absent, the committed `EXIT_AT_ENTRY` in
+   *  `trading/exit-at-entry-flag.ts` is the setting; the boot sets it only from
+   *  `exitAtEntrySetting`, which reads an override on the offline writes boot alone. */
+  readonly exitAtEntry?: ExitAtEntry;
   /** What waits on the owner's decision or merge (`owner-queue.ts`); read into Moneypenny's turn
    *  only when `isOwnerEmail` passes for the session. Omit when the feedback token is unset. */
   readonly readOwnerQueue?: ReadOwnerQueue;
@@ -494,6 +509,9 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    *  only on an offline e2e boot (`SKYNET_EDITION_NOW`, src/scripts/offline-clocks.ts, #7901); omit
    *  and the wall clock is used. */
   readonly editionNow?: () => Date;
+  /** Market hours from Alpaca's calendar and clock, shared and cached (`market-clock.ts`, #8248).
+   *  Absent: the checked-in table answers, and says so (`source: "table"`). */
+  readonly readMarketClock?: ReadMarketClock;
   /**
    * `GET/POST /api/council` — the Sunday Council's weekly thesis line (issue #2224 shape 1). Omit
    * to disable (offline mode) — the shell renders the honest "not switched on yet" state instead

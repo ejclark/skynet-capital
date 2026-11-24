@@ -240,3 +240,24 @@
   -webkit-appearance: none;
   margin: 0;
 }
+
+/* The exit a limit buy can carry (#8249): its take-profit and stop sit in their own box under the
+   limit price, the order a member reads them in at 390px. Told apart by their labels, never a hue. */
+.gate-exit {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: var(--space-2) var(--space-3);
+  margin: 0 0 var(--space-3);
+}
+.gate-exit-legend {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--muted);
+  padding: 0 4px;
+}
+.gate-exit .gate-fields {
+  margin-bottom: var(--space-2);
+}
+.gate-exit-add {
+  margin-bottom: var(--space-3);
+}

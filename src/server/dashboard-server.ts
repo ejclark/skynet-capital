@@ -33,6 +33,7 @@ import { serveFastTrackApi } from "./fast-track-route.js";
 import { serveFeedbackApi } from "./feedback-api-routes.js";
 import { serveFeedbackRoute } from "./feedback-routes.js";
 import { serveFilingCommentsApi } from "./filing-comments-api-routes.js";
+import { serveFillWatchApi } from "./fill-watch-route.js";
 import { serveHeldNewsApi } from "./held-news-route.js";
 import { serveJoinApi } from "./join-api-routes.js";
 import { serveJournalApi } from "./journal-api-routes.js";
@@ -73,7 +74,7 @@ export function createDashboardServer(config: DashboardServerConfig): Server {
   // ONE channel per server, driven by ONE hub subscription: the board diff is computed once per
   // tick regardless of how many viewers are watching, and every viewer shares one seq run.
   const channel = createBoardChannel();
-  driveBoardChannel(config.hub, channel, config.ceremonies, config.capitalFlows);
+  driveBoardChannel(config.hub, channel, config.ceremonies, config.capitalFlows, config.partySeats);
   return createServer((req, res) => {
     void handle(req, res, config, channel).catch((error: unknown) => {
       // Last-resort net (mirrors insights-listener.ts): every route handler below is expected to
@@ -230,6 +231,7 @@ async function serveWriteApis(
   if (await serveFastTrackApi(req, res, path, config, session)) return true;
   if (await serveHeldNewsApi(req, res, path, config, session)) return true;
   if (await serveAlertDeliveryApi(req, res, path, config, session)) return true;
+  if (await serveFillWatchApi(req, res, path, config, session)) return true;
   if (await serveWatchlistApi(req, res, path, config, session)) return true;
   if (await serveOptionApi(req, res, path, config, session)) return true;
   if (await serveDraftOrderApi(req, res, path, config, session)) return true;
@@ -269,7 +271,7 @@ async function serveAuthorizedRoute(
   if (path === "/events") {
     const params = new URL(url, "http://localhost").searchParams;
     const metric = parseLeaderMetric(params.get("by"));
-    streamBoardPatches(req, res, channel, metric, parseCompareParams(params));
+    streamBoardPatches(req, res, channel, metric, parseCompareParams(params), config.partySeats);
     return;
   }
   if (await serveJsonApi(res, path, url, config, channel, session)) {

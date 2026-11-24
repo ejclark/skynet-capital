@@ -15,7 +15,7 @@ import type { PageSection } from "./sections";
  *     accounts" has no single book to judge, so the aggregate switch leaves it out;
  *   - a BOT's — Playbooks · Thesis — only while one bot account is selected (#3687; Playbooks
  *     took Heartbeat's slot when the two merged, #5073);
- *   - the VIEWER's — Milestones · Feedback (#3807 slice 2b; #888, Eric 2026-08-29: "a user-level
+ *   - the VIEWER's — Milestones · Journal (key `feedback`; #3807 slice 2b, renamed in #8190; #888, Eric 2026-08-29: "a user-level
  *     feature belongs on the page itself, not repeated inside every account row") — the same on
  *     every selection incl. All accounts, so the switcher hides while one is open.
  * A member with no linked account has no book to overview: the switch carries Ledger · Events
@@ -57,7 +57,8 @@ const BALANCE: PageSection<AccountsSection> = { id: "balance", label: "Balance" 
 
 const VIEWER: readonly PageSection<AccountsSection>[] = [
   { id: "milestones", label: "Milestones" },
-  { id: "feedback", label: "Feedback" },
+  // The Journal (#8190): the label changed, the URL key `feedback` stays until #8161 stage 2.
+  { id: "feedback", label: "Journal" },
 ];
 
 /** The full candidate list `validateSearch` accepts from a URL — the *rendered* set narrows this

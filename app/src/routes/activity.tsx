@@ -129,7 +129,7 @@ function WireControls({
     <>
       {kinds.length > 1 ? group("Kind", kinds) : null}
       {tradesInScope ? group("Side", SIDE_CHIPS) : null}
-      {tradesInScope ? group("Desks", DESK_CHIPS) : null}
+      {tradesInScope ? group("Traders", DESK_CHIPS) : null}
       {filings ? group("Filings", FILING_CHIPS) : null}
     </>
   );

@@ -22,8 +22,8 @@ import { BotPlaybooksSection } from "../shell/bot-playbooks";
 import { CockpitHead, resolveNetWorth } from "../shell/cockpit-head";
 import { useDefaultAccount } from "../shell/default-account";
 import { EventsSection } from "../shell/events-section";
-import { FeedbackSection } from "../shell/feedback-section";
 import { PageFrame } from "../shell/frame";
+import { JournalSection } from "../shell/journal-section";
 import { Ledger } from "../shell/ledger";
 import type { MilestoneChapter } from "../shell/milestone-card";
 import { MilestonesSection } from "../shell/milestones-section";
@@ -359,7 +359,7 @@ function CockpitBody({
         onJoined={onJoined}
       />
     );
-  if (section === "feedback") return <FeedbackSection />;
+  if (section === "feedback") return <JournalSection />;
   if (section === "playbooks")
     return (
       <BotPlaybooksSection

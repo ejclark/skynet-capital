@@ -5,6 +5,7 @@ import type { OwnedAccount } from "../live/settings";
 import { AccountsPositionsSection } from "./accounts-positions-section";
 import { BookWaitLine, BookWaitStart } from "./book-wait-line";
 import { HeldEventsLine } from "./held-events-line";
+import { LateLockIns } from "./lock-in-late";
 import { MoneyStrip } from "./money-strip";
 import { NetWorthCard } from "./networth-card";
 import { NetWorthRoster } from "./networth-summary";
@@ -91,6 +92,8 @@ export function OverviewSection({
   if (error || !stats) return <p className="note">Net worth is unreachable right now.</p>;
   return (
     <div className="networth-detail">
+      {/* A close sent while marked Consider that filled after its page was gone (#7383). */}
+      {desks ? <LateLockIns deskIds={desks.map((d) => d.desk.id)} /> : null}
       {allAccounts ? null : (
         <NewHighCeremony key={accountId} accountId={accountId} caption={caption} stats={stats} />
       )}

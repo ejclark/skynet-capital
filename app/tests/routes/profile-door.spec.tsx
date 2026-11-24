@@ -99,6 +99,10 @@ rstest.mock("../../src/live/feedback", () => ({
       appVersion: "test",
     }),
 }));
+rstest.mock("../../src/live/journal", () => ({
+  fetchJournal: () => Promise.resolve({ available: true, wishesEnabled: true, notes: [] }),
+  postJournal: () => Promise.resolve({ ok: false, error: "not used in this spec" }),
+}));
 rstest.mock("../../src/live/options", () => ({
   fetchPlays: () => Promise.resolve({ linked: true, wheels: false, plays: [] }),
 }));
@@ -349,10 +353,10 @@ describe("the Profile page's default and its viewer-level sections", () => {
     );
     expect(await screen.findByRole("heading", { name: "Prove the play by hand, then arm it" }));
     expect(screen.getByRole("link", { name: /M·03/ })).toHaveAttribute("aria-current", "page");
-    await userEvent.click(screen.getByRole("button", { name: "Feedback" }));
+    await userEvent.click(screen.getByRole("button", { name: "Journal" }));
     await waitFor(() => expect(router.state.location.search).not.toHaveProperty("chapter"));
     expect(await screen.findByRole("button", { name: "✦ Talk to Moneypenny" })).toBeVisible();
-    expect(headNote()).toBe("Your filings · the same on every account");
+    expect(headNote()).toBe("Your journal · the same on every account");
   });
 
   it("links one picked account's page as the league sees it, one tap under its name", async () => {

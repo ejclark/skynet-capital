@@ -1,5 +1,6 @@
 import {
   formatMinutes,
+  localSessionSuffix,
   marketSession,
   nextOpenLabel,
   sessionSentence,
@@ -133,6 +134,17 @@ describe("waitsForOpen", () => {
     );
     expect(waitsForOpen(marketSession(new Date("2026-10-31T16:00:00Z")))).toBe(
       "the Mon 9:30 ET open",
+    );
+  });
+});
+
+describe("localSessionSuffix — step 3's note, on the table's hours", () => {
+  it("says nothing to an Eastern viewer on a full day", () => {
+    expect(localSessionSuffix(new Date("2026-09-03T15:00:00Z"), "America/New_York")).toBe("");
+  });
+  it("gives a Pacific viewer the session in their own zone", () => {
+    expect(localSessionSuffix(new Date("2026-09-03T15:00:00Z"), "America/Los_Angeles")).toBe(
+      " (6:30 AM–1:00 PM PDT)",
     );
   });
 });

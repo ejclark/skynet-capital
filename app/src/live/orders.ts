@@ -39,6 +39,8 @@ export interface DeskOrderRow {
   readonly replaceable?: boolean;
   readonly replaces?: string;
   readonly replacedBy?: string;
+  /** A bracket's exit, by its job (#8249): the row reads "Take-profit" or "Stop", not its type. */
+  readonly exitRole?: "take-profit" | "stop";
 }
 
 export type DeskOrders =
