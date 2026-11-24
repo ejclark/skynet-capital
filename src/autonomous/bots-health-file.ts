@@ -22,12 +22,7 @@
  */
 import { writeFileAtomicSync } from "../storage/atomic-write.js";
 import type { RestoredBotsState } from "./bots-state-db.js";
-import {
-  type BotsVitals,
-  type BotVitals,
-  type BridgeStatus,
-  MAX_VITALS_BOTS,
-} from "./bots-vitals-wire.js";
+import type { BotsVitals, BotVitals, BridgeStatus } from "./bots-vitals-wire.js";
 
 export type { BridgeStatus } from "./bots-vitals-wire.js";
 
@@ -103,10 +98,9 @@ export function openBotsHealthFile(
       : bridgeConfigured
         ? "unreachable"
         : "unset";
-    // The most recently evaluated first, so a roster past the cap keeps the bots that are alive.
-    const marks = [...perBot.entries()]
-      .sort(([, a], [, b]) => b.evalMs - a.evalMs)
-      .slice(0, MAX_VITALS_BOTS);
+    // The most recently evaluated first, so a report the wire must trim keeps the bots that are
+    // alive. The aggregates read every bot, never the trimmed list.
+    const marks = [...perBot.entries()].sort(([, a], [, b]) => b.evalMs - a.evalMs);
     const bots: BotVitals[] = marks.map(([id, m]) => ({
       id,
       lastEvalAt: iso(m.evalMs),

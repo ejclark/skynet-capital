@@ -57,8 +57,8 @@ export function botOrderPublisher(
 }
 
 /**
- * Console + audit-store sink for one decision cycle. `pulse` (#4220) moves the bot's vitals on the
- * health record before either write, and like them it never throws into the cycle. Never throws on either write: `audit` is
+ * Console + audit-store sink for one decision cycle. `pulse` (#4220) first moves the bot's vitals
+ * on the health record, caught like the writes below. Never throws on either write: `audit` is
  * async (JSONL, the existing backstop) and errors are caught; `decisionDb` is `DatabaseSync`
  * (fully synchronous — a throw would propagate synchronously, not via a rejected promise), so its
  * call is wrapped in try/catch instead. Both are optional and independent — a `decisionDb` write

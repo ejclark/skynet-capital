@@ -6,6 +6,7 @@ import {
   CONTROLS_BOT_VITALS_HEADER,
   controlsPollVitalsHeaders,
   MAX_VITALS_BOTS,
+  MAX_VITALS_HEADER_BYTES,
   parseControlsPollVitals,
 } from "../../src/autonomous/bots-vitals-wire.js";
 import type { ControlsPollReport } from "../../src/autonomous/controls-poll-wire.js";
@@ -164,13 +165,42 @@ describe("the health record's pulse", () => {
   it("keeps the most recently evaluated bots when the roster passes the cap, so it still reads", () => {
     const health = openBotsHealthFile(undefined, null);
     health.boot(true);
-    for (let i = 0; i <= MAX_VITALS_BOTS; i += 1) {
+    health.decided({ at: 500, personaId: "bot-0", outcomes: placed }); // stalest eval, newest order
+    for (let i = 1; i <= MAX_VITALS_BOTS; i += 1) {
       health.decided({ at: 1_000 + i, personaId: `bot-${i}`, outcomes: [] });
     }
-    const vitals = health.vitals();
-    expect(vitals?.bots).toHaveLength(MAX_VITALS_BOTS);
-    expect(vitals?.bots.map((b) => b.id)).not.toContain("bot-0"); // the stalest one drops
-    expect(parseControlsPollVitals(controlsPollVitalsHeaders(vitals))).toEqual(vitals);
+    health.decided({ at: 2_000, personaId: "bot-0", outcomes: [] }); // evaluates again, no order
+    health.decided({ at: 100, personaId: "bot-stale", outcomes: [] });
+    const sent = parseControlsPollVitals(controlsPollVitalsHeaders(health.vitals()));
+    expect(sent?.bots).toHaveLength(MAX_VITALS_BOTS);
+    expect(sent?.bots.map((b) => b.id)).not.toContain("bot-stale"); // the stalest one drops
+    // The aggregates read every bot, not just the ones that fit.
+    expect(sent?.lastOrderAt).toBe(new Date(500).toISOString());
+  });
+
+  it("trims the stalest bots to fit the header budget, never failing the poll it shares", () => {
+    const health = openBotsHealthFile(undefined, null);
+    health.boot(true);
+    for (let i = 0; i < MAX_VITALS_BOTS; i += 1) {
+      health.decided({ at: 1_000 + i, personaId: `${"x".repeat(60)}-${i}`, outcomes: placed });
+    }
+    const headers = controlsPollVitalsHeaders(health.vitals());
+    expect(headers[CONTROLS_BOT_VITALS_HEADER]?.length).toBeLessThanOrEqual(
+      MAX_VITALS_HEADER_BYTES,
+    );
+    const sent = parseControlsPollVitals(headers);
+    expect(sent?.bots.length).toBeGreaterThan(0);
+    expect(sent?.bots.length).toBeLessThan(MAX_VITALS_BOTS);
+    expect(sent?.bots[0]?.id).toBe(`${"x".repeat(60)}-${MAX_VITALS_BOTS - 1}`); // newest kept
+  });
+
+  it("leaves out a bot whose id the reader would refuse, rather than voiding the whole pulse", () => {
+    const health = openBotsHealthFile(undefined, null);
+    health.boot(true);
+    health.decided({ at: 1_000, personaId: "sauron", outcomes: [] });
+    health.decided({ at: 2_000, personaId: "y".repeat(65), outcomes: [] });
+    const sent = parseControlsPollVitals(controlsPollVitalsHeaders(health.vitals()));
+    expect(sent?.bots.map((b) => b.id)).toEqual(["sauron"]);
   });
 });
 
@@ -211,6 +241,7 @@ describe("parseControlsPollVitals — fail-closed", () => {
     ["a sha that is not a sha", encode({ ...good, gitSha: "main; rm -rf" })],
     ["an unknown bridge verdict", encode({ ...good, bridge: "fine" })],
     ["a timestamp that is not a date", encode({ ...good, lastTickAt: "yesterday-ish" })],
+    ["a loose date Date.parse would take", encode({ ...good, lastTickAt: "2026" })],
     ["no booted-at", encode({ ...good, bootedAt: null })],
     ["a bot with no id", encode({ ...good, bots: [{ lastEvalAt: null, lastOrderAt: null }] })],
     [

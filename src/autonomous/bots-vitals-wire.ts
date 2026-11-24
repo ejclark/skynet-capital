@@ -57,23 +57,45 @@ export interface BotsVitals {
  *  Over it, the sender keeps the most recently evaluated and the reader drops the whole report. */
 export const MAX_VITALS_BOTS = 32;
 const MAX_ID_LENGTH = 64;
+/** The encoded header's ceiling. It shares one GET with the gate and roster headers under Node's
+ *  16 KiB header limit, and a 431 there would fail the poll that carries the owner's suspend
+ *  toggles, so the sender trims the stalest bots to fit rather than risk the poll. */
+export const MAX_VITALS_HEADER_BYTES = 4 * 1024;
+/** What `toISOString` writes, and nothing looser: `Date.parse` alone would take "2026" or "1". */
+const ISO_INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/;
 const SHA = /^[0-9a-f]{7,40}$/;
 const BRIDGE_STATUSES: readonly BridgeStatus[] = ["armed", "unreachable", "unset"];
 
+const encode = (vitals: BotsVitals): string =>
+  Buffer.from(JSON.stringify(vitals), "utf8").toString("base64");
+
 /** Bots side: the header to add to the poll. Empty when there is nothing to report yet (the boot
- *  fetch, before the bridge verdict is in) — an absent header is the honest signal. */
+ *  fetch, before the bridge verdict is in) — an absent header is the honest signal. `bots` is
+ *  expected most recently evaluated first; the sender trims from the end, so what it keeps always
+ *  reads whole on the other side. */
 export function controlsPollVitalsHeaders(vitals: BotsVitals | undefined): Record<string, string> {
   if (!vitals) return {};
   // A `GIT_SHA` that is not a sha travels as null (unknown), so it never voids the rest of the pulse.
   const sha = vitals.gitSha?.trim().toLowerCase() ?? "";
-  const sent: BotsVitals = { ...vitals, gitSha: SHA.test(sha) ? sha : null };
-  const encoded = Buffer.from(JSON.stringify(sent), "utf8").toString("base64");
+  const bots = vitals.bots
+    .filter((bot) => bot.id.length > 0 && bot.id.length <= MAX_ID_LENGTH)
+    .slice(0, MAX_VITALS_BOTS);
+  let sent: BotsVitals = { ...vitals, gitSha: SHA.test(sha) ? sha : null, bots };
+  let encoded = encode(sent);
+  while (encoded.length > MAX_VITALS_HEADER_BYTES && sent.bots.length > 0) {
+    sent = { ...sent, bots: sent.bots.slice(0, -1) };
+    encoded = encode(sent);
+  }
   return { [CONTROLS_BOT_VITALS_HEADER]: encoded };
 }
 
 /** An ISO instant or null, and nothing else: a string that does not parse as a date is junk. */
+function isInstant(value: unknown): value is string {
+  return typeof value === "string" && ISO_INSTANT.test(value) && Number.isFinite(Date.parse(value));
+}
+
 function isInstantOrNull(value: unknown): value is string | null {
-  return value === null || (typeof value === "string" && Number.isFinite(Date.parse(value)));
+  return value === null || isInstant(value);
 }
 
 function parseBot(value: unknown): BotVitals | undefined {
@@ -89,7 +111,7 @@ function parseVitals(decoded: unknown): BotsVitals | undefined {
   const { gitSha, bootedAt, bridge, lastControlsPollAt, lastTickAt, lastEvalAt, lastOrderAt } =
     decoded;
   if (!(gitSha === null || (typeof gitSha === "string" && SHA.test(gitSha)))) return undefined;
-  if (typeof bootedAt !== "string" || !Number.isFinite(Date.parse(bootedAt))) return undefined;
+  if (!isInstant(bootedAt)) return undefined;
   if (!BRIDGE_STATUSES.includes(bridge as BridgeStatus)) return undefined;
   const instants = [lastControlsPollAt, lastTickAt, lastEvalAt, lastOrderAt];
   if (!instants.every(isInstantOrNull)) return undefined;
