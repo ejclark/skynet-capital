@@ -8,8 +8,8 @@ import { markOf } from "../live/position-mark";
 import { fetchQuests } from "../live/quests";
 import { fetchSettings } from "../live/settings";
 import { isCampaignAddress } from "../shell/campaign-forward";
-import { reopenTarget } from "../shell/last-app";
 import { PageFrame } from "../shell/frame";
+import { reopenTarget } from "../shell/last-app";
 import { usePhoneWidth } from "../shell/use-media";
 import { TowerSlot } from "../shell/vantage";
 

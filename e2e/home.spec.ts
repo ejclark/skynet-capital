@@ -122,8 +122,11 @@ test("keeps the stage's left edge and width identical across pages at 1280 (crit
   ]) {
     await page.goto(path);
     await expect(page.locator("main.stage")).toBeVisible();
-    const box = await page.locator("main.stage").boundingBox();
-    boxes.push({ path, x: Math.round(box?.x ?? -1), width: Math.round(box?.width ?? -1) });
+    // Layout boxes, not painted ones: a page's entrance animation scales its stage for a moment.
+    const box = await page
+      .locator("main.stage")
+      .evaluate((el: HTMLElement) => ({ x: el.offsetLeft, width: el.offsetWidth }));
+    boxes.push({ path, ...box });
   }
   for (const b of boxes)
     expect({ x: b.x, width: b.width }, b.path).toEqual({ x: boxes[0]?.x, width: boxes[0]?.width });
