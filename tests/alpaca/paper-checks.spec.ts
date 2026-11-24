@@ -318,6 +318,47 @@ describe("paper checks: cleanup", () => {
     expect(record.stillOpen).toEqual(["ord-1"]);
     expect(record.rows[0]?.cleanup).toBe("still open: ord-1");
   });
+
+  // #8371: a list read that fails is not an empty list. Once the run has posted an order, its
+  // open-orders and positions reads answer `how` (`times` times, then heal).
+  const LIST_READ = /^\/v2\/(orders\?|positions$)/;
+  function failListReads(broker: FakeAlpaca, how: 429 | 500 | "throw", times = Infinity) {
+    const inner = broker.trading.get;
+    let left = times;
+    broker.trading.get = (path) => {
+      const placed = broker.calls.some((c) => c.method === "POST");
+      const fails = placed && LIST_READ.test(path) && left > 0;
+      if (!fails) return inner(path);
+      left -= 1;
+      if (how === "throw") return Promise.reject(new Error("fake: connection reset"));
+      return Promise.resolve({ status: how, body: { message: "fake: unavailable" } });
+    };
+  }
+
+  for (const how of [429, 500, "throw"] as const) {
+    it(`cancels from its ledger, then names what it can't confirm and exits 1, when the lists answer ${how}`, async () => {
+      const { broker, run } = harness(et(TUE, 16, 30), { only: "bracket-after-close" });
+      failListReads(broker, how);
+      const record = await run.execute();
+      expect(broker.open.size).toBe(0); // the ledger's DELETEs reached both brackets anyway
+      expect(record.exitCode).toBe(1);
+      expect(record.stillOpen).toEqual(expect.arrayContaining(["ord-1", "ord-2"]));
+      expect(record.rows[0]?.cleanup).toMatch(/^not confirmed closed.*ord-1.*ord-2/);
+      const why = how === "throw" ? "no answer" : `HTTP ${how}`;
+      expect(record.unread).toEqual([`open orders (${why})`, `positions (${why})`]);
+    });
+  }
+
+  it("rides out list reads that fail once, and reports the run clean", async () => {
+    const { broker, run } = harness(et(TUE, 16, 30), { only: "bracket-after-close" });
+    failListReads(broker, 500, 2); // the cancel pass's two reads fail; the confirm reads answer
+    const record = await run.execute();
+    expect(broker.open.size).toBe(0);
+    expect(record.exitCode).toBe(0);
+    expect(record.stillOpen).toEqual([]);
+    expect(record.unread).toBeUndefined();
+    expect(record.rows[0]?.cleanup).toBe("cancelled");
+  });
 });
 
 describe("paper checks: the record", () => {
