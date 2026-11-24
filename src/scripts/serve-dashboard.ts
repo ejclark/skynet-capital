@@ -14,6 +14,7 @@
 
 import { createAlertDismissals } from "../adapters/jsonl-alert-dismissals.js";
 import { createWatchlist } from "../adapters/jsonl-watchlist-store.js";
+import { opensHeldReason, suspendedReason } from "../autonomous/bot-controls.js";
 import { JsonlAuditStore } from "../autonomous/jsonl-audit-store.js";
 import { signalWindows } from "../autonomous/signal-windows.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
@@ -67,6 +68,7 @@ import { createMemberVisitStore } from "../server/member-visits.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
 import { ownerQueueWiring } from "../server/owner-queue.js";
 import { ParticipantService } from "../server/participant-service.js";
+import { PartySeats } from "../server/party-seats.js";
 import { recordPasses } from "../server/play-milestone-sync.js";
 import { publicOriginFrom } from "../server/public-url.js";
 import { resolvePort } from "../server/resolve-port.js";
@@ -321,6 +323,7 @@ async function main(): Promise<void> {
     authoredPlays,
     memberCampaigns,
     memberChains,
+    memberFollows,
     discoveryQueue,
     campaignQuestions,
     memberConvictions,
@@ -381,6 +384,8 @@ async function main(): Promise<void> {
   // The trade ladder's evidence, held per participant and advanced by appended lines: one fold read
   // by both the Learn page (the progression service) and the Wire's milestone kind (#4619).
   const readLadderEvidence = ladderEvidenceReader({ activity, orderAudit });
+  // The party's table (#8253) seats a member on that same fold's first fill.
+  const partySeats = new PartySeats(readLadderEvidence);
   // Shares the coach's ANTHROPIC_API_KEY/cost dials; also builds the ProgressionService instance
   // and the ladder gate's message log (dashboard-companion.ts owns crossing the id seam).
   const {
@@ -455,6 +460,7 @@ async function main(): Promise<void> {
     // Ceremonies ride the board's seq-numbered patch stream as fire-once cues.
     ceremonies,
     capitalFlows: flowLedger,
+    partySeats,
     password,
     ...(auth ? { auth } : {}),
     ...(publicUrl ? { publicUrl } : {}),
@@ -471,6 +477,14 @@ async function main(): Promise<void> {
     authoredPlays,
     memberCampaigns,
     memberChains,
+    memberFollows,
+    // The Bots screen's standing words (#8254): the same poll and holds the ops panel reads.
+    readBotsStanding: () => ({
+      processMode: insightsBridge.botsProcessMode(),
+      verdicts: insightsBridge.botsGate(),
+      suspendedReason: (botId: string) => suspendedReason(botControls.load(), botId),
+      opensHeldReason: (botId: string) => opensHeldReason(botControls.load(), botId),
+    }),
     discoveryQueue,
     campaignQuestions,
     discoveryPerPass: discoveryPerPass(),

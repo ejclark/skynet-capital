@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { FocusEvent, ReactElement } from "react";
+import type { ReactElement } from "react";
 import { useEffect, useId, useState } from "react";
 import { marketSession, viewerTimeZone } from "../live/market-session";
 import type { PlayInfo } from "../live/options";
@@ -7,13 +7,16 @@ import type { SentOrder } from "../live/order-receipt";
 import { quoteQuery } from "../live/quote-query";
 import {
   buildDraft,
+  carriesExit,
   carryAcrossSide,
   defaultTimeInForce,
+  exitFits,
   money,
   ORDER_TYPE_LABELS,
   orderTypeLabel,
   orderTypeNote,
-  priceFieldFor,
+  orderTypesFor,
+  priceFieldsFor,
   reviewTicket,
   submitTicket,
   type TicketCarry,
@@ -21,12 +24,21 @@ import {
   type TicketOrderType,
   type TicketPreview,
   type TicketResult,
+  type TicketTimeInForce,
   tifLabel,
 } from "../live/ticket";
+import {
+  EXIT_HOURS_NOTE,
+  EXIT_TIF_NOTE,
+  exitPreviewLines,
+  exitReceiptLine,
+} from "../live/ticket-exit";
+import { ExitFields } from "./exit-fields";
 import { DisarmNote, GateHead, keepFocus } from "./gate-frame";
 import { LockedPanel } from "./locked-panel";
 import { useNow } from "./market-session";
 import { OrderReceipt } from "./order-receipt";
+import { PriceInput, selectAll } from "./price-input";
 import { QuoteHeader } from "./quote-header";
 import { RecentOrdersStrip } from "./recent-orders-strip";
 import { HeldShares, reviewMissing } from "./share-ticket-hints";
@@ -76,6 +88,13 @@ function PreviewBody({ preview }: { readonly preview: TicketPreview }): ReactEle
   return (
     <div className="gate-body">
       <OrderLine preview={preview} />
+      {preview.exit
+        ? exitPreviewLines(preview.exit).map((line) => (
+            <p key={line} className="gate-row gate-exit-row">
+              {line}
+            </p>
+          ))
+        : null}
       {preview.refusals.map((refusal) => (
         <p key={refusal} className="gate-row gate-refusal">
           ✕ {refusal}
@@ -152,12 +171,36 @@ function GateStatus({ state }: { readonly state: GateState }): ReactElement | nu
   );
 }
 
-/**
- * Focusing an amount the form already holds selects it, so typing REPLACES it. The change study's
- * blind members typed into seeded amounts and got "510.00505", "90.0085" and a 950-share sell they
- * could not trim (EQ-03, OM-04, EQ-04, 2026-11-16) — the same append that cost OM-02 its change.
- */
-const selectAll = (e: FocusEvent<HTMLInputElement>): void => e.currentTarget.select();
+/** When the order works, said before Review: the time in force (or, with an exit, the GTC it is
+ *  sent with), how this order type fills with the open a closed market waits for, and — with an
+ *  exit — the hours the broker's take-profit and stop act in (#8249). */
+function WhenItWorks({
+  fields,
+  withExit,
+  market,
+  onTimeInForce,
+}: {
+  readonly fields: TicketFields;
+  readonly withExit: boolean;
+  readonly market: ReturnType<typeof marketSession>;
+  readonly onTimeInForce: (tif: TicketTimeInForce) => void;
+}): ReactElement {
+  return (
+    <>
+      {withExit ? (
+        <p className="gate-note">{EXIT_TIF_NOTE}</p>
+      ) : (
+        <TimeInForceField
+          fallback={defaultTimeInForce(fields.orderType)}
+          value={fields.timeInForce}
+          onChange={onTimeInForce}
+        />
+      )}
+      <p className="gate-note">{orderTypeNote(fields.orderType, market, viewerTimeZone())}</p>
+      {withExit ? <p className="gate-note">{EXIT_HOURS_NOTE}</p> : null}
+    </>
+  );
+}
 
 /** @category trading */
 export function TradeGate({
@@ -170,6 +213,7 @@ export function TradeGate({
   header,
   carried,
   onCarry,
+  exitAtEntry = false,
 }: {
   readonly deskId: string;
   /** `?play=102` preselects Sell — the catalog's stock rungs are the same gate, sided. */
@@ -197,6 +241,9 @@ export function TradeGate({
   /** Reports the carry on every edit, so the next flip can hand it back; undefined once an order
    *  was sent, since its entries belonged to that order. */
   readonly onCarry?: (carry: TicketCarry | undefined) => void;
+  /** The exit-at-entry setting admits this session (#8249, `/api/trade/plays`): Stop-Limit joins
+   *  the order types and a limit buy offers "Add an exit". False, the form is exactly as before. */
+  readonly exitAtEntry?: boolean;
 }): ReactElement {
   const [fields, setFields] = useState<TicketFields>(() => ({
     symbol: initialSymbol ?? "",
@@ -253,7 +300,9 @@ export function TradeGate({
   const priceId = useId();
   const whyId = useId();
 
-  const draft = () => buildDraft(deskId, fields);
+  const draft = () => buildDraft(deskId, fields, exitAtEntry);
+  /** The exit rides this draft (`carriesExit`): the form shows its fields, notes and GTC line. */
+  const withExit = carriesExit(fields, exitAtEntry);
 
   /** Any edit disarms a standing review — straight back to draft. Changing the order type counts:
    *  a review of a market order says nothing about the stop order that replaced it. */
@@ -264,16 +313,19 @@ export function TradeGate({
       setState((s) => (s.step === "reviewed" || s.step === "done" ? { step: "draft" } : s));
     };
 
-  const priceField = priceFieldFor(fields.orderType);
+  const priceFields = priceFieldsFor(fields.orderType);
   /** A hand on the type or the price ends the seeding for this ticket (see `priced`). */
+  const seeded =
+    seed !== undefined && fields.orderType === "limit" && fields.limitPrice === seed.mid.toFixed(2);
   const price =
     <K extends "orderType" | "limitPrice" | "stopPrice">(key: K) =>
     (value: TicketFields[K]) => {
       setPriced(true);
       edit(key)(value);
+      // A stop-limit's limit is set against its stop (#8249): the mid seeded for a plain limit is
+      // not the member's number there, so switching to Stop-Limit clears it rather than keep it.
+      if (key === "orderType" && value === "stop_limit" && seeded) edit("limitPrice")("");
     };
-  const seeded =
-    seed !== undefined && fields.orderType === "limit" && fields.limitPrice === seed.mid.toFixed(2);
 
   const review = async () => {
     // The Review button keeps focus (`keepFocus`), so a symbol typed and never blurred commits
@@ -345,6 +397,8 @@ export function TradeGate({
   const busy = state.step === "reviewing" || state.step === "submitting";
   const missing = busy ? undefined : reviewMissing(fields);
   const sent = state.step === "done" && state.result.ok ? state.sent : undefined;
+  /** A bracket's exits as the broker echoed them (#8249) — the receipt's extra line. */
+  const sentExits = state.step === "done" && state.result.ok ? state.result.exits : undefined;
   const form = (
     <>
       <div className="gate-fields">
@@ -395,47 +449,44 @@ export function TradeGate({
             value={fields.orderType}
             onChange={(e) => price("orderType")(e.target.value as TicketOrderType)}
           >
-            {(Object.keys(ORDER_TYPE_LABELS) as TicketOrderType[]).map((type) => (
+            {/* A stop-limit the ticket already holds (a setting turned off mid-visit) stays
+                listed, so the picker never shows a type other than the one that would be sent. */}
+            {orderTypesFor(exitAtEntry || fields.orderType === "stop_limit").map((type) => (
               <option key={type} value={type}>
                 {ORDER_TYPE_LABELS[type]}
               </option>
             ))}
           </select>
         </div>
-        {priceField !== undefined ? (
-          <div className="field">
-            <label htmlFor={priceId}>
-              {priceField === "stopPrice" ? "Stop price" : "Limit price"}
-            </label>
-            <input
-              id={priceId}
-              type="number"
-              min={0}
-              step={0.01}
-              inputMode="decimal"
-              value={fields[priceField]}
-              placeholder="40.00"
-              onFocus={selectAll}
-              onChange={(e) => price(priceField)(e.target.value)}
-            />
-          </div>
-        ) : null}
+        {priceFields.map((priceField) => (
+          <PriceInput
+            key={priceField}
+            id={`${priceId}-${priceField}`}
+            label={priceField === "stopPrice" ? "Stop price" : "Limit price"}
+            value={fields[priceField]}
+            onChange={price(priceField)}
+            placeholder="40.00"
+          />
+        ))}
       </div>
+      {exitAtEntry && exitFits(fields) ? (
+        <ExitFields exit={fields.exit} onChange={edit("exit")} />
+      ) : null}
       {fields.action === "sell" ? (
         <HeldShares deskId={deskId} symbol={quoteSym} onSellAll={edit("quantity")} />
       ) : null}
-      <TimeInForceField
-        fallback={defaultTimeInForce(fields.orderType)}
-        value={fields.timeInForce}
-        onChange={edit("timeInForce")}
-      />
       {seeded && seed ? (
         <p className="gate-note gate-note-seed">
           Limit seeded at the mid — {money(seed.mid)}, between the {money(seed.bid)} bid and the{" "}
           {money(seed.ask)} ask. Edit it, or switch the order type to Market.
         </p>
       ) : null}
-      <p className="gate-note">{orderTypeNote(fields.orderType, market, viewerTimeZone())}</p>
+      <WhenItWorks
+        fields={fields}
+        withExit={withExit}
+        market={market}
+        onTimeInForce={edit("timeInForce")}
+      />
 
       {/* Instrument-agnostic (task 3a, unlike the options-chain-only earnings badge/wire-row) —
           this stock ticket gets its own compact "here's what you've done" strip, same relative
@@ -485,12 +536,20 @@ export function TradeGate({
       {header}
       <h2 className="panel-title">New trade</h2>
       <p className="panel-sub">
-        Paper account · market, limit or stop · the gate reviews before anything is sent
+        {exitAtEntry
+          ? "Paper account · market, limit, stop or stop-limit · the gate reviews before anything is sent"
+          : "Paper account · market, limit or stop · the gate reviews before anything is sent"}
       </p>
       <QuoteHeader symbol={quoteSym} />
       {/* Sent, the form steps aside for the receipt — an order that went out never sits under
           fields that still hold it (Eric, 2026-11-06). */}
-      {sent ? <OrderReceipt deskId={deskId} order={sent} onNewTicket={newTicket} /> : form}
+      {sent ? (
+        <OrderReceipt deskId={deskId} order={sent} onNewTicket={newTicket}>
+          {sentExits ? <p className="gate-note">{exitReceiptLine(sentExits)}</p> : null}
+        </OrderReceipt>
+      ) : (
+        form
+      )}
     </section>
   );
 }

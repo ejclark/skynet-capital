@@ -104,6 +104,16 @@
   font-size: 13px;
   color: var(--muted);
 }
+/* A read "Needs you" could not complete (#8316): said in words, never an all-clear. */
+.home-needs-gap {
+  margin: 6px 0 0;
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--text);
+}
 
 /* ── the app tiles ── */
 .home-apps ul {
@@ -130,6 +140,19 @@
 .home-app:hover {
   border-color: var(--accent);
 }
+/* The Scoreboard tile lights once the member's first fill seats them (#8253): a filled glyph, the
+   words "your seat" and a heavier accent edge, so the lit state never rests on hue alone. */
+.home-app-lit {
+  border: 2px solid var(--accent);
+  padding: 11px;
+  background: var(--surface-2);
+}
+.home-app-seat {
+  display: block;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--accent);
+}
 .home-app-glyph {
   font-size: 18px;
   line-height: 1;
@@ -147,8 +170,11 @@
   text-wrap: pretty;
 }
 @media (min-width: 861px) {
+  /* Every tile in one row, however many apps have shipped (Scoreboard #8253, Bots #8254). */
   .home-apps ul {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
   }
 }
 

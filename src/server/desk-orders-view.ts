@@ -1,5 +1,6 @@
 import type { AlpacaOrder } from "../alpaca/alpaca-trading-client.js";
 import { humanizeOptionSymbol, parseOccSymbol } from "../trading/option-symbols.js";
+import { bracketExitRoles, type ExitRole } from "./bracket-exits.js";
 
 /**
  * THE WORKING-ORDERS VIEW — the broker's order record as the desk's own honest vocabulary
@@ -59,6 +60,8 @@ export interface DeskOrderRow {
   readonly replaces?: string;
   /** The order that superseded this one — a `replaced` row's forward pointer. */
   readonly replacedBy?: string;
+  /** A bracket's exit, by its job (#8249): the row reads "Take-profit" or "Stop", not "Limit". */
+  readonly exitRole?: ExitRole;
 }
 
 export interface DeskOrdersView {
@@ -172,7 +175,14 @@ export function deskOrdersView(
   orders: readonly AlpacaOrder[],
   now: number = Date.now(),
 ): DeskOrdersView {
-  const rows = orders.map(deskOrderRow).filter((row): row is DeskOrderRow => row !== undefined);
+  const roles = bracketExitRoles(orders);
+  const rows = orders
+    .map((order) => {
+      const row = deskOrderRow(order);
+      const exitRole = roles.get(order.id);
+      return row && exitRole ? { ...row, exitRole } : row;
+    })
+    .filter((row): row is DeskOrderRow => row !== undefined);
   const newestFirst = (a: DeskOrderRow, b: DeskOrderRow): number =>
     Date.parse(b.submittedAt ?? "") - Date.parse(a.submittedAt ?? "") || 0;
   return {

@@ -55,7 +55,7 @@ describe("/heartbeat — a held lot nothing on the bot will sell", () => {
     expect((await heartbeatFor(over)).unmanaged).toEqual([]);
   });
 
-  it("withholds the list from a member who does not own the bot", async () => {
+  it("gives the list to a member who does not own the bot, now its playbooks are every member's (#8254)", async () => {
     const { res, out } = fakeRes();
     await serveDeskJson(
       res,
@@ -72,7 +72,7 @@ describe("/heartbeat — a held lot nothing on the bot will sell", () => {
       }),
       { email: "guest@x", provider: "google", exp: 0 },
     );
-    expect(answered(out).heartbeat).not.toHaveProperty("unmanaged");
+    expect(answered(out).heartbeat).toHaveProperty("unmanaged");
   });
 });
 
@@ -129,7 +129,7 @@ describe("/heartbeat — the roll call reads the bot's subscriptions", () => {
     expect(lineFor(heartbeat, "CRWV-WHEEL")?.status).toBe("off");
   });
 
-  it("gives the owner the new lines and a non-owner none of them", async () => {
+  it("gives the owner and any signed-in member the same lines (#8254)", async () => {
     const gated: Partial<DashboardServerConfig> = {
       auth: {} as never,
       resolveOwnerIds: (email: string) => (email === "owner@x" ? ["sauron"] : ["human-eric"]),
@@ -138,10 +138,7 @@ describe("/heartbeat — the roll call reads the bot's subscriptions", () => {
     const owner = await read(gated, "owner@x");
     expect(lineFor(owner.heartbeat, "CRWV-WHEEL")?.status).toBe("paused");
     const guest = await read(gated, "guest@x");
-    expect(guest.heartbeat).not.toHaveProperty("rollCall");
-    for (const word of ["CRWV-WHEEL", "NVDA-CALL-SPREAD", "paused", "starting", "Paused"]) {
-      expect(guest.body).not.toContain(word);
-    }
+    expect(lineFor(guest.heartbeat, "CRWV-WHEEL")?.status).toBe("paused");
   });
 });
 

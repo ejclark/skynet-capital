@@ -122,6 +122,8 @@ import {
   MANAGED_LABELS,
   notPullable,
   setInProgress,
+  setLabelRest,
+  setSessionHeld,
 } from "./labels.mjs";
 import { draftLesson, routeLessonDraft } from "./lesson-draft.mjs";
 import { modelTier } from "./model-tier.mjs";
@@ -137,7 +139,7 @@ import {
   flagRedResearch,
   reportResearchSweep,
 } from "./research-pr-sweep.mjs";
-import { continuationLeaseVerdict, SESSION_HOLDER } from "./session-hold.mjs";
+import { continuationLeaseVerdict, SESSION_HOLDER, sessionHoldLive } from "./session-hold.mjs";
 import { mergedReference, prIsMerged, resolveShipped, routeShipped } from "./shipped.mjs";
 import { rearmStranded } from "./stranded-pr.mjs";
 import { updateStuckBranch } from "./stuck-branch-update.mjs";
@@ -301,9 +303,44 @@ export function claimHandoff(slug, sha, nowMs, staleAfterMs = CLAIM_TTL_MS, hold
  *
  * @returns {{ claimed: boolean, reason: string }}
  */
-export function holdForSession(slug, nowMs = Date.now()) {
+export function holdForSession(
+  slug,
+  nowMs = Date.now(),
+  { claim = claimHandoff, label = setSessionHeld, readLabels = readIssueLabels } = {},
+) {
   const sha = process.env.GITHUB_SHA || sh("git", ["rev-parse", "origin/main"]);
-  return claimHandoff(slug, sha, nowMs, CLAIM_TTL_MS, SESSION_HOLDER);
+  const number = issueNumberFromSlug(slug);
+  // #8314 — the label is a hold too, so a second session meets it here before anything is written.
+  // Not a compare-and-set like the ref; it closes the common case, a second `--hold` minutes later.
+  if (readLabels(number).includes(LABELS.sessionHeld.name)) {
+    return { claimed: false, reason: "held by a live claim (`session-held` is on the issue)" };
+  }
+  const result = claim(slug, sha, nowMs, CLAIM_TTL_MS, SESSION_HOLDER);
+  // The label goes on with a won ref (it is what the pull rule reads) and in place of a REFUSED
+  // one: a cloud session's proxy answers 403 to the ref write. Any other loss (a live claim, a lost
+  // race) means someone else holds it, and the session must skip it.
+  const refused = !result.claimed && /HTTP 403|not permitted/i.test(result.reason ?? "");
+  if (!(result.claimed || refused)) return result;
+  const labelled = label(number, true);
+  if (result.claimed) return { ...result, label: labelled };
+  return labelled
+    ? {
+        claimed: true,
+        reason: `held by the \`session-held\` label — the lease write was refused: ${result.reason}`,
+        label: true,
+      }
+    : { ...result, label: false };
+}
+
+/** An issue's label names over REST; empty when unreadable (the claim below still arbitrates). */
+function readIssueLabels(number) {
+  try {
+    return labelNames(
+      JSON.parse(sh("gh", ["api", `repos/{owner}/{repo}/issues/${number}`])).labels,
+    );
+  } catch {
+    return [];
+  }
 }
 
 /** Release a lease once its work is no longer being built. */
@@ -325,7 +362,11 @@ export function releaseClaim(slug) {
  */
 export function releaseBuild(slug) {
   const freed = releaseClaim(slug);
-  setInProgress(issueNumberFromSlug(slug), false);
+  const n = issueNumberFromSlug(slug);
+  // #8314 — `setInProgress` is `gh issue edit` (GraphQL), which a cloud session's proxy refuses;
+  // the REST delete is the one a cloud session's `--release` can make.
+  if (!setInProgress(n, false)) setLabelRest(n, LABELS.inProgress.name, false);
+  setSessionHeld(n, false);
   return freed;
 }
 
@@ -424,6 +465,17 @@ export function claimFeedback(
     console.log(`::notice::not building feedback #${issue.number} — ${stale}`);
     return { claimed: false, reason: stale };
   }
+  // #8314 — a live session's hold outlives the 2h TTL while the issue shows activity; without this
+  // `claimHandoff` would reclaim it as stale and build beside the session.
+  const held = sessionHoldRefusal(
+    issue,
+    (admission.readLease ?? readLease)(`feedback-${issue.number}`),
+    nowMs,
+  );
+  if (held) {
+    console.log(`::notice::not building feedback #${issue.number} — ${held}`);
+    return { claimed: false, reason: held };
+  }
   // #3960 — the work spigot, the in-flight cap and the surface fence, BEFORE any lease is taken.
   const gate = gateAdmission(issue, admission);
   if (!gate.admit) return { claimed: false, reason: gate.reason };
@@ -444,6 +496,22 @@ export function claimFeedback(
   adoptFeedbackLabel(issue);
   console.log(`::notice::feedback #${issue.number} — model tier: ${tier.model} — ${tier.reason}`);
   return { ...result, number: issue.number, model: tier.model };
+}
+
+/**
+ * THE FEEDBACK CLAIM HONOURS A LIVE SESSION'S REF HOLD (#8314), as `continueNext` does a plan's.
+ * A session shipping a feedback issue in several PRs holds `claim/feedback-<n>` (`--hold`) and may
+ * outlive the 2h TTL from its stamp; it stays live while the issue's `updated_at` (its labels and
+ * comments) falls inside the TTL. The cloud hold, the `session-held` label, needs nothing here: the
+ * pull rule refuses it (`notPullable`, labels.mjs) before any lease is read. Pure; returns the
+ * refusal reason or null. It starts "held by a live claim" so the retry sweep steps past it.
+ */
+export function sessionHoldRefusal(issue, lease, nowMs) {
+  if (lease?.holder !== SESSION_HOLDER || !Number.isFinite(lease.takenMs)) return null;
+  const hold = sessionHoldLive(lease, [Date.parse(issue?.updated_at ?? "")], nowMs, CLAIM_TTL_MS);
+  return hold.live
+    ? `held by a live claim (a session's hold, last activity ${hold.quietMin}m ago)`
+    : null;
 }
 
 /**
@@ -1588,7 +1656,14 @@ function commentAndFlagConflictCap(i) {
  */
 function clearStaleInProgress(i) {
   if (!i.issueNumber) return;
-  sh("gh", ["issue", "edit", String(i.issueNumber), "--remove-label", LABELS.inProgress.name]);
+  if (i.inProgress !== false) {
+    sh("gh", ["issue", "edit", String(i.issueNumber), "--remove-label", LABELS.inProgress.name]);
+  }
+  // #8314 — a dead session's `session-held` goes too. Strict when it is the only label being
+  // cleared, for the same reason the removal above is strict: no removal, no comment.
+  const freed = setSessionHeld(i.issueNumber, false);
+  if (!freed && i.inProgress === false)
+    throw new Error(`could not clear session-held on #${i.issueNumber}`);
   sh("gh", ["issue", "comment", String(i.issueNumber), "--body", i.body]);
 }
 

@@ -356,3 +356,12 @@ details[open] > .pbb-sum .pbb-chev {
     display: none;
   }
 }
+
+/* A named card's strategy line under its title (#8254): what the strategy does, in plain words. */
+.pbb-sub {
+  display: block;
+  margin-top: 2px;
+  font: 400 var(--text-xs) / 1.35 var(--sans);
+  letter-spacing: normal;
+  color: var(--muted);
+}

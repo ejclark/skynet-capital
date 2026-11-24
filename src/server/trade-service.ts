@@ -55,6 +55,8 @@ export type DeskTradeResult =
       /** The broker's own echo of what it was told (#3407 P1) — absent only on a transport
        *  double that doesn't echo it. */
       readonly timeInForce?: string;
+      /** A bracket's take-profit and stop as the broker echoed them (#8249). */
+      readonly exits?: { readonly takeProfit: number; readonly stop: number };
     }
   | { readonly ok: false; readonly refusals: string[] };
 

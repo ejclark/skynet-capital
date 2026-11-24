@@ -48,9 +48,14 @@ export function JournalSection(): ReactElement {
   const refresh = () => void queryClient.invalidateQueries({ queryKey: ["feedback"] });
 
   if (index.isPending) return <p className="note">Opening your journal…</p>;
-  if (index.isError || !index.data) return <p className="note">Your journal is unreachable.</p>;
+  // Unreachable only when no read ever landed. A failed background refresh (a tab return during a
+  // deploy's restart) keeps the last good read on screen and says so beside it, never in place of
+  // it: swapping the section out unmounts the composer and loses an unsent draft, and hides a
+  // just-sent wish's issue number (#8355; TanStack keeps `data` with `isError` on a failed refetch).
+  if (!index.data) return <p className="note">Your journal is unreachable.</p>;
 
   const data = index.data;
+  const refreshFailed = index.isError;
   const journal = journalRead.data ?? (journalRead.isError ? JOURNAL_DOWN : JOURNAL_OPENING);
   return (
     <div className="feedback-section journal-section">
@@ -73,6 +78,12 @@ export function JournalSection(): ReactElement {
         >
           ✦ Talk to Moneypenny
         </button>
+        {refreshFailed ? (
+          <p className="note" role="status">
+            Couldn't refresh your wishes and filings. What's below is the last good read; it updates
+            on its own once the connection is back.
+          </p>
+        ) : null}
       </header>
       <JournalComposer
         wishesEnabled={data.enabled && journal.wishesEnabled}

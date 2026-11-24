@@ -1,7 +1,6 @@
-import type { BoardRow } from "../../src/live/board";
 import type { EditionDate } from "../../src/live/edition";
 import { moveFigure, type SectorRow, type SectorsView } from "../../src/live/edition-sectors";
-import { calendarGlance, marketGlance, partyRows } from "../../src/shell/mission-windows";
+import { calendarGlance, marketGlance } from "../../src/shell/mission-windows";
 
 /**
  * The Overview and Party glances of campaign mission control (#7487 slice 1). Every figure is read
@@ -80,51 +79,5 @@ describe("calendarGlance", () => {
     expect(calendarGlance([dated("CPI"), dated("FOMC"), dated("NFP"), dated("GDP")])).toBe(
       "CPI · FOMC · 2 more",
     );
-  });
-});
-
-const row = (name: string, kind: "human" | "bot", sortValue: number): BoardRow => ({
-  key: `${kind}-${name}`,
-  name,
-  kind,
-  value: String(sortValue),
-  tone: "flat",
-  bar: 0,
-  sortValue,
-});
-
-describe("partyRows", () => {
-  it("lists members by name, never by score", () => {
-    const { members } = partyRows([
-      row("Zed", "human", 900),
-      row("amy", "human", -50),
-      row("Mo", "human", 10),
-    ]);
-    expect(members.map((r) => r.name)).toEqual(["amy", "Mo", "Zed"]);
-  });
-
-  it("adds ranked members' booked P&L into the party total and leaves unranked out", () => {
-    const { total } = partyRows([
-      row("A", "human", 100),
-      row("B", "human", -40),
-      row("C", "human", -1e9),
-      row("Tower", "bot", 5000),
-    ]);
-    expect(total).toBe(60);
-  });
-
-  it("puts only The Tower under against, by its key, named for members — never the franchise name", () => {
-    const { members, against } = partyRows([
-      row("Ann", "human", 10),
-      { ...row("Sauron", "bot", 50), key: "sauron" },
-      row("Probe", "bot", 2),
-    ]);
-    expect(members.map((r) => r.name)).toEqual(["Ann"]);
-    expect(against.map((r) => r.name)).toEqual(["The Tower"]);
-    expect(JSON.stringify(against)).not.toMatch(/"name":"Sauron"/);
-  });
-
-  it("an empty board is an empty party with a zero total", () => {
-    expect(partyRows([])).toEqual({ members: [], against: [], total: 0 });
   });
 });

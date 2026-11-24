@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { Readable } from "node:stream";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
 import { serveTradeApi } from "../../src/server/trade-api-routes.js";
+import { ACCOUNT_UNREAD_REFUSAL } from "../../src/trading/order-ticket.js";
 
 /**
  * The trade API's contract: strict shape gate, session-only identity, and pass-through to the
@@ -140,6 +141,44 @@ describe("serveTradeApi", () => {
     const preview = JSON.parse(out.body ?? "{}").preview;
     expect(preview.estNotional).toBeUndefined();
     expect(preview.warnings.join(" ")).toContain("No recent price");
+  });
+
+  describe("on an account whose read failed (#8335): unread is not empty", () => {
+    // The hub's `degraded()` row: $0 cash, no positions, and the error that says why.
+    const unread = { ...snapshot, cash: 0, equity: 0, positions: [], error: "timed out" };
+    const unreadConfig = (over: Partial<DashboardServerConfig> = {}) =>
+      configWith({
+        hub: { getState: () => ({ generatedAt: "t", participants: [unread], collisions: [] }) },
+        ...over,
+      } as never);
+    const review = async (body: unknown, cfg = unreadConfig()) => {
+      const { res, out } = fakeRes();
+      await serveTradeApi(post(body), res, "/api/trade/review", cfg, session);
+      return { status: out.status, ...JSON.parse(out.body ?? "{}").preview };
+    };
+
+    it("refuses a sell by saying the account couldn't be read, never 'you don't hold this'", async () => {
+      const preview = await review(ticket);
+      expect(preview.status).toBe(200);
+      expect(preview.ok).toBe(false);
+      expect(preview.refusals).toEqual([ACCOUNT_UNREAD_REFUSAL]);
+      expect(preview.refusals.join(" ")).not.toContain("don't hold");
+      expect(preview.positionAfter).toBeUndefined();
+    });
+
+    it("refuses a priced buy the same way, never 'more than your cash', and claims no cash after", async () => {
+      const buy = { participantId: "human-eric", symbol: "NVDA", quantity: 10, action: "buy" };
+      const quoting = unreadConfig({
+        optionsClientFor: () => ({ getUnderlyingPrice: () => Promise.resolve(232.1) }),
+      } as never);
+      const preview = await review(buy, quoting);
+      expect(preview.status).toBe(200);
+      expect(preview.ok).toBe(false);
+      expect(preview.refusals).toEqual([ACCOUNT_UNREAD_REFUSAL]);
+      expect(preview.refusals.join(" ")).not.toContain("cash —");
+      expect(preview.estCashAfter).toBeUndefined();
+      expect(preview.warnings.join(" ")).not.toContain("available cash");
+    });
   });
 
   it("reviews a stranger's desk honestly — refused, with the reason rendered", async () => {

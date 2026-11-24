@@ -54,9 +54,11 @@ import type { ReadMarketClock } from "./market-clock.js";
 import type { MemberCampaignStore } from "./member-campaign-store.js";
 import type { MemberChainStore } from "./member-chain-store.js";
 import type { MemberConvictionStore } from "./member-conviction-store.js";
+import type { MemberFollowStore } from "./member-follow-store.js";
 import type { MemberVisitStore } from "./member-visits.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
 import type { OpsStatusDeps } from "./ops-status-routes.js";
+import type { BotsStandingRead } from "./ops-status-service.js";
 import type { SubmitOptionTrade } from "./option-trade-service.js";
 import type { OrderAuditRecord } from "./order-audit-log.js";
 import type { ReadOwnerQueue } from "./owner-queue.js";
@@ -66,6 +68,7 @@ import type {
   RotateCredentialsInput,
   RotateResult,
 } from "./participant-service.js";
+import type { PartySeats } from "./party-seats.js";
 import type { PlayMilestoneLedger } from "./play-milestone-ledger.js";
 import type { ProgressionService } from "./progression-service.js";
 import type { QuoteStreamPort } from "./quote-stream-hub.js";
@@ -99,6 +102,11 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * or curve carries a mark.
    */
   readonly capitalFlows?: CapitalFlowReader;
+  /**
+   * Who sits at the party's table (#8253): a member's first filled paper order, read from our own
+   * journal. Omit (tests, offline) and nobody is seated — the table shows open seats only.
+   */
+  readonly partySeats?: PartySeats;
   /**
    * Legacy shared-password gate. Used only when `auth` is not configured (localhost/offline).
    * When set, every request must carry ?key=<password>.
@@ -457,6 +465,16 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * list answers empty and a save answers "not wired in this deployment."
    */
   readonly memberChains?: MemberChainStore;
+  /**
+   * The bots a member follows on the Bots screen (#8254) — a pin keyed by `opaqueMemberId`, read by
+   * the bots API alone: it orders the list and opens nothing. Omit to disable (offline mode): the
+   * list answers with no follows and a follow answers "not wired in this deployment."
+   */
+  readonly memberFollows?: MemberFollowStore;
+  /** What the bots process last reported on its `/controls` poll — the house mode and each bot's
+   *  gate verdict — plus this app's Mission Control holds, for the Bots screen's standing words
+   *  (#8254). Omit and every standing reads "not reported", never guessed. */
+  readonly readBotsStanding?: () => BotsStandingRead;
   /**
    * Whether the house has a ledger on a symbol, for a campaign's research ask. Omit to read the
    * research shelf on each save (`shelfResearched`); specs pass a fixed answer.

@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { Readable } from "node:stream";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
 import { serveDraftOrderApi } from "../../src/server/draft-order-route.js";
+import { ACCOUNT_UNREAD_REFUSAL } from "../../src/trading/order-ticket.js";
 
 /**
  * The draft's route (#582, slices 3-4): every action re-applies the actual `draft-order.ts`
@@ -411,5 +412,35 @@ describe("serveDraftOrderApi", () => {
       });
       expect(parsed.draft.phase).toBe("validated");
     });
+  });
+
+  it("refuses validate on an account whose read failed by saying so, never 'you hold 0' or '$0 cash' (#8335)", async () => {
+    // The hub's `degraded()` row: placeholders beside the error, not the account.
+    const unread = config({
+      hub: {
+        getState: () => ({
+          participants: [{ id: "human-ann", cash: 0, positions: [], error: "timed out" }],
+        }),
+      },
+    });
+    const one = await call(
+      { participantId: "human-ann", draft: undefined, action: { kind: "add-leg", leg: CALL_LEG } },
+      unread,
+    );
+    const two = await call(
+      {
+        participantId: "human-ann",
+        draft: one.parsed.draft,
+        action: { kind: "add-leg", leg: UNRELATED_PUT_LEG },
+      },
+      unread,
+    );
+    const { parsed } = await call(
+      { participantId: "human-ann", draft: two.parsed.draft, action: { kind: "validate" } },
+      unread,
+    );
+    expect(parsed.draft.phase).toBe("drafting");
+    expect(parsed.draft.refusals).toEqual([ACCOUNT_UNREAD_REFUSAL]);
+    expect(parsed.draft.verdict).toMatchObject({ ok: false, refusals: [ACCOUNT_UNREAD_REFUSAL] });
   });
 });

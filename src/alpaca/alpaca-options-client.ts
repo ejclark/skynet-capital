@@ -14,8 +14,8 @@ import type { AlpacaTradingTransport } from "./trading-transport.js";
  * last-close premiums when the quote feed is down or unwired. Nothing that places an order
  * ever depends on the data host.
  *
- * Options orders are `time_in_force: "day"` always — that is all Alpaca supports for options,
- * and the ticket says so rather than offering a GTC that would be refused.
+ * Options orders default to `time_in_force: "day"`; `gtc` passes through when the member picks
+ * it (`PlaceOptionOrderParams.timeInForce`, below), and the option routes accept either.
  */
 
 /** One row of an option chain, merged from contracts (+ quotes when available). */

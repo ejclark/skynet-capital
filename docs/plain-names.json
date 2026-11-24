@@ -1,0 +1,45 @@
+{
+  "$comment": "Names Eric rejected, each with the plain name to say instead. Read by scripts/plain-names.mjs, which fails issue-lint, the PR-body check, the redesign lint and the member-copy spec when one comes back. Only names he rejected belong here, never a full vocabulary (docs/BRAND.md → the plain-name rule). Add a row the moment he rejects a name. `match` lists the exact spellings that fail (case-sensitive, whole word, plural allowed); a code span, a quoted span, a path or an identifier such as DeskTiles never does.",
+  "names": [
+    {
+      "term": "Desk",
+      "plain": "Trade",
+      "match": ["Desk", "the desk", "your desk"],
+      "date": "2026-11-24",
+      "said": "'desk' verbiage still gives 'wtf is that' vibes.. which I've articulated multiple times over in multiple session feedback",
+      "source": "https://github.com/ejclark/skynet-capital/issues/8290"
+    },
+    {
+      "term": "Cast",
+      "plain": "Who's who",
+      "match": ["Cast"],
+      "date": "2026-11-24",
+      "said": "renamed in the same feedback as Desk: say what it does (who does what, whom to ask)",
+      "source": "https://github.com/ejclark/skynet-capital/pull/8291"
+    },
+    {
+      "term": "Garage",
+      "plain": "Bots",
+      "match": ["Garage"],
+      "date": "2026-11-24",
+      "said": "renamed in the same feedback as Desk: say what it does (the bots and their playbooks)",
+      "source": "https://github.com/ejclark/skynet-capital/pull/8291"
+    },
+    {
+      "term": "Film Room",
+      "plain": "Practice",
+      "match": ["Film Room", "Film room", "film room"],
+      "date": "2026-11-24",
+      "said": "renamed in the same feedback as Desk: say what it does (replays of real past days, no money)",
+      "source": "https://github.com/ejclark/skynet-capital/pull/8291"
+    },
+    {
+      "term": "the Brief",
+      "plain": "what it does, e.g. position guidance",
+      "match": ["the Brief", "The Brief"],
+      "date": "2026-09-25",
+      "said": "another cute word you keep using that i've told you to stop because it's confusing",
+      "source": "https://github.com/ejclark/skynet-capital/blob/main/CLAUDE.md"
+    }
+  ]
+}

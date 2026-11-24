@@ -14,6 +14,7 @@ import {
   streamBoardPatches,
 } from "./board-patch-routes.js";
 import { serveBookWaitApi } from "./book-wait-routes.js";
+import { serveBotsApi } from "./bots-api-routes.js";
 import { serveClientErrorApi } from "./client-error-route.js";
 import { serveCompanionApi } from "./companion-routes.js";
 import { serveJsonApi } from "./content-api-routes.js";
@@ -42,7 +43,7 @@ import { serveLegacyRedirect } from "./legacy-redirects.js";
 import { serveMemberCampaignsApi } from "./member-campaigns-api-routes.js";
 import { serveMemberChainsApi } from "./member-chains-api-routes.js";
 import { serveMemberConvictionsApi } from "./member-convictions-api-routes.js";
-import { noteAppVisit, noteMemberPresence } from "./member-visits.js";
+import { noteAppVisit, servePresenceApi } from "./member-visits.js";
 import { serveOnboardingApi } from "./onboarding-api-routes.js";
 import { serveOptionApi } from "./option-api-routes.js";
 import { serveOptionLifecycleApi } from "./option-lifecycle-route.js";
@@ -74,7 +75,7 @@ export function createDashboardServer(config: DashboardServerConfig): Server {
   // ONE channel per server, driven by ONE hub subscription: the board diff is computed once per
   // tick regardless of how many viewers are watching, and every viewer shares one seq run.
   const channel = createBoardChannel();
-  driveBoardChannel(config.hub, channel, config.ceremonies, config.capitalFlows);
+  driveBoardChannel(config.hub, channel, config.ceremonies, config.capitalFlows, config.partySeats);
   return createServer((req, res) => {
     void handle(req, res, config, channel).catch((error: unknown) => {
       // Last-resort net (mirrors insights-listener.ts): every route handler below is expected to
@@ -207,6 +208,9 @@ async function servePlaybookWrites(
   if (await serveMemberConvictionsApi(req, res, path, config, session)) return true;
   if (await serveMemberCampaignsApi(req, res, path, config, session)) return true;
   if (await serveMemberChainsApi(req, res, path, config, session)) return true;
+  // Following a bot is a pin, not a subscription (#8254): it lives beside the playbook writes only
+  // because it is a member write; it opens nothing.
+  if (await serveBotsApi(req, res, path, config, session)) return true;
   return serveAuthoredPlaysApi(req, res, path, config, session);
 }
 
@@ -266,12 +270,13 @@ async function serveAuthorizedRoute(
   session: Session | undefined,
   channel: BoardPatchChannel,
 ): Promise<void> {
-  // An open tab never reloads the shell, so its API calls are how "last seen" learns of it (#8262).
-  noteMemberPresence(config.memberVisits, session, path, config.now?.());
+  // An open tab never reloads the shell, so its in-view ping is how "last seen" learns of it
+  // (#8262). Only the ping counts: a hidden tab still calls the API (#8319).
+  if (await servePresenceApi(req, res, path, config.memberVisits, session, config.now?.())) return;
   if (path === "/events") {
     const params = new URL(url, "http://localhost").searchParams;
     const metric = parseLeaderMetric(params.get("by"));
-    streamBoardPatches(req, res, channel, metric, parseCompareParams(params));
+    streamBoardPatches(req, res, channel, metric, parseCompareParams(params), config.partySeats);
     return;
   }
   if (await serveJsonApi(res, path, url, config, channel, session)) {

@@ -5,10 +5,12 @@ import stillTower from "../assets/tower-still.jpg";
 import { parseBoardMetric } from "../live/board";
 import { type Desk, fetchDesk } from "../live/desk";
 import { markOf } from "../live/position-mark";
-import { fetchQuests } from "../live/quests";
+import { fetchQuests, questsReadFailed, unreadLine } from "../live/quests";
 import { fetchSettings } from "../live/settings";
 import { isCampaignAddress } from "../shell/campaign-forward";
 import { PageFrame } from "../shell/frame";
+import { useParty } from "../shell/mission-windows";
+import { scoreboardTileLine } from "../shell/party-table";
 import { usePhoneWidth } from "../shell/use-media";
 import { TowerSlot } from "../shell/vantage";
 
@@ -20,7 +22,7 @@ import { TowerSlot } from "../shell/vantage";
  *
  * At 390, in order: the tower as a committed still (≤200px tall, no WebGL on a phone until #3977's
  * real-device recheck) · "Needs you", at most three rows · the tiles, two to a row. Desktop adds
- * room — a taller tower box, the five tiles in one row — never a new concept. From 861px the
+ * room — a taller tower box, the six tiles in one row — never a new concept. From 861px the
  * session's one moving tower frame (`shell/vantage.tsx`) lays over the box; the scene's card
  * framing re-fits any box, so the scene needs no change. Reduced motion and Settings → Display →
  * "Tower motion: Still" reach this frame exactly as they reach the column on other pages.
@@ -47,7 +49,8 @@ type HomeSearch = {
   readonly b?: string;
 };
 
-/** The five apps, in the topbar's order. Each says what its place does, never a coined name. */
+/** The apps: the topbar's five in its order, then Bots (#8254). Each says what its place does,
+ *  never a coined name. */
 export const APPS = [
   {
     to: "/campaign",
@@ -59,6 +62,7 @@ export const APPS = [
   { to: "/trade", glyph: "⇄", name: "Trade", line: "Place a paper trade" },
   { to: "/activity", glyph: "≡", name: "Activity", line: "Every order, yours and the bots'" },
   { to: "/research", glyph: "⌕", name: "R&D", line: "Research the market and its playbooks" },
+  { to: "/bots", glyph: "◈", name: "Bots", line: "Watch the house bots and why they skipped" },
 ] as const;
 
 export interface NeedsRow {
@@ -121,6 +125,44 @@ export function needsRows(input: {
   return rows.slice(0, 3);
 }
 
+/** What each read behind "Needs you" came back as (#8316). */
+export interface NeedsReads {
+  /** GET /api/settings failed: no account, desk or quest was read at all. */
+  readonly settingsFailed: boolean;
+  /** The All-accounts desk read rejected as a whole (one desk failing fails the `Promise.all`). */
+  readonly desksFailed: boolean;
+  /** Desks that answered error-tagged (`desk.error`, positions `[]`), and how many were read. */
+  readonly desksUnreachable: number;
+  readonly desksRead: number;
+  readonly questsFailed: boolean;
+  /** What the quest read did not judge this time: an underlying, or `conditions`. */
+  readonly questsUnread: readonly string[];
+}
+
+/**
+ * One line per read "Needs you" could not complete, in Profile's and Campaign's words where they
+ * have one (#8316). An all-clear is a claim, so it shows only when this is empty: a failed read is
+ * never an empty one. Settings failing stands alone, since nothing past it was read.
+ */
+export function readGaps(r: NeedsReads): readonly string[] {
+  if (r.settingsFailed) return ["Accounts are unreachable. What needs you can't be checked yet."];
+  const gaps: string[] = [];
+  if (r.desksFailed || (r.desksRead > 0 && r.desksUnreachable >= r.desksRead))
+    gaps.push("Account unreachable — positions can't be read right now.");
+  else if (r.desksUnreachable > 0)
+    gaps.push(
+      r.desksUnreachable === 1
+        ? "One account is unreachable — its positions can't be read right now."
+        : `${capitalize(countWords(r.desksUnreachable, "account"))} are unreachable — their positions can't be read right now.`,
+    );
+  if (r.questsFailed) gaps.push("Quests can't be read right now.");
+  else {
+    const unread = unreadLine(r.questsUnread);
+    if (unread) gaps.push(unread);
+  }
+  return gaps;
+}
+
 /** The tower's box: the phone still at ≤860, else the empty slot the session's frame lays over. */
 function TowerBox(): ReactElement {
   const phone = usePhoneWidth();
@@ -135,7 +177,7 @@ function TowerBox(): ReactElement {
   );
 }
 
-function NeedsYou(): ReactElement {
+export function NeedsYou(): ReactElement {
   const settings = useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
   const accounts = settings.data?.accounts ?? [];
   const ids = accounts.map((a) => a.id);
@@ -160,6 +202,14 @@ function NeedsYou(): ReactElement {
     bestQuest: quests.data?.available ? quests.data.quests[0]?.move.label : undefined,
   });
   const loading = settings.isPending || (ids.length > 0 && (desks.isPending || quests.isPending));
+  const gaps = readGaps({
+    settingsFailed: settings.isError,
+    desksFailed: desks.isError,
+    desksUnreachable: desks.data?.filter((s) => s.desk.error).length ?? 0,
+    desksRead: desks.data?.length ?? 0,
+    questsFailed: quests.isError || questsReadFailed(quests.data),
+    questsUnread: quests.data?.available ? quests.data.unread : [],
+  });
   return (
     <section className="home-needs" aria-labelledby="home-needs-title">
       <h2 id="home-needs-title" className="home-eyebrow">
@@ -184,12 +234,52 @@ function NeedsYou(): ReactElement {
             </li>
           ))}
         </ul>
-      ) : (
+      ) : gaps.length > 0 ? null : (
         <p className="home-needs-none">
           {loading ? "Checking what needs you…" : "Nothing needs you right now."}
         </p>
       )}
+      {gaps.map((g) => (
+        // The words carry it; the mark only repeats them (hue never carries meaning alone).
+        <p key={g} className="home-needs-gap">
+          <span className="home-need-glyph" aria-hidden="true">
+            !
+          </span>
+          {g}
+        </p>
+      ))}
     </section>
+  );
+}
+
+/**
+ * The Scoreboard's tile (#8253 criterion 10): a glyph, its name and one plain line — the seat line
+ * before the viewer's first fill, the lead line after it, when the tile lights. It opens the
+ * Scoreboard either way: the page is open to every member, only the seat is earned. It reads the
+ * Party window's own query (`useParty`), so the home adds no request the app did not already make.
+ */
+function ScoreboardTile(): ReactElement {
+  const settings = useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
+  const party = useParty();
+  const ownedIds = (settings.data?.accounts ?? []).map((a) => a.id);
+  const { line, lit } = scoreboardTileLine(party.data?.party, ownedIds);
+  return (
+    <li>
+      <Link
+        className={`home-app${lit ? " home-app-lit" : ""}`}
+        to="/leaderboard"
+        search={{ by: "equity" }}
+      >
+        <span className="home-app-glyph" aria-hidden="true">
+          {lit ? "◆" : "◇"}
+        </span>
+        <span className="home-app-name">
+          Scoreboard
+          {lit ? <span className="home-app-seat">◆ your seat</span> : null}
+        </span>
+        <span className="home-app-line">{line}</span>
+      </Link>
+    </li>
   );
 }
 
@@ -213,6 +303,7 @@ function Home(): ReactElement {
                 </Link>
               </li>
             ))}
+            <ScoreboardTile />
           </ul>
         </nav>
       </div>
