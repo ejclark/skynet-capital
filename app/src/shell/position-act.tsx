@@ -5,7 +5,6 @@ import { parseOccSymbol } from "../../../src/trading/option-symbols";
 import type { DeskPosition } from "../live/desk";
 import {
   fetchChain,
-  fetchOptionPositions,
   type OptionDraft,
   type OptionPreview,
   reviewOption,
@@ -44,6 +43,7 @@ import { type LockInFlag, lockInFlag } from "./locked-in";
 import { usePriceContext } from "./position-picture";
 import { plural } from "./position-row-spec";
 import { RollRow } from "./roll-row";
+import { useHeldSpot } from "./use-held-spot";
 
 /**
  * ACT IN THE ROW (#5070 slice 3; round 2 of #5037, R2's depth ladder step 3). Inside a position's
@@ -300,6 +300,8 @@ function CloseTicket({
   const [timeInForce, setTimeInForce] = useState<TicketTimeInForce>("day");
   const [state, setState] = useState<Step>({ step: "editing" });
   const seed = useLimitSeed(position, verb);
+  // A sold option's Consider badge is judged on its stock's price first (#7383).
+  const spot = useHeldSpot(deskId, position);
   const shownLimit = limitText ?? (seed?.price !== undefined ? seed.price.toFixed(2) : "");
   const count = parseQuantity(countText);
   const limit = typedPrice(shownLimit);
@@ -329,7 +331,7 @@ function CloseTicket({
   // Place sends exactly the order the recap showed: the count and limit fixed at Review.
   const place = async (order: Order, preview: TicketPreview | OptionPreview) => {
     setState({ step: "submitting", order, preview });
-    const lockIn = lockInFlag(position);
+    const lockIn = lockInFlag(position, spot);
     try {
       const result = position.isOption
         ? await submitOption(optionDraft(deskId, position, order))
@@ -474,12 +476,7 @@ function RollInRow({
   readonly position: DeskPosition;
   readonly onFilled: () => void;
 }): ReactElement {
-  const book = useQuery({
-    queryKey: ["option-positions", deskId],
-    queryFn: () => fetchOptionPositions(deskId),
-    staleTime: 30_000,
-  });
-  const spot = book.data?.rows.find((r) => r.symbol === position.symbol)?.spot;
+  const spot = useHeldSpot(deskId, position);
   const { facts } = usePriceContext(position, spot);
   return (
     <RollRow
