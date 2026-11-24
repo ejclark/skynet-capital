@@ -301,7 +301,7 @@ describe("paper checks: each body's shape", () => {
 describe("paper checks: cleanup", () => {
   it("cancels everything and closes the position when a check throws mid-flight", async () => {
     const { broker, run } = harness(et(TUE, 11), { open: true, only: "fractional-exits" });
-    broker.throwOnDelete = 1; // the OCO's cancel dies: the check throws with a bracket, an OCO and 0.5 SPY live
+    broker.throwOnDelete = 2; // the OCO's cancel dies: the check throws with an OCO and 0.5 SPY live
     const record = await run.execute();
     expect(record.rows[0]?.outcome).toBe("error");
     expect(broker.open.size).toBe(0);
@@ -389,5 +389,116 @@ describe("paper checks: the record", () => {
     for (const line of rows) expect(line.split(/(?<!\\)\|/).length - 2).toBe(4);
     expect(readme).toMatch(/`fractional-exits`[^\n]*\| not run yet \|/);
     expect(readme).toMatch(/`account-cap`[^\n]*\| not scriptable:/);
+  });
+});
+
+describe("paper checks: review fixes", () => {
+  it("check 4 cancels its bracket before anything sells, so the wash-trade guard can't answer for it", async () => {
+    const { broker, run } = harness(et(TUE, 11), { open: true, only: "fractional-exits" });
+    await run.execute();
+    const order = broker
+      .writes()
+      .map((c) =>
+        c.method === "POST" ? `POST ${c.body?.side} ${c.body?.type}` : `DELETE ${c.path}`,
+      );
+    expect(order.slice(0, 3)).toEqual([
+      "POST buy limit",
+      "DELETE /v2/orders/ord-1",
+      "POST buy market",
+    ]);
+  });
+
+  it("check 4 sends no OCO or sell when the market buy doesn't fill", async () => {
+    const { broker, run } = harness(et(TUE, 11), { open: true, only: "fractional-exits" });
+    broker.fillMarket = false;
+    const record = await run.execute();
+    expect(broker.posted().map((b) => b.side)).toEqual(["buy", "buy"]);
+    expect(record.rows[0]?.answer).toMatch(/did not fill in 10 seconds, so no OCO sent/);
+    expect(broker.open.size).toBe(0);
+  });
+
+  it("check 6 with no flagged name stays not in window and sends nothing", async () => {
+    const { broker, run } = harness(et("2026-12-04", 7, 45), { only: "options-extended-hours" });
+    const row = (await run.execute()).rows[0];
+    expect(row?.outcome).toBe("not in window");
+    expect(broker.writes()).toEqual([]);
+  });
+
+  it("opens the post-close options window at a half day's 13:00 close", () => {
+    const half: SessionDay[] = [
+      { date: "2026-12-24", openAt: et("2026-12-24", 9, 30), closeAt: et("2026-12-24", 13) },
+    ];
+    const facts = (now: number) => ({ now, clockOpen: false, sessions: half });
+    expect(windowFor("options-extended-hours", facts(et("2026-12-24", 13, 5))).open).toBe(true);
+    expect(windowFor("options-extended-hours", facts(et("2026-12-24", 16, 5))).open).toBe(false);
+  });
+
+  it("an interrupt sends nothing more, starts no further check, cleans up and exits 130", async () => {
+    const { broker, run } = harness(et(TUE, 11), {
+      open: true,
+      only: "same-day-options,mleg-stock-leg",
+    });
+    const original = broker.refuse;
+    broker.refuse = (b) => {
+      run.interrupt(); // the signal lands while check 7's first order is in flight
+      return original(b);
+    };
+    const record = await run.execute();
+    expect(broker.posted()).toHaveLength(1);
+    expect(record.rows.map((r) => r.check)).toEqual(["same-day-options"]);
+    expect(record.rows[0]?.answer).toMatch(/interrupted, not sent/);
+    expect(broker.open.size).toBe(0);
+    expect(record.exitCode).toBe(130);
+  });
+
+  it("cancels a paperchk- order an earlier run left behind", async () => {
+    const { broker, run } = harness(et(TUE, 16, 30), { only: "account-cap" });
+    broker.open.set("old-1", {
+      id: "old-1",
+      client_order_id: "paperchk-earlier-bracket-after-close-2",
+    });
+    const record = await run.execute();
+    expect(broker.open.size).toBe(0);
+    expect(record.exitCode).toBe(0);
+  });
+
+  it("a later error or wait never hides an earlier broker answer in the README", () => {
+    const row = (check: string, outcome: string, answer: string) =>
+      ({
+        check,
+        outcome,
+        answer,
+        ranAt: "",
+        phase: "closed",
+        attempts: [],
+        orderIds: [],
+        cleanup: "",
+      }) as RunRecord["rows"][number];
+    const run = (rows: RunRecord["rows"]): RunRecord => ({
+      runId: "r",
+      startedAt: "",
+      finishedAt: "",
+      exitCode: 0,
+      rows,
+      stillOpen: [],
+      positionsLeft: [],
+    });
+    const latest = latestAnswers([
+      { date: "2026-11-24", runs: [run([row("mleg-stock-leg", "refused", "no stock legs")])] },
+      {
+        date: "2026-11-25",
+        runs: [
+          run([
+            row("mleg-stock-leg", "error", "no IEX last trade"),
+            row("same-day-options", "error", "timeout"),
+          ]),
+        ],
+      },
+    ]);
+    expect(latest.get("mleg-stock-leg")).toEqual({
+      answer: "refused: no stock legs",
+      date: "2026-11-24",
+    });
+    expect(latest.get("same-day-options")?.answer).toBe("error: timeout");
   });
 });

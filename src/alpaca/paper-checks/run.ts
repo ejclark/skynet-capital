@@ -4,7 +4,7 @@
  * (`scripts/paper-checks.mjs`) owns the process: flags, signals, writing the record, the exit code.
  *
  * Exit codes: 2 refused before anything was placed (`guard.ts`), 1 something it placed is still
- * open after cleanup, 0 otherwise. A broker refusal is an answer and never fails the run.
+ * open after cleanup, 130 interrupted (and cleaned up), 0 otherwise. A broker refusal is an answer and never fails the run.
  */
 import { calendarDays } from "../../domain/market-clock.js";
 import type { AlpacaTradingTransport } from "../trading-transport.js";
@@ -50,8 +50,12 @@ export interface PaperCheckRun {
   execute(): Promise<RunRecord>;
   /** Idempotent; a no-op until the guard has passed, so a refusal never touches the account. */
   cleanup(): Promise<CleanupReport>;
-  /** The rows finished so far — what a signal-interrupted run writes. */
-  rows(): readonly CheckRow[];
+  /**
+   * SIGINT/SIGTERM: send no further order and start no further check, so `execute` runs its own
+   * cleanup after the last order it placed — never beside a check still sending — and returns
+   * the record (exit 130, or 1 if something is still open).
+   */
+  interrupt(): void;
   /** The account's own identifiers once read, for redaction only. */
   secrets(): AccountSecrets | undefined;
 }
@@ -90,8 +94,25 @@ export function createRun(options: RunOptions): PaperCheckRun {
     return report;
   };
 
-  async function one(id: CheckId): Promise<CheckRow> {
-    const facts = await readFacts(options.trading, options.now(), desk?.facts.sessions);
+  async function one(id: CheckId, at: Desk): Promise<CheckRow> {
+    let facts: MarketFacts;
+    try {
+      facts = await readFacts(options.trading, options.now(), at.facts.sessions);
+    } catch (error) {
+      const now = options.now();
+      const phase = phaseAt({ ...at.facts, now });
+      const answer = error instanceof Error ? error.message : String(error);
+      return {
+        check: id,
+        ranAt: iso(now),
+        phase,
+        attempts: [],
+        orderIds: [],
+        cleanup: "nothing placed",
+        outcome: "error",
+        answer,
+      };
+    }
     const base = {
       check: id,
       ranAt: iso(facts.now),
@@ -113,8 +134,8 @@ export function createRun(options: RunOptions): PaperCheckRun {
       };
     }
     const runner = RUNNERS[id];
-    if (!(runner && desk)) return { ...base, outcome: "error", answer: "no runner for this check" };
-    const checkDesk: Desk = { ...desk, facts };
+    if (!runner) return { ...base, outcome: "error", answer: "no runner for this check" };
+    const checkDesk: Desk = { ...at, facts };
     try {
       const answer = await runner(checkDesk);
       return { ...base, ...answer };
@@ -132,10 +153,14 @@ export function createRun(options: RunOptions): PaperCheckRun {
       const startedAt = iso(options.now());
       account = await guardAccount(options.trading);
       const facts = await readFacts(options.trading, options.now());
-      desk = { ...options, facts, ledger };
+      const at: Desk = { ...options, facts, ledger };
+      desk = at;
       let done: CleanupReport;
       try {
-        for (const id of options.only) finished.push(await one(id));
+        for (const id of options.only) {
+          if (ledger.interrupted) break;
+          finished.push(await one(id, at));
+        }
       } finally {
         done = await runCleanup();
       }
@@ -152,7 +177,8 @@ export function createRun(options: RunOptions): PaperCheckRun {
           cleanup: left.length ? `still open: ${left.join(", ")}` : "cancelled",
         };
       });
-      const exitCode = done.stillOpen.length > 0 || done.positionsLeft.length > 0 ? 1 : 0;
+      const leftover = done.stillOpen.length > 0 || done.positionsLeft.length > 0;
+      const exitCode = leftover ? 1 : ledger.interrupted ? 130 : 0;
       return {
         runId: options.runId,
         startedAt,
@@ -164,7 +190,9 @@ export function createRun(options: RunOptions): PaperCheckRun {
       };
     },
     cleanup: runCleanup,
-    rows: () => finished,
+    interrupt: () => {
+      ledger.interrupted = true;
+    },
     secrets: () => account,
   };
 }

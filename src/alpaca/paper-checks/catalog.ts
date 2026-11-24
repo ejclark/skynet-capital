@@ -70,7 +70,7 @@ export const PAPER_CHECKS: readonly CheckSpec[] = [
   {
     id: "options-extended-hours",
     question: "Do options trade 07:30-09:25 and 16:00-16:15 on paper from Dec 4?",
-    window: "07:30-09:25 or 16:00-16:15, on or after 2026-12-04",
+    window: "07:30-09:25 or the 15 minutes after the close, on or after 2026-12-04",
     reader: "the Scoreboard's game-day phases (step 9)",
   },
   {

@@ -27,7 +27,11 @@ const optionBuy = (symbol: string, qty: number, extendedHours = false) => ({
   ...(extendedHours ? { extended_hours: true } : {}),
 });
 
-/** Check 6 — the asset flag on the campaign's 15 names, then one extended-hours option bid. */
+/**
+ * Check 6 — the asset flag on the campaign's 15 names, then one extended-hours option bid. With no
+ * name flagged there is nothing to bid on, so the row stays `not in window` (never `refused`: the
+ * broker refused nothing) and a later run answers it.
+ */
 export async function optionsExtendedHours(desk: Desk): Promise<CheckAnswer> {
   const reads: Attempt[] = [];
   let flagged: string | undefined;
@@ -41,8 +45,8 @@ export async function optionsExtendedHours(desk: Desk): Promise<CheckAnswer> {
   const fields = reads.map((r) => `${r.label.split(" ")[0]} ${r.message}`).join(", ");
   if (!flagged) {
     return {
-      outcome: "refused",
-      answer: `no campaign name has has_options_extended_hours set (${fields}); no order sent`,
+      outcome: "not in window",
+      answer: `no campaign name has has_options_extended_hours set yet (${fields}); no order sent`,
       attempts: reads,
     };
   }

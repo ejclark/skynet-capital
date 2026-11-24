@@ -43,6 +43,8 @@ export class FakeAlpaca {
   refuse: (body: Record<string, unknown>) => JsonResponse | undefined = () => undefined;
   /** Throw on the nth DELETE (1-based) — a check that dies mid-flight. */
   throwOnDelete = 0;
+  /** False: a market order rests unfilled (a halted name, a slow fractional fill). */
+  fillMarket = true;
   /** Order ids the broker won't cancel — a stuck order. */
   readonly stuck = new Set<string>();
   private seq = 0;
@@ -53,7 +55,7 @@ export class FakeAlpaca {
   private orderFor(body: Record<string, unknown>): Order {
     this.seq += 1;
     const id = `ord-${this.seq}`;
-    const market = body.type === "market";
+    const market = body.type === "market" && this.fillMarket;
     const legs =
       body.order_class === "bracket" || body.order_class === "oco"
         ? [
@@ -103,7 +105,7 @@ export class FakeAlpaca {
         const refusal = this.refuse(order);
         if (refusal) return refusal;
         const placed = this.orderFor(order);
-        if (order.type === "market") {
+        if (order.type === "market" && this.fillMarket) {
           if (order.side === "buy") this.positions.push(String(order.symbol));
           else this.positions = this.positions.filter((s) => s !== order.symbol);
           this.filled.set(placed.id, placed);

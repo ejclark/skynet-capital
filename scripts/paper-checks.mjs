@@ -12,7 +12,8 @@
 // Never a member's key, a bot's key, Eric's own account or a Connect token.
 //
 // Exit codes: 2 refused before placing anything; 1 something it placed is still open after
-// cleanup (the ids are in the results file); 0 otherwise. A broker refusal is an answer, never a
+// cleanup (the ids are in the results file), or the broker couldn't be read; 130 interrupted and
+// cleaned up; 0 otherwise. A broker refusal is an answer, never a
 // failure. Run logs are public: only check ids, outcomes and the broker's words are printed.
 import { join } from "node:path";
 import { parseOnly } from "../src/alpaca/paper-checks/catalog.ts";
@@ -72,6 +73,7 @@ const runId = process.env.GITHUB_RUN_ID
   ? `${process.env.GITHUB_RUN_ID}.${process.env.GITHUB_RUN_ATTEMPT ?? "1"}`
   : Date.now().toString(36);
 const transports = transportsFor(credentials);
+const interrupted = new AbortController();
 const run = createRun({
   trading: dryRun ? dryRunTransport(transports.trading, log) : transports.trading,
   data: transports.data,
@@ -81,7 +83,20 @@ const run = createRun({
   sameDayQty,
   campaignSymbols: campaign ? castSymbols(campaign) : [],
   now: () => Date.now(),
-  sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+  // A signal ends any wait at once (check 1 can watch the open for 20 minutes).
+  sleep: (ms) =>
+    new Promise((resolve) => {
+      if (interrupted.signal.aborted) return resolve();
+      const timer = setTimeout(resolve, ms);
+      interrupted.signal.addEventListener(
+        "abort",
+        () => {
+          clearTimeout(timer);
+          resolve();
+        },
+        { once: true },
+      );
+    }),
 });
 
 const resultsDir = join(process.cwd(), RESULTS_DIR);
@@ -103,23 +118,14 @@ function report(record) {
   log(`results: ${RESULTS_DIR}/${etDate(Date.now())}.json and README.md`);
 }
 
-// A signal still cancels everything this run placed, then writes what finished.
+// A signal stops new orders and new checks; `execute` then cleans up after the last order it
+// placed and returns the record, which is written like any other (exit 130, or 1 if left open).
+// A second signal kills the process outright.
 for (const signal of ["SIGINT", "SIGTERM"]) {
-  process.once(signal, async () => {
-    log(`${signal}: cleaning up`);
-    const done = await run.cleanup();
-    const now = new Date().toISOString();
-    const leftover = done.stillOpen.length > 0 || done.positionsLeft.length > 0;
-    report({
-      runId,
-      startedAt: now,
-      finishedAt: now,
-      exitCode: leftover ? 1 : 130,
-      rows: run.rows(),
-      stillOpen: done.stillOpen,
-      positionsLeft: done.positionsLeft,
-    });
-    process.exit(leftover ? 1 : 130);
+  process.once(signal, () => {
+    log(`${signal}: stopping, then cancelling everything this run placed`);
+    run.interrupt();
+    interrupted.abort();
   });
 }
 
@@ -129,6 +135,6 @@ try {
   process.exit(record.exitCode);
 } catch (error) {
   if (error instanceof PaperCheckRefused) fail(2, `refused, nothing placed: ${error.message}`);
-  await run.cleanup();
+  await run.cleanup(); // execute's own cleanup has run if anything was placed; this is a no-op then
   fail(1, scrub(error instanceof Error ? error.message : String(error)));
 }

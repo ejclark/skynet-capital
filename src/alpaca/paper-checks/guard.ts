@@ -16,6 +16,7 @@ import type { JsonResponse } from "../../http/fetch-json.js";
 import { ALPACA_DATA_HOST, assertPaperTradingHost, PAPER_TRADING_HOST } from "../paper-host.js";
 import { type AlpacaTradingTransport, FetchAlpacaTradingTransport } from "../trading-transport.js";
 import { ORDER_PREFIX } from "./catalog.js";
+import { asObject } from "./desk.js";
 
 /** A refusal before anything was placed — the command exits 2. */
 export class PaperCheckRefused extends Error {}
@@ -85,8 +86,7 @@ export function dryRunTransport(
   };
 }
 
-const field = (body: unknown, key: string): unknown =>
-  body && typeof body === "object" ? (body as Record<string, unknown>)[key] : undefined;
+const field = (body: unknown, key: string): unknown => asObject(body)[key];
 
 function listed(response: JsonResponse, what: string): unknown[] {
   if (response.status !== 200 || !Array.isArray(response.body)) {

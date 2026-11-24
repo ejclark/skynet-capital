@@ -54,7 +54,8 @@ function windowsOn(check: CheckId, day: SessionDay): [number, number][] {
       if (day.date < OPTIONS_EXTENDED_FROM) return [];
       return [
         [at(day.date, 7, 30), at(day.date, 9, 25)],
-        [at(day.date, 16), at(day.date, 16, 15)],
+        // The 15 minutes after the close: 16:00-16:15, or 13:00-13:15 on a half day.
+        [day.closeAt, day.closeAt + 15 * 60_000],
       ];
     default:
       return [[day.openAt, day.closeAt]];

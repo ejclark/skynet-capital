@@ -86,31 +86,34 @@ interface Latest {
   readonly date: string;
 }
 
-/** A row as the README says it: an answer, a wait (`not in window`), or nothing (a dry run). */
-function entryOf(row: CheckRow): { kind: "answer" | "waiting"; answer: string } | undefined {
+type Tier = 0 | 1 | 2;
+
+/**
+ * A row as the README says it, and how much it outranks: a broker answer (2) beats an error (1),
+ * which beats a wait (0) — so a later transient error or `not in window` never hides an earlier
+ * real answer. A dry run is never on the record.
+ */
+function entryOf(row: CheckRow): { tier: Tier; answer: string } | undefined {
   if (row.outcome === "dry run") return undefined;
-  if (row.outcome !== "not in window")
-    return { kind: "answer", answer: `${row.outcome}: ${row.answer}` };
-  return {
-    kind: "waiting",
-    answer: `not in window yet${row.nextWindow ? `; next window ${row.nextWindow}` : ""}`,
-  };
+  if (row.outcome === "not in window") {
+    const next = row.nextWindow ? `; next window ${row.nextWindow}` : "";
+    return { tier: 0, answer: `not in window yet${next}` };
+  }
+  return { tier: row.outcome === "error" ? 1 : 2, answer: `${row.outcome}: ${row.answer}` };
 }
 
-/** The latest answered row for each check; `not in window` only when no run has answered it. */
+/** The latest row of the highest tier for each check (files oldest first, runs in order). */
 export function latestAnswers(files: readonly ResultsFile[]): Map<CheckId, Latest> {
-  const answered = new Map<CheckId, Latest>();
-  const waiting = new Map<CheckId, Latest>();
+  const best = new Map<CheckId, Latest & { tier: Tier }>();
   const rows = files.flatMap((file) =>
     file.runs.flatMap((run) => run.rows.map((row) => ({ row, date: file.date }))),
   );
   for (const { row, date } of rows) {
     const entry = entryOf(row);
-    if (entry)
-      (entry.kind === "answer" ? answered : waiting).set(row.check, { answer: entry.answer, date });
+    const held = best.get(row.check);
+    if (entry && (!held || entry.tier >= held.tier)) best.set(row.check, { ...entry, date });
   }
-  for (const [check, latest] of waiting) if (!answered.has(check)) answered.set(check, latest);
-  return answered;
+  return new Map([...best].map(([check, { answer, date }]) => [check, { answer, date }]));
 }
 
 /** The README: what this is, how to run it, and one row per check. */

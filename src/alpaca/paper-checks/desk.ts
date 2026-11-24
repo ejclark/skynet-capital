@@ -41,12 +41,15 @@ export interface Ledger {
   readonly orders: Map<string, CheckId>;
   readonly bought: Set<string>;
   readonly sequence: Map<CheckId, number>;
+  /** Set by SIGINT/SIGTERM: no further order is sent, so cleanup sees everything placed. */
+  interrupted: boolean;
 }
 
 export const newLedger = (): Ledger => ({
   orders: new Map(),
   bought: new Set(),
   sequence: new Map(),
+  interrupted: false,
 });
 
 export interface Desk {
@@ -65,9 +68,10 @@ export interface Desk {
 /** The client order id prefix every order of this run carries. */
 export const runPrefix = (runId: string): string => `${ORDER_PREFIX}${runId}-`;
 
-type Json = Record<string, unknown>;
-const asObject = (v: unknown): Json => (v && typeof v === "object" ? (v as Json) : {});
-const str = (v: unknown): string | undefined => (typeof v === "string" ? v : undefined);
+export type Json = Record<string, unknown>;
+/** Read untrusted broker JSON: an object or `{}`, a string or undefined. */
+export const asObject = (v: unknown): Json => (v && typeof v === "object" ? (v as Json) : {});
+export const str = (v: unknown): string | undefined => (typeof v === "string" ? v : undefined);
 
 function legsOf(body: Json): LegStatus[] | undefined {
   if (!Array.isArray(body.legs)) return undefined;
@@ -130,6 +134,7 @@ export async function placeOrder(
   const n = (desk.ledger.sequence.get(check) ?? 0) + 1;
   desk.ledger.sequence.set(check, n);
   const order = { ...body, client_order_id: `${runPrefix(desk.runId)}${check}-${n}` };
+  if (desk.ledger.interrupted) return { label, result: "error", message: "interrupted, not sent" };
   try {
     const response = await desk.trading.post("/v2/orders", order);
     record(desk, check, response);
@@ -163,7 +168,7 @@ export async function lastTrade(desk: Desk, symbol: string): Promise<number> {
   return price;
 }
 
-const cents = (n: number): number => Math.round(n * 100) / 100;
+export const cents = (n: number): number => Math.round(n * 100) / 100;
 
 /** A buy limit that can't fill: 30% of the last trade, rounded DOWN to the cent. */
 export const unfillableBuy = (last: number): number => Math.floor(last * 0.3 * 100) / 100;

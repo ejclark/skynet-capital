@@ -8,6 +8,7 @@ import { type CheckAnswer, sayAll, verdict } from "./answer.js";
 import {
   type Attempt,
   bracketLegs,
+  cents,
   classify,
   type Desk,
   lastTrade,
@@ -130,8 +131,8 @@ export async function eveningQuotes(desk: Desk): Promise<CheckAnswer> {
   return { outcome, answer: attempts.map(feedWords).join("; "), attempts };
 }
 
-/** Poll an order until it fills (10 reads, 1s apart), returning the last read. */
-async function awaitFill(
+/** Poll an order until it fills or is cancelled (10 reads, 1s apart), returning the last read. */
+async function awaitSettled(
   desk: Desk,
   label: string,
   id: string | undefined,
@@ -146,7 +147,25 @@ async function awaitFill(
   return read;
 }
 
-/** Check 4 — a 0.5-share bracket, then an OCO sell over a 0.5-share position it buys and sells back. */
+/** Cancel one order this check placed and wait for the broker to say so. */
+async function cancel(
+  desk: Desk,
+  label: string,
+  id: string | undefined,
+): Promise<Attempt | undefined> {
+  if (!id) return undefined;
+  await desk.trading.delete(`/v2/orders/${encodeURIComponent(id)}`);
+  return awaitSettled(desk, label, id);
+}
+
+const present = (attempts: readonly (Attempt | undefined)[]): Attempt[] =>
+  attempts.filter((a): a is Attempt => a !== undefined);
+
+/**
+ * Check 4 — a 0.5-share bracket, then an OCO sell over a 0.5-share position it buys and sells back.
+ * The bracket is cancelled before anything sells: an open buy limit beside a sell is what Alpaca's
+ * wash-trade guard refuses, and that refusal would answer a question this check isn't asking.
+ */
 export async function fractionalExits(desk: Desk): Promise<CheckAnswer> {
   const last = await lastTrade(desk, "SPY");
   const entry = unfillableBuy(last);
@@ -161,6 +180,7 @@ export async function fractionalExits(desk: Desk): Promise<CheckAnswer> {
     order_class: "bracket",
     ...bracketLegs(entry),
   });
+  const bracketGone = await cancel(desk, "0.5-share bracket buy, cancelled", bracket.orderId);
   const market = (side: "buy" | "sell", label: string) =>
     placeOrder(desk, check, label, {
       symbol: "SPY",
@@ -170,16 +190,18 @@ export async function fractionalExits(desk: Desk): Promise<CheckAnswer> {
       time_in_force: "day",
     });
   const buy = await market("buy", "0.5-share market buy");
-  const attempts: Attempt[] = [bracket, buy];
-  if (buy.result !== "accepted" && buy.result !== "dry run") {
-    return {
-      outcome: verdict([bracket]),
-      answer: `${sayAll(attempts)}; no position, so no OCO sent`,
-      attempts,
-    };
-  }
+  const attempts = present([bracket, bracketGone, buy]);
+  const stop = (why: string): CheckAnswer => ({
+    outcome: verdict([bracket]),
+    answer: `${sayAll(attempts)}; ${why}, so no OCO sent`,
+    attempts,
+  });
+  if (buy.result !== "accepted" && buy.result !== "dry run") return stop("no position");
   desk.ledger.bought.add("SPY");
-  const bought = await awaitFill(desk, "0.5-share market buy, filled", buy.orderId);
+  const bought = await awaitSettled(desk, "0.5-share market buy, filled", buy.orderId);
+  if (bought) attempts.push(bought);
+  if (!desk.dryRun && bought?.orderStatus !== "filled")
+    return stop("the market buy did not fill in 10 seconds");
   const oco = await placeOrder(desk, check, "0.5-share OCO sell", {
     symbol: "SPY",
     qty: "0.5",
@@ -187,16 +209,12 @@ export async function fractionalExits(desk: Desk): Promise<CheckAnswer> {
     type: "limit",
     time_in_force: "day",
     order_class: "oco",
-    take_profit: { limit_price: Math.round(last * 150) / 100 },
-    stop_loss: { stop_price: Math.round(last * 50) / 100 },
+    take_profit: { limit_price: cents(last * 1.5) },
+    stop_loss: { stop_price: cents(last * 0.5) },
   });
-  if (oco.orderId) {
-    await desk.trading.delete(`/v2/orders/${encodeURIComponent(oco.orderId)}`);
-    await awaitFill(desk, "0.5-share OCO sell, cancelled", oco.orderId);
-  }
+  const ocoGone = await cancel(desk, "0.5-share OCO sell, cancelled", oco.orderId);
   const sell = await market("sell", "0.5-share market sell back");
-  const sold = await awaitFill(desk, "0.5-share market sell back, filled", sell.orderId);
-  const reads = [bought, sold].filter((a): a is Attempt => a !== undefined);
-  attempts.push(oco, sell, ...reads);
+  const sold = await awaitSettled(desk, "0.5-share market sell back, filled", sell.orderId);
+  attempts.push(...present([oco, ocoGone, sell, sold]));
   return { outcome: verdict([bracket, oco]), answer: sayAll(attempts), attempts };
 }
