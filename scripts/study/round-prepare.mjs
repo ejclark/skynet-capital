@@ -160,7 +160,7 @@ function factsAndHarvest(ctx, step, dir) {
 export function preflight(ctx) {
   const step = "0-preflight";
   const dir = ctx.dir(step);
-  const problems = profileProblems(ctx.p);
+  const problems = profileProblems(ctx.p, { control: isControl(ctx.opts) });
   if (problems.length > 0) throw new Error(`area config: ${problems.join("; ")}`);
   // The sign-in is checked by round.mjs on every start, resumed or not — not only here.
   if (ctx.stub) ctx.log(step, "stub", { note: `every call answered from ${ctx.stub}` });

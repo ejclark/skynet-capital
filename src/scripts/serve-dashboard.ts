@@ -327,6 +327,7 @@ async function main(): Promise<void> {
     builtPlans,
     feedbackFollowup,
     communityProgression,
+    journal,
   } = setupFeedback(process.env);
   // Feedback as the bus's second kind (#784 slice 2): a filing publishes `feedback.filed`, and the
   // GitHub status poll publishes `feedback.status-changed` on a real transition. Both wrap here
@@ -495,6 +496,7 @@ async function main(): Promise<void> {
     ...(builtPlans ? { fetchBuiltPlans: builtPlans } : {}),
     ...(feedbackFollowup ? { submitFollowup: feedbackFollowup } : {}),
     communityProgression,
+    journal,
     ...(companion ? { companion } : {}),
     // `/api/companion/ack`'s store — the caller there already has the session's own opaque id.
     readMessages: (id) => companionMessageLog.list(id),

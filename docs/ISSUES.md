@@ -404,6 +404,7 @@ decayed to 4/126 PR bodies, every gated one held).
 | mermaid | every block parses under GitHub's own Mermaid (`scripts/mermaid-lint.mjs`) | a syntax error renders as the opening frame |
 | `needs-eric` decision | labelled `needs-eric` ⇒ a `Needs from you` callout above the fold, ≥1 numbered item | the label promises a decision; the callout is where it has to live |
 | `bottleneck` baseline | labelled `bottleneck` ⇒ a `**Before:**` line with a number, or `unmeasured — <why>` | a fix nobody measured before cannot be shown to have worked |
+| `pitch` shape | labelled `pitch` ⇒ its five lines filled (a `$` in Monthly cost, a number in Rolls back if), `needs-eric`, and `- Class: spend limits` in the callout | a spend ask he cannot price, compare or undo is not a decision he can make |
 | raw URLs | SHA-pinned | branch URLs 404 at squash-merge |
 | title | imperative, ≤120 chars (past ~80 only a note: mobile list views truncate), not `Fix bug`-class | Google's rule, their anti-patterns |
 
@@ -447,6 +448,48 @@ fan-out"), so it carries the measurement, in two lines of the body:
   before 2026-10-01 are reported as legacy; the research grind backfills their Before line when
   it picks one up (`docs/grind/research-bottleneck.instructions.md`, step 2).
 - First instance: #3926, the CI-failure recurrence storm.
+
+## Pitch issues — a spend ask in five lines (#8201)
+
+Anything that costs Eric money out of pocket (a bigger server, more tokens, a raised cap) reaches
+him as a **pitch** and a conversation, never as a build (Eric, 2026-11-23, relayed on #8161). The
+rule lives in [`docs/process/WORKING-AGREEMENTS.md`](process/WORKING-AGREEMENTS.md) → *Spend arrives
+as a pitch*; this is its shape. A pitch is an issue labelled `pitch` **and** `needs-eric`, with these
+five lines above the fold, one line each so they read on a phone (no table that scrolls sideways):
+
+```text
+- **Who wants it:** <a seat, a loop, or a member by `member-<id>` label, never a name>
+- **Monthly cost:** $<n>/month, <how it was priced>  (or `$0 out of pocket, <what it uses instead>`)
+- **What it buys:** <number and unit>, <how it is measured>
+- **Free alternative first:** <what was tried, #N, what it moved>  (or `not tried, <why>`)
+- **Rolls back if:** <number> by <date>, <what reads it>
+```
+
+Plus the `Needs from you` callout in rule 8's grammar, so the assignment card carries the whole ask:
+
+```text
+> [!IMPORTANT]
+> **Needs from you**
+> 1. <the ask as a closed question> — <why, trailing>
+>    - A (predicted, <confidence>): approve for <period>
+>    - B: try the free alternative first
+>    - Class: spend limits
+>    - On silence: nothing is spent; it stays assigned to you
+```
+
+- **`issue-lint` refuses** a `pitch` body missing any of the five lines (one problem per line, named),
+  a Monthly cost with no `$` figure, a Rolls back line with no number, the label without
+  `needs-eric`, and a callout without `Class: spend limits` (`scripts/pitch-issue.mjs`).
+- **Nothing new routes it.** `needs-eric` parks it, so nothing builds a pitch before his answer;
+  `assignments.mjs` assigns him with the ask card; `answer-readback.mjs` reads his `A`, `yes` or
+  `not now`; and `spend limits` is irreversible in `alignment-graduation.mjs`, so a pitch never
+  graduates to decide-and-report.
+- **After a yes,** the protected change (a cap in `work-mode.json`, a model dial) is staged as one
+  held item on the platter, tracked on the pitch. After a `not now`, nothing changes and the pitch
+  stays open with his answer logged.
+- **The lane judges what is spend; the lint checks only the shape.** No keyword guess files a pitch.
+  The spend line itself is drawn in `.github/prompts/feedback-build.md` and `envelope.json`.
+- Filed with `node scripts/issues.mjs create --labels pitch,needs-eric`.
 
 ## The state block — a plan issue's context store (#3765)
 

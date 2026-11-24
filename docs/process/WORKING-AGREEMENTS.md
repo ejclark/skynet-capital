@@ -288,6 +288,31 @@ either grade or falsifier; `/research` folds method and ledger behind the decisi
 `docs/research/nvda-aug-2026-print.md`. Paper-only, educational — the deploy decision on real capital
 stays Eric's.
 
+## Spend arrives as a pitch
+
+**Anything that costs Eric money out of pocket arrives as a pitch and a conversation, never a
+build** (Eric, 2026-11-23, relayed from the #8161 session: a bigger server or more tokens). The
+hard boundary already named spend as his (`CLAUDE.md` → *Hard boundaries*; "raising a cap is the
+spend class", `scripts/moneypenny/work-mode.mjs`). This gives the ask its shape, so he can decide it
+in seconds: **who wants it, $ per month, what it buys (measured), the free try first, and the
+number that undoes it.** The five lines, the callout and the lint are in
+[`docs/ISSUES.md`](../ISSUES.md) → *Pitch issues* (#8201).
+
+- **Three routes file one.** A member wish that would cost money (the feedback lane's spend line,
+  [`docs/FEEDBACK.md`](../FEEDBACK.md)); a loop's resource ask ([`LEARNING-LOOP.md`](LEARNING-LOOP.md)
+  field 14: a loop asks by pitch, never by editing a cap); a contributor's ask
+  ([`CONTRIBUTING.md`](../../CONTRIBUTING.md)).
+- **Spend means the bill or a cap moves.** A cap, a round or token limit, a poll interval, a retry
+  count, a new call to a metered API, a bigger machine. Picking a model tier on a lane already paid
+  for is not spend (`CLAUDE.md` reads the word narrowly). A cap on a quota already paid for is still
+  his, so it is still a pitch, priced `$0 out of pocket, <what it uses instead>`.
+- **The free move is tried first, or the pitch says why not.** A pitch whose free alternative is
+  still open says so plainly; it does not pretend the money is the only way.
+- **Nothing builds before his answer.** `needs-eric` parks it. A yes stages the protected change as
+  one held platter item, tracked on the pitch; `not now` changes nothing and leaves it open.
+- *Wrong if:* by 2027-01-31 he answers two pitches by asking for a number the five lines were meant
+  to carry, or a spend change merges with no pitch behind it.
+
 ## When Eric's action is needed
 
 **When Eric's action IS needed — procedural, pre-verified, near-zero** (Eric, 2026-08-15):

@@ -51,6 +51,14 @@ describe("feedback-service issue body", () => {
     expect(issueBody({ kind: "idea", title: "t", details: "d" })).not.toContain("**Where**");
   });
 
+  it("marks a wish from the journal with one From row, and nothing else (#8190)", () => {
+    const wish = issueBody({ kind: "idea", title: "t", details: "I wish it…", source: "journal" });
+
+    expect(wish).toContain("| **From** | the member's wish journal |");
+    expect(wish.startsWith("I wish it…")).toBe(true);
+    expect(issueBody({ kind: "idea", title: "t", details: "d" })).not.toContain("**From**");
+  });
+
   it("derives a stable, case-insensitive member id", () => {
     expect(opaqueMemberId("Member@Example.com")).toBe(opaqueMemberId("  member@example.com "));
     expect(opaqueMemberId("member@example.com")).toHaveLength(10);

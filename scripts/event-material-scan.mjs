@@ -18,6 +18,10 @@
 //       # untouched — only interval-elapsed pulses are ever screened (docs/process/
 //       # EVENT-RESEARCH.md's constraint). Prints {stillDue, screened} JSON to stdout; `stillDue`
 //       # is exactly what still needs a session.
+//       # One pass covers the whole day (#8202, scripts/event-screen-widen.mjs): with a non-empty
+//       # list and no screen landed on main today (UTC), it also screens every other due
+//       # interval pulse, and a widened row only ever leaves the list by screening — so `stillDue`
+//       # is always a subset of the input. Each symbol is fetched at most once per pass.
 //
 //   node scripts/event-material-scan.mjs --explain
 //       # the spec entrypoint (house pattern, see deploy-lag.mjs / tests/scripts/*.spec.ts): takes
@@ -44,6 +48,7 @@ import {
   parseLedgerHeader,
   splitIntents,
 } from "./event-material-decide.mjs";
+import { planWidening } from "./event-screen-widen.mjs";
 import { endOfDayUtc, forEvent, loadIntents } from "./intents.mjs";
 import { readCalendarDir } from "./market-events-read.mjs";
 import { reexecWithProxy } from "./proxy-reexec.mjs";
@@ -178,6 +183,18 @@ async function latestClose(symbol) {
   return closeFromChart(await res.json(), symbol);
 }
 
+/** One fetch per symbol for a whole --screen-due pass (#8202): the date-flip burst screens many
+ *  events, and each one used to fetch `^VIX` and its symbols again. The promise is cached, a
+ *  rejected one included — a symbol that failed once fails every event that needs it this pass,
+ *  loudly, rather than buying a second request. */
+export function memoizeCloses(fetchClose = latestClose) {
+  const cache = new Map();
+  return (symbol) => {
+    if (!cache.has(symbol)) cache.set(symbol, fetchClose(symbol));
+    return cache.get(symbol);
+  };
+}
+
 /** Assemble the full decision state for one event id: the table row, its ledger header, live
  *  price/VIX readings, and the current adjacency list. `allEvents`/`cadence` are accepted as
  *  options so --screen-due loads the tables once for the whole batch instead of once per event. */
@@ -191,8 +208,9 @@ async function buildState(id, today, opts = {}) {
   const ledgerText = readFileSync(ledgerPath, "utf8");
   const ledger = parseLedgerHeader(ledgerText);
   const symbols = event.symbols ?? [];
-  const reads = await Promise.all(symbols.map((sym) => latestClose(sym)));
-  const vix = await latestClose("^VIX");
+  const close = opts.close ?? latestClose;
+  const reads = await Promise.all(symbols.map((sym) => close(sym)));
+  const vix = await close("^VIX");
   const adjacentIds = computeAdjacentIds(event, allEvents);
   // The adjacency filter (#2946): only confirmed high/critical adjacents may trip a session; the
   // full corridor is still recorded in the probe-ref either way.
@@ -306,19 +324,39 @@ async function runScreenDue() {
   // Beside the calendar and cadence, not per event: a malformed record fails this run loudly once,
   // where a per-event probe error would buy a session for every due pulse. Its spec gates the PR.
   const intents = loadIntents();
+  // Read before anything is screened, so the widened list comes from the same tree as the input.
+  const widened = planWidening(due, today, {
+    mainLogFile: arg("main-log-file"),
+    dueFile: arg("due-file"),
+    headsFile: arg("research-heads-file"),
+    forward: process.argv.filter((a) =>
+      ["--events-dir=", "--calendar-file=", "--cadence-file=", "--ledger-dir="].some((f) =>
+        a.startsWith(f),
+      ),
+    ),
+  }).map((row) => ({ ...row, widened: true }));
+  const close = memoizeCloses();
   const stillDue = [];
   const screened = [];
-  for (const item of due) {
+  for (const item of [...due, ...widened]) {
     if (item.reason !== "interval-elapsed") {
       stillDue.push(item);
       continue;
     }
+    // A widened row was never handed in, so it never enters `stillDue`: material or a failed
+    // probe leaves it due for a later tick's capped list, exactly as if this pass had not seen it.
+    const keepDue = (row) => {
+      if (item.widened) {
+        console.error(`event-material-scan: widened pulse ${item.id} not screened — it stays due`);
+      } else stillDue.push(row);
+    };
     try {
       const { state, ledgerPath, ledgerText, priceAsOf } = await buildState(item.id, today, {
         allEvents,
         cadence,
         proposals,
         intents,
+        close,
       });
       const decision = decide(state);
       warnOnFallbackPrices(item.id, priceAsOf);
@@ -326,13 +364,19 @@ async function runScreenDue() {
       if (decision.verdict === "screen") {
         writeFileSync(ledgerPath, applyScreen(ledgerText, state, decision));
         const { cappedIntents } = decision;
-        screened.push({ id: item.id, reasons: decision.reasons, cappedIntents, priceAsOf });
+        screened.push({
+          id: item.id,
+          reasons: decision.reasons,
+          cappedIntents,
+          priceAsOf,
+          ...(item.widened ? { widened: true } : {}),
+        });
       } else {
-        stillDue.push({ ...item, materialReasons: decision.reasons, priceAsOf });
+        keepDue({ ...item, materialReasons: decision.reasons, priceAsOf });
       }
     } catch (err) {
       console.error(`event-material-scan: probe failed for ${item.id} — ${err.message}`);
-      stillDue.push({ ...item, materialReasons: [`probe-error:${err.message}`] });
+      keepDue({ ...item, materialReasons: [`probe-error:${err.message}`] });
     }
   }
   console.log(JSON.stringify({ stillDue, screened }, null, 2));

@@ -58,6 +58,13 @@ npm run lint
 npm test
 ```
 
+## Asks that cost money
+
+A change that would cost the project money (a bigger server, more tokens, a raised cap, a new paid
+API) is never built straight away: it is filed as a **pitch** for Eric, in five lines (who wants it,
+$ per month, what it buys, the free alternative tried first, the number that would undo it). The
+shape and the label are in [`docs/ISSUES.md`](docs/ISSUES.md) → *Pitch issues*; `issue-lint` checks it.
+
 ## Merging — auto-merge on green, no babysitting
 
 Every PR to `main` runs two required checks: **`CI`** (`node 24 · typecheck · lint · test`) and

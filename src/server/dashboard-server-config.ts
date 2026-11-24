@@ -45,6 +45,7 @@ import type { FilingCommentsDeps } from "./filing-comments-form.js";
 import type { FixAnnouncementStore } from "./fix-announcement-store.js";
 import type { GithubTokenDeps } from "./github-token.js";
 import type { InviteDeps } from "./invite-form.js";
+import type { JournalStore } from "./journal-store.js";
 import type { MemberCampaignStore } from "./member-campaign-store.js";
 import type { MemberChainStore } from "./member-chain-store.js";
 import type { MemberConvictionStore } from "./member-conviction-store.js";
@@ -374,6 +375,10 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
   /** The day each signed-in member last loaded the shell, and the screens they landed on (#8169,
    *  `member-visits.ts`). Omit (offline wiring) and nothing is recorded. */
   readonly memberVisits?: MemberVisitStore;
+  /** A member's private experience and trade notes from the wish journal (#8190,
+   *  `journal-store.ts`). Omit (offline wiring) and `/api/journal` saves no notes; wishes still
+   *  file through `submitFeedback`. */
+  readonly journal?: JournalStore;
   /**
    * The Playbook Store (issue #885) — an account's own playbook subscriptions and capital
    * sub-allocations. Omit to disable (offline mode) — the catalog still browses, just with no
