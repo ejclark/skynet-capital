@@ -138,11 +138,34 @@ export function parseJournalPost(body: Readonly<Record<string, unknown>>): Journ
   }
 }
 
-/** The first line's first sentence — skipping a break too short to be one (an abbreviation). */
+/** Words that end in a period mid-sentence ("vs. the bots"), lowercased, without the dot. */
+const ABBREVIATIONS = new Set("vs cf approx mr mrs ms dr jr sr st no".split(" "));
+
+/**
+ * Whether a period run is not a sentence end (#8261): an ellipsis, a list number ("1. … 2."), an
+ * abbreviation or initial ("vs.", "e.g.", "U.S.", "J."), or a period the next word continues in
+ * lowercase. `!` and `?` never ask: no abbreviation uses them, and members type casually after one.
+ */
+function periodContinues(line: string, start: number, run: string): boolean {
+  if (/\.\.|…/.test(run)) return true;
+  const word = /(\S+)$/.exec(line.slice(0, start))?.[1] ?? "";
+  if (/^\d+$/.test(word)) return true;
+  if (/^(?:\p{L}\.)*\p{L}$/u.test(word)) return true;
+  if (ABBREVIATIONS.has(word.toLowerCase())) return true;
+  return /^\p{Ll}/u.test(line.slice(start + run.length).trimStart());
+}
+
+/**
+ * The first line's first sentence. A break too short to be one (under
+ * {@link MIN_TITLE_SENTENCE_CHARS}) or one that only looks like an end (`periodContinues`) is read
+ * past; a line with no real break is its own sentence.
+ */
 function firstSentence(line: string): string {
-  for (const m of line.matchAll(/[.!?](?=\s|$)/g)) {
-    const end = m.index + 1;
-    if (end >= MIN_TITLE_SENTENCE_CHARS) return line.slice(0, end);
+  for (const m of line.matchAll(/[.!?…]+(?=\s|$)/g)) {
+    const end = m.index + m[0].length;
+    if (end < MIN_TITLE_SENTENCE_CHARS) continue;
+    if (!/[!?]/.test(m[0]) && periodContinues(line, m.index, m[0])) continue;
+    return line.slice(0, end);
   }
   return line;
 }
