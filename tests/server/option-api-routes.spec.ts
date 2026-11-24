@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { Readable } from "node:stream";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
 import { serveOptionApi } from "../../src/server/option-api-routes.js";
+import { ACCOUNT_UNREAD_REFUSAL } from "../../src/trading/order-ticket.js";
 
 /**
  * The options ticket's JSON twins: the pure ticket rules answer the review with sentences, the
@@ -223,6 +224,43 @@ describe("serveOptionApi review", () => {
   it("404s a desk that isn't on the board", async () => {
     const { out } = await review(openPut({ participantId: "human-ghost" }), config());
     expect(out.status).toBe(404);
+  });
+
+  describe("on an account whose read failed (#8399): unread is not empty", () => {
+    // The hub's `degraded()` row: $0 cash, no positions, and the error that says why. The share
+    // review answers this row with ACCOUNT_UNREAD_REFUSAL (#8335); the option ticket on the same
+    // page must say the same, never "$0 cash" or "you hold 0".
+    const unread = config({
+      hub: {
+        getState: () => ({
+          participants: [{ id: "human-ann", cash: 0, positions: [], error: "ETIMEDOUT" }],
+        }),
+      },
+    });
+    const PRICED_AGAINST_ZERO =
+      /available cash \(\$0\)|you have \$0|you hold 0|You don't hold this contract|nothing to close/;
+    const orders: readonly [string, Record<string, unknown>][] = [
+      ["a long call (302)", openPut({ code: "302", strike: 230, limitPrice: 4.1 })],
+      ["a cash-secured put (201)", openPut({ strike: 230, limitPrice: 4.1 })],
+      ["a covered call (202)", openPut({ code: "202", strike: 230, limitPrice: 4.1 })],
+      ["a close", { kind: "close", participantId: "human-ann", occSymbol: "NVDA260918P00100000" }],
+    ];
+
+    it.each(orders)("refuses %s by saying the account couldn't be read", async (_, body) => {
+      const { out, parsed } = await review(body, unread);
+      expect(out.status).toBe(200);
+      expect(parsed.preview.ok).toBe(false);
+      expect(parsed.preview.refusals).toEqual([ACCOUNT_UNREAD_REFUSAL]);
+      expect(parsed.preview.refusals.join(" | ")).not.toMatch(PRICED_AGAINST_ZERO);
+    });
+
+    it("keeps the other refusals beside it — a stranger's desk is still not theirs", async () => {
+      const { parsed } = await review(openPut({ code: "302" }), unread, stranger);
+      expect(parsed.preview.refusals).toEqual([
+        "You can only trade your own account.",
+        ACCOUNT_UNREAD_REFUSAL,
+      ]);
+    });
   });
 });
 

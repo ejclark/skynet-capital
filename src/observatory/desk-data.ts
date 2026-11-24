@@ -191,6 +191,9 @@ export function ticketContext(
       ? { optionsBuyingPower: snapshot.optionsBuyingPower }
       : {}),
     positions: snapshot.positions,
+    // UNREAD IS NOT EMPTY (#8399): a failed broker read degrades to $0 cash, no positions and
+    // `error` set; the error rides along so the option review says the read failed instead.
+    ...(snapshot.error ? { accountUnread: true as const } : {}),
     tradingEnabled: options.tradingEnabled,
     isSelf: options.isSelf,
     ...(options.marketOpen !== undefined ? { marketOpen: options.marketOpen } : {}),
