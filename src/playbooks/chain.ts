@@ -33,6 +33,8 @@
  * `chain-form.ts` (slice 3a): this file knows the events, that one knows the playbooks.
  */
 
+import { DATE_RE } from "../domain/time.js";
+
 /** The closed menu. Adding an event here is the only way the menu grows. */
 export const HANDOFF_EVENTS = [
   "filled",
@@ -80,7 +82,6 @@ export interface PlaybookChain {
 /** At most this many links (the plan's open question, its recommended default). */
 export const MAX_LINKS = 3;
 
-const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 const CHAIN_KEYS = new Set(["id", "title", "source", "links"]);
 const LINK_KEYS = new Set(["from", "on", "to"]);
 
@@ -110,7 +111,7 @@ function parseEvent(raw: unknown, at: string, problems: string[]): HandoffEvent 
   }
   if (kind === "on-date") {
     const { date } = raw;
-    if (typeof date !== "string" || !ISO_DAY.test(date)) {
+    if (typeof date !== "string" || !DATE_RE.test(date)) {
       problems.push(`${at}: on-date needs a YYYY-MM-DD date`);
       return undefined;
     }
