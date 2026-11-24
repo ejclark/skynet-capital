@@ -1,6 +1,7 @@
 import { createAlertDelivery } from "../adapters/email-alert-delivery.js";
 import { createAlertDeliveryStore } from "../adapters/jsonl-alert-delivery-store.js";
 import { AlertDeliveryDispatcher } from "../alerts/alert-delivery-dispatcher.js";
+import { WATCH_MAX_AGE_MS } from "../alerts/fill-watch.js";
 import type { ActivityEventBus } from "../observatory/activity-event.js";
 import type { AlertDeliveryPort, AlertDeliveryStorePort } from "../ports/alert-delivery.js";
 import { type DeskAlertsDeps, deskAlertsFor } from "../server/desk-alerts-route.js";
@@ -16,7 +17,10 @@ import { type DeskAlertsDeps, deskAlertsFor } from "../server/desk-alerts-route.
  * 2. **The sweep.** Expiry reminders and assignment risk are standing conditions, not events —
  *    nothing fires them. A timer re-derives them for MEMBERS WHO OPTED IN ONLY, so a deployment
  *    where nobody has turned delivery on does no broker reads at all and the cost of this feature
- *    is exactly zero until someone asks for it.
+ *    is exactly zero until someone asks for it. A member with an open one-order watch counts as
+ *    asking (#8352): the sweep is what retries a watched fill whose one send was refused or lost
+ *    to a restart, whatever the account-wide channel says, and it drops a watch past
+ *    `WATCH_MAX_AGE_MS` with a logged note so a lost email cannot hold a watch slot forever.
  *
  * Both paths share `deskAlertsFor`, the strip's own derivation, so a delivered alert is by
  * construction the same alert the page would have shown — dismissals already subtracted, no second
@@ -107,9 +111,29 @@ export function wireAlertDelivery(options: {
   const sweep = async (): Promise<void> => {
     const members = await store.listMembers().catch(() => []);
     for (const id of members) {
-      const { prefs } = await store.load(id);
-      if (prefs.channel !== "off") queue(id);
+      const { prefs, watches } = await store.load(id);
+      const open = await dropStaleWatches(id, watches);
+      if (prefs.channel !== "off" || open > 0) queue(id);
     }
+  };
+  // A watch past its age limit can never be worded (its order's ending has left the alert window),
+  // so it is ended here rather than re-derived hourly forever. Returns how many stay open.
+  const dropStaleWatches = async (
+    id: string,
+    watches: readonly { readonly orderId: string; readonly at: string }[],
+  ): Promise<number> => {
+    let open = 0;
+    for (const watch of watches) {
+      if (Date.now() - Date.parse(watch.at) <= WATCH_MAX_AGE_MS) {
+        open += 1;
+        continue;
+      }
+      await store.dropWatch(id, watch.orderId);
+      console.warn(
+        `Alert delivery: watch on ${watch.orderId} for ${id} dropped unsent after ${WATCH_MAX_AGE_MS / 86_400_000} days`,
+      );
+    }
+    return open;
   };
   const minutes = Number(options.env.SKYNET_ALERT_SWEEP_MINUTES ?? "") || DEFAULT_SWEEP_MINUTES;
   const timer = setInterval(() => void sweep(), minutes * 60_000);

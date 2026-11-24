@@ -29,6 +29,20 @@ export interface FillWatch {
   readonly at: string;
 }
 
+/**
+ * How long a watch may stay open (#8352). An after-hours order placed on a Friday night ends by
+ * Monday's close; a week covers a long weekend with room to spare. Past it the watch is dropped
+ * with a logged note: the order's ending has left the ledger's 24 h alert window by then
+ * (`ORDER_WATCH_WINDOW_MS`), so no later pass could ever word the email, and an open line would
+ * hold one of the 50 watch slots for good.
+ */
+export const WATCH_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** Refused sends one watch may spend before it is dropped with a logged note (#8352). The hourly
+ *  sweep and any order event each earn a pass, so five is a few hours of provider trouble — enough
+ *  to ride out a rate limit, never a loop against a provider that keeps saying no. */
+export const WATCH_MAX_SEND_FAILURES = 5;
+
 /** The states that end a watch. A partial fill is not one: the order is still working. */
 const ENDINGS: Readonly<Record<string, { readonly word: string; readonly filled: boolean }>> = {
   filled: { word: "Filled", filled: true },

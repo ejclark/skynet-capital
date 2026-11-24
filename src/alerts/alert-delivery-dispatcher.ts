@@ -5,7 +5,12 @@ import type {
 } from "../ports/alert-delivery.js";
 import { type Alert, sortAlerts } from "./alert.js";
 import { deliveryFingerprint, deliveryMessage, shouldDeliver } from "./alert-delivery.js";
-import { fillWatchFingerprint, fillWatchMessage, watchOutcome } from "./fill-watch.js";
+import {
+  fillWatchFingerprint,
+  fillWatchMessage,
+  WATCH_MAX_SEND_FAILURES,
+  watchOutcome,
+} from "./fill-watch.js";
 
 /**
  * THE DELIVERY DISPATCHER (#3407 P4 slice 3) — the seam between alerts a member cannot see and a
@@ -46,6 +51,11 @@ function sameAddress(stored: string, current: string | undefined): boolean {
 }
 
 export class AlertDeliveryDispatcher {
+  /** Refused sends per watched order (`consumerId` + NUL + `orderId`), for the give-up bound
+   *  (#8352). In memory on purpose: a restart resets it, and `WATCH_MAX_AGE_MS` is the durable
+   *  bound that still ends the watch. */
+  private readonly watchFailures = new Map<string, number>();
+
   constructor(
     private readonly store: AlertDeliveryStorePort,
     private readonly transport: AlertDeliveryPort,
@@ -104,7 +114,8 @@ export class AlertDeliveryDispatcher {
    * Each watched order whose ledger shows it ended — filled, cancelled, expired, rejected — gets ONE
    * message, then the watch is dropped. A partial fill is not an ending. The sent-ledger is checked
    * and written first, so a dropped watch line that failed to write can never cause a second email;
-   * a failed send keeps the watch for the next pass. A watch armed by an address that no longer
+   * a failed send keeps the watch for the next pass (the sweep queues one, #8352), up to
+   * `WATCH_MAX_SEND_FAILURES` refusals, after which it is dropped and the failure says so. A watch armed by an address that no longer
    * owns the account is dropped silently.
    */
   private async deliverWatches(
@@ -125,9 +136,23 @@ export class AlertDeliveryDispatcher {
       if (!(already.has(fingerprint) || handedOver)) {
         const receipt = await this.transport.send(fillWatchMessage(watch, outcome));
         if (!receipt.ok) {
-          failed.push({ fingerprint, reason: receipt.reason });
+          const key = `${consumerId}\u0000${watch.orderId}`;
+          const failures = (this.watchFailures.get(key) ?? 0) + 1;
+          if (failures < WATCH_MAX_SEND_FAILURES) {
+            this.watchFailures.set(key, failures);
+            failed.push({ fingerprint, reason: receipt.reason });
+            continue;
+          }
+          // Bounded, never a loop against a provider that keeps refusing: end the watch and say so.
+          this.watchFailures.delete(key);
+          failed.push({
+            fingerprint,
+            reason: `${receipt.reason} — gave up after ${failures} tries; watch on ${watch.orderId} dropped`,
+          });
+          await this.store.dropWatch(consumerId, watch.orderId);
           continue;
         }
+        this.watchFailures.delete(`${consumerId}\u0000${watch.orderId}`);
         await this.store.recordSent(consumerId, fingerprint);
         delivered.push(fingerprint);
       }

@@ -83,6 +83,18 @@ describe("JsonlAlertDeliveryStore", () => {
     expect((await store.load("human-bob")).prefs.destination).toBe("bob@x.com");
   });
 
+  it("lists a member who only armed a watch, so the sweep can retry its email (#8352)", async () => {
+    const store = new JsonlAlertDeliveryStore(dir);
+    await store.recordSent("human-cy", "fp-1");
+    await store.saveWatch("human-dee", {
+      orderId: "ord-1",
+      destination: "dee@x.com",
+      link: "https://app.example/orders",
+      at: "2026-11-24T02:00:00.000Z",
+    });
+    expect(await store.listMembers()).toEqual(["human-dee"]);
+  });
+
   it("builds from the environment with the volume-pinned default", () => {
     expect(createAlertDeliveryStore({})).toBeInstanceOf(JsonlAlertDeliveryStore);
     expect(createAlertDeliveryStore({ SKYNET_ALERT_DELIVERY_DIR: dir })).toBeInstanceOf(

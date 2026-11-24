@@ -138,7 +138,13 @@ export class JsonlAlertDeliveryStore implements AlertDeliveryStorePort {
 
   async listMembers(): Promise<readonly string[]> {
     const lines = await this.store.list();
-    return [...new Set(lines.filter((line) => line.kind === "prefs").map((l) => l.consumerId))];
+    return [
+      ...new Set(
+        lines
+          .filter((line) => line.kind === "prefs" || line.kind === "watch")
+          .map((l) => l.consumerId),
+      ),
+    ];
   }
 }
 
