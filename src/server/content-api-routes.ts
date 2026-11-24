@@ -116,13 +116,18 @@ export async function serveContentApi(
     return true;
   };
   if (path === "/api/wire") {
-    // Every account's fills, so each bot row's playbook rides only to that account's owner (#885),
-    // the rule `/api/desk/:id` already keeps.
+    // Every account's fills: a bot row's playbook rides to every signed-in member (#8254 lifted
+    // #885 for bot accounts), its broker's words only to its owner — `/api/desk/:id`'s rule.
     // The playbook kind is members-only (#5457 slice 5): a read with no session is the pre-auth
     // side of the invite gate, so that dep is withheld before anything is assembled.
     const { readPlayMilestones: _members, ...open } = config;
-    await serveWireJson(res, url, session ? config : open, Boolean(config.submitFeedback), (id) =>
-      ownsDesk(id, config, session),
+    await serveWireJson(
+      res,
+      url,
+      session ? config : open,
+      Boolean(config.submitFeedback),
+      (id) => ownsDesk(id, config, session),
+      Boolean(session),
     );
     return true;
   }

@@ -27,6 +27,11 @@ export type QuestsAnswer =
       readonly unread: readonly string[];
     };
 
+/** True when the quests could not be worked out because the account's broker read failed (#8334):
+ *  a different answer from "no quests", and from "no account". */
+export const questsReadFailed = (answer: QuestsAnswer | null | undefined): boolean =>
+  answer?.available === false && answer.reason === "read-failed";
+
 /** The signed-in member's quests, or `null` when the session owns no account to read. */
 export async function fetchQuests(): Promise<QuestsAnswer | null> {
   const res = await fetch("/api/quests", { credentials: "same-origin" });

@@ -236,6 +236,7 @@ async function assembleWire(
   ownsAccount: ((participantId: string) => boolean) | undefined,
   underlyingFilter?: string,
   before?: string,
+  member = false,
 ): Promise<AssembledWire> {
   const { participants } = config.hub.getState();
   const {
@@ -281,6 +282,7 @@ async function assembleWire(
     ...(config.findByOrderId ? { findByOrderId: config.findByOrderId } : {}),
     ...(vitalsByParticipant ? { vitalsByParticipant } : {}),
     ...(ownsAccount ? { ownsAccount } : {}),
+    member,
   });
 
   return {
@@ -326,13 +328,22 @@ export async function serveWireJson(
   /** Whether the viewer owns an account — its rows keep their playbook (#885). Omitted, the viewer
    *  owns none and every row's playbook is withheld. */
   ownsAccount?: (participantId: string) => boolean,
+  /** Whether the viewer is a signed-in member: a member reads a bot row's playbook (#8254). */
+  member = false,
 ): Promise<void> {
   const params = new URL(url, "http://localhost").searchParams;
   const requested = (params.get("symbol") ?? "").trim().toUpperCase();
   const underlyingFilter = UNDERLYING_PATTERN.test(requested) ? requested : undefined;
   const limit = resolvePageSize(params.get("per_page"));
   const before = params.get("before") ?? undefined;
-  const assembled = await assembleWire(config, limit, ownsAccount, underlyingFilter, before);
+  const assembled = await assembleWire(
+    config,
+    limit,
+    ownsAccount,
+    underlyingFilter,
+    before,
+    member,
+  );
   const headers: Record<string, string> = {
     "content-type": "application/json",
     "cache-control": "no-store",

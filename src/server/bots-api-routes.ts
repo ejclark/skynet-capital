@@ -69,6 +69,9 @@ async function rosterPayload(
     houseMode: standing?.processMode,
     following: (memberKey && config.memberFollows?.list(memberKey)) || [],
     canFollow: Boolean(memberKey && config.memberFollows),
+    // A bot's playbook names ride to a signed-in member (#8254); with no sign-in configured, the
+    // single operator owns every bot.
+    names: Boolean(memberKey) || !config.auth,
     now: new Date(),
     marketOpen: regularSessionOpen(),
   });

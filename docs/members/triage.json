@@ -96,7 +96,7 @@
     "screen": "/u/$id/playbooks",
     "verdict": "keep",
     "home": "loop",
-    "mustBeSeenBy": "anyone signed in, bot accounts only (playbook ids should be owner-only)"
+    "mustBeSeenBy": "anyone signed in, bot accounts only (playbooks named by strategy to every member since #8254; rules and the way to change them owner-only)"
   },
   {
     "screen": "/bots",

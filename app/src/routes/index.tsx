@@ -5,7 +5,7 @@ import stillTower from "../assets/tower-still.jpg";
 import { parseBoardMetric } from "../live/board";
 import { type Desk, fetchDesk } from "../live/desk";
 import { markOf } from "../live/position-mark";
-import { fetchQuests, unreadLine } from "../live/quests";
+import { fetchQuests, questsReadFailed, unreadLine } from "../live/quests";
 import { fetchSettings } from "../live/settings";
 import { isCampaignAddress } from "../shell/campaign-forward";
 import { PageFrame } from "../shell/frame";
@@ -207,7 +207,7 @@ export function NeedsYou(): ReactElement {
     desksFailed: desks.isError,
     desksUnreachable: desks.data?.filter((s) => s.desk.error).length ?? 0,
     desksRead: desks.data?.length ?? 0,
-    questsFailed: quests.isError,
+    questsFailed: quests.isError || questsReadFailed(quests.data),
     questsUnread: quests.data?.available ? quests.data.unread : [],
   });
   return (

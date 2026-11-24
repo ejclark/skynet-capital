@@ -35,6 +35,11 @@ const roster = {
       standing: WATCHING,
       loop: loop("beating", 40_000),
       skip: { at: ago(40_000), reason: "NVDA: blocked by S2 (flat through the print)" },
+      // #8254 PR 2: a signed-in member reads what the bot runs, named by strategy.
+      playbooks: [
+        { playbookId: "S1-NVDA", mode: "standard", state: "no-window" },
+        { playbookId: "CRWV-WHEEL", mode: "standard", state: "flat" },
+      ],
       followed: true,
     },
     {
@@ -47,6 +52,7 @@ const roster = {
       standing: WATCHING,
       loop: loop("stale", 14 * 60_000),
       skip: { at: ago(14 * 60_000) },
+      playbooks: null,
       followed: false,
     },
     {
@@ -62,6 +68,7 @@ const roster = {
         at: ago(25_000),
         reason: "AMD: not sent — ordered too recently, or an earlier order is still open",
       },
+      playbooks: null,
       followed: false,
     },
   ],
