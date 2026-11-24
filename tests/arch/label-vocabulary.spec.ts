@@ -136,9 +136,9 @@ describe("the label registry", () => {
   it("upserts only what it applies — registering a label never makes this script its owner", () => {
     const managed = [...declared()].sort();
 
-    // Exactly the seventeen this file applies (the five #3960 work-spigot labels joined the ten, then
+    // Exactly the eighteen this file applies (the five #3960 work-spigot labels joined the ten, then
     // #3960's `in-progress` in-flight signal, then #7939's `decisions-page`, which the page's own
-    // create applies). `bug`/`enhancement` are GitHub's own defaults and
+    // create applies, then #8201's `pitch`, which a session filing a spend ask applies). `bug`/`enhancement` are GitHub's own defaults and
     // `idea`/`feedback` are the intake form's: upserting those would silently revert a recolor
     // made in the UI on the next push to main, with nothing anywhere saying why it changed back.
     expect(managed).toEqual([
@@ -153,6 +153,7 @@ describe("the label registry", () => {
       "needs-info",
       "needs-session",
       "next-slice",
+      "pitch",
       "plan",
       "stall-flagged",
       "work-mode:conserve",
