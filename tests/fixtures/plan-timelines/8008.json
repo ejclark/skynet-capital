@@ -1,0 +1,28 @@
+[
+  { "created_at": "2026-11-23T18:29:08Z", "event": "labeled", "state_reason": null },
+  { "created_at": "2026-11-23T18:29:09Z", "event": "labeled", "state_reason": null },
+  { "created_at": "2026-11-23T18:29:09Z", "event": "parent_issue_added", "state_reason": null },
+  { "created_at": "2026-11-23T18:29:10Z", "event": "added_to_project_v2", "state_reason": null },
+  { "created_at": "2026-11-23T18:29:20Z", "event": "commented", "state_reason": null },
+  {
+    "created_at": "2026-11-23T18:29:27Z",
+    "event": "project_v2_item_status_changed",
+    "state_reason": null
+  },
+  { "created_at": "2026-11-23T18:37:55Z", "event": "cross-referenced", "state_reason": null },
+  { "created_at": "2026-11-23T18:44:59Z", "event": "cross-referenced", "state_reason": null },
+  { "created_at": "2026-11-23T18:53:45Z", "event": "referenced", "state_reason": null },
+  { "created_at": "2026-11-23T19:09:14Z", "event": "referenced", "state_reason": null },
+  { "created_at": "2026-11-23T21:59:17Z", "event": "cross-referenced", "state_reason": null },
+  { "created_at": "2026-11-23T21:59:20Z", "event": "marked_as_duplicate", "state_reason": null },
+  { "created_at": "2026-11-23T21:59:37Z", "event": "unmarked_as_duplicate", "state_reason": null },
+  { "created_at": "2026-11-23T23:45:04Z", "event": "cross-referenced", "state_reason": null },
+  { "created_at": "2026-11-24T00:11:43Z", "event": "cross-referenced", "state_reason": null },
+  { "created_at": "2026-11-24T00:28:12Z", "event": "cross-referenced", "state_reason": null },
+  { "created_at": "2026-11-24T01:37:23Z", "event": "referenced", "state_reason": null },
+  { "created_at": "2026-11-24T01:41:27Z", "event": "cross-referenced", "state_reason": null },
+  { "created_at": "2026-11-24T02:06:10Z", "event": "referenced", "state_reason": null },
+  { "created_at": "2026-11-24T02:50:06Z", "event": "cross-referenced", "state_reason": null },
+  { "created_at": "2026-11-24T04:22:58Z", "event": "cross-referenced", "state_reason": null },
+  { "created_at": "2026-11-24T04:26:38Z", "event": "cross-referenced", "state_reason": null }
+]
