@@ -41,7 +41,7 @@ import { serveLegacyRedirect } from "./legacy-redirects.js";
 import { serveMemberCampaignsApi } from "./member-campaigns-api-routes.js";
 import { serveMemberChainsApi } from "./member-chains-api-routes.js";
 import { serveMemberConvictionsApi } from "./member-convictions-api-routes.js";
-import { noteAppVisit } from "./member-visits.js";
+import { noteAppVisit, noteMemberPresence } from "./member-visits.js";
 import { serveOnboardingApi } from "./onboarding-api-routes.js";
 import { serveOptionApi } from "./option-api-routes.js";
 import { serveOptionLifecycleApi } from "./option-lifecycle-route.js";
@@ -264,6 +264,8 @@ async function serveAuthorizedRoute(
   session: Session | undefined,
   channel: BoardPatchChannel,
 ): Promise<void> {
+  // An open tab never reloads the shell, so its API calls are how "last seen" learns of it (#8262).
+  noteMemberPresence(config.memberVisits, session, path, config.now?.());
   if (path === "/events") {
     const params = new URL(url, "http://localhost").searchParams;
     const metric = parseLeaderMetric(params.get("by"));

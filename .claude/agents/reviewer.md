@@ -37,7 +37,12 @@ whether it's ready.
    - **A process-file diff, when asked** (see *The process-file lens* below).
 3. **Judge correctness first, then taste:**
    - Does the change do what it claims? Read the tests it added or changed — do they actually assert
-     the claimed behavior, or do they assert something weaker that happens to pass?
+     the claimed behavior, or do they assert something weaker that happens to pass? For each test,
+     name the real caller or entry point the defect would travel through. Report it when the spec
+     drives a stand-in instead of what production passes for something the change reads or writes (a
+     response that swallows writes and never disconnects, a dependency returning live data where
+     production passes a stored or degraded one, an assertion like `> 0` or truthy that the wrong
+     value also meets), or when no test drives that real entry point at all.
    - Any edge case the diff's own logic implies but doesn't handle (an empty list, a zero value, a
      boundary the code's conditionals suggest but never test)?
    - Does it introduce or leave behind dead code, an unused export, or a duplicate of something that
