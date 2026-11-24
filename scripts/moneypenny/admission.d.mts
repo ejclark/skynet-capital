@@ -53,6 +53,9 @@ export interface AdmissionDeps {
   }>;
   /** #7316: the recount's wait (`SETTLE_MS`); a spec injects a no-op or a scheduler. */
   settle?: (ms: number) => unknown;
+  /** #8213: the claim lanes' post-mark recount reads this in place of `readInFlight` when set —
+   *  the retry sweep's gate counts a stored list, and the recount must read fresh. */
+  recountInFlight?: () => AdmissionIssue[];
 }
 
 /** How long a claim that is not alone waits after marking, before the count that decides. */
