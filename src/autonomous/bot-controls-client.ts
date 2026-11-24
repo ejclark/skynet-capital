@@ -11,6 +11,7 @@ import {
   parseControlsState,
   suspendedReason,
 } from "./bot-controls.js";
+import { type BotsVitals, controlsPollVitalsHeaders } from "./bots-vitals-wire.js";
 import {
   type BotMode,
   controlsPollGateHeaders,
@@ -79,6 +80,13 @@ export interface BotControlsClient {
    * `start()`, a no-op on the disabled client, latest call wins.
    */
   reportHouseRoster(report: HouseRosterReport): void;
+  /**
+   * Hands the client this process's vitals source (#4220): read fresh on every poll, so the
+   * dashboard holds the pulse as of one poll interval ago at worst (`bots-vitals-wire.ts`). A
+   * source that answers undefined (before the boot verdict) or throws sends no header. Safe before
+   * `start()`, a no-op on the disabled client, latest call wins.
+   */
+  reportVitals(read: () => BotsVitals | undefined): void;
   /** True when a bridge URL is configured (used only for honest boot logging). */
   readonly enabled: boolean;
 }
@@ -126,6 +134,7 @@ const DISABLED_CLIENT: BotControlsClient = {
   reportPersonaGate: () => undefined,
   reportProcessMode: () => undefined,
   reportHouseRoster: () => undefined,
+  reportVitals: () => undefined,
   enabled: false,
 };
 
@@ -180,6 +189,15 @@ export function resolveBotControls(
   const gateVerdicts = new Map<string, PersonaGateVerdict>();
   let processMode: BotMode | undefined;
   let houseRoster: HouseRosterReport | undefined;
+  let readVitals: () => BotsVitals | undefined = () => undefined;
+  // A throwing source sends no header; it never fails the poll it rides on.
+  const vitalsNow = (): BotsVitals | undefined => {
+    try {
+      return readVitals();
+    } catch {
+      return undefined;
+    }
+  };
 
   let snapshot: ControlsState = EMPTY_CONTROLS;
   const watches = (botId: string) => effectiveMode(snapshot, botId, "live") === "observe";
@@ -205,6 +223,7 @@ export function resolveBotControls(
             ),
             ...controlsPollModeHeaders(processMode),
             ...controlsPollRosterHeaders(houseRoster),
+            ...controlsPollVitalsHeaders(vitalsNow()),
           },
           undefined,
           controller.signal,
@@ -269,6 +288,9 @@ export function resolveBotControls(
     },
     reportHouseRoster: (report) => {
       houseRoster = report;
+    },
+    reportVitals: (read) => {
+      readVitals = read;
     },
   };
 }

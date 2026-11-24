@@ -48,6 +48,7 @@ import type { InviteDeps } from "./invite-form.js";
 import type { MemberCampaignStore } from "./member-campaign-store.js";
 import type { MemberChainStore } from "./member-chain-store.js";
 import type { MemberConvictionStore } from "./member-conviction-store.js";
+import type { MemberVisitStore } from "./member-visits.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
 import type { OpsStatusDeps } from "./ops-status-routes.js";
 import type { SubmitOptionTrade } from "./option-trade-service.js";
@@ -370,6 +371,9 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    *  `fix-announcement-store.ts`), so "told once" holds across threads, devices and long chats.
    *  Omit (offline wiring) and she falls back to the transcript, which forgets within ten lines. */
   readonly fixAnnouncements?: FixAnnouncementStore;
+  /** The day each signed-in member last loaded the shell, and the screens they landed on (#8169,
+   *  `member-visits.ts`). Omit (offline wiring) and nothing is recorded. */
+  readonly memberVisits?: MemberVisitStore;
   /**
    * The Playbook Store (issue #885) — an account's own playbook subscriptions and capital
    * sub-allocations. Omit to disable (offline mode) — the catalog still browses, just with no

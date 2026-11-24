@@ -121,6 +121,9 @@ export async function bootMissionControl(
     onAuthoredPlays,
     onConvictions,
   );
+  // The process's pulse rides every poll from here on (#4220): the boot fetch below carries none,
+  // since `vitals()` stays undefined until `boot()` has the bridge verdict.
+  controls.reportVitals(() => health.vitals());
   const fetched = await controls.fetchOnce();
   health.boot(controls.enabled);
   if (health.path) console.log(`[health] stamping ${health.path}`);

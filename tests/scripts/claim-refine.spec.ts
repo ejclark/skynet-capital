@@ -297,6 +297,28 @@ describe("prFor — the held PR's body", () => {
     expect(body).not.toMatch(/\b(closes|fixes|resolves) #/i);
   });
 
+  it("says no trade changes when another failed claim already holds the pair", () => {
+    if (!found) throw new Error("no proposal");
+    const ledger: AdoptionLedger = {
+      "ai-dip-2026-10/1/CRWV-WHEEL": {
+        change: "stop-new-entries",
+        adoptedOn: "2026-11-09",
+        basis: "y",
+      },
+      [KEY]: HOLD,
+    };
+    const { body } = prFor(found, HOLD, undefined, ledger);
+    expect(body).toContain(
+      "| New entries | none: already held by `ai-dip-2026-10/1/CRWV-WHEEL` (2026-11-09) | none |",
+    );
+    expect(body).toContain("No trade change today");
+    expect(body).not.toContain("inside the view's fence");
+    expect(body).not.toContain(`\`${KEY}\` (`);
+    expect(prFor(found, HOLD, undefined, { [KEY]: HOLD }).body).toContain(
+      "| New entries | inside the view's fence",
+    );
+  });
+
   it("keeps the title within 100 characters for a long view id", () => {
     if (!found) throw new Error("no proposal");
     const long = { ...found, conviction: { ...found.conviction, id: "x".repeat(64) } };
@@ -311,6 +333,9 @@ describe("prFor — the held PR's body", () => {
     try {
       const file = join(dir, "body.md");
       writeFileSync(file, prFor(found, HOLD).body);
+      expect(run(["checkbody", file])).toMatchObject({ code: 0 });
+      const held = { "ai-dip-2026-10/1/CRWV-WHEEL": HOLD, [KEY]: HOLD };
+      writeFileSync(file, prFor(found, HOLD, undefined, held).body);
       expect(run(["checkbody", file])).toMatchObject({ code: 0 });
     } finally {
       rmSync(dir, { recursive: true, force: true });

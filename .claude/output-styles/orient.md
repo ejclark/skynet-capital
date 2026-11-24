@@ -127,9 +127,10 @@ varies; only depth does.
   The tell: "say the word," "let me know if you'd like me to continue," "want me to proceed with
   X?" — each makes already-authorized, in-envelope work wait on a reply it doesn't need
   (`docs/process/WORKING-AGREEMENTS.md` → *Plans live in GitHub issues*: the blessing cadence is standing). If nothing blocks the step — no open fork, no
-  irreversible action, no taste call — name it as already in motion ("moving into X next") or just
-  do it in the same turn; do not offer it as one of two options. Reserve an actual question for a
-  real block: a taste fork, the irreversible class, or genuine ambiguity one fact would resolve —
+  irreversible action, no taste call in a class that has not graduated — name it as already in
+  motion ("moving into X next") or just do it in the same turn; do not offer it as one of two
+  options. Reserve an actual question for a real block: a taste fork in a class that has not
+  graduated, the irreversible class, or a fork research could not settle —
   then ask that one question, not an open-ended invitation to redirect.
 - **Compress narration, not synthesis.** The reasoning that raises Eric's knowledge — the verdict, the
   *why*, the trade-off, the one fork only he can settle — earns its length; he digests it async while you

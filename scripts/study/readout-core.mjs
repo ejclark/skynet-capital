@@ -7,6 +7,7 @@
 // Plain words throughout; key items are shown by id, with their wording only when revealed.
 
 import { basename } from "node:path";
+import { planScorecardLines } from "./plan-scorecard.mjs";
 import { SCALE, severityOf } from "./round-findings.mjs";
 
 export const SECTIONS = [
@@ -332,7 +333,7 @@ const mark = (score, primed) =>
   (score >= 1 ? "yes" : score >= 0.5 ? "partly" : "—") +
   (score >= 0.5 && primed ? " (hinted)" : "");
 
-function scorecard({ grade, titles }) {
+function itemScorecard({ grade, titles }) {
   const rows = grade.gold.filter((g) => g.tier === "main");
   const c = grade.classes;
   const found = (cls) =>
@@ -401,6 +402,12 @@ function scorecard({ grade, titles }) {
   return lines;
 }
 
+/** Section 4: the key items one by one, then the cross-feature plan's own rows (#8005) when the
+ *  readout gathered them (plan-scorecard.mjs). */
+function scorecard(model) {
+  return [...itemScorecard(model), ...(model.plan ? ["", ...planScorecardLines(model.plan)] : [])];
+}
+
 function battle({ battle: b, battleReason }) {
   if (!b) return [`Did not run: ${battleReason}.`];
   const rows = b.shapes.map(
@@ -452,10 +459,11 @@ function missed({ grade, titles }) {
   return groups.map(([head, gs]) => `- **${head}:** ${list(gs)}`);
 }
 
-function question({ nextArea, cost }) {
+function question({ nextArea, cost, silence }) {
   return [
     `Scale to **${nextArea}** next (predicted cost: ${cost}), revise the method first, or stop?`,
     "",
+    ...(silence ? [`**If you say nothing:** ${oneLine(silence)}`, ""] : []),
     "If you like, sit one short session yourself on the same tasks.",
   ];
 }

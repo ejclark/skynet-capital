@@ -720,8 +720,8 @@ Claude-derived fork it overturns, row cited) ◆.
   Claim; the Milestones section carries the check gate and the courses.
 - ◆ **The fog sentence, corrected.** Not "the fog belongs to one entity drawn by this group":
   FOG-OF-WAR.md's ledger lists six fogs on four groups, each rendered by its host reading the
-  plays payload — the rung is a joint read by six fogs; the placement of each is Eric's
-  (propose-then-place). Still true: lifting the range into the cockpit must not carry the day-lens
+  plays payload — the rung is a joint read by six fogs; each is placed by the decision tree plus a
+  prediction and reviewed live by Eric (predict, place, report). Still true: lifting the range into the cockpit must not carry the day-lens
   fog with it (joint 8).
 - ◆ Not merged with Me (§5.6), but the shared surface is named: `Journey.gate` **is** the hello
   (`progression.ts:159-168`, satisfied by first-feedback), and one banner family renders both

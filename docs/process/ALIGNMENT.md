@@ -27,6 +27,19 @@ alignment has come — and the evidence that lets a class stop asking.
    and anything outward-facing and hard to reverse (`envelope.json`) stay his because of
    accountability and recoverability, not because alignment is short. That boundary moves only when
    he moves it.
+5. **A class he reverses more than 1 in 4 times returns to asking** (Eric, 2026-11-23, plan #8161:
+   "My job will be to steer/direct, not bless"). Every class rule 4 does not hold is
+   decide-and-report: a call made on evidence, or a taste call in a graduated class
+   ([`WORKING-AGREEMENTS.md`](WORKING-AGREEMENTS.md) → *Humans steer; the system decides, acts and
+   reports*). Each such call leaves a row below with its prediction and the Score `decided on his
+   behalf`. A reversal is his act that undoes the call: a reply reversing it, a revert, a reopened
+   issue, or a different pick. The session that sees it rescores the row `miss (reversed)`. A class
+   is read over its last 8 decided calls (since its graduation, for a graduated class): 3 reversals
+   in 8, or 2 while it has fewer than 8, return it to asking. One reversal in a young class is a
+   data point, not yet a rate. `node scripts/alignment-graduation.mjs` reads the window and prints
+   `RETURNS TO ASKING` for that class. A class that returns to asking puts a prediction on every
+   ask again, and comes back to decide-and-report only by rule 3's graduation. A graduated class
+   also keeps rule 3's send-back on one miss; whichever trips first wins.
 
 ## How rows get recorded (#6953 slice 3)
 
@@ -70,8 +83,8 @@ or after its graduation is flagged *send back*, and a normal PR removes its row 
 **How a graduated class is consumed.** An ask whose class is graduated is not assigned to him:
 the session that owns it decides at the predicted answer, takes `needs-eric` off, and reports the
 decision in the digest's **Headlines** ("decided for you: <ask> → <predicted answer>; reply to
-reverse"), with a ledger row whose Score is filled when he reacts. A reversal is a `miss`, and one
-miss sends the class back. In code: `plan()` in `scripts/moneypenny/assignments.mjs` reads the live
+reverse"), with a ledger row scored as rule 5 says: `decided on his behalf`, and `miss (reversed)`
+if he reverses it. A reversal is a `miss`, and one miss sends the class back. In code: `plan()` in `scripts/moneypenny/assignments.mjs` reads the live
 graduated classes (`activeGraduated`) and routes such an ask to the digest's *needs a session* line
 instead of an assignment, but only when every question on it carries a prediction and every
 question's class is graduated. That class is the one the callout states (`- Class:` under the

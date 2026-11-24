@@ -284,6 +284,7 @@ async function runLive(): Promise<void> {
     dataCreds,
     (event) => {
       if (event.type === "price") {
+        health.ticked();
         tracker.record(event.symbol, event.price);
         void maybeEvaluate();
       }
@@ -315,7 +316,8 @@ async function runLive(): Promise<void> {
       )
       .catch((error) => console.warn("[decision-db] JSONL migration failed (non-fatal):", error));
   }
-  const onDecision = decisionSink(audit, decisionDb);
+  // Every decision also moves the bot's pulse on the health record the poll carries (#4220).
+  const onDecision = decisionSink(audit, decisionDb, health.decided);
   // A `working` order's late fill, beside its decision — and where the forced pick reads what its
   // working buys filled before it sells one.
   const settlements = settlementBook(decisionDb);

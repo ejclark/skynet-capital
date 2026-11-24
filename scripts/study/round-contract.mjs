@@ -71,6 +71,9 @@ export const FILES = {
   grade: "grade.json",
   frozen: "frozen.json",
   usage: "usage.json",
+  // An aware read of every member message to Moneypenny (friction or not), for the plan's chat
+  // sensor recall (#8005, plan-scorecard.mjs): [{session, n, friction, why}].
+  chatLabels: "chat-labels.json",
 };
 
 /** The sessions step's folder — also the round step that writes it. */

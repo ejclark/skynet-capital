@@ -84,14 +84,19 @@ get added (`/charter`). The lens and the first census: [`docs/process/LEARNING-L
 **Alignment is the asymptote, and it is measured** (Eric, 2026-10-18: "If we are fully aligned
 (ongoing goal that we will never fully reach), you would be equipped to make 100% of
 decisions/judgement calls on my behalf. That is the ideal we should be working towards"). Every ask
-records Claude's predicted answer before he replies; a class of decision whose predictions keep
-matching graduates, by his one tap, to decide-and-report — [`docs/process/ALIGNMENT.md`](docs/process/ALIGNMENT.md).
+and every decided call records Claude's predicted answer; his reversals send a class back to
+asking, and it graduates again by his one tap — [`docs/process/ALIGNMENT.md`](docs/process/ALIGNMENT.md).
 The irreversible class still moves only by his hand. **Effort is dialed in iterations** (same day:
 "commanding x number of iterations is a normalized way to instruct the degree of effort, account of
 resources (tokens) to apply towards an experiment, effort, goal"): "N iterations" is his budget for
 an experiment, and every loop reports iterations used, what each cost and what each moved — toward
 the supporting goals he named, a person's efficiency, speed and outcome — and stops early when an
 iteration stops moving the number (`LEARNING-LOOP.md` field 14).
+
+**Humans steer and direct; the system decides, acts and reports** (Eric, 2026-11-23: "My job will
+be to steer/direct, not bless", then "not just my job, but 'humans jobs'"), in the build and for
+members in the game; the irreversible class stays his. Full rule, its six rules and their
+falsifiers: [`docs/process/WORKING-AGREEMENTS.md`](docs/process/WORKING-AGREEMENTS.md) → *Humans steer*.
 
 ## Product taste & ethos (what "good" looks like — not derivable from frameworks)
 
@@ -142,13 +147,13 @@ iteration stops moving the number (`LEARNING-LOOP.md` field 14).
   a note in the relevant surface doc *before* an implementation PR opens — the PR then executes an
   already-settled call instead of re-litigating it live. This is a process step, not a gate: a trivial
   single-link move with no structural ambiguity doesn't need its own decision doc.
-- **Fog of war:** withhold a capability behind an earnable rung, never information a member needs to stay safe ([`docs/FOG-OF-WAR.md`](docs/FOG-OF-WAR.md)). Claude proposes patterns rendered on a candidate surface; Eric places them, and a rejected placement banks the pattern, never the idea. Full rule: [`docs/process/WORKING-AGREEMENTS.md`](docs/process/WORKING-AGREEMENTS.md).
+- **Fog of war:** withhold a capability behind an earnable rung, never information a member needs to stay safe ([`docs/FOG-OF-WAR.md`](docs/FOG-OF-WAR.md)). Claude places a pattern by that doc's decision tree with its prediction recorded, and reports it; Eric reviews live, and a reversed placement banks the pattern, never the idea. Full rule: [`docs/process/WORKING-AGREEMENTS.md`](docs/process/WORKING-AGREEMENTS.md).
 - **A surface decision arrives as 3–5 named shapes, and every named pattern lands in the ledger**
   (Eric, 2026-09-06: "3-5 design choices seems like a good pattern when building out UI design…
   there are good patterns to become aware of which plant seeds to let them marinade… this builds
   intuition for when to apply patterns once you're aware of said pattern"). A plan issue, a
   `/teardown`, an interrogation call sheet or a taste fork hands him named shapes he can judge by
-  eye, each pointing at its row in [`docs/PATTERNS.md`](docs/PATTERNS.md); a pattern named anywhere
+  eye (beside the shipped pick, in a graduated class), each pointing at its row in [`docs/PATTERNS.md`](docs/PATTERNS.md); a pattern named anywhere
   gets a row there (seeded · placed · declined-here), so awareness precedes need. The trigger is a
   surface decision, never a copy fix — a shape menu on every PR would be the 10,000-cuts failure.
   First instance: #1740's call sheet, which settled *kind / section / sub-view*. Design work runs
@@ -258,7 +263,8 @@ buildable asks that should start now but don't belong in *this* session — see
 [`docs/plans/issue-centric-orchestration.md`](docs/plans/issue-centric-orchestration.md)) versus
 **plan** (a tangent that needs its own interrogation before it's buildable — hand it to a fresh
 planning session per [`docs/ISSUES.md`](docs/ISSUES.md) → *Delegating a tangent to a planning
-session*, #3818 slice 1; it lands ready, `needs-eric`, or parked, never a build) ·
+session*, #3818 slice 1; it lands ready, `needs-eric`, or parked, never a build, and an unready
+plan has an age limit: call 5 in [`docs/process/WORKING-AGREEMENTS.md`](docs/process/WORKING-AGREEMENTS.md)) ·
 **declare** (an outcome with a date: `docs/intents/README.md`) ·
 **profile note** (update this file) · **question** (answer, don't build). Optional overrides:
 `NOW:` · `PARK:` · `FAN:` · `ME:` · `Q:`. Doubt between act/park/fan → park and ask. *(That
@@ -306,15 +312,17 @@ source sets the weight (directive vs. proposal-to-prune), `while` is the proximi
 Quality over volume; don't derail — capture and continue.
 
 **Synthesis & the question budget.** Synthesize multi-source feedback (Eric's notes, users' issues,
-Claude's side quests) → surface the central **logjams** whose resolution unlocks the most. Front-load
-questions early (builds baseline trust); taper as alignment + drift-detection mature. **Bar for
-autonomous pickup:** high confidence it moves the needle — below that, ask. Signal saturation proactively
+Claude's side quests) → surface the central **logjams** whose resolution unlocks the most. **Bar for
+autonomous pickup:** research the deciding question, then decide once two refuters fail to overturn
+the call, and report it; a question goes to Eric only for the irreversible class or a fork the
+research could not settle (*A piling backlog is a defect* above). Signal saturation proactively
 ("we've largely saturated this; build a slice or push somewhere new?").
 
 **Interrupt economics.** Gate interrupts on the **cost + reversibility of the drift, not the existence
 of a flaw** — the bar is fast iterative improvement, not flawless-out-of-the-gate. Cheap + reversible +
 self-correctable → fix on the fly (overlapping nets catch the rest). Irreversible / outward-facing →
-always gate. Load-bearing fork → one sharp question, then clear downstream. Avoid **death by 10,000
+always gate. Load-bearing fork → research its deciding question first, one sharp question only when
+the research cannot settle it, then clear downstream. Avoid **death by 10,000
 cuts** — absorb the noise so Eric's attention goes to what moves the needle.
 
 **A bug found mid-build is the next pull** (Eric, 2026-09-30: "bug resolution opportunities discovered
@@ -352,16 +360,7 @@ condition attached to this compression — altitude never means silence.
 
 **A finished session archives itself, unasked, once `node scripts/archive-audit.mjs` prints `ARCHIVE: yes`** and the turn asks Eric nothing; a red row keeps it open. Full rule: [`docs/process/WORKING-AGREEMENTS.md`](docs/process/WORKING-AGREEMENTS.md).
 
-**Sessions run in the cloud by default; the laptop is the exception** (Eric, 2026-10-13, after a
-Remote Control session on his laptop went `computer_unreachable` and his phone could not wake it:
-cloud sessions "organically convert the issue… a none problem, solved OOTB"). A cloud session keeps
-working with the lid closed, is steerable from the phone, and bills against the same plan with no VM
-charge; review already rides screenshots and messages, so nothing in the loop needs his machine.
-Any session Claude starts or hands him (`create_session`, a "start a session" link, a `/redesign`
-round) is a cloud one; a laptop session is for files that exist only there or a real GPU for 3D feel.
-The environment is code — `mise.toml` pins the toolchain, `.claude/hooks/session-start.sh` installs
-it — so a gap a cloud session hits is fixed there, never routed around by going local. Wrong if, by
-2026-11-13, three sessions had to move to the laptop for a reason the environment could not absorb.
+**Sessions run in the cloud by default; the laptop is the exception:** any session Claude starts or hands him is a cloud one, and a gap a cloud session hits is fixed in the environment's code, never routed around by going local. Full rule: [`docs/process/WORKING-AGREEMENTS.md`](docs/process/WORKING-AGREEMENTS.md).
 
 **Pictures first:** every PR, plan and report opens with something he can judge by eye in ten seconds, then at most 3 short bullets, everything else below the fold ([`docs/PICTURES.md`](docs/PICTURES.md)). Full rule: [`docs/process/WORKING-AGREEMENTS.md`](docs/process/WORKING-AGREEMENTS.md).
 
@@ -372,8 +371,10 @@ it — so a gap a cloud session hits is fixed there, never routed around by goin
 **…but the bar is not silence** (Eric's correction). Interrupts are *welcome* where **uncertainty is real
 and the value unlocked is high** — that product is the test, not "is this an interrupt." Under-asking is
 its own failure mode: absorbing noise is the job, and so is surfacing the fork only he can settle. Two
-classes are close to always worth the question. A **taste call** — if the alternative is guessing on his
-behalf, ask, and prefer showing rendered options over describing them in prose. For a shipped visual
+classes are close to always worth his eyes. A **taste call**: in a class that has not graduated, ask,
+with rendered options and a predicted pick rather than prose; in a graduated class, ship the
+predicted pick with a ledger row and let him steer from the live page (call 1,
+[`docs/process/WORKING-AGREEMENTS.md`](docs/process/WORKING-AGREEMENTS.md) → *Humans steer*). For a shipped visual
 surface, the fastest review format is the live page itself (Eric, 2026-08-16: "faster for me to just
 review the changes in the preview on desktop mode or live in the browser and adapt from there") — hand
 him the route/URL and let feedback come back as reactions, not a guided checklist. And the one most often
@@ -391,8 +392,10 @@ intent to it** — every skill/agent states its own `Use when`, and the **Orient
 (`.claude/output-styles/orient.md`) consults the full roster + [`docs/TECHNIQUES.md`](docs/TECHNIQUES.md)
 at the top of a task. **The GitHub App itself is Moneypenny** — her domain is orchestration through
 GitHub issues/PRs, sequencing work and hunting friction proactively; see
-[`docs/MONEYPENNY.md`](docs/MONEYPENNY.md) for her mandate before extending anything she owns. The
-common routes:
+[`docs/MONEYPENNY.md`](docs/MONEYPENNY.md) for her mandate before extending anything she owns.
+**Plain intent is one way in, never the only one:** a seat only his phrase starts also gets an
+event or a schedule (call 4, [`docs/process/WORKING-AGREEMENTS.md`](docs/process/WORKING-AGREEMENTS.md)
+→ *Humans steer*). The common routes:
 
 - "clean up the code" / "burn down debt" → a `/governor` cycle (drills `/decompose`, `/dedupe`,
   `/bury`, `/backfill`, run by `docs/grind/governor.instructions.md`; big burn-downs → feast mode,
@@ -412,6 +415,8 @@ common routes:
   a cheap fan-out (a `/governor` athlete's own WIP=1 throttle is deliberate for the same reason —
   check before fanning a skill/agent that already has one). A run wider than the work spigot's
   current position allows is refused outright, with the number to re-batch it in — never truncated.
+  Every fan-out prints its price line and launches; it waits for Eric only above the thresholds in
+  [`docs/process/WORKING-AGREEMENTS.md`](docs/process/WORKING-AGREEMENTS.md) → *Humans steer*.
 - **"stop everything" · "conserve tokens" · "we have spare quota before the reset"** → the **work
   spigot** (#3960): one `work-mode:<halt|conserve|normal|surge>` label on the tracking issue that
   every autonomous lane reads before it pulls — the build lanes' in-flight cap, the research lane's
