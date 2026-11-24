@@ -65,19 +65,16 @@
   const copyBtn = document.getElementById("copy");
   const state = { decisions: {}, queue: {}, reel: {} };
   const meta = { id: ID, openedAt: null, doneAt: null, taps: [], shown: TP.shown };
-  const chains = {};
   const timers = {};
   /** Notes typed but not yet saved (they wait for a pause): Done saves them first. */
   const pendingNotes = new Map();
   let db = null;
   /** `claude.use("comments")`, asked at boot and awaited only on Done. */
   let comments = Promise.resolve(null);
-  /** Has the round's document been seen or written? Until then a meta write reads first. */
-  let metaStored = false;
   /** Record paths the store is known to hold (loaded, or written here): a pin merges into these. */
   const stored = new Set();
   // A decision record's shape and its keyed fields (record-client.js).
-  const { MAPS, MERGED, blank, fromDoc, keyValue, liveOf, noteValue, put, read, split, toggle } =
+  const { MAPS, MERGED, blank, fromDoc, noteValue, put, read, split, toggle } =
     globalThis.steerRecord;
   /** Pin ids this view has reacted to or written on, by field and decision key: only these may
    *  overwrite what the store holds there. */
@@ -260,100 +257,17 @@
     const head = readOnly ? "View only" : msg;
     out.textContent = `${head ? `${head} · ` : ""}${n} of ${TP.decisions.length} answered`;
   }
-  /** One write to one document, after the last one there; resolves whether it landed. */
-  function chain(path, run) {
-    const next = (chains[path] || Promise.resolve())
-      .then(() => run(db.doc(path)))
-      .then(
-        () => {
-          status("Saved");
-          return true;
-        },
-        () => {
-          status("Not saved — Copy as text");
-          return false;
-        },
-      );
-    chains[path] = next;
-    return next;
-  }
-  /** A write that lands; the path is then one the store holds. */
-  const landed = (path, run) => () =>
-    run().then(
-      () => {
-        stored.add(path);
-      },
-      (err) => {
-        stored.delete(path);
-        throw err;
-      },
-    );
-  const write = (path, body) => chain(path, (ref) => landed(path, () => ref.set(body))());
-  /** The whole record of one answer, as the page holds it. */
-  function body(sec, key) {
-    const r = state[sec][key];
-    const d = sec === "decisions" ? TP.decisions.find((x) => x.key === key) : null;
-    return {
-      round: ID,
-      section: sec,
-      key,
-      issue: d ? d.issue : Number(key),
-      kind: d ? d.kind : sec,
-      pick: r.pick,
-      react: r.react,
-      verdict: r.verdict,
-      note: r.note || "",
-      ...(sec === "decisions" ? Object.fromEntries(MAPS.map((f) => [f, liveOf(f, r[f])])) : {}),
-      ...(sec === "decisions" ? { revealAt: r.revealAt || null } : {}),
-      at: new Date().toISOString(),
-    };
-  }
-  /** One keyed field as the store has it, with this view's own keys laid over it. */
-  function mergeKeys(field, key, stored, mine) {
-    const merged = liveOf(field, stored);
-    for (const id of touched[field].get(key) ?? []) {
-      const v = keyValue(field, mine?.[id]);
-      if (v) merged[id] = v;
-      else delete merged[id];
-    }
-    return merged;
-  }
-  /** Write one answer's whole record. */
-  function save(sec, key) {
-    if (sec !== "decisions") return write(`tp/${ID}/${sec}/${key}`, body(sec, key));
-    // A whole decision record replaces what is stored, so it first takes the stored pins and pin
-    // notes and keeps every one this view didn't touch: another view's survive this view's tap.
-    const path = `tp/${ID}/decisions/${key}`;
-    chain(path, (ref) =>
-      ref.get().then((snap) => {
-        const live = snap.exists ? snap.data() : null;
-        const r = state.decisions[key];
-        for (const f of MAPS) r[f] = mergeKeys(f, key, live?.[f], r[f]);
-        r.revealAt = r.revealAt || live?.revealAt || null; // a reveal is never taken back
-        return landed(path, () => ref.set(body("decisions", key)))();
-      }),
-    );
-  }
-  /** Pins' reactions or notes, marks (`[field, id]` pairs) or a merged field alone (`[field]`),
-   *  merged into their decision's record in one write, each key alone (null clears it); a record
-   *  the store doesn't hold yet is written whole. */
-  function saveKeys(key, pairs) {
-    const path = `tp/${ID}/decisions/${key}`;
-    const merge = { at: new Date().toISOString() };
-    for (const [field, id] of pairs)
-      if (id === undefined) merge[field] = state.decisions[key]?.[field] ?? null;
-      else
-        merge[field] = {
-          ...merge[field],
-          [id]: keyValue(field, state.decisions[key]?.[field]?.[id]),
-        };
-    chain(path, (ref) => {
-      const there = stored.has(path) ? Promise.resolve(true) : ref.get().then((s) => s.exists);
-      return there.then((yes) =>
-        landed(path, () => (yes ? ref.update(merge) : ref.set(body("decisions", key))))(),
-      );
-    });
-  }
+  // The writes to the store (save-client.js): an answer's record, its keys, the round's own document.
+  const { save, saveKeys, saveMeta, savePageNoteKey, seen } = globalThis.steerSave({
+    id: ID,
+    tp: TP,
+    state,
+    meta,
+    stored,
+    touched,
+    db: () => db,
+    status,
+  });
   /** One answer changed at these field paths: written now — a pin's reaction or note as its one
    *  key, anything else as the whole record — or held, as the values he left, while the store
    *  connects. */
@@ -372,40 +286,6 @@
     if (!keyed) return save(sec, key);
     saveKeys(key, paths.map(split));
   }
-  /** The page's own fields on `tp/<round>` — the only ones it ever writes there. */
-  const metaBody = () => ({
-    id: ID,
-    openedAt: meta.openedAt,
-    doneAt: meta.doneAt,
-    taps: meta.taps.slice(-3000),
-    shown: meta.shown,
-  });
-  /** Merge the page's fields (or `body`, a note about the page) into the round's document, so the
-   *  session's read-back fields stay. `update` needs the document, so a first write reads to
-   *  choose; a failed update reads again. */
-  function putMeta(ref, body = metaBody()) {
-    const exists = metaStored ? Promise.resolve(true) : ref.get().then((s) => s.exists);
-    return exists
-      .then((yes) => (yes ? ref.update(body) : ref.set(body)))
-      .then(
-        () => {
-          metaStored = true;
-        },
-        (err) => {
-          metaStored = false;
-          throw err;
-        },
-      );
-  }
-  /** Write the meta now (resolves whether it landed) or on a pause (resolves null at once). */
-  function saveMeta(now) {
-    if (!db) return Promise.resolve(false);
-    clearTimeout(timers.meta);
-    const go = () => chain(`tp/${ID}`, putMeta);
-    if (now) return go();
-    timers.meta = setTimeout(go, 2000);
-    return Promise.resolve(null);
-  }
   function tap() {
     meta.taps.push(Date.now());
     saveMeta(false);
@@ -418,7 +298,7 @@
     tap();
     changedSince();
     status("Saving");
-    return chain(`tp/${ID}`, (ref) => putMeta(ref, { pageNotes: { [id]: entry } }));
+    return savePageNoteKey(id, entry);
   }
 
   function runNote(k) {
@@ -831,7 +711,7 @@
     if (!saved.ok || loaded.includes(false)) return offline(UNREAD);
     if (saved.data) {
       const prev = saved.data;
-      metaStored = true;
+      seen();
       meta.taps = [...new Set((prev.taps || []).concat(meta.taps))].sort((a, b) => a - b);
       meta.openedAt = prev.openedAt || null;
       meta.doneAt = prev.doneAt || null;

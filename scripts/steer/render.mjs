@@ -45,7 +45,8 @@ const CSS = readFileSync(new URL("./page.css", import.meta.url), "utf8");
 // outcomes-client.js, page-notes-client.js, compare-client.js, widths-client.js); record-client.js
 // defines `steerRecord`, the shape of a decision record, which the page script takes from;
 // status-client.js defines `steerStatus`, what became of Done in words, and copy-client.js
-// `steerCopy`, the Copy-as-text builder — both pure, both ahead of the page script.
+// `steerCopy`, the Copy-as-text builder — both pure, both ahead of the page script; save-client.js
+// defines `steerSave`, the page's writes to the store, which the page script hands its state.
 const CLIENT = [
   "./pins-client.js",
   "./ear-client.js",
@@ -58,6 +59,7 @@ const CLIENT = [
   "./record-client.js",
   "./status-client.js",
   "./copy-client.js",
+  "./save-client.js",
   "./page-client.js",
 ]
   .map((f) => readFileSync(new URL(f, import.meta.url), "utf8"))
