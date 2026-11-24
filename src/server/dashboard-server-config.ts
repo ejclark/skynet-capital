@@ -321,6 +321,9 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
   /** The transport that carries an alert off this machine — the one half that needs Eric's
    *  credential. Absent: delivery reads as unconfigured IN WORDS, never a silent drop. */
   readonly alertDelivery?: AlertDeliveryPort;
+  /** Run one delivery pass for this account now — the fill-watch route calls it after a tap, so an
+   *  order that ended a moment before still gets its one email (#8251). Absent: no transport. */
+  readonly alertDeliveryNudge?: (participantId: string) => void;
   /** Where a member's watchlist is kept (`watchlist-route.ts`, #4332). Absent: the route says the
    *  list isn't stored on this deployment rather than accepting names into memory. */
   readonly watchlist?: WatchlistPort;

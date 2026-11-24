@@ -18,6 +18,7 @@ import {
 } from "../live/order-receipt";
 import type { DeskOrderRow, OrderChange } from "../live/orders";
 import { useFillFlare } from "./fill-flare";
+import { FillWatch } from "./fill-watch";
 import { GateHead } from "./gate-frame";
 import { useNow } from "./market-session";
 import { sellSharesSearch } from "./trade-search";
@@ -132,6 +133,8 @@ export function OrderReceipt({
           </p>
         </div>
       </div>
+      {/* At 390, in order: state · the order in words · the note · this · Modify / Cancel (#8251). */}
+      {isLive(read.state) ? <FillWatch deskId={deskId} orderId={now.orderId} /> : null}
       {isLive(read.state) ? (
         row?.cancelable ? (
           <div className="receipt-act">
