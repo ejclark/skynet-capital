@@ -8,7 +8,7 @@ import { type ResearchShelfJson, researchShelfJson } from "../observatory/resear
 import { standingsBoardView, standingsCompareView } from "../observatory/standings-board-view.js";
 import { parseLeaderMetric } from "../observatory/standings-metric.js";
 import type { Session } from "./auth/session.js";
-import type { BoardPatchChannel } from "./board-patch-routes.js";
+import { type BoardPatchChannel, humanIds } from "./board-patch-routes.js";
 import { serveCoverageJson } from "./coverage-route.js";
 import { resolveCurrentId, resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
@@ -190,14 +190,16 @@ export async function serveContentApi(
 /** The board as data for the React shell (the old `/board/frame` HTML twin is gone, #3816). The
  *  client renders this once, then applies `/events` ops verbatim from `seq` — on a gap it comes
  *  back here instead of patching around a hole. Same formatted values, same keys, same auth gate. */
-function serveBoardJson(
+async function serveBoardJson(
   res: ServerResponse,
   url: string,
   config: DashboardServerConfig,
   channel: BoardPatchChannel,
-): void {
+): Promise<void> {
   const params = new URL(url, "http://localhost").searchParams;
   const metric = parseLeaderMetric(params.get("by"));
+  // Seats first, from the journal (#8253): a snapshot is never behind a first fill that landed.
+  await config.partySeats?.refresh(humanIds(config.hub.getState()));
   const state = config.hub.getState();
   // Exactly the page's compare resolution: an id must exist, match, and carry no error —
   // missing/unknown/errored falls through to no compare, never a crash.
@@ -216,6 +218,7 @@ function serveBoardJson(
         state,
         metric,
         config.capitalFlows?.flowsFor.bind(config.capitalFlows),
+        config.partySeats?.isSeated,
       ),
       ...(a && b ? { compare: standingsCompareView(a, b) } : {}),
     }),
@@ -236,7 +239,7 @@ export async function serveJsonApi(
     return true;
   }
   if (path === "/api/board") {
-    serveBoardJson(res, url, config, channel);
+    await serveBoardJson(res, url, config, channel);
     return true;
   }
   if (path === "/api/edition") {

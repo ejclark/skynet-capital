@@ -11,6 +11,7 @@ import type { ParticipantSnapshot } from "./participant-snapshot.js";
 import { formatCurrency, formatSigned, formatSignedPercent, plClass } from "./render-atoms.js";
 import { cohortStats } from "./standings-cohort.js";
 import type { LeaderMetric } from "./standings-metric.js";
+import { type PartyView, partyView } from "./standings-party.js";
 import {
   cohortView,
   matchView,
@@ -75,6 +76,9 @@ interface BoardViewBlock {
 export interface StandingsBoardView {
   readonly rows: readonly BoardViewRow[];
   readonly blocks: Readonly<Record<string, BoardViewBlock>>;
+  /** The party's table (#8253): members together against the house bot. Live ops address it as
+   *  the `party` field key (`partyFields`); a change of who is seated reframes. */
+  readonly party: PartyView;
 }
 
 /**
@@ -86,11 +90,15 @@ export interface StandingsBoardView {
  * `flowsFor` reads the capital-flow ledger (#4563): a row with a recorded top-up or reset carries a
  * mark saying so. The mark never moves a row's value, rank or place — the record says what
  * happened and does not judge it.
+ *
+ * `isSeated` answers "has this account's first fill landed in our journal?" (#8253) — the server's
+ * read, injected the same way, so the party's table seats a member on evidence and never on a claim.
  */
 export function standingsBoardView(
   data: DashboardData,
   metric: LeaderMetric,
   flowsFor?: (participantId: string) => readonly CapitalFlow[],
+  isSeated?: (participantId: string) => boolean,
 ): StandingsBoardView {
   const byId = new Map(data.participants.map((p) => [p.id, p]));
   const humans = cohortStats(data.participants, "human", "Humans");
@@ -111,6 +119,7 @@ export function standingsBoardView(
       match: matchView(humans, bots),
       versus: { text: versusView(humans, bots) },
     },
+    party: partyView(data, isSeated),
   };
 }
 
