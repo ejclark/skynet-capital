@@ -247,9 +247,13 @@ export async function serveTradeApi(
     }
     const isSelf = requesterId !== undefined && requesterId === body.participantId;
     const quotePrice = isSelf ? await reviewQuote(config, requesterId, body.symbol) : undefined;
+    // UNREAD IS NOT EMPTY (#8335): a failed broker read degrades to a row with $0 cash, no
+    // positions and `error` set. Priced against that, a buy reads "more than your cash" and a sell
+    // "you don't hold this", so the row's error rides along and the review says the read failed.
     const preview = previewOrder(body, {
       cash: snapshot.cash,
       positions: snapshot.positions,
+      ...(snapshot.error ? { accountUnread: true as const } : {}),
       tradingEnabled: Boolean(config.tradingEnabled),
       isSelf,
       ...(quotePrice !== undefined ? { quotePrice } : {}),
