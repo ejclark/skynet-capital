@@ -15,6 +15,7 @@
  * "Unproven" is the expected answer for a long time. That is the guard against overfitting
  * working, not a failure — a small sample is never promoted into a claim.
  */
+import { meanOrZero } from "../domain/mean.js";
 import { type ExpectancyCI, expectancyBootstrapCI } from "../trading/expectancy-ci.js";
 import type { ProbeRetro } from "./cond-scout-retro.js";
 
@@ -40,9 +41,6 @@ export interface HypothesisVerdict {
   /** The call re-run without the outliers — differs only when a few prints carry the result. */
   readonly callWithoutOutliers: VerdictCall;
 }
-
-const mean = (xs: readonly number[]): number =>
-  xs.length === 0 ? 0 : xs.reduce((a, b) => a + b, 0) / xs.length;
 
 function median(xs: readonly number[]): number {
   const sorted = [...xs].sort((a, b) => a - b);
@@ -95,10 +93,10 @@ export function hypothesisVerdicts(
       hypothesis,
       closes: group.length,
       winRate: group.filter((r) => r.roi > 0).length / group.length,
-      meanRoi: mean(group.map((r) => r.roi)),
-      meanRoiPerDay: mean(group.map((r) => r.roiPerDay)),
+      meanRoi: meanOrZero(group.map((r) => r.roi)),
+      meanRoiPerDay: meanOrZero(group.map((r) => r.roiPerDay)),
       band,
-      ...(benchmarked.length > 0 ? { meanExcessVsMarket: mean(benchmarked) } : {}),
+      ...(benchmarked.length > 0 ? { meanExcessVsMarket: meanOrZero(benchmarked) } : {}),
       benchmarked: benchmarked.length,
       outliers,
       call,

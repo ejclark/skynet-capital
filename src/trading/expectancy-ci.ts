@@ -1,4 +1,5 @@
 import { marketDayKey } from "../domain/market-day.js";
+import { mean } from "../domain/mean.js";
 
 /**
  * EXPECTANCY WITH A CONFIDENCE INTERVAL — measure #5 (#2287 PR 7c): "we print expectancy as a bare
@@ -46,10 +47,6 @@ const DEFAULT_CONFIDENCE = 0.95;
 /** Below this many distinct days, a bootstrap interval is false precision, not a real one — the
  *  variance of a single resampled block tells you nothing about the population. */
 const MIN_DAYS_FOR_CI = 5;
-
-function mean(values: readonly number[]): number {
-  return values.reduce((sum, v) => sum + v, 0) / values.length;
-}
 
 /**
  * Block-bootstraps the mean R-multiple over whole trading days.
