@@ -420,6 +420,8 @@ export function buildBook(name) {
     // A member's own R&D records (#8005): the stores production keeps them in, and what each member
     // saved before the instant, replayed through the real handlers at compose (member-stores.mjs).
     ...(input.stores ? { stores: input.stores, writes: input.writes ?? [] } : {}),
+    // What each member filed and where each filing stands (member-filings.mjs), when it says.
+    ...(input.feedback ? { feedback: input.feedback } : {}),
     subscriptions,
     history,
     lastEquity,

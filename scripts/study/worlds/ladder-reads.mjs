@@ -7,6 +7,9 @@
 
 import { worldReads } from "./reads.mjs";
 
+/** The leaderboard's metrics, as `cross-reads.mjs` lists them for its compare reads. */
+const BOARD_METRICS = ["equity", "month", "pl", "return", "realized"];
+
 const CAST = {
   accounts: ["eric", "sauron", "day-trader", "jordan", "casey"],
   bots: ["sauron", "day-trader"],
@@ -18,12 +21,21 @@ const CAST = {
     "/api/quests",
     "/api/target-split",
     "/api/research/outlook?symbol=NVDA",
+    // Two reads only a control reaches (#8123, bot-loop's census): Sauron's page opens AVGO's
+    // outlook, and R&D Playbooks reads the research coverage.
+    "/api/research/outlook?symbol=AVGO",
+    "/api/research/coverage",
     "/api/research/outlook?symbol=AAPL",
     "/api/authored-plays",
     "/api/playbook-chains",
     "/api/convictions/mine",
   ],
-  extra: (id) => [`/api/book-wait?participantId=${id}`, `/api/outpost/performance?accounts=${id}`],
+  // The leaderboard's compare with one account picked (#8123, bot-loop's census).
+  extra: (id) => [
+    `/api/book-wait?participantId=${id}`,
+    `/api/outpost/performance?accounts=${id}`,
+    ...BOARD_METRICS.map((m) => `/api/board?a=${id}&by=${m}`),
+  ],
 };
 
 export function ladderReads() {
