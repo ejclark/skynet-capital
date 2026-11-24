@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-router";
 import { type ReactElement, useRef } from "react";
 import { horizonSearch } from "../live/horizon-params";
+import { usePresencePings } from "../live/presence";
 import { BrandEye } from "../shell/brand-eye";
 import { EyeLight } from "../shell/eye-light-layer";
 import { KeyboardChords } from "../shell/keyboard";
@@ -103,6 +104,8 @@ function RootShell(): ReactElement {
   const app = useRef<HTMLDivElement>(null);
   // The last of the five apps used, so a fresh load at `/` reopens it (#8189, `last-app.ts`).
   useRecordLastApp();
+  // "Last seen" learns of a tab left open only from this ping, sent while the tab is in view (#8319).
+  usePresencePings();
   return (
     <div className="shell">
       <div className="shell-app" ref={app}>

@@ -39,6 +39,12 @@ export const MARKET_CLOSED_WORDS =
 export const NO_EVENT_WORDS =
   "nothing is on the event calendar for the next 14 days, which is not the same as nothing happening";
 
+/** When neither link derives (a market-wide event, or a name the ticker directory does not know as
+ *  tradable): the record holds no ticket, and the scene must not pick a stock for the party
+ *  (#8317). Words to repeat, like `marketWords`; the game master's rules say what follows. */
+export const NO_TICKET_WORDS =
+  "this event names no stock the trade ticket trades, so the record holds no ticket for it";
+
 export interface SceneEvent extends UpcomingEventRow {
   readonly kind: MarketEvent["kind"];
   /** Titles of the house campaigns that link this event; empty when none does. */
@@ -50,6 +56,8 @@ export interface SceneEvent extends UpcomingEventRow {
   readonly questHref?: string;
   /** The plain ticket link on the event's first tradable symbol, when it names one. */
   readonly ticketHref?: string;
+  /** `NO_TICKET_WORDS`, only when there is neither `questHref` nor `ticketHref`. */
+  readonly ticketWords?: string;
 }
 
 export type SceneFacts =
@@ -172,6 +180,7 @@ export function sceneFacts(query: SceneFactsQuery): SceneFacts {
         : {}),
       ...(questHref ? { questHref } : {}),
       ...(tradable ? { ticketHref: `/trade?symbol=${encodeURIComponent(tradable)}` } : {}),
+      ...(questHref || tradable ? {} : { ticketWords: NO_TICKET_WORDS }),
     },
     otherEvents: inWindow - 1,
     notCovered: NOT_COVERED,
