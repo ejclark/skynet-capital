@@ -105,6 +105,34 @@ describe("claimNext — the retry sweep hands the pick to its own lane's claim",
     expect(r.reason).toContain("1 ready, 3 in flight, 0 plans waiting, work-mode=normal");
     expect(called).toEqual([]);
   });
+
+  // #6942, 2026-11-24: run 45312271752 (the scan a push re-dispatched) died on these reads with
+  // the App's REST budget at 0. A read that never returned took no lease, so it skips, green.
+  const SPENT = new Error("GitHub said: API rate limit exceeded for installation ID 157155153.");
+  const throwing = (err: Error) => () => {
+    throw err;
+  };
+
+  it("skips with no claim when a sweep read hits a spent budget", () => {
+    for (const read of ["readReady", "readInFlight", "readPrIssues"] as const) {
+      const { deps, called } = setup([issue(8, "a", ["ready", "feedback"])]);
+      const r = claimNext(0, "abc", { ...deps, [read]: throwing(SPENT) });
+      expect(r).toMatchObject({ claimed: false, reason: expect.stringMatching(/budget spent/) });
+      expect(called).toEqual([]);
+    }
+  });
+
+  it("still throws when a sweep read fails for any other reason", () => {
+    const { deps } = setup([issue(8, "a", ["ready", "feedback"])]);
+    const notFound = throwing(new Error("HTTP 404: Not Found"));
+    expect(() => claimNext(0, "abc", { ...deps, readReady: notFound })).toThrow(/HTTP 404/);
+  });
+
+  it("does not swallow a spent budget once the lane's claim has started", () => {
+    const { deps } = setup([issue(8, "a", ["ready", "feedback"])]);
+    const claims = { plan: throwing(SPENT), feedback: throwing(SPENT) };
+    expect(() => claimNext(0, "abc", { ...deps, claims })).toThrow(/rate limit/);
+  });
 });
 
 // 2026-10-01: #3960's lease outlived its successful build, and every tick for ~2h stopped at

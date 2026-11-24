@@ -874,9 +874,20 @@ export function claimNext(nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? ""
     readHold: holdOf = sweepHold({ now: nowMs, ...holdReads }),
     ...admission
   } = deps;
-  const mode = readMode();
-  const inFlight = inFlightOf();
-  let pool = withoutOpenPr(readReady(), readPrIssues());
+  // The sweep's own reads, skipped on a spent budget (#6942, 2026-11-24). #8159 left this flag
+  // unguarded because the claim writes, but the claim never starts until these four reads return:
+  // run 45312271752 (the scan the 02:33Z push re-dispatched) died here with the App's REST budget
+  // at 0 and reopened #6942 a 25th time. Skipping takes no lease and writes no label, so the issue
+  // stays `ready` and the next push peeks again. Everything from the lane's claim on stays outside.
+  const reads = tickOrSkip("retry sweep claim", () => ({
+    mode: readMode(),
+    inFlight: inFlightOf(),
+    ready: withoutOpenPr(readReady(), readPrIssues()),
+  }));
+  if (reads === null)
+    return { claimed: false, reason: "API budget spent; the next push peeks again" };
+  const { mode, inFlight } = reads;
+  let pool = reads.ready;
   // Read once: the sweep's pick and the claim's own gate must count the same Next part queued
   // column. A failed read leaves the claim's gate its own reader, which fails closed for a fresh
   // plan only.
@@ -2022,9 +2033,10 @@ function runCliFlag(argv, ctx) {
     // #3959 slice 1: the feedback lane's second door — an authorized reply on a `needs-info` issue.
     "--claim-feedback-reply": claimFeedbackReply,
     "--claim-plan": claimPlan,
+    // Its reads skip on a spent budget inside `claimNext`; its claim's writes still fail red.
     "--claim-next": () => claimNext(),
     // Read-only, so a spent budget skips it (#6942): no `has_next`, no re-dispatch, and the next
-    // push peeks again. The claim (`--claim-next`) stays unguarded: it writes.
+    // push peeks again.
     "--peek-next": () => tickOrSkip("retry sweep peek", () => peekNext()),
   };
   for (const [flag, claim] of Object.entries(claimers)) {

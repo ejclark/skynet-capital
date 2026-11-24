@@ -199,4 +199,23 @@ describe("the audit step, run end to end with GitHub refusing every call", () =>
 
     expect(out.status).not.toBe(0);
   });
+
+  // #6942, 2026-11-24: run 45312271752 died in `Claim the next admissible ready issue`, the
+  // re-dispatched scan's `--claim-next`, on the sweep's reads before any claim was attempted.
+  it("passes the retry-sweep claim with no claim when the budget is spent", () => {
+    const out = runAudit("API rate limit exceeded for installation ID 157155153.", [
+      "--claim-next",
+    ]);
+
+    expect(out.status).toBe(0);
+    expect(out.stdout).toMatch(/::warning::retry sweep claim skipped — this token's API budget/);
+    expect(out.stdout).not.toMatch(/claimed (plan|feedback)/);
+  });
+
+  it("still fails the retry-sweep claim on a refusal that is not the budget", () => {
+    const out = runAudit("Bad credentials", ["--claim-next"]);
+
+    expect(out.status).not.toBe(0);
+    expect(out.stdout).not.toMatch(/retry sweep claim skipped/);
+  });
 });
