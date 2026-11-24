@@ -475,6 +475,12 @@ export function OptionPositionsCard({
           />
         ))}
       </div>
+      {statement.data && !statement.data.available && statement.data.reason === "read-failed" ? (
+        <p className="tkt-note tkt-book">
+          The broker read for this account failed, so prices, greeks and the book total are missing
+          right now. They come back on the next read.
+        </p>
+      ) : null}
       {statement.data?.available ? (
         <>
           <BookLine book={statement.data.book} representative={statement.data.representative} />

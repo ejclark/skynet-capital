@@ -42,16 +42,10 @@ const MENTIONS_QUERY_ERROR = (text: string): boolean =>
  * line; never add one. Each entry names its tracking issue, or why the empty read claims nothing.
  */
 const SERVER_OFFENDERS: Readonly<Record<string, string>> = {
-  "src/server/desk-alerts-route.ts":
-    "bug #8334: a failed read drops held-name window alerts, so the list reads as all clear",
   "src/server/fast-track-route.ts":
     "ranking key only: a failed read loses the held-first ordering and states nothing as fact",
   "src/server/option-exit-plan.ts":
     "bug #8336: a failed read counts 0 contracts held, so a stored exit plan can be dropped",
-  "src/server/option-positions-route.ts":
-    "bug #8334: a failed read answers ok with no rows, read as 'no options held'",
-  "src/server/quests-route.ts":
-    "bug #8334: a failed read builds quests from no positions, read as nothing to do",
 };
 
 const ROUTE_OFFENDERS: Readonly<Record<string, string>> = {
