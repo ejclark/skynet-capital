@@ -60,11 +60,13 @@ export function closedAsBuilt(issue: unknown): boolean {
 }
 
 /** The timeline half: since the last reopen, nothing says the plan closed unbuilt or that its
- *  remainder moved elsewhere. A reopen starts over, so a plan reopened and then built counts. */
+ *  remainder moved elsewhere. A reopen starts over, so a plan reopened and then built counts.
+ *  `marked_as_duplicate` is deliberately NOT read (#8216): GitHub writes it on the issue another
+ *  was closed as a duplicate OF, so it says nothing about this plan's own close. The duplicate
+ *  itself carries a `closed` event with `state_reason: duplicate`, which the check below catches. */
 export function timelineSaysBuilt(timeline: readonly TimelineEvent[]): boolean {
   const lastReopen = timeline.findLastIndex((e) => e?.event === "reopened");
   return !timeline.slice(lastReopen + 1).some((e) => {
-    if (e?.event === "marked_as_duplicate") return true;
     if (e?.event === "closed") return UNBUILT_REASONS.has(String(e.state_reason));
     return e?.event === "commented" && String(e.body ?? "").startsWith(RELAY_RECEIPT);
   });

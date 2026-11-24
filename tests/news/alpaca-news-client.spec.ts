@@ -52,6 +52,32 @@ describe("AlpacaNewsClient.getNews", () => {
     expect(news[1]).not.toHaveProperty("id");
   });
 
+  // #8203: the held-news read shows the link and the publisher, and bounds the read by time.
+  it("carries the feed's url and source, and leaves them off when the feed sends none", async () => {
+    const transport = new FakeTransport({
+      status: 200,
+      body: {
+        news: [
+          { id: 1, headline: "a", url: "https://news.example.com/a", source: "benzinga" },
+          { id: 2, headline: "b" },
+        ],
+      },
+    });
+    const news = await new AlpacaNewsClient(transport).getNews(["NVDA"]);
+    expect(news[0]).toMatchObject({ url: "https://news.example.com/a", source: "benzinga" });
+    expect(news[1]).not.toHaveProperty("url");
+    expect(news[1]).not.toHaveProperty("source");
+  });
+
+  it("sends start when given, and leaves it off when not", async () => {
+    const transport = new FakeTransport({ status: 200, body: { news: [] } });
+    const client = new AlpacaNewsClient(transport);
+    await client.getNews(["NVDA"], 50, "2026-11-17T14:05:00.000Z");
+    expect(transport.lastPath).toContain("&start=2026-11-17T14%3A05%3A00.000Z");
+    await client.getNews(["NVDA"]);
+    expect(transport.lastPath).not.toContain("start=");
+  });
+
   it("throws AlpacaApiError on a non-2xx response", async () => {
     const client = new AlpacaNewsClient(
       new FakeTransport({ status: 403, body: { message: "no" } }),

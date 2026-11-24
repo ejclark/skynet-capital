@@ -36,7 +36,7 @@ export function heldAge(
 export function heldDue(
   pr: HeldPr,
   opts?: { greenAt?: number | null; now?: number },
-): { green: boolean; hours: number } | null;
+): { green: boolean; hours: number; unknown?: true } | null;
 export function blockedBy(
   pr: HeldPr,
   readIssue: (

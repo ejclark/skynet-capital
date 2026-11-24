@@ -51,7 +51,8 @@ export function heldAge(pr, { greenAt = null, now = Date.now() } = {}) {
  * open for `HELD_OPEN_HOURS` whatever its checks say. Returns `{ green, hours }` — when the head is
  * green now, `green: true` and the GREEN hours (so the ask never says "not green" about a green
  * PR); otherwise `green: false` and the OPEN hours — or `null` when not due. `greenAt` is ms,
- * `null` (not green) or `undefined` (unknown).
+ * `null` (not green) or `undefined` (unknown); an unknown one also carries `unknown: true`, so a
+ * reader says "checks unknown" and never "not green" about checks nobody read (#8212).
  *
  * Why the backstop also covers a green PR: a held PR takes merges from main while it waits (#7080
  * took 5), and each push restarts its checks and so its green clock. Past 12 h open it stays due
@@ -62,9 +63,10 @@ export function heldDue(pr, { greenAt, now = Date.now() } = {}) {
   const { openHours, greenHours } = heldAge(pr, { greenAt: greenAt ?? null, now });
   const due = (greenHours ?? 0) >= HELD_GREEN_HOURS || openHours >= HELD_OPEN_HOURS;
   if (!due) return null;
-  return greenHours === null
-    ? { green: false, hours: openHours }
-    : { green: true, hours: greenHours };
+  if (greenHours !== null) return { green: true, hours: greenHours };
+  return greenAt === undefined
+    ? { green: false, hours: openHours, unknown: true }
+    : { green: false, hours: openHours };
 }
 
 /**

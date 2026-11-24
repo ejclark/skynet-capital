@@ -43,13 +43,18 @@ describe("dayChangeGaps — the header's day change is its rows'", () => {
 });
 
 describe("yesterdayEquity — derived, never typed", () => {
-  const snapshot = { positions: [{ quantity: 10, lastdayPrice: 100 }] };
+  const positions = [{ symbol: "SPY", quantity: 10, lastday: 100 }];
   it("is cash plus each position at yesterday's close, less a declared closed-today amount", () => {
-    expect(yesterdayEquity({ id: "p", cash: 500 }, snapshot)).toBe(1_500);
-    expect(yesterdayEquity({ id: "p", cash: 500, closedToday: 40 }, snapshot)).toBe(1_460);
+    expect(yesterdayEquity({ id: "p", cash: 500, positions })).toBe(1_500);
+    expect(yesterdayEquity({ id: "p", cash: 500, positions, closedToday: 40 })).toBe(1_460);
+  });
+  it("prices an option contract at its multiplier", () => {
+    // One short put that closed at 1.50 a share is −150 of equity, not −1.50.
+    const put = { symbol: "SPY261218P00600000", quantity: -1, lastday: 1.5 };
+    expect(yesterdayEquity({ id: "p", cash: 500, positions: [...positions, put] })).toBe(1_350);
   });
   it("refuses a typed figure", () => {
-    expect(() => yesterdayEquity({ id: "p", cash: 500, lastEquity: 1_499 }, snapshot)).toThrow(
+    expect(() => yesterdayEquity({ id: "p", cash: 500, positions, lastEquity: 1_499 })).toThrow(
       /types lastEquity/,
     );
   });

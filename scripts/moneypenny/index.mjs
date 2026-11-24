@@ -334,9 +334,18 @@ export function releaseBuild(slug) {
  * after `in-progress` goes on and before the build gets its `number=`: a claim that finds itself
  * past the cap takes the mark and the lease back off and leaves `ready` on, so the retry sweep
  * starts it once a seat frees. `admission` carries the gate's injected reads, for specs.
+ *
+ * `recountInFlight`, when set, is the reader the recount uses in place of `readInFlight` (#8213).
+ * The retry sweep hands its claims a `readInFlight` that returns the list it read at sweep start,
+ * so its pick and the claim's gate agree; a recount on that list never sees its own mark or a
+ * rival's, and kept every sweep claim (7 builds against a cap of 6). The recount must read fresh.
  */
 function keepSeat(issue, slug, admission = {}) {
-  const seat = recountAfterMark(issue, admission);
+  const { recountInFlight, ...rest } = admission;
+  const seat = recountAfterMark(
+    issue,
+    recountInFlight ? { ...rest, readInFlight: recountInFlight } : rest,
+  );
   if (seat.keep) return seat;
   setInProgress(issue.number, false);
   releaseClaim(slug);
@@ -823,7 +832,8 @@ function recordPlanFlip(ctx, issue, edit) {
  * and hands it to its own lane's claim as a synthetic `labeled: ready` event — so the sweep runs
  * exactly the checks a live label event would, lease included. One claim per call: admitting it
  * changes what the next pick may see. Writes `lane=` beside the claim's own `number=`/`model=`.
- * An unreadable list throws (a red tick), never "nothing to do".
+ * An unreadable list throws (a red tick), never "nothing to do" — except a spent API budget, which
+ * skips the tick with one warning (#8215, `tickOrSkip`): the next push peeks again.
  */
 /**
  * THE SWEEP'S DRY RUN (#3818 slice 3 follow-up). `claude-code-action` rejects a `push` event, so a
@@ -874,16 +884,30 @@ export function claimNext(nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? ""
     readHold: holdOf = sweepHold({ now: nowMs, ...holdReads }),
     ...admission
   } = deps;
-  const mode = readMode();
-  const inFlight = inFlightOf();
-  let pool = withoutOpenPr(readReady(), readPrIssues());
-  // Read once: the sweep's pick and the claim's own gate must count the same Next part queued
-  // column. A failed read leaves the claim's gate its own reader, which fails closed for a fresh
-  // plan only.
-  const { openPlans, waiting } = waitingOrSkip(readPlans);
+  // The read phase skips on a spent budget (#8215): these reads ran unguarded ahead of any write,
+  // so a scan dispatched just before the installation hit 0/5000 died in `readInFlight` and
+  // reopened #6942 twice on 2026-11-24 (runs 45312271752, 45319243602). The claim below stays
+  // outside the guard: a write that fails still turns the run red.
+  const reads = tickOrSkip("retry sweep", () => ({
+    mode: readMode(),
+    inFlight: inFlightOf(),
+    ready: readReady(),
+    prIssues: readPrIssues(),
+    // Read once: the sweep's pick and the claim's own gate must count the same Next part queued
+    // column. A failed read leaves the claim's gate its own reader, which fails closed for a fresh
+    // plan only.
+    plans: waitingOrSkip(readPlans),
+  }));
+  if (!reads) return { claimed: false, reason: "skipped — this token's API budget is spent" };
+  const { mode, inFlight } = reads;
+  let pool = withoutOpenPr(reads.ready, reads.prIssues);
+  const { openPlans, waiting } = reads.plans;
   const gateDeps = {
     readMode: () => mode,
     readInFlight: () => inFlight,
+    // #8213: the gate counts the stored list above; the post-mark recount reads it fresh, or it
+    // never sees its own mark nor a label-event claim that marked mid-sweep (`keepSeat`).
+    recountInFlight: inFlightOf,
     ...(openPlans ? { readPlans: () => openPlans } : { readPlans }),
     ...admission,
   };
@@ -2022,9 +2046,10 @@ function runCliFlag(argv, ctx) {
     // #3959 slice 1: the feedback lane's second door — an authorized reply on a `needs-info` issue.
     "--claim-feedback-reply": claimFeedbackReply,
     "--claim-plan": claimPlan,
+    // Its read phase skips on a spent budget inside `claimNext` (#8215); the claim write still throws.
     "--claim-next": () => claimNext(),
     // Read-only, so a spent budget skips it (#6942): no `has_next`, no re-dispatch, and the next
-    // push peeks again. The claim (`--claim-next`) stays unguarded: it writes.
+    // push peeks again.
     "--peek-next": () => tickOrSkip("retry sweep peek", () => peekNext()),
   };
   for (const [flag, claim] of Object.entries(claimers)) {

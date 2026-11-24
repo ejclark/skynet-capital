@@ -121,6 +121,14 @@ Eric-sourced.
   _(src: Claude · while: governor cycle 7, 2026-11-02)_ **Done** in governed cycle 14
   (2026-11-23), after the same stall recurred: `--candidate` skips the carve-out and lists it under
   `needsHuman`; `tests/scripts/spec-gap-carve-out.spec.ts` reads the skill's list so the two can't drift.
+- **A dedupe rep pays its duplication debt in spec-gap debt.** The shared module a consolidation
+  creates is imported by no spec, so the spec-gap eye counts one more untested file each time: of the
+  six such modules from governed cycles 7 and 14–16, `src/domain/is-text.ts`,
+  `src/scripts/cli-entry.ts` and `src/ui/usd-whole.ts` still have no direct spec (cycle 16 specced
+  `src/server/save-body.ts` by hand). The callers' specs exercise the code, but the gate cannot see
+  that. Cheapest fix: the dedupe drill writes a direct spec for the module it creates, in the same
+  rep, so the two coaches stop trading debt.
+  _(src: Claude · while: governor cycles 14–17, 2026-11-24)_
 - **IPO discovery runs only when someone types it.** `npm run research:lockups` now files a listing
   from its public S-1 (#5912 slice 3), but no schedule calls it, so "Anthropic's S-1 lands and
   discovery files it within one run" (the slice's falsifier) waits on a person remembering the run:

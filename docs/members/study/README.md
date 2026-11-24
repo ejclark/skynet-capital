@@ -629,3 +629,9 @@ node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answe
 - 2026-11-24 · **the session budget was over-projected:** 8.7 calls a session measured against 14
   projected (the thin slice's one chatty session), so the round ran 2 runs a task where 3 (~770
   calls) would have fit under the ≈830 approved. Project from the first five sessions, not one.
+- 2026-11-24 · **the cross-feature round's fixed-build control failed on a real leftover.** Its two
+  items were Moneypenny's place names (#8012), a mechanism only the chat shows, which experts never
+  see and members rarely trigger. An expert still read "R&D … calls itself 'Research' elsewhere":
+  the write-ups' back link, which the fix never touched (#8236). A fixed-build control proves
+  little when its fixed mechanism lives where no evaluator looks; pick fixes the census can see, and
+  key a leftover's place as its own item.

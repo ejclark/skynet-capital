@@ -152,6 +152,22 @@ function flagsOnLine(line) {
   return flags;
 }
 
+/**
+ * A `#N` with the word before it. `owner/repo#N` never matches (no space before the `#`), and a URL
+ * carries no `#N` at all; the word is kept so `claude-code #1234` can be told from `after #1234`.
+ */
+const ISSUE_REF = /(?:^|[\s(])(?:(?<repo>[\w.-]+(?:\/[\w.-]+)?)\s+)?#(?<n>\d{3,5})\b/g;
+const THIS_REPO = "skynet-capital";
+
+/**
+ * Whether the word before a `#N` names another repo (#8231): an `owner/repo` or a hyphenated name,
+ * as repos are and plain prose before an issue number rarely is. A false hit (`follow-up #N`) costs a
+ * claim left unchecked; a miss read another repo's issue state as ours, a wrong verdict with no marker.
+ */
+function isOtherRepo(word) {
+  return Boolean(word && /[-/]/.test(word) && word.split("/").at(-1) !== THIS_REPO);
+}
+
 /** What a memory cites that a stale check can test mechanically, at no model tokens. */
 export function memoryClaims(text) {
   const commands = [...text.matchAll(COMMAND_OR_FLAG)].map((m) => m.groups);
@@ -159,7 +175,9 @@ export function memoryClaims(text) {
     .map((m) => m[1])
     .filter((p) => p.includes("/"))
     .concat(commands.flatMap((c) => c.script ?? []));
-  const issues = [...text.matchAll(/(?:^|[\s(])#(\d{3,5})\b/g)].map((m) => Number(m[1]));
+  const issues = [...text.matchAll(ISSUE_REF)]
+    .filter((m) => !isOtherRepo(m.groups.repo))
+    .map((m) => Number(m.groups.n));
   const npmScripts = commands.flatMap((c) => c.npm ?? []);
   const flags = text.split("\n").flatMap(flagsOnLine);
   const futureOnIssue = [...text.matchAll(WAITS_ON_ISSUE)].map((m) => Number(m[1]));
