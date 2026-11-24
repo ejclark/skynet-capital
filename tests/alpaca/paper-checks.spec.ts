@@ -547,6 +547,59 @@ describe("paper checks: review fixes", () => {
     expect(record.exitCode).toBe(130);
   });
 
+  it("check 1 cancels its brackets before a later check sells SPY, in a default run that crosses the open (#8373)", async () => {
+    // The run the issue plans for: every check, started 09:15 ET, check 1 watched through the open.
+    // The broker's clock flips at 09:30, so check 4 runs at 09:31 and sells SPY twice. An open SPY
+    // buy limit beside a sell is what Alpaca's wash-trade guard refuses, so none may be resting.
+    const clock = { now: et("2026-11-25", 9, 15) };
+    const broker = new FakeAlpaca(clock);
+    const restingAtSell: { sell: string; restingBuyLimits: string[] }[] = [];
+    const sentBodies = new Map<string, Record<string, unknown>>();
+    const original = broker.refuse;
+    broker.refuse = (body) => {
+      sentBodies.set(String(body.client_order_id), body);
+      if (body.symbol === "SPY" && body.side === "sell") {
+        const resting = [...broker.open.values()]
+          .map((o) => String(o.client_order_id))
+          .filter((cid) => {
+            const sent = sentBodies.get(cid);
+            return sent?.symbol === "SPY" && sent.side === "buy" && sent.type === "limit";
+          });
+        restingAtSell.push({
+          sell: `${body.type}${body.order_class ? ` ${body.order_class}` : ""}`,
+          restingBuyLimits: resting,
+        });
+      }
+      return original(body);
+    };
+    const run = createRun({
+      trading: broker.trading,
+      data: broker.data,
+      only: parseOnly(undefined),
+      runId: "run1",
+      dryRun: false,
+      sameDayQty: 25,
+      campaignSymbols: ["NVDA", "AMD", "MSFT"],
+      now: () => clock.now,
+      sleep: (ms) => {
+        clock.now += ms;
+        if (clock.now >= et("2026-11-25", 9, 30)) broker.isOpen = true;
+        return Promise.resolve();
+      },
+    });
+    const record = await run.execute();
+    const check1 = record.rows.find((r) => r.check === "bracket-after-close");
+    const check4 = record.rows.find((r) => r.check === "fractional-exits");
+    expect(check1?.attempts.some((a) => a.label.endsWith("after the open"))).toBe(true);
+    expect(check4?.outcome).toBe("accepted");
+    expect(restingAtSell).toEqual([
+      { sell: "limit oco", restingBuyLimits: [] },
+      { sell: "market", restingBuyLimits: [] },
+    ]);
+    expect(broker.open.size).toBe(0);
+    expect(record.exitCode).toBe(0);
+  });
+
   it("cancels a paperchk- order an earlier run left behind", async () => {
     const { broker, run } = harness(et(TUE, 16, 30), { only: "account-cap" });
     broker.open.set("old-1", {
