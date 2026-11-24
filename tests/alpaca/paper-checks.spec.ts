@@ -547,6 +547,52 @@ describe("paper checks: review fixes", () => {
     expect(record.exitCode).toBe(130);
   });
 
+  it("a signal before the open keeps no pre-open read under 'after the open' (#8393)", async () => {
+    // Started 09:15 ET, signalled at 09:16:05: the 09:16 read was made before the open, so neither
+    // the answer nor the attempts may call it an after-the-open read. The README still takes this
+    // run's row as check 1's latest answer, so that answer must not claim a read it never made.
+    const day = "2026-11-25";
+    const clock = { now: et(day, 9, 15) };
+    const signalAt = et(day, 9, 16) + 5_000;
+    const broker = new FakeAlpaca(clock);
+    let signalled = false;
+    const run = createRun({
+      trading: broker.trading,
+      data: broker.data,
+      only: parseOnly("bracket-after-close"),
+      runId: "run1",
+      dryRun: false,
+      sameDayQty: 25,
+      campaignSymbols: [],
+      now: () => clock.now,
+      // scripts/paper-checks.mjs's sleep: a wait ends at the signal instant, later ones at once.
+      sleep: (ms) => {
+        if (signalled) return Promise.resolve();
+        if (clock.now + ms >= signalAt) {
+          clock.now = signalAt;
+          signalled = true;
+          run.interrupt();
+        } else clock.now += ms;
+        return Promise.resolve();
+      },
+    });
+    const record = await run.execute();
+    const check1 = record.rows[0];
+    if (!check1) throw new Error("check 1 recorded no row");
+    expect(record.exitCode).toBe(130);
+    expect(check1.outcome).toBe("accepted");
+    expect(check1.attempts.filter((a) => a.label.endsWith("after the open"))).toEqual([]);
+    expect(check1.answer).not.toMatch(/after the open/);
+    const latest = latestAnswers([
+      {
+        date: "2026-11-24",
+        runs: [{ ...record, rows: [{ ...check1, answer: "bracket, day, after the open: held" }] }],
+      },
+      { date: day, runs: [record] },
+    ]);
+    expect(latest.get("bracket-after-close")?.answer ?? "").not.toMatch(/after the open/);
+  });
+
   it("check 1 cancels its brackets before a later check sells SPY, in a default run that crosses the open (#8373)", async () => {
     // The run the issue plans for: every check, started 09:15 ET, check 1 watched through the open.
     // The broker's clock flips at 09:30, so check 4 runs at 09:31 and sells SPY twice. An open SPY

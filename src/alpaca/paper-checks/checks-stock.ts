@@ -49,6 +49,9 @@ export async function bracketAfterClose(desk: Desk): Promise<CheckAnswer> {
   // Started 15 minutes or less before the open: watch both through 09:31 ET, 20 minutes at most.
   // A signal ends the watch (#8372): the script's sleep returns at once after one, so a loop bounded
   // only by the clock would spin broker reads until 09:31 instead of letting cleanup start.
+  // Only a read made at or after the open is kept as "after the open" (#8393): a signal before the
+  // open would otherwise leave a pre-open read under that label, and the README would print it as
+  // check 1's answer.
   const started = desk.now();
   const openAt = openingToday({ ...desk.facts, now: started });
   let afterOpen: Attempt[] = [];
@@ -57,7 +60,9 @@ export async function bracketAfterClose(desk: Desk): Promise<CheckAnswer> {
     while (desk.now() < until && !desk.ledger.interrupted) {
       await desk.sleep(Math.min(MINUTE, until - desk.now()));
       if (desk.ledger.interrupted) break;
-      afterOpen = await readAll("after the open");
+      const readAt = desk.now();
+      const watched = await readAll("after the open");
+      if (readAt >= openAt) afterOpen = watched;
     }
   }
   // Polled and recorded, so cancel (#8373): in a run that crosses the open, check 4 sells SPY next,
