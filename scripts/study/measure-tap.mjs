@@ -115,6 +115,37 @@ export function landingTop(name) {
   return null;
 }
 
+/**
+ * Would a phone show its keyboard now? True when the focused element (followed into open shadow
+ * roots and same-origin frames) takes typed text: a textarea, a text-like input, or contenteditable,
+ * none of them disabled or read-only. A date or select input opens a picker, never a keyboard.
+ * `what` names the element that had focus, for the trace (#8126; the rule is metrics.mjs →
+ * `keyboardRefusal`).
+ */
+export function typingFocus() {
+  const TEXT = new Set(["text", "search", "email", "url", "tel", "password", "number"]);
+  let el = document.activeElement;
+  for (;;) {
+    const inner = el?.shadowRoot?.activeElement ?? safeFrameFocus(el);
+    if (!inner) break;
+    el = inner;
+  }
+  function safeFrameFocus(node) {
+    try {
+      return node?.tagName === "IFRAME" ? (node.contentDocument?.activeElement ?? null) : null;
+    } catch {
+      return null;
+    }
+  }
+  const what = el ? `${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ""}` : "(none)";
+  if (!el || el.disabled || el.readOnly) return { editable: false, what };
+  const editable =
+    el.isContentEditable ||
+    el.tagName === "TEXTAREA" ||
+    (el.tagName === "INPUT" && TEXT.has(el.type));
+  return { editable, what };
+}
+
 /** Smoke only: the centre of the first uncovered operable control in <main> inside the frame. */
 export function onScreenControl() {
   const els = document.querySelectorAll("main button, main a[href], main [role=tab], main summary");

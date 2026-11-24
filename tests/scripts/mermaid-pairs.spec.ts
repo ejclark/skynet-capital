@@ -19,6 +19,13 @@ const BUDGET = 100 * 1024;
 
 const run = (...args: string[]) =>
   spawnSync("node", [SCRIPT, ...args], { encoding: "utf8", timeout: 120_000 });
+/** The same, with the embedded faces read from another directory (the broken-face case). */
+const runWithFonts = (fontDir: string, ...args: string[]) =>
+  spawnSync("node", [SCRIPT, ...args], {
+    encoding: "utf8",
+    timeout: 120_000,
+    env: { ...process.env, MERMAID_PAIRS_FONT_DIR: fontDir },
+  });
 
 /** Ask the harness's own resolver, so this spec never carries a second copy of the path list. */
 const probe = spawnSync(
@@ -88,10 +95,12 @@ describe("mermaid-pairs: a bad input fails loudly and renders nothing", () => {
     expect(run(file, dir).stderr).toContain(`got a bare array; wrap it as {"pairs": [...]}`);
     writeFileSync(file, JSON.stringify({ pairs: [{ id: "x", captoin: "typo" }] }));
     expect(run(file, dir).stderr).toContain("pairs[0].captoin: unknown key");
-    const flags = run(FIXTURE, dir, "--mode", "sepia", "--quality", "0");
+    const flags = run(FIXTURE, dir, "--mode", "sepia", "--quality", "0", "--look", "neon");
     expect(flags.status).toBe(2);
     expect(flags.stderr).toContain("--mode must be light|dark|both");
     expect(flags.stderr).toContain("--quality must be 1–100");
+    expect(flags.stderr).toContain("--look must be live|ink");
+    expect(run(FIXTURE, dir, "--face", "comic").stderr).toContain("--face must be serif|sans");
   });
 });
 
@@ -196,5 +205,83 @@ describe.skipIf(!HAVE_CHROMIUM)("mermaid-pairs: the fixture renders offline", ()
     expect(car.lint.before.problems.join(" ")).toContain("will not parse it");
     expect(car.lint.after.ok).toBe(true);
     expect(statSync(join(out.broken, "broken-light.jpg")).size).toBeGreaterThan(5 * 1024);
+  });
+});
+
+type InkSidecar = Sidecar & {
+  looks: Record<"before" | "after", "live" | "ink">;
+  face: { id: string; family: string } | null;
+  phone: Record<"before" | "after", number | null>;
+  lint: Record<"before" | "after", { ok: boolean; problems: string[] }>;
+  sheets: {
+    side: string;
+    face: string;
+    file: string;
+    bytes: number;
+    width: number;
+    phone: number;
+  }[];
+};
+
+// The owned look (#3981): the same text, drawn by our renderer in ink with an embedded face. What a
+// reader gets: GitHub's side untouched, our side named as ours, the image alone on disk at its own
+// size with rule 13's number, a scope panel for a type ink does not dress, and no fallback face.
+describe.skipIf(!HAVE_CHROMIUM)("mermaid-pairs --look ink: our renderer beside GitHub's", () => {
+  const out = { ink: "", broken: "", brokenFonts: "" };
+  let brokenRun: ReturnType<typeof run>;
+
+  beforeAll(() => {
+    out.ink = fresh("ink");
+    out.broken = fresh("ink-broken");
+    out.brokenFonts = fresh("ink-fonts");
+    for (const f of ["ink-serif-regular", "ink-serif-bold", "lato-regular", "lato-bold"])
+      writeFileSync(join(out.brokenFonts, `${f}.woff2`), "not a font");
+    const r = run(FIXTURE, out.ink, "--look", "ink", "--face", "sans", "--mode", "light");
+    if (r.status !== 0) throw new Error(`ink render failed:\n${r.stderr}`);
+    brokenRun = runWithFonts(
+      out.brokenFonts,
+      FIXTURE,
+      out.broken,
+      "--look",
+      "ink",
+      "--mode",
+      "light",
+    );
+  }, 180_000);
+
+  it("draws the after side as ours and the before side as GitHub's, naming the face", () => {
+    const car = sidecar(out.ink, "pr-picture") as InkSidecar;
+    expect(car.looks).toEqual({ before: "live", after: "ink" });
+    expect(car.face).toMatchObject({ id: "sans", family: "Lato" });
+    expect(car.lint.after.ok).toBe(true);
+  });
+
+  it("writes the ink side alone, within budget, with rule 13's number for its own width", () => {
+    const car = sidecar(out.ink, "pr-picture") as InkSidecar;
+    expect(car.sheets).toHaveLength(1);
+    const [sheet] = car.sheets;
+    expect(sheet?.file).toBe("pr-picture-after-ink-sans.jpg");
+    const buf = readFileSync(join(out.ink, sheet?.file ?? ""));
+    expect(buf.length).toBe(sheet?.bytes);
+    expect(buf.length).toBeLessThanOrEqual(BUDGET);
+    expect(sofDimensions(buf).width).toBe(sheet?.width);
+    const expected = Math.round(Math.min(1, 390 / car.natural.after) * 16 * 10) / 10;
+    expect(sheet?.phone).toBe(expected);
+    expect(car.phone.after).toBe(expected);
+  });
+
+  it("gives a type ink does not dress a panel that names the scope, never derived colours", () => {
+    const car = sidecar(out.ink, "platter") as InkSidecar;
+    expect(car.looks.after).toBe("ink");
+    expect(car.lint.after.ok).toBe(false);
+    expect(car.lint.after.problems.join(" ")).toContain("the ink look dresses flowcharts only");
+    expect(car.sheets).toEqual([]);
+  });
+
+  it("stops with exit 5 and names the face when it does not load, writing no frame", () => {
+    expect(brokenRun.status).toBe(5);
+    expect(brokenRun.stderr).toContain('the face "Ink Serif"');
+    expect(brokenRun.stderr).toContain("did not load");
+    expect(readdirSync(out.broken).filter((f) => f.endsWith(".jpg"))).toEqual([]);
   });
 });

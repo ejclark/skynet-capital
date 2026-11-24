@@ -480,6 +480,13 @@ flowchart TD
   gallery comment from. Scale 1 fits the 100KB budget; `--scale 1.5` is the crisp shareable set;
   `--layout stacked` is the phone read. **The pairs file for a showcase lives on its issue, not in
   the tree** — the only committed one is the spec fixture, `tests/fixtures/mermaid-pairs/example.json`.
+- **The owned look, on trial: `--look ink --face serif|sans`** (plan #3981, slice 1). The after
+  side of each pair (or any side whose source carries `%% look: ink`) is drawn by our renderer:
+  the ink snippet as a theme, an embedded face (`scripts/shoot/fonts/`, never a fallback; a face
+  that does not load stops the run), depth GitHub will not draw. Each such side is also written
+  alone as `<id>-<side>-ink-<face>.jpg`, the image a PR frame would carry, with rule 13's number
+  for its own width. Flowcharts only, ink's scope. Not yet a PR-frame lane: that is slice 3, after
+  Eric judges the image beside the live block on his phone.
 
 **The fold is not guaranteed to survive even through `ship.sh`/REST — always re-fetch and check.**
 The GitHub **MCP** write tools strip `<details>`/`<summary>` outright while leaving `<img>` and
