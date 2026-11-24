@@ -14,13 +14,16 @@
  *    log uses (`opaqueMemberId`), never the email. Bots hold no session, so they never appear.
  *  - **A page load is a server hit for the shell's page** (`index.html`), not each screen change
  *    inside the app: the shell routes client-side, so `routes` is the screens a member LANDED on.
- *  - **A day counts as active on any signed-in `/api/*` request, page load or not** (#8262). A tab
- *    left open (or a phone resuming one from memory) never loads the shell again: it only calls
- *    the API, so counting loads alone said a member active five days had been seen once. Such a
- *    day keeps a row with `loads: 0` and no screens. `/events` does not count: the board stream
- *    stays connected in a hidden tab, while the API queries pause there (TanStack Query polls only
- *    a visible tab), so an API call is a member actually using the app. One write per member per
- *    day at most: the store remembers who it has already marked today.
+ *  - **A day also counts when a tab in view says so** (`POST /api/presence`, #8262 then #8319). A
+ *    tab left open (or a phone resuming one from memory) never loads the shell again, so counting
+ *    loads alone said a member active five days had been seen once. #8262 first counted any `/api/*`
+ *    call instead, but a hidden tab calls the API too: every deploy ends the board stream, the
+ *    tab reconnects to a new boot, resyncs, and TanStack Query runs that invalidation's refetch
+ *    whether or not the tab is visible (#8319's audit trace). A desktop tab nobody looked at since
+ *    Monday read as active every day. The server cannot see visibility, so the shell tells it:
+ *    `app/src/live/presence.ts` pings only while `document.visibilityState` is `visible`. Such a
+ *    day keeps a row with `loads: 0` and no screens. One write per member per day at most: the
+ *    store remembers who it has already marked today.
  *  - **Never fails a request.** A store error is reported once per call and swallowed.
  *  - **Keeps 180 days.** One JSON file per day under the dir; older files are deleted on the first
  *    write of each new day, and ignored on read if a prune ever missed them.
@@ -29,6 +32,7 @@
  * for the weekly newsletter and #8161's scorecard.
  */
 import { existsSync, readdirSync, rmSync } from "node:fs";
+import type { IncomingMessage, ServerResponse } from "node:http";
 import { join } from "node:path";
 
 import { marketDayKey } from "../domain/market-day.js";
@@ -37,6 +41,12 @@ import { JsonFileStore } from "../storage/json-file-store.js";
 import { isRecord } from "../storage/parse-guards.js";
 import type { Session } from "./auth/session.js";
 import { opaqueMemberId } from "./feedback-attribution.js";
+import { readJsonPost } from "./page-shell.js";
+
+/** The shell's "this tab is in view" ping (#8319) — the one request that marks a day without a load. */
+export const PRESENCE_PATH = "/api/presence";
+/** The ping carries no data: `{}` is all the shell sends. */
+const PRESENCE_CAP_BYTES = 64;
 
 /** How many days of rows the store keeps, today included. */
 export const VISIT_RETENTION_DAYS = 180;
@@ -87,7 +97,7 @@ export interface MemberActivity {
 export interface MemberVisitStore {
   /** Count one page load of `route` (already reduced by `appScreenOf`) for this member today. */
   record(memberId: string, route: string, now: Date): void;
-  /** Mark this member present today without counting a page load (an API call from an open tab). */
+  /** Mark this member present today without counting a page load (a tab in view, #8319). */
   touch(memberId: string, now: Date): void;
   /** Every kept row, oldest day first. */
   list(now: Date): readonly MemberVisitDay[];
@@ -258,21 +268,42 @@ export function noteAppVisit(
 }
 
 /**
- * Mark the signed-in member present today when the request is an API call (#8262): the one kind
- * of request an already-open tab still makes. Never throws, like `noteAppVisit`.
+ * Mark the signed-in member present today without a page load (#8262). Called only for the shell's
+ * in-view ping, never for an API call in general: a hidden tab makes those too (#8319). Never
+ * throws, like `noteAppVisit`.
  */
 export function noteMemberPresence(
   store: MemberVisitStore | undefined,
   session: Session | undefined,
-  path: string,
   now: Date = new Date(),
 ): void {
-  if (!(store && session && path.startsWith("/api/"))) return;
+  if (!(store && session)) return;
   try {
     store.touch(opaqueMemberId(session.email), now);
   } catch (error) {
     process.emitWarning(`[member-visits] presence failed: ${String(error)}`);
   }
+}
+
+/**
+ * Handle `POST /api/presence`. Returns true when the request was answered. JSON-only through
+ * `readJsonPost`, the server's CSRF seam: a cross-site form post cannot set that content type, so
+ * another page cannot mark a member present. 204 either way: the shell has nothing to show.
+ */
+export async function servePresenceApi(
+  req: IncomingMessage,
+  res: ServerResponse,
+  path: string,
+  store: MemberVisitStore | undefined,
+  session: Session | undefined,
+  now?: Date,
+): Promise<boolean> {
+  if (path !== PRESENCE_PATH) return false;
+  if ((await readJsonPost(req, res, PRESENCE_CAP_BYTES)) === undefined) return true;
+  noteMemberPresence(store, session, now);
+  res.writeHead(204);
+  res.end();
+  return true;
 }
 
 /**

@@ -77,6 +77,14 @@
 .wo-recent .wo-state {
   font-weight: 500;
 }
+/* A close sent while marked Consider that settled at a gain (#7383): one plain line under its row,
+ * the receipt's own words, on its own line at every width. */
+.wo-kept {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
 .wo-sub {
   margin: 12px 0 4px;
   font-size: var(--text-xs);

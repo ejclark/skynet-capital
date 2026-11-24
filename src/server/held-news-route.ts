@@ -22,6 +22,10 @@ import { requireGet, sendJson } from "./page-shell.js";
  * WHAT HAPPENED, NEVER WHAT TO DO. Items are `heldNews`'s seven keys and nothing else: no score,
  * no stance, no suggested trade. A failure says so in words (`note`), never as a status code.
  *
+ * UNREAD IS NOT EMPTY (#8318). A hub row whose broker read failed (`degraded()` in
+ * participant-snapshot.ts) carries `positions: []` beside its `error`; that empty list means
+ * "unknown", so it answers `positionsUnread` and its own note, never "you don't hold anything".
+ *
  * RATE. One read per account per 5 minutes on success; overlapping requests share one read; a 429
  * earns exactly one retry after 1.1s (the house posture, `alpaca-options-client.ts`), never a loop.
  */
@@ -41,6 +45,8 @@ export const HELD_NEWS_NOTES = {
   empty: "You don't hold anything yet, so there's no news on your holdings.",
   quiet: `No news on what you hold in the last ${HELD_NEWS_DAYS} days.`,
   failed: "News couldn't be read right now.",
+  positionsUnread:
+    "Your positions couldn't be read right now, so there's no news on your holdings.",
 } as const;
 
 export interface HeldNewsAnswer {
@@ -52,6 +58,9 @@ export interface HeldNewsAnswer {
   readonly note?: string;
   /** Only on a last good answer served after a failed read; `asOf` is that answer's own time. */
   readonly stale?: true;
+  /** Only when the account's positions read failed (an error-tagged hub row), so the held names
+   *  are unknown: distinct from an account that holds nothing (`note: empty`). */
+  readonly positionsUnread?: true;
 }
 
 export type HeldNewsDeps = Pick<DashboardServerConfig, "hub" | "newsClientFor" | "now">;
@@ -100,6 +109,13 @@ function nothingToRead(asOf: string, note: string): HeldNewsAnswer {
   return { asOf, held: [], namesLeftOut: 0, items: [], note };
 }
 
+/** The answer while the account's positions can't be read: its last good news answer if there is
+ *  one (true as of its own `asOf`), else the failure in words. Never a feed read on unknown names. */
+function positionsUnread(entry: AccountCache, asOf: string): HeldNewsAnswer {
+  if (entry.last) return { ...entry.last.answer, stale: true, positionsUnread: true };
+  return { ...nothingToRead(asOf, HELD_NEWS_NOTES.positionsUnread), positionsUnread: true };
+}
+
 const defaultSleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 async function readOnce(
@@ -132,6 +148,7 @@ export function heldNewsFor(
   // Criterion 6: no linked account, or nothing held, answers in words with no feed read.
   if (!client) return Promise.resolve(nothingToRead(asOf, HELD_NEWS_NOTES.unlinked));
   const desk = deps.hub.getState().participants.find((p) => p.id === accountId);
+  if (desk?.error) return Promise.resolve(positionsUnread(cacheFor(deps, accountId), asOf));
   const ranked = rankedHeldNames(desk?.positions ?? []);
   if (ranked.length === 0) return Promise.resolve(nothingToRead(asOf, HELD_NEWS_NOTES.empty));
   const held = ranked.slice(0, HELD_NEWS_NAMES_MAX);

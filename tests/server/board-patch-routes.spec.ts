@@ -9,6 +9,7 @@ import {
   streamBoardPatches,
 } from "../../src/server/board-patch-routes.js";
 import { ObservatoryHub } from "../../src/server/observatory-hub.js";
+import { PartySeats } from "../../src/server/party-seats.js";
 
 /**
  * The wire itself: what a fresh connection is told, what a reconnecting one is replayed, and what
@@ -159,6 +160,28 @@ describe("driveBoardChannel", () => {
     ]);
     off();
     expect(heard).toBeUndefined();
+  });
+
+  it("asks every open board to re-read when a member takes their seat at the party's table (#8253)", async () => {
+    const hub = new ObservatoryHub(data(snap()));
+    const channel = createBoardChannel();
+    const filled = new Set<string>();
+    const seats = new PartySeats(async (id) => ({ earned: [], hasFill: filled.has(id) }));
+    const off = driveBoardChannel(hub, channel, undefined, undefined, seats);
+    await seats.refresh(["human-eric"]);
+    expect(channel.head).toBe(0);
+    filled.add("human-eric");
+    hub.apply({ type: "price", symbol: "NVDA", price: 700, at: "2026-08-26T15:00:01.000Z" });
+    await seats.refresh(["human-eric"]);
+    expect(seats.isSeated("human-eric")).toBe(true);
+    const replay = channel.since(0);
+    const reasons = replay.ok
+      ? replay.patches.flatMap((p) =>
+          p.ops.flatMap((op) => (op.kind === "reframe" ? [op.reason] : [])),
+        )
+      : [];
+    expect(reasons).toEqual(["a member took their seat at the party's table"]);
+    off();
   });
 
   it("stops folding once unsubscribed", () => {

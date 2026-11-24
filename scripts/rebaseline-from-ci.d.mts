@@ -94,3 +94,11 @@ export function commitMessage(
 };
 export function imageName(row: { spec: string; snapshot: string }, kind: string): string;
 export function renderRows(rows: ScreenshotRow[]): string;
+export function shotsRef(pr: number | string, runId: number | string): string;
+export function fetchShots(input: {
+  pr: number | string;
+  runId: number | string;
+  reportDir: string;
+  cwd: string;
+  remote?: string;
+}): string;

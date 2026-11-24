@@ -62,6 +62,17 @@ const BODY: Partial<Record<string, string>> = {
   replaced: "Your change went through under a new order id — the working row reads 'changed from'.",
 };
 
+function numbers(payload: ActivityEvent["payload"]): Record<string, number> {
+  const out: Record<string, number> = {};
+  const quantity = finiteOrUndefined(payload.quantity);
+  const filledQuantity = finiteOrUndefined(payload.filledQuantity);
+  const price = finiteOrUndefined(payload.price);
+  if (quantity !== undefined) out.quantity = quantity;
+  if (filledQuantity !== undefined) out.filledQuantity = filledQuantity;
+  if (price !== undefined) out.price = price;
+  return out;
+}
+
 function statusOf(event: ActivityEvent): string {
   if (event.eventType === "order.filled") return "filled";
   return (str(event.payload.status) ?? "").toLowerCase();
@@ -89,7 +100,15 @@ function orderAlert(event: ActivityEvent): Alert | undefined {
     // One alert per order per state: a re-read never duplicates a fill; a partial fill that then
     // fills is genuinely new news.
     dedupeKey: `${status}:${event.target.id}`,
-    data: { orderId: event.target.id, status, eventId: event.id },
+    // The ledger's own numbers, carried structured so a one-order fill email (`fill-watch.ts`,
+    // #8251) words them without parsing this title.
+    data: {
+      orderId: event.target.id,
+      status,
+      eventId: event.id,
+      display,
+      ...numbers(event.payload),
+    },
   };
 }
 

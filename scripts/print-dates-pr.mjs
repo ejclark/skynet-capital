@@ -49,7 +49,7 @@ export function refreshPr(log, outcome, today) {
   const body = [
     "## Summary",
     "",
-    "- The weekday calendar refresh (#4479) changed `src/domain/earnings-calendar.ts`: a near estimate the company has now dated, or a cadence estimate for a playbook symbol with no print in ~100 days.",
+    "- The weekday calendar refresh (#4479) changed `src/domain/earnings-calendar.ts`: a near estimate the company has now dated, or a cadence estimate for a playbook or campaign symbol with no print in ~100 days.",
     "- A confirmed row cites Nasdaq's company-reported date (`CAL:`); a date that moved stays an estimate until someone reads IR.",
     needsIr.length > 0
       ? `- **${needsIr.length} row(s) need an IR read** — listed below; this PR does not confirm them.`

@@ -18,6 +18,7 @@ import {
   memberActivity,
   noteAppVisit,
   noteMemberPresence,
+  PRESENCE_PATH,
   VISIT_RETENTION_DAYS,
 } from "../../src/server/member-visits.js";
 import { ObservatoryHub } from "../../src/server/observatory-hub.js";
@@ -166,21 +167,21 @@ describe("noteAppVisit — never fails the request", () => {
     };
     const warn = rstest.spyOn(process, "emitWarning").mockImplementation(() => undefined);
     expect(() => noteAppVisit(broken, session, "/app", at("2026-11-20"))).not.toThrow();
-    expect(() => noteMemberPresence(broken, session, "/api/board", at("2026-11-20"))).not.toThrow();
+    expect(() => noteMemberPresence(broken, session, at("2026-11-20"))).not.toThrow();
     expect(warn).toHaveBeenCalledWith(expect.stringContaining("disk full"));
     warn.mockRestore();
   });
 });
 
-describe("noteMemberPresence — an open tab's API call marks the day, once (#8262)", () => {
+describe("noteMemberPresence — a tab in view marks the day, once (#8262, #8319)", () => {
   const session: Session = { email: "member@gmail.com", provider: "google", exp: 0 };
   const id = opaqueMemberId("member@gmail.com");
 
-  it("adds a no-load row for an API call and leaves a page load's row as it was", () => {
+  it("adds a no-load row and leaves a page load's row as it was", () => {
     const store = new JsonMemberVisitStore(dir);
-    noteMemberPresence(store, session, "/api/board", at("2026-11-19"));
+    noteMemberPresence(store, session, at("2026-11-19"));
     noteAppVisit(store, session, "/app/trade", at("2026-11-20"));
-    noteMemberPresence(store, session, "/api/board", at("2026-11-20"));
+    noteMemberPresence(store, session, at("2026-11-20"));
     expect(store.list(at("2026-11-20")).map((r) => [r.day, r.loads, r.routes])).toEqual([
       ["2026-11-19", 0, []],
       ["2026-11-20", 1, ["/app/trade"]],
@@ -192,11 +193,9 @@ describe("noteMemberPresence — an open tab's API call marks the day, once (#82
     });
   });
 
-  it("ignores the board stream, the shell and requests without a session", () => {
+  it("records nothing without a session", () => {
     const store = new JsonMemberVisitStore(dir);
-    noteMemberPresence(store, session, "/events", at("2026-11-20"));
-    noteMemberPresence(store, session, "/app/trade", at("2026-11-20"));
-    noteMemberPresence(store, undefined, "/api/board", at("2026-11-20"));
+    noteMemberPresence(store, undefined, at("2026-11-20"));
     expect(store.list(at("2026-11-20"))).toEqual([]);
   });
 
@@ -237,7 +236,7 @@ describe("memberActivity — last seen and days active in the last 7 / 30", () =
   });
 });
 
-describe("the dashboard server records signed-in shell loads only", () => {
+describe("the dashboard server records signed-in shell loads and in-view pings only", () => {
   const SECRET = "sess";
   const auth = resolveAuth({
     SKYNET_SESSION_SECRET: SECRET,
@@ -283,7 +282,7 @@ describe("the dashboard server records signed-in shell loads only", () => {
       await new Promise<void>((resolve) => server.close(() => resolve()));
     }
   });
-  it("counts every day a member uses a tab left open, not only the day it loaded (#8262)", async () => {
+  it("counts a day only when a tab in view says so, never a hidden tab's API calls (#8319)", async () => {
     const store = new JsonMemberVisitStore(dir);
     let now = at("2026-11-16");
     const server = createDashboardServer({
@@ -300,33 +299,88 @@ describe("the dashboard server records signed-in shell loads only", () => {
         SECRET,
       ),
     )}`;
+    const ping = (headers: Record<string, string>, method = "POST") =>
+      fetch(`${base}${PRESENCE_PATH}`, {
+        method,
+        headers,
+        redirect: "manual",
+        ...(method === "POST" ? { body: "{}" } : {}),
+      });
+    const json = { cookie, "content-type": "application/json" };
     const id = opaqueMemberId("member@gmail.com");
     try {
-      // Monday: the one full page load.
-      await fetch(`${base}/app/`, { headers: { cookie }, redirect: "manual" });
-      // Tuesday to Friday: the open tab only talks to the API.
-      for (const day of ["2026-11-17", "2026-11-18", "2026-11-19", "2026-11-20"]) {
+      // Monday: the one full page load, then the tab is hidden and never looked at again.
+      await fetch(`${base}/app/accounts`, { headers: { cookie }, redirect: "manual" });
+      // Tuesday to Thursday: each deploy's restart makes the hidden tab resync and refetch the
+      // board (the issue's trace). Those calls are not the member using the app.
+      for (const day of ["2026-11-17", "2026-11-18", "2026-11-19"]) {
         now = at(day);
-        const res = await fetch(`${base}/api/board`, { headers: { cookie } });
+        const res = await fetch(`${base}/api/board?by=month`, { headers: { cookie } });
         expect(res.status).toBe(200);
-        await fetch(`${base}/api/board`, { headers: { cookie } }); // a second call writes nothing new
       }
-      expect(memberActivity(store.list(now), now).get(id)).toEqual({
-        lastSeen: "2026-11-20",
-        activeDays7: 5,
-        activeDays30: 5,
-      });
-      // Presence is not a page load: the API days carry no load and no screen.
       expect(store.list(now).map((r) => [r.day, r.loads, r.routes])).toEqual([
-        ["2026-11-16", 1, ["/app"]],
-        ["2026-11-17", 0, []],
-        ["2026-11-18", 0, []],
-        ["2026-11-19", 0, []],
+        ["2026-11-16", 1, ["/app/accounts"]],
+      ]);
+      expect(memberActivity(store.list(now), now).get(id)).toEqual({
+        lastSeen: "2026-11-16",
+        activeDays7: 1,
+        activeDays30: 1,
+      });
+
+      // Friday: the member comes back to the tab, and the tab says it is in view.
+      now = at("2026-11-20");
+      expect((await ping(json)).status).toBe(204);
+      expect((await ping(json)).status).toBe(204); // a second ping writes nothing new
+      expect(store.list(now).map((r) => [r.day, r.loads, r.routes])).toEqual([
+        ["2026-11-16", 1, ["/app/accounts"]],
         ["2026-11-20", 0, []],
       ]);
-      // A visitor's API call records nothing.
-      await fetch(`${base}/api/board`);
-      expect(store.list(now)).toHaveLength(5);
+      expect(memberActivity(store.list(now), now).get(id)).toEqual({
+        lastSeen: "2026-11-20",
+        activeDays7: 2,
+        activeDays30: 2,
+      });
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+
+  it("takes the ping as a JSON POST from a signed-in member only", async () => {
+    const store = new JsonMemberVisitStore(dir);
+    const now = at("2026-11-20");
+    const server = createDashboardServer({
+      hub: new ObservatoryHub(board()),
+      ...(auth ? { auth } : {}),
+      memberVisits: store,
+      now: () => now,
+    });
+    await new Promise<void>((resolve) => server.listen(0, resolve));
+    const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    const cookie = `skynet_session=${encodeURIComponent(
+      signSession(
+        { email: "member@gmail.com", provider: "google", exp: Date.now() + 60_000 },
+        SECRET,
+      ),
+    )}`;
+    const url = `${base}${PRESENCE_PATH}`;
+    try {
+      // A GET, or a form-encoded POST (what another site could send cross-origin), marks nothing.
+      expect((await fetch(url, { headers: { cookie } })).status).toBe(405);
+      const form = await fetch(url, {
+        method: "POST",
+        headers: { cookie, "content-type": "application/x-www-form-urlencoded" },
+        body: "a=1",
+      });
+      expect(form.status).toBe(415);
+      // A visitor never reaches it.
+      const anon = await fetch(url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}",
+        redirect: "manual",
+      });
+      expect(anon.status).not.toBe(204);
+      expect(store.list(now)).toEqual([]);
     } finally {
       await new Promise<void>((resolve) => server.close(() => resolve()));
     }

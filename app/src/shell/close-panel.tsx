@@ -13,6 +13,7 @@ import {
 } from "../live/ticket";
 import { InlineResult } from "../ui";
 import { fifoLine, refreshAfterClose, type SentClose } from "./close-receipt";
+import { rememberLockIn } from "./lock-in-memory";
 import type { LockInFlag } from "./locked-in";
 import { plural } from "./position-row-spec";
 
@@ -195,7 +196,11 @@ export function ClosePanel({
       setState({ step: "done", result });
       if (result.ok) {
         refreshAfterClose(queryClient, deskId);
-        onDone(sentClose(position, result, preview, count, lockIn));
+        const sent = sentClose(position, result, preview, count, lockIn);
+        // A flagged close is remembered with its order, so a fill after this row is gone is still
+        // celebrated on the next Overview load (#7383; `lock-in-memory.ts`).
+        rememberLockIn(deskId, sent);
+        onDone(sent);
       }
     } catch (error) {
       setState({ step: "error", message: String(error) });

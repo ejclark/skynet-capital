@@ -374,7 +374,7 @@ test.describe("landing page", () => {
     );
     await expect(nav.getByRole("link", { name: "Leaderboard" })).toHaveCount(0);
     await page.goto("/app/leaderboard");
-    await expect(page.getByRole("heading", { name: "Leaderboard" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Scoreboard" })).toBeVisible();
   });
 });
 

@@ -101,13 +101,6 @@ describe("standingsFieldOps", () => {
     expect(standingsFieldOps(before, after, { metric: "equity" })).toEqual([]);
   });
 
-  it("patches the cohort card and the match bar when the aggregate read moves", () => {
-    const ops = standingsFieldOps(board(), board(160_000), { metric: "equity" });
-    expect(fieldKeys(ops)).toEqual(expect.arrayContaining(["cohort:human", "match", "versus"]));
-    const match = ops.find((op) => op.kind === "field" && op.key === "match");
-    expect(match?.kind === "field" && match.bar).toMatchObject({ human: expect.any(Number) });
-  });
-
   it("renders an ABSENT best performer as an em dash and an EMPTY figure, never a fake 0%", () => {
     const empty = data();
     const ops = standingsFieldOps(empty, data(snap()), { metric: "equity" });
@@ -121,13 +114,6 @@ describe("standingsFieldOps", () => {
     it("when the field gains or loses a row", () => {
       const ops = standingsFieldOps(board(), data(snap()), { metric: "equity" });
       expect(ops).toEqual([{ kind: "reframe", reason: "the field gained or lost a row" }]);
-    });
-
-    it("when the cohort lead changes sides (the LEADS badge and card order move)", () => {
-      const ops = standingsFieldOps(board(150_000, 120_000), board(100_000, 120_000), {
-        metric: "equity",
-      });
-      expect(ops).toEqual([{ kind: "reframe", reason: "the cohort lead changed sides" }]);
     });
 
     it("when a head-to-head compare is on screen — that view keeps the full-render path", () => {
@@ -189,13 +175,8 @@ describe("standingsBoardView", () => {
     const view = standingsBoardView(board(), "equity");
     expect(view.rows.map((r) => r.key)).toEqual(["human-eric", "bot-sauron"]);
     expect(view.rows[0]).toMatchObject({ name: "Eric", kind: "human", value: "$150,000" });
-    expect(Object.keys(view.blocks).sort()).toEqual([
-      "cohort:bot",
-      "cohort:human",
-      "match",
-      "versus",
-    ]);
-    expect(view.blocks["cohort:human"]?.text.totalEquity).toBe("$150,000");
+    // The Humans vs Bots race is gone (#8253): the opening is the party's table, nothing else.
+    expect(Object.keys(view).sort()).toEqual(["party", "rows"]);
   });
 
   it("renders a snapshot a later field op patches coherently — op values land on view keys", () => {
@@ -203,7 +184,7 @@ describe("standingsBoardView", () => {
     const ops = standingsFieldOps(board(), board(160_000), { metric: "equity" });
     for (const op of ops) {
       if (op.kind !== "field") continue;
-      const target = view.rows.some((r) => r.key === op.key) || view.blocks[op.key] !== undefined;
+      const target = view.rows.some((r) => r.key === op.key) || op.key === "party";
       expect(target).toBe(true);
     }
   });

@@ -38,6 +38,9 @@ export interface PlaysIndex {
   /** The feedback gate (#1119), while it holds: every rung locked for one reason, stated. */
   readonly gate?: { readonly reason: string; readonly note: string };
   readonly nextUp?: string;
+  /** The exit-at-entry setting admits this session (#8249): the stock form offers Stop-Limit and
+   *  "Add an exit". Absent means it doesn't, and the form is exactly as before. */
+  readonly exitAtEntry?: boolean;
   readonly plays: readonly PlayInfo[];
 }
 

@@ -2,6 +2,7 @@ import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useState } from "react";
 import { useDeskEvents } from "../live/desk-events";
+import { followFillWatch } from "../live/fill-watch";
 import {
   type CancelResult,
   cancelOrder,
@@ -13,7 +14,10 @@ import {
   replaceOrder,
 } from "../live/orders";
 import { money, orderTypeLabel, tifLabel } from "../live/ticket";
+import { EXIT_ROLE_LABELS } from "../live/ticket-exit";
 import { ConnectLink } from "./connect-link";
+import { lockInOfRow, rememberedCloses } from "./lock-in-memory";
+import type { LockedIn } from "./locked-in";
 import { ModifyForm } from "./working-order-modify";
 
 /**
@@ -56,7 +60,25 @@ const STATE_WORD: Record<DeskOrderState, string> = {
   expired: "Expired",
 };
 
+/** The row's type and price. A bracket's exit is named by its job and its price — "Take-profit
+ *  $95.00", "Stop $85.00" (#8249) — and a stop-limit names both prices. */
+function typeWords(row: DeskOrderRow): string {
+  if (row.exitRole) {
+    const price = row.exitRole === "stop" ? row.stopPrice : row.limitPrice;
+    const label = EXIT_ROLE_LABELS[row.exitRole];
+    // A stop leg that carries a limit won't sell below it — say so, as a stop-limit row does.
+    const limit =
+      row.exitRole === "stop" && row.limitPrice !== undefined
+        ? ` · limit ${money(row.limitPrice)}`
+        : "";
+    return price === undefined ? label : `${label} ${money(price)}${limit}`;
+  }
+  return `${orderTypeLabel(row.orderType)} · ${priceLabel(row)}`;
+}
+
 function priceLabel(row: DeskOrderRow): string {
+  if (row.limitPrice !== undefined && row.stopPrice !== undefined)
+    return `stop ${money(row.stopPrice)} · limit ${money(row.limitPrice)}`;
   if (row.limitPrice !== undefined) return `limit ${money(row.limitPrice)}`;
   if (row.stopPrice !== undefined) return `stop ${money(row.stopPrice)}`;
   return "market";
@@ -134,8 +156,11 @@ function OrderRow({
   onCancel,
   onReplace,
   pending,
+  kept,
 }: {
   readonly row: DeskOrderRow;
+  /** A close sent while the position was marked Consider that settled at a gain (#7383). */
+  readonly kept?: LockedIn;
   readonly onCancel?: (id: string) => Promise<void>;
   readonly onReplace?: (id: string, change: OrderChange) => Promise<ReplaceResult | undefined>;
   readonly pending: boolean;
@@ -149,7 +174,7 @@ function OrderRow({
         <span className="wo-side">{row.side === "buy" ? "Buy" : "Sell"}</span>
         <span className="wo-qty num">{qtyLabel(row)}</span>
         <span className="wo-type">
-          {orderTypeLabel(row.orderType)} · {priceLabel(row)}
+          {typeWords(row)}
           {tif ? ` · ${tif}` : ""}
         </span>
       </span>
@@ -162,6 +187,9 @@ function OrderRow({
         {row.replaces ? ` · changed from ${row.replaces}` : ""}
         {row.state === "replaced" && row.replacedBy ? ` · now ${row.replacedBy}` : ""}
       </span>
+      {/* Said plainly first (#7383): the receipt's own words, no celebration here — the moment
+          itself comes on the next Overview load (`lock-in-late.tsx`). */}
+      {kept ? <p className="wo-kept">{kept.headline}.</p> : null}
       {row.cancelable && onCancel ? (
         <RowActions
           row={row}
@@ -241,7 +269,16 @@ export function useOrderActions(deskId: string) {
   const replace = (id: string, change: OrderChange): Promise<ReplaceResult | undefined> =>
     run(
       id,
-      () => replaceOrder(deskId, id, change),
+      async () => {
+        const answer = await replaceOrder(deskId, id, change);
+        // A watched order's email follows the modify to its new order id (#8251) — from the
+        // receipt or the Orders pane alike. Best effort: a miss leaves the old watch unsent.
+        if (answer.ok) {
+          await followFillWatch(deskId, answer.orderId, id).catch(() => undefined);
+          await queryClient.invalidateQueries({ queryKey: ["fill-watch", deskId] });
+        }
+        return answer;
+      },
       (r) =>
         r.ok
           ? `Change sent — the broker replaced the order (${r.status.replace(/_/g, " ")}).`
@@ -267,6 +304,7 @@ export function WorkingOrders({ deskId }: { readonly deskId: string }): ReactEle
   };
 
   const data = query.data;
+  const remembered = rememberedCloses(deskId);
   return (
     <section className="wr-panel wo-panel" aria-label="Working orders">
       <h3 className="wr-h">Working orders</h3>
@@ -304,9 +342,12 @@ export function WorkingOrders({ deskId }: { readonly deskId: string }): ReactEle
             <>
               <h4 className="wo-sub">Settled today</h4>
               <ul className="wr-list wo-recent">
-                {data.recent.map((row) => (
-                  <OrderRow key={row.id} row={row} pending={false} />
-                ))}
+                {data.recent.map((row) => {
+                  const kept = lockInOfRow(remembered, row);
+                  return (
+                    <OrderRow key={row.id} row={row} pending={false} {...(kept ? { kept } : {})} />
+                  );
+                })}
               </ul>
             </>
           ) : null}
