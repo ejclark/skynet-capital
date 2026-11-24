@@ -7,7 +7,9 @@ neighbours) → **Container** (separately runnable units) → **Component** (the
 **Generated** by `scripts/architecture-pages.mjs` from `source/` (the two maps derived from the code
 on 2026-09-25, one refuter verdict per claim, the Graphify parity notes); `tests/arch/architecture-pages.spec.ts`
 regenerates and fails on drift, and checks every code root exists. Edit the source, not the pages;
-read a container's page before touching it, and update the source in the same PR. Provenance:
+read a container's page before touching it, and update the source in the same PR. The drawn `Rel` lines
+are also a contract: `scripts/arch-boundaries.mjs` names every import that crosses a container
+with no arrow drawn that way (advisory, ratcheted). Provenance:
 `docs/adr/0008` chose Mermaid as the spec surface for exactly this. The research package behind
 the source (each refuter's evidence, the narrative synthesis, the parity sketch) is not in the
 tree — it stays at the commit that carried it:
