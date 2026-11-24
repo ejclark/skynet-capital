@@ -46,7 +46,6 @@ import { execFile } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { researchCapNow } from "../../scripts/moneypenny/events.mjs";
 import { bars } from "../../scripts/research/market-data.mjs";
@@ -64,6 +63,7 @@ import type { Conviction } from "../playbooks/conviction-record.js";
 import { CONVICTIONS } from "../playbooks/conviction-store.js";
 import { writeRefinement } from "./claim-proposals.js";
 import { fullPassScores, laneScores, readsEvent, scoreConviction } from "./claim-scoring-run.js";
+import { isMain } from "./cli-entry.js";
 
 const run = promisify(execFile);
 const ROOT = process.cwd();
@@ -304,5 +304,4 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
   return 0;
 }
 
-const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
-if (isMain) process.exit(await main());
+if (isMain(import.meta.url)) process.exit(await main());
