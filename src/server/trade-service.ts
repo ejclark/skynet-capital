@@ -1,5 +1,5 @@
 import type { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
-import type { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
+import type { AlpacaOrder, AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
 import { positionsFrom } from "../observatory/broker-positions.js";
 import {
   normalizeSymbol,
@@ -11,6 +11,7 @@ import {
   type TicketTimeInForce,
 } from "../trading/order-ticket.js";
 import type { VerifyAccess } from "./account-identity-gate.js";
+import { type EchoedExits, echoedExits } from "./bracket-legs.js";
 import { marketOpen, readReview, submitAndAudit } from "./desk-gate.js";
 import type { OrderAuditRecord } from "./order-audit-log.js";
 
@@ -55,6 +56,8 @@ export type DeskTradeResult =
       /** The broker's own echo of what it was told (#3407 P1) — absent only on a transport
        *  double that doesn't echo it. */
       readonly timeInForce?: string;
+      /** A bracket's two exits as the broker echoed them (#8249) — never the draft's prices. */
+      readonly exits?: EchoedExits;
     }
   | { readonly ok: false; readonly refusals: string[] };
 
@@ -126,9 +129,11 @@ export function createTradeService(deps: TradeServiceDeps): SubmitDeskTrade {
       return { ok: false, refusals: preview.refusals };
     }
 
-    return submitAndAudit(
-      () =>
-        access.client.placeOrder({
+    // The broker's echo is kept so a bracket's receipt names the exits the broker holds (#8249).
+    let echoed: AlpacaOrder | undefined;
+    const result = await submitAndAudit(
+      async () => {
+        echoed = await access.client.placeOrder({
           symbol: normalizeSymbol(request.symbol),
           qty: request.quantity,
           side: request.action,
@@ -141,7 +146,9 @@ export function createTradeService(deps: TradeServiceDeps): SubmitDeskTrade {
           ...(preview.exit
             ? { bracket: { takeProfit: preview.exit.takeProfit, stop: preview.exit.stop } }
             : {}),
-        }),
+        });
+        return echoed;
+      },
       access.participant,
       deps,
       {
@@ -150,5 +157,7 @@ export function createTradeService(deps: TradeServiceDeps): SubmitDeskTrade {
         side: request.action,
       },
     );
+    const exits = result.ok && echoed ? echoedExits(echoed) : undefined;
+    return result.ok && exits ? { ...result, exits } : result;
   };
 }

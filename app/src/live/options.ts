@@ -38,6 +38,8 @@ export interface PlaysIndex {
   /** The feedback gate (#1119), while it holds: every rung locked for one reason, stated. */
   readonly gate?: { readonly reason: string; readonly note: string };
   readonly nextUp?: string;
+  /** This session's stock ticket offers stop-limit and an exit at entry (#8249). Absent = no. */
+  readonly exitAtEntry?: boolean;
   readonly plays: readonly PlayInfo[];
 }
 

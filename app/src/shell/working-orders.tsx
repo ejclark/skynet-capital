@@ -129,6 +129,14 @@ export function RowActions({
   );
 }
 
+/** A bracket's exit reads as what it is — "Take-profit" or "Stop" — never its bare order type
+ *  (#8249); every other row keeps the order type's own name. */
+function rowTypeLabel(row: DeskOrderRow): string {
+  if (row.exitRole === "take-profit") return "Take-profit";
+  if (row.exitRole === "stop") return "Stop";
+  return orderTypeLabel(row.orderType);
+}
+
 function OrderRow({
   row,
   onCancel,
@@ -149,7 +157,7 @@ function OrderRow({
         <span className="wo-side">{row.side === "buy" ? "Buy" : "Sell"}</span>
         <span className="wo-qty num">{qtyLabel(row)}</span>
         <span className="wo-type">
-          {orderTypeLabel(row.orderType)} · {priceLabel(row)}
+          {rowTypeLabel(row)} · {priceLabel(row)}
           {tif ? ` · ${tif}` : ""}
         </span>
       </span>

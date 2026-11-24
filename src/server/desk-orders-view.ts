@@ -1,5 +1,6 @@
 import type { AlpacaOrder } from "../alpaca/alpaca-trading-client.js";
 import { humanizeOptionSymbol, parseOccSymbol } from "../trading/option-symbols.js";
+import type { ExitRole } from "./bracket-legs.js";
 
 /**
  * THE WORKING-ORDERS VIEW — the broker's order record as the desk's own honest vocabulary
@@ -59,6 +60,9 @@ export interface DeskOrderRow {
   readonly replaces?: string;
   /** The order that superseded this one — a `replaced` row's forward pointer. */
   readonly replacedBy?: string;
+  /** A bracket's exit, named by the broker's nesting (#8249): the row reads "Take-profit" or
+   *  "Stop" instead of its bare order type. Absent on every other order. */
+  readonly exitRole?: ExitRole;
 }
 
 export interface DeskOrdersView {
@@ -123,7 +127,7 @@ const REPLACEABLE_TYPES = new Set(["limit", "stop", "stop_limit"]);
 
 /** One broker record → one desk row, or undefined when the status is one this view can't
  *  honestly name. */
-export function deskOrderRow(order: AlpacaOrder): DeskOrderRow | undefined {
+export function deskOrderRow(order: AlpacaOrder, exitRole?: ExitRole): DeskOrderRow | undefined {
   const state = brokerStatusState(order.status);
   if (!state) return undefined;
   const limitPrice = coerceNumber(order.limit_price);
@@ -148,6 +152,7 @@ export function deskOrderRow(order: AlpacaOrder): DeskOrderRow | undefined {
     ...(settledAt ? { settledAt } : {}),
     ...(order.replaces ? { replaces: order.replaces } : {}),
     ...(order.replaced_by ? { replacedBy: order.replaced_by } : {}),
+    ...(exitRole ? { exitRole } : {}),
     state,
     cancelable: state === "working" || state === "partial",
     // A bracket's entry or exit (#8249) is not offered Modify in this slice: its pieces are linked
@@ -171,8 +176,11 @@ function withinRecentWindow(row: DeskOrderRow, now: number): boolean {
 export function deskOrdersView(
   orders: readonly AlpacaOrder[],
   now: number = Date.now(),
+  exitRoles: ReadonlyMap<string, ExitRole> = new Map(),
 ): DeskOrdersView {
-  const rows = orders.map(deskOrderRow).filter((row): row is DeskOrderRow => row !== undefined);
+  const rows = orders
+    .map((order) => deskOrderRow(order, exitRoles.get(order.id)))
+    .filter((row): row is DeskOrderRow => row !== undefined);
   const newestFirst = (a: DeskOrderRow, b: DeskOrderRow): number =>
     Date.parse(b.submittedAt ?? "") - Date.parse(a.submittedAt ?? "") || 0;
   return {

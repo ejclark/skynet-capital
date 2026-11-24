@@ -39,6 +39,8 @@ export interface DeskOrderRow {
   readonly replaceable?: boolean;
   readonly replaces?: string;
   readonly replacedBy?: string;
+  /** A bracket's exit, named by the broker's own nesting (#8249). */
+  readonly exitRole?: "take-profit" | "stop";
 }
 
 export type DeskOrders =

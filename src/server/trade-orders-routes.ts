@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { AlpacaApiError } from "../alpaca/alpaca-api-error.js";
+import { exitRoles, hasBracket } from "./bracket-legs.js";
 import { resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { deskOrdersView } from "./desk-orders-view.js";
@@ -151,10 +152,17 @@ async function serveOrdersList(
   }
   try {
     const orders = await client.listOrders({ status: "all", limit: ORDERS_FETCH_LIMIT });
+    // A bracket's exits come back as rows of their own with no link to their entry; a second,
+    // nested read names them (#8249). Only when a bracket is there: every other list costs one read.
+    const roles = hasBracket(orders)
+      ? exitRoles(
+          await client.listOrders({ status: "all", limit: ORDERS_FETCH_LIMIT, nested: true }),
+        )
+      : undefined;
     sendJson(res, 200, {
       available: true,
       asOf: new Date().toISOString(),
-      ...deskOrdersView(orders),
+      ...deskOrdersView(orders, Date.now(), roles),
     });
   } catch {
     sendJson(res, 200, { available: false, reason: "unreachable", working: [], recent: [] });

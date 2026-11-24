@@ -376,3 +376,61 @@ test.describe("Exits at entry: the setting decides", () => {
     expect((await desk(request)).positions.find((p) => p.symbol === "XLE")?.quantity).toBe("3");
   });
 });
+
+test.describe("Exits at entry: a member on a phone", () => {
+  test("with the setting off, the form offers no Stop-Limit and no exit control", async ({
+    page,
+  }) => {
+    test.skip(EXIT_ON(), "the unchanged form is the setting-off half");
+    await phone(page);
+    await page.goto(ROUTES.stockForm);
+    const type = page.getByLabel("Order type", { exact: true });
+    await expect(type.locator("option")).toHaveText(["Market", "Limit", "Stop-Market"]);
+    await type.selectOption("limit");
+    await expect(page.getByLabel("Add an exit")).toHaveCount(0);
+  });
+
+  test("with the setting on, a limit buy with an exit placed on the form fills, and both exits show on the orders list", async ({
+    page,
+  }) => {
+    test.skip(!EXIT_ON(), "the bracket is the setting-on half");
+    await phone(page);
+    expect((await desk(page.request)).positions.some((p) => p.symbol === "QQQ")).toBe(false);
+    await page.goto(ROUTES.stockForm);
+    await page.getByLabel("Symbol", { exact: true }).scrollIntoViewIfNeeded();
+    await page.getByLabel("Symbol", { exact: true }).click();
+    await page.keyboard.type("QQQ");
+    await page.locator("label", { hasText: /^Shares$/ }).click();
+    await page.keyboard.type("1");
+    const type = page.getByLabel("Order type", { exact: true });
+    await expect(type.locator("option")).toHaveText([
+      "Market",
+      "Limit",
+      "Stop-Market",
+      "Stop-Limit",
+    ]);
+    await type.selectOption("limit");
+    await page.getByLabel("Limit price", { exact: true }).fill("520");
+    await page.getByLabel("Add an exit").check();
+    await page.getByLabel("Take-profit", { exact: true }).fill("530");
+    await page.getByLabel("Stop", { exact: true }).fill("500");
+    await page.getByRole("button", { name: "Review order" }).click();
+    await expect(
+      page.getByText("Take-profit $530.00 · $10.00 gained against your limit"),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Stop $500.00 · about $20.00 lost against your limit"),
+    ).toBeVisible();
+    await page.getByRole("button", { name: /^Submit order/ }).click();
+    await expect(
+      page.getByText("Exits held by the broker · Take-profit $530.00 · Stop $500.00"),
+    ).toBeVisible();
+
+    await page.goto(`${ROUTES.stockForm}?section=orders`);
+    await expect(page.getByText(/^Take-profit · limit \$530\.00/)).toBeVisible();
+    await expect(page.getByText(/^Stop · stop \$500\.00/)).toBeVisible();
+
+    await page.goto(ROUTES.book);
+    await expect(page.getByRole("link", { name: /^QQQ ,.* 1 shares? ,/ })).toBeVisible();
+  });
+});

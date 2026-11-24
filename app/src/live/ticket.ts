@@ -11,7 +11,7 @@ import { questOfPage } from "./quest-link";
 /** The order classes the desk can actually place today. Mirrors the server's `TicketOrderType`
  *  (`src/trading/order-ticket.ts`) exactly — a value this list can produce is a value the broker
  *  client can send, which is the whole reason it is spelled out here rather than left as string. */
-export type TicketOrderType = "market" | "limit" | "stop";
+export type TicketOrderType = "market" | "limit" | "stop" | "stop_limit";
 
 /** Mirrors the server's `TicketTimeInForce` — Day or GTC, the two the desk shows (#3407 P1). */
 export type TicketTimeInForce = "day" | "gtc";
@@ -25,6 +25,16 @@ export interface TicketDraft {
   readonly limitPrice?: number;
   readonly stopPrice?: number;
   readonly timeInForce?: TicketTimeInForce;
+  /** A take-profit and stop sent with a limit buy as one bracket (#8249) — only an admitted session. */
+  readonly exit?: { readonly takeProfit?: number; readonly stop?: number };
+}
+
+/** The server's exit echo on a preview: both prices and each leg's dollars against the limit. */
+export interface ExitPreview {
+  readonly takeProfit: number;
+  readonly stop: number;
+  readonly takeProfitDollars?: number;
+  readonly stopDollars?: number;
 }
 
 export interface TicketPreview {
@@ -37,6 +47,7 @@ export interface TicketPreview {
   readonly stopPrice?: number;
   /** What will be sent — the server always says, even when the draft left it blank. */
   readonly timeInForce: TicketTimeInForce;
+  readonly exit?: ExitPreview;
   readonly estPrice?: number;
   readonly estNotional?: number;
   readonly estCashAfter?: number;
@@ -52,6 +63,8 @@ export type TicketResult =
       readonly status: string;
       readonly symbol: string;
       readonly timeInForce?: string;
+      /** A bracket's exits as the BROKER echoed them (#8249) — what the receipt names. */
+      readonly exits?: { readonly takeProfit: number; readonly stop: number };
     }
   | { readonly ok: false; readonly refusals: readonly string[] };
 
@@ -88,13 +101,33 @@ export interface TicketFields {
    *  `defaultTimeInForce` pressed and sends nothing — the server previews the default it will
    *  use, so what is shown is always what is sent (#3407 P1). */
   readonly timeInForce?: TicketTimeInForce;
+  /** "Add an exit" is on (#8249). Undefined on a ticket that never offered it. */
+  readonly withExit?: boolean;
+  /** The exit's raw prices — empty until the member types them; nothing is ever prefilled. */
+  readonly takeProfit?: string;
+  readonly exitStop?: string;
 }
 
 export const ORDER_TYPE_LABELS: Record<TicketOrderType, string> = {
   market: "Market",
   limit: "Limit",
   stop: "Stop-Market",
+  stop_limit: "Stop-Limit",
 };
+
+/** The classes the select offers. Stop-Limit only to a session the exit-at-entry setting admits
+ *  (#8249); every other session sees exactly the three it saw before, in the same order. */
+export function orderTypesFor(exitAtEntry: boolean): readonly TicketOrderType[] {
+  return exitAtEntry ? ["market", "limit", "stop", "stop_limit"] : ["market", "limit", "stop"];
+}
+
+/** Whether this ticket may carry an exit: an admitted session, a limit BUY (#8249). */
+export const exitAllowed = (exitAtEntry: boolean, fields: TicketFields): boolean =>
+  exitAtEntry && fields.action === "buy" && fields.orderType === "limit";
+
+/** The one sentence on when a bracket's exits act — Alpaca's own rule, stated before the order. */
+export const EXIT_HOURS_NOTE =
+  "Guards regular hours only: the take-profit and stop don't act between 4pm and 9:30am ET.";
 
 export const TIF_LABELS: Record<TicketTimeInForce, string> = { day: "Day", gtc: "GTC" };
 
@@ -176,6 +209,9 @@ export function orderTypeNote(orderType: TicketOrderType, market: MarketSessionV
   if (orderType === "limit") {
     return `${wait}Fills at your limit price or better, or not at all — a limit order can sit open indefinitely if the price never comes to you.`;
   }
+  if (orderType === "stop_limit") {
+    return `${wait}Stays dormant until the stop price trades, then becomes a limit order at your limit price — it fills at that price or better, or not at all. Unlike Stop-Market, it can be left unfilled in a fast move.`;
+  }
   return `${wait}Stays dormant until the stop price trades, then turns into a plain market order. It will fill — but at whatever the market is paying at that moment, which in a fast move can be well past your stop.`;
 }
 
@@ -199,8 +235,50 @@ export function buildDraft(participantId: string, fields: TicketFields): TicketD
     action: fields.action,
     ...(fields.orderType !== "market" ? { orderType: fields.orderType } : {}),
     ...(field !== undefined && price !== undefined ? { [field]: price } : {}),
+    ...stopLimitPrices(fields),
     ...(fields.timeInForce ? { timeInForce: fields.timeInForce } : {}),
+    ...exitOf(fields),
   };
+}
+
+/** A stop-limit carries both prices (#8249); an unparsable one is left out for the server to name. */
+function stopLimitPrices(fields: TicketFields): Pick<TicketDraft, "stopPrice" | "limitPrice"> {
+  if (fields.orderType !== "stop_limit") return {};
+  const stop = parsePrice(fields.stopPrice);
+  const limit = parsePrice(fields.limitPrice);
+  return {
+    ...(stop !== undefined ? { stopPrice: stop } : {}),
+    ...(limit !== undefined ? { limitPrice: limit } : {}),
+  };
+}
+
+/** The exit rides only a limit buy with "Add an exit" on; a price left blank goes as absent, and
+ *  the server refuses it in words rather than this form guessing one. */
+function exitOf(fields: TicketFields): Pick<TicketDraft, "exit"> {
+  if (!fields.withExit || fields.action !== "buy" || fields.orderType !== "limit") return {};
+  const takeProfit = parsePrice(fields.takeProfit ?? "");
+  const stop = parsePrice(fields.exitStop ?? "");
+  return {
+    exit: {
+      ...(takeProfit !== undefined ? { takeProfit } : {}),
+      ...(stop !== undefined ? { stop } : {}),
+    },
+  };
+}
+
+/** One line per exit, from the server's preview — the dollars are the server's, signed in words as
+ *  well as by sign, so neither hue nor a minus sign carries the meaning alone. The stop's is
+ *  "about": once triggered it sells at the market. */
+export function exitLines(exit: ExitPreview): readonly string[] {
+  const vs = (dollars: number | undefined, about: boolean): string => {
+    if (dollars === undefined) return "";
+    const word = dollars >= 0 ? "gained" : "lost";
+    return ` · ${about ? "about " : ""}${money(Math.abs(dollars))} ${word} against your limit`;
+  };
+  return [
+    `Take-profit ${money(exit.takeProfit)}${vs(exit.takeProfitDollars, false)}`,
+    `Stop ${money(exit.stop)}${vs(exit.stopDollars, true)}`,
+  ];
 }
 
 /** Whether a carry was typed for this ticket's symbol — the only case it may be offered back. */

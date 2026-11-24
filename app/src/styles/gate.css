@@ -240,3 +240,28 @@
   -webkit-appearance: none;
   margin: 0;
 }
+
+/* "Add an exit" (#8249): a reset fieldset, and an inline checkbox with a full tap target. The
+   words carry the state; the box only echoes it. */
+.exit-fields {
+  border: 0;
+  margin: 0 0 12px;
+  padding: 0;
+  min-width: 0;
+}
+.exit-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+}
+.exit-toggle input {
+  accent-color: var(--accent);
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  flex: none;
+}

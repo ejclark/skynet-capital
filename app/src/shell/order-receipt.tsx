@@ -7,6 +7,7 @@ import { useOrderFill } from "../live/desk-events";
 import { manageSearch } from "../live/manage-handoff";
 import { marketSession } from "../live/market-session";
 import {
+  exitWords,
   followRow,
   isLive,
   orderWords,
@@ -125,6 +126,7 @@ export function OrderReceipt({
         <div className="gate-body">
           <p className="receipt-what">{words.instrument}</p>
           <p className="receipt-terms">{words.terms}</p>
+          {order.exits ? <p className="receipt-terms">{exitWords(order.exits)}</p> : null}
           <p className="gate-note">{receiptNote(read, market)}</p>
           {children}
           <p className="receipt-ref">

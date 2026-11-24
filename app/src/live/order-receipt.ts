@@ -40,6 +40,13 @@ export interface SentOrder {
   readonly timeInForce?: string;
   /** An option order's effect as the server reviewed it — "sell_to_open", "buy_to_close". */
   readonly intent?: string;
+  /** A bracket's exits as the broker echoed them (#8249), never the draft's prices. */
+  readonly exits?: { readonly takeProfit: number; readonly stop: number };
+}
+
+/** The receipt's exit line, in words, from the broker's echo (#8249). */
+export function exitWords(exits: NonNullable<SentOrder["exits"]>): string {
+  return `Exits held by the broker · Take-profit ${money(exits.takeProfit)} · Stop ${money(exits.stop)}`;
 }
 
 /** Where the order stands: the order list's own states, plus a cancel the broker hasn't confirmed. */

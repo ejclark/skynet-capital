@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { FocusEvent, ReactElement } from "react";
 import { useEffect, useId, useState } from "react";
-import { marketSession } from "../live/market-session";
+import { marketSession, waitsForOpen } from "../live/market-session";
 import type { PlayInfo } from "../live/options";
 import type { SentOrder } from "../live/order-receipt";
 import { quoteQuery } from "../live/quote-query";
@@ -9,10 +9,13 @@ import {
   buildDraft,
   carryAcrossSide,
   defaultTimeInForce,
+  EXIT_HOURS_NOTE,
+  exitLines,
   money,
   ORDER_TYPE_LABELS,
   orderTypeLabel,
   orderTypeNote,
+  orderTypesFor,
   priceFieldFor,
   reviewTicket,
   submitTicket,
@@ -23,6 +26,7 @@ import {
   type TicketResult,
   tifLabel,
 } from "../live/ticket";
+import { ExitFields, StopLimitFields } from "./exit-fields";
 import { DisarmNote, GateHead, keepFocus } from "./gate-frame";
 import { LockedPanel } from "./locked-panel";
 import { useNow } from "./market-session";
@@ -72,10 +76,34 @@ function OrderLine({ preview }: { readonly preview: TicketPreview }): ReactEleme
   );
 }
 
+/** A bracket's review (#8249): each exit with the server's dollars against the limit, then when it
+ *  works — the open a closed market waits for, and the regular-hours rule. Words carry every
+ *  meaning ("Take-profit", "Stop", "gained", "lost"); no figure here is computed in the browser. */
+function ExitPreviewLines({ preview }: { readonly preview: TicketPreview }): ReactElement {
+  const market = marketSession(useNow());
+  const open = market.state === "open" ? undefined : waitsForOpen(market);
+  return (
+    <>
+      {preview.exit
+        ? exitLines(preview.exit).map((line) => (
+            <p key={line} className="gate-row gate-exit">
+              {line}
+            </p>
+          ))
+        : null}
+      {open ? (
+        <p className="gate-row">Waits for {open}; the exits go to work once it fills.</p>
+      ) : null}
+      <p className="gate-row">{EXIT_HOURS_NOTE}</p>
+    </>
+  );
+}
+
 function PreviewBody({ preview }: { readonly preview: TicketPreview }): ReactElement {
   return (
     <div className="gate-body">
       <OrderLine preview={preview} />
+      {preview.exit ? <ExitPreviewLines preview={preview} /> : null}
       {preview.refusals.map((refusal) => (
         <p key={refusal} className="gate-row gate-refusal">
           ✕ {refusal}
@@ -170,8 +198,12 @@ export function TradeGate({
   header,
   carried,
   onCarry,
+  exitAtEntry = false,
 }: {
   readonly deskId: string;
+  /** This session may place a stop-limit and an exit at entry (#8249) — from the `/api/trade/plays`
+   *  read the parent already makes. False: the ticket is exactly what it was before. */
+  readonly exitAtEntry?: boolean;
   /** `?play=102` preselects Sell — the catalog's stock rungs are the same gate, sided. */
   readonly initialAction?: "buy" | "sell";
   /** False on `/trade`, where the ticket's own nav (#1461) already carries Buy / Sell. */
@@ -312,6 +344,7 @@ export function TradeGate({
         ...(preview.limitPrice === undefined ? {} : { limitPrice: preview.limitPrice }),
         ...(preview.stopPrice === undefined ? {} : { stopPrice: preview.stopPrice }),
         timeInForce: result.timeInForce ?? preview.timeInForce,
+        ...(result.exits ? { exits: result.exits } : {}),
       };
       setState({ step: "done", result, sent });
       // The order list (#3407 P1 slice 2) reads the broker; the receipt finds the order there at
@@ -395,7 +428,7 @@ export function TradeGate({
             value={fields.orderType}
             onChange={(e) => price("orderType")(e.target.value as TicketOrderType)}
           >
-            {(Object.keys(ORDER_TYPE_LABELS) as TicketOrderType[]).map((type) => (
+            {orderTypesFor(exitAtEntry).map((type) => (
               <option key={type} value={type}>
                 {ORDER_TYPE_LABELS[type]}
               </option>
@@ -420,7 +453,19 @@ export function TradeGate({
             />
           </div>
         ) : null}
+        <StopLimitFields
+          fields={fields}
+          onStop={price("stopPrice")}
+          onLimit={price("limitPrice")}
+        />
       </div>
+      <ExitFields
+        exitAtEntry={exitAtEntry}
+        fields={fields}
+        onToggle={edit("withExit")}
+        onTakeProfit={edit("takeProfit")}
+        onStop={edit("exitStop")}
+      />
       {fields.action === "sell" ? (
         <HeldShares deskId={deskId} symbol={quoteSym} onSellAll={edit("quantity")} />
       ) : null}
