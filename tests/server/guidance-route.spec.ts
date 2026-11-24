@@ -1,4 +1,6 @@
 import type { ServerResponse } from "node:http";
+import type { AlpacaOptionsClient } from "../../src/alpaca/alpaca-options-client.js";
+import type { AlpacaTradingClient } from "../../src/alpaca/alpaca-trading-client.js";
 import { positionGuidance } from "../../src/options/position-guidance.js";
 import type { GuidanceMarket } from "../../src/options/position-guidance-types.js";
 import { priceOption } from "../../src/options/pricing.js";
@@ -6,6 +8,7 @@ import { daysToExpiryFrom } from "../../src/options/single-leg-odds.js";
 import { InMemoryIvHistory } from "../../src/research/in-memory-iv-history.js";
 import type { SpotCheck } from "../../src/research/spot-checks.js";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
+import { readGuidanceMarket } from "../../src/server/guidance-market-read.js";
 import { serveGuidance, withWindowChain } from "../../src/server/guidance-route.js";
 
 /**
@@ -85,11 +88,17 @@ function broker(spot = 80, chainShift = 0, open = true) {
       );
     },
   };
+  const trading = { isMarketOpen: () => Promise.resolve(open) };
   const config = {
     optionsClientFor: () => client,
-    tradingClientFor: () => ({ isMarketOpen: () => Promise.resolve(open) }),
+    tradingClientFor: () => trading,
   } as unknown as DashboardServerConfig;
-  return { config, chainCalls };
+  return {
+    config,
+    chainCalls,
+    options: client as unknown as AlpacaOptionsClient,
+    trading: trading as unknown as AlpacaTradingClient,
+  };
 }
 
 const deps = {
@@ -104,6 +113,30 @@ const STAKE = { shares: 400, costBasis: 70, cash: 40_000, goal: "income" as cons
 
 /** What the member's browser does with the answer: apply the stake it never sent. */
 const inBrowser = (market: GuidanceMarket) => positionGuidance({ ...market, stake: STAKE });
+
+describe("readGuidanceMarket — one market read for the member route and the bots (#3798 slice 1)", () => {
+  it("builds, from the route's own broker, the market the route answers with, byte for byte", async () => {
+    const { config, options, trading } = broker();
+    const r = fakeRes();
+    await serveGuidance(r.res, `${URL}&refresh=1`, config, "parity-a", deps);
+    const direct = await readGuidanceMarket({ options, trading, ...deps }, "CRWV", true);
+    expect(JSON.stringify({ market: direct })).toBe(r.out.body);
+  });
+
+  it("serves a caller with no member, no session and only its own keys — a bot's read", async () => {
+    const { options } = broker();
+    const market = await readGuidanceMarket({ options, ...deps }, "CRWV");
+    if ("reason" in market) throw new Error(market.note);
+    // No broker clock: the session is judged off the wall clock (18:00Z is 14:00 ET, a weekday).
+    expect(market.sessionOpen).toBe(true);
+    expect(market.ivRank).toBeUndefined();
+    expect(inBrowser(market).calls.map((c) => c.lever)).toEqual([
+      "shares",
+      "covered-calls",
+      "cash-secured-puts",
+    ]);
+  });
+});
 
 describe("serveGuidance — the spot cross-check count (#3729)", () => {
   it("records one line per fresh read, keyed by symbol, with no member id in it", async () => {
