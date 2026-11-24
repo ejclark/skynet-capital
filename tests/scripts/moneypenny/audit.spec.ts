@@ -414,8 +414,8 @@ describe("staleInProgressFrom() — the in-flight issues and how long each has b
       now,
     );
     expect(rows).toEqual([
-      { number: 3651, title: "Plan 3651", hoursQuiet: 20 },
-      { number: 3939, title: "Plan 3939", hoursQuiet: 31 },
+      { number: 3651, title: "Plan 3651", inProgress: true, hoursQuiet: 20 },
+      { number: 3939, title: "Plan 3939", inProgress: true, hoursQuiet: 31 },
     ]);
   });
 
