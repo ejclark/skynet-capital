@@ -24,7 +24,12 @@ function fridaysAfter(now: Date): string[] {
   return out;
 }
 
-function quote(now: Date, expiration: string, strike: number, type: "call" | "put"): GuidanceQuote {
+function stagedQuote(
+  now: Date,
+  expiration: string,
+  strike: number,
+  type: "call" | "put",
+): GuidanceQuote {
   const days = daysToExpiryFrom(expiration, now) ?? 1;
   const v = priceOption({ spot: SPOT, strike, daysToExpiry: days, volatility: IV, type });
   const price = v?.price ?? 0;
@@ -42,7 +47,7 @@ function quote(now: Date, expiration: string, strike: number, type: "call" | "pu
 /** The market `suggestMarketFor` returns in the eval: NVDA, session open, on `now`. */
 export function stageTradeMarket(now: Date): GuidanceMarket {
   const chain = fridaysAfter(now).flatMap((e) =>
-    STRIKES.flatMap((k) => [quote(now, e, k, "call"), quote(now, e, k, "put")]),
+    STRIKES.flatMap((k) => [stagedQuote(now, e, k, "call"), stagedQuote(now, e, k, "put")]),
   );
   return {
     symbol: "NVDA",
