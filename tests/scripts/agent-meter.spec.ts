@@ -1,7 +1,10 @@
 import { describe, expect, it } from "@rstest/core";
+// @ts-expect-error plain .mjs script, no declarations
+import { heldRows } from "../../scripts/agent-meter/render.mjs";
 import {
   ciByTrigger,
   crossesRepeatedHour,
+  heldWaits,
   iterationRow,
   localVerify,
   mainFailuresByJob,
@@ -252,5 +255,38 @@ describe("agent meter", () => {
 
   it("has no startup to report before the first answer", () => {
     expect(startupFromTranscript(["{}"])).toBeNull();
+  });
+});
+
+// #7317: nothing measured a held PR's wait; `npm run meter` folded it into open-to-merge, which only
+// sees a PR once it merges. Each held PR open now gets its own green-to-now row.
+describe("held PRs: green-to-now, apart from open-to-merge", () => {
+  const now = Date.parse("2026-11-23T20:00:00Z");
+  const pr = (number: number, openHours: number) => ({
+    number,
+    title: `held ${number}`,
+    created_at: new Date(now - openHours * 36e5).toISOString(),
+  });
+
+  it("reads both clocks per PR, longest green first, a not-green PR last", () => {
+    const rows = heldWaits(
+      [
+        { pr: pr(7211, 5), greenAt: now - 2 * 36e5 },
+        { pr: pr(7080, 40), greenAt: null },
+        { pr: pr(7030, 30), greenAt: now - 26 * 36e5 },
+      ],
+      now,
+    );
+    expect(rows.map((r: { number: number }) => r.number)).toEqual([7030, 7211, 7080]);
+    expect(heldRows(rows)).toEqual([
+      "  held #7030: green to now 26.0h (open 30.0h, live)",
+      "  held #7211: green to now 2.0h (open 5.0h, live)",
+      "  held #7080: not green (open 40.0h, live)",
+    ]);
+  });
+
+  it("says none open when none is, and unavailable when the read failed", () => {
+    expect(heldRows([])).toEqual(["  held PRs: none open"]);
+    expect(heldRows("unavailable: 502")).toEqual(["  held PRs: unavailable: 502"]);
   });
 });

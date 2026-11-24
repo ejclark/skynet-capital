@@ -1,0 +1,51 @@
+{
+  "$comment": "World 'rd-own-views' (#8005, R&D), layered over rd-today: the same Monday, after Eric has written into R&D himself. On Friday evening he stated a view of his own on CRWV that would steer his bot's CRWV wheel (saved, not yet handed over — the house's AI-dip view still steers that pair), and at lunch today he drafted a playbook of his own for his bot to run. So R&D shows a member's own conviction view, the house's view steering the same pair, and his own draft beside the house's playbooks: the two meanings of 'conviction' IA §5.4 records as undecided, on one page. Both are written through production's own handlers into production's own stores at compose (member-stores.mjs); every stamp is the store's, and a write the handler refuses stops the compose.",
+  "base": "rd-today",
+  "stores": ["memberConvictions", "authoredPlays"],
+  "writes": [
+    {
+      "member": "eric@study.world",
+      "at": "@-3d 20:10",
+      "path": "/api/convictions/save",
+      "body": {
+        "draft": {
+          "title": "CRWV's sell-off is overdone",
+          "checkOn": "2027-02-26",
+          "claims": [
+            {
+              "tag": "underrated",
+              "statement": "CRWV's signed backlog covers more of next year's revenue than the price allows for.",
+              "bucket": "forward",
+              "evidence": "The last report's backlog grew faster than its spending plan.",
+              "falsifier": "The next report cuts the backlog or the revenue guide.",
+              "scoreBy": "2027-02-26"
+            }
+          ],
+          "steers": ["CRWV-WHEEL"]
+        }
+      }
+    },
+    {
+      "member": "eric@study.world",
+      "at": "@0d 12:15",
+      "path": "/api/authored-plays/save",
+      "body": {
+        "form": {
+          "name": "CRWV news pop",
+          "symbol": "CRWV",
+          "thesis": "CRWV jumps on contract news and gives most of it back by the next day.",
+          "strategy": "event-window",
+          "settings": {
+            "holdMinutes": 90
+          },
+          "sizePercent": {
+            "conservative": 1,
+            "standard": 2,
+            "aggressive": 3
+          },
+          "runsOn": "sauron"
+        }
+      }
+    }
+  ]
+}

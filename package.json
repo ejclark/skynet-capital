@@ -149,6 +149,7 @@
     "crawl:coverage": "node scripts/crawl/coverage.mjs",
     "ia:ledger": "node scripts/ia-ledger.mjs",
     "cohesion:census": "node scripts/crawl/cohesion.mjs",
+    "cohesion:placement": "node scripts/crawl/placement.mjs",
     "phone": "tsx scripts/crawl/phone-one.mjs",
     "study:compose": "tsx scripts/study/worlds/compose.mjs",
     "study:parity": "tsx scripts/study/parity.mjs",

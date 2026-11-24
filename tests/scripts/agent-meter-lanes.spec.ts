@@ -247,8 +247,8 @@ describe("reading the lanes over REST with a cache", () => {
       inProgress: 1,
       unreadRuns: 0,
     });
-    // 15 listings (3 workflows × 5 lane events) + 1 zip; the short run and the running one cost nothing.
-    expect(cold.calls).toBe(16);
+    // 18 listings (3 workflows × 6 lane events) + 1 zip; the short run and the running one cost nothing.
+    expect(cold.calls).toBe(19);
 
     const warm = fakeRest(routes());
     const second = await readLanes({
@@ -259,7 +259,7 @@ describe("reading the lanes over REST with a cache", () => {
       maxRest: 100,
     });
     expect(second.rows).toEqual(first.rows);
-    expect(warm.calls).toBe(15);
+    expect(warm.calls).toBe(18);
     expect(warm.paths.some((p) => p.includes("/logs"))).toBe(false);
   });
 
@@ -268,7 +268,7 @@ describe("reading the lanes over REST with a cache", () => {
     const rest = fakeRest(routes());
     const out = await readLanes({ rest, cache, sinceMs: since, untilMs: until, maxRest: 1 });
     expect(out.counts.unreadRuns).toBe(1);
-    expect(out.counts.unlisted).toHaveLength(14);
+    expect(out.counts.unlisted).toHaveLength(17);
     expect(out.counts.unlisted[0]).toBe("moneypenny-events.yml issue_comment");
     expect(out.rows.research).toBeUndefined();
   });

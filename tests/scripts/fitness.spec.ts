@@ -1000,6 +1000,26 @@ describe("fitness: the owner is assigned last", () => {
       expect(path(mine).status).toBe("pass");
     });
 
+    // #6701: GitHub's assignee filter drops a thread he left, so the read adds the fitness threads.
+    it("counts a bot's assignment on a fitness thread he left, and only that", () => {
+      const stale = held(1, "work", "OPEN", [event("Bot", 31 * day)]);
+      const left = held(7, "[fitness] bots-running", "OPEN", [event("Bot", 120 * MIN)]);
+      const both = (threads: unknown[]) =>
+        judgeAssignmentPath({ assignable: true, issues: [stale], threads }, NOW);
+      expect(both([left]).status).toBe("pass");
+      // Nothing fresh anywhere, held or left: it still fails, and the drill opens as today.
+      const oldLeft = held(7, "[fitness] bots-running", "CLOSED", [event("Bot", 31 * day)]);
+      expect(both([oldLeft]).detail).toContain("no bot has assigned the owner");
+      expect(both([]).status).toBe("fail");
+      // A thread he left and had assigned himself is his answer, not a re-assign.
+      const selfLeft = held(8, "[fitness] x", "OPEN", [event("Bot", day), event("User", MIN)]);
+      const r = both([selfLeft]);
+      expect(r.status).toBe("pass");
+      expect(r.reassign).toBeUndefined();
+      // A pull request the search returns comes back as an empty node.
+      expect(both([{}]).status).toBe("fail");
+    });
+
     it("says in its own words that it does not prove the email or the watch", () => {
       const text = contract("owner-assignment-path").mustBeTrue;
       expect(text).toContain("does not prove");

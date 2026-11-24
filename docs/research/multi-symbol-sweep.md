@@ -71,6 +71,10 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"The 2Y auction-day front-end rally is a live regime: the 2026-11-23 2Y CMT closes at or below -3.0bp (FT-treasury-2y-note-2026-11-23-1)"** — added 2026-11-24 from the
+  [treasury-2y-note-2026-11-23 close-out](events/treasury-2y-note-2026-11-23.md). The 2Y closed **4.63 → 4.63 (0bp)** on a far-from-FOMC sale at $69B, with the prior-session VIX at **35.89** and the 2Y already **-13bp** on the sale-eve session.
+  Do not use the -6.07bp 2023+ auction-day prior flat for the next 2Y sale; condition it on prior-session VIX under 20 (FT-3 passed the same day), and do not read one 0bp print as proof the regime is gone.
+
 - **"Microsoft Ignite week carries no MSFT alpha: MSFT minus QQQ stays at or below 0.0pp from the 2026-11-13 to the 2026-11-20 close, the post-print lag holds (FT-msft-ignite-2026-11-17-1)"** — added 2026-11-23 from the
   [msft-ignite-2026-11-17 close-out](events/msft-ignite-2026-11-17.md). MSFT **−7.33%** vs QQQ **−10.51%**, **+3.17pp**, past the +2.0pp kill bar, in a week the Nasdaq-wide AI selloff took VIX from 19.30 to 35.89.
   Do not re-propose a conference-week lag off three Ignite weeks plus a drift cell; the 2026 margin was a single rout day (11/20: +2.99pp) and reads as lower beta, not a conference effect.
@@ -291,6 +295,12 @@ robust, alpha fragile — is the finding.
   **+0.131%** (+$10.2bn on a $7,783.3bn base) — above the line by 0.05pp, ~0.2σ of the model's residual sd. Do not re-register a
   directional drift test on this model off the trailing-residual average: it described the past and missed the one month built
   to measure it. The one-factor model itself passed its band test (FT-1) and is not retired.
+
+- **"September 2026's foreign long-term Treasury valuation change prints *below* the two-window midpoint (−0.0064 − 0.043045 × Δ), because the last-18 intercept (−0.096%) beats the full-sample one" (FT-tic-monthly-2026-11-18-2)** — added 2026-11-24 from the
+  [tic-monthly-2026-11-18 close-out](events/tic-monthly-2026-11-18.md). Registered 2026-09-08 on a September Δ10Y that fixed at +54.0bp.
+  September printed **−2.281%** (−$180.2bn), above the −2.331% midpoint by 0.05pp. The second consecutive month the trailing-window
+  drift lost to the full-sample fit; with the sibling entry above, do not re-register a directional intercept test on this model.
+  Its band test (FT-1) passed and the model is not retired.
 
 - **"A hot ISM Services Prices print does not produce a hawkish yield day — `^TNX` is not up by more than its own median
   |move|" (FT-ism-services-2026-11-04-1)** — added 2026-10-16 from the

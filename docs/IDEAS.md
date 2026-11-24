@@ -18,6 +18,13 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **Reword `.claude/skills/steer/SKILL.md`'s "The bar says whether Claude is listening" bullet to
+  name `ackFor` beside `ackAt` and quote today's bar text ("✓ Received — Claude is reading your
+  answers back…").** It describes the page, not a stamp, so #6734's writer check passes it, but it
+  still teaches the old ackAt-only shape and the old wording. The feedback lane's harness refused the
+  write under `.claude/` twice (#7724, #6734) — needs an interactive session.
+  _(src: Claude · while: #6734 feedback build)_
+
 - **Count how many suggested tickets get placed, then decide the ticket's *Suggested* section.**
   #7547 shipped Moneypenny's three sized options for all four strategies; its falsifier (by
   2026-12-13, under 1 in 10 suggested tickets placed → revisit the tier thresholds before more
@@ -1950,3 +1957,13 @@ per PR that is held, unprotected, green and over a day old, for `/secretary`'s d
 page: "held without a protected path; lift it?". That turns a five-day wait into a one-tap
 question the next morning.
 _(src: Claude · while: clearing #7672's mistaken hold)_
+
+### A close-out hold that one far-off forward test cancels buys a session that can only leave
+
+`closeOutHold` (`scripts/forward-test-pending.mjs`) holds a close-out only when *every* pending forward
+test scores inside `closeOutWithinDays`. An event with one in-window row and one row years out (here
+`jpx-market-closure-2026-11-23`: FT-1 due 2026-11-25, FT-2 due 2027-01-15) dispatches on D+1 anyway,
+before FT-1's own bar has closed, so the session can write the outcome but not the score. Holding to the
+latest *in-window* score-by, and leaving the beyond-window row to the `forward-test-due` door, would save
+that session. Falsifier: count close-outs dispatched with an in-window row still unscoreable.
+_(src: Claude · while: closing out jpx-market-closure-2026-11-23 at D+1)_

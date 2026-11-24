@@ -87,8 +87,10 @@ describe("the page body", () => {
     expect(body).toContain("_On silence: nothing is built_");
   });
 
-  it("lists held PRs as links only, and never offers a reply as the merge", () => {
-    expect(body).toContain("**Held for your merge:** 1 — #7424.");
+  it("lists held PRs one per line, and never offers a reply as the merge", () => {
+    expect(body).toContain("**Held for your merge: 1.**");
+    // A row with no clock (no hours) is a bare link: nothing is claimed that was not read.
+    expect(body).toContain("\n- #7424\n");
     expect(body).toContain("no reply here is read as a merge");
   });
 
@@ -96,12 +98,19 @@ describe("the page body", () => {
     const merge = issue(7548, { body: callout("Merge held platter #7424?") });
     const out = planDecisions({ needsYou: [row(7548)], issues: [merge], now: NOW });
     expect(out.state.entries).toEqual([]);
-    expect(out.body).toContain("**Held for your merge:** 1 — #7548.");
+    expect(out.body).toContain("**Held for your merge: 1.**");
+    expect(out.body).toContain("- #7548 ask 7548");
   });
 
   it("carries its state, so the next tick keeps every number", () => {
     expect(stateOf(body).entries).toEqual(state.entries);
-    expect(stateOf("no state here")).toEqual({ entries: [], retired: [], pinged: [], pingedAt: 0 });
+    expect(stateOf("no state here")).toEqual({
+      entries: [],
+      retired: [],
+      pinged: [],
+      pingedAt: 0,
+      heldPinged: [],
+    });
   });
 
   it("changes nothing on a tick where nothing changed", () => {
@@ -112,6 +121,83 @@ describe("the page body", () => {
       now: NOW + 60_000,
     });
     expect(again.intents).toEqual([]);
+  });
+});
+
+// #7317: every held PR due his merge, as one ask — named, timed from green, what it blocks, what
+// silence does — and pinged once, never one card per PR.
+describe("held PRs as one ask (#7317)", () => {
+  const green = (number: number, hours: number, blocks: NeedsYouRow["blocks"] = []) => ({
+    number,
+    title: `held ${number}`,
+    criterion: 4,
+    why: `held PR green ${hours}h`,
+    green: true,
+    hours,
+    blocks,
+  });
+  const plan6871 = [{ number: 6871, title: "plan", plan: true }];
+  const heldOnly = (over: Record<string, unknown> = {}) =>
+    planDecisions({ needsYou: [green(7030, 26, plan6871), green(7211, 5)], now: NOW, ...over });
+
+  it("names each PR, how long it has been green, what it blocks and what silence does", () => {
+    const { body } = heldOnly();
+    expect(body).toContain("**2 held PRs wait on your merge.**");
+    expect(body).toContain(
+      "- #7030 held 7030 — green 26h · blocks plan #6871 · _On silence: it stays open, and plan #6871 keeps waiting._",
+    );
+    expect(body).toContain("- #7211 held 7211 — green 5h · _On silence: it stays open._");
+    expect(body).not.toContain("Nothing waits on you");
+  });
+
+  it("says a held PR is not green when only the 12h backstop made it due", () => {
+    const row = { number: 7080, criterion: 4, green: false, hours: 13 };
+    expect(planDecisions({ needsYou: [row], now: NOW }).body).toContain(
+      "- #7080 — open 13h, checks not green",
+    );
+  });
+
+  it("opens the page for held PRs alone, and the assignment is the push", () => {
+    const { intents, state } = heldOnly();
+    expect(kinds(intents)).toEqual(["decisions-open"]);
+    expect(state.heldPinged.map((h) => h.n)).toEqual([7030, 7211]);
+  });
+
+  it("pings once for every new held PR, in one comment, when he is already on the page", () => {
+    const { intents } = heldOnly({ page: page() });
+    const sync = intents[0] as Extract<DecisionsIntent, { kind: "decisions-sync" }>;
+    expect(sync.assign).toBe(false);
+    expect(sync.ping).toContain(
+      "2 held PRs ready for your merge: #7030 (green 26h, blocks plan #6871); #7211 (green 5h)",
+    );
+  });
+
+  it("never pings the same held PR twice inside a day, even if it left the list meanwhile", () => {
+    const first = heldOnly({ page: page() });
+    const sync = first.intents[0] as Extract<DecisionsIntent, { kind: "decisions-sync" }>;
+    const body = sync.body ?? "";
+    // A push restarted 7030's checks: it is off the list for a tick, then back in the next window.
+    const off = planDecisions({
+      needsYou: [green(7211, 6)],
+      page: page({ body }),
+      now: NOW + 36e5,
+    });
+    const offBody =
+      (off.intents[0] as Extract<DecisionsIntent, { kind: "decisions-sync" }> | undefined)?.body ??
+      body;
+    const back = planDecisions({
+      needsYou: [green(7030, 4, plan6871), green(7211, 13)],
+      page: page({ body: offBody }),
+      now: Date.parse("2026-11-22T22:00:00Z"), // past the 21:30Z batch start
+    });
+    for (const i of back.intents) expect((i as { ping?: string | null }).ping ?? null).toBeNull();
+  });
+
+  it("takes him off the page once nothing is held and nothing is asked", () => {
+    const { body } = heldOnly();
+    const { intents } = planDecisions({ needsYou: [], page: page({ body }), now: NOW + 60_000 });
+    const sync = intents[0] as Extract<DecisionsIntent, { kind: "decisions-sync" }>;
+    expect(sync.unassign).toBe(true);
   });
 });
 
@@ -194,6 +280,59 @@ describe("his reply fans out through answer-readback's path", () => {
       user: { type: "User", login: "x" },
     };
     expect(kinds(planDecisions(deps([footed, stranger])).intents)).toEqual([]);
+  });
+
+  // #7957: tick 1's sync used to retire an answered ask before the answer was applied. When the
+  // answer intent then failed (a 502, or a busy lease), tick 2 read his reply against the retired
+  // entry as "cleared before this was read", receipted it, and lost the answer.
+  describe("an answer that did not land (#7957)", () => {
+    const tick1 = planDecisions(deps([his(55, "1A")]));
+    const sync = tick1.intents[1] as Extract<DecisionsIntent, { kind: "decisions-sync" }>;
+
+    it("keeps the answered ask's number in the page's state until the ask leaves", () => {
+      expect(stateOf(sync.body ?? "").entries.map((e) => [e.n, e.issue])).toEqual([
+        [1, 7669],
+        [2, 7670],
+      ]);
+      expect(stateOf(sync.body ?? "").retired).toEqual([]);
+    });
+
+    it("still draws the page without it, the tick he answered", () => {
+      expect(sync.body).toContain("**1 decision waits on you.");
+      expect(sync.body).not.toContain("**1 · #7669**");
+      expect(sync.body).toContain("**2 · #7670**");
+    });
+
+    it("re-reads the unreceipted reply next tick and answers it again", () => {
+      const tick2 = planDecisions({
+        ...deps([his(55, "1A")]),
+        page: page({ body: sync.body ?? "" }),
+        now: NOW + 60_000,
+      });
+      const ans = tick2.intents[0] as Extract<DecisionsIntent, { kind: "decisions-answer" }>;
+      expect(ans.kind).toBe("decisions-answer");
+      expect(ans.readbacks.map((r) => r.number)).toEqual([7669]);
+      expect(ans.unread).toEqual([]);
+      expect(tick2.state.entries.map((e) => [e.n, e.issue])).toEqual([
+        [1, 7669],
+        [2, 7670],
+      ]);
+    });
+
+    it("retires the number once the answer landed and the ask left", () => {
+      const receipt = { body: receiptComment({ replyId: 55 }), user: BOT };
+      const tick2 = planDecisions({
+        needsYou: [row(7670)],
+        issues: [issue(7670)],
+        page: page({ body: sync.body ?? "" }),
+        comments: [his(55, "1A"), receipt] as never[],
+        now: NOW + 60_000,
+      });
+      expect(tick2.state.entries.map((e) => e.issue)).toEqual([7670]);
+      expect(tick2.state.retired.map((r) => [r.n, r.issue, r.until])).toEqual([
+        [1, 7669, NOW + 60_000],
+      ]);
+    });
   });
 
   it("never answers a reply twice, and says nothing to a note with no number in it", () => {

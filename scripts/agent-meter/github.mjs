@@ -1,6 +1,7 @@
 // The meter's other REST reads (#6470): pipeline runs for the first-pass split, and merged PRs for
 // open-to-merge. Both go through the same counted layer as the lanes, so the run's REST total is
 // one number.
+import { greenSince, isHeldPr } from "../held-pr.mjs";
 import { listRuns, noop, REPO } from "./lanes.mjs";
 
 /** One run's failing jobs and the step each died at: the shape `cache.pipeline` holds. */
@@ -76,4 +77,27 @@ export function defectIssues(rest, sinceMs) {
   const day = new Date(sinceMs).toISOString().slice(0, 10);
   // is:issue, because a PR that quotes the two fields is not a finding.
   return searchIssues(rest, `"Introduced in" in:body is:issue created:>=${day}`);
+}
+
+/**
+ * Every held PR open now, with when its head last went green (#7317): one list read and one
+ * check-runs read per held PR — a handful, never one per open PR. The meter reports their wait
+ * apart from open-to-merge, which only ever sees a held PR after it has merged.
+ */
+export function openHeldPrs(rest) {
+  const open = [];
+  for (let page = 1; ; page += 1) {
+    // A list cut short would drop a held PR and read as a shorter wait, so a list this long is
+    // unavailable, never a partial reading (#6694).
+    if (page > 10) throw new Error("more than 1,000 open PRs; held PRs not read");
+    const batch = rest.api(`repos/${REPO}/pulls?state=open&per_page=100&page=${page}`);
+    open.push(...batch);
+    if (batch.length < 100) break;
+  }
+  return open.filter(isHeldPr).map((pr) => ({
+    pr,
+    greenAt: greenSince(
+      rest.api(`repos/${REPO}/commits/${pr.head.sha}/check-runs?per_page=100`).check_runs ?? [],
+    ),
+  }));
 }
