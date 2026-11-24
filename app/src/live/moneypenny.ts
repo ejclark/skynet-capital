@@ -363,7 +363,7 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
   /** A scene thread takes its event's name from her first reply in it (`moneypenny-scene.ts`). */
   const nameScene = (key: string | undefined, reply: string) => {
     const open = get().thread;
-    if (!open || !isSceneKey(key) || open.key !== key || open.title !== SCENE_TITLE) return;
+    if (!(open && isSceneKey(key)) || open.key !== key || open.title !== SCENE_TITLE) return;
     const named = { ...open, title: sceneTitle(reply) };
     set({ thread: named });
     renamed(named);

@@ -27,7 +27,7 @@ export const PLAY_SCENE: Move = { kind: "scene", label: PLAY_SCENE_LABEL };
 export const SCENE_CHOICE_LABELS = ["Watch it", "Take a paper position", "Stand aside"] as const;
 
 export const isSceneKey = (key: string | undefined): boolean =>
-  key !== undefined && key.startsWith(SCENE_KEY_PREFIX);
+  key?.startsWith(SCENE_KEY_PREFIX) === true;
 
 /** A fresh scene thread. `path` is the page it was started on, so History can point back there. */
 export function newSceneThread(now: number, path: string): MpThread {
