@@ -12,6 +12,11 @@ export interface TradeUpdatesStreamConfig {
   readonly participantId: string;
   readonly apiKey: string;
   readonly apiSecret: string;
+  /**
+   * The Connect-with-Alpaca OAuth token (#8250). When set, the handshake is the OAuth frame and
+   * the key pair (blank on a connected account) is never sent.
+   */
+  readonly accessToken?: string;
   /** HTTP base, e.g. https://paper-api.alpaca.markets. Converted to the wss /stream URL. */
   readonly baseUrl: string;
   readonly onEvent: (event: ObservatoryEvent) => void;
@@ -34,6 +39,20 @@ const MAX_RECONNECT_DELAY_MS = 60_000;
 export function streamUrlFromBase(baseUrl: string): string {
   const root = baseUrl.replace(/\/v2\/?$/, "").replace(/^http/, "ws");
   return `${root}/stream`;
+}
+
+/**
+ * The handshake frame. A key-pair account sends `auth` with key and secret; a connected account
+ * sends Alpaca's OAuth form — `authenticate` with an `oauth_token` — because its key and secret
+ * are blank and a key frame would be refused, leaving its fills to the 60-second broker re-sync.
+ */
+export function authFrame(
+  config: Pick<TradeUpdatesStreamConfig, "apiKey" | "apiSecret" | "accessToken">,
+): string {
+  if (config.accessToken) {
+    return JSON.stringify({ action: "authenticate", data: { oauth_token: config.accessToken } });
+  }
+  return JSON.stringify({ action: "auth", key: config.apiKey, secret: config.apiSecret });
 }
 
 /**
@@ -84,11 +103,7 @@ export class AlpacaTradeUpdatesStream {
     this.socket = socket;
     this.listening = false;
 
-    socket.addEventListener("open", () => {
-      socket.send(
-        JSON.stringify({ action: "auth", key: this.config.apiKey, secret: this.config.apiSecret }),
-      );
-    });
+    socket.addEventListener("open", () => socket.send(authFrame(this.config)));
     socket.addEventListener("message", (event) => {
       if (this.socket === socket) this.onMessage(event.data);
     });

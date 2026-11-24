@@ -1,5 +1,6 @@
 import {
   AlpacaTradeUpdatesStream,
+  authFrame,
   streamUrlFromBase,
 } from "../../src/alpaca/trade-updates-stream.js";
 
@@ -14,6 +15,21 @@ describe("streamUrlFromBase", () => {
     expect(streamUrlFromBase("https://paper-api.alpaca.markets/v2")).toBe(
       "wss://paper-api.alpaca.markets/stream",
     );
+  });
+});
+
+describe("authFrame", () => {
+  it("sends the key pair for a pasted-key account", () => {
+    expect(JSON.parse(authFrame({ apiKey: "PK1", apiSecret: "s" }))).toEqual({
+      action: "auth",
+      key: "PK1",
+      secret: "s",
+    });
+  });
+
+  it("sends Alpaca's OAuth frame, and no key pair, for a connected account (#8250)", () => {
+    const frame = JSON.parse(authFrame({ apiKey: "", apiSecret: "", accessToken: "tok" }));
+    expect(frame).toEqual({ action: "authenticate", data: { oauth_token: "tok" } });
   });
 });
 

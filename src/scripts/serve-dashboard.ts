@@ -48,6 +48,7 @@ import { createIvHistoryStore } from "../research/iv-sampler.js";
 import { createSpotChecks } from "../research/spot-checks.js";
 import { resolveDataSource } from "../runtime/data-source.js";
 import { accountPersonasFrom } from "../server/account-personas-fold.js";
+import { resolveAlpacaConnect } from "../server/alpaca-connect-wiring.js";
 import { ownerEmails } from "../server/auth/resolve-auth.js";
 import { createBookHealthHistoryStore } from "../server/book-health-history-store.js";
 import { startBookHealthSampler } from "../server/book-health-sampler.js";
@@ -261,6 +262,12 @@ async function main(): Promise<void> {
     findRosterParticipant: (id) => envRoster.find((p) => p.id === id),
     isOwnerEmail: (email) => owners.has(email.toLowerCase()),
   });
+  // Connect with Alpaca (#8250): live only — offline has no Alpaca to send a member to — and on
+  // only once Eric's app secrets are set AND the provider asks for paper (alpaca-connect-wiring.ts).
+  const alpacaConnect =
+    dataSource.mode === "live"
+      ? resolveAlpacaConnect(process.env, { service, log: (line) => console.log(line) })
+      : undefined;
 
   // Account service + live-roster/findParticipant/clientFor helpers (dashboard-desk-wiring.ts).
   // Removing an account closes BOTH of its sockets — the fill stream and (if it is streaming a
@@ -450,6 +457,7 @@ async function main(): Promise<void> {
     ...(auth ? { auth } : {}),
     ...(publicUrl ? { publicUrl } : {}),
     addParticipant: (input) => service.addParticipant(input),
+    ...(alpacaConnect ? { alpacaConnect } : {}),
     rotateCredentials: (input) => service.rotateCredentials(input),
     accountAdmin: buildAccountAdmin(accounts, store),
     subscriptions,
