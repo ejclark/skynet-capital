@@ -1,4 +1,12 @@
-// THE SESSION HOLD (#6065) — a live session holds a plan through its own merges.
+// THE SESSION HOLD (#6065) — a live session holds a plan through its own merges. #8314 extends it to
+// a feedback issue the session ships in more than one PR (`--hold feedback-<n>`): on 2026-11-24 a
+// surge child's first PR merged, `in-progress` came off, and the feedback lane built the child's
+// second PR beside it, twice in one hour. The feedback claim reads the same rule for a ref hold;
+// its activity is the issue's own `updated_at` (labels, comments). A CLOUD session cannot write the
+// ref at all (its proxy answers 403, measured the same night), so `--hold` falls back to the
+// `session-held` label, written over REST. That label is in the pull rule (`notPullable`), so every
+// claim path refuses it; `pr-in-progress.mjs` keeps `in-progress` on beside it at a merge; and
+// `--release` or the stall audit's 6h sweep takes it off.
 //
 // WHAT BROKE. On 2026-10-26 a `/work-issues` session took #5482 at 11:30 by labelling it
 // `in-progress`, and nothing else. Its first slice PR merged at 11:57; `pr-in-progress.mjs` saw no
@@ -48,6 +56,18 @@ export function lastActivityMs(takenMs, activityMs = []) {
 }
 
 /**
+ * Is a session's hold live by the activity rule above? Live while its last activity (the stamp, or
+ * any time in `activityMs`) is within the TTL. Shared by continuation (plans) and the feedback claim
+ * (#8314), so the two lanes can never disagree about when a session has gone quiet.
+ *
+ * @returns {{ live: boolean, quietMin: number }}
+ */
+export function sessionHoldLive(lease, activityMs, nowMs, ttlMs) {
+  const quietMs = nowMs - lastActivityMs(lease.takenMs, activityMs);
+  return { live: quietMs < ttlMs, quietMin: Math.round(quietMs / 60000) };
+}
+
+/**
  * Should continuation release this plan's lease and claim the next slice, or leave it alone?
  *
  * @param lease `{ takenMs, holder }`, or null when no lease is held
@@ -60,11 +80,13 @@ export function continuationLeaseVerdict(lease, pick = {}, nowMs, ttlMs) {
     return { action: "release", reason: "no lease held" };
   }
   if (lease.holder === SESSION_HOLDER) {
-    const quietMs = nowMs - lastActivityMs(lease.takenMs, [pick.mergedMs, pick.blockEditedMs]);
-    const quietMin = Math.round(quietMs / 60000);
-    return quietMs < ttlMs
-      ? { action: "leave", reason: `held by a live session (last activity ${quietMin}m ago)` }
-      : { action: "release", reason: `the session hold went quiet ${quietMin}m ago — released` };
+    const hold = sessionHoldLive(lease, [pick.mergedMs, pick.blockEditedMs], nowMs, ttlMs);
+    return hold.live
+      ? { action: "leave", reason: `held by a live session (last activity ${hold.quietMin}m ago)` }
+      : {
+          action: "release",
+          reason: `the session hold went quiet ${hold.quietMin}m ago — released`,
+        };
   }
   // A lane lease stamped AFTER the merge belongs to a claim taken since the gather's snapshot.
   if (pick.mergedMs && lease.takenMs > pick.mergedMs) {

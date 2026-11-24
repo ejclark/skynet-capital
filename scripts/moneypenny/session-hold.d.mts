@@ -15,6 +15,13 @@ export interface Lease {
   readonly holder: string;
 }
 
+export function sessionHoldLive(
+  lease: Lease,
+  activityMs: ReadonlyArray<number | undefined>,
+  nowMs: number,
+  ttlMs: number,
+): { live: boolean; quietMin: number };
+
 export function continuationLeaseVerdict(
   lease: Lease | null,
   pick: { mergedMs?: number; blockEditedMs?: number } | undefined,
