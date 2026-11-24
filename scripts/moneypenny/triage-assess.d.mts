@@ -61,7 +61,7 @@ export function planWrite(
   judged: Judged | null,
   mode?: Mode,
 ): {
-  kind: "ready" | "ask" | "backlog";
+  kind: "ready" | "ask" | "backlog" | "evidence";
   issue: number;
   body: string;
   remove: string[];
