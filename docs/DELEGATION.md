@@ -55,7 +55,11 @@ into separate lint, typecheck and per-suite calls (#5191).
    goes in a script file in your scratchpad, run as `bash <file>`, still aimed at your own worktree
    (#5192). **An isolated agent never waits on a PR merge** — its dispatcher
    does: a session through `subscribe_pr_activity` (the merge arrives as `pull_request.closed`),
-   a Workflow step through one backgrounded REST loop (`CONTRIBUTING.md`, #5193). **Temp files are yours alone:** write them inside your own worktree
+   a Workflow step through one backgrounded REST loop (`CONTRIBUTING.md`, #5193). **Poll CI or a PR
+   no faster than once a minute** (`sleep 60` or longer between reads): every session, cloud build
+   and lane acting for Eric shares one 5,000/hr REST allowance, and on 2026-11-24 a surge emptied it
+   28 minutes before the refill (#8289). A check run takes minutes; a 10-second loop spends a call
+   every 10 seconds to learn nothing. **Temp files are yours alone:** write them inside your own worktree
    (`scratchpad/` there is gitignored) or in a session-scratchpad subfolder named after your
    label — never a shared generic name such as a bare body.md. Every agent in a workflow shares one
    scratchpad; on 2026-10-11 one agent overwrote another's PR body and commit message mid-ship

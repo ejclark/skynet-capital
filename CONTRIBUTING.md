@@ -105,11 +105,12 @@ consistently so recurring-intent audits see one templated pattern instead of fre
 One check, not a chain — if it's still open after that, surface it instead of continuing to poll.
 A wait with no event path (a `/grind` or Workflow step, which cannot subscribe) is one REST loop in
 a single `run_in_background` Bash call, never a foreground loop or repeated `gh pr view` (GraphQL,
-refused from cloud sessions). The harness re-invokes the caller when it exits; keep it one line
+refused from cloud sessions), polling no faster than once a minute (#8289: one REST allowance is
+shared by every session). The harness re-invokes the caller when it exits; keep it one line
 with no `git` in it, or the harness will not background it:
 
 ```bash
-until s=$(gh api repos/<owner>/<repo>/pulls/<n> --jq '"\(.merged) \(.state)"') && [ "$s" != "false open" ]; do sleep 30; done; echo "pr <n>: $s"
+until s=$(gh api repos/<owner>/<repo>/pulls/<n> --jq '"\(.merged) \(.state)"') && [ "$s" != "false open" ]; do sleep 60; done; echo "pr <n>: $s"
 ```
 
 ## Keeping agent sessions moving (no PR churn)
