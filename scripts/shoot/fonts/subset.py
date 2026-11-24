@@ -4,15 +4,17 @@ for the owned ink render, and DejaVu Sans, the Verdana-width stand-in the live s
 Run (fontTools 4.68 + brotli in any venv):
   python -I scripts/shoot/fonts/subset.py <dir with CharisSIL-*.ttf> <dir with Lato-*.ttf> \\
     <dir with DejaVuSans*.ttf> scripts/shoot/fonts
-Provenance and licence: ./README.md and ./OFL.txt. Keep UNICODES in step with COVERAGE in
-../mermaid-pairs-ink.mjs: a label outside it fails the side by name rather than borrowing a glyph.
+Provenance and licence: ./README.md and ./OFL.txt. UNICODES is a request, not a promise: a source
+font missing a character just leaves it out. Each face's `coverage` in ../mermaid-pairs-ink.mjs is
+what the files really map, and tests/scripts/shoot/mermaid-pairs-coverage.spec.ts fails on a code
+point it lists that a rebuilt file lacks (#8217).
 """
 import sys
 from fontTools import subset
 
 charis_dir, lato_dir, dejavu_dir, out_dir = sys.argv[1:5]
 
-# Basic Latin, Latin-1, Latin Extended-A (ō in Yōtei), general punctuation, arrows, the ✕ glyph.
+# Basic Latin, Latin-1, Latin Extended-A (ō in Yōtei), general punctuation, arrows; ✕ for DejaVu.
 UNICODES = "U+0020-007E,U+00A0-00FF,U+0100-017F,U+2010-2027,U+2030-203A,U+2190-2199,U+2212,U+2715,U+00B7"
 
 JOBS = [
