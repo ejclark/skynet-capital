@@ -1,3 +1,4 @@
+import { cachedDateTimeFormat } from "../../../src/domain/intl-format";
 import { isMarketClosed, MARKET_CLOSURES } from "../../../src/domain/market-calendar";
 import { sessionBounds } from "../../../src/domain/market-session";
 import { clockSource, marketClock } from "./market-clock";
@@ -54,7 +55,7 @@ const POWER_HOUR = 60;
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 
 /** One formatter, built once (src/domain/intl-format.ts → ONE FORMATTER PER SHAPE). */
-const EASTERN = new Intl.DateTimeFormat("en-US", {
+const EASTERN = cachedDateTimeFormat("en-US", {
   timeZone: ET,
   year: "numeric",
   month: "2-digit",
@@ -221,7 +222,7 @@ export function marketOpenNow(now: Date = new Date()): boolean {
 /** The viewer's own time zone, or undefined when the browser won't say. */
 export function viewerTimeZone(): string | undefined {
   try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+    return cachedDateTimeFormat("en-US", {}).resolvedOptions().timeZone || undefined;
   } catch {
     return undefined;
   }
@@ -233,7 +234,7 @@ export function localTimeSuffix(at: number | undefined, timeZone: string | undef
   if (at === undefined || !timeZone || timeZone === ET) return "";
   try {
     const time = (zone: string) =>
-      new Intl.DateTimeFormat("en-US", {
+      cachedDateTimeFormat("en-US", {
         timeZone: zone,
         hour: "numeric",
         minute: "2-digit",
@@ -261,7 +262,7 @@ export function waitsForOpen(view: MarketSessionView, timeZone?: string): string
 
 /** A time in `timeZone` (the viewer's default when absent): "6:30 AM". */
 function timeIn(at: number, timeZone: string | undefined): string {
-  return new Intl.DateTimeFormat("en-US", {
+  return cachedDateTimeFormat("en-US", {
     ...(timeZone ? { timeZone } : {}),
     hour: "numeric",
     minute: "2-digit",
@@ -283,7 +284,7 @@ export function localSessionSuffix(now = new Date(), timeZone?: string): string 
     const when = today && minutes < today.close ? date : tradingDayAfter(date);
     const day = when ? dayFor(when) : undefined;
     if (!day) return "";
-    const zone = new Intl.DateTimeFormat("en-US", {
+    const zone = cachedDateTimeFormat("en-US", {
       ...(timeZone ? { timeZone } : {}),
       timeZoneName: "short",
     })
