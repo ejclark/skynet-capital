@@ -43,6 +43,10 @@ export interface MemberContextInput {
    *  the problem in the ledger's words and the screen to try it on — server-built, never client
    *  text, beside the member's own quoted title. */
   readonly fixed?: readonly FixedFiling[];
+  /** Fixes she has already announced to this member (#8078), on record server-side
+   *  (`fix-announcement-store.ts`): stated as fact so she can answer if asked, never announced
+   *  again — the transcript is too short to tell her she already said it. */
+  readonly announcedFixed?: readonly FixedFiling[];
 }
 
 export interface FixedFiling {
@@ -52,20 +56,41 @@ export interface FixedFiling {
   readonly tryAt?: { readonly name: string; readonly route: string };
 }
 
-/** One line per fixed filing, at most two: the member who asked hears the fix shipped, once, and
- *  is offered the screen to try it on. Glad and brief — the fanfare goes to what went right. */
+/** At most this many fixes are announced in one reply; the rest wait for the next turn. */
+export const MAX_FIXED_ANNOUNCED = 2;
+
+function fixedClause(f: FixedFiling): string {
+  return `#${f.issueNumber} ${quoteTitle(f.title)} counted toward a known problem (${quoteTitle(f.problem)}), and its fix has shipped${
+    f.tryAt ? `: they can try it on ${f.tryAt.name} (${f.tryAt.route})` : ""
+  }`;
+}
+
+/** One line for the fixes not yet announced, at most two: the member who asked hears the fix
+ *  shipped, once, and is offered the screen to try it on. Glad and brief — the fanfare goes to
+ *  what went right. "Once" is the server's record (#8078): the route drops a filing from this list
+ *  after the reply that announced it, so the line never comes back. */
 function fixedLine(fixed: readonly FixedFiling[]): string | undefined {
   if (fixed.length === 0) return undefined;
-  const each = fixed
-    .slice(0, 2)
-    .map(
-      (f) =>
-        `#${f.issueNumber} ${quoteTitle(f.title)} counted toward a known problem (${quoteTitle(f.problem)}), and its fix has shipped${
-          f.tryAt ? `: they can try it on ${f.tryAt.name} (${f.tryAt.route})` : ""
-        }`,
-    )
-    .join("; ");
+  const each = fixed.slice(0, MAX_FIXED_ANNOUNCED).map(fixedClause).join("; ");
   return `Fixed since they asked: ${each}. If you have not said so in this conversation, open your reply by telling them gladly in one short line and offering the screen; never claim more than that the fix shipped.`;
+}
+
+const MAX_ANNOUNCED_NAMED = 3;
+
+/** The fixes she already announced: a fact to answer from, never a cue to announce again. */
+function announcedLine(announced: readonly FixedFiling[]): string | undefined {
+  if (announced.length === 0) return undefined;
+  const each = announced.slice(-MAX_ANNOUNCED_NAMED).map(fixedClause).join("; ");
+  return `Fixes you have already told them about: ${each}. Do not announce these again; mention one only if they ask about it.`;
+}
+
+/** The shipped-fix lines: the ones to announce now, then the ones already announced. */
+function fixLines(input: MemberContextInput): string[] {
+  const lines = [
+    input.fixed ? fixedLine(input.fixed) : undefined,
+    input.announcedFixed ? announcedLine(input.announcedFixed) : undefined,
+  ];
+  return lines.filter((l): l is string => l !== undefined);
 }
 
 const MAX_FILINGS_NAMED = 3;
@@ -140,7 +165,7 @@ export function memberContext(input: MemberContextInput): string {
     `Onboarding (M·01, ${onboarding.done} of ${onboarding.total} done) — ${steps}.`,
     `${account}${graduation}`,
     feedback,
-    ...(input.fixed ? [fixedLine(input.fixed)].filter((l): l is string => Boolean(l)) : []),
+    ...fixLines(input),
     `Market: the regular session is ${marketOpen ? "OPEN right now" : "CLOSED right now (9:30 AM–4:00 PM ET, weekdays); an order placed now is queued and fills at the open"}.`,
   ].join("\n");
 }

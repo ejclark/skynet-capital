@@ -20,6 +20,7 @@
  */
 
 import { FEEDBACK_STATUS_LABEL, statusFromIssue } from "../domain/feedback-status.js";
+import { DAY_MS } from "../domain/time.js";
 import { type Waiting, waitingOn } from "../domain/work-waiting.js";
 import { fetchJson } from "../http/fetch-json.js";
 import { labelNamesOf } from "./feedback-status.js";
@@ -184,8 +185,6 @@ function threadOf(issue: IssueJson, comments: readonly unknown[]): ThreadExcerpt
     withheld: typed.length - kept.length,
   };
 }
-
-const DAY_MS = 24 * 60 * 60_000;
 
 /** Whole days since `created_at`, floored; 0 when it is missing or unreadable. */
 function openDaysOf(issue: IssueJson, nowMs: number): number {

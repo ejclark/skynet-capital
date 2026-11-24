@@ -1,4 +1,5 @@
 import { JsonFileStore } from "../storage/json-file-store.js";
+import { isBoundedText } from "../storage/parse-guards.js";
 import { siblingPath } from "../storage/sibling-path.js";
 
 /**
@@ -46,8 +47,8 @@ type LedgerState = readonly PlayMilestone[];
 /** Oldest entries fall off past this — the feed only ever shows a page of recent ones. */
 const MAX_ENTRIES = 1_000;
 
-const isText = (v: unknown, max = 200): v is string =>
-  typeof v === "string" && v.length > 0 && v.length <= max;
+/** Default ceiling for a ledger row's text fields; a few pass their own. */
+const LEDGER_TEXT_MAX = 200;
 
 function parseEntry(raw: unknown): PlayMilestone | undefined {
   if (typeof raw !== "object" || raw === null) return undefined;
@@ -56,11 +57,11 @@ function parseEntry(raw: unknown): PlayMilestone | undefined {
   if (
     !(
       kind &&
-      isText(r.key) &&
-      isText(r.at, 40) &&
-      isText(r.accountId) &&
-      isText(r.playName) &&
-      isText(r.symbol, 20)
+      isBoundedText(r.key, LEDGER_TEXT_MAX) &&
+      isBoundedText(r.at, 40) &&
+      isBoundedText(r.accountId, LEDGER_TEXT_MAX) &&
+      isBoundedText(r.playName, LEDGER_TEXT_MAX) &&
+      isBoundedText(r.symbol, 20)
     )
   ) {
     return undefined;

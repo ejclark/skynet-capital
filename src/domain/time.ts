@@ -6,3 +6,10 @@
  * callers that need wall-clock/DST-aware days must use the market calendar instead.
  */
 export const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * A calendar date key, `YYYY-MM-DD` — the shape every data-file validator and CLI checks before it
+ * trusts a date string. Shape only: it does not reject `2026-02-31`, so callers that need a real
+ * day parse it too.
+ */
+export const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;

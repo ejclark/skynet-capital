@@ -11,6 +11,7 @@
 import type { ServerResponse } from "node:http";
 import { allEvents } from "../domain/market-events.js";
 import { GICS_SECTORS } from "../domain/sector-coverage.js";
+import { DAY_MS } from "../domain/time.js";
 import { coverageJsonView } from "../observatory/coverage-json-view.js";
 import {
   type FundStats,
@@ -21,8 +22,6 @@ import type { Session } from "./auth/session.js";
 import { resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { shelfCoverage } from "./sector-coverage-service.js";
-
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 const NO_ACCOUNT_NOTE =
   "No market data — sector-fund prices load through your own linked account, and none is linked.";

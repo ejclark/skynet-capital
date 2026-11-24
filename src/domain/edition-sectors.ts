@@ -29,6 +29,7 @@
  */
 import { isSession, sessionsBefore } from "./market-calendar.js";
 import { GICS_SECTORS } from "./sector-coverage.js";
+import { DAY_MS } from "./time.js";
 
 /** The S&P 500's row: the whole market, drawn apart from the sectors (round 3's run 2 fix: "6 of 9
  *  notes had missed the grey line"). */
@@ -50,8 +51,6 @@ export interface EditionSectors {
   /** `closes[fund][YYYY-MM-DD]`: the edition's own close and each period's starting close. */
   readonly closes: Readonly<Record<string, Readonly<Record<string, number>>>>;
 }
-
-const DAY_MS = 86_400_000;
 
 const iso = (ms: number): string => new Date(ms).toISOString().slice(0, 10);
 const at = (date: string): number => Date.parse(`${date}T00:00:00Z`);

@@ -35,6 +35,7 @@ import {
   type ForceName,
   type LinkReason,
 } from "./campaigns.js";
+import { isText } from "./is-text.js";
 import { TICKER_DIRECTORY } from "./ticker-directory/index.js";
 
 export interface NewsItem {
@@ -207,7 +208,6 @@ const PRIMARY_HOSTS: Readonly<Record<string, string>> = {
 
 const ID_RE = /^[a-z0-9][a-z0-9-]*$/;
 const AT_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
-const isText = (v: unknown): v is string => typeof v === "string" && v.trim().length > 0;
 
 const hostOf = (url: string): string | undefined => {
   try {

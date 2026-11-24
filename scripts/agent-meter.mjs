@@ -42,7 +42,7 @@ import {
 } from "./agent-meter/defects.mjs";
 import { quantile, readFailureToFix, writeLedgerRow } from "./agent-meter/failure-to-fix.mjs";
 import { readFlow } from "./agent-meter/flow.mjs";
-import { defectIssues, mergedPrs, pipelineRuns } from "./agent-meter/github.mjs";
+import { defectIssues, mergedPrs, openHeldPrs, pipelineRuns } from "./agent-meter/github.mjs";
 import { readJobs } from "./agent-meter/jobs.mjs";
 import {
   createRest,
@@ -59,6 +59,7 @@ import {
   renderJobs,
   renderWorkerStages,
 } from "./agent-meter/render.mjs";
+import { heldAge } from "./held-pr.mjs";
 import { isMain } from "./is-main.mjs";
 
 export { quantile };
@@ -155,6 +156,17 @@ export function mergeMinutes(prs, sinceMs, untilMs = Number.POSITIVE_INFINITY) {
     )
     .map((pr) => (Date.parse(pr.mergedAt) - Date.parse(pr.createdAt)) / 60000);
   return { n: minutes.length, p50: quantile(minutes, 0.5), p90: quantile(minutes, 0.9) };
+}
+
+/**
+ * Each held PR open now, both clocks: hours green (null when its head is not green) and hours open,
+ * longest green first (#7317). A live reading — the window does not bound it, because a held PR's
+ * wait is what is happening now, and open-to-merge cannot see it until it merges.
+ */
+export function heldWaits(rows, now = Date.now()) {
+  return rows
+    .map(({ pr, greenAt }) => heldAge(pr, { greenAt, now }))
+    .sort((a, b) => (b.greenHours ?? -1) - (a.greenHours ?? -1) || b.openHours - a.openHours);
 }
 
 /** What local verify prints when this machine holds no ship.sh log. It names no home path. */
@@ -294,6 +306,7 @@ async function measure(w, { maxRest }) {
 
   const pipeline = attempt(() => pipelineRuns(rest, cache, w, maxRest, persist));
   const prs = attempt(() => mergedPrs(rest, w.sinceMs));
+  const held = attempt(() => heldWaits(openHeldPrs(rest)));
   const issues = attempt(() => defectIssues(rest, w.sinceMs));
   const lanes = attempt(() =>
     readLanes({ rest, cache, sinceMs: w.sinceMs, untilMs: w.untilMs, maxRest, persist }),
@@ -353,6 +366,7 @@ async function measure(w, { maxRest }) {
     lanes: typeof lanes === "string" ? lanes : { ...lanes, floorSec: SESSION_FLOOR_SEC },
     speed: {
       openToMergeMinutes: typeof prs === "string" ? prs : mergeMinutes(prs, w.sinceMs, w.untilMs),
+      heldWaits: held,
       runs: runRows,
       note: "open-to-merge excludes local verify and agent time; run rows are the fuller measure",
     },

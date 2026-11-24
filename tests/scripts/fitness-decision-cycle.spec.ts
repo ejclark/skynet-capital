@@ -35,7 +35,7 @@ import { MARKET_CLOSURES } from "../../src/domain/market-calendar";
 //     --with src/alerts/bot-watch.ts --with src/domain/market-session.ts \
 //     --with src/domain/market-calendar.ts --with src/domain/intl-format.ts --with fly.bots.toml \
 //     --with tests/fixtures/fitness/replay-2026-10-22.json --with scripts/deploy-lag.mjs \
-//     --with scripts/bot-relevant.mjs --with scripts/fitness-rungs.mjs \
+//     --with scripts/bot-relevant.mjs --with scripts/fitness-rungs.mjs --with scripts/fitness-judges.mjs \
 //     --with src/autonomous/live-cycle.ts --with src/autonomous/cond-scout-runner.ts
 const SCRIPT = resolve("scripts/fitness.mjs");
 const REPLAY = resolve("tests/fixtures/fitness/replay-2026-10-22.json");
