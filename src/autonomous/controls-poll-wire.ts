@@ -30,6 +30,7 @@
  * either field reads as "not reported" — never as watching or placing.
  */
 
+import { type BotsVitals, parseControlsPollVitals, SHA } from "./bots-vitals-wire.js";
 import { type HouseRosterReport, parseControlsPollRoster } from "./house-roster-wire.js";
 
 /** The bots process's running commit, as its deploy stamped `GIT_SHA` into the machine env. */
@@ -79,12 +80,10 @@ export interface ControlsPollReport {
   /** The bots app's `SKYNET_PLAYBOOKS` house roster and the accounts it runs on (#4535 slice
    *  1b, `house-roster-wire.ts`) — absent when not reported or not cleanly parsed. */
   readonly houseRoster?: HouseRosterReport;
+  /** The process's pulse (#4220, `bots-vitals-wire.ts`) — absent when not reported or not cleanly
+   *  parsed, which the dashboard reads as "no vitals", never as health. */
+  readonly vitals?: BotsVitals;
 }
-
-/** A full or abbreviated git sha and nothing else. Strict on purpose: this value is rendered into
- *  owner-facing copy AND interpolated into a GitHub `compare/<base>...<head>` URL, so anything
- *  that isn't a sha is dropped rather than passed along. */
-const SHA = /^[0-9a-f]{7,40}$/;
 
 /** Bots side: the headers to add to the poll. Empty when this process has no sha to report — an
  *  absent header is the honest signal; an empty one would be a claim. */
@@ -187,11 +186,13 @@ export function controlsPollReport(headers: NodeJS.Dict<string | string[]>): Con
   const sha = typeof raw === "string" ? raw.trim().toLowerCase() : "";
   const gate = parseControlsPollGate(headers);
   const houseRoster = parseControlsPollRoster(headers);
+  const vitals = parseControlsPollVitals(headers);
   const processMode = headers[CONTROLS_BOT_MODE_HEADER];
   return {
     ...(SHA.test(sha) ? { gitSha: sha } : {}),
     ...(gate ? { gate } : {}),
     ...(isBotMode(processMode) ? { processMode } : {}),
     ...(houseRoster ? { houseRoster } : {}),
+    ...(vitals ? { vitals } : {}),
   };
 }
