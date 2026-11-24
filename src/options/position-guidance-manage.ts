@@ -1,6 +1,7 @@
+import { fixedPct } from "../domain/percent.js";
 import { buildLadder, headlineRow } from "./position-guidance-ladder.js";
 import { type LeverContext, why, windowText } from "./position-guidance-levers.js";
-import { daysBetween, dayText, pct, pulseOf, usd } from "./position-guidance-rules.js";
+import { daysBetween, dayText, pulseOf, usd } from "./position-guidance-rules.js";
 import { decisionDate } from "./position-guidance-shares.js";
 import type {
   GuidanceReason,
@@ -44,7 +45,7 @@ function keptLine(c: OpenCall, ask: number, kept: number, spot: number): Guidanc
   return why(
     "MANAGE",
     kept >= 0
-      ? `Buying it back costs ${usd(ask * 100)} a contract now — you've kept ${pct(kept)} of the ${usd(c.premium * 100)} you took in.`
+      ? `Buying it back costs ${usd(ask * 100)} a contract now — you've kept ${fixedPct(kept)} of the ${usd(c.premium * 100)} you took in.`
       : `Buying it back costs ${usd(ask * 100)} a contract — more than the ${usd(c.premium * 100)} you took in, because the stock has risen ${where} the strike.`,
   );
 }

@@ -111,6 +111,48 @@ describe("the profile area config", () => {
     const blank = { ...profile, roles: { ...profile.roles, "phone-only": " " } };
     expect(profileProblems(blank)).toEqual(["roles must describe every member: phone-only"]);
   });
+
+  // The harvest judges a fact only where a labels census walked its world/viewer, so a matrix pair
+  // without one would leave its sheet ungradable and stop a full round at its tasks step (#8204).
+  it("refuses a matrix world/viewer no labels census covers, except in a control round", () => {
+    const row = { ...profile.matrix[0], world: "other-world", viewer: "nobody" };
+    const bare = { ...profile, matrix: [...profile.matrix, row] };
+    expect(profileProblems(bare)).toEqual([
+      "census must label every matrix world/viewer: other-world/nobody",
+    ]);
+    const expertsOnly = {
+      ...bare,
+      census: [
+        ...(profile.census ?? []),
+        { world: "other-world", viewer: "nobody", for: ["experts"] },
+      ],
+    };
+    expect(profileProblems(expertsOnly)).toEqual([
+      "census must label every matrix world/viewer: other-world/nobody",
+    ]);
+    const labelled = {
+      ...bare,
+      census: [
+        ...(profile.census ?? []),
+        { world: "other-world", viewer: "nobody", for: ["labels"] },
+      ],
+    };
+    expect(profileProblems(labelled)).toEqual([]);
+    // A control round adopts the main round's tasks, so its census may narrow.
+    expect(profileProblems(bare, { control: true })).toEqual([]);
+  });
+});
+
+// Every area config a round can be started from, each held to its own checks: a control copy as
+// a control round, every other as a main round (#8204 found league.json short a labels census).
+describe("every area config under scripts/study/tasks", () => {
+  const dir = join(ROOT, "scripts/study/tasks");
+  const files = readdirSync(dir).filter((f) => f.endsWith(".json"));
+
+  it.each(files)("%s passes its own checks", (f) => {
+    const p = JSON.parse(readFileSync(join(dir, f), "utf8")) as AreaConfig;
+    expect(profileProblems(p, { control: f.endsWith("-control.json") })).toEqual([]);
+  });
 });
 
 describe("planning the session matrix", () => {

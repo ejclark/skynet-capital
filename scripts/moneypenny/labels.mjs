@@ -73,6 +73,16 @@ export const LABELS = {
     description: "A decision only Eric can make — the irreversible class or a genuine taste fork",
     managed: true,
   },
+  // #8201 — a spend ask, filed for Eric as a pitch in five lines (docs/ISSUES.md → Pitch issues).
+  // Always paired with `needs-eric`, which parks and assigns it; this label only names the kind of
+  // decision, so pitches can be found and counted. Managed so the first filing never 404s on it.
+  pitch: {
+    name: "pitch",
+    color: "d93f0b",
+    description:
+      "A spend ask for Eric in five lines: who, $/month, what it buys, free try, rollback",
+    managed: true,
+  },
   // #7939 slice 2 — the one standing "Decisions for Eric" issue (decisions-page.mjs). Managed so
   // the page's first create never 404s on its own label, and excluded from the board by
   // `isBacklogCandidate` so it never reads as work a lane could pull.

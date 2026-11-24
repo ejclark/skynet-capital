@@ -1,3 +1,4 @@
+import { fixedPct } from "../domain/percent.js";
 import { priceInside, singleLegTick } from "./contract-picker.js";
 import {
   coverableLots,
@@ -8,7 +9,6 @@ import {
   MAX_SPREAD_OF_MID,
   MIN_BID,
   MIN_OPEN_INTEREST,
-  pct,
   QUOTE_STALE_MS,
   usd,
 } from "./position-guidance-rules.js";
@@ -281,8 +281,8 @@ function sizeFor(
   const byRisk = Math.floor((rule.maxAccountAtRisk * account.equity) / loss + 1e-9);
   const byCash = Math.floor(account.cash / cash + 1e-9);
   const at = `One contract at the ${usd(strike)} strike`;
-  const share = `(${pct(loss / account.equity, 1)} of your account)`;
-  const cap = `this tier caps that at ${pct(rule.maxAccountAtRisk)}.`;
+  const share = `(${fixedPct(loss / account.equity, 1)} of your account)`;
+  const cap = `this tier caps that at ${fixedPct(rule.maxAccountAtRisk)}.`;
   if (byRisk < 1) {
     return {
       reason: long

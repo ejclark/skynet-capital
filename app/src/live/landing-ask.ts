@@ -174,7 +174,7 @@ export function questionState(q: PartyQuestion, laneReads: boolean = LANE_READS_
 
 /**
  * WHO HOLDS IT (#7034 slice 4, criterion 9): one plain line naming the job of whoever has the
- * question, worded from the "research desk" station in docs/agents/seats.json (the market-event
+ * question, worded from the "research desk" character job in docs/agents/seats.json (the market-event
  * calendar seat; org-chart.md → *The crew on the deck*). It says who and what, never when:
  * the wait stays `questionState`'s to state, so the line can't promise a turn the lane isn't
  * giving (LANE_READS_QUEUE). Build seats never show here (#6948: the game never explains how the app

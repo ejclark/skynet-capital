@@ -30,6 +30,7 @@ import {
   sendJson,
 } from "./page-shell.js";
 import { recordPasses, recordPlayMilestone, shadowStamp } from "./play-milestone-sync.js";
+import { parseFormSaveBody } from "./save-body.js";
 import { delegationRefusal } from "./subscriptions-api-routes.js";
 
 /**
@@ -177,18 +178,6 @@ function runsOnRefusal(
     : undefined;
 }
 
-function parseSaveBody(
-  raw: string,
-): { readonly form: AuthoredPlayForm; readonly replaceId?: string } | undefined {
-  const body = parseJsonRecord(raw);
-  if (!body) return undefined;
-  const form = parseAuthoredPlayForm(body.form);
-  if (!form) return undefined;
-  if (body.replaceId === undefined) return { form };
-  const replaceId = boundedString(body.replaceId, AUTHORED_PLAY_MAX_ID);
-  return replaceId ? { form, replaceId } : undefined;
-}
-
 function save(
   res: ServerResponse,
   raw: string,
@@ -197,7 +186,7 @@ function save(
   memberKey: string,
 ): void {
   const store = config.authoredPlays;
-  const body = parseSaveBody(raw);
+  const body = parseFormSaveBody(raw, parseAuthoredPlayForm, AUTHORED_PLAY_MAX_ID);
   if (!body) {
     sendJson(res, 400, { error: "malformed save body" });
     return;

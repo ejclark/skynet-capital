@@ -60,6 +60,8 @@ export interface LabelSpec {
   managed?: boolean;
 }
 export const LABELS: Record<string, LabelSpec>;
+/** The labels this file applies and therefore provisions on GitHub. */
+export const MANAGED_LABELS: readonly LabelSpec[];
 /** `P0`–`P3`, in lane order. */
 export const PRIORITY_LABELS: string[];
 /** Every label name the repo speaks — what `issue-lint` and the seat registry validate against. */

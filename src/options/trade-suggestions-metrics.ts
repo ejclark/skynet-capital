@@ -1,4 +1,5 @@
-import { dayText, pct, usd } from "./position-guidance-rules.js";
+import { fixedPct } from "../domain/percent.js";
+import { dayText, usd } from "./position-guidance-rules.js";
 import { priceOption } from "./pricing.js";
 import { probabilityAbove, probabilityBelow } from "./terminal-odds.js";
 import { isLong, type SuggestionStrategy } from "./trade-suggestions-rules.js";
@@ -98,19 +99,19 @@ function longMetrics(t: CitedTrade): SuggestionMetric[] {
     {
       id: "chance-of-profit",
       value: profit,
-      text: `${pct(profit)} model chance of a profit at expiry (break-even ${usd(breakEven)}).`,
+      text: `${fixedPct(profit)} model chance of a profit at expiry (break-even ${usd(breakEven)}).`,
     },
     {
       id: "chance-in-the-money",
       value: inMoney,
-      text: `${pct(inMoney)} model chance it finishes in the money, ${call ? "above" : "below"} ${usd(t.strike)}.`,
+      text: `${fixedPct(inMoney)} model chance it finishes in the money, ${call ? "above" : "below"} ${usd(t.strike)}.`,
     },
     {
       id: "theta-per-day",
       value: decay,
       text: `About ${usd(decay)} a day lost to time decay today, if nothing else moves (model).`,
     },
-    { id: "iv", value: t.iv, text: `Implied volatility ${pct(t.iv)} on this contract.` },
+    { id: "iv", value: t.iv, text: `Implied volatility ${fixedPct(t.iv)} on this contract.` },
   ];
   metrics.push(...ivRankMetric(t));
   if (t.print) {
@@ -134,7 +135,7 @@ function longMetrics(t: CitedTrade): SuggestionMetric[] {
     {
       id: "account-at-risk",
       value: atRisk,
-      text: `${pct(atRisk, 1)} of your account at that max loss.`,
+      text: `${fixedPct(atRisk, 1)} of your account at that max loss.`,
     },
   );
   return metrics;
@@ -169,21 +170,21 @@ export function metricsFor(t: CitedTrade): SuggestionMetric[] {
     {
       id: "chance-of-profit",
       value: profit,
-      text: `${pct(profit)} model chance of a profit at expiry (break-even ${usd(breakEven)}).`,
+      text: `${fixedPct(profit)} model chance of a profit at expiry (break-even ${usd(breakEven)}).`,
     },
     {
       id: "chance-assigned",
       value: assigned,
       text: call
-        ? `${pct(assigned)} model chance the shares are called away at ${usd(t.strike)}.`
-        : `${pct(assigned)} model chance you are assigned and buy ${shares} shares at ${usd(t.strike)}.`,
+        ? `${fixedPct(assigned)} model chance the shares are called away at ${usd(t.strike)}.`
+        : `${fixedPct(assigned)} model chance you are assigned and buy ${shares} shares at ${usd(t.strike)}.`,
     },
     {
       id: "theta-per-day",
       value: decay,
       text: `About ${usd(decay)} a day from time decay today, if nothing else moves (model).`,
     },
-    { id: "iv", value: t.iv, text: `Implied volatility ${pct(t.iv)} on this contract.` },
+    { id: "iv", value: t.iv, text: `Implied volatility ${fixedPct(t.iv)} on this contract.` },
   ];
   metrics.push(...ivRankMetric(t));
   metrics.push(
@@ -202,7 +203,7 @@ export function metricsFor(t: CitedTrade): SuggestionMetric[] {
     {
       id: "account-at-risk",
       value: atRisk,
-      text: `${pct(atRisk, 1)} of your account at that max loss.`,
+      text: `${fixedPct(atRisk, 1)} of your account at that max loss.`,
     },
   );
   return metrics;

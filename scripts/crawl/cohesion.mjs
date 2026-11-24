@@ -324,6 +324,20 @@ export function memberFacing({ needles = true } = {}) {
   return { screens, names, api };
 }
 
+/** Row 2's input: every §2f concept with the IA homes of the screens that hold it. */
+const conceptsOf = (ia, homeOf) => conceptHomes(parseConcepts(ia), homeOf);
+
+/**
+ * Row 2 alone, read with no git (#8199): the daily scorecard (`scripts/loop-scorecard.mjs`) prints
+ * it, and a shallow clone's history (#8065) must not reach it. Same functions `measure()` uses, so
+ * the two counts cannot disagree on one tree.
+ */
+export function multiHomeConcepts() {
+  const ia = read(IA);
+  checkHomes(ia);
+  return conceptsOf(ia, homesOf(JSON.parse(read(TRIAGE)))).filter((c) => c.homes.length > 1);
+}
+
 export function measure() {
   const ia = read(IA);
   checkHomes(ia);
@@ -334,7 +348,7 @@ export function measure() {
   const files = linkFiles(appFiles);
 
   const labels = labelCollisions(collectNames(cov, homeOf, files));
-  const concepts = conceptHomes(parseConcepts(ia), homeOf);
+  const concepts = conceptsOf(ia, homeOf);
   const multiHome = concepts.filter((c) => c.homes.length > 1);
   const drops = keyDrops(files, { appLevel: new Set([ROOT]) });
 
