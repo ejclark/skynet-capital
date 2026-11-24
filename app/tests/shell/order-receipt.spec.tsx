@@ -1,5 +1,5 @@
 import { QueryClient, queryOptions } from "@tanstack/react-query";
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { SentOrder } from "../../src/live/order-receipt";
 import type { DeskOrderRow, DeskOrders, OrderChange } from "../../src/live/orders";
 import { OrderReceipt } from "../../src/shell/order-receipt";
@@ -37,6 +37,8 @@ rstest.mock("../../src/live/desk-events", () => ({ useOrderFill: () => undefined
 
 // "Email me when it fills" (#8251): the route's answer, set per spec.
 let watchState: Record<string, unknown> = { available: true, watching: false };
+/** When set, the route answers per order id — it watches only the id the watch is saved under. */
+let watchFor: ((orderId: string) => Record<string, unknown>) | undefined;
 const armed: string[] = [];
 const followed: { orderId: string; replaces: string }[] = [];
 rstest.mock("../../src/live/fill-watch", () => {
@@ -44,7 +46,7 @@ rstest.mock("../../src/live/fill-watch", () => {
     fillWatchQuery: (desk: string, orderId: string) =>
       queryOptions({
         queryKey: ["fill-watch", desk, orderId],
-        queryFn: () => Promise.resolve(watchState),
+        queryFn: () => Promise.resolve(watchFor ? watchFor(orderId) : watchState),
       }),
     armFillWatch: (_desk: string, orderId: string) => {
       armed.push(orderId);
@@ -88,12 +90,27 @@ function row(over: Partial<DeskOrderRow> = {}): DeskOrderRow {
   };
 }
 
+let client: QueryClient;
 function mount(order: SentOrder, onNewTicket = () => undefined) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return renderOnTrade(
     <OrderReceipt deskId="desk-1" order={order} onNewTicket={onNewTicket} />,
     client,
   );
+}
+
+/** A modify made from the Orders pane, beside the receipt at 1280px: the broker answers o-9 and the
+ *  list now holds the sent order as replaced. Only the shared desk-orders read reaches the receipt. */
+async function modifyFromOrdersPane() {
+  orders = {
+    available: true,
+    asOf: "t",
+    working: [row({ id: "o-9", replaces: UUID, limitPrice: 19 })],
+    recent: [row({ state: "replaced", replacedBy: "o-9", cancelable: false })],
+  };
+  await client.invalidateQueries();
+  const receipt = screen.getByRole("region", { name: "Order receipt" });
+  await waitFor(() => expect(receipt).toHaveTextContent("Limit $19.00"));
 }
 
 beforeEach(() => {
@@ -101,6 +118,7 @@ beforeEach(() => {
   cancels.length = 0;
   changes.length = 0;
   watchState = { available: true, watching: false };
+  watchFor = undefined;
   armed.length = 0;
   followed.length = 0;
 });
@@ -255,5 +273,34 @@ describe("Email me when it fills (#8251)", () => {
     fireEvent.change(screen.getByLabelText(/Limit/i), { target: { value: "19" } });
     fireEvent.click(screen.getByRole("button", { name: /Send change/ }));
     await waitFor(() => expect(followed).toEqual([{ orderId: "o-9", replaces: UUID }]));
+  });
+
+  it("SHALL arm the order's current id after a modify made from the Orders pane (#8351)", async () => {
+    mount(put);
+    await screen.findByRole("button", { name: "Email me when it fills" });
+    await modifyFromOrdersPane();
+    fireEvent.click(await screen.findByRole("button", { name: "Email me when it fills" }));
+    await screen.findByRole("status");
+    expect(armed).toEqual(["o-9"]);
+  });
+
+  it("SHALL keep saying the email is armed once an Orders-pane modify moves the watch (#8351)", async () => {
+    // The route moved the armed watch to the successor, and answers watching for that id only.
+    let savedUnder = UUID;
+    watchFor = (id) =>
+      id === savedUnder
+        ? { available: true, watching: true, destination: "owner@x.com" }
+        : { available: true, watching: false };
+    mount(put);
+    await screen.findByRole("status");
+    savedUnder = "o-9";
+    await modifyFromOrdersPane();
+    const receipt = screen.getByRole("region", { name: "Order receipt" });
+    await waitFor(() =>
+      expect(within(receipt).getByRole("status")).toHaveTextContent(
+        "✓ We'll email owner@x.com when it fills",
+      ),
+    );
+    expect(screen.queryByRole("button", { name: "Email me when it fills" })).toBeNull();
   });
 });
