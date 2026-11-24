@@ -5,6 +5,7 @@ import type { DeskPosition } from "../../src/live/desk";
 import * as actualTicket from "../../src/live/ticket" with { rstest: "importActual" };
 import type { TicketDraft, TicketPreview } from "../../src/live/ticket";
 import { LockInMoments, useLockInMoments } from "../../src/shell/lock-in-ceremony";
+import { rememberedCloses } from "../../src/shell/lock-in-memory";
 import { PositionActs } from "../../src/shell/position-act";
 
 /**
@@ -134,8 +135,16 @@ describe("PositionActs — a close from the guidance sheet", () => {
     expect(dialog).toHaveTextContent("winners can give it back");
   });
 
+  it("remembers the flagged close with its order, for a fill after the sheet is gone (#7383)", async () => {
+    await sellAllAndFill(amd({}), true);
+    expect(rememberedCloses("human-eric").map((c) => [c.orderId, c.side, c.count])).toEqual([
+      ["g-1", "sell", 10],
+    ]);
+  });
+
   it("stays quiet for a position that was never marked Consider", async () => {
     await sellAllAndFill(amd({ returnPct: "+3.0%", totalPlRaw: 30 }), false);
     expect(screen.queryByRole("dialog", { name: /Profit locked in/ })).not.toBeInTheDocument();
+    expect(rememberedCloses("human-eric")).toEqual([]);
   });
 });
