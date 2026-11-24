@@ -5,7 +5,7 @@ import { expect, test } from "@playwright/test";
 // Campaign address forwards there with its search and hash; the board's `?by=` still opens the board.
 
 test.describe("the home screen", () => {
-  test("at 390: the tower's still, Needs you, then the five tiles, all above the dock (criteria 1, 3, 4)", async ({
+  test("at 390: the tower's still, Needs you, then the tiles, all above the dock (criteria 1, 3, 4)", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
@@ -21,8 +21,10 @@ test.describe("the home screen", () => {
     const needs = page.getByRole("region", { name: "Needs you" });
     await expect(needs).toBeVisible();
     const apps = page.getByRole("navigation", { name: "Apps" }).getByRole("link");
-    await expect(apps).toHaveCount(5);
+    await expect(apps).toHaveCount(6);
     for (const [name, href] of [
+      // #8253: the Scoreboard's tile opens the board whether or not the viewer has a seat yet.
+      ["Scoreboard", "/app/leaderboard?by=equity"],
       ["Campaign", "/app/campaign"],
       ["Profile", "/app/accounts"],
       ["Trade", "/app/trade"],

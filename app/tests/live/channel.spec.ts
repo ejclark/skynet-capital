@@ -37,7 +37,6 @@ const snapshot = (boot: string | undefined, seq: number): BoardSnapshot => ({
   generatedAt: "t",
   metric: "equity",
   rows: [],
-  blocks: {},
   opsApplied: 0,
 });
 

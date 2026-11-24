@@ -21,7 +21,6 @@ import { sinceLine } from "../live/edition-sectors";
 import { useHorizonRange } from "../live/horizon-params";
 import { DEFAULT_WINDOW, type MissionWindow, parseWindow } from "../live/mission";
 import { type PageKeys, usePublishPageKeys } from "../live/page-keys";
-import { signedMoney } from "../live/position-act";
 import { fetchQuests, placeQuests, type QuestsAnswer } from "../live/quests";
 import { targetedEditionAnchor, useLandOnEdition } from "../shell/edition-anchor";
 import { PageFrame } from "../shell/frame";
@@ -37,13 +36,7 @@ import {
   Waypoints,
   type WindowLink,
 } from "../shell/mission-window";
-import {
-  marketGlance,
-  OverviewWindow,
-  PartyWindow,
-  partyRows,
-  useParty,
-} from "../shell/mission-windows";
+import { marketGlance, OverviewWindow, PartyWindow, useParty } from "../shell/mission-windows";
 import { SectorOverview } from "../shell/sector-overview";
 import { TagMark } from "../shell/tag-mark";
 
@@ -385,12 +378,12 @@ function Landing(): ReactElement {
   const market = marketGlance(edition?.sectors);
   // ◆ means "a story waits on it" on the calendar itself, so the figure counts only those events.
   const waited = inside.filter((e) => waitingOn(e, edition?.stories ?? []).length > 0).length;
-  const total = party.data ? partyRows(party.data.rows).total : undefined;
+  const partyFigure = party.data?.party?.partyReturn;
   const figures: Partial<Record<MissionWindow, string>> = {
     ...(market.figure ? { market: market.figure.replace(" wk", "") } : {}),
     calendar: `◆ ${String(waited)}`,
     ...(answer ? { quests: String(placed.account.length) } : {}),
-    ...(total !== undefined ? { party: signedMoney(total) } : {}),
+    ...(partyFigure !== undefined ? { party: partyFigure } : {}),
   };
   const spec = windowSpec(cur, { edition, inside, figures, hasAccount: Boolean(answer) });
   return (
