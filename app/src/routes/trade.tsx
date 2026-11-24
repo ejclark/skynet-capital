@@ -472,7 +472,22 @@ function TradePage(): ReactElement {
         guidanceLink
       )}
       {plan ? <FastTrackPlan plan={plan} /> : null}
-      {settings.isLoading ? null : accounts.length === 0 ? (
+      {/* A failed settings read has no `data`, so `accounts` is `[]`: ask "did it fail?" before
+          "is it empty?", or a linked member is told no accounts are linked and sent to re-link
+          one they already have (#8337; the class is tests/arch/failed-read-not-empty.spec.ts). */}
+      {settings.isError ? (
+        <p className="note" role="alert">
+          Your accounts couldn't be read just now, so the ticket can't open yet.{" "}
+          <button
+            type="button"
+            className="btn"
+            disabled={settings.isFetching}
+            onClick={() => void settings.refetch()}
+          >
+            {settings.isFetching ? "Trying again…" : "Try again"}
+          </button>
+        </p>
+      ) : settings.isLoading ? null : accounts.length === 0 ? (
         <p className="note">
           No accounts are linked to your session yet —{" "}
           <Link

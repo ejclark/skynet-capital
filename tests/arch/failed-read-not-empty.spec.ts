@@ -58,10 +58,7 @@ const SERVER_OFFENDERS: Readonly<Record<string, string>> = {
     "bug #8335: a failed read reviews an order against $0 cash and no positions",
 };
 
-const ROUTE_OFFENDERS: Readonly<Record<string, string>> = {
-  "app/src/routes/trade.tsx":
-    "bug #8337: a failed settings read shows 'No accounts are linked to your session yet'",
-};
+const ROUTE_OFFENDERS: Readonly<Record<string, string>> = {};
 
 /** Files known to handle the case today; the scan must find them or it has gone blind. */
 const SERVER_ANCHORS = ["src/server/coverage-route.ts", "src/server/held-news-route.ts"] as const;
