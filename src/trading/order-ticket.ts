@@ -62,6 +62,12 @@ export interface TicketRequest {
   readonly exit?: TicketExit;
 }
 
+/** The one refusal an order gets while its account can't be read (#8335): the failure in words,
+ *  never a cash or holding refusal priced against the degraded row's $0 and empty positions.
+ *  Shared by the single-leg review and the multi-leg draft check. */
+export const ACCOUNT_UNREAD_REFUSAL =
+  "Your account couldn't be read just now, so this order can't be checked against your cash and holdings. Try again in a moment.";
+
 export interface TicketContext {
   /** Settled cash available to spend. */
   readonly cash: number;
@@ -83,6 +89,10 @@ export interface TicketContext {
    *  account doesn't hold, so a first buy is costed and checked against cash like any other. A held
    *  symbol keeps its position's mark. */
   readonly quotePrice?: number;
+  /** The account's read failed (#8335): `cash` and `positions` are a degraded row's zeros, not
+   *  the account. The preview refuses with `ACCOUNT_UNREAD_REFUSAL` and makes no cash or holding
+   *  claim, so "you can't afford it" or "you don't hold it" is never said on an unread account. */
+  readonly accountUnread?: true;
 }
 
 export interface TicketPreview {
@@ -349,7 +359,9 @@ export function previewOrder(request: TicketRequest, context: TicketContext): Ti
   validatePricedOrder(orderType, request, request.action, estPrice, refusals, warnings);
   const exit = exitOf(request, orderType, refusals);
 
-  if (request.action === "sell") {
+  if (context.accountUnread) {
+    refusals.push(ACCOUNT_UNREAD_REFUSAL);
+  } else if (request.action === "sell") {
     validateSell(quantity, held, refusals, warnings);
   } else {
     validateBuy(estNotional, context.cash, refusals, warnings);
@@ -360,11 +372,11 @@ export function previewOrder(request: TicketRequest, context: TicketContext): Ti
   }
 
   const signedCash =
-    estNotional === undefined
+    estNotional === undefined || context.accountUnread
       ? undefined
       : context.cash + (request.action === "sell" ? estNotional : -estNotional);
   const positionAfter =
-    held === undefined
+    held === undefined || context.accountUnread
       ? undefined
       : held.quantity + (request.action === "sell" ? -quantity : quantity);
 
