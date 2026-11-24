@@ -1,5 +1,5 @@
 {"date":"2026-11-02","loop":"governor-dedupe","before":294,"after":294,"worth":1,"tokensM":null,"usd":null,"changed":"debt before the first rep"}
 {"date":"2026-11-02","loop":"governor-dedupe","before":294,"after":290,"tokensM":2.16,"usd":null,"changed":"dollars: three whole-dollar copies and the usdWhole in play-target became src/ui/usd-whole.ts; two cents formatters renamed for what they do"}
-{"date":"2026-11-23","loop":"governor-dedupe","before":428,"after":424,"tokensM":null,"usd":null,"changed":"DATE_RE consolidated from 5 pasted copies into src/domain/time.ts"}
-{"date":"2026-11-23","loop":"governor-dedupe","before":424,"after":420,"tokensM":null,"usd":null,"changed":"consolidated DAY_MS (4 pasted copies) into src/domain/time.ts"}
-{"date":"2026-11-24","loop":"governor-dedupe","before":420,"after":416,"tokensM":null,"usd":null,"changed":"isText: three trim-check copies became src/domain/is-text.ts; two length-bounded copies became isBoundedText in storage/parse-guards.ts"}
+{"date":"2026-11-23","loop":"governor-dedupe","before":428,"after":424,"tokensM":1.85,"usd":null,"changed":"DATE_RE consolidated from 5 pasted copies into src/domain/time.ts"}
+{"date":"2026-11-23","loop":"governor-dedupe","before":424,"after":420,"tokensM":1.85,"usd":null,"changed":"consolidated DAY_MS (4 pasted copies) into src/domain/time.ts"}
+{"date":"2026-11-24","loop":"governor-dedupe","before":420,"after":416,"tokensM":1.85,"usd":null,"changed":"isText: three trim-check copies became src/domain/is-text.ts; two length-bounded copies became isBoundedText in storage/parse-guards.ts"}
