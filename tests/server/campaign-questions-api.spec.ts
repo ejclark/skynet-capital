@@ -20,6 +20,7 @@ import { CampaignQuestionsStore } from "../../src/server/campaign-questions-stor
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
 import { DiscoveryQueueStore } from "../../src/server/discovery-queue-store.js";
 import { MemberCampaignStore } from "../../src/server/member-campaign-store.js";
+import { plantHostileShelf } from "../support/member-campaigns-harness.js";
 
 /**
  * WHAT THE PARTY ASKED, SERVED (#6949 slice 6): which campaigns a member can read, the log write
@@ -30,6 +31,10 @@ import { MemberCampaignStore } from "../../src/server/member-campaign-store.js";
  * asked inside a campaign it is logged by display name, a bare ask is not, and a failed log write
  * never fails the ask. WHEN the list is read, each question says where it stands.
  */
+
+// Every read here runs on a shelf that already holds NVDA and AMD write-ups for the AI buildout
+// (#8224): a read that skips the `campaignShelfAnswered` seam sees them and its answers go red.
+plantHostileShelf();
 
 const ada = "adakey0001";
 const grace = "gracekey02";

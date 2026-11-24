@@ -64,7 +64,10 @@ export function derivedFields(
 ): InputPosition;
 
 export function buildBook(name: string): Book;
-export function yesterdayEquity(
-  input: { id: string; cash: number; lastEquity?: number; closedToday?: number },
-  snapshot: { positions: { quantity: number; lastdayPrice: number }[] },
-): number;
+export function yesterdayEquity(input: {
+  id: string;
+  cash: number;
+  positions: { symbol: string; quantity: number; lastday: number }[];
+  lastEquity?: number;
+  closedToday?: number;
+}): number;

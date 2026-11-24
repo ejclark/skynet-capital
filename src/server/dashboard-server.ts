@@ -32,6 +32,7 @@ import { serveFastTrackApi } from "./fast-track-route.js";
 import { serveFeedbackApi } from "./feedback-api-routes.js";
 import { serveFeedbackRoute } from "./feedback-routes.js";
 import { serveFilingCommentsApi } from "./filing-comments-api-routes.js";
+import { serveHeldNewsApi } from "./held-news-route.js";
 import { serveJoinApi } from "./join-api-routes.js";
 import { serveJournalApi } from "./journal-api-routes.js";
 import { serveLearnApi } from "./learn-api-routes.js";
@@ -226,6 +227,7 @@ async function serveWriteApis(
   if (await serveQuestsTakenApi(req, res, path, config, session)) return true;
   if (await serveBookWaitApi(req, res, path, config, session)) return true;
   if (await serveFastTrackApi(req, res, path, config, session)) return true;
+  if (await serveHeldNewsApi(req, res, path, config, session)) return true;
   if (await serveAlertDeliveryApi(req, res, path, config, session)) return true;
   if (await serveWatchlistApi(req, res, path, config, session)) return true;
   if (await serveOptionApi(req, res, path, config, session)) return true;

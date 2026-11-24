@@ -613,6 +613,8 @@ async function main(): Promise<void> {
     // durable on the same volume (#4332).
     watchlist,
     optionsClientFor: (id) => clientFor(id, dataSource.optionsClientFactory),
+    // News on held names, on the member's own credential — never the bots' key (#8203).
+    newsClientFor: (id) => clientFor(id, dataSource.newsClientFactory),
     quoteStream,
     tradingClientFor: (id) => clientFor(id, dataSource.clientFactory),
     ...("store" in ivHistory ? { ivHistory: ivHistory.store } : {}),

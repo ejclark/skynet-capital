@@ -58,14 +58,7 @@ import {
   shellHtml,
   WIDTHS,
 } from "./mermaid-pairs-frame.mjs";
-import {
-  COVERAGE,
-  FACES,
-  faceCss,
-  INK_MARKER,
-  inkCss,
-  inkMermaidConfig,
-} from "./mermaid-pairs-ink.mjs";
+import { FACES, faceCss, INK_MARKER, inkCss, inkMermaidConfig } from "./mermaid-pairs-ink.mjs";
 import { MODES, parseArgs, validatePairs } from "./mermaid-pairs-input.mjs";
 import { LIVE_FACE, liveFaceCss, liveFaceRecord } from "./mermaid-pairs-live.mjs";
 
@@ -260,7 +253,11 @@ async function shootPair(page, pair, car, mode, opts, mermaidVersion) {
   const layout = opts.layout === "auto" ? (pair.layout ?? "auto") : opts.layout;
   const key = `${pair.id}-${mode}`.replace(/[^A-Za-z0-9-]/g, "-");
   const ink = Object.values(looks).includes("ink")
-    ? { config: inkMermaidConfig(opts.face), live: liveConfig(mode), coverage: COVERAGE }
+    ? {
+        config: inkMermaidConfig(opts.face),
+        live: liveConfig(mode),
+        coverage: FACES[opts.face].coverage,
+      }
     : null;
   const laid = await page.evaluate(layoutInPage, {
     html,

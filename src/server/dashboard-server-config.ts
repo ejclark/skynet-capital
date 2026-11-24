@@ -13,6 +13,7 @@ import type { CompanionTurn } from "../companion/companion-chat.js";
 import type { GameMasterPilot } from "../companion/game-master-flag.js";
 import type { Lesson } from "../domain/campaign-lessons.js";
 import type { OrderIntent, PlaybookVerdict } from "../domain/types.js";
+import type { AlpacaNewsClient } from "../news/alpaca-news-client.js";
 import type { ActivityEventBus } from "../observatory/activity-event.js";
 import type { TradeActivityRecord } from "../observatory/activity-store.js";
 import type { CapitalFlowReader } from "../observatory/capital-flow-ledger.js";
@@ -295,6 +296,9 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
   readonly activityLog?: Pick<ActivityEventBus, "list">;
   /** Options data (chains/spot) via a participant's own credentials, for the /trade ticket. */
   readonly optionsClientFor?: (participantId: string) => AlpacaOptionsClient | undefined;
+  /** News on held names via a participant's own credentials (`held-news-route.ts`, #8203) —
+   *  never the bots' shared key. Absent = the route says the session isn't linked. */
+  readonly newsClientFor?: (participantId: string) => AlpacaNewsClient | undefined;
   /** The underlying quote, pushed instead of polled (`quote-stream-route.ts`, #3407 P4) — one
    *  market-data socket per member, on that member's own credential. Absent = the route says so
    *  and the quote keeps its 15-second poll. */
