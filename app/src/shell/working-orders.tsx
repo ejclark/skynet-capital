@@ -13,6 +13,7 @@ import {
   replaceOrder,
 } from "../live/orders";
 import { money, orderTypeLabel, tifLabel } from "../live/ticket";
+import { EXIT_ROLE_LABELS } from "../live/ticket-exit";
 import { ConnectLink } from "./connect-link";
 import { ModifyForm } from "./working-order-modify";
 
@@ -56,7 +57,20 @@ const STATE_WORD: Record<DeskOrderState, string> = {
   expired: "Expired",
 };
 
+/** The row's type and price. A bracket's exit is named by its job and its one price — "Take-profit
+ *  $95.00", "Stop $85.00" (#8249) — and a stop-limit names both prices. */
+function typeWords(row: DeskOrderRow): string {
+  if (row.exitRole) {
+    const price = row.exitRole === "stop" ? row.stopPrice : row.limitPrice;
+    const label = EXIT_ROLE_LABELS[row.exitRole];
+    return price === undefined ? label : `${label} ${money(price)}`;
+  }
+  return `${orderTypeLabel(row.orderType)} · ${priceLabel(row)}`;
+}
+
 function priceLabel(row: DeskOrderRow): string {
+  if (row.limitPrice !== undefined && row.stopPrice !== undefined)
+    return `stop ${money(row.stopPrice)} · limit ${money(row.limitPrice)}`;
   if (row.limitPrice !== undefined) return `limit ${money(row.limitPrice)}`;
   if (row.stopPrice !== undefined) return `stop ${money(row.stopPrice)}`;
   return "market";
@@ -149,7 +163,7 @@ function OrderRow({
         <span className="wo-side">{row.side === "buy" ? "Buy" : "Sell"}</span>
         <span className="wo-qty num">{qtyLabel(row)}</span>
         <span className="wo-type">
-          {orderTypeLabel(row.orderType)} · {priceLabel(row)}
+          {typeWords(row)}
           {tif ? ` · ${tif}` : ""}
         </span>
       </span>

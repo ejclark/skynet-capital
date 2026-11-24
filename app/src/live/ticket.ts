@@ -10,8 +10,9 @@ import { questOfPage } from "./quest-link";
 
 /** The order classes the desk can actually place today. Mirrors the server's `TicketOrderType`
  *  (`src/trading/order-ticket.ts`) exactly — a value this list can produce is a value the broker
- *  client can send, which is the whole reason it is spelled out here rather than left as string. */
-export type TicketOrderType = "market" | "limit" | "stop";
+ *  client can send, which is the whole reason it is spelled out here rather than left as string.
+ *  `stop_limit` is offered only to a session the exit-at-entry setting admits (`orderTypesFor`). */
+export type TicketOrderType = "market" | "limit" | "stop" | "stop_limit";
 
 /** Mirrors the server's `TicketTimeInForce` — Day or GTC, the two the desk shows (#3407 P1). */
 export type TicketTimeInForce = "day" | "gtc";
@@ -25,6 +26,18 @@ export interface TicketDraft {
   readonly limitPrice?: number;
   readonly stopPrice?: number;
   readonly timeInForce?: TicketTimeInForce;
+  /** A take-profit and stop the broker holds with the entry (#8249); a missing price is left out
+   *  and the server refuses it in words. */
+  readonly exit?: { readonly takeProfit?: number; readonly stop?: number };
+}
+
+/** The exit as the server reviewed it — mirrors `ExitPreview` (`src/trading/order-exit.ts`). Each
+ *  leg's dollars are measured against the limit by `previewOrder`, never here. */
+export interface TicketExitPreview {
+  readonly takeProfit: number;
+  readonly stop: number;
+  readonly takeProfitDollars?: number;
+  readonly stopDollars?: number;
 }
 
 export interface TicketPreview {
@@ -37,6 +50,7 @@ export interface TicketPreview {
   readonly stopPrice?: number;
   /** What will be sent — the server always says, even when the draft left it blank. */
   readonly timeInForce: TicketTimeInForce;
+  readonly exit?: TicketExitPreview;
   readonly estPrice?: number;
   readonly estNotional?: number;
   readonly estCashAfter?: number;
@@ -52,6 +66,8 @@ export type TicketResult =
       readonly status: string;
       readonly symbol: string;
       readonly timeInForce?: string;
+      /** A bracket's take-profit and stop as the broker echoed them (#8249) — the receipt's words. */
+      readonly exits?: { readonly takeProfit: number; readonly stop: number };
     }
   | { readonly ok: false; readonly refusals: readonly string[] };
 
@@ -88,13 +104,30 @@ export interface TicketFields {
    *  `defaultTimeInForce` pressed and sends nothing — the server previews the default it will
    *  use, so what is shown is always what is sent (#3407 P1). */
   readonly timeInForce?: TicketTimeInForce;
+  /** The exit the member opened with "Add an exit" (#8249): raw text, both empty until typed —
+   *  never prefilled. Undefined while no exit is added. */
+  readonly exit?: { readonly takeProfit: string; readonly stop: string };
 }
 
 export const ORDER_TYPE_LABELS: Record<TicketOrderType, string> = {
   market: "Market",
   limit: "Limit",
   stop: "Stop-Market",
+  stop_limit: "Stop-Limit",
 };
+
+/** The order types the form offers. With the exit-at-entry setting off for this session (#8249),
+ *  exactly the three it offered before; admitted, Stop-Limit joins them. */
+export function orderTypesFor(exitAtEntry: boolean): readonly TicketOrderType[] {
+  const types: TicketOrderType[] = ["market", "limit", "stop"];
+  return exitAtEntry ? [...types, "stop_limit"] : types;
+}
+
+/** Whether this ticket can carry an exit: a limit buy, the one entry the server takes one on
+ *  (`src/trading/order-exit.ts`). The server still judges it; this only decides what to offer. */
+export function exitFits(fields: Pick<TicketFields, "action" | "orderType">): boolean {
+  return fields.action === "buy" && fields.orderType === "limit";
+}
 
 export const TIF_LABELS: Record<TicketTimeInForce, string> = { day: "Day", gtc: "GTC" };
 
@@ -149,11 +182,22 @@ export function carryAcrossSide(fields: TicketFields, priced: boolean): TicketCa
   };
 }
 
-/** Which price this order class needs from the member — undefined when it needs none. */
+/** Which price this order class needs from the member — undefined when it needs none, or when it
+ *  needs two (a stop-limit: `priceFieldsFor`). */
 export function priceFieldFor(orderType: TicketOrderType): "limitPrice" | "stopPrice" | undefined {
   if (orderType === "limit") return "limitPrice";
   if (orderType === "stop") return "stopPrice";
   return undefined;
+}
+
+/** Every price this order class needs, in the order the form asks for them: a stop-limit's stop
+ *  first (it is what triggers the order), then its limit. */
+export function priceFieldsFor(
+  orderType: TicketOrderType,
+): readonly ("limitPrice" | "stopPrice")[] {
+  if (orderType === "stop_limit") return ["stopPrice", "limitPrice"];
+  const one = priceFieldFor(orderType);
+  return one === undefined ? [] : [one];
 }
 
 /** How this class actually fills, in one sentence, stated before the order is placed rather than
@@ -176,6 +220,9 @@ export function orderTypeNote(orderType: TicketOrderType, market: MarketSessionV
   if (orderType === "limit") {
     return `${wait}Fills at your limit price or better, or not at all — a limit order can sit open indefinitely if the price never comes to you.`;
   }
+  if (orderType === "stop_limit") {
+    return `${wait}Stays dormant until the stop price trades, then becomes a limit order at your limit price. It fills at that price or better, or not at all — in a fast move it can be left behind unfilled.`;
+  }
   return `${wait}Stays dormant until the stop price trades, then turns into a plain market order. It will fill — but at whatever the market is paying at that moment, which in a fast move can be well past your stop.`;
 }
 
@@ -184,22 +231,50 @@ const parsePrice = (raw: string): number | undefined => {
   return raw.trim() !== "" && Number.isFinite(value) ? value : undefined;
 };
 
+/** The exit's prices as typed; a blank or unreadable one is left out for the server to name. */
+function exitDraft(exit: NonNullable<TicketFields["exit"]>): NonNullable<TicketDraft["exit"]> {
+  const takeProfit = parsePrice(exit.takeProfit);
+  const stop = parsePrice(exit.stop);
+  return {
+    ...(takeProfit !== undefined ? { takeProfit } : {}),
+    ...(stop !== undefined ? { stop } : {}),
+  };
+}
+
+/** Whether the draft carries the member's exit: they added one, the setting admits them, and the
+ *  entry is one an exit can ride. An exit added and then left behind by a switch to Sell or Market
+ *  is not sent — the form hides it there too. */
+export function carriesExit(fields: TicketFields, exitAtEntry: boolean): boolean {
+  return exitAtEntry && fields.exit !== undefined && exitFits(fields);
+}
+
 /**
- * Form state → the draft that goes over the wire. Only the price the chosen class actually uses
- * is carried: a stop price left over from a previous edit must never ride along on a market
+ * Form state → the draft that goes over the wire. Only the prices the chosen class actually uses
+ * are carried: a stop price left over from a previous edit must never ride along on a market
  * order, where the server would have no reason to look at it and the member no way to see it.
+ * The same rule keeps an exit off any draft that can't carry one (`carriesExit`); a draft with an
+ * exit sends no time in force, since the server sends it GTC and the form says so (`ticket-exit.ts`).
  */
-export function buildDraft(participantId: string, fields: TicketFields): TicketDraft {
-  const field = priceFieldFor(fields.orderType);
-  const price = field === undefined ? undefined : parsePrice(fields[field]);
+export function buildDraft(
+  participantId: string,
+  fields: TicketFields,
+  exitAtEntry = false,
+): TicketDraft {
+  const prices: { limitPrice?: number; stopPrice?: number } = {};
+  for (const field of priceFieldsFor(fields.orderType)) {
+    const price = parsePrice(fields[field]);
+    if (price !== undefined) prices[field] = price;
+  }
+  const exit = carriesExit(fields, exitAtEntry) && fields.exit ? exitDraft(fields.exit) : undefined;
   return {
     participantId,
     symbol: fields.symbol.trim().toUpperCase(),
     quantity: Number(fields.quantity),
     action: fields.action,
     ...(fields.orderType !== "market" ? { orderType: fields.orderType } : {}),
-    ...(field !== undefined && price !== undefined ? { [field]: price } : {}),
-    ...(fields.timeInForce ? { timeInForce: fields.timeInForce } : {}),
+    ...prices,
+    ...(fields.timeInForce && !exit ? { timeInForce: fields.timeInForce } : {}),
+    ...(exit ? { exit } : {}),
   };
 }
 
