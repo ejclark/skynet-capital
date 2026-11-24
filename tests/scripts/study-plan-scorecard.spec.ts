@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "@rstest/core";
@@ -12,7 +12,7 @@ import {
   planScorecardLines,
   withLostness,
 } from "../../scripts/study/plan-scorecard.mjs";
-import { buildReadout, copySmall, FRAME_CAP, readoutArgs } from "../../scripts/study/readout.mjs";
+import { buildReadout, readoutArgs, shrink } from "../../scripts/study/readout.mjs";
 
 // The cross-feature plan's scorecard rows (#8005): phone task success, lostness and backtracks,
 // and chat sensor recall, read from a round's own sessions so slice 8's re-run prints the same rows.
@@ -244,36 +244,32 @@ describe("the readout's stop says what silence does (#8037)", () => {
   });
 });
 
-describe("copySmall — a frame over the cap is shrunk where the session runs", () => {
-  it("turns a large non-JPEG frame into a JPEG under 100KB (sips on a Mac, ImageMagick elsewhere)", () => {
-    // A 24-bit BMP gradient, 1600×1000: ~4.8MB, not a JPEG, so it must be shrunk.
-    const w = 1600;
-    const h = 1000;
-    const row = Math.ceil((w * 3) / 4) * 4;
-    const buf = Buffer.alloc(54 + row * h);
-    buf.write("BM", 0);
-    buf.writeUInt32LE(buf.length, 2);
-    buf.writeUInt32LE(54, 10);
-    buf.writeUInt32LE(40, 14);
-    buf.writeInt32LE(w, 18);
-    buf.writeInt32LE(h, 22);
-    buf.writeUInt16LE(1, 26);
-    buf.writeUInt16LE(24, 28);
-    buf.writeUInt32LE(row * h, 34);
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const o = 54 + y * row + x * 3;
-        buf[o] = (x * 255) / w;
-        buf[o + 1] = (y * 255) / h;
-        buf[o + 2] = 128;
-      }
-    }
-    const dir = mkdtempSync(join(tmpdir(), "study-shrink-"));
-    const src = join(dir, "big.bmp");
-    writeFileSync(src, buf);
-    const out = copySmall(src, join(dir, "small.jpg"));
-    const bytes = readFileSync(out);
-    expect(bytes.length).toBeLessThanOrEqual(FRAME_CAP);
-    expect(bytes.subarray(0, 3)).toEqual(Buffer.from([0xff, 0xd8, 0xff]));
+describe("shrink — a frame over the cap is shrunk by whichever tool the machine has", () => {
+  // The runner is injected: which tools a machine has is the machine's, never the spec's (CI's
+  // runner has neither sips nor ImageMagick).
+  const runner = (have: string[]) => {
+    const calls: string[] = [];
+    const run = (cmd: string, args: string[]) => {
+      calls.push(cmd);
+      if (!have.includes(cmd)) throw new Error(`${cmd}: not found`);
+      return args;
+    };
+    return { calls, run };
+  };
+  it("uses sips on a Mac and stops there", () => {
+    const r = runner(["sips", "convert"]);
+    expect(shrink("in.png", "out.jpg", 960, 55, r.run)).toBe(true);
+    expect(r.calls).toEqual(["sips"]);
+  });
+  it("falls back to ImageMagick, then ffmpeg, in that order", () => {
+    const im = runner(["convert"]);
+    expect(shrink("in.png", "out.jpg", 960, 55, im.run)).toBe(true);
+    expect(im.calls).toEqual(["sips", "magick", "convert"]);
+    const ff = runner(["ffmpeg"]);
+    expect(shrink("in.png", "out.jpg", 960, 55, ff.run)).toBe(true);
+    expect(ff.calls).toEqual(["sips", "magick", "convert", "ffmpeg"]);
+  });
+  it("says it could not when the machine has none of them", () => {
+    expect(shrink("in.png", "out.jpg", 960, 55, runner([]).run)).toBe(false);
   });
 });

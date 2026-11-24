@@ -98,32 +98,39 @@ export function readoutArgs(argv) {
 
 /**
  * Shrink one frame to a JPEG whose longer side is `side` px: macOS `sips` on the laptop, else
- * ImageMagick's `convert` (a cloud session's Linux image has it and no sips — sessions run in the
- * cloud by default, CLAUDE.md). → true when either wrote `dest`.
+ * ImageMagick (`magick`, or `convert` before v7: a cloud session's Linux image has it and no sips —
+ * sessions run in the cloud by default, CLAUDE.md), else ffmpeg. → true when one wrote `dest`.
+ * `run` is the process runner, injected so the fallback order is specced without any of them.
  */
-function shrink(src, dest, side, quality) {
+export function shrink(src, dest, side, quality, run = execFileSync) {
+  const q = String(quality);
   const tries = [
     [
       "sips",
+      ["-s", "format", "jpeg", "-s", "formatOptions", q, "-Z", String(side), src, "--out", dest],
+    ],
+    ["magick", [src, "-resize", `${side}x${side}>`, "-quality", q, `jpeg:${dest}`]],
+    ["convert", [src, "-resize", `${side}x${side}>`, "-quality", q, `jpeg:${dest}`]],
+    // ffmpeg's JPEG scale is 2 (best) to 31; map the 40–60 quality ladder onto 6–10.
+    [
+      "ffmpeg",
       [
-        "-s",
-        "format",
-        "jpeg",
-        "-s",
-        "formatOptions",
-        String(quality),
-        "-Z",
-        String(side),
+        "-y",
+        "-loglevel",
+        "error",
+        "-i",
         src,
-        "--out",
+        "-vf",
+        `scale='min(${side},iw)':-2`,
+        "-q:v",
+        String(Math.round(16 - quality / 10)),
         dest,
       ],
     ],
-    ["convert", [src, "-resize", `${side}x${side}>`, "-quality", String(quality), `jpeg:${dest}`]],
   ];
   for (const [cmd, args] of tries) {
     try {
-      execFileSync(cmd, args, { stdio: "ignore" });
+      run(cmd, args, { stdio: "ignore" });
       return true;
     } catch {
       // not installed here, or it could not read the frame: try the next

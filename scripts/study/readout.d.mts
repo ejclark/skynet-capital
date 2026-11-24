@@ -27,6 +27,13 @@ export function jobMapOf(j: Record<string, unknown>): {
 };
 export function readoutArgs(argv: string[]): ReadoutOptions;
 export function copySmall(src: string, dest: string): string;
+export function shrink(
+  src: string,
+  dest: string,
+  side: number,
+  quality: number,
+  run?: (cmd: string, args: string[], opts: object) => unknown,
+): boolean;
 export function insideRoot(root: string, path: string): string;
 export function buildReadout(opts: ReadoutOptions): {
   page: string;
