@@ -61,11 +61,16 @@ export function useParty() {
   });
 }
 
+/** The quests read failed (#8334): said in words, never as "connect" or "no quest right now". */
+export const QUESTS_UNREAD =
+  "Your quests couldn't be worked out: your account couldn't be read right now. They come back on the next read.";
+
 export function OverviewWindow({
   edition,
   inside,
   waited,
   quests,
+  questsFailed = false,
   open,
 }: {
   readonly edition: Edition | null;
@@ -74,6 +79,8 @@ export function OverviewWindow({
   readonly waited: number;
   /** The member's quests; undefined when the session owns no account to read. */
   readonly quests: readonly Quest[] | undefined;
+  /** No quests because the read failed, not because there is no account. */
+  readonly questsFailed?: boolean;
   readonly open: (w: MissionWindow) => void;
 }): ReactElement {
   const navigate = useNavigate();
@@ -99,6 +106,14 @@ export function OverviewWindow({
             mark="◆"
             title="Look over the whole market"
             sub="No quest for this account right now"
+            tag="start here"
+            onOpen={() => open("market")}
+          />
+        ) : questsFailed ? (
+          <MissionRow
+            mark="◆"
+            title="Look over the whole market"
+            sub="Your quests couldn't be read right now"
             tag="start here"
             onOpen={() => open("market")}
           />
@@ -137,7 +152,9 @@ export function OverviewWindow({
           sub={
             quests
               ? `${String(quests.length)} for your account, best first`
-              : "Yours once a paper account is connected"
+              : questsFailed
+                ? "Couldn't be read right now"
+                : "Yours once a paper account is connected"
           }
           {...(quests ? { figure: String(quests.length) } : {})}
           onOpen={() => open("quests")}

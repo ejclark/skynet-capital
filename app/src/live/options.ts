@@ -250,7 +250,12 @@ export type OptionPositions =
       /** Absent when SPY's price couldn't be read — nothing could be weighted. */
       readonly betaWeighted?: BetaWeightedBook;
     }
-  | { readonly available: false; readonly reason: "unlinked"; readonly rows: readonly [] };
+  | {
+      readonly available: false;
+      /** `read-failed`: the account's broker read failed, so what it holds is unknown (#8334). */
+      readonly reason: "unlinked" | "read-failed";
+      readonly rows: readonly [];
+    };
 
 export const fetchOptionPositions = (participantId: string): Promise<OptionPositions> =>
   getJson(`/api/trade/option-positions?participantId=${encodeURIComponent(participantId)}`);
