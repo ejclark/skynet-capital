@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
-import { DOTS, dayText, pct, usd } from "../../../src/options/position-guidance-rules";
+import { fixedPct } from "../../../src/domain/percent";
+import { DOTS, dayText, usd } from "../../../src/options/position-guidance-rules";
 import type { ManageCall } from "../../../src/options/position-guidance-types";
 import { GlossaryTerm } from "./glossary-term";
 
@@ -43,7 +44,7 @@ export function ManageGlanceLine({ m }: { readonly m: ManageCall }): ReactElemen
       <strong>{MANAGE_WORDS[m.call]}</strong>
       <Confidence m={m} />
       {m.kept === undefined ? null : m.kept >= 0 ? (
-        <span>{pct(m.kept)} kept</span>
+        <span>{fixedPct(m.kept)} kept</span>
       ) : (
         <span>costs more than you took in</span>
       )}

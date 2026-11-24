@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { fixedPct } from "../../../src/domain/percent";
 import { headlineRow } from "../../../src/options/position-guidance-ladder";
 import {
   actionable,
@@ -6,7 +7,6 @@ import {
   DOTS,
   dayText,
   LEVER_NAME,
-  pct,
   usd,
 } from "../../../src/options/position-guidance-rules";
 import type { LadderRow, LeverCall } from "../../../src/options/position-guidance-types";
@@ -97,7 +97,7 @@ function outcome(row: LadderRow): string {
   if (row.returnIfCalled === undefined) return `If exercised, 100 shares go at ${usd(row.strike)}.`;
   // `returnIfCalled` includes the premium kept, so it is a total return — not the sale price's gap.
   const word = row.returnIfCalled >= 0 ? "gain" : "loss";
-  return `If exercised, 100 shares go at ${usd(row.strike)} — a ${pct(Math.abs(row.returnIfCalled), 1)} total ${word} on what you paid, premium included.`;
+  return `If exercised, 100 shares go at ${usd(row.strike)} — a ${fixedPct(Math.abs(row.returnIfCalled), 1)} total ${word} on what you paid, premium included.`;
 }
 
 function StrikeCard({
@@ -131,12 +131,12 @@ function StrikeCard({
         <>
           <p>
             You receive <strong>{usd(row.bid * 100)}</strong> now, yours whatever happens (≈
-            {pct(row.annualizedYield)} a year only if repeated).
+            {fixedPct(row.annualizedYield)} a year only if repeated).
           </p>
           <p>
-            About a {pct(row.probAssigned)} chance it's{" "}
-            <GlossaryTerm term="exercised">exercised</GlossaryTerm>; {pct(row.probTouch)} it touches
-            the strike first. {outcome(row)}
+            About a {fixedPct(row.probAssigned)} chance it's{" "}
+            <GlossaryTerm term="exercised">exercised</GlossaryTerm>; {fixedPct(row.probTouch)} it
+            touches the strike first. {outcome(row)}
           </p>
         </>
       )}

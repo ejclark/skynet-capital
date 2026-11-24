@@ -202,7 +202,6 @@ export function pulseOf(pulse: readonly PulseItem[], id: PulseItem["id"]): Pulse
   return pulse.find((p) => p.id === id);
 }
 
-export const pct = (x: number, digits = 0): string => `${(x * 100).toFixed(digits)}%`;
 export const usd = (x: number): string =>
   `$${x.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 

@@ -1,3 +1,4 @@
+import { fixedPct } from "../domain/percent.js";
 import {
   CALL_WORDS,
   DOTS,
@@ -7,7 +8,6 @@ import {
   LEVER_NAME,
   PULSE_MARK,
   PULSE_WORDS,
-  pct,
   usd,
 } from "./position-guidance-rules.js";
 import type { PositionGuidance } from "./position-guidance-types.js";
@@ -51,14 +51,14 @@ function stake(b: PositionGuidance): string[] {
     `Shares **${s.shares ?? 0}**`,
     s.costBasis !== undefined ? `paid **${usd(s.costBasis)}** a share` : "paid — (not entered)",
     s.unrealizedPnl !== undefined
-      ? `unrealized **${s.unrealizedPnl >= 0 ? "+" : "−"}${usd(Math.abs(s.unrealizedPnl))}** (${pct(s.unrealizedPct ?? 0, 1)})`
+      ? `unrealized **${s.unrealizedPnl >= 0 ? "+" : "−"}${usd(Math.abs(s.unrealizedPnl))}** (${fixedPct(s.unrealizedPct ?? 0, 1)})`
       : undefined,
     s.cash !== undefined ? `cash **${usd(s.cash)}**` : "cash —",
     s.goal ? `goal **${GOAL_WORDS[s.goal] ?? s.goal}**` : "goal — (not set)",
     s.happyToOwnAt !== undefined ? `happy to own at **${usd(s.happyToOwnAt)}**` : undefined,
     s.callsSold ? `**${s.callsSold}** call${s.callsSold === 1 ? "" : "s"} already sold` : undefined,
     s.premiumsCollected ? `**${usd(s.premiumsCollected)}** premium collected` : undefined,
-    s.concentration !== undefined ? `**${pct(s.concentration)}** of portfolio` : undefined,
+    s.concentration !== undefined ? `**${fixedPct(s.concentration)}** of portfolio` : undefined,
   ].filter(Boolean);
   return ["### 2 · Your stake", "", parts.join(" · "), ""];
 }
@@ -94,7 +94,7 @@ function manage(b: PositionGuidance): string[] {
   if (b.manage.length === 0) return [];
   const rows = b.manage.map((m) => {
     const what = `${usd(m.strike)} call, ${dayText(m.expiration)} (${m.contracts})`;
-    const kept = m.kept === undefined ? "—" : pct(m.kept);
+    const kept = m.kept === undefined ? "—" : fixedPct(m.kept);
     const call = `**${MANAGE_WORDS[m.call] ?? m.call}**${m.atOpen ? " _(plan for the open)_" : ""}`;
     const reasons = m.reasons.map((r) => tableCell(r.text)).join("<br>");
     const back = m.provesWrong ? `<br>_Come back if: ${tableCell(m.provesWrong)}_` : "";
@@ -174,10 +174,10 @@ function ladder(b: PositionGuidance): string[] {
       r.lever === "covered-calls"
         ? r.returnIfCalled === undefined
           ? `100 shares sold at ${usd(r.strike)}`
-          : `100 shares sold at ${usd(r.strike)}: ${pct(Math.abs(r.returnIfCalled), 1)} ${r.returnIfCalled >= 0 ? "above" : "below"} what you paid`
+          : `100 shares sold at ${usd(r.strike)}: ${fixedPct(Math.abs(r.returnIfCalled), 1)} ${r.returnIfCalled >= 0 ? "above" : "below"} what you paid`
         : `you buy 100 at ${usd(r.effectiveEntry ?? r.strike)} a share`;
     const flag = r.deltaDisagreement !== undefined ? " ⚠ data check: feed and model disagree" : "";
-    return `| ${r.expiration} (${r.dte}d) | ${usd(r.strike)} ${kind} | ${usd(r.bid * 100)} | ${pct(r.annualizedYield, 1)} | ${pct(r.probAssigned)} / ${pct(r.probTouch)} | ${outcome} | 1 of ${r.maxContracts}${flag} |`;
+    return `| ${r.expiration} (${r.dte}d) | ${usd(r.strike)} ${kind} | ${usd(r.bid * 100)} | ${fixedPct(r.annualizedYield, 1)} | ${fixedPct(r.probAssigned)} / ${fixedPct(r.probTouch)} | ${outcome} | 1 of ${r.maxContracts}${flag} |`;
   });
   return [
     "### 6 · Strike ladder",
