@@ -60,6 +60,7 @@ import { installGracefulShutdown } from "../server/graceful-shutdown.js";
 import { guidanceMarketFor, withWindowChain } from "../server/guidance-route.js";
 import { heldActivity, heldOrderOrigins } from "../server/held-activity.js";
 import { ladderEvidenceReader } from "../server/ladder-evidence.js";
+import { createMemberVisitStore } from "../server/member-visits.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
 import { ownerQueueWiring } from "../server/owner-queue.js";
 import { ParticipantService } from "../server/participant-service.js";
@@ -500,6 +501,8 @@ async function main(): Promise<void> {
     recordMessage: (id) => companionMessageLog.record(id),
     companionScreenshots,
     fixAnnouncements,
+    // Who opened the app, which day, which screens (#8169) — on the volume via storePath.
+    memberVisits: createMemberVisitStore(process.env, (m) => console.error(m)),
     refreshParticipant: (id) => brokerSync.syncParticipant(id),
     readPulseHistory,
     readHeldLedger,
