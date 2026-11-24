@@ -14,8 +14,9 @@ import { type DeskAlertsDeps, deskAlertsFor } from "../server/desk-alerts-route.
  *    what is new. A fill or a rejection therefore reaches them within a second of the broker's own
  *    echo, with no polling added anywhere.
  * 2. **The sweep.** Expiry reminders and assignment risk are standing conditions, not events —
- *    nothing fires them. A timer re-derives them for MEMBERS WHO OPTED IN ONLY, so a deployment
- *    where nobody has turned delivery on does no broker reads at all and the cost of this feature
+ *    nothing fires them. A timer re-derives them for MEMBERS WHO OPTED IN ONLY — the account-wide
+ *    channel on, or one order watched (#8352: the sweep is a watch's only retry) — so a deployment
+ *    where nobody has asked for delivery does no broker reads at all and the cost of this feature
  *    is exactly zero until someone asks for it.
  *
  * Both paths share `deskAlertsFor`, the strip's own derivation, so a delivered alert is by
@@ -104,11 +105,14 @@ export function wireAlertDelivery(options: {
     if (event.target.kind === "order") queue(event.actor.participantId);
   });
 
+  // An open watch earns the sweep too, channel off or not (#8352): a watch's send that failed (a
+  // 429, the 10 s timeout) or whose pass was lost (a throw, a restart) has no other retry unless
+  // the account happens to place another order — and its fill leaves the 24 h window regardless.
   const sweep = async (): Promise<void> => {
     const members = await store.listMembers().catch(() => []);
     for (const id of members) {
-      const { prefs } = await store.load(id);
-      if (prefs.channel !== "off") queue(id);
+      const { prefs, watches } = await store.load(id);
+      if (prefs.channel !== "off" || watches.length > 0) queue(id);
     }
   };
   const minutes = Number(options.env.SKYNET_ALERT_SWEEP_MINUTES ?? "") || DEFAULT_SWEEP_MINUTES;
