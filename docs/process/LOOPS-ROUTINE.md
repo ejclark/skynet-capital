@@ -32,7 +32,7 @@ would have missed a loop.
    - `due: true` → run the `post-merge-audit` workflow with the `run:` args the script printed
      (`prs`, `through`, `file: true`). The filing and the marker move are the script's job
      (`scripts/audit-file.mjs`); the session files nothing by hand and edits no marker.
-3. **Flip.** `node scripts/flip-due.mjs --json`.
+3. **Flip.** `node scripts/flip-due.mjs --json`. It is due when the lanes are starved **or** the pile is over the line (more than 20 un-readied `feedback`, or the oldest over 14 days; #8037), and `because` says which. The list may carry `plan` issues untouched for 14 days.
    - `due: false` → note it, go to step 4.
    - `due: true` → run the `clear-path-flip` workflow with `{issues: [<the listed numbers>]}` (at most
      6), save its returned object as JSON, run `node scripts/clear-path-post.mjs <file> --dry-run`,
