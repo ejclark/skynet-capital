@@ -27,6 +27,18 @@ alignment has come — and the evidence that lets a class stop asking.
    and anything outward-facing and hard to reverse (`envelope.json`) stay his because of
    accountability and recoverability, not because alignment is short. That boundary moves only when
    he moves it.
+5. **A class he reverses more than 1 in 4 times returns to asking** (Eric, 2026-11-23, plan #8161:
+   "My job will be to steer/direct, not bless"). Every class outside `envelope.json` is
+   decide-and-report: a call made on evidence, or a taste call in a graduated class
+   ([`WORKING-AGREEMENTS.md`](WORKING-AGREEMENTS.md) → *Humans steer; the system decides, acts and
+   reports*). Each such call leaves a row below with its prediction and the Score `decided on his
+   behalf`; he steers by reversing, and a reversal rescores the row `miss (reversed)`. A class is
+   read over its last 8 decided calls: more than 2 reversals in 8, or 2 while it has fewer than 8,
+   return it to asking. One reversal in a young class is a data point, not yet a rate. The session
+   that writes a `miss (reversed)` row reads that class's window in the same change. A class that
+   returns to asking puts a prediction on every ask again and comes back to decide-and-report only
+   by rule 3's graduation. A graduated class also keeps rule 3's send-back on one miss, which
+   `alignment-graduation.mjs` checks; whichever trips first wins.
 
 ## How rows get recorded (#6953 slice 3)
 

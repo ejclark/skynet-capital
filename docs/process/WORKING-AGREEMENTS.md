@@ -44,10 +44,14 @@ research brief, not from the research itself.
 research day lens: "a spot on / perfect scenario"). Withhold a *capability* behind an earnable
 rung, never *information* a member needs to stay safe; draw the door visible · named · disabled ·
 counted. The decision tree and the instance ledger live in
-[`docs/FOG-OF-WAR.md`](docs/FOG-OF-WAR.md) — run a candidate through it before fogging anything. **The general rule this instance taught:** Claude *proposes* patterns it
-knows how to deliver, rendered on a candidate surface; Eric *places* them. A rejected placement
-banks the pattern (`docs/IDEAS.md` inbox), never the idea — fog of war was declined for the
-ticket on 2026-09-05 and landed on the research day lens a day later. Once a textbook case is
+[`docs/FOG-OF-WAR.md`](docs/FOG-OF-WAR.md) — run a candidate through it before fogging anything. **The general rule this instance taught:** Claude places a pattern it
+knows how to deliver, rendered on a candidate surface, once the candidate passes that decision
+tree: the predicted placement goes on the alignment ledger as a screen design (taste) row, the
+placement ships, and the report says so; Eric reviews it live. The safety half never loosens:
+information a member needs to stay safe is never fogged, and the unlock is a rung that exists. A
+reversed placement banks the pattern (`docs/IDEAS.md` inbox), never the idea — fog of war was declined for the
+ticket on 2026-09-05 and landed on the research day lens a day later. The falsifier is call 10 in
+*Humans steer; the system decides, acts and reports* below. Once a textbook case is
 found, run its criteria across the app: the same tree finds the other candidates *and* strips the
 gates that were never the pattern, which is how the emerging design gets its noise removed.
 
@@ -106,12 +110,81 @@ brute force us to a better/superior solution over time even if it's less token e
   The weekly newsletter prints the stock, the week's inflow against outflow, and the rework below
   (`metrics.backlogStock` · `backlogFlow` · `rework`, `scripts/newsletter/backlog.mjs`).
 - **When one path is better on the evidence, decide.** A scored call sheet, two independent
-  refuters that fail to overturn it, then ship and report. A taste call ships on the predicted pick
-  and is reviewed live, like every merge (`CLAUDE.md` → *Merge posture*). The irreversible class
-  (`envelope.json`) never moves this way.
+  refuters that fail to overturn it, then ship and report. A taste call in a graduated class ships
+  on the predicted pick and is reviewed live, like every merge (call 1 in the next section;
+  `CLAUDE.md` → *Merge posture*). The irreversible class (`envelope.json`) never moves this way.
 - **Rework is the price, so it is metered.** A revert or a fix-forward within 48h counts against the
   decision it reworks. The falsifier: by 2026-12-21, rework over 15% of autonomous decisions, or Eric
   reversing more than 1 in 4 calls decided on evidence, narrows this back to his flip.
+
+## Humans steer; the system decides, acts and reports
+
+**Humans steer and direct; the system decides, acts and reports** (Eric, 2026-11-23, plan #8161
+point 19: "So much of the work got hung up on needing my feedback/direction. The gamble and beauty
+about this direction is that we relinquish much of that control to AI. The leap of faith is that if
+we can clearly articulate/communicate our intent that AI will be able to be trained over time which
+ultimately delivers exponential ROI over time. My job will be to steer/direct, not bless." Then:
+"not just my job, but 'humans jobs'"). A person states intent and corrects course. The system makes
+the call, does the work and says what it did, and the person reverses what they disagree with. No
+step waits on a blessing it does not need.
+
+- **It holds for every person, in the build and in the game.** Eric steers the build: lanes,
+  sessions and seats decide and report to him. A member steers their own game: they state intent (a
+  goal, a bot's mandate, a story choice), and the bots and the game master decide, act and report
+  back inside that member's safeguards; the member redirects or reverses, and is never asked to
+  approve each step. A game mechanic that would ask a member to bless a step the system could take
+  and report is the same defect as a recurring blessing-ask in the build (`CLAUDE.md` → *Hard
+  boundaries*). Paper only, and no fog ever withholds what a member needs to stay safe.
+- **The boundary is `envelope.json`, unchanged.** The irreversible class is the safety boundary, not
+  a blessing: it stays Eric's, one touch per batch on the platter (`CLAUDE.md` → *Merge posture*).
+  Every class outside it is decide-and-report.
+- **Reversals are the meter.** Each decided call that would otherwise be a question to him leaves
+  a row on the alignment ledger, and a class he reverses more than 1 in 4 times returns to asking
+  ([`ALIGNMENT.md`](ALIGNMENT.md) rule 5).
+
+**The six rules this decision sets.** Each comes from the stage 0 census's rules audit on #8161 and
+keeps that audit's number, so a reader can trace it to its evidence. Each carries its falsifier;
+when one trips, the session that notices narrows that rule back to asking Eric in a PR that cites
+the reading.
+
+- **Call 1 — a taste call in a graduated class ships on the predicted pick.** The session records the
+  prediction as a ledger row, ships it, and hands Eric the live page to steer from. A taste call in
+  a class that has not graduated still reaches him as rendered options with a predicted pick
+  ([`ALIGNMENT.md`](ALIGNMENT.md) rules 1 and 3). *Wrong if:* by 2026-12-21 he reverses more than 1
+  in 4 shipped taste picks, or the class logs a miss.
+- **Call 2 — research the deciding question, then decide once two refuters fail.** No front-loaded
+  questions: the rule is *A piling backlog is a defect; evidence is enough to move* above, and a
+  question goes to Eric only for the irreversible class or a fork the research could not settle.
+  *Wrong if:* by 2026-12-21 the weekly newsletter's rework meter (#8037) reads above 15%, or he
+  reverses more than 1 in 4 calls decided on evidence.
+- **Call 4 — every seat names an event or a schedule that starts it.** A seat whose `invoker` in
+  `docs/agents/seats.json` is `eric` gets one, and plain intent stays a second way in (the list is
+  [`org-chart.md`](../architecture/org-chart.md) → *Seats with no reporting line*). A seat stays with a person only when its act is a person's by nature: the quota surge
+  (raising a cap is spend), invites (the invite gate) and the owner's own bot controls (his account,
+  as a member's bots are theirs). A schedule or event that needs a workflow file touches
+  `.github/workflows/**`, which `envelope.json` protects, so it boards the platter as a held item.
+  *Wrong if:* by 2026-12-21, or 30 days after the first seat moves if that is later, a seat started
+  by an event or a schedule has more than 1 in 4 of its PRs reverted, or spends more than the work
+  dial allows.
+- **Call 5 — an unready plan has an age limit of 30 days.** A `plan` issue with no `ready` 30 days
+  after filing is merged into a parent plan as a sub-issue, flipped `ready` on evidence
+  (`/clear-path-flip`, two refuters), or closed `not_planned` with its reason in one line. A plan
+  carrying `needs-eric` stays on the decisions page instead. 30 days is a first guess: on
+  2026-11-24, 84 of 95 open plans had no `ready`, at a median age of 46 days. The first sweep is
+  #8161's stage 1 close-out, after Eric picks the direction. *Wrong if:* by 2026-12-21 the open plan
+  count has not fallen below 95, or he reopens more than 2 age-closed plans.
+- **Call 9 — a fan-out prints a price line and launches.** Before a workflow or a batch of agents
+  starts, the session prints one line: the agents, their models, and the share of the weekly quota
+  it expects to spend (`npm run pace` for what is already used; the estimate from the nearest
+  measured run, labelled an estimate). It waits for Eric's go only above 15% of the weekly quota, or
+  above 4 Fable agents in one run. The work dial still refuses what it refuses (`npm run work-gate`),
+  and conservation still follows only his phrase ([`COMPUTE.md`](../COMPUTE.md)). Both thresholds
+  are first guesses, and this file is their home until the dial carries them: `work-mode.json` is
+  protected, so moving them there is a platter item. *Wrong if:* by 2026-12-21 he stops a run, or
+  turns the dial to `conserve`, because a fan-out spent more than he expected.
+- **Call 10 — a pattern that locks a capability behind a rung is placed by the decision tree plus a
+  prediction.** The rule is *Fog of war* above; the safety half stays as written there. *Wrong if:*
+  he reverses a placement by 2026-12-21.
 
 ## PR-watch status replies
 
