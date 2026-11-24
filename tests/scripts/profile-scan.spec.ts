@@ -166,6 +166,34 @@ describe("profile-scan: review fixes", () => {
     expect(owed.map((r) => r.askId)).toEqual(["#6870 S2: merge?"]);
   });
 
+  it("cites the whole cell when two `#N · question` asks share an issue and a day (#8342)", () => {
+    // answer-readback writes one `#N · <question>` row per question on a card, all dated the reply.
+    const rows = ledgerRows(
+      ledger(
+        "| 2026-12-01 | taste | #8300 · which layout? | A (medium) | B | miss |",
+        "| 2026-12-01 | taste | #8300 · which colour? | A (medium) | C | miss |",
+      ),
+    );
+    expect(new Set(rows.map((r) => r.cite)).size).toBe(2);
+    const owed = uncitedMisses(
+      rows,
+      ["(ALIGNMENT 2026-12-01 · #8300 · which layout?, miss)"],
+      "2026-12-20",
+    );
+    expect(owed.map((r) => r.askId)).toEqual(["#8300 · which colour?"]);
+    // One line citing the bare id clears neither: it no longer names a single ask.
+    expect(
+      uncitedMisses(rows, ["(ALIGNMENT 2026-12-01 · #8300, miss)"], "2026-12-20"),
+    ).toHaveLength(2);
+  });
+
+  it("keeps the short `#N` cite for a `#N · question` ask alone on its day", () => {
+    const [row] = ledgerRows(
+      ledger("| 2026-12-01 | taste | #8300 · which layout? | A | B | miss |"),
+    );
+    expect(row?.cite).toBe("ALIGNMENT 2026-12-01 · #8300");
+  });
+
   it("never swallows the next hypothesis when text follows a closing underscore", () => {
     const md = [
       "- _hypothesis H9 (2026-12-01) — guess. Proves it wrong: x._ (#9001)",
