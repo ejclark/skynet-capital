@@ -90,6 +90,7 @@ export function holdForSession(
       holder: string,
     ) => { claimed: boolean; reason: string };
     label?: (n: number | null, add: boolean) => boolean;
+    readLabels?: (n: number | null) => string[];
   },
 ): { claimed: boolean; reason: string; label?: boolean };
 /** #8314: the refusal reason when a live session holds the issue by the activity rule, else null. */

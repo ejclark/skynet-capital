@@ -2,7 +2,9 @@ import { execFileSync } from "node:child_process";
 import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { staleInProgressFrom } from "../../../scripts/moneypenny/audit.mjs";
 import { holdForSession, sessionHoldRefusal } from "../../../scripts/moneypenny/index.mjs";
+import { notPullable } from "../../../scripts/moneypenny/labels.mjs";
 import { leasedFromRefs, planPrInProgress } from "../../../scripts/moneypenny/pr-in-progress.mjs";
 import { LANE_HOLDER, SESSION_HOLDER } from "../../../scripts/moneypenny/session-hold.mjs";
 
@@ -60,7 +62,7 @@ describe("step 1 — the merge of the session's first PR keeps in-progress on", 
 describe("step 2 — the lane's claim honours a live session hold past the TTL", () => {
   const session = { takenMs: at(HELD_AT), holder: SESSION_HOLDER };
 
-  it("refuses while the issue showed activity inside the TTL (the label write at the merge)", () => {
+  it("refuses while the issue showed activity inside the TTL (a label or comment at 07:07:56)", () => {
     const reason = sessionHoldRefusal(
       { updated_at: "2026-11-24T07:07:56Z" },
       session,
@@ -173,50 +175,77 @@ describe("the skills take the hold for a multi-PR feedback issue (fix 3 and 4)",
 
 // THE CLOUD CONSTRAINT (measured 2026-11-24, the same night): a cloud session's proxy refuses the
 // claim-ref write with HTTP 403, but an issue-label write over REST goes through. So `--hold`
-// falls back to the `session-held` label, and every reader honours the label as it honours the ref.
+// falls back to the `session-held` label, which the one pull rule refuses, for every claim path.
 describe("the cloud path — the ref write is refused, the label holds", () => {
   const refused = () => ({
     claimed: false,
     reason:
       "could not create the lease — gh: Write access to this GitHub API path is not permitted through this proxy. (HTTP 403)",
   });
+  const recorder = (ok = true) => {
+    const calls: [number | null, boolean][] = [];
+    return {
+      calls,
+      label: (n: number | null, add: boolean) => {
+        calls.push([n, add]);
+        return ok;
+      },
+    };
+  };
+  const unlabelled = () => [] as string[];
 
-  it("--hold falls back to session-held and answers claimed", () => {
-    const labelled: [number | null, boolean][] = [];
+  it("06:22 — --hold falls back to session-held and answers claimed", () => {
+    const rec = recorder();
     const r = holdForSession("feedback-8249", at("06:22:03"), {
       claim: refused,
-      label: (n, add) => {
-        labelled.push([n, add]);
-        return true;
-      },
+      label: rec.label,
+      readLabels: unlabelled,
     });
-    expect(labelled).toEqual([[8249, true]]);
+    expect(rec.calls).toEqual([[8249, true]]);
     expect(r).toMatchObject({ claimed: true, label: true });
     expect(r.reason).toMatch(/session-held/);
   });
 
-  it("--hold takes nothing when someone else's live claim holds the issue", () => {
-    const labelled: unknown[] = [];
-    const r = holdForSession("feedback-8249", at("06:22:03"), {
-      claim: () => ({ claimed: false, reason: "held by a live claim (5m old)" }),
-      label: (n) => {
-        labelled.push(n);
-        return true;
+  it("--hold takes nothing when a live claim or a won race holds the issue", () => {
+    for (const reason of ["held by a live claim (5m old)", "lost the race to a concurrent claim"]) {
+      const rec = recorder();
+      const r = holdForSession("feedback-8249", at("06:22:03"), {
+        claim: () => ({ claimed: false, reason }),
+        label: rec.label,
+        readLabels: unlabelled,
+      });
+      expect(r.claimed).toBe(false);
+      expect(rec.calls).toEqual([]);
+    }
+  });
+
+  it("--hold refuses a second session when session-held is already on the issue", () => {
+    const rec = recorder();
+    let claimed = false;
+    const r = holdForSession("feedback-8249", at("06:30:00"), {
+      claim: () => {
+        claimed = true;
+        return { claimed: true, reason: "claimed" };
       },
+      label: rec.label,
+      readLabels: () => ["feedback", "session-held"],
     });
     expect(r.claimed).toBe(false);
-    expect(labelled).toEqual([]);
+    expect(r.reason).toMatch(/^held by a live claim/);
+    expect(claimed).toBe(false);
+    expect(rec.calls).toEqual([]);
   });
 
   it("--hold reports the refusal when the label write fails too", () => {
     const r = holdForSession("feedback-8249", at("06:22:03"), {
       claim: refused,
-      label: () => false,
+      label: recorder(false).label,
+      readLabels: unlabelled,
     });
     expect(r).toMatchObject({ claimed: false, label: false });
   });
 
-  it("the 07:07:56 merge keeps in-progress on a session-held issue with no lease", () => {
+  it("07:07:56 — the merge keeps in-progress on a session-held issue with no lease", () => {
     const [row] = planPrInProgress({
       event: "closed",
       facts: [
@@ -229,18 +258,30 @@ describe("the cloud path — the ref write is refused, the label holds", () => {
     });
   });
 
-  it("the 07:16:28 claim refuses a session-held issue that showed activity inside the TTL", () => {
-    const issue = {
-      updated_at: "2026-11-24T07:07:56Z",
+  // The retry sweep's rows (`readOpenIssues`) carry no `updated_at`, so the label must be refused by
+  // the pull rule itself, not by an activity read: every claim path asks this rule first.
+  it("07:16:28 — the pull rule refuses a session-held issue, even with in-progress gone", () => {
+    const row = {
+      number: 8249,
+      state: "open",
       labels: [{ name: "feedback" }, { name: "ready" }, { name: "session-held" }],
     };
-    expect(sessionHoldRefusal(issue, null, at(CLAIM_AT))).toBe(
-      "held by a live claim (a session's hold, last activity 9m ago)",
-    );
+    expect(notPullable(row)).toMatchObject({ code: "in-progress" });
+    expect(notPullable(row, { interactive: true })?.text).toMatch(/session-held/);
   });
 
-  it("a session-held label quiet for the TTL no longer holds (a crashed cloud session)", () => {
-    const issue = { updated_at: "2026-11-24T05:00:00Z", labels: [{ name: "session-held" }] };
-    expect(sessionHoldRefusal(issue, null, at(CLAIM_AT))).toBeNull();
+  it("a crashed cloud session's label is cleared by the 6h stall sweep, even without in-progress", () => {
+    const rows = staleInProgressFrom(
+      [
+        {
+          number: 8249,
+          title: "t",
+          labels: [{ name: "session-held" }],
+          updatedAt: "2026-11-24T00:00:00Z",
+        },
+      ],
+      at("07:00:00"),
+    );
+    expect(rows).toEqual([{ number: 8249, title: "t", inProgress: false, hoursQuiet: 7 }]);
   });
 });

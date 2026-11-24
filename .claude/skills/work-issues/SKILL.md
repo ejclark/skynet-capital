@@ -61,10 +61,12 @@ mandate, per `docs/MONEYPENNY.md`'s authority section.
    (anything else). `claimed: false` means a lane or another session holds it, so skip it. The
    label alone comes off at your first PR's merge, and the lane would then build the PR you are
    still building (#6065 for a plan; #8314, twice in one hour of a surge, for a feedback issue).
-   In a cloud session the proxy refuses the lease write (HTTP 403); `--hold` then puts the
-   `session-held` label on instead, which the same readers honour, and still answers
-   `claimed: true`. The hold lasts while you show activity (a merge, a state-block edit, a label
-   or comment on the issue) and goes stale after 2h quiet (`scripts/moneypenny/session-hold.mjs`).
+   `--hold` also puts the `session-held` label on (over REST); in a cloud session the proxy
+   refuses the lease write (HTTP 403) and the label alone is the hold, still answering
+   `claimed: true`. Every claim path refuses a `session-held` issue, so the label lasts until you
+   `--release`, or the stall audit clears it after 6h quiet. A lease-only hold lasts while you
+   show activity (a merge, a state-block edit, a label or comment on the issue) and goes stale
+   after 2h quiet (`scripts/moneypenny/session-hold.mjs`).
    A fresh plan can also be refused because the board's Next part queued column (started plans
    with a next part approved and nobody building) is at `startedPlanCap` — the CLI says so; finish
    one of those instead (#4393, #6871).
@@ -100,8 +102,9 @@ mandate, per `docs/MONEYPENNY.md`'s authority section.
    `needs-info` or `needs-eric`; the stall audit only catches one forgotten for 6h. A **held**
    issue ends differently: a merge is not the end of it. When you stop working it (its last PR
    merges, any other terminal outcome, the pass ends, or you hand it on), run `node
-   scripts/moneypenny/index.mjs --release plan-<n>` (or `feedback-<n>`), which drops the lease and
-   the label together, so the lane can continue a plan on the next sweep. A `needs-eric` item doesn't block
+   scripts/moneypenny/index.mjs --release plan-<n>` (or `feedback-<n>`), which drops the lease,
+   `session-held` and `in-progress` together (over REST where GraphQL is refused), so the lane can
+   continue a plan on the next sweep. A `needs-eric` item doesn't block
    the rest of the queue; it just stops competing for the same PR slot. **On a `plan` issue, every
    outcome is an edit to its state block** (the slice's new state, the next pickup line, one dated
    log line), made with `npm run issues -- update N --edit-comment <id> --comment-file f` so it

@@ -231,6 +231,7 @@ export function audit(deps = {}) {
     intents.push({
       kind: "clear-in-progress",
       issueNumber: w.number,
+      inProgress: w.inProgress,
       title: w.title,
       hoursQuiet: w.hoursQuiet,
       body: `Cleared \`${LABELS.inProgress.name}\`: no activity for ${inProgressStaleAfterHours}h. Re-apply it when work resumes.\n\n${FOOTER}`,
@@ -457,13 +458,22 @@ export function planStallFrom(
  * 6h. Re-filters on the label so a caller may pass any issue list; `audit()` applies the threshold.
  */
 export function staleInProgressFrom(issues = [], nowMs = 0) {
-  return (issues ?? [])
-    .filter((i) => (i.labels ?? []).some((l) => l.name === LABELS.inProgress.name))
-    .map((i) => ({
-      title: i.title,
-      number: i.number,
-      hoursQuiet: Math.floor((nowMs - Date.parse(i.updatedAt)) / 3_600_000),
-    }));
+  return (
+    (issues ?? [])
+      // #8314 — a `session-held` issue too: a cloud session that died before its first PR leaves the
+      // hold label with no `in-progress`, and the pull rule refuses it until this sweep clears it.
+      .filter((i) =>
+        (i.labels ?? []).some(
+          (l) => l.name === LABELS.inProgress.name || l.name === LABELS.sessionHeld.name,
+        ),
+      )
+      .map((i) => ({
+        title: i.title,
+        number: i.number,
+        inProgress: (i.labels ?? []).some((l) => l.name === LABELS.inProgress.name),
+        hoursQuiet: Math.floor((nowMs - Date.parse(i.updatedAt)) / 3_600_000),
+      }))
+  );
 }
 
 /**

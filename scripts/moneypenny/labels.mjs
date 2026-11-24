@@ -366,6 +366,17 @@ export function notPullable(issue, { interactive = false, boardedOn } = {}) {
       text: `#${n} is already \`in-progress\` — another session or lane is building it`,
     };
   }
+  // #8314 — a session holds it through its own merges: the cloud-safe hold, which a cloud session's
+  // `--hold` writes where the claim ref is refused. In the pull rule, so every claim path (the
+  // feedback and plan lanes, the retry sweep, continuation, a second session) refuses it alike.
+  // Same code as `in-progress`: to the board it is a build in progress. A dead session's label goes
+  // on the stall audit's 6h sweep (`staleInProgressFrom`).
+  if (names.includes(LABELS.sessionHeld.name)) {
+    return {
+      code: "in-progress",
+      text: `#${n} carries \`session-held\` — a live session is building it across several PRs`,
+    };
+  }
   if (!interactive && names.includes(LABELS.needsSession.name)) {
     return {
       code: "needs-session",
@@ -456,18 +467,24 @@ export function setInProgress(number, add) {
  * Best-effort like `setInProgress`: returns false on a failed write. Removing an absent label 404s,
  * which is the harmless no-op it reads as.
  */
-export function setSessionHeld(number, add, exec = sh) {
+export const setSessionHeld = (number, add, exec = sh) =>
+  setLabelRest(number, LABELS.sessionHeld.name, add, exec);
+
+/** Add or remove one label over REST (the core bucket, and the one label write a cloud session
+ *  has). Best-effort: false on a failed write, warned only on an add. */
+export function setLabelRest(number, name, add, exec = sh) {
   if (!number) return false;
   const path = `repos/{owner}/{repo}/issues/${number}/labels`;
   try {
-    if (add) exec("gh", ["api", "-X", "POST", path, "-f", `labels[]=${LABELS.sessionHeld.name}`]);
-    else exec("gh", ["api", "-X", "DELETE", `${path}/${LABELS.sessionHeld.name}`]);
+    if (add) exec("gh", ["api", "-X", "POST", path, "-f", `labels[]=${name}`]);
+    else exec("gh", ["api", "-X", "DELETE", `${path}/${name}`]);
     return true;
   } catch (err) {
-    if (!add) return false;
-    console.log(
-      `::warning::could not apply \`${LABELS.sessionHeld.name}\` on #${number}: ${String(err?.stderr || err?.message).slice(0, 200)}`,
-    );
+    if (add) {
+      console.log(
+        `::warning::could not apply \`${name}\` on #${number}: ${String(err?.stderr || err?.message).slice(0, 200)}`,
+      );
+    }
     return false;
   }
 }

@@ -1,11 +1,12 @@
 // THE SESSION HOLD (#6065) — a live session holds a plan through its own merges. #8314 extends it to
 // a feedback issue the session ships in more than one PR (`--hold feedback-<n>`): on 2026-11-24 a
 // surge child's first PR merged, `in-progress` came off, and the feedback lane built the child's
-// second PR beside it, twice in one hour. The feedback claim reads the same rule; its activity is
-// the issue's own `updated_at`, which the label write at a merge moves. A CLOUD session cannot write
-// the ref at all (its proxy answers 403, measured the same night), so `--hold` falls back to the
-// `session-held` label, written over REST; `pr-in-progress.mjs` and the feedback claim honour the
-// label exactly as they honour the ref, and `--release` and the 6h stall sweep take it off.
+// second PR beside it, twice in one hour. The feedback claim reads the same rule for a ref hold;
+// its activity is the issue's own `updated_at` (labels, comments). A CLOUD session cannot write the
+// ref at all (its proxy answers 403, measured the same night), so `--hold` falls back to the
+// `session-held` label, written over REST. That label is in the pull rule (`notPullable`), so every
+// claim path refuses it; `pr-in-progress.mjs` keeps `in-progress` on beside it at a merge; and
+// `--release` or the stall audit's 6h sweep takes it off.
 //
 // WHAT BROKE. On 2026-10-26 a `/work-issues` session took #5482 at 11:30 by labelling it
 // `in-progress`, and nothing else. Its first slice PR merged at 11:57; `pr-in-progress.mjs` saw no
