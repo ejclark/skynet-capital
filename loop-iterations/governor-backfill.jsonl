@@ -7,3 +7,4 @@
 {"date":"2026-11-24","loop":"governor-backfill","before":41,"after":40,"tokensM":1.84,"usd":null,"changed":"direct behavioral specs for src/server/option-exit-plan.ts (28 tests)"}
 {"date":"2026-11-24","loop":"governor-backfill","before":40,"after":39,"tokensM":null,"usd":null,"changed":"added behavioral specs for src/options/drawdown-base-rates.ts, one untested file covered"}
 {"date":"2026-11-24","loop":"governor-backfill","before":39,"after":38,"tokensM":null,"usd":null,"changed":"behavioral specs for src/domain/ticker-directory/technology.ts (one untested file covered)"}
+{"date":"2026-11-24","loop":"governor-backfill","before":39,"after":38,"tokensM":null,"usd":null,"changed":"specs for src/evals/companion/stage-trade-fixture.ts (11 behaviors)"}
