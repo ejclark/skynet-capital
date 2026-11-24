@@ -17,11 +17,11 @@
  */
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
 import { refinementText, renderProposals } from "../playbooks/claim-proposals.js";
 import type { Conviction } from "../playbooks/conviction-record.js";
 import { CONVICTIONS } from "../playbooks/conviction-store.js";
 import { CONVICTION_ID, CONVICTION_ID_MAX } from "../subscriptions/subscription-state.js";
+import { isMain } from "./cli-entry.js";
 
 export const REFINEMENTS_DIR = join(process.cwd(), "docs/research/convictions/refinements");
 
@@ -74,5 +74,4 @@ export function main(argv: readonly string[] = process.argv.slice(2)): number {
   return 0;
 }
 
-const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
-if (isMain) process.exit(main());
+if (isMain(import.meta.url)) process.exit(main());
