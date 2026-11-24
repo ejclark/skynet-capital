@@ -241,7 +241,7 @@ function readiesFor(issue, answer) {
 }
 
 /** The answers in one of his replies, as read-back intents plus what was not read. */
-function answerIntent(reply, read, { page, askMap, issueBy, answered }) {
+function answerIntent(reply, read, { page, askOf, issueBy, answered }) {
   const readbacks = [];
   const unread = [...read.unread];
   for (const a of read.applied) {
@@ -250,7 +250,7 @@ function answerIntent(reply, read, { page, askMap, issueBy, answered }) {
       continue;
     }
     answered.add(a.issue);
-    const ask = askMap.get(a.issue);
+    const ask = askOf(a.issue);
     const issue = issueBy.get(a.issue);
     const card = { items: ask.items.map(cardTwin) };
     const rows = ledgerRows({ number: a.issue, title: ask.title, card, answer: a.answer, reply });
@@ -264,7 +264,9 @@ function answerIntent(reply, read, { page, askMap, issueBy, answered }) {
       why: `his reply on the decisions page #${page.number}`,
       said: saidOf(a.answer),
       body,
-      ready: readiesFor(issue, a.answer),
+      // An ask kept only by its snapshot (#8060) may be off the gathered issues: no labels to read,
+      // so no `ready` — an answer that already landed skips the write anyway.
+      ready: issue ? readiesFor(issue, a.answer) : false,
     });
   }
   return {
@@ -311,14 +313,23 @@ export function planDecisions({
   }
   const held = [...needsYou.filter((r) => r.criterion === 4), ...mergeAsks];
   const prior = page ? stateOf(page.body) : EMPTY();
+  // An ask a reply answered carries a snapshot of its card (`ask`) until that reply's receipt
+  // lands (#8060). Its own answer takes it off the selector, so without the snapshot a retry tick
+  // (a busy lease on another ask, a failed receipt POST) read his APPLIED answer as "cleared before
+  // this was read". With it, the retry reads the answer again; fanOut finds the ledger row the
+  // first tick wrote and reports it as read.
+  const kept = new Map(
+    prior.entries.filter((e) => e.ask && !askMap.has(e.issue)).map((e) => [e.issue, e.ask]),
+  );
+  const askOf = (n) => askMap.get(n) ?? kept.get(n);
+  const cardOf = (a) => (a ? { items: a.items.map(cardTwin) } : null);
   // Entries whose ask left since the page was drawn read as cleared, never as an answerable card.
   const readable = [
-    ...prior.entries.map((e) => (askMap.has(e.issue) ? e : { ...e, until: now })),
-    ...prior.retired,
-  ].map((e) => ({
-    ...e,
-    card: askMap.has(e.issue) ? { items: askMap.get(e.issue).items.map(cardTwin) } : null,
-  }));
+    ...prior.entries.map(({ ask: _, ...e }) =>
+      askOf(e.issue) ? { ...e, card: cardOf(askOf(e.issue)) } : { ...e, until: now, card: null },
+    ),
+    ...prior.retired.map((e) => ({ ...e, card: cardOf(askMap.get(e.issue)) })),
+  ];
   const intents = [];
   const answered = new Set();
   if (page) {
@@ -333,15 +344,23 @@ export function planDecisions({
         replyAt: Date.parse(reply.created_at),
       });
       if (!read.referenced) continue; // a note with no number in it is not an answer to anything
-      intents.push(answerIntent(reply, read, { page, askMap, issueBy, answered }));
+      intents.push(answerIntent(reply, read, { page, askOf, issueBy, answered }));
     }
   }
-  // An ask answered this tick keeps its number in the STATE until it actually leaves the selector:
-  // nothing has confirmed the answer landed yet, and this tick's sync runs even if the answer
-  // intent throws or finds its lease busy. Retiring it here made the next tick read his unreceipted
-  // reply as "cleared before this was read" and lose the answer (#7957). It is only left off the
-  // page he SEES this tick, so his reply clears what he answered at once.
-  const state = nextState(prior, [...askMap.values()], now);
+  // An ask answered this tick keeps its number in the STATE until its reply is receipted: nothing
+  // has confirmed the answer landed yet, and this tick's sync runs even if the answer intent throws
+  // or finds its lease busy. Retiring it made the next tick read his unreceipted reply as "cleared
+  // before this was read" (#7957), and so did retiring it once its own answer took it off the
+  // selector while another part of the reply had not landed (#8060). It is only left off the page
+  // he SEES, so his reply clears what he answered at once. A receipted reply is not re-read, so its
+  // asks stop being `answered` and retire on the next tick.
+  const pending = [...kept.keys()].filter((n) => answered.has(n)).map((issue) => ({ issue }));
+  const state = nextState(prior, [...askMap.values(), ...pending], now);
+  state.entries = state.entries.map(({ ask: _, ...e }) => {
+    const a = answered.has(e.issue) && askOf(e.issue);
+    return a ? { ...e, ask: { title: a.title, items: a.items } } : e;
+  });
+  state.retired = state.retired.map(({ ask: _, ...r }) => r);
   const shown = state.entries.filter((e) => !answered.has(e.issue));
   const ericOn = (page?.assignees ?? []).some((u) => isEric(u?.login ?? u));
   const hasAsks = shown.length > 0 || held.length > 0;
