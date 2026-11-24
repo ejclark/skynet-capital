@@ -12,7 +12,7 @@ import { describePage, pagePath, pageSymbol } from "../companion/companion-page.
 import { COMPANION_DISCLOSURE, FIRST_TRADE_TOUR } from "../companion/companion-system-prompt.js";
 import { GAME_MASTER_PILOT, gameMasterAdmits } from "../companion/game-master-flag.js";
 import { editions, editionView } from "../domain/edition.js";
-import { regularSessionOpen } from "../domain/market-session.js";
+import { marketHoursLine } from "../domain/market-clock.js";
 import type { Session } from "./auth/session.js";
 import { companionConvictionsFor } from "./companion-convictions-port.js";
 import { companionFollowupFor } from "./companion-followup-port.js";
@@ -23,6 +23,7 @@ import { resolveCurrentId } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { opaqueMemberId } from "./feedback-issue.js";
 import { knownProblemFixes } from "./known-problem-fixes.js";
+import { readClockFor } from "./market-clock.js";
 import { onboardingView } from "./onboarding-api-routes.js";
 import { describeOwnerQueue, type OwnerQueue, type ReadOwnerQueue } from "./owner-queue.js";
 import { parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
@@ -153,10 +154,11 @@ async function memberContextFor(
     // on — nothing in the request or the prompt can — and a slow or failed read drops the line,
     // never the turn.
     const owner = config.isOwnerEmail?.(session.email) === true;
-    const [onboarding, filings, ownerQueue] = await Promise.all([
+    const [onboarding, filings, ownerQueue, clock] = await Promise.all([
       onboardingView(config, session),
       config.readFeedback ? config.readFeedback(opaqueMemberId(session.email)) : [],
       owner && config.readOwnerQueue ? ownerQueueWithin(config.readOwnerQueue) : undefined,
+      readClockFor(config),
     ]);
     // "Try it" (#8005 slice 7): a matched filing whose known problem was fixed since they asked.
     const fixes = await knownProblemFixes(filings, config.fetchBuiltPlans);
@@ -176,7 +178,9 @@ async function memberContextFor(
       filings: [...filings]
         .sort((a, b) => b.filedAt.localeCompare(a.filedAt))
         .map((f) => ({ issueNumber: f.issueNumber, title: f.title, filedAt: f.filedAt })),
-      marketOpen: regularSessionOpen(),
+      // Open/closed and the day's real close from the broker's calendar (#8248), never a fixed 4:00.
+      marketOpen: clock.isOpen,
+      marketLine: marketHoursLine(clock),
       ...(page ? { page } : {}),
       ...(holding ? { holding } : {}),
       ...(onScreen ? { onScreen } : {}),

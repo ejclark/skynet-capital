@@ -271,7 +271,10 @@ function offlineTransports(
   const fixtureFor = (id: string): AccountFixture =>
     fixtures.get(id) ?? { account: emptyAccount() };
   if (env.SKYNET_OFFLINE_WRITES !== "apply") {
-    return (id) => new FixtureTradingTransport(fixtureFor(id));
+    // The read-only world's calendar and clock read the same pinned instant (#8248).
+    const fixed = Date.parse(env.SKYNET_FIXED_NOW ?? "");
+    const now = Number.isFinite(fixed) ? () => new Date(fixed) : () => new Date();
+    return (id) => new FixtureTradingTransport(fixtureFor(id), now);
   }
   const market = offlineMarket(env, fixtures, events);
   const ledgers = new Map<string, WritableFixtureTradingTransport>();
@@ -283,6 +286,7 @@ function offlineTransports(
         market,
         idPrefix: `paper-${id}`,
         clock: () => marketClock(market.now()),
+        marketNow: () => market.now(),
         onFill: (fill) => sink?.({ type: "fill", participantId: id, ...fill }),
       });
       ledgers.set(id, found);

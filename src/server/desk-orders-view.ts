@@ -150,9 +150,12 @@ export function deskOrderRow(order: AlpacaOrder): DeskOrderRow | undefined {
     ...(order.replaced_by ? { replacedBy: order.replaced_by } : {}),
     state,
     cancelable: state === "working" || state === "partial",
+    // A bracket's entry or exit (#8249) is not offered Modify in this slice: its pieces are linked
+    // (one exit filling cancels the other), and the desk does not yet replace one piece in place.
     replaceable:
       (state === "working" || state === "partial") &&
-      REPLACEABLE_TYPES.has((order.type ?? "market").toLowerCase()),
+      REPLACEABLE_TYPES.has((order.type ?? "market").toLowerCase()) &&
+      order.order_class !== "bracket",
   };
 }
 
