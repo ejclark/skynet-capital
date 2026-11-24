@@ -126,13 +126,22 @@ export function numbersIn(text) {
  */
 export function hedged(text) {
   const { hits, clean } = numberHits(text);
+  return offersChoice(hits, clean);
+}
+
+// "or", optionally followed by the word that signs the next amount: "$4 or up $4", "$4 or lost $4".
+const OR_JOIN =
+  /^[\s,;(]*or[\s(]*(?:(?:up|down|gained|lost|rose|fell|a\s+(?:gain|loss)\s+of)\s+(?:by\s+|of\s+)?(?:about\s+)?)?$/i;
+
+/** The choice check over hits already read — signed ones, when a loss said in words counts. */
+function offersChoice(hits, clean) {
   return hits.some((h, i) => {
     const next = hits[i + 1];
     return (
       next !== undefined &&
       next.unit === h.unit &&
       next.n !== h.n &&
-      /^[\s,;(]*or[\s(]*$/i.test(clean.slice(h.end, next.start))
+      OR_JOIN.test(clean.slice(h.end, next.start))
     );
   });
 }
@@ -254,7 +263,10 @@ function gradeNumber(given, expected) {
   const hits = expected.ignoreSign ? written : written.map((h) => withWordSign(clean, h));
   const found = [...new Set(hits.map((h) => h.n))];
   if (found.length === 0) return { matched: false, why: "no number in the answer" };
-  if (hedged(given)) return { matched: false, why: "it offers a choice of numbers — a guess" };
+  // On the signed hits: "down $4 or up $4" is −4 or +4, a guess, though it writes 4 twice (#8056).
+  if (offersChoice(hits, clean)) {
+    return { matched: false, why: "it offers a choice of numbers — a guess" };
+  }
   const want = Math.abs(expected.value);
   const hit = hits.find((h) => withinTolerance(h.n, expected));
   const sized = (h) =>
