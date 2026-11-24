@@ -493,8 +493,8 @@ picks it up starts from the fork, not the wish.
 - **The vendored "Diagrams first" output-style line** (`docs/vendor/claude-code/output-styles.md`
   L66-81) into `.claude/output-styles/orient.md`: an in-session explanation of code or flow opens with a diagram. Eric
   put AI→human chat in scope (2026-09-25); judge on a week of replies. _(src: Claude · while: #3748)_
-- **Digest picture slot** — the revival condition (2–3 digests on cadence, IDEAS L296) is met with
-  13 shipped; a generated `kanban` of the ready queue is the candidate. _(src: Claude · while: #3748)_
+- **Digest picture slot** — shipped advisory (#3748 slice 7c: `digest-scan --pictures`); a generated
+  `kanban` of the ready queue stays the candidate for a second slot. _(src: Claude · while: #3748)_
 - **Prose-in-cells** — the table-as-media rule lets a paragraph in a cell pass as a picture (#3735,
   243 words above the fold); an advisory cell-length note in `checkbody`. _(src: Claude · while: the
   2026-09-25 PR census)_
@@ -771,10 +771,10 @@ gate + digest delivery prove out. Workflow-file carve-out. _(src: Claude · whil
 research, 2026-08-20)_
 
 ### Digest picture slot — ratchet in only after the digest loop is proven live
-Add `## The picture` to `docs/digests/TEMPLATE.md` + `digest-scan` REQUIRED_SECTIONS once 2–3 digests
-have actually shipped on cadence (the instrument has fired once ever; decorating a dead instrument
-decorates an empty room). The digest picture = `## The picture` blocks harvested from squash bodies
-via local git log. _(src: Claude · while: hat-team comms research, 2026-08-20)_
+**Shipped advisory (#3748 slice 7c):** the template slot and `digest-scan --pictures` exist; `--validate`
+prints "ratchet due" once 2 digests carry it, and that PR adds `## The picture` to `digest-scan`
+REQUIRED_SECTIONS. The digest picture = `## The picture` blocks harvested from squash bodies via
+local git log. _(src: Claude · while: hat-team comms research, 2026-08-20)_
 
 ### Long-session journey nudge from duel-log telemetry
 Teach `scripts/duel-log.mjs` (or the postmaster audit) a heuristic: a session with many turns and no

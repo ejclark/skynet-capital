@@ -15,3 +15,5 @@ export function harvestPictures(
   rows: readonly { number: number | null; subject: string; picture: string; block: string }[],
   limit?: number,
 ): string | null;
+/** Re-join the table rows a squash commit body hard-wrapped; fenced code is left alone. */
+export function unwrapRows(block: string): string;

@@ -1,5 +1,10 @@
 import { execFileSync } from "node:child_process";
-import { gitSince } from "../../scripts/comms-scan.mjs";
+import { gitSince, harvestPictures, unwrapRows } from "../../scripts/comms-scan.mjs";
+import {
+  carryingPictureSlot,
+  missingPictureSlot,
+  RATCHET_AFTER,
+} from "../../scripts/digest-scan.mjs";
 
 /**
  * The landing meter (#456) — the picture-first redesign's own scoreboard.
@@ -202,5 +207,52 @@ describe("the digest picture slot — what it harvests", () => {
 
   it("keeps the harvested block out of the meter's own JSON rows", () => {
     expect(Object.keys(report().rows[0] ?? {})).not.toContain("block");
+  });
+});
+
+describe("the digest picture slot — squash bodies wrap, the slot must not show it", () => {
+  it("re-joins a table row the squash body wrapped, and nothing else", () => {
+    const wrapped = [
+      "| a | b |",
+      "|---|---|",
+      "| the long first",
+      "cell | second |",
+      "",
+      "_Caption._",
+    ].join("\n");
+    expect(unwrapRows(wrapped)).toBe(
+      ["| a | b |", "|---|---|", "| the long first cell | second |", "", "_Caption._"].join("\n"),
+    );
+  });
+
+  it("leaves a fenced diagram untouched, even a line that starts with a pipe", () => {
+    const fence = ["```mermaid", "flowchart LR", "| not a row", "  A --> B", "```"].join("\n");
+    expect(unwrapRows(fence)).toBe(fence);
+  });
+
+  it("is what the harvest prints", () => {
+    const rows = [
+      {
+        number: 9,
+        subject: "feat: x",
+        picture: "table",
+        block: "| k | v |\n|---|---|\n| one\ntwo | 3 |",
+      },
+    ];
+    expect(harvestPictures(rows)).toContain("| one two | 3 |");
+  });
+});
+
+describe("the digest picture slot — the advisory ratchet has a reader", () => {
+  const files = ["2026-11-23.md", "2026-11-25.md", "2026-11-26.md", "2026-11-27.md"];
+  const text = (f: string) => (f === "2026-11-26.md" ? "## The picture\n" : "no slot");
+
+  it("names a digest from the advisory day on that lacks the slot, and never an older one", () => {
+    expect(missingPictureSlot(files, text)).toEqual(["2026-11-25.md", "2026-11-27.md"]);
+  });
+
+  it("counts the digests that carry it, so the ratchet fires on a number", () => {
+    expect(carryingPictureSlot(files, text)).toEqual(["2026-11-26.md"]);
+    expect(RATCHET_AFTER).toBe(2);
   });
 });

@@ -168,6 +168,29 @@ function readLog(since) {
   return parseLog(raw);
 }
 
+/**
+ * Re-join the table rows a squash commit body wrapped. `git log` returns the stored body, which
+ * GitHub hard-wraps near 72 columns, so a `| a | b |` row arrives split across lines and renders as
+ * stray text (the 2026-11-24 review: 28 of 34 table pictures and 6 of 7 screenshot pictures were
+ * split). A row starts with `|`; if it does not end with `|` the next lines continue it. Fenced
+ * code is left alone — a mermaid line is never a table row. Pure.
+ */
+export function unwrapRows(block) {
+  const out = [];
+  let fenced = false;
+  let open = false;
+  for (const line of block.split("\n")) {
+    if (/^\s*```/.test(line)) fenced = !fenced;
+    if (open) {
+      out[out.length - 1] += ` ${line.trim()}`;
+    } else {
+      out.push(line);
+    }
+    open = !fenced && /^\|/.test(out.at(-1)) && !/\|\s*$/.test(out.at(-1));
+  }
+  return out.join("\n");
+}
+
 /** How many pictures the digest slot carries unless `--limit` says otherwise — the cap that keeps a
  *  busy week's harvest from overflowing the digest's fold (#3748 slice 7c's falsifier). */
 export const PICTURE_LIMIT = 5;
@@ -182,7 +205,7 @@ export function harvestPictures(rows, limit = PICTURE_LIMIT) {
   const shown = rows.filter((r) => r.picture !== "waived" && r.picture !== "missing" && r.block);
   if (!shown.length) return null;
   const kept = shown.slice(0, limit);
-  const parts = kept.map((r) => `### #${r.number} ${r.subject}\n\n${r.block}`);
+  const parts = kept.map((r) => `### #${r.number} ${r.subject}\n\n${unwrapRows(r.block)}`);
   const more = shown.length - kept.length;
   if (more > 0) parts.push(`_${more} older picture(s) not shown — the ${limit} newest only._`);
   return parts.join("\n\n");
@@ -269,6 +292,18 @@ export function summarize(rows) {
   };
 }
 
+/** `--pictures`: the digest slot, or the one line that says the window held none. */
+function picturesReport(rows, window) {
+  const limit = Number(arg("limit") ?? PICTURE_LIMIT);
+  if (!Number.isInteger(limit) || limit < 1) {
+    throw new Error("comms-scan: --limit must be a positive integer.");
+  }
+  return (
+    harvestPictures(rows, limit) ??
+    `_No PR picture merged since ${window}: every change was waived or had none._`
+  );
+}
+
 async function main() {
   reexecWithProxy();
   const fixture = arg("fixture");
@@ -289,13 +324,7 @@ async function main() {
   if (token && rows.length) await enrich(rows, token);
 
   if (has("pictures")) {
-    const limit = Number(arg("limit") ?? PICTURE_LIMIT);
-    if (!Number.isInteger(limit) || limit < 1) {
-      throw new Error("comms-scan: --limit must be a positive integer.");
-    }
-    process.stdout.write(
-      `${harvestPictures(rows, limit) ?? `_No PR picture merged since ${window}: every change was waived or had none._`}\n`,
-    );
+    process.stdout.write(`${picturesReport(rows, window)}\n`);
     return;
   }
   if (has("json")) {

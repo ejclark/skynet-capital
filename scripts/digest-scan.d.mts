@@ -49,3 +49,9 @@ export function missingPictureSlot(
   files: readonly string[],
   readText: (file: string) => string,
 ): string[];
+/** Digests carrying the picture slot before it is ratcheted into the required sections. */
+export const RATCHET_AFTER: number;
+export function carryingPictureSlot(
+  files: readonly string[],
+  readText: (file: string) => string,
+): string[];

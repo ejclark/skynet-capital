@@ -85,6 +85,8 @@ const REQUIRED_SECTIONS = ["## Needs you", "## Headlines", "## Noise absorbed"];
 // are shipped history and are never rewritten.
 const ADVISORY_SECTION = "## The picture";
 const ADVISORY_FROM = "2026-11-25";
+/** Digests carrying the slot before the ratchet is due — the number the template and skill name. */
+export const RATCHET_AFTER = 2;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 const arg = (name) => {
@@ -403,6 +405,13 @@ export function missingPictureSlot(files, readText) {
   );
 }
 
+/** Digests dated from the advisory day on that carry the slot. Pure. */
+export function carryingPictureSlot(files, readText) {
+  return files.filter(
+    (f) => f.slice(0, 10) >= ADVISORY_FROM && readText(f).includes(ADVISORY_SECTION),
+  );
+}
+
 function validate() {
   const problems = [];
   for (const f of digestFiles()) {
@@ -413,9 +422,14 @@ function validate() {
       if (!text.includes(section)) problems.push(`docs/digests/${f}: missing "${section}"`);
     }
   }
-  for (const f of missingPictureSlot(digestFiles(), (n) =>
-    readFileSync(join(DIGEST_DIR, n), "utf8"),
-  )) {
+  const readDigest = (n) => readFileSync(join(DIGEST_DIR, n), "utf8");
+  const carrying = carryingPictureSlot(digestFiles(), readDigest).length;
+  if (carrying >= RATCHET_AFTER) {
+    console.log(
+      `· ratchet due: ${carrying} digests carry "${ADVISORY_SECTION}" — move it into REQUIRED_SECTIONS.`,
+    );
+  }
+  for (const f of missingPictureSlot(digestFiles(), readDigest)) {
     console.log(
       `· advisory: docs/digests/${f} has no "${ADVISORY_SECTION}" slot (not yet required).`,
     );

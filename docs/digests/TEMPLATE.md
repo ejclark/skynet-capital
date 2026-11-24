@@ -33,10 +33,11 @@
 
 ## The picture
 
-<!-- `node scripts/digest-scan.mjs --pictures`, verbatim: the `## The picture` blocks of the PRs
-     merged since the last digest, newest first, waived ones skipped, the 5 newest at most. Advisory
-     until two digests carry it (#3748 slice 7c); `digest-scan --validate` names a digest without it
-     but does not fail. A window with no picture prints one line saying so. -->
+<!-- `node scripts/digest-scan.mjs --pictures`, pasted as printed: the `## The picture` blocks of
+     the PRs merged after the last digest's date, newest first, waived ones skipped, the 5 newest
+     at most (table rows a squash body wrapped are re-joined). Advisory: `digest-scan --validate`
+     names a digest without it, and prints "ratchet due" once 2 digests carry it — then the slot
+     moves into REQUIRED_SECTIONS (#3748 slice 7c). A window with no picture prints one line saying so. -->
 
 ## Noise absorbed
 
