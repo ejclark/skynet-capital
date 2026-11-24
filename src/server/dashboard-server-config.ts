@@ -217,6 +217,10 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
   readonly findByOrderId?: (
     orderId: string,
   ) => { readonly record: DecisionRecord; readonly intent: OrderIntent } | undefined;
+  /** The playbook that placed a bot's order, off the same join but remembered for the process
+   *  (`rememberPlaybooks`, #8397): Activity's chip list asks about every order in the ledger on
+   *  every member's read. Omit and the desk routes ask `findByOrderId` afresh on each request. */
+  readonly playbookOfOrder?: (orderId: string) => string | undefined;
   /** Which other personas trade on an account — the order-id join kept per account, advanced by
    *  only the ledger lines appended since and asked again only when the decision store gains a row
    *  it can match (`account-personas-fold.ts`, #4619). Omit and the Decisions tab shows the
