@@ -39,7 +39,7 @@ import { iso, MIN, START } from "./fitness-harness";
 // That list is the regression list now (`node scripts/fitness-audit.mjs --bugs <it> --with ...`,
 // the --with files are the ones named below, plus tests/scripts/fitness-harness.ts (the stub fly and
 // gh this spec drives the entrypoint with), scripts/deploy-lag.mjs and
-// scripts/bot-relevant.mjs, scripts/bots-start-stopped.sh, scripts/fitness-rungs.mjs and the four
+// scripts/bot-relevant.mjs, scripts/bots-start-stopped.sh, scripts/fitness-rungs.mjs, scripts/fitness-judges.mjs and the four
 // src/ files decision-cycle loads, listed in fitness-decision-cycle.spec.ts), so a new score needs
 // bugs from a fresh blind pass. The 21 after the first 30 attack the owner's assignment and were
 // written by the author of this spec, so they are a regression net and not a blind score.
