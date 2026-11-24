@@ -104,6 +104,16 @@
   font-size: 13px;
   color: var(--muted);
 }
+/* A read "Needs you" could not complete (#8316): said in words, never an all-clear. */
+.home-needs-gap {
+  margin: 6px 0 0;
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--text);
+}
 
 /* ── the app tiles ── */
 .home-apps ul {
