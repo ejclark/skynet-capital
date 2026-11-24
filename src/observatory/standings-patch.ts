@@ -9,6 +9,7 @@ import {
   metricValue,
   rankValue,
 } from "./standings-metric.js";
+import { partyFields, partyView, seatKeys } from "./standings-party.js";
 
 /**
  * THE STANDINGS FIELD PATCH — what the live board says instead of re-rendering itself.
@@ -32,6 +33,9 @@ export interface StandingsPatchOptions {
   /** `?a=` — when a compare is armed or showing, the view is analytical and keeps full renders. */
   readonly aId?: string;
   readonly bId?: string;
+  /** Whether an account's first fill has landed (#8253) — the same read the snapshot is built
+   *  with, so the party's table moves from the same op as the Field. */
+  readonly isSeated?: (participantId: string) => boolean;
 }
 
 export interface RowView {
@@ -179,6 +183,12 @@ export function standingsFieldOps(
     return reframe("the cohort lead changed sides");
   }
 
+  const prevParty = partyView(prev, options.isSeated);
+  const nextParty = partyView(next, options.isSeated);
+  if (seatKeys(prevParty) !== seatKeys(nextParty)) {
+    return reframe("the party's table gained or lost a seat");
+  }
+
   const ops: WorldPatchOp[] = [];
   const wasByKey = new Map(before.map((r) => [r.key, r]));
   for (const row of after) {
@@ -206,5 +216,6 @@ export function standingsFieldOps(
       { text: versusView(nextHumans, nextBots) },
     ),
   );
+  ops.push(...blockOp("party", partyFields(prevParty), partyFields(nextParty)));
   return ops;
 }
