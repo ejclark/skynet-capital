@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 import { EDITION_CLOCK, FIXED_CLOCK } from "./e2e/determinism";
-import { facultyProject, ORDERS_PORTS } from "./e2e/playwright.faculty";
+import { facultyProject, ORDERS_EXIT_PORTS, ORDERS_PORTS } from "./e2e/playwright.faculty";
 import { journeysMode } from "./e2e/playwright.journeys";
 import { SHARED_CONFIG } from "./e2e/playwright.shared";
 
@@ -30,6 +30,15 @@ const orders = facultyProject({
   ...ORDERS_PORTS,
   fixedNow: FIXED_CLOCK,
 });
+// The same guard with stop-limit and exits at entry switched on (#8249): every test above must stay
+// green with the setting on, and the spec's exit tests read which project they run under.
+const ordersExit = facultyProject({
+  name: "orders-exit",
+  spec: "order-journey.spec.ts",
+  ...ORDERS_EXIT_PORTS,
+  fixedNow: FIXED_CLOCK,
+  env: { SKYNET_EXIT_AT_ENTRY: "members" },
+});
 
 export default defineConfig({
   ...SHARED_CONFIG,
@@ -54,6 +63,7 @@ export default defineConfig({
     session.project,
     faculty.project,
     orders.project,
+    ordersExit.project,
   ],
   // Launched one after another, in this order: the first boot builds the React shell (app/dist)
   // and the two playthrough boots, which skip the build, serve the same app/dist.
@@ -82,5 +92,6 @@ export default defineConfig({
     session.webServer,
     faculty.webServer,
     orders.webServer,
+    ordersExit.webServer,
   ],
 });

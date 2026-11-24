@@ -152,8 +152,9 @@ describe("what a pivot shows (calendarShows)", () => {
   });
 });
 
-/** The landing page in miniature: the calendar on `/`, reading and clearing `?show=` the way
- *  `routes/index.tsx` does, with the dock under it. */
+/** Campaign in miniature: the calendar on `/campaign`, reading and clearing `?show=` the way
+ *  `routes/campaign.tsx` does, with the dock under it. Her pivot link still reads `/?show=…`, and
+ *  the dock forwards it to `/campaign` (#8189, `shell/campaign-forward.ts`). */
 async function mount(path: string) {
   const root = createRootRoute({
     validateSearch: horizonSearch,
@@ -175,14 +176,18 @@ async function mount(path: string) {
         pivot={parsePivot(search.show)}
         onClearPivot={() =>
           void navigate({
-            to: "/",
+            to: "/campaign",
             search: (prev: Record<string, unknown>) => ({ ...prev, show: undefined }),
           })
         }
       />
     );
   }
-  const landing = createRoute({ getParentRoute: () => root, path: "/", component: Page });
+  const landing = createRoute({
+    getParentRoute: () => root,
+    path: "/campaign",
+    component: Page,
+  });
   const router = createRouter({
     routeTree: root.addChildren([landing]),
     basepath: "/app",
@@ -206,7 +211,7 @@ describe("the landing page pivots to her answer", () => {
   });
 
   it("draws only the named rows, under a bar that says they are her answer", async () => {
-    await mount(`/app/?show=story-ai-capex,${ev(jobs)}`);
+    await mount(`/app/campaign?show=story-ai-capex,${ev(jobs)}`);
     expect(rowShown("story-ai-capex")).toBe(true);
     expect(rowShown(ev(jobs))).toBe(true);
     expect(rowShown("story-rates")).toBe(false);
@@ -216,20 +221,20 @@ describe("the landing page pivots to her answer", () => {
   });
 
   it("says so when the rows it names have left the edition, rather than drawing nothing", async () => {
-    await mount("/app/?show=story-gone,story-also-gone");
+    await mount("/app/campaign?show=story-gone,story-also-gone");
     expect(screen.getByText(/aren't in this edition any more/)).toBeInTheDocument();
     expect(rowShown("story-ai-capex")).toBe(false);
   });
 
   it("says how many rows she named have since left the edition", async () => {
-    await mount("/app/?show=story-ai-capex,story-gone");
+    await mount("/app/campaign?show=story-ai-capex,story-gone");
     expect(
       screen.getByText(/1 row of the calendar · 1 more she named isn't in this edition any more/),
     ).toBeInTheDocument();
   });
 
   it("✕ brings the whole calendar back", async () => {
-    const router = await mount(`/app/?show=story-ai-capex,${ev(cpi)}`);
+    const router = await mount(`/app/campaign?show=story-ai-capex,${ev(cpi)}`);
     fireEvent.click(screen.getByRole("button", { name: /Show the whole calendar/ }));
     await waitFor(() => expect(rowShown("story-rates")).toBe(true));
     expect(rowShown(ev(coreweave))).toBe(true);
@@ -238,7 +243,7 @@ describe("the landing page pivots to her answer", () => {
   });
 
   it("her answer's move pivots the page on a tap, and Back undoes it", async () => {
-    const router = await mount("/app/");
+    const router = await mount("/app/campaign");
     expect(rowShown("story-rates")).toBe(true);
     await act(() =>
       useMoneypenny.setState({

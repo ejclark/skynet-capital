@@ -326,9 +326,18 @@ describe("coverage", () => {
   });
 });
 
-describe("the landing page's windows and the shell's parts (#8005 slice 1)", () => {
+describe("Campaign's windows (at /campaign since #8189) and the shell's parts (#8005 slice 1)", () => {
   const WINDOWS = ["overview", "market", "calendar", "quests", "party"];
-  const routes = parseRouteTree(ROUTE_TREE);
+  // The fixture's tree plus Campaign's own route, which the windows hang off.
+  const routes = parseRouteTree(
+    ROUTE_TREE.replace(
+      "import { Route as TradeRouteImport }",
+      "import { Route as CampaignRouteImport } from './routes/campaign'\nimport { Route as TradeRouteImport }",
+    ).replace(
+      "    '/leaderboard': {",
+      "    '/campaign': {\n      fullPath: '/campaign'\n      preLoaderRoute: typeof CampaignRouteImport\n    }\n    '/leaderboard': {",
+    ),
+  );
   const screens = buildScreens({
     routes,
     sections: SECTIONS,
@@ -338,33 +347,35 @@ describe("the landing page's windows and the shell's parts (#8005 slice 1)", () 
     shell: [{ screen: "shell Moneypenny dock (the chat)" }],
   });
   const triageRows: TriageRow[] = [
-    ...TRIAGE.filter((r) => !r.screen.startsWith("/ ")),
-    { screen: "/ (Overview window)", verdict: "keep" },
-    { screen: "/ ?w=quests (the quests window)", verdict: "keep" },
-    { screen: "/ ?w=calendar", verdict: "keep" },
-    { screen: "/ ?w=market", verdict: "keep" },
-    { screen: "/ ?w=party", verdict: "keep" },
+    ...TRIAGE.filter((r) => !r.screen.startsWith("/campaign")),
+    { screen: "/campaign (Overview window)", verdict: "keep" },
+    { screen: "/campaign ?w=quests (the quests window)", verdict: "keep" },
+    { screen: "/campaign ?w=calendar", verdict: "keep" },
+    { screen: "/campaign ?w=market", verdict: "keep" },
+    { screen: "/campaign ?w=party", verdict: "keep" },
     { screen: "shell Moneypenny dock", verdict: "keep" },
   ];
 
   it("gives each window past Overview a screen of its own, and each shell part one", () => {
     const keys = screens.map((s) => s.key);
-    expect(keys).toContain("/");
-    expect(keys).toContain("/ ?w=quests");
-    expect(keys).not.toContain("/ ?w=overview");
+    expect(keys).toContain("/campaign");
+    expect(keys).toContain("/campaign ?w=quests");
+    expect(keys).not.toContain("/campaign ?w=overview");
     expect(screens.find((s) => s.key === "shell Moneypenny dock")?.shell).toBe(true);
   });
 
   it("opens the window ?w= names, the Calendar for a pivot or an edition anchor, else Overview", () => {
-    expect(windowOf("/app/?w=party", WINDOWS)).toBe("party");
-    expect(windowOf("/app/?w=overview", WINDOWS)).toBeUndefined();
-    expect(windowOf("/app/?w=bogus", WINDOWS)).toBeUndefined();
-    expect(windowOf("/app/?show=story-a,event-b", WINDOWS)).toBe("calendar");
-    expect(windowOf("/app/#event-2026-11-24-cpi", WINDOWS)).toBe("calendar");
-    expect(windowOf("/app/", WINDOWS)).toBeUndefined();
-    const withWindows = { ...ctx(true), windows: WINDOWS };
-    expect(landingOf("/app/?w=quests", withWindows)).toEqual(["/ ?w=quests"]);
-    expect(landingOf("/app/", { ...withWindows, triage: indexTriage(triageRows) })).toEqual(["/"]);
+    expect(windowOf("/app/campaign?w=party", WINDOWS)).toBe("party");
+    expect(windowOf("/app/campaign?w=overview", WINDOWS)).toBeUndefined();
+    expect(windowOf("/app/campaign?w=bogus", WINDOWS)).toBeUndefined();
+    expect(windowOf("/app/campaign?show=story-a,event-b", WINDOWS)).toBe("calendar");
+    expect(windowOf("/app/campaign#event-2026-11-24-cpi", WINDOWS)).toBe("calendar");
+    expect(windowOf("/app/campaign", WINDOWS)).toBeUndefined();
+    const withWindows = { ...ctx(true), windows: WINDOWS, routePaths: routes.map((r) => r.path) };
+    expect(landingOf("/app/campaign?w=quests", withWindows)).toEqual(["/campaign ?w=quests"]);
+    expect(landingOf("/app/campaign", { ...withWindows, triage: indexTriage(triageRows) })).toEqual(
+      ["/campaign"],
+    );
   });
 
   it("reads a shell part as on every route — never a gap, never covered, outside the count", () => {
@@ -379,7 +390,7 @@ describe("the landing page's windows and the shell's parts (#8005 slice 1)", () 
     const dock = result.rows.find((r) => r.key === "shell Moneypenny dock");
     expect(dock?.status).toBe("every route");
     expect(result.gaps.map((r) => r.key)).not.toContain("shell Moneypenny dock");
-    expect(result.gaps.map((r) => r.key)).toContain("/ ?w=quests");
+    expect(result.gaps.map((r) => r.key)).toContain("/campaign ?w=quests");
     expect(result.unjudged).toEqual([]);
     expect(result.stale).toEqual([]);
   });

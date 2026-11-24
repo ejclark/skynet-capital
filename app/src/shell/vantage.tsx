@@ -8,6 +8,7 @@ import {
   useTowerRegard,
   useTowerRun,
 } from "./tower-bus";
+import { usePhoneWidth } from "./use-media";
 import { useTowerColumn } from "./use-tower-column";
 
 /**
@@ -57,10 +58,15 @@ export function columnSrc(search: string, crest: Crest = "live"): string {
   }
 }
 
+const routePath = (pathname: string): string => pathname.replace(/^\/app(?=\/|$)/, "") || "/";
+
 const isSettings = (pathname: string): boolean => {
-  const path = pathname.replace(/^\/app(?=\/|$)/, "") || "/";
+  const path = routePath(pathname);
   return path === "/settings" || path.startsWith("/settings/");
 };
+
+/** The home screen (#8189): its tower box takes the frame from the tablet width, not the bench. */
+export const isHome = (pathname: string): boolean => routePath(pathname) === "/";
 
 interface Box {
   readonly top: number;
@@ -208,8 +214,11 @@ export function Vantage({
   readonly root: RefObject<HTMLElement | null>;
 }): ReactElement | null {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  // Where the page frame gives the tower its column (`use-tower-column.ts`).
-  const wide = useTowerColumn();
+  // Where the page frame gives the tower its column (`use-tower-column.ts`); the home screen's tower
+  // box takes the frame from 861px, since a phone gets its committed still instead (#8189).
+  const column = useTowerColumn();
+  const phone = usePhoneWidth();
+  const wide = column || (isHome(pathname) && !phone);
   return <VantageFrame root={root} pathname={pathname} wide={wide} />;
 }
 

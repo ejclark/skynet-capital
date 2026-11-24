@@ -112,9 +112,13 @@ export function tifLabel(tif: string | undefined): string | undefined {
 
 /** One sentence on what the pick means, stated before the order is placed. After the close a Day
  *  order belongs to the NEXT session, so "today's session" would name one it never trades in. */
-export function tifNote(tif: TicketTimeInForce, market: MarketSessionView): string {
+export function tifNote(
+  tif: TicketTimeInForce,
+  market: MarketSessionView,
+  timeZone?: string,
+): string {
   if (tif === "gtc") return "GTC: stays working across sessions until it fills or you cancel it.";
-  const open = market.state === "closed" ? waitsForOpen(market) : undefined;
+  const open = market.state === "closed" ? waitsForOpen(market, timeZone) : undefined;
   return open
     ? `Day: waits for ${open}; anything unfilled is cancelled when that session closes.`
     : "Day: anything unfilled is cancelled when today's session closes.";
@@ -164,8 +168,12 @@ export function priceFieldFor(orderType: TicketOrderType): "limitPrice" | "stopP
  *  order never says "immediately" — it says which open it waits for — and the other classes lead
  *  with the same fact before their own rule. The server says the same in the review's warning
  *  (`src/trading/order-ticket.ts`); this says it before the member has to ask for a review. */
-export function orderTypeNote(orderType: TicketOrderType, market: MarketSessionView): string {
-  const open = waitsForOpen(market);
+export function orderTypeNote(
+  orderType: TicketOrderType,
+  market: MarketSessionView,
+  timeZone?: string,
+): string {
+  const open = waitsForOpen(market, timeZone);
   const lead = market.state === "pre" ? "Pre-market" : "Market closed";
   if (orderType === "market") {
     return open

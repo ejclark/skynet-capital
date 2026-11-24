@@ -160,6 +160,20 @@ That's it — `fly deploy` (or the next merge) picks it up. The URL is now clean
 `https://skynet-capital.fly.dev/`. Set only one provider's vars if you only want that button.
 `/logout` clears the session.
 
+**Connect with Alpaca (optional, #8250).** Lets a member link a free Alpaca *paper* account in one
+tap instead of pasting keys. Two web forms, no terminal:
+
+1. **Alpaca dashboard → OAuth Apps → create an app.** Name it something members will recognize on
+   Alpaca's consent screen. Redirect URI, exactly:
+   `https://skynet-capital.fly.dev/connect/alpaca/callback`. No paper/live setting is needed: every
+   request sends `env=paper`.
+2. **Fly dashboard → `skynet-capital` → Secrets:** add the app's client ID as
+   `SKYNET_ALPACA_CLIENT_ID` and its secret as `SKYNET_ALPACA_CLIENT_SECRET`.
+
+Connect turns on at the next boot only when both secrets are set **and** the app's authorize URL
+asks for a paper account (`src/server/alpaca-connect-wiring.ts` checks it); until then the
+Onboarding chapter keeps the five-step key-paste guide. Unset either secret to turn it back off.
+
 **Adding people: use `/invite`, not the secret.** `SKYNET_ALLOWED_EMAILS` is the **owner** tier —
 the identities that may sign in *and* invite others. Everyone else is added from the app itself:
 

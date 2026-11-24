@@ -8,7 +8,7 @@ import { personaClasses } from "./persona-classes.js";
 /**
  * JOIN THE BOARD — `/add`'s twin for the shell, as one endpoint:
  *
- *   GET  /api/join → whether joining is wired, the persona classes for the picker, the
+ *   GET  /api/join → whether joining is wired (and whether Connect with Alpaca is on), the persona classes for the picker, the
  *                    timezone choices, and whether this viewer may add a BOT — everything the
  *                    page renders, nothing it decides. `canAddBots` mirrors the owner pages'
  *                    posture (`admin-api-routes.ts`): it decides what the form SHOWS (the account
@@ -76,6 +76,8 @@ export async function serveJoinApi(
     const isOwner = config.invite?.isOwner ?? config.isOwnerEmail;
     sendJson(res, 200, {
       wired: Boolean(config.addParticipant),
+      // Connect with Alpaca's one-tap path is on (#8250) — off, the chapter shows the key paste.
+      connect: Boolean(config.alpacaConnect),
       canAddBots: !config.auth || Boolean(email && isOwner?.(email)),
       classes: personaClasses(),
       timezones: ALLOWED_TIMEZONES,

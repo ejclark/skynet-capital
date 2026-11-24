@@ -1,6 +1,7 @@
 import type { AlpacaTradingTransport } from "../alpaca/trading-transport.js";
 import type { JsonResponse } from "../http/fetch-json.js";
 import { contractMultiplier, isOccSymbol } from "../trading/option-symbols.js";
+import { fixtureCalendar, fixtureMarketClock } from "./fixture-market-hours.js";
 import type { AccountFixture } from "./fixture-trading-transport.js";
 
 /**
@@ -18,6 +19,11 @@ import type { AccountFixture } from "./fixture-trading-transport.js";
  *    order fills at once at the symbol's mark; a limit fills at the mark when marketable, else it
  *    rests (`new`); a stop / stop-limit rests. A buy that costs more than cash answers 403
  *    "insufficient buying power", Alpaca's own refusal, so a guardrail scenario meets a real wall.
+ *  - `order_class: "bracket"` (#8249) — the entry plus two exit legs, a take-profit (sell limit) and
+ *    a stop (sell stop), each its own row in a flat read and under the entry's `legs` in a nested
+ *    one. The legs read `held` until the entry fills, then `new`; one leg filling cancels the
+ *    other, and cancelling the entry cancels both. Alpaca's own refusals: no `extended_hours`, and
+ *    each exit at least $0.01 on its side of the base price (the limit, or the touch for a market).
  *  - `PATCH /v2/orders/:id` — replace: the old order becomes `replaced`, the new one `replaces` it.
  *  - `DELETE /v2/orders/:id` · `DELETE /v2/orders` — cancel one · cancel every open order (207).
  *  - `DELETE /v2/positions/:symbol` — close at the mark with a filled market order.
@@ -47,6 +53,9 @@ export interface WritableFixtureOptions {
    *  open — exactly as a paper account answers an order placed in the evening; the first read once
    *  the market is open fills what has become marketable. */
   readonly clock?: () => { is_open: boolean; next_open?: string; next_close?: string };
+  /** The market's "now" for `/v2/calendar` and `/v3/clock` (#8248) — the same pinned instant the
+   *  `clock` above reads, so all three agree. Absent, `now`. */
+  readonly marketNow?: () => Date;
   /** Told of every fill, the moment it lands — the offline twin of Alpaca's `trade_updates`
    *  stream, so the board shows the new position at once instead of on the next 60s sweep. */
   readonly onFill?: (fill: {
@@ -120,7 +129,10 @@ export class WritableFixtureTradingTransport implements AlpacaTradingTransport {
   private readonly market: MarketSource | undefined;
   private readonly onFill: WritableFixtureOptions["onFill"];
   private readonly liveClock: WritableFixtureOptions["clock"];
+  private readonly marketNow: () => Date;
   private seq = 0;
+  /** A bracket leg's id → its entry's, so a fill or cancel reaches the sibling and the parent. */
+  private readonly legParent = new Map<string, Order>();
 
   constructor(fixture: AccountFixture, options: WritableFixtureOptions = {}) {
     this.account = { ...(fixture.account as Record<string, unknown>) };
@@ -133,6 +145,7 @@ export class WritableFixtureTradingTransport implements AlpacaTradingTransport {
     this.market = options.market;
     this.onFill = options.onFill;
     this.liveClock = options.clock;
+    this.marketNow = options.marketNow ?? this.now;
     for (const p of this.positions) {
       const qty = num(p.qty);
       if (qty !== 0)
@@ -157,6 +170,8 @@ export class WritableFixtureTradingTransport implements AlpacaTradingTransport {
       return ok(this.positions.map((p) => ({ ...p })));
     }
     if (route === "/v2/clock") return ok(this.liveClock ? this.liveClock() : this.clock);
+    if (route === "/v2/calendar") return ok(fixtureCalendar(query, this.marketNow()));
+    if (route === "/v3/clock") return ok(fixtureMarketClock(this.marketNow()));
     if (route === "/v2/orders") return ok(this.listOrders(query));
     if (route === "/v2/orders:by_client_order_id") {
       const found = this.orders.find((o) => o.client_order_id === query.get("client_order_id"));
@@ -194,6 +209,12 @@ export class WritableFixtureTradingTransport implements AlpacaTradingTransport {
     // order would land an order with no symbol (code review, change-scenarios PR).
     if (old.order_class === "mleg")
       return unprocessable("a multi-leg order cannot be replaced; cancel it and place a new one");
+    // A bracket is one order with linked legs; re-placing a piece as a simple order would cut the
+    // link that cancels one exit when the other fills. Not modelled: cancel and place anew.
+    if (old.order_class === "bracket")
+      return unprocessable(
+        "a bracket order cannot be replaced here; cancel it and place a new one",
+      );
     const change = (body ?? {}) as Record<string, unknown>;
     if (Object.keys(change).length === 0) return unprocessable("nothing to replace");
     const successor = {
@@ -222,7 +243,7 @@ export class WritableFixtureTradingTransport implements AlpacaTradingTransport {
     const [route] = split(path);
     if (route === "/v2/orders") {
       const open = this.orders.filter((o) => OPEN.has(o.status));
-      for (const o of open) this.cancel(o);
+      for (const o of open) if (OPEN.has(o.status)) this.cancel(o);
       return Promise.resolve({ status: 207, body: open.map((o) => ({ id: o.id, status: 200 })) });
     }
     const orderId = under(route, "/v2/orders/");
@@ -238,14 +259,14 @@ export class WritableFixtureTradingTransport implements AlpacaTradingTransport {
       const held = this.positions.find((p) => p.symbol === decodeURIComponent(symbol));
       if (!held) return notFound();
       const qty = num(held.qty);
-      return ok(
-        this.place({
-          symbol: held.symbol,
-          qty: Math.abs(qty),
-          side: qty > 0 ? "sell" : "buy",
-          type: "market",
-        }),
-      );
+      const close = {
+        symbol: held.symbol,
+        qty: Math.abs(qty),
+        side: qty > 0 ? "sell" : "buy",
+        type: "market",
+      };
+      // Shares a bracket's exits hold can't be closed out from under them (#8249).
+      return this.refuseReserved(close, Math.abs(qty)) ?? ok(this.place(close));
     }
     return notFound();
   }
@@ -271,10 +292,15 @@ export class WritableFixtureTradingTransport implements AlpacaTradingTransport {
     const status = query.get("status") ?? "open";
     const limit = Number(query.get("limit") ?? 50);
     const nested = query.get("nested") === "true";
+    // Nested, a bracket's legs ride under their entry, and an entry with a working exit is still
+    // open (Alpaca lists it so); flat, every leg is a row of its own.
+    const open = (o: Order): boolean =>
+      OPEN.has(o.status) || (nested && (o.legs ?? []).some((l) => OPEN.has(l.status)));
     const rows = this.orders
-      .filter((o) => status === "all" || (status === "open") === OPEN.has(o.status))
+      .filter((o) => status === "all" || (status === "open") === open(o))
       .sort((a, b) => (b.submitted_at ?? "").localeCompare(a.submitted_at ?? ""));
-    const page = rows.slice(0, Number.isFinite(limit) && limit > 0 ? limit : 50);
+    const listed = nested ? rows.filter((o) => !this.legParent.has(o.id)) : rows;
+    const page = listed.slice(0, Number.isFinite(limit) && limit > 0 ? limit : 50);
     return nested ? page : page.map((o) => ({ ...o, legs: null }));
   }
 
@@ -312,7 +338,62 @@ export class WritableFixtureTradingTransport implements AlpacaTradingTransport {
         });
       }
     }
-    return undefined;
+    return this.refuseLinked(input, type, qty);
+  }
+
+  /** The two walls a bracket adds (#8249): its own shape, and the shares its exits hold. */
+  private refuseLinked(
+    input: Record<string, unknown>,
+    type: string,
+    qty: number,
+  ): Promise<JsonResponse> | undefined {
+    return this.refuseBracket(input, type) ?? this.refuseReserved(input, qty);
+  }
+
+  /** Shares a bracket's working exits hold (Alpaca's `held_for_orders`): its entry's quantity,
+   *  once per bracket — the take-profit and the stop cover the same shares, one-cancels-other. */
+  private reserved(symbol: string): number {
+    const entries = new Set<Order>();
+    for (const [id, entry] of this.legParent) {
+      const leg = this.orders.find((o) => o.id === id);
+      if (entry.symbol === symbol && leg && OPEN.has(leg.status)) entries.add(entry);
+    }
+    return [...entries].reduce((sum, e) => sum + num(e.qty), 0);
+  }
+
+  /** A sell of shares a bracket's exits hold is refused, in Alpaca's words, as a paper account
+   *  refuses it — never filled into a short the exit would then deepen. */
+  private refuseReserved(
+    input: Record<string, unknown>,
+    qty: number,
+  ): Promise<JsonResponse> | undefined {
+    if (input.side !== "sell" || typeof input.symbol !== "string") return undefined;
+    const reserved = this.reserved(input.symbol);
+    if (reserved === 0) return undefined;
+    const held = num(this.positions.find((p) => p.symbol === input.symbol)?.qty);
+    const available = Math.max(0, held - reserved);
+    return qty > available ? insufficientQty(qty, available) : undefined;
+  }
+
+  /** Alpaca's bracket walls (none for any other order class): a market or limit entry, no extended hours, and each exit at least a
+   *  cent on its side of the base price (the limit, else the touch the entry would meet). */
+  private refuseBracket(
+    input: Record<string, unknown>,
+    type: string,
+  ): Promise<JsonResponse> | undefined {
+    if (input.order_class !== "bracket") return undefined;
+    if (input.extended_hours === true)
+      return unprocessable("bracket orders are not allowed in extended hours");
+    if (type !== "limit" && type !== "market")
+      return unprocessable("bracket orders must be market or limit orders");
+    const tp = num((input.take_profit as Record<string, unknown> | undefined)?.limit_price);
+    const sl = num((input.stop_loss as Record<string, unknown> | undefined)?.stop_price);
+    if (!(tp > 0)) return unprocessable("take_profit.limit_price is required");
+    if (!(sl > 0)) return unprocessable("stop_loss.stop_price is required");
+    const touch = this.quote(String(input.symbol));
+    const base =
+      type === "limit" ? num(input.limit_price) : input.side === "buy" ? touch?.ask : touch?.bid;
+    return base === undefined ? undefined : offsetRefusal(input.side === "buy", base, tp, sl);
   }
 
   /** A buy adds to (or opens) a long — a buy that covers a short spends nothing new to check. */
@@ -370,8 +451,34 @@ export class WritableFixtureTradingTransport implements AlpacaTradingTransport {
       }));
     }
     this.orders.push(order);
+    if (input.order_class === "bracket") this.attachExits(order, input);
     if (!isLeg) this.tryFill(order);
     return order;
+  }
+
+  /** The bracket's two exit legs, `held` until the entry fills: a take-profit (limit) and a stop,
+   *  each on the opposite side, same size and time in force. */
+  private attachExits(entry: Order, input: Record<string, unknown>): void {
+    entry.order_class = "bracket";
+    const side = entry.side === "buy" ? "sell" : "buy";
+    const leg = (suffix: string, type: "limit" | "stop", price: string): Order => ({
+      ...entry,
+      id: `${entry.id}-${suffix}`,
+      client_order_id: `${entry.id}-${suffix}-client`,
+      side,
+      type,
+      status: "held",
+      limit_price: type === "limit" ? price : null,
+      stop_price: type === "stop" ? price : null,
+      legs: null,
+    });
+    const tp = String(num((input.take_profit as Record<string, unknown>).limit_price));
+    const sl = String(num((input.stop_loss as Record<string, unknown>).stop_price));
+    entry.legs = [leg("tp", "limit", tp), leg("sl", "stop", sl)];
+    for (const l of entry.legs) {
+      this.legParent.set(l.id, entry);
+      this.orders.push(l);
+    }
   }
 
   /** Orders queued while the market was shut fill on the first read after it opens — the paper
@@ -408,21 +515,45 @@ export class WritableFixtureTradingTransport implements AlpacaTradingTransport {
       order.type === "market" ||
       (order.type === "limit" &&
         limit !== undefined &&
-        (order.side === "buy" ? limit >= mark : limit <= mark));
+        (order.side === "buy" ? limit >= mark : limit <= mark)) ||
+      this.stopLegTriggered(order, mark);
     if (!marketable) return;
     const qty = num(order.qty);
     order.status = "filled";
     order.filled_qty = String(qty);
     order.filled_avg_price = String(mark);
-    order.filled_at = order.submitted_at;
+    const at = this.fillStamp(order);
+    order.filled_at = at;
     this.apply(order.symbol, order.side === "buy" ? qty : -qty, mark);
-    this.onFill?.({
-      symbol: order.symbol,
-      side: order.side,
-      quantity: qty,
-      price: mark,
-      at: order.submitted_at,
-    });
+    this.onFill?.({ symbol: order.symbol, side: order.side, quantity: qty, price: mark, at });
+    this.afterBracketFill(order);
+  }
+
+  /** When a fill lands: an order filling on placement carries its submit stamp (as before); a
+   *  bracket's exit fills on a later read, so it carries that read's clock, never the entry's. */
+  private fillStamp(order: Order): string {
+    return this.legParent.has(order.id) ? this.stamp() : order.submitted_at;
+  }
+
+  /** A bracket's stop leg triggers when the touch reaches it and sells at the market. Only the
+   *  leg: a simple stop keeps resting exactly as before (#8249 changes no existing order's path). */
+  private stopLegTriggered(order: Order, mark: number): boolean {
+    if (order.type !== "stop" || !this.legParent.has(order.id)) return false;
+    const stop = num(order.stop_price);
+    return order.side === "sell" ? mark <= stop : mark >= stop;
+  }
+
+  /** The entry filled: its exits go live. An exit filled: its sibling is cancelled (one-cancels-other). */
+  private afterBracketFill(order: Order): void {
+    if (order.order_class !== "bracket") return;
+    const parent = this.legParent.get(order.id);
+    if (!parent) {
+      for (const leg of order.legs ?? []) if (leg.status === "held") leg.status = "new";
+      return;
+    }
+    for (const sibling of parent.legs ?? []) {
+      if (sibling !== order && OPEN.has(sibling.status)) this.cancel(sibling);
+    }
   }
 
   private apply(symbol: string, signedQty: number, price: number): void {
@@ -460,6 +591,10 @@ export class WritableFixtureTradingTransport implements AlpacaTradingTransport {
   private cancel(order: Order): void {
     order.status = "canceled";
     order.canceled_at = this.stamp();
+    // Cancelling a bracket's entry cancels its exits too (cancel-all reaches them first or after;
+    // either way each is cancelled once).
+    if (order.order_class !== "bracket" || this.legParent.has(order.id)) return;
+    for (const leg of order.legs ?? []) if (OPEN.has(leg.status)) this.cancel(leg);
   }
 
   private stamp(): string {
@@ -475,6 +610,26 @@ function normalisePosition(raw: unknown): Position {
     side: (p.side as "long" | "short") ?? (qty < 0 ? "short" : "long"),
     asset_class: p.asset_class ?? (isOccSymbol(p.symbol) ? "us_option" : "us_equity"),
   };
+}
+
+/** Each exit at least a cent on its side of the base: a buy's take-profit above and stop below, a
+ *  sell's the other way round — in Alpaca's own words. */
+function offsetRefusal(
+  buy: boolean,
+  base: number,
+  tp: number,
+  sl: number,
+): Promise<JsonResponse> | undefined {
+  const up = buy ? 1 : -1;
+  if (Math.round((tp - base) * 100) * up < 1)
+    return unprocessable(
+      `take_profit.limit_price must be ${buy ? ">= base_price +" : "<= base_price -"} 0.01`,
+    );
+  if (Math.round((base - sl) * 100) * up < 1)
+    return unprocessable(
+      `stop_loss.stop_price must be ${buy ? "<= base_price -" : ">= base_price +"} 0.01`,
+    );
+  return undefined;
 }
 
 const mult = (symbol: string): number => contractMultiplier(symbol);
@@ -510,3 +665,11 @@ const notFound = (): Promise<JsonResponse> =>
   Promise.resolve({ status: 404, body: { message: "not found" } });
 const unprocessable = (message: string): Promise<JsonResponse> =>
   Promise.resolve({ status: 422, body: { code: 42210000, message } });
+const insufficientQty = (requested: number, available: number): Promise<JsonResponse> =>
+  Promise.resolve({
+    status: 403,
+    body: {
+      code: 40310000,
+      message: `insufficient qty available for order (requested: ${requested}, available: ${available})`,
+    },
+  });

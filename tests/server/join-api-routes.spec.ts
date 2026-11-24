@@ -45,6 +45,12 @@ function configWith(over: Record<string, unknown> = {}): DashboardServerConfig {
 }
 
 describe("serveJoinApi", () => {
+  it("reports Connect with Alpaca on only when it is wired (#8250)", async () => {
+    const { res, out } = fakeRes();
+    await serveJoinApi(get(), res, "/api/join", configWith({ alpacaConnect: {} }), session);
+    expect(JSON.parse(out.body ?? "{}").connect).toBe(true);
+  });
+
   it("ignores other paths", async () => {
     const { res } = fakeRes();
     expect(await serveJoinApi(get(), res, "/api/settings", configWith(), session)).toBe(false);
@@ -61,6 +67,7 @@ describe("serveJoinApi", () => {
     );
     const body = JSON.parse(out.body ?? "{}");
     expect(body.wired).toBe(true);
+    expect(body.connect).toBe(false);
     expect(body.canAddBots).toBe(false);
     expect(Array.isArray(body.classes)).toBe(true);
     expect(body.classes.length).toBeGreaterThan(0);

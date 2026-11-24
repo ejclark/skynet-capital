@@ -27,6 +27,9 @@ export interface MemberContextInput {
   /** The member's own filings, newest first — the feedback log's entries. */
   readonly filings: readonly FilingSummary[];
   readonly marketOpen: boolean;
+  /** The Market line from the broker's calendar (`marketHoursLine`, #8248): the open/closed answer
+   *  with the day's real close or the next open. Absent, the line names no hour at all. */
+  readonly marketLine?: string;
   /** Where they asked from, already reduced to fixed words by `describePage` (#2224 shape 2) —
    *  never the raw path the client sent. */
   readonly page?: string;
@@ -177,6 +180,7 @@ export function memberContext(input: MemberContextInput): string {
     `${account}${graduation}`,
     feedback,
     ...fixLines(input),
-    `Market: the regular session is ${marketOpen ? "OPEN right now" : "CLOSED right now (9:30 AM–4:00 PM ET, weekdays); an order placed now is queued and fills at the open"}.`,
+    input.marketLine ??
+      `Market: the regular session is ${marketOpen ? "OPEN right now" : "CLOSED right now; an order placed now is queued and fills at the open"}.`,
   ].join("\n");
 }

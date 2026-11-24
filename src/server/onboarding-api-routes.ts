@@ -1,12 +1,12 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { COURSES, type CourseLevel, graduatingLevel } from "../domain/curriculum.js";
-import { regularSessionOpen } from "../domain/market-session.js";
 import { deriveOnboarding, ONBOARDING_MILESTONE } from "../domain/onboarding.js";
 import { TRADE_TYPES } from "../domain/trade-types.js";
 import type { Session } from "./auth/session.js";
 import { resolveCurrentId, resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { opaqueMemberId } from "./feedback-issue.js";
+import { readClockFor } from "./market-clock.js";
 import { requireGet, sendJson } from "./page-shell.js";
 
 /**
@@ -110,7 +110,8 @@ export async function onboardingView(
     linked,
     ...(session?.name ? { viewerName: session.name } : {}),
     ...(session?.email ? { viewerId: opaqueMemberId(session.email) } : {}),
-    marketOpen: regularSessionOpen(),
+    // Open or closed from the broker's calendar and clock, the table as its labelled fallback (#8248).
+    marketOpen: (await readClockFor(config)).isOpen,
     milestone: ONBOARDING_MILESTONE,
     ...progress,
     ...(human
