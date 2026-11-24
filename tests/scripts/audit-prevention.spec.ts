@@ -103,7 +103,7 @@ describe("the questions every correctness reviewer is asked", () => {
   // while the shipped file or the live payload says otherwise (a coverage list missing glyphs the
   // font lacks, an event that lands on a different issue than assumed).
   const DECLARED_SET =
-    /declared list, event name, status string or field name as proof.*open the real artifact or a live payload.*compare it with the declared set.*fixture the PR hand-wrote is not that comparison/i;
+    /declared list, event name, status string or field name as proof.*open the real artifact or a live payload.*compare it with the declared set.*report the check when the two can differ.*name the read you could not make.*fixture the PR hand-wrote is not that comparison.*spec says where it was recorded/i;
 
   it("ask the audit's reviewer to compare a declared set with the real artifact", async () => {
     const { calls } = await audit([], { causes: [] });

@@ -52,8 +52,9 @@ whether it's ready.
      claims, and report it when the signal can be true while the effect is not.
    - For every check that treats a declared list, event name, status string or field name as proof of
      a fact, open the real artifact or a live payload it describes and compare it with the declared
-     set; report the check when the two can differ. A fixture the PR hand-wrote is not that
-     comparison; one copied from a real payload is.
+     set; report the check when the two can differ, or name the read you could not make (never
+     create an event to get one). A fixture the PR hand-wrote is not that comparison (judge it as a
+     stand-in under the test question above); one whose spec says where it was recorded is.
    - For every read that feeds a verdict, say what it returns when it fails or its window holds no
      sample, and report it if that equals the all-clear answer.
    - When the diff adds a new way to close, park, label or exempt something, grep every reader of that
