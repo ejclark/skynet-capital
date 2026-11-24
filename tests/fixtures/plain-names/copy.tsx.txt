@@ -1,4 +1,4 @@
-// Fixture for tests/ui/plain-names-copy.spec.ts: the old Desk name in a comment never fires.
+// Fixture (.txt so the type check skips it) for tests/ui/plain-names-copy.spec.ts: the old Desk name in a comment never fires.
 import { DeskTiles } from "../live/desk";
 
 type Desk = { id: string };

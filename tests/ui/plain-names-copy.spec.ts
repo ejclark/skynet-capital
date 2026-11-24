@@ -17,7 +17,7 @@ const scan = (files: string[] = []) => {
 
 describe("member copy never says a rejected name", () => {
   it("fails a rejected name in a copy string and passes the same word as an identifier", () => {
-    const { status, hits } = scan(["tests/fixtures/plain-names/copy.tsx"]);
+    const { status, hits } = scan(["tests/fixtures/plain-names/copy.tsx.txt"]);
     expect(status).toBe(1);
     expect(hits.map((h) => [h.found, h.plain])).toEqual([
       ["Desk", "Trade"],

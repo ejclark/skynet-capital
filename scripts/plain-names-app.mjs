@@ -40,7 +40,7 @@ function literalText(node) {
  */
 export function memberStrings(path, source) {
   const { code } = transformSync(source, {
-    loader: path.endsWith(".tsx") ? "tsx" : "ts",
+    loader: /\.tsx(\.txt)?$/.test(path) ? "tsx" : "ts",
     jsx: "transform",
     legalComments: "none",
     sourcefile: path,

@@ -23,9 +23,7 @@ describe("the rejected-name list", () => {
   });
 
   it("holds the four names renamed on 2026-11-24 and the Brief", () => {
-    const plain = Object.fromEntries(
-      PLAIN_NAMES.map((r: { term: string; plain: string }) => [r.term, r.plain]),
-    );
+    const plain = Object.fromEntries(PLAIN_NAMES.map((r) => [r.term, r.plain]));
     expect(plain).toMatchObject({
       Desk: "Trade",
       Cast: "Who's who",
