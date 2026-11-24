@@ -118,7 +118,9 @@ Eric-sourced.
   behavior; 3 of the 10 largest untested files sit there. The candidate is always the largest file,
   so the coach stays wedged until someone confirms that file's behavior or the eye skips carve-out
   paths for `--candidate` (still counting them in `debt`, listed apart as needing a human).
-  _(src: Claude · while: governor cycle 7, 2026-11-02)_
+  _(src: Claude · while: governor cycle 7, 2026-11-02)_ **Done** in governed cycle 14
+  (2026-11-23), after the same stall recurred: `--candidate` skips the carve-out and lists it under
+  `needsHuman`; `tests/scripts/spec-gap-carve-out.spec.ts` reads the skill's list so the two can't drift.
 - **IPO discovery runs only when someone types it.** `npm run research:lockups` now files a listing
   from its public S-1 (#5912 slice 3), but no schedule calls it, so "Anthropic's S-1 lands and
   discovery files it within one run" (the slice's falsifier) waits on a person remembering the run:
@@ -1957,3 +1959,13 @@ per PR that is held, unprotected, green and over a day old, for `/secretary`'s d
 page: "held without a protected path; lift it?". That turns a five-day wait into a one-tap
 question the next morning.
 _(src: Claude · while: clearing #7672's mistaken hold)_
+
+### A close-out hold that one far-off forward test cancels buys a session that can only leave
+
+`closeOutHold` (`scripts/forward-test-pending.mjs`) holds a close-out only when *every* pending forward
+test scores inside `closeOutWithinDays`. An event with one in-window row and one row years out (here
+`jpx-market-closure-2026-11-23`: FT-1 due 2026-11-25, FT-2 due 2027-01-15) dispatches on D+1 anyway,
+before FT-1's own bar has closed, so the session can write the outcome but not the score. Holding to the
+latest *in-window* score-by, and leaving the beyond-window row to the `forward-test-due` door, would save
+that session. Falsifier: count close-outs dispatched with an in-window row still unscoreable.
+_(src: Claude · while: closing out jpx-market-closure-2026-11-23 at D+1)_

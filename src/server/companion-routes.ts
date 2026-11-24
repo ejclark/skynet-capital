@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { CompanionMessage } from "../companion/companion-chat.js";
-import { memberContext } from "../companion/companion-context.js";
+import { MAX_FIXED_ANNOUNCED, memberContext } from "../companion/companion-context.js";
 import { describeHolding } from "../companion/companion-holding.js";
 import {
   COMPANION_MODEL_CALLS_MAX,
@@ -122,15 +122,17 @@ function serveCompanionIndex(res: ServerResponse, config: DashboardServerConfig)
 }
 
 /** The member's live context for this turn — the same reads the Onboarding and Feedback pages
- *  make, folded into a few lines for the volatile half of the prompt. Any read failing degrades
- *  to "no context" rather than failing the turn: she answers from the cached help desk instead. */
+ *  make, folded into a few lines for the volatile half of the prompt — and the shipped fixes this
+ *  turn tells her to announce, for the route to record once the reply completes (#8078). Any read
+ *  failing degrades to "no context" rather than failing the turn: she answers from the cached help
+ *  desk instead. */
 async function memberContextFor(
   config: DashboardServerConfig,
   session: Session,
   page?: string,
   holding?: string,
   onScreen?: string,
-): Promise<string | undefined> {
+): Promise<{ readonly text: string; readonly announcing: readonly number[] } | undefined> {
   try {
     // The owner desk (the Moneypenny operator plan): only the server's own owner check turns it
     // on — nothing in the request or the prompt can — and a slow or failed read drops the line,
@@ -143,11 +145,17 @@ async function memberContextFor(
     ]);
     // "Try it" (#8005 slice 7): a matched filing whose known problem was fixed since they asked.
     const fixes = await knownProblemFixes(filings, config.fetchFeedbackStatus);
-    const fixed = filings.flatMap((f) => {
+    const allFixed = filings.flatMap((f) => {
       const fix = fixes.get(f.issueNumber);
       return fix ? [{ issueNumber: f.issueNumber, title: f.title, ...fix }] : [];
     });
-    return memberContext({
+    // "Once" is a server record, not the transcript (#8078): the client resends ten lines of one
+    // thread, so her own announcement ages out and a new thread never had it. Announced filings
+    // stay as a fact; the rest are announced at most two per reply, so a third gets its turn.
+    const told = allFixed.length > 0 ? announcedFor(config, session) : new Set<number>();
+    const fixed = allFixed.filter((f) => !told.has(f.issueNumber)).slice(0, MAX_FIXED_ANNOUNCED);
+    const announcedFixed = allFixed.filter((f) => told.has(f.issueNumber));
+    const text = memberContext({
       now: new Date(),
       onboarding,
       filings: [...filings]
@@ -159,9 +167,35 @@ async function memberContextFor(
       ...(onScreen ? { onScreen } : {}),
       ...(ownerQueue ? { ownerDesk: describeOwnerQueue(ownerQueue) } : {}),
       ...(fixed.length > 0 ? { fixed } : {}),
+      ...(announcedFixed.length > 0 ? { announcedFixed } : {}),
     });
+    return { text, announcing: fixed.map((f) => f.issueNumber) };
   } catch {
     return undefined;
+  }
+}
+
+/** What she has already announced to this member; an unreadable record reads as nothing told,
+ *  which costs one more announcement, never the turn. */
+function announcedFor(config: DashboardServerConfig, session: Session): ReadonlySet<number> {
+  try {
+    return config.fixAnnouncements?.announced(opaqueMemberId(session.email)) ?? new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+/** Record the fixes a completed reply was told to announce. Never throws into the stream. */
+function recordAnnounced(
+  config: DashboardServerConfig,
+  session: Session,
+  announcing: readonly number[],
+): void {
+  if (announcing.length === 0) return;
+  try {
+    config.fixAnnouncements?.record(opaqueMemberId(session.email), announcing);
+  } catch {
+    // A failed write costs one more announcement next turn, never this reply.
   }
 }
 
@@ -229,7 +263,7 @@ async function serveChat(
     : undefined;
   const holding = describeHolding(pageSymbol(body?.page), desk);
   const onScreen = landingOnScreen(body?.page, body?.keys);
-  const context = await memberContextFor(
+  const member = await memberContextFor(
     config,
     session,
     describePage(body?.page),
@@ -244,7 +278,7 @@ async function serveChat(
     {
       messages,
       ...(participantId ? { participantId } : {}),
-      ...(context ? { context } : {}),
+      ...(member ? { context: member.text } : {}),
       convictions: companionConvictionsFor(config, session),
       // Any signed-in member's screenshot loads by id, whoever attached it (Eric, 2026-11-10).
       ...(screenshotStore ? { loadScreenshot: (id: string) => screenshotStore.load(id) } : {}),
@@ -258,6 +292,8 @@ async function serveChat(
         res.write(sseFrame(JSON.stringify({ text: chunk }), "delta", seq++));
       },
       onDone: () => {
+        // The reply that carried the announce line is the announcement: record it (#8078).
+        recordAnnounced(config, session, member?.announcing ?? []);
         res.write(sseFrame("{}", "done", seq++));
         res.end();
       },

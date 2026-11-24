@@ -331,6 +331,7 @@ of it.
 | 2026-11-04 | D-14 | **Pulse — date re-confirmed, September input already fixed, stance holds.** **Date (TSY:, re-fetched direct 2026-11-04, HTTP 200):** the release-dates table still reads November **18** (Quarterly/Annual empty); the October press notice states the September-data release "is scheduled for November 18, 2026" (secondary read via search summary; PDF not parsed). **Sibling scored:** `tic-monthly-2026-10-16` closed out 10-22 — FT-3 PASS (10-19 +6bp, under 10bp, a mixed read), FT-2 KILL (drift hypothesis), FT-4 PASS; so this ledger's FT-2 (same drift claim, midpoint line) was already leaning fail per the 10-19 row; registered rows untouched, scored 11-24. **Tape (TSY: par curve, through 11-03):** 10Y **4.95%**; 10-22 was −17bp (largest in the window); since 10-20 mean \|Δ10Y\| 4.5bp (n=11), 4.4bp since 09-09 (n=39) vs the 3.94bp benchmark, so FT-3's 2.55bp bar stays easy to clear (weak evidence on a pass). **Vol:** VIX **20.83** (live) vs 19.99 last row (+0.84, no regime cross; CBOE close 11-02 21.15). *Macro (NEWS:, secondary):* Fed held 10-28, reported 10-2 with two dissents for a hike, December hike priced; 10Y 5.05%→4.98% 10-28→10-29. **Corridor 35 → 39; new:** `asean-summit-manila-2026-11-16`, `eurostat-hicp-final-2026-11-18`, `sp-global-flash-us-pmi-2026-11-23`, `uk-consumer-confidence-2026-11-20` — all already on calendar. **Strong adjacents:** `retail-sales-2026-11-17`, `nvda-2026-11-18-print` (now confirmed, after the close, so 11-19 also carries its reaction). **Falsifiers checked:** none tripped (no TIC next-session >10bp). **Proposals:** none; nothing new in horizon. Conviction proposals: none; declared intents: none. **Blocked:** none. | — (stand-aside holds on every horizon) | 2026-11-11 (`low:0+`, every 7d) |
 | 2026-11-11 | D-7 | **Deterministic screen (no Claude session).** Readings — VIX 19.5 (-1.4pt since last), band unchanged (low:0+), 41 adjacent event(s) tracked, new in corridor since last pulse: `empire-state-mfg-2026-11-16`, `japan-gdp-q3-prelim-2026-11-16` (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-11-18 |
 | 2026-11-18 | D-0 | **Pulse (VIX +6.0pt crossed the regime screen); date holds, stance holds, stand aside.** **Date (TSY:, re-fetched direct 2026-11-18, HTTP 200):** release-dates table still reads November **18**; release is 16:00 ET, after this session, so no September print is read here (FT-1/2/4 untouched, scored 11-24). **Tape (TSY: par curve, through 11-17; 11-11 closed):** 10Y **5.10%** vs 4.95% on 11-03 (+15bp; 30Y 5.46%); mean \|Δ10Y\| **5.2bp** (n=9 since 11-04) vs the 3.94bp benchmark, so FT-3's 2.55bp bar on 11-19 stays easy to clear (weak evidence on a pass). **Vol:** VIX **25.46** (CBOE close 11-17) vs 19.46 = **+6.0pt** (17.49 on 11-11, 22.91 on 11-16); cause not sourced here, no tracked symbol. *Macro:* no usable 11-17 retail-sales or NVDA-print coverage found (search returned other years); nothing claimed. **Falsifiers checked:** no TIC next-session >10bp (09-17 7bp, 10-19 6bp); the 09-16 30Y>5.40% line never fired. **Adjacency:** 41 ids ±5d, strong = `nvda-2026-11-18-print`, `retail-sales-2026-11-17`; `--on-date` 11-18/11-19 found nothing untracked. **Proposals:** none. Conviction proposals: none; declared intents: none. **Blocked:** none. | — (stand-aside holds on every horizon) | 2026-11-24 (close-out, FT scoring) |
+| 2026-11-24 | D+6 | **Close-out (FT scoring; stance never changed).** September data **published 2026-11-18 on schedule** (TSY: `slt_table3/5` HTTP 200, Last-Modified 21:04 GMT = 16:04 ET). Scored from re-fetched tables and the par curve, not memory: **FT-1 PASS** (valchg **−2.281%** = −$180.2bn vs line −2.510%, band −2.86…−2.16), **FT-2 KILL** (−2.281% at/above midpoint −2.331%), **FT-3 PASS, thin** (11-19 10Y −3bp vs 2.55bp bar), **FT-4 PASS** (official bills −22.3% y/y vs coupons −3.3%). Missed: **LT net purchases +$80.8bn** and, in-month, coupons fell more in dollars (−$57.3bn) than bills (−$23.7bn). **Vol:** VIX **35.89** (CBOE close 11-20) vs 25.46 = **+10.4pt**; 10Y 5.10% (11-17) → 4.92% (11-23). **Proposed:** nothing; no new dated adjacency. Conviction proposals: none; declared intents: none. **Blocked:** none. | — (stand-aside held; FT-2 killed, see Outcome) | — (closed; no further pulses) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -340,6 +341,68 @@ every row; a dated adjacent event found gets proposed as a new
 `src/domain/market-events/proposals/<id>.from-<this-event-id>.json` (`status: "estimate"`) in the
 same PR — your own file, never another event's canonical one (#1717). Close-out fills `## Outcome` below from re-run instrument
 data (cache busted first), never from memory — after which this doc goes quiet.
+
+## Outcome
+
+**Close-out (2026-11-24, D+6 — the last day inside `closeOutWithinDays: 6`).** Macro-print mode runs no
+`earnings-cycle` / `intraday-edges` instrument (`symbols: []`); the cache bust touched nothing this event
+reads. "Re-run data" here means re-fetching every primary today (HTTP 200): Treasury's `slt_table3.txt`,
+`slt_table5.txt` (both Last-Modified 2026-11-18 21:04 GMT, i.e. 16:04 ET, so published on the scheduled day) and
+the daily par yield curve CSV; CBOE's VIX history for the vol row. The press-release text was not read, so its
+headline net-flow figures are not quoted. Stand-aside cost nothing and was never tradeable (`symbols: []`, `low` tier).
+
+**Verdict: the model held, the recent-window drift lost again, the quiet-session claim passed thinly, and the
+bill-retreat read passed on the year but not on the month.** Three of four forward tests pass; one is a kill.
+
+### What printed for September 2026 (Table 3, Grand Total)
+
+| Line | Aug-2026 | Sep-2026 | Δ |
+|---|---|---|---|
+| Total foreign UST holdings (LT+ST) | $9,316.7bn | $9,241.2bn | −$75.5bn |
+| LT UST holdings | $7,899.4bn | $7,820.4bn | −$79.0bn |
+| LT UST net purchases | +$108.6bn | **+$80.8bn** | still a buyer after August |
+| LT UST valuation change | −$4.4bn | **−$180.2bn** | the +54bp month |
+| Foreign official UST holdings | $3,755.6bn | $3,674.7bn | −$80.9bn |
+
+Holdings identity closes: −$79.0bn change − $80.8bn net purchases + $180.2bn valuation = **+$20.4bn**
+residual, inside the logged sd of $26bn. **August was restated** in this release (LT base $7,914.3bn at
+2026-10-16, $7,899.4bn now); the verdicts below hold on either base (−2.277% vs −2.281%).
+
+### Scoring
+
+Δ10Y for September is **+54.0bp** (par curve 4.75% on 2026-08-31 → 5.29% on 2026-09-30), inside the
+±60bp support line, so every test scores.
+
+| FT | Verdict | Actual vs registered |
+|---|---|---|
+| FT-…-11-18-1 | **PASS** | valchg **−2.281%** of the $7,899.4bn August base vs line −2.510% and band −2.86%…−2.16%; residual **+0.23pp** (1.3σ of 0.175pp), far inside the ±0.90pp retirement line |
+| FT-…-11-18-2 | **KILL** | −2.281% is **at or above** the midpoint −2.331% — kill switch 2 fires. The print sits 0.11pp under the full-sample line (−2.169%) and 0.23pp over the last-18 line |
+| FT-…-11-18-3 | **PASS (thin)** | 10Y 5.07% → 5.04% on 2026-11-19 = **−3bp**, above the 2.55bp bar by 0.45bp on a 1bp grid |
+| FT-…-11-18-4 | **PASS** | official bills **−22.3%** y/y ($288.5bn vs $371.3bn) vs coupons **−3.3%** ($3,386.1bn vs $3,501.2bn; the registered baseline read 3,501.3 off a rounding) |
+
+**FT-2 and the drift: two months, two kills, same direction.** This is the second consecutive month the
+trailing-window drift lost: August printed +0.05pp over the full-sample intercept and September
+−2.281% printed above the two-window midpoint. The last-18 window's intercept (−0.096%) was too low in both
+months. The full-sample line (+0.080%, the 10-19 refit on 43 months) is the better description, so FT-1's
+last-18 band passed on width alone (±0.35pp). Do not register another directional intercept test on this
+model from a trailing-residual average; sibling `FT-tic-monthly-2026-10-16-2` is already on the kill list.
+
+**FT-3 is a weak pass, as the 11-04 and 11-18 rows warned.** The session did what the contamination claim
+says (FOMC minutes the day before, an NVDA print after that close, a 10-Year TIPS auction on the day), but the
+move is 3bp on a grid that rounds to 1bp, one observation against a 2.55bp bar, and the VIX regime
+had already moved (24.56 → 28.44 on 11-19). It does not distinguish "calendar position" from "TIC effect" at
+any usable confidence; a clean test needs a release on a day nothing else owns. The following session (11-20) was **−12bp** with VIX 35.89, outside the test and not scored.
+
+**FT-4 passes on the year and not on the month.** Official bills are down 22.3% y/y against 3.3% for coupons,
+as registered. But September alone moved the other way in dollars: coupons **−$57.3bn** against bills
+**−$23.7bn** — with the 10Y up 54bp, part of that coupon fall is valuation, not selling, so this does not
+refute the bill story, but it is **the first month in this series where the dollar retreat was mostly duration**.
+That is a note for any future official-holdings test, not a stance change.
+
+**What the stance missed.** Two things. Foreign long-term buying stayed strong (+$80.8bn) through the
+largest rate rise in the window, so a sell-off did not translate into foreign selling. And the
+valuation hit (−$180.2bn) was the **largest of the 44 months** in the file (next: −$143.0bn, 2023-09) — the flow story and the mark story ran
+in opposite directions, which a flow-only reader of the headline would have missed.
 
 **Last assessed:** 2026-10-19
 <!-- probe-ref: {"symbols":{},"vix":19.99,"daysBand":"low:15+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","fomc-minutes-2026-11-18","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-cpi-2026-11-20","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-liquidity-enhancement-1-5y-2026-11-20","jpx-market-closure-2026-11-23","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","nvda-2026-11-18-print","opex-2026-11-20","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","ppi-2026-11-13","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","russell-recon-preliminary-2026-11-13","survey-of-professional-forecasters-q4-2026-11-16","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-note-2026-11-23","treasury-coupon-announcement-2026-11-19","uk-cpi-2026-11-18","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["retail-sales-2026-11-17"],"screenStreak":0,"blocked":[]} -->
@@ -352,3 +415,6 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-11-18
 <!-- probe-ref: {"symbols":{},"vix":25.46,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","empire-state-mfg-2026-11-16","eurostat-hicp-final-2026-11-18","fomc-minutes-2026-11-18","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-liquidity-enhancement-1-5y-2026-11-20","jpx-market-closure-2026-11-23","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","nvda-2026-11-18-print","opex-2026-11-20","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","ppi-2026-11-13","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","russell-recon-preliminary-2026-11-13","sp-global-flash-us-pmi-2026-11-23","survey-of-professional-forecasters-q4-2026-11-16","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-note-2026-11-23","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["nvda-2026-11-18-print","retail-sales-2026-11-17"],"screenStreak":0} -->
+
+**Last assessed:** 2026-11-24
+<!-- probe-ref: {"symbols":{},"vix":35.89,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","fomc-minutes-2026-11-18","housing-starts-2026-11-18","japan-cpi-2026-11-20","jpx-market-closure-2026-11-23","nvda-2026-11-18-print","opex-2026-11-20","philly-fed-mfg-2026-11-19","sp-global-flash-us-pmi-2026-11-23","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-note-2026-11-23","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"screenStreak":0,"blocked":[]} -->

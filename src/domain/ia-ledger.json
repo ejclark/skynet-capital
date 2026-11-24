@@ -339,7 +339,8 @@
       ],
       "screensCited": 1,
       "plans": [],
-      "state": "waiting"
+      "state": "fixed",
+      "fixedBy": 6952
     }
   ]
 }

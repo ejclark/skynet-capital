@@ -18,7 +18,7 @@ const PASS = { pass: true, evidence: "x" };
 const survivor = (over: Record<string, unknown> = {}) => ({
   issue: 6001,
   title: "add a thing",
-  checks: { criteria: PASS, size: PASS, noFork: PASS, notBlocked: PASS },
+  checks: { criteria: PASS, size: PASS, noFork: PASS, notBlocked: PASS, placed: PASS },
   addFeedback: true,
   comment: "**Clear path — session flip**\n&lt;details&gt;why&lt;/details&gt;",
   verifiers: ["envelope — traced 2 paths, none protected", "thread — read 3 comments; clear"],
@@ -60,6 +60,10 @@ describe("malformed", () => {
   it("refuses a failing or missing check", () => {
     const checks = { criteria: PASS, size: { pass: false }, noFork: PASS };
     expect(malformed(survivor({ checks }))).toMatch(/size, notBlocked/);
+  });
+  it("refuses a survivor whose IA home was never named (#8005 slice 2)", () => {
+    const checks = { criteria: PASS, size: PASS, noFork: PASS, notBlocked: PASS };
+    expect(malformed(survivor({ checks }))).toMatch(/placed/);
   });
   it("refuses an empty comment or a bad issue number", () => {
     expect(malformed(survivor({ comment: " " }))).toMatch(/comment/);
