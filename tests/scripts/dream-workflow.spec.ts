@@ -93,3 +93,45 @@ describe("dream.js when a judging agent does not return", () => {
     expect(result.notRun).toMatch(/propose/);
   });
 });
+
+// A memory citing another repo's issue ("claude-code #12345") reads as a 404 here, forever. The check
+// agent reports it "unchecked". That is one row the review could not judge, not a stage that died, so
+// it must not raise notRun — step 7 would re-run a review no re-run can fix, and never score it (#7728).
+describe("dream.js when a memory row could not be checked", () => {
+  const UNCHECKED = {
+    file: "m/cross-repo.md",
+    kind: "unchecked",
+    detail: "claude-code #12345 unreadable",
+    evidence: "404 in this repo",
+  };
+  const withUnchecked: Reply = (prompt, opts) =>
+    opts.label === "check:memory" ? { findings: [FINDING, UNCHECKED] } : reply()(prompt, opts);
+
+  it("names the row in unchecked and leaves the run scoreable", async () => {
+    const { result } = await dream(withUnchecked);
+    expect(result.notRun).toBeUndefined();
+    expect(result.proposals).toHaveLength(1);
+    expect(result.unchecked).toEqual(["m/cross-repo.md: claude-code #12345 unreadable"]);
+  });
+
+  it("still keeps the row out of what propose may retire", async () => {
+    const { calls } = await dream(withUnchecked);
+    const propose = calls.find((c) => c.opts.label === "propose");
+    expect(propose?.prompt).not.toMatch(/cross-repo/);
+    expect(propose?.prompt).toMatch(/m\/a\.md/);
+  });
+
+  it("a dead propose stage still raises notRun beside the unchecked row", async () => {
+    const deadPropose: Reply = (prompt, opts) =>
+      opts.label === "propose" ? null : withUnchecked(prompt, opts);
+    const { result } = await dream(deadPropose);
+    expect(result.notRun).toMatch(/propose/);
+    expect(result.notRun).not.toMatch(/cross-repo/);
+    expect(result.unchecked).toEqual(["m/cross-repo.md: claude-code #12345 unreadable"]);
+  });
+
+  it("a clean run carries no unchecked list", async () => {
+    const { result } = await dream(reply());
+    expect(result.unchecked).toBeUndefined();
+  });
+});
