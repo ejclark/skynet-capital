@@ -319,6 +319,14 @@ $stray"
   [ -z "$closed" ] || [ -z "$partof" ] || both="$(comm -12 <(echo "$closed") <(echo "$partof") || true)"
   [ -z "$both" ] || fail "an issue is both 'Part of' and closed by this PR — the closing keyword wins on merge. Keep one: $(echo $both)"
 
+  # 6. A name Eric already rejected, above the fold (#8290). The list is docs/plain-names.json;
+  #    code spans, quotes and identifiers are skipped, so a body can still discuss a name as a name.
+  local pn
+  if ! pn="$(node scripts/plain-names.mjs --above-fold "$f" 2>&1)"; then
+    fail "a rejected name is back above the fold:
+$pn"
+  fi
+
   if [ "$fails" -gt 0 ]; then
     echo "ship checkbody: $fails problem(s) — the PR body is the durable record; see docs/PICTURES.md." >&2
     exit 1

@@ -29,6 +29,7 @@ import { readinessNotes } from "./issue-readiness.mjs";
 import { LABEL_NAMES } from "./moneypenny/labels.mjs";
 import { BUILDING, STATUS_OPTIONS, WAITING_ON_PERSON } from "./moneypenny/projects.mjs";
 import { isPitchLine, pitchProblems } from "./pitch-issue.mjs";
+import { plainNameProblems } from "./plain-names.mjs";
 import { fleschKincaidGrade, stripMarkdown } from "./readability.mjs";
 
 /** Above this, an advisory note fires — chosen generous (college-graduate level) so the necessarily
@@ -458,6 +459,8 @@ export function lintIssue({ title = "", body = "", labels } = {}) {
   checkStateBlockTop(text, notes);
   checkStatusRow(text, labels, notes);
   checkNeedsFromYou(text, labels, problems, notes);
+  // A name Eric already rejected, in the title or above the fold (#8290, docs/plain-names.json).
+  problems.push(...plainNameProblems(title, "title"), ...plainNameProblems(aboveFold(text)));
   notes.push(...readinessNotes({ title, body: text, labels }));
 
   return { problems, notes };
