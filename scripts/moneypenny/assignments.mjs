@@ -433,9 +433,11 @@ function planIssue(
  * here as well, so a hand-edited table can never route a spend or credential ask past him. The
  * class is the one the ask states (`- Class:`), else `classOf`'s guess — its ledger row's class.
  * A class (stated or guessed) is a claim about the ask, so the ask's own words hold a veto: when
- * the guess lands on a rule-4 class, or the words name rule 4 (merge, arm, access, deploy…), no
- * class graduates it. The guess alone reaches only three of CLASS_MAP's seven rule-4 classes, so
- * a merge ask guessed `unclassified` and rode its stated reversible class past him (#7959). Pure.
+ * the guess lands on a rule-4 class, or the words name a rule-4 class's act (RULE_FOUR_ACTS: one
+ * row per irreversible class), no class graduates it. The guess alone reaches only three of
+ * CLASS_MAP's seven rule-4 classes, so a merge ask guessed `unclassified` and rode its stated
+ * reversible class past him (#7959); a single keyword list then missed "land", a Routine, the
+ * public page and a friend's login (#8059). Pure.
  */
 export function graduatedClass(issue, graduated = []) {
   if (!graduated.length) return null;

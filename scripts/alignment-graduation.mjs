@@ -64,16 +64,47 @@ export const CLASS_MAP = {
     "safeguards on autonomous trading; held by safety-scales-to-stakes until he moves it",
   ],
 };
-/** A class the table does not name, but whose words say rule 4: still not eligible, louder. */
-const RULE_FOUR_WORDS =
-  /spend|budget|credential|secret|token|password|merge|arm|access|invite|privacy|outward|deploy/i;
+/**
+ * The words that name each irreversible class's ACT, for text CLASS_MAP does not name: an unmapped
+ * class name, or an ask's own question and title (`graduatedClass` in moneypenny/assignments.mjs
+ * vetoes on them). One row per irreversible class, so the veto reaches all seven, not only the
+ * ones a single keyword list happened to cover: #8059's four asks ("land" a held PR, turn on a
+ * Routine, show members' positions to the public, give a friend a login) said none of the old
+ * words and graduated as screen design. The rows hold every word the old single list held, so
+ * nothing it vetoed graduates now. Still wording, so still a backstop: a new irreversible class
+ * needs a row here (a spec fails without one), and a missed wording is a new word in its row.
+ */
+export const RULE_FOUR_ACTS = [
+  ["spend limits", /spend|budget|\bcap\b|\$\d|quota|billing|subscription|\bpaid\b/i],
+  ["credentials", /credential|secret|token|password|api key/i],
+  ["review queue", /merge|\bland(s|ed)?\b|platter|held pr|hold-merge|deploy/i],
+  ["schedule (arming)", /arm|routine|\bcron\b|schedul/i],
+  [
+    "member data sharing",
+    /privacy|outward|public|pre-?auth|non-?members?|logged[- ]out|signed[- ]out|outsiders?|anonymi[sz]|\bshar(e|es|ed|ing)\b|expos(e|es|ed|ing)\b|every member|all members|other members|everyone's/i,
+  ],
+  [
+    "member onboarding",
+    /access|invite|onboard|\b(give|grant|create|make|send|issue|set up)\b.{0,40}\b(login|account|seat|sign-?in)\b|\badd\b.{0,40}\bto the (app|league|repo|org)\b/i,
+  ],
+  ["bot safety rules", /breaker|\bbots?\b|wheel|playbook|paper order|safeguard|kill switch/i],
+];
+
+/** The irreversible class whose act `text` names, else `null`. Pure. */
+export function ruleFourAct(text = "") {
+  return RULE_FOUR_ACTS.find(([, re]) => re.test(String(text)))?.[0] ?? null;
+}
 
 /** `{ verdict: "reversible"|"irreversible"|"unmapped", why }` for a class name. Pure. */
 export function ruleFour(cls = "") {
   const hit = CLASS_MAP[String(cls).trim().toLowerCase()];
   if (hit) return { verdict: hit[0], why: hit[1] };
-  if (RULE_FOUR_WORDS.test(cls))
-    return { verdict: "irreversible", why: "not in CLASS_MAP, and its words name rule 4" };
+  const act = ruleFourAct(cls);
+  if (act)
+    return {
+      verdict: "irreversible",
+      why: `not in CLASS_MAP, and its words name rule 4 (${act})`,
+    };
   return { verdict: "unmapped", why: "not in CLASS_MAP: add it by PR before it can graduate" };
 }
 

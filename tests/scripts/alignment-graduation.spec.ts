@@ -3,12 +3,15 @@ import { describe, expect, it } from "@rstest/core";
 import {
   activeGraduated,
   branchOf,
+  CLASS_MAP,
   check,
   decidedOf,
   parseGraduated,
   parseLedger,
   prBody,
+  RULE_FOUR_ACTS,
   ruleFour,
+  ruleFourAct,
   scoreOf,
   withGraduated,
   withoutGraduated,
@@ -120,6 +123,30 @@ describe("check: rule 4 is a table, and unknown is not eligible", () => {
       eligible: false,
     });
     expect(ruleFour("token rotation").verdict).toBe("irreversible");
+  });
+
+  // #8059: one keyword list reached only some of the seven irreversible classes, so an ask worded
+  // around it graduated. Every irreversible class names its acts, and the old words still veto.
+  it("names an act row for every irreversible class in CLASS_MAP", () => {
+    const irreversible = Object.entries(CLASS_MAP as Record<string, [string, string]>)
+      .filter(([, [verdict]]) => verdict === "irreversible")
+      .map(([cls]) => cls);
+    const rows = (RULE_FOUR_ACTS as [string, RegExp][]).map(([cls]) => cls);
+    expect(rows.sort()).toEqual(irreversible.sort());
+  });
+  it("vetoes every word the old single list held", () => {
+    const old =
+      "spend budget credential secret token password merge arm access invite privacy outward deploy";
+    for (const w of old.split(" ")) expect([w, ruleFour(w).verdict]).toEqual([w, "irreversible"]);
+  });
+  it("reads each class's act in plain wording", () => {
+    expect(ruleFourAct("Show every member's open positions on the public /login page?")).toBe(
+      "member data sharing",
+    );
+    expect(ruleFourAct("Land the held platter PR #8100 now?")).toBe("review queue");
+    expect(ruleFourAct("Turn on the nightly research Routine?")).toBe("schedule (arming)");
+    expect(ruleFourAct("Give my friend Dana a login to the app?")).toBe("member onboarding");
+    expect(ruleFourAct("Rework the landing page hero on /login?")).toBeNull();
   });
 });
 

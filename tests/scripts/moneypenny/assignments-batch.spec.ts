@@ -295,6 +295,42 @@ describe("plan: a graduated class is decided, not asked", () => {
     expect(planned.needsSession).toEqual([]);
   });
 
+  // #8059: the words veto knew "merge" but not "land", and nothing for arming a Routine, showing
+  // member data to the public, or giving someone a login. Each irreversible class now names its acts.
+  it.each([
+    ["member data sharing", "Show every member's open positions on the public /login page?"],
+    ["review queue", "Land the held platter PR #8100 now?"],
+    ["schedule (arming)", "Turn on the nightly research Routine?"],
+    ["member onboarding", "Give my friend Dana a login to the app?"],
+  ])("keeps a %s ask worded without the old keywords with him", (_cls, question) => {
+    const body = [
+      "> [!IMPORTANT]",
+      "> **Needs from you**",
+      `> 1. ${question}`,
+      ">    - Class: screen design (taste)",
+      ">    - A (predicted, high): yes",
+      ">    - B: not yet",
+    ].join("\n");
+    const ask = issue({ number: 77, title: "weekly tidy", body });
+    expect(graduatedClass(ask, ["screen design (taste)"])).toBeNull();
+    const planned = plan({ issues: [ask], graduated: ["screen design (taste)"], now: NOW });
+    expect(planned.actions.map((a) => a.number)).toEqual([77]);
+    expect(planned.needsSession).toEqual([]);
+  });
+
+  it("still graduates a plain screen-design ask, so the veto is not a blanket", () => {
+    const body = [
+      "> [!IMPORTANT]",
+      "> **Needs from you**",
+      "> 1. Put the leaderboard's rank badge left of the name?",
+      ">    - Class: screen design (taste)",
+      ">    - A (predicted, high): left",
+      ">    - B: right",
+    ].join("\n");
+    const ask = issue({ number: 78, title: "weekly tidy", body });
+    expect(graduatedClass(ask, ["screen design (taste)"])).toBe("screen design (taste)");
+  });
+
   it("leaves an ask he already holds with him", () => {
     const held = issue({
       number: 73,
