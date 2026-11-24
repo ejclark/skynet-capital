@@ -4,6 +4,7 @@ import {
   printEventId,
   printSpan,
 } from "../domain/earnings-calendar.js";
+import { isSession, nextSession } from "../domain/market-calendar.js";
 
 /**
  * Keeping the earnings calendar current (#4479): the pure half of `confirm-print-dates`.
@@ -21,8 +22,9 @@ import {
  *   - NEEDS IR — every company-dated answer the run does not turn into a confirmation (a move, a
  *     held move, a date too far off to be this print, a date already past) is reported by name and
  *     sets the `needs-ir` outcome, so no answer is dropped without a word.
- *   - FILL — a playbook symbol with no print in the next ~100 days gets its next one estimated from
- *     cadence. An estimate only ever WIDENS a safety window and never opens an entry (the date
+ *   - FILL — a playbook or campaign symbol with no print in the next ~100 days gets its next one
+ *     estimated from cadence, on a session (#8252: the edition's census found AVGO and MRVL with
+ *     no next row, because only playbook symbols were filled). An estimate only ever WIDENS a safety window and never opens an entry (the date
  *     policy in earnings-calendar.ts), so a rough cadence guess is the safe direction.
  *
  * LOUD FAILURE: a run where every fetch failed checked nothing, and must exit non-zero — reading a
@@ -307,9 +309,11 @@ export async function fetchEarningsDate(symbol: string, deps: FetchDeps): Promis
 }
 
 /**
- * EARS 1: for each playbook symbol with no print in the next `lookaheadDays`, the next estimate —
- * 13 weeks on from its latest row on or before today, stepped past today if the table went stale.
- * Skipped when that estimate sits on top of a row already on file further out.
+ * EARS 1: for each playbook or campaign symbol with no print in the next `lookaheadDays`, the next
+ * estimate — 13 weeks on from its latest row on or before today, stepped past today if the table
+ * went stale, and moved to the next session when it lands on a closed day (#8252). Skipped when
+ * that estimate sits on top of a row already on file further out, or when the symbol has no row to
+ * step from (a fund never reports).
  */
 export function cadenceFills(
   prints: readonly EarningsPrint[],
@@ -333,6 +337,8 @@ export function cadenceFills(
 
     let date = shift(base.date, CADENCE_DAYS);
     while (daysUntil(at(today), date) < 0) date = shift(date, CADENCE_DAYS);
+    // A company reports on a session: 13 weeks from MRVL's 08-27 lands on Thanksgiving (#8252).
+    if (!isSession(date)) date = nextSession(date);
     const onFile = rows.some((p) => Math.abs(daysUntil(at(p.date), date)) <= FILL_DEDUPE_DAYS);
     if (onFile) continue;
 
