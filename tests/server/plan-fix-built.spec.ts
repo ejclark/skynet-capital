@@ -14,6 +14,7 @@
  * #1211 (closed duplicate of #8008, then re-closed so its current reason reads completed), #4469
  * (closed completed, remainder relayed to #6045 and `next-slice` removed).
  */
+import { readFileSync } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { sourceCommentBody } from "../../scripts/moneypenny/relay.mjs";
 import type { JsonResponse } from "../../src/http/fetch-json.js";
@@ -201,6 +202,43 @@ describe("a matched filing reads fixed only when its plan was built (#8077)", ()
         RELAY_RECEIPT,
       ),
     ).toBe(true);
+  });
+});
+
+/** Real REST timelines, recorded 2026-11-24 and reduced to event / state_reason / created_at:
+ *  #1211 was closed as a duplicate of #8008 at 21:59:20Z. GitHub wrote `marked_as_duplicate` on
+ *  #8008, the issue the duplicate points AT; #1211 itself carries only the `duplicate` close. */
+const recorded = (n: number): Record<string, unknown>[] =>
+  JSON.parse(
+    readFileSync(new URL(`../fixtures/plan-timelines/${n}.json`, import.meta.url), "utf8"),
+  );
+
+describe("a duplicate close is read from the plan's own timeline (#8216)", () => {
+  it("still counts a plan built when another issue was closed as its duplicate (#8008)", async () => {
+    const live = recorded(8008);
+    expect(live.some((e) => e.event === "marked_as_duplicate")).toBe(true);
+    const fixes = await knownProblemFixes(
+      [entry(9001, { match: { row: "U1" } }), entry(9002, { match: { row: "U2" } })],
+      reader({
+        8008: {
+          state: "closed",
+          state_reason: "completed",
+          labels: ["plan"],
+          timeline: [...live, closed({ state_reason: null })],
+        },
+      }),
+    );
+    expect([...fixes.keys()]).toEqual([9001, 9002]);
+  });
+
+  it("never counts the duplicate itself built, though its current reason reads completed (#1211)", async () => {
+    const live = recorded(1211);
+    expect(live.some((e) => e.event === "marked_as_duplicate")).toBe(false);
+    const fixes = await knownProblemFixes(
+      [entry(9005, { match: { plan: 1211 } })],
+      reader({ 1211: { state: "closed", state_reason: "completed", timeline: live } }),
+    );
+    expect(fixes.has(9005)).toBe(false);
   });
 });
 
