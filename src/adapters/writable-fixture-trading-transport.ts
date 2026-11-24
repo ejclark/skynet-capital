@@ -1,6 +1,7 @@
 import type { AlpacaTradingTransport } from "../alpaca/trading-transport.js";
 import type { JsonResponse } from "../http/fetch-json.js";
 import { contractMultiplier, isOccSymbol } from "../trading/option-symbols.js";
+import { fixtureCalendar, fixtureMarketClock } from "./fixture-market-hours.js";
 import type { AccountFixture } from "./fixture-trading-transport.js";
 
 /**
@@ -52,6 +53,9 @@ export interface WritableFixtureOptions {
    *  open — exactly as a paper account answers an order placed in the evening; the first read once
    *  the market is open fills what has become marketable. */
   readonly clock?: () => { is_open: boolean; next_open?: string; next_close?: string };
+  /** The market's "now" for `/v2/calendar` and `/v3/clock` (#8248) — the same pinned instant the
+   *  `clock` above reads, so all three agree. Absent, `now`. */
+  readonly marketNow?: () => Date;
   /** Told of every fill, the moment it lands — the offline twin of Alpaca's `trade_updates`
    *  stream, so the board shows the new position at once instead of on the next 60s sweep. */
   readonly onFill?: (fill: {
@@ -125,6 +129,7 @@ export class WritableFixtureTradingTransport implements AlpacaTradingTransport {
   private readonly market: MarketSource | undefined;
   private readonly onFill: WritableFixtureOptions["onFill"];
   private readonly liveClock: WritableFixtureOptions["clock"];
+  private readonly marketNow: () => Date;
   private seq = 0;
   /** A bracket leg's id → its entry's, so a fill or cancel reaches the sibling and the parent. */
   private readonly legParent = new Map<string, Order>();
@@ -140,6 +145,7 @@ export class WritableFixtureTradingTransport implements AlpacaTradingTransport {
     this.market = options.market;
     this.onFill = options.onFill;
     this.liveClock = options.clock;
+    this.marketNow = options.marketNow ?? this.now;
     for (const p of this.positions) {
       const qty = num(p.qty);
       if (qty !== 0)
@@ -164,6 +170,8 @@ export class WritableFixtureTradingTransport implements AlpacaTradingTransport {
       return ok(this.positions.map((p) => ({ ...p })));
     }
     if (route === "/v2/clock") return ok(this.liveClock ? this.liveClock() : this.clock);
+    if (route === "/v2/calendar") return ok(fixtureCalendar(query, this.marketNow()));
+    if (route === "/v3/clock") return ok(fixtureMarketClock(this.marketNow()));
     if (route === "/v2/orders") return ok(this.listOrders(query));
     if (route === "/v2/orders:by_client_order_id") {
       const found = this.orders.find((o) => o.client_order_id === query.get("client_order_id"));

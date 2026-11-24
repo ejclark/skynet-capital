@@ -17,6 +17,7 @@ import { ownsDesk } from "./desk-owner-gate.js";
 import { serveEquityCurveJson } from "./equity-curve-routes.js";
 import { opaqueMemberId } from "./feedback-issue.js";
 import { fitAnswerFor } from "./fit-route.js";
+import { readClockFor } from "./market-clock.js";
 import { serveNetWorthJson } from "./networth-api-routes.js";
 import { outlooksFor } from "./outlook-route.js";
 import {
@@ -245,6 +246,14 @@ export async function serveJsonApi(
     const { campaignById } = await import("../domain/campaigns.js");
     const now = config.editionNow?.() ?? new Date();
     const view = editionView(editions(), now, (id) => campaignById(id)?.title);
+    res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
+    res.end(JSON.stringify(view));
+    return true;
+  }
+  if (path === "/api/market/clock") {
+    // Market hours (#8248): Alpaca's calendar and clock through the shared reader, or the
+    // checked-in table marked `source: "table"`. Market data only, so one body for every member.
+    const view = await readClockFor(config);
     res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
     res.end(JSON.stringify(view));
     return true;

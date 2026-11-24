@@ -1,5 +1,6 @@
 import type { AlpacaTradingTransport } from "../alpaca/trading-transport.js";
 import type { JsonResponse } from "../http/fetch-json.js";
+import { fixtureCalendar, fixtureMarketClock } from "./fixture-market-hours.js";
 
 /**
  * One account's canned Alpaca responses — the raw shapes the Trading API returns
@@ -34,9 +35,12 @@ export interface AccountFixture {
  */
 export class FixtureTradingTransport implements AlpacaTradingTransport {
   private readonly fixture: AccountFixture;
+  /** The market's "now" for `/v2/calendar` and `/v3/clock` (#8248): the pinned instant offline. */
+  private readonly now: () => Date;
 
-  constructor(fixture: AccountFixture) {
+  constructor(fixture: AccountFixture, now: () => Date = () => new Date()) {
     this.fixture = fixture;
+    this.now = now;
   }
 
   get(path: string): Promise<JsonResponse> {
@@ -44,6 +48,11 @@ export class FixtureTradingTransport implements AlpacaTradingTransport {
     if (isRoute(path, "/v2/positions")) return ok(this.fixture.positions ?? []);
     if (isRoute(path, "/v2/orders")) return ok(this.fixture.orders ?? []);
     if (isRoute(path, "/v2/clock")) return ok(this.fixture.clock ?? { is_open: true });
+    if (isRoute(path, "/v2/calendar")) {
+      const at = path.indexOf("?");
+      return ok(fixtureCalendar(new URLSearchParams(at < 0 ? "" : path.slice(at + 1)), this.now()));
+    }
+    if (isRoute(path, "/v3/clock")) return ok(fixtureMarketClock(this.now()));
     return Promise.resolve({ status: 404, body: null });
   }
 

@@ -196,3 +196,41 @@ describe("/api/edition — the landing page's market news (#7077)", () => {
     expect(view.edition.next.length).toBeGreaterThan(0);
   });
 });
+
+describe("/api/market/clock — market hours from the broker's calendar (#8248)", () => {
+  it("answers the shared reader's view, one body for every member", async () => {
+    const view = {
+      asOf: "2026-11-26T15:00:00.000Z",
+      source: "broker",
+      isOpen: false,
+      phase: "closed",
+      nextOpenAt: "2026-11-27T14:30:00.000Z",
+      days: [],
+    };
+    const config = configWith({ readMarketClock: () => Promise.resolve(view) });
+    const { res, out } = fakeRes();
+    const channel = {} as never;
+    expect(
+      await serveJsonApi(res, "/api/market/clock", "/api/market/clock", config, channel, undefined),
+    ).toBe(true);
+    expect(out.status).toBe(200);
+    expect(JSON.parse(out.body ?? "")).toEqual(view);
+  });
+
+  it("with no reader configured, the table answers and says so", async () => {
+    const { res, out } = fakeRes();
+    const channel = {} as never;
+    await serveJsonApi(
+      res,
+      "/api/market/clock",
+      "/api/market/clock",
+      configWith(),
+      channel,
+      undefined,
+    );
+    const view = JSON.parse(out.body ?? "");
+    expect(view.source).toBe("table");
+    expect(view.phase).toBeUndefined();
+    expect(Array.isArray(view.days)).toBe(true);
+  });
+});

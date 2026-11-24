@@ -1,7 +1,8 @@
 import type { AlpacaAccountActivity, LifecycleRead } from "../alpaca/alpaca-options-client.js";
-import type { AlpacaOrder } from "../alpaca/alpaca-trading-client.js";
+import { type AlpacaOrder, RECENT_ORDER_WINDOW } from "../alpaca/alpaca-trading-client.js";
 import { parseLifecycleActivity } from "../trading/option-lifecycle.js";
 import {
+  type ActivitySource,
   type ActivityStore,
   advancesLedger,
   collapseActivity,
@@ -18,6 +19,8 @@ import type { ActivityView } from "./participant-snapshot.js";
  *
  *  - `reconcileBrokerActivity` — every boot banks the broker's recent-order window, so orders that
  *    landed while the dashboard was down still make it into the ledger before they scroll away.
+ *  - `recoverStreamGap` — a reopened fill stream's catch-up read: the boot's window again, paged
+ *    back past the drop when needed (#8251).
  *  - `backfillParticipantActivity` — the one-time (re-runnable) retroactive sweep: pages the
  *    broker's full order history back to the account's first order and journals everything the
  *    ledger doesn't already hold. This is the recovery path `history-boot.ts` documented as a
@@ -92,9 +95,14 @@ export async function backfillParticipantActivity(opts: {
   readonly store: ActivityStore;
   readonly listOrders: (params: { limit: number; until?: string }) => Promise<AlpacaOrder[]>;
   readonly pageSize?: number;
+  /** Stop once a page reaches an order submitted at or before this moment (ISO) — the walk the
+   *  stream-gap net needs, not the whole history. Omitted: page to the first order. */
+  readonly since?: string;
+  /** Provenance on each appended line; the retroactive sweep's own by default. */
+  readonly source?: ActivitySource;
 }): Promise<BackfillResult> {
   const pageSize = opts.pageSize ?? PAGE_SIZE;
-  const known = await knownOrders(opts.store, opts.participantId);
+  let known = await knownOrders(opts.store, opts.participantId);
   let fetched = 0;
   let appended = 0;
   let pages = 0;
@@ -108,18 +116,46 @@ export async function backfillParticipantActivity(opts: {
 
     const rows: TradeActivityRecord[] = [];
     for (const order of orders) {
-      const row = recordFromOrder(order, opts.participantId, "backfill");
+      const row = recordFromOrder(order, opts.participantId, opts.source ?? "backfill");
       if (row) rows.push(row);
     }
+    // A gap re-read runs beside the live stream, which may have journaled one of these orders
+    // while the page was in flight: dedupe against the ledger as it is now, not as it was.
+    if (opts.since) known = await knownOrders(opts.store, opts.participantId);
     appended += await appendAdvancing(opts.store, rows, known);
 
     // `until` is exclusive on submission time, so the oldest row seen is the next page's cursor.
     const oldest = orders[orders.length - 1]?.submitted_at;
     if (orders.length < pageSize || !oldest || oldest === until) break;
+    if (opts.since && Date.parse(oldest) <= Date.parse(opts.since)) break;
     until = oldest;
   }
 
   return { participantId: opts.participantId, fetched, appended, pages };
+}
+
+/**
+ * The stream-gap net (#8251): when an account's fill stream listens again after a drop, re-read
+ * the broker's recent-order window into the ledger — the same read the boot makes — and page back
+ * only while that window's oldest order is still newer than the drop. A fill that landed in the
+ * gap is then journaled once (`advancesLedger` dedupes against what the stream already wrote), and
+ * the ledger's bus carries it on to alert delivery like any other write.
+ */
+export function recoverStreamGap(opts: {
+  readonly participantId: string;
+  readonly store: ActivityStore;
+  readonly listOrders: (params: { limit: number; until?: string }) => Promise<AlpacaOrder[]>;
+  /** When the stream first dropped (ISO), from `AlpacaTradeUpdatesStream`'s `onResume`. */
+  readonly droppedAt: string;
+}): Promise<BackfillResult> {
+  return backfillParticipantActivity({
+    participantId: opts.participantId,
+    store: opts.store,
+    listOrders: opts.listOrders,
+    pageSize: RECENT_ORDER_WINDOW,
+    since: opts.droppedAt,
+    source: "broker",
+  });
 }
 
 /** A page cap for the lifecycle sweep too — same defensive reasoning as `MAX_PAGES` above.
