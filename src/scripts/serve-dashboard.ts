@@ -349,6 +349,7 @@ async function main(): Promise<void> {
     progression: progressionService,
     companionMessageLog,
     companionScreenshots,
+    fixAnnouncements,
   } = setupCompanion(process.env, {
     hub,
     readFills: (id) => activity.list(id),
@@ -496,6 +497,7 @@ async function main(): Promise<void> {
     readMessages: (id) => companionMessageLog.list(id),
     recordMessage: (id) => companionMessageLog.record(id),
     companionScreenshots,
+    fixAnnouncements,
     refreshParticipant: (id) => brokerSync.syncParticipant(id),
     readPulseHistory,
     readHeldLedger,
