@@ -64,16 +64,19 @@ export const FACES = {
 export const COVERAGE =
   "\\u0020-\\u007E\\u00A0-\\u017F\\u2010-\\u2027\\u2030-\\u203A\\u2190-\\u2199\\u2212\\u2715";
 
-/** `@font-face` rules for one face, embedded so nothing is fetched and nothing falls back. */
-export function faceCss(faceId) {
-  const face = FACES[faceId];
-  return Object.entries(face.files)
+/** `@font-face` rules for one family, embedded so nothing is fetched and nothing falls back. A file
+ *  that is not there throws, naming it: a face that cannot be read is a stop, never a fallback. */
+export function fontFaceRules(family, files) {
+  return Object.entries(files)
     .map(([weight, file]) => {
       const b64 = readFileSync(join(FONT_DIR, file)).toString("base64");
-      return `@font-face{font-family:"${face.family}";font-weight:${weight};font-style:normal;src:url(data:font/woff2;base64,${b64}) format("woff2")}`;
+      return `@font-face{font-family:"${family}";font-weight:${weight};font-style:normal;src:url(data:font/woff2;base64,${b64}) format("woff2")}`;
     })
     .join("\n");
 }
+
+/** `@font-face` rules for one of the ink faces. */
+export const faceCss = (faceId) => fontFaceRules(FACES[faceId].family, FACES[faceId].files);
 
 /** The sheet the image is, and the depth GitHub will not draw. Scoped to ids starting `ink-`,
  *  because Mermaid measures a label in a scratch node before it lands in the slot, and the face
