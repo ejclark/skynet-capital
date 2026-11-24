@@ -4,6 +4,7 @@ import {
   backfillParticipantActivity,
   backfillParticipantOptionLifecycle,
   reconcileBrokerActivity,
+  recoverStreamGap,
 } from "../../src/observatory/activity-backfill.js";
 import { collapseActivity, InMemoryActivityStore } from "../../src/observatory/activity-store.js";
 
@@ -178,5 +179,115 @@ describe("reconcileBrokerActivity", () => {
     expect(await reconcileBrokerActivity(store, participants)).toBe(1);
     expect(await reconcileBrokerActivity(store, participants)).toBe(0);
     expect(await store.list("sauron")).toHaveLength(1);
+  });
+});
+
+// #8251: a reopened fill stream re-reads the broker's recent window; it pages back only while
+// that window is still newer than the drop.
+describe("recoverStreamGap", () => {
+  const DROP = "2026-11-24T14:30:00Z";
+
+  it("journals a fill that landed in the gap exactly once, however often it is re-read", async () => {
+    const store = new InMemoryActivityStore();
+    // The stream saw the order accepted before it dropped…
+    await store.record({
+      orderId: "o1",
+      participantId: "day-trader",
+      symbol: "NVDA",
+      side: "buy",
+      quantity: 10,
+      filledQuantity: 0,
+      status: "new",
+      at: "2026-11-24T14:00:00Z",
+      source: "stream",
+    });
+    // …and the broker filled it during the gap.
+    const filled = order("o1", "2026-11-24T14:00:00Z", { filled_at: "2026-11-24T14:31:00Z" });
+    const listOrders = () => Promise.resolve([filled]);
+
+    const first = await recoverStreamGap({
+      participantId: "day-trader",
+      store,
+      listOrders,
+      droppedAt: DROP,
+    });
+    const again = await recoverStreamGap({
+      participantId: "day-trader",
+      store,
+      listOrders,
+      droppedAt: DROP,
+    });
+
+    expect(first.appended).toBe(1);
+    expect(again.appended).toBe(0);
+    const held = collapseActivity(await store.list("day-trader"));
+    expect(held).toHaveLength(1);
+    expect(held[0]).toMatchObject({ status: "filled", filledQuantity: 10, source: "broker" });
+  });
+
+  it("does not re-journal a fill the live stream wrote while the page was in flight", async () => {
+    const store = new InMemoryActivityStore();
+    const filled = order("o1", "2026-11-24T14:00:00Z", { filled_at: "2026-11-24T14:31:00Z" });
+    const result = await recoverStreamGap({
+      participantId: "day-trader",
+      store,
+      listOrders: async () => {
+        // The reopened stream journals the fill before the broker page comes back.
+        await store.record({
+          orderId: "o1",
+          participantId: "day-trader",
+          symbol: "NVDA",
+          side: "buy",
+          quantity: 10,
+          filledQuantity: 10,
+          price: 120,
+          status: "filled",
+          at: "2026-11-24T14:31:00Z",
+          source: "stream",
+        });
+        return [filled];
+      },
+      droppedAt: DROP,
+    });
+    expect(result.appended).toBe(0);
+    expect(await store.list("day-trader")).toHaveLength(1);
+  });
+
+  it("reads one recent window when its oldest order is already older than the drop", async () => {
+    const calls: Array<{ limit: number; until?: string }> = [];
+    const window = Array.from({ length: 15 }, (_, i) =>
+      order(`w${i}`, `2026-11-24T14:${String(59 - i * 3).padStart(2, "0")}:00Z`),
+    );
+    await recoverStreamGap({
+      participantId: "day-trader",
+      store: new InMemoryActivityStore(),
+      listOrders: (params) => {
+        calls.push(params);
+        return Promise.resolve(window);
+      },
+      droppedAt: "2026-11-24T14:45:00Z",
+    });
+    expect(calls).toEqual([{ limit: 15 }]);
+  });
+
+  it("pages back while the window is still newer than the drop, then stops", async () => {
+    const calls: Array<string | undefined> = [];
+    const page = (prefix: string, minute: number) =>
+      Array.from({ length: 15 }, (_, i) =>
+        order(`${prefix}${i}`, `2026-11-24T15:${String(minute - i).padStart(2, "0")}:00Z`),
+      );
+    const pages = [page("a", 59), page("b", 44), page("c", 29)];
+    const result = await recoverStreamGap({
+      participantId: "day-trader",
+      store: new InMemoryActivityStore(),
+      listOrders: (params) => {
+        calls.push(params.until);
+        return Promise.resolve(pages[calls.length - 1] ?? []);
+      },
+      droppedAt: "2026-11-24T15:35:00Z",
+    });
+    // Page a ends 15:45 (newer than the drop), page b ends 15:30 (past it): stop there.
+    expect(calls).toEqual([undefined, "2026-11-24T15:45:00Z"]);
+    expect(result.pages).toBe(2);
   });
 });
