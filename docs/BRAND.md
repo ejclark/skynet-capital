@@ -105,6 +105,10 @@ dock under the page since #7487 slice 2), and the bar still asks its own width (
   shorthand drifting into copy one string at a time, 2026-09) rather than a heavyweight controlled
   vocabulary — it doesn't ask writers to give up the cinematic-metaphor voice below, only to stop
   reusing code's own nouns as user-facing ones.
+  **It failed again on 2026-11-24:** the #8161 redesign named its apps Desk, Cast, Garage and Film Room,
+  and Eric: "'desk' verbiage still gives 'wtf is that' vibes.. which I've articulated multiple times".
+  The plain names: Desk → Trade · Cast → Who's who · Garage → Bots · Film Room → Practice. A prose
+  rule didn't hold across sessions, so #8290 makes the rejected names a list that lint reads.
 
 ## Core metaphors & motifs
 
