@@ -77,7 +77,9 @@ export function heldNews(
     const url = httpsUrl(article.url);
     const ms = Date.parse(article.createdAt);
     // No id, no stable key to tell a re-send from a new story, so it is dropped like a bad link.
-    if (!headline || !url || !article.id || Number.isNaN(ms) || ms < floor) continue;
+    const sourced = Boolean(headline && url && article.id);
+    const recent = !Number.isNaN(ms) && ms >= floor;
+    if (!(sourced && recent && url)) continue;
     const named = new Set(article.symbols.map((s) => s.toUpperCase()));
     const symbols = held.filter((s) => named.has(s.toUpperCase()));
     if (symbols.length === 0) continue;
