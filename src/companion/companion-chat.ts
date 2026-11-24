@@ -256,7 +256,7 @@ export function createCompanionChat(
     const canUseDesk = Boolean(config.tools && input.participantId);
     const toolsNote = canUseDesk
       ? "This member has a linked account — the read-only tools describe their own account."
-      : "This member has no linked account yet — the account lookups are not available; answer from general knowledge and the member context, and don't claim to see their positions. draft_feedback, get_work_status, get_roadmap, get_known_problems and get_upcoming_events still work.";
+      : `This member has no linked account yet — the account lookups are not available; answer from general knowledge and the member context, and don't claim to see their positions. draft_feedback, get_work_status, get_roadmap, get_known_problems and get_upcoming_events still work${input.gameMaster ? ", and so does get_scene_facts" : ""}.`;
     const volatile = input.context ? `${toolsNote}\n\n${input.context}` : toolsNote;
     const initial = await withScreenshots(trimHistory(input.messages), input.loadScreenshot);
 

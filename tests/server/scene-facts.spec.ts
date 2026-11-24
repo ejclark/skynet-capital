@@ -150,6 +150,21 @@ describe("sceneFacts — one event from the next 14 days", () => {
     expect(found(read({ eventId: "cpi-nov" })).event.timing).toBeUndefined();
   });
 
+  it("counts every other event in the 14 days, even on a narrowed call", () => {
+    expect(found(read({ underlying: "NBIS" })).otherEvents).toBe(2);
+  });
+
+  it("checks the quest on the UTC day the quests page uses, so an evening scene offers no expired quest", () => {
+    const desk = { id: "desk-1", cash: 50_000 };
+    // 8pm in New York on the print's day is already the next UTC day: the quest has gone.
+    const evening = found(read({ asOf: "2026-11-10", questDay: "2026-11-11", desk }));
+    expect(evening.event.id).toBe("crwv-2026-11-10-print");
+    expect(evening.event.questHref).toBeUndefined();
+    expect(
+      found(read({ asOf: "2026-11-10", questDay: "2026-11-10", desk })).event.questHref,
+    ).toBeDefined();
+  });
+
   it("invents nothing when the fortnight is empty (criterion 4)", () => {
     const facts = read({ events: [event({ id: "far", date: "2026-12-30" })] });
     expect(facts).toEqual({

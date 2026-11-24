@@ -59,7 +59,7 @@ export type SceneFacts =
       readonly marketOpen: boolean;
       readonly marketWords: string;
       readonly event: SceneEvent;
-      /** Other events in the window the scene could have used; counted, never dropped silently. */
+      /** Other events in the 14 days, whatever the query narrowed to; counted, never dropped. */
       readonly otherEvents: number;
       readonly notCovered: string;
     }
@@ -80,6 +80,9 @@ export interface SceneFactsQuery {
   readonly held: readonly string[];
   /** The member's own desk and cash, only with a linked desk — for the quest check. */
   readonly desk?: { readonly id: string; readonly cash: number };
+  /** The UTC day the quest check runs on, as the quests page runs it (`quests-route.ts`), so a
+   *  scene never offers a quest that page already dropped. Defaults to `asOf`. */
+  readonly questDay?: string;
   /** Already validated as an underlying by the caller. */
   readonly underlying?: string;
   /** A calendar id the model read from an earlier answer; matched, never used as a path. */
@@ -108,7 +111,8 @@ function questHrefFor(
   if (!(/^[a-z0-9][a-z0-9.-]*$/.test(event.id) && existsSync(file))) return undefined;
   try {
     const md = readFileSync(file, "utf8");
-    const [quest] = eventQuests(query.desk.id, [{ event, md, campaigns }], query.desk, query.asOf);
+    const day = query.questDay ?? query.asOf;
+    const [quest] = eventQuests(query.desk.id, [{ event, md, campaigns }], query.desk, day);
     return quest ? chatTicketHref(quest.move.href) : undefined;
   } catch {
     return undefined;
@@ -131,6 +135,13 @@ export function sceneFacts(query: SceneFactsQuery): SceneFacts {
     book: { held, watched: [] },
   });
   const top = ranked[0];
+  // Every other event in the fortnight, whatever the query narrowed to, so "nothing else" is never
+  // implied by a narrowed call (the same guard as `upcoming-events.ts`'s `marketWide`).
+  const inWindow = rankEvents({
+    asOf,
+    events: fortnight.map((e) => ({ event: e, killSwitches: [] })),
+    book: { held: [], watched: [] },
+  }).length;
   if (!top) {
     const said = eventId
       ? "that event is not on the event calendar for the next 14 days; call again without eventId for the next one that is"
@@ -162,7 +173,7 @@ export function sceneFacts(query: SceneFactsQuery): SceneFacts {
       ...(questHref ? { questHref } : {}),
       ...(tradable ? { ticketHref: `/trade?symbol=${encodeURIComponent(tradable)}` } : {}),
     },
-    otherEvents: ranked.length - 1,
+    otherEvents: inWindow - 1,
     notCovered: NOT_COVERED,
   };
 }

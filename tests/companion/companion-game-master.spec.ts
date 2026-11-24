@@ -132,7 +132,7 @@ describe("the scene's two halves exist only in a game-master turn", () => {
 describe("the scene rules say what the criteria require", () => {
   it("offers the three choices in order with none the default (criterion 6), and reflects 'should we' back (criterion 8)", () => {
     expect(SCENE_CHOICES).toEqual(["watch it", "take a paper position", "stand aside"]);
-    expect(GAME_MASTER_RULES).toContain("1. Watch it  2. Take a paper position  3. Stand aside");
+    expect(GAME_MASTER_RULES).toContain("1. Watch it\n2. Take a paper position\n3. Stand aside");
     expect(GAME_MASTER_RULES).toContain("none marked as the default");
     expect(GAME_MASTER_RULES).toMatch(
       /"should we buy".*reflect it back as a question about their own goals/s,

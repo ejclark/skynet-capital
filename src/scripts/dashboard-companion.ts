@@ -151,6 +151,7 @@ export function setupCompanion(env: NodeJS.ProcessEnv, deps: CompanionSetupDeps)
     readSceneFacts: (query) =>
       sceneFacts({
         asOf: marketDayKey(new Date().toISOString()),
+        questDay: new Date().toISOString().slice(0, 10),
         marketOpen: regularSessionOpen(),
         ...query,
       }),
