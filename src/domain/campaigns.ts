@@ -38,6 +38,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { SYMBOL_RE } from "./ask-input.js";
+import { isText } from "./is-text.js";
 import { marketById } from "./market-catalog.js";
 import type { MarketEvent } from "./market-events-types.js";
 import { GICS_SECTORS } from "./sector-coverage.js";
@@ -279,7 +280,6 @@ const EVENT_KINDS: ReadonlySet<string> = new Set<EventKind>([
   "geopolitical",
 ]);
 
-export const isText = (v: unknown): v is string => typeof v === "string" && v.trim().length > 0;
 const isTextList = (v: unknown): v is string[] => Array.isArray(v) && v.every(isText);
 
 type Raw = Record<string, unknown>;
