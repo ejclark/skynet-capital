@@ -23,7 +23,7 @@
  *
  * No model, no key, no member's data, no order: paper only; educational.
  */
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { appendFileSync, existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { reexecWithProxy } from "../../scripts/proxy-reexec.mjs";
@@ -59,22 +59,39 @@ function campaignFor(id: string | undefined) {
   return campaign;
 }
 
-/** Run the news collector once (it fails soft per source); exit 2 means nothing was reachable. */
-function collectNews(): string {
+/** The collector's three sources, by the word its UNREACHABLE lines name them with. */
+const NEWS_SOURCES = [
+  ["EDGAR", "SEC EDGAR 8-Ks"],
+  ["Fed", "Federal Reserve press releases"],
+  ["GDELT", "GDELT press headlines"],
+] as const;
+
+/**
+ * Run the news collector once and say plainly which sources answered. It fails soft per source,
+ * so a run where GDELT was down must not read as "no press" (this string is shown on the campaign
+ * page). Exit 2 means nothing was reachable: a gap, so the edition is not written. Under
+ * `--dry-run` the collector writes nothing either.
+ */
+function collectNews(dryRun: boolean): string {
   const started = `${new Date().toISOString().slice(0, 19)}Z`;
-  try {
-    execFileSync("npx", ["tsx", "src/scripts/news-collect.ts", "--days", "2"], {
-      stdio: "inherit",
-    });
-  } catch (err) {
-    const status = (err as { status?: number }).status;
+  const args = ["tsx", "src/scripts/news-collect.ts", "--days", "2"];
+  const run = spawnSync("npx", dryRun ? [...args, "--dry-run"] : args, { encoding: "utf8" });
+  process.stdout.write(run.stdout ?? "");
+  process.stderr.write(run.stderr ?? "");
+  if (run.status !== 0)
     throw new Error(
-      status === 2
+      run.status === 2
         ? 'every news source was unreachable, so nothing was checked; this is not "no news"'
-        : `the news collector failed (exit ${String(status)})`,
+        : `the news collector failed (exit ${String(run.status)})`,
     );
-  }
-  return `the news collector (SEC EDGAR 8-Ks, Federal Reserve press releases, GDELT press headlines), run ${started}`;
+  const missed = (word: string): boolean =>
+    new RegExp(`UNREACHABLE — ${word}[ :]`).test(run.stderr ?? "");
+  const full = NEWS_SOURCES.filter(([w]) => !missed(w)).map(([, name]) => name);
+  const partial = NEWS_SOURCES.filter(([w]) => missed(w)).map(([, name]) => name);
+  return (
+    `the news collector, run ${started}: ${full.length > 0 ? full.join(", ") : "no source answered in full"}` +
+    (partial.length > 0 ? `; not fully reached on this run: ${partial.join(", ")}` : "")
+  );
 }
 
 async function main(): Promise<void> {
@@ -97,7 +114,6 @@ async function main(): Promise<void> {
   reexecWithProxy();
 
   const campaign = campaignFor(flag(argv, "campaign"));
-  const newsSource = argv.includes("--no-news") ? undefined : collectNews();
 
   const prev = sessionsBefore(date, 1);
   const symbols = castSymbols(campaign);
@@ -110,6 +126,9 @@ async function main(): Promise<void> {
   const closes: Record<string, SessionClose> = {};
   for (const [sym, byDay] of Object.entries(read.closes))
     closes[sym] = { prev: byDay[prev] as number, close: byDay[date] as number };
+  const sectors = await sectorCloses(date, fetched.slice(0, 10));
+  // News last: the collector writes its own file, so every gap that can stop the run is found first.
+  const newsSource = argv.includes("--no-news") ? undefined : collectNews(dryRun);
 
   const edition = writeEdition({
     date,
@@ -121,7 +140,6 @@ async function main(): Promise<void> {
     prints: UPCOMING_PRINTS,
     events: MARKET_EVENTS,
   });
-  const sectors = await sectorCloses(date, fetched.slice(0, 10));
   const full = JSON.parse(JSON.stringify({ ...edition, sectors }));
   parseEdition(full, `${date}.json`, date);
 

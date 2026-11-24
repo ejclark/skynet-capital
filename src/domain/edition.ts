@@ -164,7 +164,8 @@ const SIGNED_RE = /^[+\-−]/;
 
 /** A number as copy carries it: a run of digits with any decimal or thousands parts ("11.2",
  *  "2020", "1,250"). The words check compares these runs, so "11.2%" on a card covers "11.2" in a
- *  headline, and "11" alone is covered by any card that carries an 11 (a date's day included). */
+ *  headline. A sign is not compared: "falling 3.1%" beside a "+3.1%" card passes, so templates take
+ *  the verb from the same change that signs the value. */
 const NUMBER_RE = /\d+(?:[.,]\d+)*/g;
 
 /** Whether a fact's value is a level (a price, a yield, the VIX) rather than a change. */
@@ -250,14 +251,18 @@ function checkLine(l: Raw, where: string, fail: Fail): void {
  * headline, line and narrator) may only repeat a number its own cards carry: a fact, a report or a
  * more line. Code fills the cards from market data; the words are a template today and a model's
  * later (#8252 slice 2), and either way a figure the cards do not hold cannot reach the page. It
- * runs on every edition, the hand-written ones included. Spelled-out numbers ("three") are not
- * caught yet; slice 2 adds them before a model writes a word.
+ * runs on every edition, the hand-written ones included. Only member-read card text counts (a
+ * fact, a report's what and when, a more line's text), never a source or a raw date. Not caught
+ * yet, both slice 2's before a model writes a word: spelled-out numbers ("three"), and a sign the
+ * words contradict.
  */
 function checkWords(s: Raw, facts: Raw[], reports: Raw[], more: Raw[], fail: Fail): void {
+  // What a member reads on the cards, never the provenance behind them: a source string's fetch
+  // stamps and accession numbers, or a report's ISO date, would let "20%" pass on a "2026-11-20".
   const cards = [
     ...facts.flatMap((f) => [f.label, f.value, f.change, f.note]),
-    ...reports.flatMap((d) => [d.date, d.when, d.what]),
-    ...more.flatMap((l) => [l.text, l.source]),
+    ...reports.flatMap((d) => [d.when, d.what]),
+    ...more.map((l) => l.text),
   ]
     .filter(isText)
     .join(" ");

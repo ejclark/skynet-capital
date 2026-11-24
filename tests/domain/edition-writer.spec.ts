@@ -198,13 +198,29 @@ describe("writeEdition", () => {
     const tampered = { ...e, stories: [{ ...lead, headline: "NVDA fell 12.7% on the day." }] };
     expect(() => judge(tampered)).toThrow(/its headline says "12.7"/);
   });
+
+  it("never counts a source's fetch stamp or a report's ISO date as a carried number", () => {
+    const e = writeEdition(input());
+    const [lead] = e.stories;
+    // The closes source says "2026-11-23 … 21:50Z"; neither 21, 50 nor 23-as-"20%" is a figure.
+    const tampered = { ...e, stories: [{ ...lead, narrator: "NVDA moved 50% on the day." }] };
+    expect(() => judge(tampered)).toThrow(/its narrator says "50"/);
+  });
+
+  it("draws a tiny fall as a fall, its sign and its move agreeing", () => {
+    const e = writeEdition(input({ closes: { MSFT: { prev: 100.04, close: 100 } } }));
+    expect(e.stories[0]?.facts[0]).toMatchObject({ label: "MSFT", value: "−0.04%", move: "down" });
+    expect(() => judge(e)).not.toThrow();
+  });
 });
 
 describe("the formatting the cards use", () => {
   it("signs every change with the house minus, and never prints a negative zero", () => {
     expect(signedPct(3.14)).toBe("+3.1%");
     expect(signedPct(-11.25)).toBe("−11.3%");
-    expect(signedPct(-0.01)).toBe("+0.0%");
+    expect(signedPct(-0.04)).toBe("−0.04%");
+    expect(signedPct(0)).toBe("+0.0%");
+    expect(signedPct(-0.001)).toBe("+0.0%");
   });
   it("names a day the way the cards say it", () => {
     expect(dayLabel("2026-11-24")).toBe("Tue Nov 24");

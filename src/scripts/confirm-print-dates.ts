@@ -45,7 +45,9 @@ const CALENDAR_FILE = join(process.cwd(), "src", "domain", "earnings-calendar.ts
 const PLAYBOOK_SYMBOLS = [...S1_NVDA.symbols, ...G1_GOOG.symbols];
 /** Every name a house campaign follows also gets a cadence estimate (#8252), so the edition and the
  *  safety windows see its next report. Exit 3 stays for the playbook symbols alone: an unanswered
- *  fetch for a campaign-only name is a warning, not a red run. Funds have no row and are skipped. */
+ *  fetch for a campaign-only name is a warning, not a red run. A cadence needs a past print to step
+ *  from: a name with no row at all (a fund, or a company nobody has dated yet) gets no estimate and
+ *  is named in the log instead, never guessed. */
 const FILL_SYMBOLS = [...new Set([...PLAYBOOK_SYMBOLS, ...CAMPAIGNS.flatMap(castSymbols)])];
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
@@ -87,6 +89,11 @@ async function main(): Promise<void> {
   const fills = cadenceFills(UPCOMING_PRINTS, FILL_SYMBOLS, today);
   for (const f of fills)
     log(`${f.symbol}: no print in ~100 days — ESTIMATED ${f.date} from cadence.`);
+  const undated = FILL_SYMBOLS.filter((sym) => !UPCOMING_PRINTS.some((p) => p.symbol === sym));
+  if (undated.length > 0)
+    log(
+      `no print on file to step a cadence from (a fund, or a company not yet dated by hand or IR): ${undated.join(", ")}.`,
+    );
 
   const changes = result.updates.length + fills.length;
   const answered = `${result.attempts - result.failures}/${result.attempts} symbol fetches answered`;

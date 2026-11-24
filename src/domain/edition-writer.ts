@@ -77,10 +77,13 @@ const MAX_LINE = 34;
 /** Percent change, close to close. */
 const changeOf = (s: SessionClose): number => ((s.close - s.prev) / s.prev) * 100;
 
-/** A change with its sign, the house's minus (U+2212), one decimal: "+3.2%", "−11.2%". */
+/** A change with its sign, the house's minus (U+2212): one decimal, two when one would print a
+ *  zero ("−0.04%"), so a sign never disagrees with its move. Only an exact zero reads "+0.0%". */
 export function signedPct(change: number): string {
-  const abs = Math.abs(change).toFixed(1);
-  return change < 0 && abs !== "0.0" ? `−${abs}%` : `+${abs}%`;
+  const abs = Math.abs(change);
+  const digits = abs.toFixed(1) === "0.0" ? abs.toFixed(2) : abs.toFixed(1);
+  if (change === 0 || Number(digits) === 0) return "+0.0%";
+  return change < 0 ? `−${digits}%` : `+${digits}%`;
 }
 
 const price = (n: number): string => n.toFixed(2);
@@ -95,8 +98,11 @@ export function dayLabel(date: string): string {
   }).replace(",", "");
 }
 
-const moveOf = (change: number): EditionFact["move"] =>
-  change > 0 ? "up" : change < 0 ? "down" : "mixed";
+/** The move a change draws, read from the same rounding its value prints, so the two agree. */
+const moveOf = (change: number): EditionFact["move"] => {
+  const shown = signedPct(change);
+  return shown === "+0.0%" ? "mixed" : shown.startsWith("−") ? "down" : "up";
+};
 
 /** "the AI buildout" from "The AI buildout", for use mid-sentence. */
 const inText = (title: string): string => title.replace(/^The /, "the ");
@@ -263,10 +269,10 @@ function moversStory(input: WriterInput, ahead: readonly Dated[]): EditionStory 
   const top = all.slice(0, MAX_MOVERS);
   const lead = top[0];
   if (!lead) return undefined;
-  const up = all.filter((m) => m.change > 0).length;
-  const down = all.filter((m) => m.change < 0).length;
+  const up = all.filter((m) => moveOf(m.change) === "up").length;
+  const down = all.filter((m) => moveOf(m.change) === "down").length;
   const verb = lead.change < 0 ? "fell" : "rose";
-  const abs = Math.abs(lead.change).toFixed(1);
+  const abs = signedPct(lead.change).slice(1, -1);
   const symbols = top.map((m) => m.symbol);
   const title = inText(input.campaign.title);
   return {

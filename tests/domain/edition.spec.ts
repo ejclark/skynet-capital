@@ -183,7 +183,8 @@ describe("the edition record", () => {
 
   it("lets the words repeat a number a fact, a report or a more line carries", () => {
     expect(() => parse(withStory({ headline: "Chip stocks fell 11.2%." }))).not.toThrow();
-    expect(() => parse(withStory({ line: "CRWV reports Nov 10" }))).not.toThrow();
+    expect(() => parse(withStory({ line: "CRWV reports after the close" }))).not.toThrow();
+    expect(() => parse(withStory({ line: "CRWV reports Nov 10" }))).toThrow(/its line says "10"/);
     const more = [{ text: "Voters rejected 40 of 41 measures.", mark: "reported", source: "CNBC" }];
     expect(() =>
       parse(withStory({ more, narrator: "Voters said no 40 times out of 41." })),
