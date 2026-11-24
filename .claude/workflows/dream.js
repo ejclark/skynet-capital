@@ -151,10 +151,13 @@ if (!checked) {
   log("check:memory did not return");
 }
 // An "unchecked" row is a check nobody could run (#6717): name it, and keep it out of the
-// propose agent's input so it can never become a "retire" on an unverified verdict.
+// propose agent's input so it can never become a "retire" on an unverified verdict. It is named
+// in its own `unchecked` list, never in notRun: notRun means a stage died and a re-run fixes it,
+// while an unreadable row (another repo's issue, a 404 here) survives every re-run, so putting
+// it there made the review unscoreable for good (#7728).
 const unchecked = (checked?.findings ?? []).filter((f) => f.kind === "unchecked");
 const verdicts = (checked?.findings ?? []).filter((f) => f.kind !== "unchecked");
-if (unchecked.length) notRun.push(`${unchecked.length} memory check(s) could not run: ${unchecked.map((f) => f.file).join(", ")}`);
+if (unchecked.length) log(`${unchecked.length} memory row(s) could not be checked: ${unchecked.map((f) => f.file).join(", ")}`);
 
 const PROPOSALS = {
   type: "object",
@@ -215,5 +218,6 @@ return {
   dropped: proposed?.dropped ?? [],
   memoryFindings: checked?.findings ?? [],
   coverage: { sessions: digests.length, batchesReturned: analyzed.filter(Boolean).length, batches: batches.length },
+  ...(unchecked.length ? { unchecked: unchecked.map((f) => `${f.file}: ${f.detail}`) } : {}),
   ...(notRun.length ? { notRun: notRun.join("; ") } : {}),
 };

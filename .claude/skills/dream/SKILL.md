@@ -29,13 +29,15 @@ sessions. Plan: #6470. The conductor: `.claude/workflows/dream.js`.
 5. **Hand over the proposals** on a page Eric can tap through, take or discard, in plain words and
    with no invented names (`CLAUDE.md`). Each shows what changes, why, how many sessions, and whether
    a written rule already covered it. A `captured` proposal means another sentence will not help, so
-   it needs a gate or a hook.
+   it needs a gate or a hook. List the result's `unchecked` rows on the same page: memories the
+   review could not judge (an issue it could not read, such as another repo's), for him to look at.
 6. **Apply only what he takes**, through `node scripts/run-memory.mjs promote`, which refuses if the
    file changed since it was read. Repo rules go through a PR; protected ones board the platter.
    When a correction of Eric's recurs, that PR also adds a case to `docs/evals/how-he-writes-set.json`, with what his next message showed as the evidence.
 7. **Score it.** Record taken, discarded, and recurrences session-time capture missed. Under 30%
    taken, or under 3 such recurrences, means do not schedule it. A result carrying `notRun` was not
-   run, so record it as not run and re-run it, never as nothing taken (#6718).
+   run, so record it as not run and re-run it, never as nothing taken (#6718). An `unchecked` list
+   is not `notRun`: the stages finished, so score the run, and note the rows as a gap (#7728).
 
 ## What this will not do
 
