@@ -34,8 +34,8 @@ export interface AlertDeliveryStorePort {
   saveWatch(consumerId: string, watch: FillWatch): Promise<void>;
   /** End a watch — sent, or moved to a modify's new order id. Unknown ids are a no-op. */
   dropWatch(consumerId: string, orderId: string): Promise<void>;
-  /** Every member who has ever saved a choice — the sweep's whole working set, so a deployment
-   *  where nobody opted in does no work at all. */
+  /** Every member who has ever saved a choice or armed a watch — the sweep's whole working set
+   *  (it re-checks each record), so a deployment where nobody opted in does no work at all. */
   listMembers(): Promise<readonly string[]>;
 }
 
