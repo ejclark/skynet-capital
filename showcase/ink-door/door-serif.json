@@ -1,0 +1,88 @@
+{
+  "id": "door",
+  "title": "The door starter: GitHub draws it, then our renderer draws the same text",
+  "caption": "The same diagram text both sides: left as github.com draws it, right as an image from our renderer in ink. From `docs/PICTURES.md`, the door starter.",
+  "alt": "The door starter: GitHub draws it, then our renderer draws the same text — before (live, as GitHub draws it) vs after (the same text). The same diagram text both sides: left as github.com draws it, right as an image from our renderer in ink. From docs/PICTURES.md, the door starter.",
+  "looks": {
+    "before": "live",
+    "after": "ink"
+  },
+  "face": {
+    "id": "serif",
+    "family": "Ink Serif",
+    "label": "Charter cut (Charis SIL, renamed subset)"
+  },
+  "layout": "stacked",
+  "natural": {
+    "before": 499,
+    "after": 560
+  },
+  "naturalHeight": {
+    "before": 664,
+    "after": 766
+  },
+  "scale": 2,
+  "mermaidVersion": "11.17.2",
+  "githubMermaidVersion": "11.17.2",
+  "lint": {
+    "before": {
+      "kind": "mermaid",
+      "type": "flowchart-v2",
+      "ok": true,
+      "problems": [],
+      "notes": []
+    },
+    "after": {
+      "kind": "mermaid",
+      "type": "flowchart-v2",
+      "ok": true,
+      "problems": [],
+      "notes": []
+    }
+  },
+  "images": [
+    {
+      "mode": "light",
+      "file": "door-light.jpg",
+      "bytes": 316211,
+      "width": 1220,
+      "height": 3436,
+      "quality": 82,
+      "overBudget": false,
+      "alt": "The door starter: GitHub draws it, then our renderer draws the same text — before (live, as GitHub draws it) vs after (the same text), GitHub light mode. The same diagram text both sides: left as github.com draws it, right as an image from our renderer in ink. From docs/PICTURES.md, the door starter."
+    },
+    {
+      "mode": "dark",
+      "file": "door-dark.jpg",
+      "bytes": 305493,
+      "width": 1220,
+      "height": 3436,
+      "quality": 82,
+      "overBudget": false,
+      "alt": "The door starter: GitHub draws it, then our renderer draws the same text — before (live, as GitHub draws it) vs after (the same text), GitHub dark mode. The same diagram text both sides: left as github.com draws it, right as an image from our renderer in ink. From docs/PICTURES.md, the door starter."
+    }
+  ],
+  "sheets": [
+    {
+      "side": "after",
+      "face": "serif",
+      "file": "door-after-ink-serif.jpg",
+      "bytes": 126190,
+      "width": 1120,
+      "height": 1532,
+      "quality": 82,
+      "overBudget": false,
+      "phone": 13.9,
+      "phoneScreens": 0.63,
+      "alt": "The door starter: GitHub draws it, then our renderer draws the same text — drawn by our renderer in ink, Charter cut (Charis SIL, renamed subset). The same diagram text both sides: left as github.com draws it, right as an image from our renderer in ink. From docs/PICTURES.md, the door starter."
+    }
+  ],
+  "phone": {
+    "before": 15.6,
+    "after": 13.9
+  },
+  "phoneScreens": {
+    "before": 0.61,
+    "after": 0.63
+  }
+}
