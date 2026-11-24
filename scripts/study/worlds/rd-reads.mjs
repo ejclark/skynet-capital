@@ -15,6 +15,9 @@ const boardReads = (s) => [
   `/api/research/mentions?sym=${s}`,
 ];
 
+/** The leaderboard's metrics, as `cross-reads.mjs` lists them for its compare reads. */
+const BOARD_METRICS = ["equity", "month", "pl", "return", "realized"];
+
 const CAST = {
   accounts: ["eric", "sauron", "day-trader", "jordan", "casey"],
   bots: ["sauron", "day-trader"],
@@ -32,7 +35,13 @@ const CAST = {
     "/api/convictions/mine",
     ...BOARD_SYMBOLS.flatMap(boardReads),
   ],
-  extra: (id) => [`/api/book-wait?participantId=${id}`, `/api/outpost/performance?accounts=${id}`],
+  // The leaderboard's compare reads the board with one account picked (#8123: bot-loop's census met
+  // it one tap away, on the league card's leaderboard).
+  extra: (id) => [
+    `/api/book-wait?participantId=${id}`,
+    `/api/outpost/performance?accounts=${id}`,
+    ...BOARD_METRICS.map((m) => `/api/board?a=${id}&by=${m}`),
+  ],
 };
 
 export function rdReads() {

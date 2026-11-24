@@ -15,3 +15,6 @@ export function vixAnswer(input: {
   vix?: { session: string; close: number };
 }): (url: string) => { raw: string; contentType: string } | undefined;
 export function worldNetwork(input: Record<string, unknown>): (url: string) => unknown;
+export function githubAnswer(input: {
+  feedback?: { issues?: Record<string, Record<string, unknown>> };
+}): (url: string) => Record<string, unknown> | undefined;

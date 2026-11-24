@@ -34,6 +34,10 @@ const CAST = {
     "/api/quests",
     "/api/target-split",
     "/api/research/outlook?symbol=NVDA",
+    // Two reads only a control reaches (#8123, bot-loop's census): Sauron's page opens AVGO's
+    // outlook, and R&D Playbooks reads the research coverage.
+    "/api/research/outlook?symbol=AVGO",
+    "/api/research/coverage",
     "/api/authored-plays",
     "/api/playbook-chains",
     "/api/convictions/mine",
