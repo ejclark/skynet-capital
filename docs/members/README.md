@@ -18,8 +18,11 @@ Eric, the owner.
 
 1. **Who** — one paragraph in plain words. For a real member it is drawn ONLY from their own
    recorded words, quoted with the date; every inference is marked
-   `_hypothesis — proves it wrong: <a dated, observable event>_`, the way a research call sheet
-   carries its falsifier. The file is theirs to edit (below).
+   `_hypothesis Hn (<date written>) — <the guess>. Proves it wrong (check by YYYY-MM-DD): <an
+   observable event>._`, the way a research call sheet carries its falsifier. The check-by date is
+   when a session settles it (refuted · known · held · stale; `npm run profile:due`; held sets a new
+   check-by date, at most twice without new evidence), and
+   `scripts/profile-scan.mjs --validate` (run by its spec) fails a numbered one without it. The file is theirs to edit (below).
 2. **What they own** — the fixture participant (or none), rungs earned, accounts, device.
 3. **What they are trying to do** — goals, ranked; **needs in their words**.
 4. **How they decide** — by outcome or by mechanism; what they read first; what they skip; and
