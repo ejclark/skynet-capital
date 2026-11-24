@@ -82,7 +82,8 @@ function OrderLine({ preview }: { readonly preview: TicketPreview }): ReactEleme
  *  meaning ("Take-profit", "Stop", "gained", "lost"); no figure here is computed in the browser. */
 function ExitPreviewLines({ preview }: { readonly preview: TicketPreview }): ReactElement {
   const market = marketSession(useNow());
-  const open = market.state === "open" ? undefined : waitsForOpen(market);
+  // Undefined while the session is open; else the open a closed market waits for, in the viewer's zone.
+  const open = waitsForOpen(market, viewerTimeZone());
   return (
     <>
       {preview.exit
