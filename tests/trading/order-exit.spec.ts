@@ -150,6 +150,16 @@ describe("previewOrder — a stop-limit (#8249)", () => {
     expect(preview.warnings).toEqual([]);
   });
 
+  it("costs a buy at its limit when that is above the mark: the broker holds that much cash", () => {
+    const preview = previewOrder(
+      { ...stopLimitBuy, stopPrice: 110, limitPrice: 115 },
+      { ...context, cash: 1_000, quotePrice: 90 },
+    );
+    expect(preview.estNotional).toBe(1_150);
+    expect(preview.ok).toBe(false);
+    expect(preview.refusals.join(" ")).toContain("more than your available cash");
+  });
+
   it("requires both prices", () => {
     const preview = previewOrder(
       { symbol: "XLF", quantity: 10, action: "buy", orderType: "stop_limit" },

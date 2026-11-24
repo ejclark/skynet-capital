@@ -251,14 +251,14 @@ export class WritableFixtureTradingTransport implements AlpacaTradingTransport {
       const held = this.positions.find((p) => p.symbol === decodeURIComponent(symbol));
       if (!held) return notFound();
       const qty = num(held.qty);
-      return ok(
-        this.place({
-          symbol: held.symbol,
-          qty: Math.abs(qty),
-          side: qty > 0 ? "sell" : "buy",
-          type: "market",
-        }),
-      );
+      const close = {
+        symbol: held.symbol,
+        qty: Math.abs(qty),
+        side: qty > 0 ? "sell" : "buy",
+        type: "market",
+      };
+      // Shares a bracket's exits hold can't be closed out from under them (#8249).
+      return this.refuseReserved(close, Math.abs(qty)) ?? ok(this.place(close));
     }
     return notFound();
   }
@@ -284,10 +284,13 @@ export class WritableFixtureTradingTransport implements AlpacaTradingTransport {
     const status = query.get("status") ?? "open";
     const limit = Number(query.get("limit") ?? 50);
     const nested = query.get("nested") === "true";
+    // Nested, a bracket's legs ride under their entry, and an entry with a working exit is still
+    // open (Alpaca lists it so); flat, every leg is a row of its own.
+    const open = (o: Order): boolean =>
+      OPEN.has(o.status) || (nested && (o.legs ?? []).some((l) => OPEN.has(l.status)));
     const rows = this.orders
-      .filter((o) => status === "all" || (status === "open") === OPEN.has(o.status))
+      .filter((o) => status === "all" || (status === "open") === open(o))
       .sort((a, b) => (b.submitted_at ?? "").localeCompare(a.submitted_at ?? ""));
-    // Nested, a bracket's legs ride under their entry; flat, every leg is a row of its own.
     const listed = nested ? rows.filter((o) => !this.legParent.has(o.id)) : rows;
     const page = listed.slice(0, Number.isFinite(limit) && limit > 0 ? limit : 50);
     return nested ? page : page.map((o) => ({ ...o, legs: null }));
@@ -327,7 +330,41 @@ export class WritableFixtureTradingTransport implements AlpacaTradingTransport {
         });
       }
     }
-    return this.refuseBracket(input, type);
+    return this.refuseLinked(input, type, qty);
+  }
+
+  /** The two walls a bracket adds (#8249): its own shape, and the shares its exits hold. */
+  private refuseLinked(
+    input: Record<string, unknown>,
+    type: string,
+    qty: number,
+  ): Promise<JsonResponse> | undefined {
+    return this.refuseBracket(input, type) ?? this.refuseReserved(input, qty);
+  }
+
+  /** Shares a bracket's working exits hold (Alpaca's `held_for_orders`): its entry's quantity,
+   *  once per bracket — the take-profit and the stop cover the same shares, one-cancels-other. */
+  private reserved(symbol: string): number {
+    const entries = new Set<Order>();
+    for (const [id, entry] of this.legParent) {
+      const leg = this.orders.find((o) => o.id === id);
+      if (entry.symbol === symbol && leg && OPEN.has(leg.status)) entries.add(entry);
+    }
+    return [...entries].reduce((sum, e) => sum + num(e.qty), 0);
+  }
+
+  /** A sell of shares a bracket's exits hold is refused, in Alpaca's words, as a paper account
+   *  refuses it — never filled into a short the exit would then deepen. */
+  private refuseReserved(
+    input: Record<string, unknown>,
+    qty: number,
+  ): Promise<JsonResponse> | undefined {
+    if (input.side !== "sell" || typeof input.symbol !== "string") return undefined;
+    const reserved = this.reserved(input.symbol);
+    if (reserved === 0) return undefined;
+    const held = num(this.positions.find((p) => p.symbol === input.symbol)?.qty);
+    const available = Math.max(0, held - reserved);
+    return qty > available ? insufficientQty(qty, available) : undefined;
   }
 
   /** Alpaca's bracket walls (none for any other order class): a market or limit entry, no extended hours, and each exit at least a
@@ -477,16 +514,17 @@ export class WritableFixtureTradingTransport implements AlpacaTradingTransport {
     order.status = "filled";
     order.filled_qty = String(qty);
     order.filled_avg_price = String(mark);
-    order.filled_at = order.submitted_at;
+    const at = this.fillStamp(order);
+    order.filled_at = at;
     this.apply(order.symbol, order.side === "buy" ? qty : -qty, mark);
-    this.onFill?.({
-      symbol: order.symbol,
-      side: order.side,
-      quantity: qty,
-      price: mark,
-      at: order.submitted_at,
-    });
+    this.onFill?.({ symbol: order.symbol, side: order.side, quantity: qty, price: mark, at });
     this.afterBracketFill(order);
+  }
+
+  /** When a fill lands: an order filling on placement carries its submit stamp (as before); a
+   *  bracket's exit fills on a later read, so it carries that read's clock, never the entry's. */
+  private fillStamp(order: Order): string {
+    return this.legParent.has(order.id) ? this.stamp() : order.submitted_at;
   }
 
   /** A bracket's stop leg triggers when the touch reaches it and sells at the market. Only the
@@ -619,3 +657,11 @@ const notFound = (): Promise<JsonResponse> =>
   Promise.resolve({ status: 404, body: { message: "not found" } });
 const unprocessable = (message: string): Promise<JsonResponse> =>
   Promise.resolve({ status: 422, body: { code: 42210000, message } });
+const insufficientQty = (requested: number, available: number): Promise<JsonResponse> =>
+  Promise.resolve({
+    status: 403,
+    body: {
+      code: 40310000,
+      message: `insufficient qty available for order (requested: ${requested}, available: ${available})`,
+    },
+  });

@@ -89,7 +89,6 @@ describe("the trade API with the setting off (as committed)", () => {
   it.each([
     ["an exit", bracket],
     ["a stop-limit", stopLimit],
-    ["an exit that is null", { ...limitBuy, exit: null }],
   ])("refuses %s with a sentence and places nothing", async (_name, body) => {
     const { config, sent } = configWith();
     for (const path of ["/api/trade/review", "/api/trade/submit"] as const) {
@@ -107,6 +106,8 @@ describe("the trade API with the setting off (as committed)", () => {
       limitBuy,
       { ...limitBuy, orderType: "limit", timeInForce: "day" },
       { ...limitBuy, action: "sell", orderType: "stop", stopPrice: 40, limitPrice: undefined },
+      // `exit: null` is no exit, as on main (which dropped it like any unknown field).
+      { ...limitBuy, exit: null },
     ];
     for (const body of today) {
       const answer = await call("/api/trade/submit", body, config, owner);
@@ -124,6 +125,7 @@ describe("the trade API with the setting off (as committed)", () => {
         orderType: "stop",
         stopPrice: 40,
       },
+      limitBuy,
     ]);
   });
 });

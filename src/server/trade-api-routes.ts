@@ -63,8 +63,8 @@ export const EXIT_AT_ENTRY_REFUSAL =
  *  (malformed, never dropped). A price that is missing or not positive is left out, and the
  *  ticket refuses it in words. */
 function parseExit(raw: unknown): TicketExit | undefined | null {
-  if (raw === undefined) return undefined;
-  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return null;
+  if (raw === undefined || raw === null) return undefined;
+  if (typeof raw !== "object" || Array.isArray(raw)) return null;
   const { takeProfit, stop } = raw as Record<string, unknown>;
   const tp = parsePositivePrice(takeProfit);
   const sl = parsePositivePrice(stop);
@@ -82,7 +82,8 @@ function knownOrderType(raw: unknown, exitAtEntry: boolean): boolean {
 
 /** A body carrying what only an admitted session may send: a stop-limit, or any `exit` at all. */
 function carriesExitAtEntry(body: Record<string, unknown>): boolean {
-  return body.orderType === "stop_limit" || body.exit !== undefined;
+  // `exit: null` reads as no exit, as an absent field does (main drops it like any unknown field).
+  return body.orderType === "stop_limit" || (body.exit !== undefined && body.exit !== null);
 }
 
 /** Strict shape gate: exactly the fields an order needs, verified, everything else dropped.

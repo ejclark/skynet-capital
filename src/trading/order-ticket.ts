@@ -277,6 +277,24 @@ export function validateBuy(
   }
 }
 
+/** Estimated dollars in or out: quantity at the last known price. A stop-limit BUY is costed at its
+ *  limit when that is higher, since the broker holds that much cash for it (#8249 review: costed
+ *  at the mark, a limit far above it passed the cash check and met the broker's refusal instead).
+ *  Every other order type keeps the mark, exactly as before. */
+function estimateNotional(
+  estPrice: number | undefined,
+  quantity: number,
+  request: TicketRequest,
+  orderType: TicketOrderType,
+): number | undefined {
+  if (!Number.isFinite(quantity) || quantity <= 0) return undefined;
+  const limit = request.limitPrice;
+  if (orderType === "stop_limit" && request.action === "buy" && limit !== undefined && limit > 0) {
+    return Math.max(limit, estPrice ?? 0) * quantity;
+  }
+  return estPrice === undefined ? undefined : estPrice * quantity;
+}
+
 /** The exit the ticket carries, reviewed against its entry (`order-exit.ts`), as the preview's
  *  `exit` field — empty when there is none to echo. */
 function exitOf(
@@ -326,10 +344,7 @@ export function previewOrder(request: TicketRequest, context: TicketContext): Ti
   const estPrice =
     markPrice(held) ??
     (quote !== undefined && Number.isFinite(quote) && quote > 0 ? quote : undefined);
-  const estNotional =
-    estPrice !== undefined && Number.isFinite(quantity) && quantity > 0
-      ? estPrice * quantity
-      : undefined;
+  const estNotional = estimateNotional(estPrice, quantity, request, orderType);
 
   validatePricedOrder(orderType, request, request.action, estPrice, refusals, warnings);
   const exit = exitOf(request, orderType, refusals);

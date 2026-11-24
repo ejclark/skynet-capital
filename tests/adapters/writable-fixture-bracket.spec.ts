@@ -186,3 +186,54 @@ describe("WritableFixtureTradingTransport — a bracket order (#8249)", () => {
     );
   });
 });
+
+describe("WritableFixtureTradingTransport — the shares a bracket's exits hold (#8249)", () => {
+  it("refuses a sell or a close of shares the exits hold, in Alpaca's words, and opens no short", async () => {
+    const { client, transport } = setup();
+    await client.placeOrder(bracketBuy(151));
+    const sell = await transport.post("/v2/orders", {
+      symbol: "AAPL",
+      qty: 1,
+      side: "sell",
+      type: "market",
+      time_in_force: "day",
+    });
+    const close = await transport.delete("/v2/positions/AAPL");
+    expect([sell.status, close.status]).toEqual([403, 403]);
+    expect((close.body as { message: string }).message).toBe(
+      "insufficient qty available for order (requested: 10, available: 0)",
+    );
+    expect((await client.getPositions()).find((p) => p.symbol === "AAPL")?.qty).toBe("10");
+  });
+
+  it("frees the shares once the exits are done", async () => {
+    const { client, transport } = setup();
+    const entry = await client.placeOrder(bracketBuy(151));
+    await transport.delete(`/v2/orders/${entry.id}-tp`);
+    await transport.delete(`/v2/orders/${entry.id}-sl`);
+    expect((await transport.delete("/v2/positions/AAPL")).status).toBe(200);
+  });
+
+  it("keeps a filled entry with a working exit in a nested open read, exits underneath", async () => {
+    const { client } = setup();
+    const entry = await client.placeOrder(bracketBuy(151));
+    const open = await client.listOrders({ status: "open", nested: true });
+    expect(open.map((o) => o.id)).toEqual([entry.id]);
+    expect(open[0]?.legs?.map((l) => l.status)).toEqual(["new", "new"]);
+  });
+
+  it("stamps an exit's fill with the read it filled on, never the entry's submit time", async () => {
+    let now = new Date("2026-11-16T15:00:00.000Z");
+    const transport = new WritableFixtureTradingTransport(
+      { account: { id: "sim", cash: "10000.00", status: "ACTIVE" }, positions: [] },
+      { marks: new Map([["AAPL", 150]]), now: () => now, idPrefix: "t" },
+    );
+    const client = new AlpacaTradingClient(transport);
+    const entry = await client.placeOrder(bracketBuy(151));
+    now = new Date("2026-11-16T19:00:00.000Z");
+    transport.mark("AAPL", 161);
+    const tp = byId(await client.listOrders({ status: "all", limit: 50 })).get(`${entry.id}-tp`);
+    expect(tp?.filled_at).toBe("2026-11-16T19:00:00.000Z");
+    expect(entry.filled_at).toBe("2026-11-16T15:00:00.000Z");
+  });
+});
