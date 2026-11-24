@@ -1,5 +1,10 @@
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "@rstest/core";
+import { cardEchoes, memberCard, rolesPacket } from "../../scripts/study/packets.mjs";
+import { type AreaConfig, profileProblems } from "../../scripts/study/round-plan.mjs";
+import { WORLDS } from "../../scripts/study/worlds/index.mjs";
 
 /**
  * The ladder's worlds (#8005, the ladder: `docs/IA.md` §5.5): the rung a fill earns is the
@@ -37,4 +42,55 @@ describe("the first stock sale, as the ladder reads it", () => {
       ["102", { on: "2026-11-23", orderId: "eric-aapl-2" }],
     ]);
   }, 60_000);
+});
+
+// The ladder's area config (#8005 slice 5): what scripts/study/round.mjs reads to run its round.
+// Checked against the worlds it names, so it can never point a member at a world, a viewer or a
+// route the worlds do not serve, and its roles never carry a member card's words.
+describe("the ladder area config", () => {
+  const ROOT = join(import.meta.dirname, "../..");
+  const config = JSON.parse(
+    readFileSync(join(ROOT, "scripts/study/tasks/ladder.json"), "utf8"),
+  ) as AreaConfig & { census: { world: string; viewer: string; for: string[] }[] };
+  const world = (name: string) => WORLDS.find((w) => w.name === name);
+
+  it("passes its own checks", () => {
+    expect(profileProblems(config)).toEqual([]);
+  });
+
+  it("puts every member and every census on a ladder world, as one of its viewers", () => {
+    for (const r of [...config.matrix, ...config.census]) {
+      expect(r.world).toMatch(/^ladder-/);
+      expect(Object.keys(world(r.world)?.viewers ?? {})).toContain(r.viewer);
+    }
+  });
+
+  it("runs phone first, the thin cut included, with the chat in hand", () => {
+    const frames = config.matrix.flatMap((r) => r.viewports);
+    expect(frames.filter((v) => v === "phone").length).toBeGreaterThan(frames.length / 2);
+    expect(config.thin.viewport).toBe("phone");
+    for (const r of config.matrix) expect(world(r.world)?.chat).toBe(true);
+  });
+
+  it("starts the thin cut's experts on a route its world's own surfaces name", () => {
+    const viewer = config.matrix.find((r) => r.member === config.thin.member)?.viewer;
+    const routes = (world(config.thin.world)?.surfaces ?? [])
+      .filter((s) => s.viewer === viewer && !s.struck)
+      .map((s) => s.route);
+    expect(routes).toContain(config.thin.expertRoute);
+  });
+
+  it("ships roles that repeat no member card", () => {
+    const members = [...new Set(config.matrix.map((r) => r.member))];
+    const cards = Object.fromEntries(
+      members.map((m) => [
+        m,
+        memberCard(readFileSync(join(ROOT, "docs/members", `${m}.md`), "utf8"), {
+          cutoff: config.cutoff,
+          name: m,
+        }).text,
+      ]),
+    );
+    expect(cardEchoes(rolesPacket(config.roles, members).text, cards)).toEqual([]);
+  });
 });
