@@ -13,6 +13,7 @@ import {
   skipAgoText,
   standingGlyph,
 } from "../live/bots";
+import { strategyNaming } from "../live/playbook-name";
 
 /**
  * THE BOTS SCREEN'S BODY (#8254) — one card per bot account: who it is (the persona's name beside
@@ -49,6 +50,30 @@ function FollowButton({ bot }: { readonly bot: BotRowView }): ReactElement {
   );
 }
 
+/** The most strategies a card lists before "and N more" — the rest are one tap away. */
+const RUNS_SHOWN = 3;
+
+/** What the bot runs, each named as a strategy with its plain line (#8254 criterion 14). */
+function Runs({ playbooks }: { readonly playbooks: BotRowView["playbooks"] }): ReactElement | null {
+  if (!playbooks || playbooks.length === 0) return null;
+  const shown = playbooks.slice(0, RUNS_SHOWN);
+  const more = playbooks.length - shown.length;
+  return (
+    <span className="bots-card-runs">
+      <span className="bots-card-label">Runs</span>
+      {shown.map((p) => {
+        const { title, line } = strategyNaming(p.playbookId);
+        return (
+          <span key={p.playbookId} className="bots-card-run">
+            <b>{title}</b> · {line}
+          </span>
+        );
+      })}
+      {more > 0 ? <span className="bots-card-run">and {more} more</span> : null}
+    </span>
+  );
+}
+
 function BotCard({
   bot,
   canFollow,
@@ -71,6 +96,7 @@ function BotCard({
           {persona ? <span className="bots-card-persona">{persona}</span> : null}
         </span>
         {bot.persona ? <span className="bots-card-thesis">{bot.persona.thesis}</span> : null}
+        <Runs playbooks={bot.playbooks} />
         <span className="bots-card-line">
           <span className="bots-glyph" aria-hidden="true">
             {standingGlyph(bot.standing)}

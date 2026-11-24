@@ -49,6 +49,7 @@ const ROSTER: BotsRosterView = {
         marketOpen: true,
       },
       skip: { at: "2026-11-24T14:58:00.000Z" },
+      playbooks: null,
       followed: true,
     },
     {
@@ -66,6 +67,10 @@ const ROSTER: BotsRosterView = {
         at: "2026-11-24T14:00:00.000Z",
         reason: "NVDA: blocked by S2 (flat through the print)",
       },
+      playbooks: [
+        { playbookId: "CRWV-WHEEL", mode: "standard", state: "flat" },
+        { playbookId: "U-acct-7-runup", mode: "standard", state: "flat" },
+      ],
       followed: false,
     },
   ],
@@ -131,6 +136,16 @@ describe("the Bots screen", () => {
     const banker = screen.getByText("The Banker").closest("li") as HTMLElement;
     expect(within(banker).getByText(/watching: the house mode places no orders/)).toBeTruthy();
     expect(within(banker).getByText(/No reason was recorded for this check/)).toBeTruthy();
+  });
+
+  it("names what a bot runs as a strategy with its plain line, never the raw id (criterion 14)", () => {
+    render(view());
+    const sauron = screen.getByText("Sauron").closest("li") as HTMLElement;
+    expect(within(sauron).getByText("The wheel on CRWV")).toBeTruthy();
+    expect(within(sauron).queryByText(/CRWV-WHEEL/)).toBeNull();
+    expect(within(sauron).getByText("U-acct-7-runup").parentElement?.textContent).toContain(
+      "not in the strategy list yet",
+    );
   });
 
   it("opens the bot's checks with the log unfolded", () => {

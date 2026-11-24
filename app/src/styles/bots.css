@@ -76,6 +76,13 @@
   line-height: 1.4;
   color: var(--muted);
 }
+.bots-card-runs {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+  line-height: 1.4;
+}
 .bots-card-line,
 .bots-card-skip {
   font-size: 13px;

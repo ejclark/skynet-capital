@@ -4,7 +4,7 @@ import { brokerWordsFor } from "./broker-words.js";
 import { guardDeltaFor } from "./guard-delta.js";
 import { optionContractLine } from "./option-contract-line.js";
 import { optionFillCost, optionFillCostWords } from "./option-fill-cost.js";
-import { withoutPlaybookNames } from "./playbook-name-redaction.js";
+import { withoutLegacyRetireRules, withoutPlaybookNames } from "./playbook-name-redaction.js";
 import type { WireTradeVitals } from "./vitals.js";
 import type { WireTradeRow } from "./wire-data.js";
 
@@ -85,6 +85,9 @@ export interface WireReasoningDeps {
   /** Whether the viewer owns this account (`desk-owner-gate.ts`'s `ownsDesk`) — a row on any
    *  other account loses its playbook (#885). Absent, the viewer owns none. */
   readonly ownsAccount?: (participantId: string) => boolean;
+  /** Whether the viewer is a signed-in member (#8254): a member reads a bot's playbook names; a
+   *  read from the pre-auth side of the invite gate keeps #885's strip. Absent, not a member. */
+  readonly member?: boolean;
 }
 
 /** A fill's attached decision as a viewer who does not own the account reads it: without its
@@ -109,6 +112,17 @@ export function withoutOwnerReasoning(
   } = reasoning;
   // The reason's own words name the play as built ("S1-NVDA window open …", #4442).
   return withoutPlaybookNames(rest, reasoning);
+}
+
+/** A bot's fill decision as any other member reads it (#8254, lifting #885 for bot accounts): the
+ *  playbook, its mode and its strategy tag ride — a bot's strategy is the game's to see (Eric,
+ *  2026-11-10, #6007) — while what the broker said about the order and the playbook's retire rule
+ *  stay the owner's. */
+export function withoutBrokerReasoning(
+  reasoning: WireTradeReasoning,
+): Omit<WireTradeReasoning, "brokerReason" | "retireRule"> {
+  const { brokerReason: _b, retireRule: _r, ...rest } = reasoning;
+  return withoutLegacyRetireRules(rest);
 }
 
 /** The exact-order-id reasoning join, standalone — shared by `attachWireReasoning` (per wire row)
@@ -155,8 +169,9 @@ export function reasoningForOrder(
 
 /** Enriches every BOT row with reasoning/vitals when a decision is found; human rows and
  *  unresolved bot rows pass through unchanged (both fields simply absent — an honest omission,
- *  never a placeholder object). The Wire lists every account's fills, so a row's playbook, its
- *  strategy tag and the broker's words ride only to that account's owner (`ownsAccount`). */
+ *  never a placeholder object). The Wire lists every account's fills; only bot rows carry a
+ *  decision, so a row's playbook and strategy tag ride to every member (#8254) and the broker's
+ *  words and the retire rule only to that account's owner (`ownsAccount`). */
 export function attachWireReasoning(
   rows: readonly WireTradeRow[],
   deps: WireReasoningDeps,
@@ -168,9 +183,13 @@ export function attachWireReasoning(
     const vitals = deps.vitalsByParticipant?.get(row.participantId);
     return {
       ...row,
+      // Every row here is a bot's (#8254): its playbook rides to every member; the broker's words
+      // and the retire rule ride only to its owner.
       reasoning: deps.ownsAccount?.(row.participantId)
         ? reasoning
-        : withoutOwnerReasoning(reasoning),
+        : deps.member
+          ? withoutBrokerReasoning(reasoning)
+          : withoutOwnerReasoning(reasoning),
       ...(vitals ? { vitals: vitals(row.at) } : {}),
     };
   });
