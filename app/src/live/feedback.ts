@@ -22,6 +22,9 @@ export interface RecentFiling {
   /** The server's one mapping (`statusFromIssue`); absent when the status fetch failed, so the
    *  row shows no badge rather than a wrong one. */
   readonly status?: FeedbackStatus;
+  /** `"journal"` when the member sent it as a wish from their journal (#8190) — the screen marks
+   *  that row "Wish" in words. Absent for every other filing. */
+  readonly source?: "journal";
   /** Present once the known problem this filing was matched to is fixed (#8005 slice 7): what
    *  was fixed, in the ledger's words, and the screen to try it on. */
   readonly fixed?: {

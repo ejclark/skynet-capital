@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useEffect, useId, useState } from "react";
-import { marketSession } from "../live/market-session";
+import { marketSession, viewerTimeZone } from "../live/market-session";
 import type { PlayInfo } from "../live/options";
 import type { SentOrder } from "../live/order-receipt";
 import { quoteQuery } from "../live/quote-query";
@@ -196,7 +196,7 @@ function WhenItWorks({
           onChange={onTimeInForce}
         />
       )}
-      <p className="gate-note">{orderTypeNote(fields.orderType, market)}</p>
+      <p className="gate-note">{orderTypeNote(fields.orderType, market, viewerTimeZone())}</p>
       {withExit ? <p className="gate-note">{EXIT_HOURS_NOTE}</p> : null}
     </>
   );

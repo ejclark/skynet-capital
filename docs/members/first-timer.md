@@ -1,15 +1,17 @@
-# The first-timer — signed in, nothing linked
+# The first-timer — came once, has never traded
 
-_A proto-member: not a real person, so there are no quotes; the description is the plan's
+_A proto-member grounded in one real member's production counts (#8161 comment 7120379211,
+2026-11-23): counts and dates only, no name, words or message text. The shape is the plan's
 (2026-09-26) and the fixture's. Twin: `e2e/journeys/first-timer.journey.json`._
 
 ## 1. Who
 
-Someone Eric invited last night. They signed in with Google this morning for the first time, have
-never seen the app, and own nothing in it: no paper key linked, no rung earned, no filing. They
-know it is a friends-and-family paper-trading game with bots on a leaderboard, and roughly nothing
-else. They will give it ten minutes on a laptop over coffee and, if the next step is not obvious,
-close the tab and ask Eric on the group chat instead.
+Someone Eric invited weeks ago. They came in once, asked the chat assistant one thing the next
+day, filed nothing, and never placed a trade; they have not come back since. They drifted off
+rather than quit. They own nothing in the app: no rung earned, no fill, no filing. They know it is
+a friends-and-family paper-trading game with bots on a leaderboard, and roughly nothing else. When
+they do look, they give it ten minutes on a laptop over coffee and, if the next step is not
+obvious, close the tab and ask Eric on the group chat instead.
 
 ## 2. What they own
 
@@ -17,6 +19,10 @@ close the tab and ask Eric on the group chat instead.
   `newcomer@example.test`, an email no owner-link or `ownerEmail` maps to, so `/api/settings`
   answers with zero accounts (the server's real answer, not a stub).
 - Rungs: none. Accounts: none. Device: a laptop (the crawl also walks the phone frame).
+- The real member (#8161 comment 7120379211): joined 10-24, 0 paper trades, 1 chat on 10-25, 0
+  filings, and a linked paper account that has sat flat at its starting value with no positions.
+  The journeys walk the step before that, with no account; a study world may link one with no
+  fills, as `scripts/study/tasks/league.json:78` does.
 
 ## 3. What they are trying to do
 

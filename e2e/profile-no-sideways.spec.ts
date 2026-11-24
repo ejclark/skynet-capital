@@ -8,7 +8,8 @@ import { OWNED, ownTheDayTrader } from "./own-account";
  * Layout, so it needs a real browser. The viewer is made the Day Trader's owner (`own-account.ts`).
  */
 
-const SECTIONS = ["overview", "positions", "activity", "orders"] as const;
+// `feedback` is the Journal (#8190): its composer and notes must fit a phone too.
+const SECTIONS = ["overview", "positions", "activity", "orders", "feedback"] as const;
 
 for (const width of [360, 390]) {
   test(`the Profile page stays inside a ${width}px phone on every section (#5108)`, async ({
