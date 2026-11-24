@@ -26,7 +26,7 @@ import {
 //   node scripts/fitness-audit.mjs --bugs <file> --spec tests/scripts/fitness-live-silent.spec.ts \
 //     --with src/alerts/bot-watch.ts --with src/domain/market-session.ts \
 //     --with src/domain/market-calendar.ts --with src/domain/intl-format.ts \
-//     --with scripts/deploy-lag.mjs --with scripts/bot-relevant.mjs --with scripts/fitness-rungs.mjs \
+//     --with scripts/deploy-lag.mjs --with scripts/bot-relevant.mjs --with scripts/fitness-rungs.mjs --with scripts/fitness-judges.mjs \
 //     --with scripts/journal-tally.mjs --with scripts/journal-tally.d.mts \
 //     --with .dockerignore --with Dockerfile
 

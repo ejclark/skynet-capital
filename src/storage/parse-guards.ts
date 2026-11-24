@@ -16,6 +16,14 @@ export function boundedString(value: unknown, max = MAX_STRING_LENGTH): string |
 }
 
 /**
+ * Type-guard twin of `boundedString`: a non-empty string of at most `max` characters. `max` is
+ * required, since each parser states its own ceiling for its own fields.
+ */
+export function isBoundedText(v: unknown, max: number): v is string {
+  return typeof v === "string" && v.length > 0 && v.length <= max;
+}
+
+/**
  * True when everything `raw` held survives in `parsed` unchanged: every object key with its value,
  * every array element in place. `parsed` may ADD a key (a parser filling in `accountId` from its
  * map key), never drop or change one. A total parser drops what it cannot read — a malformed
