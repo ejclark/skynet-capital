@@ -50,6 +50,7 @@ import type { FixAnnouncementStore } from "./fix-announcement-store.js";
 import type { GithubTokenDeps } from "./github-token.js";
 import type { InviteDeps } from "./invite-form.js";
 import type { JournalStore } from "./journal-store.js";
+import type { ReadMarketClock } from "./market-clock.js";
 import type { MemberCampaignStore } from "./member-campaign-store.js";
 import type { MemberChainStore } from "./member-chain-store.js";
 import type { MemberConvictionStore } from "./member-conviction-store.js";
@@ -499,6 +500,9 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    *  only on an offline e2e boot (`SKYNET_EDITION_NOW`, src/scripts/offline-clocks.ts, #7901); omit
    *  and the wall clock is used. */
   readonly editionNow?: () => Date;
+  /** Market hours from Alpaca's calendar and clock, shared and cached (`market-clock.ts`, #8248).
+   *  Absent: the checked-in table answers, and says so (`source: "table"`). */
+  readonly readMarketClock?: ReadMarketClock;
   /**
    * `GET/POST /api/council` — the Sunday Council's weekly thesis line (issue #2224 shape 1). Omit
    * to disable (offline mode) — the shell renders the honest "not switched on yet" state instead
