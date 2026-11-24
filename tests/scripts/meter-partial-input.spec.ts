@@ -98,6 +98,11 @@ describe("npm run meter where this machine holds none of the checkout's local fi
     expect(section("flow")).toMatch(/unknown/);
   });
 
+  it("held PRs: unavailable, never none open (#7317)", () => {
+    expect(section("speed")).toMatch(/held PRs: unavailable/);
+    expect(out).not.toMatch(/held PRs: none open/);
+  });
+
   it("local verify: unknown, never 0 of 0 failed (#6471)", () => {
     expect(out).toContain(`local verify: ${NO_VERIFY_LOG}`);
     expect(out).not.toMatch(/local verify: 0 of 0 failed/);

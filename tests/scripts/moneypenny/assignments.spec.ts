@@ -188,6 +188,89 @@ describe("plan: assignments (criteria 1–4)", () => {
   });
 });
 
+// #7317: the four held PRs of 2026-11-10 sat a median 37.6 h green, then merged in 93 s once one
+// message listed them. Criterion 4 now starts its clock when the checks go green.
+describe("criterion 4 on the green clock (#7317)", () => {
+  const T = Date.parse("2026-09-30T12:00:00Z");
+  const pr = (over: Record<string, unknown> = {}) => ({
+    number: 7030,
+    title: "feat: held",
+    state: "open",
+    labels: [{ name: "hold-merge" }],
+    created_at: new Date(T - 5 * 36e5).toISOString(), // open 5h: the old 12h timer is silent
+    head: { ref: "feat/x" },
+    assignees: [],
+    ...over,
+  });
+  type Block = { number: number; title: string; plan: boolean };
+  const facts = (greenHoursAgo: number | null, blocks: Block[] = []) =>
+    new Map([
+      [7030, { greenAt: greenHoursAgo === null ? null : T - greenHoursAgo * 36e5, blocks }],
+    ]);
+  const plan6871 = [{ number: 6871, title: "plan", plan: true }];
+
+  it("asks 4h after both required checks went green, naming what it blocks", () => {
+    const { needsYou, actions } = plan({ prs: [pr()], held: facts(4, plan6871), now: T });
+    expect(needsYou).toEqual([
+      expect.objectContaining({
+        number: 7030,
+        criterion: 4,
+        green: true,
+        hours: 4,
+        blocks: plan6871,
+        why: "held PR green 4h",
+      }),
+    ]);
+    expect(actions[0]?.decision).toContain("green 4h and it blocks plan #6871");
+  });
+
+  it("does not ask before 4h green", () => {
+    expect(plan({ prs: [pr()], held: facts(3), now: T }).needsYou).toEqual([]);
+  });
+
+  it("never unassigns a held PR he holds because a push restarted its checks", () => {
+    const asIssue = issue({ number: 7030, labels: [], assignees: [{ login: "ejclark" }] });
+    const his = pr({ assignees: [{ login: "ejclark" }] });
+    expect(
+      plan({ issues: [asIssue], prs: [his], held: facts(null), markers: new Set([7030]), now: T })
+        .actions,
+    ).toEqual([]);
+  });
+
+  it("sends no per-PR card: held PRs reach him on the decisions page, one ask for all", () => {
+    const two = [pr(), pr({ number: 7211 })];
+    const held = new Map([
+      [7030, { greenAt: T - 26 * 36e5, blocks: [] }],
+      [7211, { greenAt: T - 5 * 36e5, blocks: [] }],
+    ]);
+    const assignments = { issues: [], prs: two, markers: new Set<number>(), held };
+    expect(plan({ ...assignments, now: T }).needsYou.map((r) => r.number)).toEqual([7030, 7211]);
+    expect(routeAssignments({ assignments, now: T })).toEqual([]);
+    expect(routeAssignments({ assignments, now: T, heldCards: true })).toHaveLength(2);
+  });
+
+  it("gather reads each held PR's check runs through the single-object read", () => {
+    const paths: string[] = [];
+    const rest = (path: string) =>
+      path === "pulls?state=open" ? [pr({ head: { ref: "feat/x", sha: "s1" } })] : [];
+    const read = (path: string) => {
+      paths.push(path);
+      return {
+        check_runs: ["verify", "integration tests"].map((name) => ({
+          name,
+          status: "completed",
+          conclusion: "success",
+          completed_at: new Date(T - 6 * 36e5).toISOString(),
+        })),
+      };
+    };
+    const deps = gather({ rest, read, now: T, graduated: () => [] });
+    expect(paths[0]).toBe("commits/s1/check-runs?per_page=100");
+    expect(deps.held.get(7030)?.greenAt).toBe(T - 6 * 36e5);
+    expect(plan({ ...deps, now: T }).needsYou[0]).toMatchObject({ number: 7030, green: true });
+  });
+});
+
 describe("assignmentComment", () => {
   it("quotes the decision and carries the marker criteria 2–3 key on", () => {
     const body = assignmentComment({ decision: "Pick A or B?" });
@@ -250,8 +333,9 @@ describe("routeAssignments: the sweep's intents", () => {
     ]);
   });
 
-  it("gives a held PR a decision of its own — the merge click is the ask", () => {
+  it("gives a held PR a decision of its own when per-PR cards are on — the merge click is the ask", () => {
     const [intent] = routeAssignments({
+      heldCards: true,
       assignments: {
         issues: [],
         prs: [
@@ -271,8 +355,8 @@ describe("routeAssignments: the sweep's intents", () => {
     if (!intent) throw new Error("one intent expected");
     expect(intent).toMatchObject({ kind: "assign-eric", number: 10, criterion: 4 });
     expect(intent.body).toContain("Merge this held PR");
-    // …and claims nothing it never checked: `heldPrHours` reads state/draft/label/age only, and
-    // `hold-merge` also goes on a PR held for a taste fork.
+    // …and claims nothing it never checked: with no check runs read, the card says neither green
+    // nor protected (`hold-merge` also goes on a PR held for a taste fork).
     expect(intent.body).not.toMatch(/green|protected/i);
   });
 });
