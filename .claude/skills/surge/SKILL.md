@@ -138,6 +138,13 @@ reverts.
   onto the new platter tip, re-verify. Never force-push the platter.
 - **A ready issue nothing builds.** The lane takes every ready non-plan issue (#6219); if one
   still sits Ready past a tick, check `pullable()` before re-flipping it.
+- **A fresh `fast-track` bug belongs to the lane, not to a child.** The lane self-readies and
+  claims an audit's `fast-track` filings within about a minute. A child dispatched in that
+  minute builds the same fix a second time: on 2026-11-24, #8352, #8353 and #8355 were each
+  built twice, and three PRs were closed as superseded. Give children only what the lane
+  will not take: `needs-session` issues, plans, protected work boarding the platter, a slice
+  of a multi-PR issue the session already holds, and a ready issue still unclaimed after a
+  tick (`index.mjs --check-claim feedback-<n>` reads `no lease found`).
 - **Subagent text arrives HTML-escaped** (`&lt;`) — unescape before posting
   (`clear-path-post.mjs` does).
 
