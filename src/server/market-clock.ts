@@ -33,31 +33,58 @@ export type ReadMarketClock = () => Promise<MarketClockView>;
 
 const CALENDAR_SHARE_MS = 6 * 60 * 60_000;
 const CLOCK_SHARE_MS = 60_000;
+/** A broker read that hasn't answered by then counts as failed: the request never waits on it. */
+const BROKER_TIMEOUT_MS = 2_500;
+/** After a failure, the next broker try waits this long — one call a minute in an outage, not
+ *  one per page load on the bots' shared rate limit, and one warning per window. */
+const RETRY_AFTER_MS = 60_000;
+
+/** `work`, or a rejection once `ms` pass — the timer never holds the process open. */
+function within<T>(work: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`no answer in ${ms}ms`)), ms);
+    timer.unref?.();
+    work.then(resolve, reject).finally(() => clearTimeout(timer));
+  });
+}
 
 export interface MarketClockReaderDeps {
   /** A house bot participant's trading client; undefined → the table answers. */
   readonly client: () => AlpacaTradingClient | undefined;
   readonly now?: () => Date;
   readonly warn?: (line: string) => void;
+  /** How long a broker read may take before it counts as failed (specs shorten it). */
+  readonly timeoutMs?: number;
 }
 
-/** One shared value with a lifetime and a single request in flight; a failure keeps the last. */
+/**
+ * One shared value with a lifetime and a single request in flight. A failure keeps the last good
+ * value for at most `maxStale` (past it, the caller's fallback answers) and backs off
+ * `RETRY_AFTER_MS` before the next try.
+ */
 function shared<T>(
   ttl: number,
+  maxStale: number,
+  timeoutMs: number,
   now: () => number,
   read: () => Promise<T | undefined>,
 ): () => Promise<T | undefined> {
   let cached: { at: number; value: T } | undefined;
+  let retryAt = 0;
   let inFlight: Promise<T | undefined> | undefined;
+  const last = () => (cached && now() - cached.at < maxStale ? cached.value : undefined);
   return () => {
     if (cached && now() - cached.at < ttl) return Promise.resolve(cached.value);
+    if (now() < retryAt) return Promise.resolve(last());
     inFlight ??= (async () => {
       try {
-        const value = await read();
+        const value = await within(read(), timeoutMs);
         if (value !== undefined) cached = { at: now(), value };
-        return value ?? cached?.value;
+        else retryAt = now() + RETRY_AFTER_MS;
+        return value ?? last();
       } catch {
-        return cached?.value;
+        retryAt = now() + RETRY_AFTER_MS;
+        return last();
       } finally {
         inFlight = undefined;
       }
@@ -70,27 +97,34 @@ export function marketClockReader(deps: MarketClockReaderDeps): ReadMarketClock 
   const now = deps.now ?? (() => new Date());
   const warn = deps.warn ?? ((line: string) => process.emitWarning(line));
   const ms = () => now().getTime();
+  const timeout = deps.timeoutMs ?? BROKER_TIMEOUT_MS;
 
-  const calendar = shared<SessionDay[]>(CALENDAR_SHARE_MS, ms, async () => {
-    const client = deps.client();
-    if (!client) return undefined;
-    const from = newYorkDate(now());
-    const to = shiftDate(from, CLOCK_HORIZON_DAYS);
-    const days = calendarDays(await client.getCalendar(from, to));
-    if (!days) {
-      warn("[market-clock] /v2/calendar answered a body that is not the calendar's shape");
-      return undefined;
-    }
-    const drift = calendarDrift(days, from, to);
-    if (drift.length > 0) {
-      warn(
-        `[market-clock] the broker's calendar and MARKET_CLOSURES disagree on ${drift.join(", ")}; the broker's dates win`,
-      );
-    }
-    return days;
-  });
+  const calendar = shared<SessionDay[]>(
+    CALENDAR_SHARE_MS,
+    7 * 24 * 60 * 60_000,
+    timeout,
+    ms,
+    async () => {
+      const client = deps.client();
+      if (!client) return undefined;
+      const from = newYorkDate(now());
+      const to = shiftDate(from, CLOCK_HORIZON_DAYS);
+      const days = calendarDays(await client.getCalendar(from, to));
+      if (!days) {
+        warn("[market-clock] /v2/calendar answered a body that is not the calendar's shape");
+        return undefined;
+      }
+      const drift = calendarDrift(days, from, to);
+      if (drift.length > 0) {
+        warn(
+          `[market-clock] the broker's calendar and MARKET_CLOSURES disagree on ${drift.join(", ")}; the broker's dates win`,
+        );
+      }
+      return days;
+    },
+  );
 
-  const clock = shared<BrokerClock>(CLOCK_SHARE_MS, ms, async () => {
+  const clock = shared<BrokerClock>(CLOCK_SHARE_MS, 5 * 60_000, timeout, ms, async () => {
     const client = deps.client();
     return client ? brokerClock(await client.getMarketClock()) : undefined;
   });
@@ -109,11 +143,18 @@ export function marketClockReader(deps: MarketClockReaderDeps): ReadMarketClock 
   };
 }
 
-/** The clock for one request: the configured reader, else the table at `now` (which says so). */
-export function readClockFor(config: {
+/**
+ * The clock for one request: the configured reader, else the table at `now` (which says so). It
+ * never rejects — a reader that throws answers the table — so a page or a companion turn can await
+ * it in-line, the way the synchronous table call it replaced never failed them.
+ */
+export async function readClockFor(config: {
   readonly readMarketClock?: ReadMarketClock;
 }): Promise<MarketClockView> {
-  return config.readMarketClock
-    ? config.readMarketClock()
-    : Promise.resolve(tableClockView(new Date()));
+  try {
+    if (config.readMarketClock) return await config.readMarketClock();
+  } catch {
+    // Falls through to the table, which marks itself `source: "table"`.
+  }
+  return tableClockView(new Date());
 }

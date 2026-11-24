@@ -1,15 +1,21 @@
 /**
- * The offline worlds' `/v2/calendar` and `/v3/clock` (#8248 criterion 7), built from the SAME
- * checked-in table and pinned clock as their `/v2/clock` (`marketClock` in data-source.ts), so the
- * server's market-hours reader answers offline exactly as it would against Alpaca, and the e2e
- * guard stays pinned open at FIXED_CLOCK. Body shapes: `src/domain/market-clock.ts` → SHAPES.
+ * The offline worlds' `/v2/calendar` and `/v3/clock` (#8248 criterion 7), built from the
+ * checked-in table at the pinned instant (`SKYNET_FIXED_NOW`), so the server's market-hours reader
+ * answers offline as it would against Alpaca, and the e2e guard stays pinned open at FIXED_CLOCK.
+ * The writable world's `/v2/clock` (`marketClock` in data-source.ts) reads the same table and
+ * instant, so all three agree there; the read-only world's `/v2/clock` stays its fixture's canned
+ * body (open by default), as it was. Body shapes: `src/domain/market-clock.ts` → SHAPES.
+ *
+ * SIMPLIFIED, on purpose: pre-market from 4:00 AM ET and after-hours for four hours past the close
+ * (to 8:00 PM, or 5:00 PM on a half day) — the shape of the exchange's extended sessions, not a
+ * promise about any broker's.
  */
 import { cachedDateTimeFormat } from "../domain/intl-format.js";
 import { CLOCK_HORIZON_DAYS, newYorkDate, shiftDate, tableDays } from "../domain/market-clock.js";
 import { newYorkInstant } from "../domain/market-session.js";
 
 const PRE_START = 4 * 60;
-const POST_END = 20 * 60;
+const POST_HOURS_MS = 4 * 60 * 60_000;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /** "09:30" on New York's wall clock — Alpaca's calendar format. */
@@ -31,7 +37,7 @@ export function fixtureCalendar(query: URLSearchParams, now: Date): unknown[] {
     open: wall(d.openAt),
     close: wall(d.closeAt),
     session_open: "0400",
-    session_close: "2000",
+    session_close: wall(d.closeAt + POST_HOURS_MS).replace(":", ""),
     settlement_date: d.date,
   }));
 }
@@ -53,8 +59,8 @@ export function fixtureMarketClock(now: Date): unknown {
     [phase, until] = ["core", session.closeAt];
   } else if (session && t < session.openAt && t >= preOf(today)) {
     [phase, until] = ["pre", session.openAt];
-  } else if (session && t >= session.closeAt && t < newYorkInstant(today, POST_END)) {
-    [phase, until] = ["post", newYorkInstant(today, POST_END)];
+  } else if (session && t >= session.closeAt && t < session.closeAt + POST_HOURS_MS) {
+    [phase, until] = ["post", session.closeAt + POST_HOURS_MS];
   } else {
     [phase, until] = ["closed", nextOpen ? preOf(nextOpen.date) : t];
   }

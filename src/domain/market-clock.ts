@@ -221,19 +221,22 @@ export function marketClockView(
   clock?: BrokerClock,
 ): MarketClockView {
   const t = now.getTime();
+  // A clock whose phase has already ended (cached across the close, or kept through an outage)
+  // says nothing about now: drop it and let the days answer, so a stale "core" never reads OPEN.
+  const live = clock && clock.phaseUntil > t ? clock : undefined;
   const listed = days.filter((d) => d.closeAt > t);
   const inside = listed.find((d) => d.openAt <= t && t < d.closeAt);
   const nextOpen = listed.find((d) => d.openAt > t)?.openAt;
   const nextClose = (inside ?? listed[0])?.closeAt;
   const iso = (ms: number | undefined): string | undefined =>
     ms === undefined ? undefined : new Date(ms).toISOString();
-  const nextOpenAt = iso(clock?.nextOpenAt ?? nextOpen);
-  const nextCloseAt = iso(clock?.nextCloseAt ?? nextClose);
+  const nextOpenAt = iso(live?.nextOpenAt ?? nextOpen);
+  const nextCloseAt = iso(live?.nextCloseAt ?? nextClose);
   return {
     asOf: now.toISOString(),
     source,
-    isOpen: clock ? clock.phase === "core" : inside !== undefined,
-    ...(clock ? { phase: clock.phase, phaseUntil: new Date(clock.phaseUntil).toISOString() } : {}),
+    isOpen: live ? live.phase === "core" : inside !== undefined,
+    ...(live ? { phase: live.phase, phaseUntil: new Date(live.phaseUntil).toISOString() } : {}),
     ...(nextOpenAt ? { nextOpenAt } : {}),
     ...(nextCloseAt ? { nextCloseAt } : {}),
     days: listed.map(servedDay),

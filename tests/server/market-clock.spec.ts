@@ -1,5 +1,5 @@
 import type { AlpacaTradingClient } from "../../src/alpaca/alpaca-trading-client.js";
-import { marketClockReader } from "../../src/server/market-clock.js";
+import { marketClockReader, readClockFor } from "../../src/server/market-clock.js";
 import { THANKSGIVING_CALENDAR, THANKSGIVING_CLOCK } from "../fixtures/alpaca-market-clock.js";
 
 /** The shared market-hours reader (#8248): cached, one request in flight, never a guessed hour. */
@@ -116,5 +116,66 @@ describe("marketClockReader", () => {
       "[market-clock] the broker's calendar and MARKET_CLOSURES disagree on 2026-12-01; the broker's dates win",
     ]);
     expect(view.days.some((d) => d.date === "2026-12-01")).toBe(false);
+  });
+});
+
+describe("marketClockReader — never a stale or hung answer (code review)", () => {
+  /** A clock read at 3:59 PM ET on a full day: core until 4:00. */
+  const CORE_BEFORE_CLOSE = {
+    clocks: [
+      {
+        ...THANKSGIVING_CLOCK.clocks[0],
+        is_market_day: true,
+        phase: "core",
+        phase_until: "2026-11-24T16:00:00-05:00",
+        next_market_open: "2026-11-25T09:30:00-05:00",
+        next_market_close: "2026-11-24T16:00:00-05:00",
+      },
+    ],
+  };
+
+  it("a 'core' clock kept through an outage stops reading OPEN once its phase has ended", async () => {
+    let t = Date.parse("2026-11-24T20:59:00Z");
+    let down = false;
+    const { client } = fakeClient({
+      clock: () => {
+        if (down) throw new Error("down");
+        return CORE_BEFORE_CLOSE;
+      },
+    });
+    const read = marketClockReader({ client: () => client, now: () => new Date(t) });
+    expect((await read()).isOpen).toBe(true);
+    down = true;
+    t = Date.parse("2026-11-25T02:00:00Z"); // 9:00 PM ET
+    const view = await read();
+    expect(view.isOpen).toBe(false);
+    expect(view.phase).toBeUndefined();
+  });
+
+  it("a broker that never answers times out to the table, then backs off a minute", async () => {
+    let t = THANKSGIVING;
+    let calls = 0;
+    /** A request the broker accepts and never answers. */
+    const never = () => new Promise<never>(() => undefined);
+    const hung = {
+      getCalendar: () => {
+        calls++;
+        return never();
+      },
+      getMarketClock: never,
+    } as unknown as AlpacaTradingClient;
+    const read = marketClockReader({ client: () => hung, now: () => new Date(t), timeoutMs: 10 });
+    expect((await read()).source).toBe("table");
+    t += 30_000;
+    await read();
+    expect(calls).toBe(1);
+    t += 31_000;
+    await read();
+    expect(calls).toBe(2);
+  });
+
+  it("readClockFor answers the table when the reader itself throws", async () => {
+    const view = await readClockFor({ readMarketClock: () => Promise.reject(new Error("boom")) });
+    expect(view.source).toBe("table");
   });
 });
