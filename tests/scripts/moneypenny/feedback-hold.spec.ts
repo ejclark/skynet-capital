@@ -171,6 +171,14 @@ describe("the skills take the hold for a multi-PR feedback issue (fix 3 and 4)",
     const text = readFileSync(".claude/skills/surge/SKILL.md", "utf8");
     expect(text).toContain("--hold feedback-<n>");
   });
+
+  it("/surge takes the hold after admission, never before it (#8389)", () => {
+    // The hold's `session-held` label makes an admission check refuse the issue, so a hold taken
+    // "before it starts" /work-issues blocked the very session that took it.
+    const text = readFileSync(".claude/skills/surge/SKILL.md", "utf8");
+    expect(text).not.toMatch(/--hold feedback-<n>`[^.]*before it starts/);
+    expect(text).toMatch(/after admission, never\s+before it/);
+  });
 });
 
 // THE CLOUD CONSTRAINT (measured 2026-11-24, the same night): a cloud session's proxy refuses the
