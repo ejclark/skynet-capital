@@ -17,8 +17,13 @@ const DAY = 86400000;
 export const REWORK_WINDOW_MS = 48 * 3600000;
 /** A plan without `ready` older than this is the plan's "older than 3 weeks" stock. */
 const PLAN_OLD_DAYS = 21;
-/** A plan without `ready` untouched this long is due a judge (#8037 slice 3). */
-const PLAN_UNTOUCHED_DAYS = 14;
+/** A plan without `ready` untouched this long is due a judge (#8037 slices 2 and 3). */
+export const PLAN_UNTOUCHED_DAYS = 14;
+/** The flip is due when this many `feedback` issues wait for `ready`, or the oldest has waited this
+ *  long, even with the lanes fed (#8037 slice 2: scripts/flip-due.mjs reads these, the meter prints
+ *  the same pile, so the number a person reads and the number that fires the flip cannot differ). */
+export const FEEDBACK_PILE_MAX = 20;
+export const FEEDBACK_OLDEST_DAYS = 14;
 
 const names = (issue) => (issue.labels ?? []).map((l) => (typeof l === "string" ? l : l.name));
 const days = (ms) => Number((ms / DAY).toFixed(1));

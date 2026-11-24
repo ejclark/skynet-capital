@@ -28,6 +28,10 @@ import { createDiscoveryQueueStore } from "../server/discovery-queue-store.js";
 import { opaqueMemberId } from "../server/feedback-issue.js";
 import type { FeedbackLogStore } from "../server/feedback-log.js";
 import { resolveSimilarFeedback } from "../server/feedback-similar.js";
+import {
+  createFixAnnouncementStore,
+  type FixAnnouncementStore,
+} from "../server/fix-announcement-store.js";
 import { createHouseResearchReader } from "../server/house-research.js";
 import type { LadderEvidenceReader } from "../server/ladder-evidence.js";
 import { shelfResearched } from "../server/member-campaign-store.js";
@@ -81,6 +85,9 @@ export interface CompanionSetup {
   readonly companionMessageLog: ReturnType<typeof createCompanionMessageLogStore>;
   /** Screenshots attached in the chat (#6007) — on the volume under the derived-store root. */
   readonly companionScreenshots: CompanionScreenshotStore;
+  /** Which shipped fixes she has already announced to each member (#8078) — beside the
+   *  subscriptions file on the volume. */
+  readonly fixAnnouncements: FixAnnouncementStore;
 }
 
 /** Resolve the companion turn (and the progression service its curriculum tool reads) for one
@@ -170,5 +177,6 @@ export function setupCompanion(env: NodeJS.ProcessEnv, deps: CompanionSetupDeps)
     );
   }
   const companionScreenshots = createCompanionScreenshotStore(env, (m) => console.error(m));
-  return { companion, progression, companionMessageLog, companionScreenshots };
+  const fixAnnouncements = createFixAnnouncementStore(env, (m) => console.error(m));
+  return { companion, progression, companionMessageLog, companionScreenshots, fixAnnouncements };
 }

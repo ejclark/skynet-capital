@@ -51,11 +51,12 @@ export interface CapitalFlow {
   readonly unexplainedCash: number;
   /**
    * The net value of the book the later sample carried through the window: its equity minus its
-   * cash, less what journaled fills inside the window opened (their cash, added back) — the third
-   * witness (#7729). An Alpaca paper reset clears every position, so a genuine reset leaves this
-   * near zero whatever the cleared book was worth — even when a bot's next tick trades again before
-   * the later sample — while the cash it moves is the equity change plus that book's net value
-   * (either sign). Absent on lines recorded before #7729.
+   * cash, less what journaled fills inside the window opened after a reset could have landed (their
+   * cash, added back) — the third witness (#7729, #8064). An Alpaca paper reset clears every
+   * position, so a genuine reset leaves this near zero whatever the cleared book was worth — even
+   * when a bot trades before the reset or again after it, inside the same window — while the cash it
+   * moves is the equity change plus that book's net value (either sign). Absent on lines recorded
+   * before #7729.
    */
   readonly heldAfter?: number;
   /** Always inferred: deduced from two of our own records, not reported by the broker. */
@@ -168,11 +169,30 @@ export function inferCapitalFlow(
     amount: equityMove,
     direction: equityMove > 0 ? "added" : "removed",
     unexplainedCash,
-    // A fill in the window swapped its cash for positions worth about as much: add it back, so
-    // only a book carried in from before the window counts as held.
-    heldAfter: next.equity - next.cash + fillCash,
+    heldAfter: heldAfter(next, records, prev.at),
     basis: "inferred",
   };
+}
+
+/**
+ * The third witness (#7729): the later book's net value, less what the window's fills opened. A fill
+ * swapped its cash for positions worth about as much, so its cash is added back — but only for fills
+ * AFTER a reset: the reset cleared what an earlier fill opened (#8064). The reset's instant is not
+ * on either sample, so every split the journal allows is tried (the window's start, then each fill
+ * line's time, that line falling before the split) and the book nearest flat is kept. A position
+ * carried in from before the window and still held is in the later book at every split, so it reads
+ * as held unless the window's own fills net it out — which the single split before #8064 allowed too.
+ */
+function heldAfter(
+  next: EquitySample,
+  records: readonly TradeActivityRecord[],
+  from: string,
+): number {
+  const book = next.equity - next.cash;
+  const fillTimes = records.map((record) => record.at).filter((at) => at > from && at <= next.at);
+  return [from, ...fillTimes]
+    .map((split) => book + fillCashBetween(records, split, next.at))
+    .reduce((nearest, held) => (Math.abs(held) < Math.abs(nearest) ? held : nearest));
 }
 
 /** Cheap pre-check: could this pair carry a flow at all? Equity must have moved beyond tolerance

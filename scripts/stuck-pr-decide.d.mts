@@ -64,6 +64,11 @@ export function latestRequired(
   checkRuns: CheckRun[],
   required: string[],
 ): Map<string, { at: number; run: CheckRun }>;
+/** When every required check last went green on this head (and which arm-gate checks were cancelled), else null. */
+export function greenHead(
+  checkRuns?: CheckRun[],
+  required?: string[],
+): { at: number; unfinished: string[] } | null;
 export function describe(stuck: Stuck): string;
 export function stuckLine(stuck: Stuck[] | null): string;
 /** Is this branch named in an open `platter/` PR's ledger? Built once from the open PR list. */

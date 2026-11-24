@@ -1261,7 +1261,7 @@
       "department": "staff",
       "name": "Admission gate",
       "kind": "gate",
-      "job": "Between ready and a build start: refuses on halt; on conserve unless fast-track; at the in-flight cap (one fast-track may go over it at a time); at the started-plan cap for a fresh plan; and on the surface fence (another build on the same Surface), which fast-track does not bypass. A refused issue keeps ready and holds no lease",
+      "job": "Between ready and a build start: refuses on halt; on conserve unless fast-track; at the in-flight cap (one fast-track may go over it at a time); at the started-plan cap for a fresh plan; and on the surface fence (another build on the same Surface), which fast-track does not bypass. A refused issue keeps ready and holds no lease. After a claim marks its issue in progress it counts again and gives the seat back if it landed past the cap (earliest mark first, pull order inside one second, #7316), so issues readied together never start more builds than the dial allows",
       "wakesOn": "Every claim attempt (feedback, plan, retry sweep, continuation)",
       "speaksOn": "admit / one queue note on the issue",
       "cadence": "Per claim",
