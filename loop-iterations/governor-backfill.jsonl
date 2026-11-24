@@ -4,3 +4,4 @@
 {"date":"2026-11-23","loop":"governor-backfill","before":43,"after":42,"tokensM":1.85,"usd":null,"changed":"behavioral specs for src/server/order-change-review.ts (41 tests), one untested file covered"}
 {"date":"2026-11-24","loop":"governor-backfill","before":43,"after":42,"tokensM":null,"usd":null,"changed":"behavioral specs for src/server/campaign-questions-api.ts (37 tests)"}
 {"date":"2026-11-24","loop":"governor-backfill","before":42,"after":41,"tokensM":null,"usd":null,"changed":"direct behavioral specs for src/companion/known-problems-tool.ts (32 tests)"}
+{"date":"2026-11-24","loop":"governor-backfill","before":41,"after":40,"tokensM":null,"usd":null,"changed":"direct behavioral specs for src/server/option-exit-plan.ts (28 tests)"}
