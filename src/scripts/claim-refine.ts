@@ -29,7 +29,6 @@
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
 import {
   describeNarrowing,
   fencesBackedBy,
@@ -56,6 +55,7 @@ import {
 } from "../playbooks/fence-studies.js";
 import { findPlaybook } from "../playbooks/registry.js";
 import { isCalendarDay } from "../subscriptions/subscription-state.js";
+import { isMain } from "./cli-entry.js";
 
 export const ADOPTIONS_PATH = join(process.cwd(), "src/playbooks/conviction-adoptions.json");
 
@@ -429,5 +429,4 @@ export function main(
   return 0;
 }
 
-const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
-if (isMain) process.exit(main());
+if (isMain(import.meta.url)) process.exit(main());

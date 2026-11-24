@@ -3,3 +3,4 @@
 {"date":"2026-11-23","loop":"governor-dedupe","before":428,"after":424,"tokensM":1.85,"usd":null,"changed":"DATE_RE consolidated from 5 pasted copies into src/domain/time.ts"}
 {"date":"2026-11-23","loop":"governor-dedupe","before":424,"after":420,"tokensM":1.85,"usd":null,"changed":"consolidated DAY_MS (4 pasted copies) into src/domain/time.ts"}
 {"date":"2026-11-24","loop":"governor-dedupe","before":420,"after":416,"tokensM":1.85,"usd":null,"changed":"isText: three trim-check copies became src/domain/is-text.ts; two length-bounded copies became isBoundedText in storage/parse-guards.ts"}
+{"date":"2026-11-24","loop":"governor-dedupe","before":417,"after":414,"tokensM":null,"usd":null,"changed":"isMain: four pasted entrypoint checks became isMain(import.meta.url) in src/scripts/cli-entry.ts"}
