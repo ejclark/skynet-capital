@@ -10,6 +10,7 @@ import {
   MARKET_CLOSED_WORDS,
   MARKET_OPEN_WORDS,
   NO_EVENT_WORDS,
+  NO_TICKET_WORDS,
   type SceneFactsQuery,
   sceneFacts,
 } from "../../src/server/scene-facts.js";
@@ -205,5 +206,23 @@ describe("sceneFacts — one event from the next 14 days", () => {
     expect(
       found(read({ held: ["NBIS"], desk: { id: "desk-1", cash: 50_000 } })).event.questHref,
     ).toBeUndefined();
+    // A scene with a ticket link carries no "no ticket" words.
+    expect(withDesk.event.ticketWords).toBeUndefined();
+  });
+
+  it("says the record holds no ticket when the event names no stock the ticket trades, and supplies none (#8317)", () => {
+    // A market-wide print (symbols []), even with a desk whose cash covers anything: no quest, no
+    // ticket link, and no symbol of the house's choosing — the words say so instead.
+    const market = found(read({ eventId: "cpi-nov", desk: { id: "desk-1", cash: 50_000 } }));
+    expect(market.event.symbols).toEqual([]);
+    expect(market.event.questHref).toBeUndefined();
+    expect(market.event.ticketHref).toBeUndefined();
+    expect(market.event.ticketWords).toBe(NO_TICKET_WORDS);
+    expect(NO_TICKET_WORDS).toMatch(/names no stock the trade ticket trades/);
+    // A name the ticker directory does not know as tradable is the same case.
+    const unknown = event({ id: "zzqx-2026-11-11-print", symbols: ["ZZQX"] });
+    const odd = found(read({ eventId: unknown.id, events: [unknown] }));
+    expect(odd.event.ticketHref).toBeUndefined();
+    expect(odd.event.ticketWords).toBe(NO_TICKET_WORDS);
   });
 });
