@@ -4,6 +4,7 @@ import {
   activeGraduated,
   branchOf,
   check,
+  decidedOf,
   parseGraduated,
   parseLedger,
   prBody,
@@ -161,6 +162,63 @@ describe("Graduated classes: read, write, send back", () => {
     });
     expect(check(md).sendBack).toEqual(["credentials"]);
     expect(activeGraduated(md)).toEqual([]);
+  });
+});
+
+describe("rule 5: a class he reverses more than 1 in 4 times returns to asking", () => {
+  const cls = "engineering gates";
+  const kept = (date: string) => row(date, cls, "decided on his behalf");
+  const reversed = (date: string) => row(date, cls, "miss (reversed)");
+
+  it("reads a decided call's Score as kept or reversed, and nothing else as a decided call", () => {
+    expect(decidedOf("decided on his behalf")).toBe("kept");
+    expect(decidedOf("miss (reversed) <!-- ledger:9 -->")).toBe("reversed");
+    expect(decidedOf("miss")).toBeNull();
+    expect(decidedOf("match")).toBeNull();
+    // a reversal is still a miss for rule 3, so a graduated class is also sent back
+    expect(scoreOf("miss (reversed)")).toBe("miss");
+  });
+
+  it("treats one reversal in a young class as a data point, and a second as a rate", () => {
+    expect(check(doc(kept("2026-11-24"), reversed("2026-11-25"))).tighten).toEqual([]);
+    const two = check(doc(kept("2026-11-24"), reversed("2026-11-25"), reversed("2026-11-26")));
+    expect(two.tighten).toEqual([cls]);
+    expect(two.classes[0].tightenBack).toBe("2 of the last 3 decided calls reversed");
+  });
+
+  it("reads a full class over its last 8 decided calls: 2 reversals hold, 3 return it to asking", () => {
+    const days = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10"];
+    const at = (d: string) => `2026-12-${d}`;
+    // two old reversals fall out of the window behind eight kept calls
+    const aged = doc(
+      reversed(at("01")),
+      reversed(at("02")),
+      ...days.slice(2).map((d) => kept(at(d))),
+    );
+    expect(check(aged).tighten).toEqual([]);
+    const holds = doc(
+      ...days.slice(0, 6).map((d) => kept(at(d))),
+      reversed(at("07")),
+      reversed(at("08")),
+    );
+    expect(check(holds).tighten).toEqual([]);
+    const trips = doc(
+      ...days.slice(0, 5).map((d) => kept(at(d))),
+      ...days.slice(5, 8).map((d) => reversed(at(d))),
+    );
+    expect(check(trips).tighten).toEqual([cls]);
+  });
+
+  it("counts a graduated class only from its graduation, so graduating again resets the window", () => {
+    const md = withGraduated(
+      doc(reversed("2026-11-01"), reversed("2026-11-02"), kept("2026-11-05")),
+      {
+        cls,
+        date: "2026-11-04",
+        pr: "x",
+      },
+    );
+    expect(check(md).tighten).toEqual([]);
   });
 });
 
