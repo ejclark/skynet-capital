@@ -172,6 +172,11 @@ export function planScorecardLines(card) {
     lines.push(
       `Chat sensor recall: not labelled yet (${c.messages} member messages to Moneypenny; the labels go in chat-labels.json).`,
     );
+  } else if (c.voiced === 0) {
+    lines.push(
+      `Chat sensor recall: nothing to recall yet. No member told Moneypenny the app was in their way: all ${c.messages - c.unlabelled} labelled messages were lookups or the like` +
+        (c.unlabelled ? `; ${c.unlabelled} not labelled.` : "."),
+    );
   } else {
     lines.push(
       `Chat sensor recall: of ${c.voiced} things members told Moneypenny that were the app getting in their way, ${c.drafted} became a filing or follow-up draft (${pct(c.rate)}, ${range(c.wilson)}). ${c.messages} member messages in all` +

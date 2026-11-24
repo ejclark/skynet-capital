@@ -158,6 +158,16 @@ describe("planScorecardLines — the rows as the readout prints them", () => {
     );
     expect(text).toContain("Chat sensor recall: not labelled yet (3 member messages");
   });
+  it("says there is nothing to recall when no labelled message voiced friction", () => {
+    const labels = [A, B].flatMap((s) =>
+      s.chat
+        .filter((c) => c.kind === "chat")
+        .map((c) => ({ session: s.rel, n: c.n, friction: false })),
+    );
+    const text = planScorecardLines(planScorecard({ sessions: SESSIONS, labels })).join("\n");
+    expect(text).toContain("Chat sensor recall: nothing to recall yet.");
+    expect(text).toContain("all 3 labelled messages were lookups");
+  });
 });
 
 describe("the readout carries the plan's rows in its scorecard section", () => {
