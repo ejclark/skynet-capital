@@ -108,11 +108,17 @@ export interface PlaceOrderParams {
   readonly qty: number;
   readonly side: Side;
   /** Defaults to "market" — every existing caller that omits this keeps today's behavior. */
-  readonly type?: "market" | "limit" | "stop";
-  /** Required when `type` is "limit". */
+  readonly type?: "market" | "limit" | "stop" | "stop_limit";
+  /** Required when `type` is "limit" or "stop_limit". */
   readonly limit_price?: number;
-  /** Required when `type` is "stop". */
+  /** Required when `type` is "stop" or "stop_limit". */
   readonly stop_price?: number;
+  /** A bracket (#8249): the entry plus a take-profit and a stop the broker holds, one order. Sent
+   *  only with both legs; omitted, the body is byte-for-byte what it was before. */
+  readonly bracket?: {
+    readonly takeProfit: number;
+    readonly stop: number;
+  };
   /** Day or good-till-cancelled. Omit and the client keeps its standing default: market → day,
    *  held (limit/stop) → gtc. The desk passes the member's own choice through (#3407 P1). */
   readonly time_in_force?: "day" | "gtc";
@@ -298,6 +304,15 @@ export class AlpacaTradingClient {
       time_in_force: params.time_in_force ?? (type === "market" ? "day" : "gtc"),
       ...(params.limit_price !== undefined ? { limit_price: params.limit_price } : {}),
       ...(params.stop_price !== undefined ? { stop_price: params.stop_price } : {}),
+      // Alpaca's bracket shape: one order, two child legs it holds until the entry fills. Never
+      // `extended_hours` — a bracket is refused outside regular hours, and its exits act only in them.
+      ...(params.bracket
+        ? {
+            order_class: "bracket",
+            take_profit: { limit_price: params.bracket.takeProfit },
+            stop_loss: { stop_price: params.bracket.stop },
+          }
+        : {}),
     });
     return ensureOk<AlpacaOrder>(response);
   }

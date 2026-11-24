@@ -26,6 +26,7 @@ import type { AlertDismissalsPort } from "../ports/alert-dismissals.js";
 import type { WatchlistPort } from "../ports/watchlist.js";
 import type { IvHistoryPort } from "../research/iv-record.js";
 import type { SpotCheckPort } from "../research/spot-checks.js";
+import type { ExitAtEntry } from "../trading/exit-at-entry-flag.js";
 import type { AccountAdmin } from "./account-forms.js";
 import type { AlpacaConnect } from "./alpaca-connect-routes.js";
 import type { Authenticator } from "./auth/authenticator.js";
@@ -353,6 +354,10 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
   /** The game-master pilot's setting (#8191) — specs only. Absent, the committed
    *  `GAME_MASTER_PILOT` in `companion/game-master-flag.ts` is the setting; boot never sets this. */
   readonly gameMasterPilot?: GameMasterPilot;
+  /** The exit-at-entry setting (#8249). Absent, the committed `EXIT_AT_ENTRY` in
+   *  `trading/exit-at-entry-flag.ts` is the setting; the boot sets it only from
+   *  `exitAtEntrySetting`, which reads an override on the offline writes boot alone. */
+  readonly exitAtEntry?: ExitAtEntry;
   /** What waits on the owner's decision or merge (`owner-queue.ts`); read into Moneypenny's turn
    *  only when `isOwnerEmail` passes for the session. Omit when the feedback token is unset. */
   readonly readOwnerQueue?: ReadOwnerQueue;
