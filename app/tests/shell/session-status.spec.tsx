@@ -390,7 +390,7 @@ describe("the status line on the broker's hours", () => {
   it("says the hours are the exchange's published table when the broker's read fails", async () => {
     mount("2026-11-26T15:00:00Z");
     fireEvent.click(line());
-    expect(within(panel()).getByText(TABLE)).toBeInTheDocument();
+    expect(await within(panel()).findByText(TABLE)).toBeInTheDocument();
     // the table knows Thanksgiving too: the clock still never guesses open
     expect(within(panel()).getByRole("timer")).toHaveAccessibleName(
       "Market closed, opens Fri 9:30 ET",
