@@ -249,9 +249,13 @@ export async function serveDraftOrderApi(
   }
 
   const snapshot = config.hub.getState().participants.find((p) => p.id === request.participantId);
-  const account: DraftAccountContext = snapshot
-    ? { cash: snapshot.cash, positions: snapshot.positions }
-    : { cash: 0, positions: [] };
+  // UNREAD IS NOT EMPTY (#8335): a row whose broker read failed (or no row at all) carries $0 and
+  // no positions as placeholders, so the check says the read failed instead of "not enough cash"
+  // or "you hold 0 shares" for a sold call's cover.
+  const account: DraftAccountContext =
+    snapshot && !snapshot.error
+      ? { cash: snapshot.cash, positions: snapshot.positions }
+      : { cash: 0, positions: [], accountUnread: true };
   const progression = config.progression
     ? await config.progression.view(
         requesterId,
