@@ -1,9 +1,21 @@
+import { spawnSync } from "node:child_process";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import { crc32, deflateRawSync } from "node:zlib";
 import {
   baselinePath,
   classify,
   commitMessage,
   type FileReport,
+  fetchShots,
   pickRun,
   plan,
   type Report,
@@ -13,10 +25,12 @@ import {
   reportZipFrom,
   type ScreenshotRow,
   screenshotVerdict,
+  shotsRef,
   staleForApply,
   type Test,
   unzip,
 } from "../../scripts/rebaseline-from-ci.mjs";
+import { hermeticGitEnv } from "../support/hermetic-git.js";
 
 // The re-baseline round trip, as one command (2026-10-10: #5079 and #5080 both went red on their
 // first CI run because screenshot baselines are Linux-only and builders run on macOS). These pin
@@ -401,5 +415,79 @@ describe("rebaseline-from-ci — the commit", () => {
     expect(subject.length).toBeLessThanOrEqual(100);
     for (const f of files) expect(body).toContain(`- ${f}`);
     for (const line of body.split("\n")) expect(line.length).toBeLessThanOrEqual(100);
+  });
+});
+
+// #8295: a cloud session's proxy refuses the artifact's blob host, so CI's `ci shots` job pushes the
+// report to a git ref instead. These build that ref the way the job does — a fresh repo, one
+// commit, pushed to refs/ci-shots/pr-<n>/run-<id> on a bare origin — and read it back.
+describe("rebaseline-from-ci --from-git — reading the report CI pushed to a ref", () => {
+  const git = (cwd: string, ...args: string[]) => {
+    const r = spawnSync("git", args, { cwd, encoding: "utf8", env: hermeticGitEnv() });
+    if (r.status !== 0) throw new Error(`git ${args.join(" ")}: ${r.stderr}`);
+    return r.stdout.trim();
+  };
+  const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 1, 2, 3]);
+
+  /** A bare origin holding one ref with these files, and a clone of it to fetch from. */
+  function originWith(ref: string, files: Record<string, string | Buffer>) {
+    const root = mkdtempSync(join(tmpdir(), "ci-shots-"));
+    const origin = join(root, "origin.git");
+    git(root, "init", "--quiet", "--bare", origin);
+    const job = join(root, "job");
+    mkdirSync(job);
+    git(job, "init", "--quiet");
+    for (const [name, body] of Object.entries(files)) {
+      mkdirSync(dirname(join(job, name)), { recursive: true });
+      writeFileSync(join(job, name), body);
+    }
+    git(job, "add", "-A");
+    git(job, "-c", "user.name=ci", "-c", "user.email=ci@example.invalid", "commit", "-qm", "shots");
+    git(job, "push", "--quiet", origin, `HEAD:${ref}`);
+    const session = join(root, "session");
+    git(root, "init", "--quiet", session);
+    git(session, "remote", "add", "origin", origin);
+    const reportDir = join(root, "out", "report");
+    return { session, reportDir };
+  }
+
+  it("names the ref the job pushes to after the PR and the run", () => {
+    expect(shotsRef(8288, 19771234567)).toBe("refs/ci-shots/pr-8288/run-19771234567");
+  });
+
+  it("lays the ref out as the artifact download does, so the same rows come out", () => {
+    const { session, reportDir } = originWith(shotsRef(7, 42), {
+      "index.html": indexHtml(ARTIFACT),
+      "data/1b.png": PNG,
+    });
+    const html = fetchShots({ pr: 7, runId: 42, reportDir, cwd: session });
+    expect(readFileSync(join(reportDir, "data/1b.png"))).toEqual(PNG);
+    const fromGit = classify(readReport(unzip(reportZipFrom(html))));
+    const fromArtifact = classify(readReport(unzip(reportZipFrom(indexHtml(ARTIFACT)))));
+    expect(fromGit).toEqual(fromArtifact);
+    // The same refusals ride along: the logic failure and the unsettled page are still others.
+    expect(fromGit.others.map((o) => o.title)).toContain(
+      "desk › matches the known-good page screenshot",
+    );
+  });
+
+  it("says the run has no ref, rather than reading nothing as all-clear", () => {
+    const { session, reportDir } = originWith(shotsRef(7, 42), { "index.html": "x" });
+    expect(() => fetchShots({ pr: 7, runId: 43, reportDir, cwd: session })).toThrow(
+      /no refs\/ci-shots\/pr-7\/run-43 on origin/,
+    );
+    expect(existsSync(reportDir)).toBe(false);
+  });
+
+  it("refuses a ref holding anything but the report page and its PNGs, writing nothing", () => {
+    const { session, reportDir } = originWith(shotsRef(7, 42), {
+      "index.html": indexHtml(ARTIFACT),
+      "data/1b.png": PNG,
+      "data/run.sh": "echo hi",
+    });
+    expect(() => fetchShots({ pr: 7, runId: 42, reportDir, cwd: session })).toThrow(
+      /holds data\/run\.sh, not a report file/,
+    );
+    expect(existsSync(reportDir) && readdirSync(reportDir).length).toBeFalsy();
   });
 });
