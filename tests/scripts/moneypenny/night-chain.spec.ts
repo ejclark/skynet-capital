@@ -286,13 +286,33 @@ describe("a wake when the token's API budget is spent", () => {
     expect(() => wakeNext({ freed: 4469, peek, dispatch: () => undefined })).toThrow(/HTTP 404/);
   });
 
-  it("still fails when the dispatch itself is refused, since that is the write", () => {
+  // Run 45333646409 (05:29Z): the peek named #8225, then `gh workflow run` itself answered the
+  // 403, and the red run reopened #6942 a 27th time. Red recovers nothing; the next push dispatches.
+  it("skips with a warning when the dispatch itself hits the budget, naming the pick it held", () => {
+    const SPENT_DISPATCH = new Error(
+      "Command failed: gh workflow run moneypenny-events.yml --ref main -f command=scan\nHTTP 403: API rate limit exceeded for installation ID 157155153.",
+    );
+    let tries = 0;
+    const result = wakeNext({
+      freed: 8213,
+      peek: () => ({ number: 8225 }) as never,
+      dispatch: () => {
+        tries++;
+        throw SPENT_DISPATCH;
+      },
+    });
+    expect(tries).toBe(1);
+    expect(result).toMatchObject({ dispatched: false, pick: 8225 });
+    expect(result.line).toMatch(/#8225 is admissible, but the API budget is spent/);
+  });
+
+  it("still fails when the dispatch is refused for anything but the budget", () => {
     const dispatch = () => {
-      throw SPENT;
+      throw new Error("Command failed: gh workflow run\nHTTP 404: workflow not found");
     };
     expect(() =>
       wakeNext({ freed: 4469, peek: () => ({ number: 4616 }) as never, dispatch }),
-    ).toThrow(/rate limit/);
+    ).toThrow(/HTTP 404/);
   });
 });
 

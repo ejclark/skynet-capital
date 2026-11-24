@@ -75,6 +75,10 @@ export interface CompanionTurnInput {
   /** The screenshot store's `load`, bound by the route (#6007 slice 2). Absent: a message's
    *  screenshot ids ride as the "no longer kept" note, and the turn still answers. */
   readonly loadScreenshot?: LoadScreenshot;
+  /** A game-master scene turn (#8191): the scene rules ride as a second cached system block and
+   *  `get_scene_facts` joins the tools. Set ONLY by the route, after `game-master-flag.ts` admits
+   *  the session; a request's `mode` alone never sets it. */
+  readonly gameMaster?: boolean;
 }
 
 /** What kind of failure an `onError` was (#6214). `refused`: the model declined — any partial
@@ -175,6 +179,7 @@ async function streamFinalReply(
   working: readonly unknown[],
   handlers: CompanionHandlers,
   callsSoFar = 0,
+  gameMaster = false,
 ): Promise<void> {
   if (callsSoFar === 0 && handlers.budget && !handlers.budget()) {
     handlers.onError(BUDGET_SPENT_MESSAGE);
@@ -192,8 +197,8 @@ async function streamFinalReply(
         model,
         max_tokens: MAX_TOKENS_PER_REPLY,
         ...effortFor(model),
-        system: systemBlocks(volatile),
-        tools: toolsFor(participantId),
+        system: systemBlocks(volatile, gameMaster),
+        tools: toolsFor(participantId, gameMaster),
         tool_choice: { type: "none" },
         messages,
       },
@@ -251,7 +256,7 @@ export function createCompanionChat(
     const canUseDesk = Boolean(config.tools && input.participantId);
     const toolsNote = canUseDesk
       ? "This member has a linked account — the read-only tools describe their own account."
-      : "This member has no linked account yet — the account lookups are not available; answer from general knowledge and the member context, and don't claim to see their positions. draft_feedback, get_work_status, get_roadmap, get_known_problems and get_upcoming_events still work.";
+      : `This member has no linked account yet — the account lookups are not available; answer from general knowledge and the member context, and don't claim to see their positions. draft_feedback, get_work_status, get_roadmap, get_known_problems and get_upcoming_events still work${input.gameMaster ? ", and so does get_scene_facts" : ""}.`;
     const volatile = input.context ? `${toolsNote}\n\n${input.context}` : toolsNote;
     const initial = await withScreenshots(trimHistory(input.messages), input.loadScreenshot);
 
@@ -270,6 +275,7 @@ export function createCompanionChat(
       },
       canUseDesk ? input.participantId : undefined,
       handlers,
+      input.gameMaster === true,
     );
     if (outcome.kind !== "continue") return; // already answered or errored via `handlers`
     await streamFinalReply(
@@ -281,6 +287,7 @@ export function createCompanionChat(
       outcome.working,
       handlers,
       outcome.calls,
+      input.gameMaster === true,
     );
   };
 }

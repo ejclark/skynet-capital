@@ -10,6 +10,7 @@ import type { HouseRosterReport } from "../autonomous/house-roster-wire.js";
 import type { PlaybookFunnelView } from "../autonomous/playbook-funnel.js";
 import type { SignalWindows } from "../autonomous/signal-windows.js";
 import type { CompanionTurn } from "../companion/companion-chat.js";
+import type { GameMasterPilot } from "../companion/game-master-flag.js";
 import type { Lesson } from "../domain/campaign-lessons.js";
 import type { OrderIntent, PlaybookVerdict } from "../domain/types.js";
 import type { AlpacaNewsClient } from "../news/alpaca-news-client.js";
@@ -26,6 +27,7 @@ import type { WatchlistPort } from "../ports/watchlist.js";
 import type { IvHistoryPort } from "../research/iv-record.js";
 import type { SpotCheckPort } from "../research/spot-checks.js";
 import type { AccountAdmin } from "./account-forms.js";
+import type { AlpacaConnect } from "./alpaca-connect-routes.js";
 import type { Authenticator } from "./auth/authenticator.js";
 import type { AuthoredPlayStore } from "./authored-play-store.js";
 import type { BookHealthHistoryPort } from "./book-health-history-store.js";
@@ -115,6 +117,12 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * registers a new account. Omit to disable the feature (e.g. offline mode).
    */
   readonly addParticipant?: (input: AddParticipantInput) => Promise<AddResult>;
+  /**
+   * Connect with Alpaca (#8250): the OAuth account link the Onboarding chapter offers in place of
+   * a key paste. Present only when the app's secrets are set and its authorize URL asks for a
+   * paper account (`alpaca-connect-wiring.ts`); omit and the chapter keeps the key-paste guide.
+   */
+  readonly alpacaConnect?: AlpacaConnect;
   /**
    * Self-service credential rotation. When provided, `GET /rotate` serves a compact form and
    * `POST /rotate` swaps an EXISTING account's key/secret in place — the sanctioned path for
@@ -342,6 +350,9 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * picker, whose authorization has no such bypass. Omit when OAuth isn't configured.
    */
   readonly isOwnerEmail?: (email: string) => boolean;
+  /** The game-master pilot's setting (#8191) — specs only. Absent, the committed
+   *  `GAME_MASTER_PILOT` in `companion/game-master-flag.ts` is the setting; boot never sets this. */
+  readonly gameMasterPilot?: GameMasterPilot;
   /** What waits on the owner's decision or merge (`owner-queue.ts`); read into Moneypenny's turn
    *  only when `isOwnerEmail` passes for the session. Omit when the feedback token is unset. */
   readonly readOwnerQueue?: ReadOwnerQueue;

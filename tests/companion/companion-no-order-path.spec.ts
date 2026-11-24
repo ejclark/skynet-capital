@@ -113,6 +113,8 @@ describe("behavioral: the dispatcher refuses every order-shaped or adversarial a
       "get_play_catalog",
       "get_research_on",
       "get_roadmap",
+      // #8191: one game-master scene's facts — calendar and ledgers only, declared only in a scene.
+      "get_scene_facts",
       // #7547: sizes three options and links each to the ticket's REVIEW screen; places nothing.
       "get_sized_suggestions",
       "get_structures_for_outlook",

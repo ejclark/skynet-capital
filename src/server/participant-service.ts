@@ -8,7 +8,13 @@ import { isAllowedTimezone } from "../participants/allowed-timezones.js";
 import type { Participant, ParticipantKind } from "../participants/participant.js";
 import type { ParticipantStore } from "../participants/participant-store.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
-import { type AddRefusal, refuseCredentials, refuseOffStartingLine } from "./onboarding-gates.js";
+import {
+  type AddRefusal,
+  formatUsd,
+  LEAGUE_STARTING_EQUITY_USD,
+  refuseCredentials,
+  refuseOffStartingLine,
+} from "./onboarding-gates.js";
 import { personaClasses } from "./persona-classes.js";
 
 /** What the `/add` form submits. Credentials must be a working Alpaca **paper** key. */
@@ -22,6 +28,28 @@ export interface AddParticipantInput {
   readonly timezone?: string;
   /** The signed-in member's session email, stamped as owner — from the route wiring, never the form. */
   readonly ownerEmail?: string;
+}
+
+/** What the Connect-with-Alpaca callback submits (#8250) — the token, never a key pair. */
+export interface AddConnectedInput {
+  readonly displayName: string;
+  readonly timezone?: string;
+  /** The session email that started AND finished the connect — the route checks both match. */
+  readonly ownerEmail: string;
+  /** The OAuth access token, fresh from the code exchange. Stored encrypted, never echoed. */
+  readonly accessToken: string;
+}
+
+/** The one sentence every failed connect shows — never Alpaca's own error text. */
+export const CONNECT_FAILED = "Couldn't finish connecting with Alpaca. Try again.";
+
+interface NewAccountPlan {
+  readonly ok: true;
+  readonly id: string;
+  readonly displayName: string;
+  readonly kind: ParticipantKind;
+  readonly personaId?: string;
+  readonly timezone?: string;
 }
 
 export type AddResult =
@@ -92,15 +120,9 @@ export class ParticipantService {
 
   async addParticipant(input: AddParticipantInput): Promise<AddResult> {
     // Checked first, before any credential is touched: if we cannot encrypt it, we do not want it.
-    if (!this.deps.store.canStoreSecurely()) {
-      return {
-        ok: false,
-        error:
-          "Onboarding is disabled: this server has no credential encryption key configured. Ask the host to set SKYNET_STORE_SECRET.",
-      };
-    }
-    const displayName = input.displayName?.trim();
-    if (!displayName) {
+    const insecure = this.refuseInsecureStore();
+    if (insecure) return insecure;
+    if (!input.displayName?.trim()) {
       return { ok: false, error: "A display name is required." };
     }
     // Missing halves and live keys are refused here, before any network call (onboarding-gates.ts).
@@ -108,6 +130,92 @@ export class ParticipantService {
     if (credentialRefusal) {
       return credentialRefusal;
     }
+    const plan = this.planNewAccount(input);
+    if (!plan.ok) return plan;
+    return await this.admit(
+      plan,
+      this.credentialsFrom(input.apiKey, input.apiSecret),
+      input.ownerEmail,
+      "That key was rejected by Alpaca. Double-check it's a valid paper key.",
+    );
+  }
+
+  /**
+   * The Connect-with-Alpaca twin of `addParticipant` (#8250): the credential is an OAuth access
+   * token the callback just exchanged, so there is no key pair to shape-check — `refuseCredentials`'
+   * `PK` test has nothing to read. Everything else is the same door: encryption required, the
+   * name/timezone/collision checks, and the $1,000,000 starting line, verified against Alpaca
+   * before anything is stored. Always a human account (a bot is an operator's paste, not a
+   * member's consent screen), always owned by the session that started the connect.
+   */
+  async addConnectedParticipant(input: AddConnectedInput): Promise<AddResult> {
+    const insecure = this.refuseInsecureStore();
+    if (insecure) return insecure;
+    if (!input.displayName?.trim()) {
+      return { ok: false, error: "A display name is required." };
+    }
+    if (!input.accessToken) return { ok: false, error: CONNECT_FAILED };
+    const plan = this.planNewAccount({ ...input, kind: "human" });
+    if (!plan.ok) return plan;
+    const result = await this.admit(
+      plan,
+      {
+        apiKey: "",
+        apiSecret: "",
+        accessToken: input.accessToken,
+        ...(this.deps.baseUrl ? { baseUrl: this.deps.baseUrl } : {}),
+      },
+      input.ownerEmail,
+      CONNECT_FAILED,
+    );
+    if (!result.ok && result.reason === "balance" && result.found !== undefined) {
+      // The pasted-key path walks a member through resetting the balance. A connected account
+      // can't be reset from here, and Alpaca has no reset to $1M on an existing paper account
+      // either — the honest fix is a fresh paper account at the starting line.
+      return {
+        ...result,
+        error: `Your paper account reports ${formatUsd(result.found)}. Everyone starts at exactly ${formatUsd(LEAGUE_STARTING_EQUITY_USD)}: open a new paper account at ${formatUsd(LEAGUE_STARTING_EQUITY_USD)} in Alpaca, then connect that one.`,
+      };
+    }
+    return result;
+  }
+
+  /**
+   * The checks a connect can fail BEFORE the member leaves for Alpaca's consent screen — no
+   * network, nothing stored. The start route runs them so a taken name or a missing encryption
+   * key is said on our page, not after a round trip; `addConnectedParticipant` runs them again
+   * at the callback because the board may have changed in between.
+   */
+  refuseConnectStart(input: {
+    readonly displayName: string;
+    readonly timezone?: string;
+  }): AddRefusal | undefined {
+    const insecure = this.refuseInsecureStore();
+    if (insecure) return insecure;
+    if (!input.displayName?.trim()) {
+      return { ok: false, error: "A display name is required." };
+    }
+    const plan = this.planNewAccount({ ...input, kind: "human" });
+    return plan.ok ? undefined : plan;
+  }
+
+  private refuseInsecureStore(): AddRefusal | undefined {
+    if (this.deps.store.canStoreSecurely()) return undefined;
+    return {
+      ok: false,
+      error:
+        "Onboarding is disabled: this server has no credential encryption key configured. Ask the host to set SKYNET_STORE_SECRET.",
+    };
+  }
+
+  /** Name, kind, persona, timezone and id collision — every network-free check an add makes. */
+  private planNewAccount(input: {
+    readonly displayName: string;
+    readonly kind?: ParticipantKind;
+    readonly personaId?: string;
+    readonly timezone?: string;
+  }): NewAccountPlan | AddRefusal {
+    const displayName = input.displayName.trim();
     const kind: ParticipantKind = input.kind ?? "human";
     const personaId = kind === "bot" ? input.personaId?.trim() : undefined;
     const personaRefusal = refusePersona(kind, personaId);
@@ -134,22 +242,39 @@ export class ParticipantService {
         error: `An account named "${displayName}" is already on the board. If it's yours, don't re-add it — a regenerated Alpaca key goes in Settings → Account → Rotate Alpaca credentials, and linking your sign-in to the account is a separate step a league owner does for you, which never touches keys. If it isn't yours, pick a different display name.`,
       };
     }
+    return {
+      ok: true,
+      id,
+      displayName,
+      kind,
+      ...(personaId ? { personaId } : {}),
+      ...(timezone ? { timezone } : {}),
+    };
+  }
 
+  /** Verify against Alpaca at the starting line, then store, show and stream — add's shared tail. */
+  private async admit(
+    plan: NewAccountPlan,
+    credentials: AlpacaCredentials,
+    ownerEmail: string | undefined,
+    rejectedError: string,
+  ): Promise<AddResult> {
+    const { id, displayName, kind, personaId, timezone } = plan;
     const participant: Participant = {
       id,
       displayName,
       kind,
-      credentials: this.credentialsFrom(input.apiKey, input.apiSecret),
+      credentials,
       ...(personaId ? { personaId } : {}),
       ...(timezone ? { timezone } : {}),
       // Humans AND bots adopt the adder as owner. An unclaimed bot has nobody for
       // `refuseRotation`'s store tier to check against, so ANY signed-in member could silently
       // swap a member-added bot's credentials (2026-08-28) — the stamp closes that the same way
       // it always has for humans.
-      ...(input.ownerEmail ? { ownerEmail: input.ownerEmail } : {}),
+      ...(ownerEmail ? { ownerEmail } : {}),
     };
 
-    const verified = await this.verify(participant, true);
+    const verified = await this.verify(participant, true, rejectedError);
     if (!verified.ok) {
       return verified;
     }
@@ -321,6 +446,7 @@ export class ParticipantService {
   private async verify(
     participant: Participant,
     requireStartingLine = false,
+    rejectedError = "That key was rejected by Alpaca. Double-check it's a valid paper key.",
   ): Promise<{ ok: true; snapshot: ParticipantSnapshot } | AddRefusal> {
     try {
       const snapshot = await buildParticipantSnapshot(
@@ -328,10 +454,7 @@ export class ParticipantService {
         this.deps.clientFactory(participant),
       );
       if (snapshot.error) {
-        return {
-          ok: false,
-          error: "That key was rejected by Alpaca. Double-check it's a valid paper key.",
-        };
+        return { ok: false, error: rejectedError };
       }
       const offLine = requireStartingLine ? refuseOffStartingLine(snapshot.equity) : undefined;
       return offLine ?? { ok: true, snapshot };

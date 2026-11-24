@@ -25,7 +25,9 @@ export type CompanionFixtureCategory =
   | "assess"
   | "research"
   | "delegate"
-  | "evolve";
+  | "evolve"
+  // The game-master scene pilot (#8191): a scene set from the record, choices never ranked.
+  | "scene";
 
 export interface CompanionFixture {
   readonly id: string;
@@ -42,6 +44,9 @@ export interface CompanionFixture {
   /** Run as a linked session with the real, full tool list, reads answered from these stubs, and
    *  the calls scored against `expect` (#7286 slice 5, `tool-use.ts`). Absent: deskless, as before. */
   readonly toolUse?: FixtureToolUse;
+  /** Run as a game-master scene turn (#8191): the scene rules block and `get_scene_facts` join the
+   *  request, exactly as the chat route sends them once the pilot setting admits the session. */
+  readonly gameMaster?: true;
 }
 
 /** Wrap a real `deriveOnboarding()` result into an `OnboardingView` — the shape `memberContext()`

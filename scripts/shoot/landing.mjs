@@ -1,9 +1,13 @@
-// Visual harness for the landing page (/app/, #7077), Campaign mission control since #7487: one window
+// Visual harness for the home screen (/app/, #8189) and Campaign (/app/campaign; the landing page
+// of #7077, Campaign mission control since #7487): one window
 // at a time — Overview (the question box, your next step, the rest at a glance), Market (the whole
 // market), Calendar (R&D's market calendar over one-line stories and events) — from the REAL built
 // shell over a stub API. The
 // edition is the checked-in one, read through the same `editionView` the server answers with, at a
 // pinned instant so its dated items are cut the same way every run. Frames:
+//   · home-phone             — 390, the home screen: the tower's still, "Needs you" (two positions
+//                              to review, the best quest), the five app tiles two to a row (#8189)
+//   · home-desktop           — 1280, the home with room: the taller tower box, the tiles in one row
 //   · landing-phone-overview — 390, the first screen: the trail, the Overview window, its ask box,
 //                              your next step and the rest at a glance (#7487)
 //   · landing-phone          — 390, the Market window: all 12 fund rows (Lines, Week) with their
@@ -36,6 +40,33 @@ const { page, origin, shoot, close } = await openShell({
   hasTouch: true,
   stubs: {
     "/api/edition": view,
+    // The home's "Needs you" (#8189): one paper account, two positions off their plan, one quest.
+    "/api/settings": { accounts: [{ id: "paper-1", name: "Paper", kind: "human" }] },
+    "/api/desk/paper-1": {
+      generatedAt: "2026-11-08T15:00:00Z",
+      desk: {
+        id: "paper-1",
+        name: "Paper",
+        kind: "human",
+        positions: [
+          { symbol: "NVDA", isOption: false, quantity: "10", totalPlRaw: -42, returnPct: "-3.1%" },
+          { symbol: "AMD", isOption: false, quantity: "5", totalPlRaw: -12, returnPct: "-1.4%" },
+          { symbol: "AAPL", isOption: false, quantity: "3", totalPlRaw: 20, returnPct: "+2.0%" },
+        ],
+      },
+    },
+    "/api/quests": {
+      available: true,
+      asOf: "2026-11-08T15:00:00Z",
+      unread: [],
+      quests: [
+        {
+          source: "position",
+          houseCall: "take",
+          move: { symbol: "AAPL", label: "Sell a covered call on AAPL" },
+        },
+      ],
+    },
     // One question a member asked in the campaign, so the frame shows the list (#6949 slice 6).
     "/api/campaigns/questions": {
       campaign: "ai-buildout",
@@ -60,6 +91,11 @@ const seg = (label, name) =>
   page.getByRole("group", { name: label }).getByRole("button", { name, exact: true });
 
 await page.goto(`${origin}/app/`);
+await page.locator(".home-need").first().waitFor();
+await page.waitForTimeout(500);
+await shoot("home-phone");
+
+await page.goto(`${origin}/app/campaign`);
 await page.evaluate(() => window.localStorage.removeItem("skynet.landing.sector-look"));
 await page.reload();
 await page.locator(".mctl-window").waitFor();
@@ -107,15 +143,20 @@ await shoot("landing-phone-ask");
 
 await page.setViewportSize({ width: 1280, height: 900 });
 await page.goto(`${origin}/app/`);
+await page.locator(".home-need").first().waitFor();
+await page.waitForTimeout(1500); // the tower frame compiles and lays over its box
+await shoot("home-desktop");
+
+await page.goto(`${origin}/app/campaign`);
 await page.locator(".mctl-rail").waitFor();
 await page.waitForTimeout(500);
 await shoot("landing-desktop-overview");
 
-await page.goto(`${origin}/app/?w=market`);
+await page.goto(`${origin}/app/campaign?w=market`);
 await page.locator(".sectors-rows--lines").waitFor();
 await shoot("landing-desktop");
 
-await page.goto(`${origin}/app/?w=calendar`);
+await page.goto(`${origin}/app/campaign?w=calendar`);
 await page.locator(".ecal").waitFor();
 
 await page.evaluate(() => {

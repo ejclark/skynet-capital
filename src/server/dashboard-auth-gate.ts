@@ -72,7 +72,7 @@ function isAuthorized(url: string, password?: string): boolean {
 }
 
 /** External origin of the request (honors Fly's x-forwarded-proto); `SKYNET_PUBLIC_URL` overrides it. */
-function baseUrlFrom(req: IncomingMessage): string {
+export function baseUrlFrom(req: IncomingMessage): string {
   const proto = (req.headers["x-forwarded-proto"] as string) ?? "http";
   const host = req.headers.host ?? "localhost";
   return `${proto}://${host}`;

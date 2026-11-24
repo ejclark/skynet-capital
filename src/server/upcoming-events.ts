@@ -108,7 +108,8 @@ export function withLedger(root: string, event: MarketEvent, asOf: string): Fast
   }
 }
 
-function rowOf(item: FastTrackEvent, held: readonly string[]): UpcomingEventRow {
+/** One ranked event as the chat reads it; the scene tool (`scene-facts.ts`) reads the same row. */
+export function rowOf(item: FastTrackEvent, held: readonly string[]): UpcomingEventRow {
   const { event } = item;
   const mine = event.symbols.filter((s) => held.includes(s));
   return {
