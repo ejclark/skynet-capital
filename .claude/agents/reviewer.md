@@ -50,8 +50,17 @@ whether it's ready.
      duplication gates' job (`docs/COACHES.md`), and re-litigating it here duplicates their function.
    - For every check the diff adds or changes, name the signal it reads against the real effect it
      claims, and report it when the signal can be true while the effect is not.
+   - For every check that treats a declared list, event name, status string or field name as proof of
+     a fact, open the real artifact or a live payload it describes and compare it with the declared
+     set; report the check when the two can differ, or name the read you could not make (never
+     create an event to get one). A fixture the PR hand-wrote is not that comparison (judge it as a
+     stand-in under the test question above); one whose spec says where it was recorded is.
    - For every read that feeds a verdict, say what it returns when it fails or its window holds no
      sample, and report it if that equals the all-clear answer.
+   - When the diff adds code that parses or windows real repo history (PR bodies, git log, digests),
+     replay it over the last 20 to 50 real merged PRs or commits on `origin/main` and report any it
+     drops, splits or leaves out of every window. A spec built from one hand-made shape, or a window
+     start given as a date where a commit instant exists, is not that proof.
    - When the diff adds a new way to close, park, label or exempt something, grep every reader of that
      state and say what each now sees.
    - For every test a diff uses to decide 'this is already done or in flight' (a file exists, an id was

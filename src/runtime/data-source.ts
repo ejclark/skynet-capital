@@ -35,7 +35,12 @@ interface StartStreamsInput {
   /** Durable trade-activity capture, fed by each account's trade_updates stream (live mode only). */
   readonly onActivity?: ActivitySink;
   readonly onStatus?: (channel: string, status: string) => void;
+  /** A reopened fill stream is listening again after a drop (#8251) — re-read the gap. */
+  readonly onResume?: StreamResumeSink;
 }
+
+/** One account's fill stream is listening again; `droppedAt` (ISO) is when it first dropped. */
+export type StreamResumeSink = (participant: Participant, droppedAt: string) => void;
 
 /**
  * The one seam that decides whether the dashboard/autonomous loop talks to Alpaca or to
@@ -72,6 +77,7 @@ export interface DataSource {
     sink: EventSink,
     onStatus?: (channel: string, status: string) => void,
     onActivity?: ActivitySink,
+    onResume?: StreamResumeSink,
   ): void;
   /**
    * Close one account's fill stream — used when a participant is removed at runtime, so a
@@ -133,16 +139,21 @@ function liveDataSource(env: Env): DataSource {
     sink,
     onStatus,
     onActivity,
+    onResume,
   ) => {
     stopParticipantStream(participant.id);
     const stream = new AlpacaTradeUpdatesStream({
       participantId: participant.id,
       apiKey: participant.credentials.apiKey,
       apiSecret: participant.credentials.apiSecret,
+      ...(participant.credentials.accessToken
+        ? { accessToken: participant.credentials.accessToken }
+        : {}),
       baseUrl: participant.credentials.baseUrl ?? ALPACA_PAPER_BASE_URL,
       onEvent: sink,
       ...(onActivity ? { onActivity } : {}),
       onStatus: (status) => onStatus?.("trade-updates", status),
+      ...(onResume ? { onResume: (droppedAt: string) => onResume(participant, droppedAt) } : {}),
     });
     fillStreams.set(participant.id, stream);
     stream.start();
@@ -156,7 +167,7 @@ function liveDataSource(env: Env): DataSource {
     loadParticipants: () => loadParticipants(createDefaultPersonas(), env),
     startParticipantStream,
     stopParticipantStream,
-    startStreams: ({ participants, sink, onActivity, onStatus }) => {
+    startStreams: ({ participants, sink, onActivity, onStatus, onResume }) => {
       // No held-symbol price socket here, by design (#4864). Alpaca allows ONE market-data
       // connection per USER LOGIN per endpoint — not per paper account — and the bots app holds
       // that login's for its eval loop (no tick → no evaluation → no trades). Any socket this app
@@ -168,7 +179,7 @@ function liveDataSource(env: Env): DataSource {
       );
 
       for (const participant of participants) {
-        startParticipantStream(participant, sink, onStatus, onActivity);
+        startParticipantStream(participant, sink, onStatus, onActivity, onResume);
       }
       onStatus?.("trade-updates", `subscribed ${participants.length} account(s)`);
     },
@@ -260,7 +271,10 @@ function offlineTransports(
   const fixtureFor = (id: string): AccountFixture =>
     fixtures.get(id) ?? { account: emptyAccount() };
   if (env.SKYNET_OFFLINE_WRITES !== "apply") {
-    return (id) => new FixtureTradingTransport(fixtureFor(id));
+    // The read-only world's calendar and clock read the same pinned instant (#8248).
+    const fixed = Date.parse(env.SKYNET_FIXED_NOW ?? "");
+    const now = Number.isFinite(fixed) ? () => new Date(fixed) : () => new Date();
+    return (id) => new FixtureTradingTransport(fixtureFor(id), now);
   }
   const market = offlineMarket(env, fixtures, events);
   const ledgers = new Map<string, WritableFixtureTradingTransport>();
@@ -272,6 +286,7 @@ function offlineTransports(
         market,
         idPrefix: `paper-${id}`,
         clock: () => marketClock(market.now()),
+        marketNow: () => market.now(),
         onFill: (fill) => sink?.({ type: "fill", participantId: id, ...fill }),
       });
       ledgers.set(id, found);

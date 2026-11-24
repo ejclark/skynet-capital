@@ -98,6 +98,37 @@ describe("the questions every correctness reviewer is asked", () => {
   it("ask the reviewer agent where a hash link lands too", () => {
     expect(flat(readFileSync(".claude/agents/reviewer.md", "utf8"))).toMatch(HASH_JUMP);
   });
+
+  // A check built on a list or event name written from belief passes its own hand-written fixture
+  // while the shipped file or the live payload says otherwise (a coverage list missing glyphs the
+  // font lacks, an event that lands on a different issue than assumed).
+  const DECLARED_SET =
+    /declared list, event name, status string or field name as proof.*open the real artifact or a live payload.*compare it with the declared set.*report the check when the two can differ.*name the read you could not make.*fixture the PR hand-wrote is not that comparison.*spec says where it was recorded/i;
+
+  it("ask the audit's reviewer to compare a declared set with the real artifact", async () => {
+    const { calls } = await audit([], { causes: [] });
+    const prompt = flat(calls.find((c) => c.opts.label?.startsWith("review"))?.prompt ?? "");
+    expect(prompt).toMatch(DECLARED_SET);
+  });
+
+  it("ask the reviewer agent the same comparison", () => {
+    expect(flat(readFileSync(".claude/agents/reviewer.md", "utf8"))).toMatch(DECLARED_SET);
+  });
+
+  // A parser of real repo history checked against one hand-made sample ships with the shapes it
+  // drops, and a window started from a date rather than the commit's instant leaves PRs in no window.
+  const HISTORY_REPLAY =
+    /parses or windows real repo history.*replay it over the last 20 to 50 real merged PRs or commits on `?origin\/main`?.*drops, splits or leaves out of every window.*one hand-made shape.*window start given as a date where a commit instant exists/i;
+
+  it("ask the audit's reviewer to replay history-parsing code over real recent merges", async () => {
+    const { calls } = await audit([], { causes: [] });
+    const prompt = flat(calls.find((c) => c.opts.label?.startsWith("review"))?.prompt ?? "");
+    expect(prompt).toMatch(HISTORY_REPLAY);
+  });
+
+  it("ask the reviewer agent for the same replay", () => {
+    expect(flat(readFileSync(".claude/agents/reviewer.md", "utf8"))).toMatch(HISTORY_REPLAY);
+  });
 });
 
 describe("the audit's prevention step", () => {

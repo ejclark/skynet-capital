@@ -284,3 +284,95 @@ test.describe("UI half: a member on a phone", () => {
     ).toBeVisible();
   });
 });
+
+// EXITS AT ENTRY (#8249). The same spec runs twice: under `orders` with the setting as committed
+// (off), and under `orders-exit` with the offline override at `members` (playwright.config.ts). Off,
+// a stop-limit or an exit is refused in a sentence and nothing is placed; on, a whole-share limit
+// buy carries its take-profit and stop to the broker as one bracket. XLE: the book does not hold it.
+const EXIT_ON = (): boolean => test.info().project.name === "orders-exit";
+
+test.describe("Exits at entry: the setting decides", () => {
+  test("with the setting off, a stop-limit or an exit is refused in a sentence and nothing is placed", async ({
+    page,
+  }) => {
+    test.skip(EXIT_ON(), "the refusal is the setting-off half");
+    const request = page.request;
+    const known = new Set((await orders(request)).map((o) => o.id));
+    const limitBuy = {
+      participantId: ACCOUNT,
+      action: "buy",
+      symbol: "XLE",
+      quantity: 3,
+      orderType: "limit",
+      limitPrice: 91,
+    };
+    for (const body of [
+      { ...limitBuy, exit: { takeProfit: 95, stop: 85 } },
+      { ...limitBuy, orderType: "stop_limit", stopPrice: 92, limitPrice: 92.5 },
+    ]) {
+      for (const path of ["/api/trade/review", "/api/trade/submit"]) {
+        const res = await request.post(path, { data: body });
+        expect(res.status(), path).toBe(400);
+        expect(((await res.json()) as { refusals: string[] }).refusals[0]).toMatch(
+          /nothing was placed/,
+        );
+      }
+    }
+    expect((await orders(request)).filter((o) => !known.has(o.id))).toEqual([]);
+  });
+
+  test("with the setting on, a limit buy with an exit reviews its dollars, fills, and puts both exits to work", async ({
+    page,
+  }) => {
+    test.skip(!EXIT_ON(), "the bracket is the setting-on half");
+    const request = page.request;
+    const before = await desk(request);
+    expect(before.positions.some((p) => p.symbol === "XLE")).toBe(false);
+    const order = {
+      participantId: ACCOUNT,
+      action: "buy",
+      symbol: "XLE",
+      quantity: 3,
+      orderType: "limit",
+      limitPrice: 91,
+      exit: { takeProfit: 95, stop: 85 },
+    };
+
+    const { preview } = await postJson<{
+      preview: { ok: boolean; refusals: string[]; timeInForce: string; exit: object };
+    }>(request, "/api/trade/review", order);
+    expect(preview.refusals).toEqual([]);
+    expect(preview.timeInForce).toBe("gtc");
+    expect(preview.exit).toEqual({
+      takeProfit: 95,
+      stop: 85,
+      takeProfitDollars: 12,
+      stopDollars: -18,
+    });
+
+    const sent = await postJson<{ ok: boolean; orderId?: string }>(
+      request,
+      "/api/trade/submit",
+      order,
+    );
+    expect(sent.ok).toBe(true);
+    const entry = await filled(request, sent.orderId as string);
+    expect(entry).toEqual(
+      expect.objectContaining({ symbol: "XLE", side: "buy", filledQuantity: 3 }),
+    );
+
+    // A flat read: each exit is a working row of its own, at the price the broker holds.
+    const body = await getJson<{
+      working: (OrderRow & { orderType: string; limitPrice?: number; stopPrice?: number })[];
+    }>(request, `/api/trade/orders?participantId=${ACCOUNT}`);
+    const exits = body.working.filter((o) => o.symbol === "XLE");
+    expect(exits).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ side: "sell", orderType: "limit", limitPrice: 95, quantity: 3 }),
+        expect.objectContaining({ side: "sell", orderType: "stop", stopPrice: 85, quantity: 3 }),
+      ]),
+    );
+    expect(exits).toHaveLength(2);
+    expect((await desk(request)).positions.find((p) => p.symbol === "XLE")?.quantity).toBe("3");
+  });
+});
