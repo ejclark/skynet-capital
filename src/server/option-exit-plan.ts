@@ -20,6 +20,12 @@ import { parseJsonRecord } from "./page-shell.js";
  *    carried today may still be waiting on its own order to fill). The desk snapshot can lag a
  *    fill, and a contract re-bought through another door (a spread, a bot) is not seen here — so
  *    only the owner reads "your plan" (`desk-json-routes.ts`), and the rules read are the same.
+ *  - UNREAD IS NOT EMPTY (#8336). A desk whose broker read failed sits in the hub as a row with
+ *    `positions: []` beside its `error` (`degraded()` in participant-snapshot.ts). That list means
+ *    "unknown", never "holds none", so a held count it can't give leaves every plan where it is: a
+ *    plan kept a day too long is read back and runs nothing, while one dropped on a broker timeout
+ *    is the member's choice lost. Only a close with no count, which sells the whole holding by its
+ *    own terms, drops a plan without the read.
  *
  * Calls only: the house has no rule for a bought put. Nothing here places, changes or sells an
  * order; the plan is offered, and a carried plan is something the app reads back, never runs.
@@ -66,8 +72,7 @@ export function settleExitPlan(
   const store = config.exitPlans;
   if (!result.ok) return {};
   if (request.kind === "close") {
-    const contracts = heldContracts(config, request.participantId, request.occSymbol);
-    if (store && (request.contracts ?? contracts) >= contracts) {
+    if (store && closesWholeHolding(request, config)) {
       store.drop(request.participantId, request.occSymbol);
     }
     return {};
@@ -94,13 +99,28 @@ function offered(request: OpenRequest, today: string): boolean {
   );
 }
 
-/** Contracts of `occSymbol` the desk holds long, by its last snapshot. */
+/** Whether a close sells all of the contract: no count says so by itself; a count does only when
+ *  the desk's last snapshot shows no more held. An unread desk can't show that, so a counted close
+ *  of it is not called whole. */
+function closesWholeHolding(
+  request: Extract<DeskOptionRequest, { kind: "close" }>,
+  config: Pick<DashboardServerConfig, "hub">,
+): boolean {
+  if (request.contracts === undefined) return true;
+  const held = heldContracts(config, request.participantId, request.occSymbol);
+  return held !== undefined && request.contracts >= held;
+}
+
+/** Contracts of `occSymbol` the desk holds long, by its last snapshot — or `undefined` when that
+ *  snapshot is not a reading: no row for the desk, or a row whose broker read failed (its `error`
+ *  is set and its empty `positions` mean nothing). */
 function heldContracts(
   config: Pick<DashboardServerConfig, "hub">,
   deskId: string,
   occSymbol: string,
-): number {
+): number | undefined {
   const desk = config.hub.getState().participants.find((p) => p.id === deskId);
-  const position = desk?.positions.find((p) => p.symbol === occSymbol && p.quantity > 0);
+  if (!desk || desk.error) return undefined;
+  const position = desk.positions.find((p) => p.symbol === occSymbol && p.quantity > 0);
   return position?.quantity ?? 0;
 }
