@@ -92,15 +92,19 @@ function reasoningFor(read: PlaybookRead, reasoning: WireTradeReasoning): unknow
 
 /** The playbook that placed a bot's order. Once #885's names were the owner's alone; a bot's are
  *  every member's to read since #8254, so any member may narrow a bot's Activity by `?playbook=`.
- *  Memoised: the filter and the chip list read the same order ids, one indexed lookup each. */
+ *  The chip list asks about every order in the ledger on every member's read, so the server's own
+ *  `playbookOfOrder` remembers the answers across requests (#8397); without it, memoised per
+ *  request: the filter and the chip list read the same order ids, one indexed lookup each. */
 function botPlaybookOf(
   kind: string,
   config: DashboardServerConfig,
   read: PlaybookRead,
 ): PlaybookOf | undefined {
-  const { findByOrderId } = config;
+  const { findByOrderId, playbookOfOrder } = config;
   // Only a bot's orders carry a playbook, and a bot's are every member's to read (#8254).
-  if (kind !== "bot" || read === "none" || !findByOrderId) return undefined;
+  if (kind !== "bot" || read === "none") return undefined;
+  if (playbookOfOrder) return playbookOfOrder;
+  if (!findByOrderId) return undefined;
   const seen = new Map<string, string | undefined>();
   return (orderId) => {
     if (!seen.has(orderId)) seen.set(orderId, findByOrderId(orderId)?.intent.playbookId);

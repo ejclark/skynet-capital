@@ -19,6 +19,7 @@ import { JsonlAuditStore } from "../autonomous/jsonl-audit-store.js";
 import { signalWindows } from "../autonomous/signal-windows.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
 import { reconcileBrokerActivity, recoverStreamGap } from "../observatory/activity-backfill.js";
+import { rememberPlaybooks } from "../observatory/activity-filter.js";
 import {
   bootPublishingActivityStore,
   publishingFeedback,
@@ -623,6 +624,16 @@ async function main(): Promise<void> {
     // symbol+side+time match (`decision-context.ts`) is a different code path entirely, and only
     // the replicated store supports an exact order-id index.
     ...(insightsBridge.findByOrderId ? { findByOrderId: insightsBridge.findByOrderId } : {}),
+    // The same join for a bot order's playbook alone, remembered across requests (#8397): every
+    // member's read of a bot's Activity builds its chip list from every order in the ledger.
+    ...(insightsBridge.findByOrderId
+      ? {
+          playbookOfOrder: rememberPlaybooks(
+            insightsBridge.findByOrderId,
+            insightsBridge.orderJoinMark,
+          ),
+        }
+      : {}),
     readAccountPersonas,
     // A leg once matched never changes (the leg table is insert-only), so remember the hits (#4458),
     // and the misses until the table gains a row (#4619).
