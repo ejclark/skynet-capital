@@ -146,15 +146,20 @@ describe("a bot's strategy tag is its owner's alone (#4971)", () => {
     expect(await wire("owner@x")).toContain(TAG);
   });
 
-  it("withholds it from a member who does not own the bot, and from a signed-out read", async () => {
-    for (const who of ["guest@x", undefined]) {
-      for (const sub of ["activity", "decisions", "thesis", "heartbeat"]) {
-        const body = await desk(sub, who);
-        expect(body).not.toContain(TAG);
-        expect(body).not.toContain('"strategy"');
-      }
-      expect(await wire(who)).not.toContain(TAG);
+  it("withholds it from a signed-out read", async () => {
+    for (const sub of ["activity", "decisions", "thesis", "heartbeat"]) {
+      const body = await desk(sub, undefined);
+      expect(body).not.toContain(TAG);
+      expect(body).not.toContain('"strategy"');
     }
+    expect(await wire(undefined)).not.toContain(TAG);
+  });
+
+  it("gives it to a signed-in member who does not own the bot, with its playbook (#8254)", async () => {
+    for (const sub of ["activity", "decisions", "thesis"]) {
+      expect(await desk(sub, "guest@x")).toContain(TAG);
+    }
+    expect(await wire("guest@x")).toContain(TAG);
   });
 
   it.each(["guest@x", undefined])(

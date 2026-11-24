@@ -458,9 +458,9 @@ owner-only.
 |---|---|
 | **Key** | **account × playbook (any kind)** ◆ — Heartbeat is bot-only (`sectionsFor`); a human account's subscription has no run state (MISSING 21). Date: `since` · `lastPassAt` · the window. Order (`activityAnchor`) joins it to the book's fills |
 | **Entities** | Heartbeat · Decision cycle (a bot's pass) · Thesis · Playbook subscription · **the own-bot switch** (`OwnedAccount.suspended` + `POST /api/settings/bot-control`, ownership-gated — `src/server/settings-api-routes.ts:126-151`) ◆ |
-| **Home** | two by ownership, said out loud ◆: owned → `/accounts?account=<bot>&section=playbooks` (`heartbeat` is an alias, `profile-sections.ts`) and `…=thesis` (`accounts.tsx:251-252`; the chip in the sticky header, `heartbeat.tsx:73`, #3687); non-owned → `/u/<bot>` gains a Heartbeat section (state + verdict words, playbook ids withheld per #885) and a fills view keyed by `whoId` ◆ |
+| **Home** | two by ownership, said out loud ◆: owned → `/accounts?account=<bot>&section=playbooks` (`heartbeat` is an alias, `profile-sections.ts`) and `…=thesis` (`accounts.tsx:251-252`; the chip in the sticky header, `heartbeat.tsx:73`, #3687); non-owned → `/u/<bot>` gains a Heartbeat section (state + verdict words; playbook ids withheld per #885 until #8254 named them by strategy to every signed-in member) and a fills view keyed by `whoId` ◆ |
 | **The Bots screen** | `/bots` (#8254): one card per bot account (`bots-roster.tsx`), each a joint into its own `/u/<bot>/playbooks?checks=open`, never a copy of its checks; Follow is a pin, not a subscription |
-| **Falsifier** | Eric reading a non-owned bot's page asks for its playbook names in the heartbeat (a dated reversal of #885, 2026-08-29) → the playbook key returns for non-owners; the bot-watcher crawl after 2d still cannot tell "stood down until Monday" from a fault → the group is missing its end-date entity (MISSING 11), not its home; Eric on the live route reads the switch beside the Thesis as "Settings leaked into my book" → only the suspend *state* renders here and the switch returns to Settings |
+| **Falsifier** | the playbook key returned for non-owners of a bot (#8254, 2026-11-24) — reversed if Eric reads a bot's named strategies on another member's view as a leak → `playbookRead` returns `none` for non-owners again; the bot-watcher crawl after 2d still cannot tell "stood down until Monday" from a fault → the group is missing its end-date entity (MISSING 11), not its home; Eric on the live route reads the switch beside the Thesis as "Settings leaked into my book" → only the suspend *state* renders here and the switch returns to Settings |
 
 **The evidence.** 42 steps in 22 scenarios; inside weight 78; a separate group scores higher than
 merged into the book (0.122 vs 0.105). Pairs: Heartbeat × Playbook subscription 16/13; Decision
@@ -527,15 +527,19 @@ needs the controls, not just the way to them.
   owners (`git show 84ef017a4:app/src/shell/heartbeat.tsx`, lines 80-96; the chip has since retired into `PlaybooksHeadLine`, #5073) — beside the state it changes, no header growth (#3687's budget);
   the suspend → trade → resume path needs the switch reachable from Trade's ticket when
   `?desk=<bot>` — a joint through `AccountField` (`trade.tsx:118`), not a section.
-- ◆ **The #885 flag, sharpened.** "At this time, we do not show what playbooks others are using"
-  was breached in three places — `decisions-section.tsx:30-35` rendered `outcome.playbook ·
-  playbookMode` on any bot's page (closed for non-owners, server and client, #3816's defects
-  slice), `wire-reasoning.ts:63-68` copies the playbook name and mode
-  into every member's feed under a "#885 attribution" label, and `activity.tsx:331-333` renders the
-  council tag to the league. Two non-owner steps need the key now ("was the loss one playbook or
-  all of them?"). This is a decision about **house bots' playbooks** (public or not); it goes to
-  Eric only after the erosion check — #1296's "fleet health should be public" may already answer
-  it; the two-day live read is the instrument.
+- **The #885 flag, settled for bot accounts (#8254 PR 2, 2026-11-24).** "At this time, we do not
+  show what playbooks others are using" (Eric, 2026-08-29) is superseded for **house bots** by his
+  newer call (2026-11-10, #6007: "user account and trade information is visible to other users for
+  the sake of gameplay"), and a watching screen that cannot say what a bot runs cannot say why it
+  skipped. So a signed-in member now reads a bot account's playbook ids, modes and strategy tags on
+  its heartbeat, decisions, thesis, Activity rows, positions and the league feed
+  (`desk-owner-gate.ts` `playbookRead`: `owner` · `names` · `none`). Still the owner's: the
+  broker's words (#4650), a playbook's retire rule (#5043, legacy invalidators cut at read time)
+  and the drawn play on the Thesis (#5327); a card's rules and the way to change it render only
+  for the owner (`owned`). Unchanged: a human account's non-owner read, and every read from the
+  pre-auth side of the invite gate. Names read as strategies, never raw ids ("The wheel on CRWV ·
+  Sells puts, then calls on shares it's assigned"; `strategyNaming`), the first step toward
+  #6771's one strategy library.
 
 ### 5.3 The name on the workbench — the quote, the chart, the chain, the lever calls, the ticket for one symbol
 

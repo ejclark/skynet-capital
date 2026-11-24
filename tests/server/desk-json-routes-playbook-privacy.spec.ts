@@ -5,7 +5,7 @@ import { bot, configWith, fakeRes } from "../support/desk-json-fixtures.js";
 describe("serveDeskJson", () => {
   // #885 (Eric, 2026-08-29): "at this time, we do not show what playbooks others are using". The
   // `/u/:id` pages read these three payloads for ANY member, so the server withholds the key.
-  describe("playbook names are the bot owner's alone (#885)", () => {
+  describe("a bot's playbook names ride to signed-in members, never to a signed-out read (#885, #8254)", () => {
     // Built the way `playbookIntents` builds a real playbook intent's reason (#4442).
     const pick = {
       symbol: "NVDA",
@@ -54,36 +54,34 @@ describe("serveDeskJson", () => {
       return out.body ?? "";
     };
 
-    it("withholds them from a member who does not own the bot", async () => {
+    it("gives a signed-in member who does not own the bot its names, as the owner reads them (#8254)", async () => {
       const heartbeat = JSON.parse(await read("heartbeat", "guest@x"));
-      expect(heartbeat.heartbeat.playbooks).toEqual([
-        expect.objectContaining({ mode: "standard", state: "long" }),
-      ]);
-      // `thesis` carries the safeguard ladder (#3194 slice 6a) — the stages still ride, so a
-      // member can see what protects the bot, with the play's name withheld like every other row.
+      expect(heartbeat.heartbeat.playbooks[0]).toMatchObject({
+        playbookId: "S1-NVDA",
+        mode: "standard",
+        state: "long",
+      });
       const thesis = JSON.parse(await read("thesis", "guest@x"));
-      expect(thesis.ladder).toEqual([
-        expect.objectContaining({ mode: "standard", stages: expect.any(Array) }),
-      ]);
-      expect(thesis.ladder[0].playbookId).toBeUndefined();
-      // The fields carrying a play's name are stripped, and so is the name inside the reason's
-      // free text — `call.why` and every `reasoning.reason` (#4442).
-      for (const sub of ["heartbeat", "decisions", "activity", "thesis"]) {
-        const body = await read(sub, "guest@x");
-        expect(body).not.toContain("S1-NVDA");
-        expect(body).not.toContain("playbookMode");
-      }
-      // The rest of the decision still rides — only the playbook's name is withheld.
+      expect(thesis.ladder[0].playbookId).toBe("S1-NVDA");
       const decisions = JSON.parse(await read("decisions", "guest@x"));
-      expect(decisions.cycles[0].outcomes[0]).toMatchObject({ symbol: "NVDA", action: "placed" });
+      expect(decisions.cycles[0].outcomes[0]).toMatchObject({
+        symbol: "NVDA",
+        action: "placed",
+        playbook: "S1-NVDA",
+        playbookMode: "standard",
+      });
       const activity = JSON.parse(await read("activity", "guest@x"));
       expect(activity.activity[0].reasoning).toMatchObject({
-        reason: "a playbook window open (standard): fade",
-        personaId: "sauron",
+        reason: pick.reason,
+        playbookId: "S1-NVDA",
       });
+      // What the broker said stays the owner's on every read (#4650).
+      for (const sub of ["heartbeat", "decisions", "activity", "thesis"]) {
+        expect(await read(sub, "guest@x")).not.toContain("brokerReason");
+      }
     });
 
-    it("redacts a member-authored play's id from a refused idea's reason", async () => {
+    it("names a member-authored play on a bot to a signed-in member, as to its owner (#8254)", async () => {
       const authored = {
         ...pick,
         reason: "U-acct-7-earnings-runup window open (standard): ride the run-up",
@@ -105,10 +103,10 @@ describe("serveDeskJson", () => {
       const path = "/api/desk/sauron/decisions";
       const guest = fakeRes();
       await serveDeskJson(guest.res, path, `${path}?trades=none`, config, session("guest@x"));
-      expect(guest.out.body).not.toContain("U-acct-7");
-      expect(JSON.parse(guest.out.body ?? "").cycles[0].refusedIntents[0].reason).toBe(
-        "a playbook window open (standard): ride the run-up",
-      );
+      expect(JSON.parse(guest.out.body ?? "").cycles[0].refusedIntents[0]).toMatchObject({
+        playbookId: "U-acct-7-earnings-runup",
+        reason: authored.reason,
+      });
       const owner = fakeRes();
       await serveDeskJson(owner.res, path, path, config, session("owner@x"));
       expect(JSON.parse(owner.out.body ?? "").cycles[0].refusedIntents[0]).toMatchObject({
@@ -229,12 +227,12 @@ describe("serveDeskJson", () => {
       expect(thesis.markers[0]).toMatchObject({ playbookId: "SAURON", sentiment: -0.82 });
     });
 
-    it("sends a non-owner the marks' news scores but neither the play nor its name", async () => {
+    it("sends a non-owner the marks' news scores but not the owner's drawn play", async () => {
       const body = await thesisFor("guest@x");
       const { thesis } = JSON.parse(body);
       expect(thesis.play).toBeUndefined();
       expect(thesis.markers[0]).toMatchObject({ symbol: "NVDA", sentiment: -0.82 });
-      expect(body).not.toContain("SAURON");
+      // The drawn play stays the owner's; the marks keep their playbook since #8254.
       expect(body).not.toContain("Buy the rumor");
     });
   });

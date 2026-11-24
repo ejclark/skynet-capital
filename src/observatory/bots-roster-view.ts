@@ -13,8 +13,8 @@ import { withoutPlaybookNames } from "./playbook-name-redaction.js";
  * the bots' records, and an unknown says so in words.
  *
  * Watching only. A row is a joint, not a copy (docs/IA.md §2f): the checks and the cards stay on
- * `/u/$id/playbooks`, and the row links there. Which playbooks a bot runs stays its owner's (#885)
- * in this slice, so a skip's reason is the non-owner copy: playbook ids read as "a playbook".
+ * `/u/$id/playbooks`, and the row links there. A signed-in member reads which playbooks a bot runs
+ * (#8254 PR 2 lifted #885 for bot accounts); before sign-in the ids read as "a playbook".
  */
 
 export interface BotStandingView {
@@ -27,6 +27,13 @@ export interface BotLoopView {
   readonly lastCheckAt: string | null;
   readonly sinceLastCheckMs: number | null;
   readonly marketOpen: boolean;
+}
+
+/** One playbook the bot's newest verdict pass ran, and what it concluded. */
+export interface BotPlaybookView {
+  readonly playbookId: string;
+  readonly mode: string;
+  readonly state: string;
 }
 
 /** The newest check that placed nothing, and why, in the bot's own recorded words. */
@@ -47,6 +54,9 @@ export interface BotRowView {
   readonly loop: BotLoopView | null;
   /** Null when no check on hand placed nothing (or none is recorded). */
   readonly skip: BotSkipView | null;
+  /** The playbooks its newest verdict pass ran (#8254 PR 2). Null when no pass on hand said, or
+   *  when the viewer is not a signed-in member (#885 still holds before sign-in). */
+  readonly playbooks: readonly BotPlaybookView[] | null;
   readonly followed: boolean;
 }
 
@@ -85,11 +95,12 @@ const WOULD: Record<string, string> = { buy: "would have bought", sell: "would h
  * first outcome: each is the bot's own words or the house's fixed label for the rule that fired,
  * never a model's. A quiet check (nothing fired) records no reason, so none is returned.
  */
-export function skipReasonOf(record: DecisionRecord): string | undefined {
+export function skipReasonOf(record: DecisionRecord, names = false): string | undefined {
   const [cycle] = decisionCyclesView([record]).cycles;
   if (!cycle) return undefined;
-  // The non-owner copy (#885): ids out of the keys and out of the words (#4442).
-  const redacted = withoutPlaybookNames(cycle, cycle);
+  // A signed-in member reads a bot's playbook names (#8254); before sign-in the ids go out of the
+  // words too (#885, #4442). Nothing here quotes the broker.
+  const redacted = names ? cycle : withoutPlaybookNames(cycle, cycle);
   if (redacted.halted) return redacted.halted;
   const refused = redacted.refusedIntents?.[0];
   if (refused) return `${refused.symbol}: ${refused.guardReason ?? refused.reason}`;
@@ -103,10 +114,10 @@ export function skipReasonOf(record: DecisionRecord): string | undefined {
 }
 
 /** The newest check on hand that placed nothing. */
-export function newestSkip(records: readonly DecisionRecord[]): BotSkipView | null {
+export function newestSkip(records: readonly DecisionRecord[], names = false): BotSkipView | null {
   const skip = records.find((r) => !r.outcomes.some((o) => o.action === "placed"));
   if (!skip) return null;
-  const reason = skipReasonOf(skip);
+  const reason = skipReasonOf(skip, names);
   return { at: new Date(skip.at).toISOString(), ...(reason ? { reason } : {}) };
 }
 
@@ -115,11 +126,20 @@ function rowOf(
   now: Date,
   marketOpen: boolean,
   followed: ReadonlySet<string>,
+  names: boolean,
 ): BotRowView {
   const lore = PERSONA_LORE[bot.personaId ?? bot.id];
   let loop: BotLoopView | null = null;
+  let playbooks: readonly BotPlaybookView[] | null = null;
   if (bot.records) {
     const beat = botHeartbeatView(bot.records, now, marketOpen);
+    if (names && beat.playbooks) {
+      playbooks = beat.playbooks.map(({ playbookId, mode, state }) => ({
+        playbookId,
+        mode,
+        state,
+      }));
+    }
     loop = {
       state: beat.state,
       lastCheckAt: beat.lastPassAt,
@@ -133,7 +153,8 @@ function rowOf(
     ...(lore ? { persona: { name: lore.name, thesis: lore.thesis } } : {}),
     standing: bot.standing,
     loop,
-    skip: bot.records ? newestSkip(bot.records) : null,
+    skip: bot.records ? newestSkip(bot.records, names) : null,
+    playbooks,
     followed: followed.has(bot.id),
   };
 }
@@ -144,11 +165,13 @@ export function botsRosterView(input: {
   /** The viewer's followed bot ids, oldest follow first. */
   readonly following: readonly string[];
   readonly canFollow: boolean;
+  /** Whether the viewer reads a bot's playbook names: a signed-in member (#8254). */
+  readonly names: boolean;
   readonly now: Date;
   readonly marketOpen: boolean;
 }): BotsRosterView {
   const followed = new Set(input.following);
-  const rows = input.bots.map((b) => rowOf(b, input.now, input.marketOpen, followed));
+  const rows = input.bots.map((b) => rowOf(b, input.now, input.marketOpen, followed, input.names));
   const order = new Map(input.following.map((id, i) => [id, i]));
   const sorted = [...rows].sort((a, b) => {
     const fa = order.get(a.id);

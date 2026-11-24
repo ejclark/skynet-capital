@@ -154,6 +154,27 @@ describe("serveBotsApi", () => {
     expect(body.note).toBe(BOTS_ONLY_NOTE);
   });
 
+  it("names each bot's playbooks to a signed-in member, and none before sign-in (#8254 PR 2)", async () => {
+    const verdicts = [{ playbookId: "CRWV-WHEEL", mode: "standard", state: "flat" }];
+    const named = config({
+      auth: {},
+      readDecisions: async () => [
+        pass({
+          playbookVerdicts: verdicts as never,
+          refusals: [
+            { intent: intent({ reason: "CRWV-WHEEL window shut", playbookId: "CRWV-WHEEL" }) },
+          ] as never,
+        }),
+      ],
+    });
+    const { body } = await call("/api/bots", get(), member, named);
+    expect(body.bots[0].playbooks).toEqual(verdicts);
+    expect(body.bots[0].skip.reason).toBe("NVDA: CRWV-WHEEL window shut");
+    const outside = await call("/api/bots", get(), null, named);
+    expect(outside.body.bots[0].playbooks).toBeNull();
+    expect(outside.body.bots[0].skip.reason).toBe("NVDA: a playbook window shut");
+  });
+
   it("lists every persona with no bot account as not running, name and thesis only (criterion 7)", async () => {
     const { body } = await call("/api/bots", get());
     const ids = body.notRunning.map((p: { personaId: string }) => p.personaId);
