@@ -24,6 +24,13 @@ import {
   researchAskCardText,
 } from "./moneypenny-research";
 import {
+  isSceneKey,
+  newSceneThread,
+  PLAY_SCENE_LABEL,
+  SCENE_TITLE,
+  sceneTitle,
+} from "./moneypenny-scene";
+import {
   answerFailed,
   DRAFT_DROPPED,
   draftCard,
@@ -121,6 +128,8 @@ export interface MoneypennyState extends Persisted {
   readonly companionEnabled?: boolean;
   /** The standing disclosure the companion is told the UI renders. */
   readonly disclosure?: string;
+  /** Whether the server offers this session a game-master scene (#8191) — cached with the switch. */
+  readonly gameMaster?: boolean;
   /** Facts the chips read: the member's onboarding state, refreshed on every open. */
   readonly connected?: boolean;
   readonly firstTradeDone?: boolean;
@@ -156,6 +165,8 @@ export interface MoneypennyState extends Persisted {
   readonly openThread: (thread: MpThread) => void;
   /** Back to the main conversation. */
   readonly closeThread: () => void;
+  /** Open a fresh game-master scene thread and ask for its first scene (#8191). False mid-turn. */
+  readonly startScene: () => boolean;
   /** Wake the dock: switch the chat on and bind the member, so her moves read the member's own
    *  facts; with `intro`, play her intro script once per member (the `introDone` flag). */
   readonly wake: (opts?: { readonly intro?: boolean }) => Promise<void>;
@@ -267,7 +278,11 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
     if (known !== undefined) return known;
     try {
       const index = await fetchCompanionIndex();
-      set({ companionEnabled: index.enabled, disclosure: index.disclosure });
+      set({
+        companionEnabled: index.enabled,
+        disclosure: index.disclosure,
+        gameMaster: index.gameMaster === true,
+      });
       return index.enabled;
     } catch {
       return false;
@@ -345,6 +360,15 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
 
   /** A known thread's title and place follow its row (a story re-cut under the same id); one never
    *  asked about stays unknown until its first line lands (`append`). */
+  /** A scene thread takes its event's name from her first reply in it (`moneypenny-scene.ts`). */
+  const nameScene = (key: string | undefined, reply: string) => {
+    const open = get().thread;
+    if (!open || !isSceneKey(key) || open.key !== key || open.title !== SCENE_TITLE) return;
+    const named = { ...open, title: sceneTitle(reply) };
+    set({ thread: named });
+    renamed(named);
+  };
+
   const renamed = (thread: MpThread) => {
     const known = get().threads.find((t) => t.key === thread.key);
     if (known && (known.title !== thread.title || known.path !== thread.path))
@@ -499,6 +523,8 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
           });
           append("draft", [researchAskCardText(researchAsk)]);
         },
+        // Every turn in a scene thread is a scene turn; any other thread or the main one never is.
+        isSceneKey(key) ? "game-master" : undefined,
       );
     } catch (err) {
       failure = err instanceof Error ? err.message : String(err);
@@ -517,6 +543,7 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
       text = `${text} — cut off`;
       show();
     }
+    nameScene(key, text);
     save({});
   };
 
@@ -662,6 +689,10 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
       if (get().typing || get().streaming || get().pending !== undefined) return;
       set({ thread: undefined });
     },
+    startScene: () => {
+      const path = typeof location === "undefined" ? "/" : location.pathname;
+      return get().ask(PLAY_SCENE_LABEL, newSceneThread(Date.now(), path));
+    },
     toggleExpanded: () => {
       const expanded = !get().expanded;
       set({ expanded, minimized: false });
@@ -763,6 +794,7 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
         streaming: false,
         companionEnabled: undefined,
         disclosure: undefined,
+        gameMaster: undefined,
       });
     },
   };
