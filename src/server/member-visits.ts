@@ -50,6 +50,7 @@ export const VISIT_RETENTION_DAYS = 180;
 export const APP_SCREENS: readonly string[] = [
   "accounts",
   "activity",
+  "bots",
   "campaign",
   "feedback",
   "join",

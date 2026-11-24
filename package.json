@@ -119,6 +119,7 @@
     "shoot:moneypenny-screenshots": "tsx scripts/shoot/moneypenny-screenshots.mjs",
     "shoot:moneypenny-conviction": "tsx scripts/shoot/moneypenny-conviction.mjs",
     "shoot:feedback": "tsx scripts/shoot/feedback.mjs",
+    "shoot:bots": "tsx scripts/shoot/bots.mjs",
     "shoot:landing": "tsx scripts/shoot/landing.mjs",
     "edition:sectors": "tsx scripts/edition-sectors.mjs",
     "edition:write": "tsx src/scripts/edition-write.ts",

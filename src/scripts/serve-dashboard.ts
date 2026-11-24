@@ -14,6 +14,7 @@
 
 import { createAlertDismissals } from "../adapters/jsonl-alert-dismissals.js";
 import { createWatchlist } from "../adapters/jsonl-watchlist-store.js";
+import { opensHeldReason, suspendedReason } from "../autonomous/bot-controls.js";
 import { JsonlAuditStore } from "../autonomous/jsonl-audit-store.js";
 import { signalWindows } from "../autonomous/signal-windows.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
@@ -321,6 +322,7 @@ async function main(): Promise<void> {
     authoredPlays,
     memberCampaigns,
     memberChains,
+    memberFollows,
     discoveryQueue,
     campaignQuestions,
     memberConvictions,
@@ -471,6 +473,14 @@ async function main(): Promise<void> {
     authoredPlays,
     memberCampaigns,
     memberChains,
+    memberFollows,
+    // The Bots screen's standing words (#8254): the same poll and holds the ops panel reads.
+    readBotsStanding: () => ({
+      processMode: insightsBridge.botsProcessMode(),
+      verdicts: insightsBridge.botsGate(),
+      suspendedReason: (botId: string) => suspendedReason(botControls.load(), botId),
+      opensHeldReason: (botId: string) => opensHeldReason(botControls.load(), botId),
+    }),
     discoveryQueue,
     campaignQuestions,
     discoveryPerPass: discoveryPerPass(),

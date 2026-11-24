@@ -167,6 +167,14 @@ const WORD: Record<HeartbeatState, string> = {
   "no-record": "Hasn't run yet",
 };
 
+/** A loop state as a glyph and its plain word, for a row that shows the state alone (#8254). */
+export function heartbeatStateWords(state: HeartbeatState): {
+  readonly glyph: string;
+  readonly word: string;
+} {
+  return { glyph: GLYPH[state], word: WORD[state] };
+}
+
 /** One short line: the state, then the one fact that explains it — empty when the word already
  *  says it all. The market's own open/close time is the topbar clock's job, so a closed market
  *  doesn't repeat it here. */

@@ -207,6 +207,7 @@ before sign-in or retired (`tests/scripts/ia-apps.spec.ts` fails on none, two or
 | `pulse` | Pulse | Pulse | Scoreboard | `/u/$id/pulse` |
 | `bot-playbooks` | Playbooks (a bot's own) | Heartbeat · Decision cycle · Playbook subscription | Bots | `/accounts ?section=playbooks` · `/u/$id/playbooks` |
 | `thesis` | Thesis | Thesis | Bots | `/accounts ?section=thesis` · `/u/$id/thesis` |
+| `bots` | Bots · Following | Bot account · Heartbeat · Decision cycle · Followed bot (#8254) | Bots | `/bots` |
 | `workbench` | Trade · the ticket · chart · chain | Quote · Bars · Option chain · Ticket / option / spread draft | Trade | `/trade ?section=ticket` · `/trade ?section=chart` · `/trade ?section=chain` |
 | `guidance` | Guidance · Outlook · saved positions | Position guidance | Trade | `/trade ?section=guidance` · `/trade ?section=outlook` · `/saved-positions` |
 | `watchlist` | Watchlist | none in §2 (#3407) | Trade | `/trade ?section=watchlist` |
@@ -1430,6 +1431,7 @@ with no file is another part of the file above it.
 | `/research` Playbooks | — | Bots | step 10 |
 | `/u/$id`, `/u/$id/ledger`, `/u/$id/activity` | `u.$id.tsx` · `u.$id.index.tsx` · `u.$id.ledger.tsx` · `u.$id.activity.tsx` | Trade, read-only for an account you don't own | the Trade move |
 | `/u/$id/pulse` | `u.$id.pulse.tsx` | Scoreboard: the account's stat line | step 9 |
+| `/bots` the Bots screen: every house bot, why it last skipped, the ones you follow (#8254) | `bots.tsx` | Bots | built, #8254 |
 | `/u/$id/playbooks`, `/u/$id/thesis`, `/u/$id/decisions` | `u.$id.playbooks.tsx` · `u.$id.thesis.tsx` · `u.$id.decisions.tsx` | Bots | step 10 |
 | `/settings` (`app/src/shell/settings-toc.tsx:16-21`) | `settings.tsx` | not an app: the member menu | — |
 | the chat dock under every page | `shell dock` | Game Master | #8191 |

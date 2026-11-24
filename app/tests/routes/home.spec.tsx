@@ -40,12 +40,28 @@ describe("Needs you (criterion 5)", () => {
 });
 
 describe("the tiles (criterion 1)", () => {
-  it("names the five apps in the topbar's order, each with a glyph and one plain line", () => {
-    expect(APPS.map((a) => a.name)).toEqual(["Campaign", "Profile", "Trade", "Activity", "R&D"]);
+  it("names the apps in the topbar's order, then Bots, each with a glyph and one plain line", () => {
+    expect(APPS.map((a) => a.name)).toEqual([
+      "Campaign",
+      "Profile",
+      "Trade",
+      "Activity",
+      "R&D",
+      "Bots",
+    ]);
     for (const a of APPS) {
       expect(a.glyph.length).toBeGreaterThan(0);
       expect(a.line.length).toBeGreaterThan(8);
     }
+  });
+});
+
+describe("the Bots tile (#8254 criterion 9)", () => {
+  it("opens the bots screen with its glyph and one plain line", () => {
+    expect(APPS.find((a) => a.name === "Bots")).toMatchObject({
+      to: "/bots",
+      line: "Watch the house bots and why they skipped",
+    });
   });
 });
 
