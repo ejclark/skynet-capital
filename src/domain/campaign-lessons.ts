@@ -31,7 +31,8 @@
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
-import { campaignById, isText, SLUG_RE, SYMBOL_RE } from "./campaigns.js";
+import { campaignById, SLUG_RE, SYMBOL_RE } from "./campaigns.js";
+import { isText } from "./is-text.js";
 import { DATE_RE } from "./time.js";
 
 export const LESSON_KINDS = ["tested", "killed", "on-watch"] as const;

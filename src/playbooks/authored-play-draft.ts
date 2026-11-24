@@ -20,7 +20,7 @@
  * bots' roster wiring reads this store (the bots compile only what `runnableSpecs` put on the wire), so there are two
  * locks on the trading door, and `tests/playbooks/authored-play-draft.spec.ts` holds both.
  */
-import { isRecord } from "../storage/parse-guards.js";
+import { isBoundedText, isRecord } from "../storage/parse-guards.js";
 import type { AuthoredPlaySpec, AuthoredTrigger } from "./authored-play.js";
 
 /** Where a saved play stands. `shadow` is a test, not a rung toward trading by itself (slice 3). */
@@ -86,8 +86,8 @@ export type AuthoredPlaysState = Readonly<Record<string, readonly AuthoredPlayRe
 
 export const EMPTY_AUTHORED_PLAYS: AuthoredPlaysState = {};
 
-const isText = (v: unknown, max = 400): v is string =>
-  typeof v === "string" && v.length > 0 && v.length <= max;
+/** Default ceiling for a draft's text fields; a few pass their own. */
+const DRAFT_TEXT_MAX = 400;
 const isNum = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
 
 function parseTrigger(raw: unknown): AuthoredTrigger | undefined {
@@ -111,14 +111,14 @@ export function parseAuthoredPlaySpec(raw: unknown): AuthoredPlaySpec | undefine
   const size = raw.size;
   if (
     !(
-      isText(raw.slug) &&
-      isText(raw.authorAccountId) &&
-      isText(raw.authorDisplayName) &&
-      isText(raw.thesis, 1_000) &&
+      isBoundedText(raw.slug, DRAFT_TEXT_MAX) &&
+      isBoundedText(raw.authorAccountId, DRAFT_TEXT_MAX) &&
+      isBoundedText(raw.authorDisplayName, DRAFT_TEXT_MAX) &&
+      isBoundedText(raw.thesis, 1_000) &&
       trigger &&
       Array.isArray(raw.symbols) &&
       raw.symbols.length === 1 &&
-      isText(raw.symbols[0], 20) &&
+      isBoundedText(raw.symbols[0], 20) &&
       isRecord(size) &&
       isNum(size.conservative) &&
       isNum(size.standard) &&
@@ -148,11 +148,11 @@ function parseRecord(raw: unknown): AuthoredPlayRecord | undefined {
   if (
     !(
       spec &&
-      isText(raw.id) &&
-      isText(raw.name) &&
+      isBoundedText(raw.id, DRAFT_TEXT_MAX) &&
+      isBoundedText(raw.name, DRAFT_TEXT_MAX) &&
       (raw.status === "draft" || raw.status === "shadow" || raw.status === "promoted") &&
-      isText(raw.createdAt) &&
-      isText(raw.updatedAt)
+      isBoundedText(raw.createdAt, DRAFT_TEXT_MAX) &&
+      isBoundedText(raw.updatedAt, DRAFT_TEXT_MAX)
     )
   ) {
     return undefined;
@@ -162,7 +162,9 @@ function parseRecord(raw: unknown): AuthoredPlayRecord | undefined {
     name: raw.name,
     status: raw.status,
     spec,
-    ...(raw.status === "shadow" && isText(raw.shadowSince) ? { shadowSince: raw.shadowSince } : {}),
+    ...(raw.status === "shadow" && isBoundedText(raw.shadowSince, DRAFT_TEXT_MAX)
+      ? { shadowSince: raw.shadowSince }
+      : {}),
     createdAt: raw.createdAt,
     updatedAt: raw.updatedAt,
   };
