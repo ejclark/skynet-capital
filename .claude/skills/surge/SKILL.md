@@ -91,8 +91,9 @@ were respawned at 04:18Z.
 Sources, in pull order (`npm run rank`):
 
 - **The Ready queue** — `/work-issues` in each child, one issue per child. The orchestrator
-  admits the issue (`admission.mjs --check <n>`) and labels it `in-progress` before it
-  dispatches, so the child skips /work-issues' own admission step, which its label would refuse.
+  admits the issue (`node scripts/moneypenny/admission.mjs --check <n>`) and labels it
+  `in-progress` before it dispatches, and its prompt tells the child to skip /work-issues' QUEUE
+  and `--check` steps and build #<n>: both refuse an `in-progress` issue.
   **For an issue the child will ship in more than one PR, its prompt names the hold, taken once**:
   `node scripts/moneypenny/index.mjs --hold feedback-<n>` (or `plan-<n>`) after admission, never
   before it, since the hold's `session-held` label makes an admission check refuse the issue

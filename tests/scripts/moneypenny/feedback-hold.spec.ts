@@ -178,6 +178,9 @@ describe("the skills take the hold for a multi-PR feedback issue (fix 3 and 4)",
     const text = readFileSync(".claude/skills/surge/SKILL.md", "utf8");
     expect(text).not.toMatch(/--hold feedback-<n>`[^.]*before it starts/);
     expect(text).toMatch(/after admission, never\s+before it/);
+    // `in-progress` is refused before `session-held` is even read, so the child must be told to skip
+    // both admission steps for the issue the orchestrator already admitted and labelled.
+    expect(text).toMatch(/tells the child to skip \/work-issues' QUEUE\s+and `--check` steps/);
   });
 });
 
