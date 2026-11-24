@@ -1,0 +1,7 @@
+{
+  "$comment": "World 'league-read-failed' (#8005, the league: docs/IA.md §5.7), layered over bot-loop-today: the same league on the same Monday, except that Jordan's own account could not be read from the broker at the instant — the read ran past production's deadline, so the account is production's degraded row (zeros, no holdings, the reason in its own words; book.mjs). Everything else is as it was: his fills are on the feed, his bot ranks, his history ends at Friday's close. §5.7 records that the standings fail open on such a row (`rowViews` drops every errored participant, so a quiet-because-unreadable account is absent, not marked): this world is where a member meets that.",
+  "base": "bot-loop-today",
+  "participants": {
+    "jordan": { "brokerRead": "timed out" }
+  }
+}

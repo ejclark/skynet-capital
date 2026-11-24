@@ -81,7 +81,7 @@ export async function replayWrites(writes, { config, channel, sessionFor, server
       serverWrite(w.path, w.body, then, channel, sessionFor(w.member)),
     );
     const body = /** @type {any} */ (answer?.body);
-    if (!answer || answer.status !== 200 || body?.ok !== true) {
+    if (answer?.status !== 200 || body?.ok !== true) {
       throw new Error(
         `compose: ${w.member}'s ${w.path} at ${w.at} was not saved: ${JSON.stringify(answer)}`,
       );

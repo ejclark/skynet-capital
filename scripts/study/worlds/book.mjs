@@ -40,6 +40,13 @@ import {
 } from "../../../src/trading/option-symbols.ts";
 import { loadInput } from "./inputs.mjs";
 import { checkInstant, INSTANT, msOf, resolveTokens } from "./instant.mjs";
+
+/** The deadline production gives one account's broker read (`dashboard-data.ts`), for an input whose
+ *  account's read timed out at the instant (#8005, the league); a pin that predates it says so. */
+const { SNAPSHOT_READ_TIMEOUT_MS } = await import(
+  "../../../src/observatory/dashboard-data.ts"
+).catch(() => ({}));
+
 import { modelMarks } from "./market.mjs";
 
 /** True when a symbol is an option contract. */
@@ -250,6 +257,23 @@ export function derivedFields(pos, fills, symbols) {
 
 /** A broker snapshot from an input participant: marks → market values, equity derived. */
 function snapshotOf(p, saleFill) {
+  // An account whose broker read did not finish at the instant (#8005, the league: `docs/IA.md` §5.7
+  // "fails open"): production's own degraded row (`participant-snapshot.ts` → `degraded`) — zeros,
+  // no holdings, and the reason in its own words — so the pages read it as production would.
+  if (p.brokerRead === "timed out") {
+    if (!SNAPSHOT_READ_TIMEOUT_MS) throw new Error("book: this commit has no broker read deadline");
+    return {
+      id: p.id,
+      displayName: p.displayName,
+      kind: p.kind,
+      ...(p.personaId ? { personaId: p.personaId } : {}),
+      cash: 0,
+      equity: 0,
+      positions: [],
+      activity: [],
+      error: String(new Error(`broker read timed out after ${SNAPSHOT_READ_TIMEOUT_MS}ms`)),
+    };
+  }
   const positions = p.positions.map((pos) => {
     const scale = contractMultiplier(pos.symbol);
     const fromSale = pos.fromWheelSale && saleFill?.symbol === pos.symbol;
@@ -354,12 +378,15 @@ export function buildBook(name) {
   const today = msOf("@0d 00:00");
   const history = {};
   for (const p of participants) {
-    const points = input.history?.[p.id] ?? [];
+    // An account read that failed records no sample now: its history ends at its last good one.
+    const all = input.history?.[p.id] ?? [];
+    const points = p.error ? all.filter((h) => Date.parse(h.at) < Date.parse(INSTANT)) : all;
     const close = points.findLastIndex((h) => Date.parse(h.at) < today);
     history[p.id] = points.map((h, i, all) => ({
       at: h.at,
       participantId: p.id,
-      equity: i === all.length - 1 ? p.equity : i === close ? lastEquity[p.id] : h.equity,
+      equity:
+        i === all.length - 1 && !p.error ? p.equity : i === close ? lastEquity[p.id] : h.equity,
       cash: p.cash,
       realizedPl: p.realizedPl ?? 0,
     }));
@@ -369,7 +396,8 @@ export function buildBook(name) {
   // (`monthReturnPct`); the world's month of history is that sync's input.
   for (const p of participants) {
     const h = history[p.id];
-    if (h?.length > 1) p.monthReturnPct = (h[h.length - 1].equity / h[0].equity - 1) * 100;
+    if (h?.length > 1 && !p.error)
+      p.monthReturnPct = (h[h.length - 1].equity / h[0].equity - 1) * 100;
   }
   return {
     generatedAt: new Date(INSTANT).toISOString(),
