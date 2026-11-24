@@ -102,7 +102,7 @@ describe("the stock form for an admitted session (#8249)", () => {
     await limitBuy();
     fireEvent.click(screen.getByRole("button", { name: "Add an exit" }));
     expect(screen.getByLabelText("Take-profit")).toHaveValue(null);
-    expect(screen.getByLabelText("Stop")).toHaveValue(null);
+    expect(screen.getByLabelText("Stop-Market")).toHaveValue(null);
     expect(screen.getByText(/Guards regular hours only/)).toBeInTheDocument();
     // An exit rides GTC, so the picker gives way to the line that says so.
     expect(screen.getByText(/^Time in force: GTC/)).toBeInTheDocument();
@@ -115,7 +115,7 @@ describe("the stock form for an admitted session (#8249)", () => {
     await limitBuy();
     fireEvent.click(screen.getByRole("button", { name: "Add an exit" }));
     fireEvent.change(screen.getByLabelText("Take-profit"), { target: { value: "95" } });
-    fireEvent.change(screen.getByLabelText("Stop"), { target: { value: "85" } });
+    fireEvent.change(screen.getByLabelText("Stop-Market"), { target: { value: "85" } });
     preview = {
       ok: true,
       action: "buy",
@@ -145,7 +145,7 @@ describe("the stock form for an admitted session (#8249)", () => {
       screen.getByText(/^Take-profit \$95\.00 · \+\$12\.00 against your limit/),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/^Stop \$85\.00 · about −\$18\.00 against your limit/),
+      screen.getByText(/^Stop-Market \$85\.00 · about −\$18\.00 against your limit/),
     ).toBeInTheDocument();
 
     // The broker's echo, a cent off the draft on purpose: the receipt states what the broker holds.
@@ -159,7 +159,7 @@ describe("the stock form for an admitted session (#8249)", () => {
     };
     fireEvent.click(screen.getByRole("button", { name: /^Submit order/ }));
     expect(
-      await screen.findByText(/Sent with its exits: Take-profit \$95\.01 · Stop \$84\.99\./),
+      await screen.findByText(/Sent with its exits: Take-profit \$95\.01 · Stop-Market \$84\.99\./),
     ).toBeInTheDocument();
   });
 });

@@ -2,117 +2,26 @@ import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-quer
 import { createFileRoute, Link } from "@tanstack/react-router";
 import type { CSSProperties, MouseEvent, ReactElement } from "react";
 import { useEffect, useRef } from "react";
-import {
-  BOARD_METRICS,
-  type BoardBlock,
-  type BoardMetric,
-  type BoardRow,
-  parseBoardMetric,
-} from "../live/board";
+import { BOARD_METRICS, type BoardMetric, type BoardRow, parseBoardMetric } from "../live/board";
 import { boardQueryOptions, connectBoardChannel } from "../live/channel";
+import { fetchSettings } from "../live/settings";
 import { useComparePlace } from "../shell/compare-place";
 import { DeskHoverName } from "../shell/desk-hovercard";
 import { PageFrame } from "../shell/frame";
 import { HeadToHead } from "../shell/head-to-head";
+import { PartyTable } from "../shell/party-table";
 import { RankFlow } from "../shell/rank-flow";
-import { KindChip } from "../ui";
 
 /**
- * LEADERBOARD (#2321: split out of Profile — every player/bot ranked here belongs to no one
- * viewer, so it reads as its own top-level destination rather than a Profile sub-view). The
+ * THE SCOREBOARD (#2321: split out of Profile — every player/bot ranked here belongs to no one
+ * viewer, so it reads as its own top-level destination rather than a Profile sub-view). It opens
+ * on the party's table (#8253, `shell/party-table.tsx`): the members together against the house
+ * bot, no member ranked against another; the Field below still ranks every account. The
  * metric picker is a TYPED search param — `?by=` validates through the router, drives the
  * snapshot fetch AND the live channel (the server formats every op for the connection's metric),
  * and stays a shareable URL. Every number on this page was formatted by the server; the green
  * intensity ramp (Eric, round 3) is the one presentational thing this file adds.
  */
-
-function MatchRead({ block }: { readonly block: BoardBlock | undefined }): ReactElement | null {
-  if (!block) return null;
-  return (
-    <section className="match" aria-label="Bots vs Humans live match standings">
-      <p className="match-eyebrow">◈ THE MATCH · LIVE</p>
-      <div
-        className="match-bar"
-        role="img"
-        aria-label="Humans versus Bots, by average equity per account"
-      >
-        <div className="match-seg match-human" style={{ width: `${block.bar?.human ?? 50}%` }}>
-          <span>{block.text.humanLabel}</span>
-        </div>
-        <div className="match-seg match-bot" style={{ width: `${block.bar?.bot ?? 50}%` }}>
-          <span>{block.text.botLabel}</span>
-        </div>
-      </div>
-      <p className="match-line">
-        <strong>{block.text.readLeader}</strong>
-        {block.text.readRest}
-      </p>
-    </section>
-  );
-}
-
-const COHORT_METRICS = [
-  ["avgEquity", "Avg equity"],
-  ["unrealized", "Unrealized"],
-  ["return", "Open-position return"],
-  ["breadth", "In profit"],
-  ["spread", "Spread"],
-] as const;
-
-function CohortFigure({
-  label,
-  block,
-}: {
-  readonly label: string;
-  readonly block: BoardBlock | undefined;
-}): ReactElement | null {
-  if (!block) return null;
-  return (
-    <article className="cohort">
-      <header>
-        <KindChip kind={label === "Humans" ? "human" : "bot"} plural />
-        <span className="cohort-count num">
-          {block.text.count}
-          {block.text.countUnit}
-        </span>
-      </header>
-      <div className="cohort-equity num">{block.text.totalEquity}</div>
-      <dl>
-        {COHORT_METRICS.map(([key, title]) => (
-          <div key={key}>
-            <dt>{title}</dt>
-            <dd className={`num tone-${block.tone?.[key] ?? "flat"}`}>{block.text[key]}</dd>
-          </div>
-        ))}
-        <div>
-          <dt>Best</dt>
-          <dd>
-            {block.text.bestName}{" "}
-            <span className={`num tone-${block.tone?.bestPct ?? "flat"}`}>
-              {block.text.bestPct}
-            </span>
-          </dd>
-        </div>
-      </dl>
-    </article>
-  );
-}
-
-function VersusRead({ block }: { readonly block: BoardBlock | undefined }): ReactElement | null {
-  if (!block) return null;
-  return (
-    <p className="versus-read">
-      <span>
-        <strong>{block.text.totalLeader}</strong> lead on total equity by{" "}
-        <span className="num">{block.text.totalGap}</span>
-      </span>
-      <span>
-        <strong>{block.text.avgLeader}</strong> lead on average equity by{" "}
-        <span className="num">{block.text.avgGap}</span>
-      </span>
-    </p>
-  );
-}
 
 /** The ramp: everyone is green, intensity carries the standing (never red on a friendly board). */
 const rampFor = (index: number, count: number): string =>
@@ -302,6 +211,9 @@ function Standings(): ReactElement {
   // back at the top, whatever the tap asked for (#5057; a chip at 390 went from 656 to 0). The rows
   // held under a NEW metric are the old ranking, so the Field draws them dimmed and busy.
   const board = useQuery({ ...boardQueryOptions(by, pick), placeholderData: keepPreviousData });
+  // The viewer's own accounts mark their seat with "you" (#8253): the same read as the league card.
+  const settings = useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
+  const ownedIds = (settings.data?.accounts ?? []).map((acct) => acct.id);
   const reranking = board.isPlaceholderData && board.data?.metric !== by;
   const compareShown = Boolean(board.data?.compare);
   const heading = useRef<HTMLHeadingElement | null>(null);
@@ -330,20 +242,15 @@ function Standings(): ReactElement {
         <p className="note">The board is unreachable — {String(board.error)}</p>
       </PageFrame>
     );
-  const { rows, blocks, generatedAt } = board.data;
+  const { rows, generatedAt } = board.data;
   const armed = a && !board.data.compare ? rows.find((r) => r.key === a) : undefined;
   return (
     <PageFrame>
       <header className="page-header">
-        <h1>Leaderboard</h1>
-        <p>How every account is performing — bots and humans, same board. Figures, not placings.</p>
+        <h1>Scoreboard</h1>
+        <p>The members together against the house bot, then every account in the Field.</p>
       </header>
-      <MatchRead block={blocks.match} />
-      <div className="versus">
-        <CohortFigure label="Humans" block={blocks["cohort:human"]} />
-        <CohortFigure label="Bots" block={blocks["cohort:bot"]} />
-      </div>
-      <VersusRead block={blocks.versus} />
+      {board.data.party ? <PartyTable party={board.data.party} ownedIds={ownedIds} /> : null}
       {board.data.compare ? (
         <HeadToHead
           compare={board.data.compare}

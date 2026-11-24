@@ -114,10 +114,10 @@ describe("COMPANION_FIXTURES", () => {
     });
   });
 
-  describe("when a fixture asks from the landing page (#7167)", () => {
+  describe("when a fixture asks from Campaign (#7167, #8315)", () => {
     it("hands her each row's link, built by the real on-screen line", () => {
       const { context } = byId("grounding-landing-row-link");
-      expect(context).toContain("Page: they sent this from the landing page");
+      expect(context).toContain("Page: they sent this from the Campaign page");
       expect(context).toContain("On screen: the edition of the 2026-09-09 close.");
       expect(context).toContain("→ /#story-ai-capex");
       expect(context).toContain("→ /#event-2026-09-16-fomc-decision");

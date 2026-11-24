@@ -10,7 +10,12 @@ import {
   priceFieldsFor,
   type TicketFields,
 } from "../../app/src/live/ticket";
-import { EXIT_HOURS_NOTE, exitPreviewLines, exitReceiptLine } from "../../app/src/live/ticket-exit";
+import {
+  EXIT_HOURS_NOTE,
+  EXIT_ROLE_LABELS,
+  exitPreviewLines,
+  exitReceiptLine,
+} from "../../app/src/live/ticket-exit";
 
 /** The stock form's model for stop-limit and an exit at entry (#8249 PR 2). With the setting off
  *  every draft is what it was before; admitted, a limit buy can carry its take-profit and stop. */
@@ -113,24 +118,36 @@ describe("the exit in words (#8249)", () => {
       exitPreviewLines({ takeProfit: 95, stop: 85, takeProfitDollars: 12, stopDollars: -18 }),
     ).toEqual([
       "Take-profit $95.00 · +$12.00 against your limit if it fills",
-      "Stop $85.00 · about −$18.00 against your limit (a triggered stop sells at the market)",
+      "Stop-Market $85.00 · about −$18.00 against your limit (a triggered stop sells at the market)",
     ]);
   });
 
   it("states a leg's price alone when the server measured no dollars", () => {
     expect(exitPreviewLines({ takeProfit: 95, stop: 85 })).toEqual([
       "Take-profit $95.00",
-      "Stop $85.00",
+      "Stop-Market $85.00",
     ]);
   });
 
   it("names the broker's exits on the receipt and the hours they guard", () => {
     expect(exitReceiptLine({ takeProfit: 95.01, stop: 84.99 })).toMatch(
-      /^Sent with its exits: Take-profit \$95\.01 · Stop \$84\.99\..*cancelling the entry cancels both\.$/,
+      /^Sent with its exits: Take-profit \$95\.01 · Stop-Market \$84\.99\..*cancelling the entry cancels both\.$/,
     );
     expect(EXIT_HOURS_NOTE).toBe(
       "Guards regular hours only: the take-profit and stop don't act between 4pm and 9:30am ET.",
     );
+  });
+
+  it("never names the stop leg a bare Stop: it sells at the market once triggered (ticket.ts)", () => {
+    // 2026-11-24 post-merge: the row, review and receipt said "Stop", against the ticket's own
+    // Stop-Market rule, which exists because "stop" alone hides the fill-at-market fact.
+    const words = [
+      ...exitPreviewLines({ takeProfit: 95, stop: 85 }),
+      ...exitPreviewLines({ takeProfit: 95, stop: 85, takeProfitDollars: 12, stopDollars: -18 }),
+      exitReceiptLine({ takeProfit: 95, stop: 85 }),
+      EXIT_ROLE_LABELS.stop,
+    ];
+    for (const w of words) expect(w).not.toMatch(/\bStop\b(?!-)/);
   });
 });
 
