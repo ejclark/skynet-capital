@@ -38,8 +38,8 @@
 //
 // NEEDS YOU (#3818 criterion 12, #4293): the list is `plan().needsYou` from
 // scripts/moneypenny/assignments.mjs — the same call the assignment dry run makes, never a second
-// selector here. Imported lazily, so the importers of `digestFiles`/`latestDigestDate` (comms,
-// rank, thrash) stay git-only; tests/scripts/moneypenny/needs-you.spec.ts fails on any divergence.
+// selector here. Imported lazily, so the importers of `digestFiles`/`latestDigestDate`/
+// `latestDigestSince` (comms, rank, thrash) stay git-only; tests/scripts/moneypenny/needs-you.spec.ts fails on any divergence.
 //
 // NEEDS A SESSION (#6953 slice 2): the asks his answer cannot complete yet — a merge of a branch
 // with no PR, a PR that carries only a patch — plus every `needs-session` issue. `plan().needsSession`,
@@ -342,6 +342,28 @@ export function latestDigestDate() {
   return latest ? latest.slice(0, 10) : null;
 }
 
+/**
+ * The window start for "merged since the last digest", as an instant: when the commit that added
+ * the newest digest landed. The date alone reads as `<date>T23:59:59Z`, and digests land ~13:25Z on
+ * their own day, so every PR merged between the digest and midnight UTC fell into no digest's
+ * window (#8225: 43 PRs on 2026-11-23). Falls back to the date when git cannot say — the file is
+ * not committed yet, or a shallow clone would date it at the graft — so the window never widens
+ * to all history. The git read is injectable for the specs; null when there is no digest.
+ */
+export function latestDigestSince(gitRead = git) {
+  const [latest] = digestFiles();
+  if (!latest) return null;
+  const date = latest.slice(0, 10);
+  try {
+    if (gitRead(["rev-parse", "--is-shallow-repository"]).trim() === "true") return date;
+    const path = `docs/digests/${latest}`;
+    const added = gitRead(["log", "-1", "--diff-filter=A", "--format=%cI", "--", path]).trim();
+    return /^\d{4}-\d{2}-\d{2}T/.test(added) ? added : date;
+  } catch {
+    return date;
+  }
+}
+
 function status(today, nowMs) {
   const [latest] = digestFiles();
   if (!latest) {
@@ -499,7 +521,7 @@ function forwardedLine() {
   if (has("learning"))
     return `${learningLine(JSON.parse(scan("incident-scan.mjs", ["--count"])))}\n`;
   if (has("pictures")) {
-    const since = arg("since") ?? latestDigestDate();
+    const since = arg("since") ?? latestDigestSince();
     return scan(
       "comms-scan.mjs",
       ["--pictures", "--offline", ...(since ? [`--since=${since}`] : [])],
@@ -565,7 +587,7 @@ async function main() {
   );
 }
 
-// CLI only — comms-scan.mjs imports `latestDigestDate` and must not trigger a report.
+// CLI only — comms-scan.mjs imports `latestDigestSince` and must not trigger a report.
 // Not `await main()`: a top-level await keeps this module "evaluating" until main returns, and
 // `--needs-you` dynamically imports assignments → decision-callout → issue-lint → projects → rank,
 // which imports this file back. That import waits on a module that waits on it: node exit 13

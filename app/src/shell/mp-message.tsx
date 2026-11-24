@@ -4,6 +4,7 @@ import { Fragment } from "react";
 import { type MpMessage, useMoneypenny } from "../live/moneypenny";
 import { linkPieces, pivotOf } from "../live/moneypenny-links";
 import { type Run, readMarkdown } from "../live/moneypenny-markdown";
+import { forwardCampaignPath } from "./campaign-forward";
 import { requestLight } from "./eye-light";
 import { MessageShots } from "./mp-screenshot";
 
@@ -19,7 +20,10 @@ import { MessageShots } from "./mp-screenshot";
  * Go where she points (a link in her line, or a move in the dock that carries one): the Eye lights
  * the item it names, and a row on the page already open lands in place instead of jumping to the top.
  */
-export function goToPlace(router: ReturnType<typeof useRouter>, path: string): void {
+export function goToPlace(router: ReturnType<typeof useRouter>, asked: string): void {
+  // Her `/#story-…` row links name Campaign's rows; Campaign lives at `/campaign` now (#8189), so
+  // the path is forwarded before the same-page test, and a row on the open page lands in place.
+  const path = forwardCampaignPath(asked);
   // A link that names an item on a page (`#pos-NVDA`) also asks for the Eye's light onto it
   // (#7216 slice 2, `eye-light-layer.tsx`), which waits for the item to land wherever it renders.
   requestLight(path);

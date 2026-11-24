@@ -183,6 +183,12 @@
 .mp-moves > li {
   flex: none;
 }
+/* A scene's choices (#8191 AC 13) wrap instead of scrolling: all three and the way out show at
+   390px, in order, and none is hidden off the edge where it could read as the one not on offer. */
+.mp-moves.is-scene {
+  flex-wrap: wrap;
+  overflow-x: visible;
+}
 .mp-move {
   min-height: 44px;
   padding: 0 14px;

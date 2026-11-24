@@ -9,7 +9,8 @@
 //   node scripts/comms-scan.mjs              # human report
 //   node scripts/comms-scan.mjs --table      # markdown table, for pasting into a digest
 //   node scripts/comms-scan.mjs --json       # machine shape
-//   ... --since=YYYY-MM-DD                   # window override (default: the last digest's date)
+//   ... --since=YYYY-MM-DD                   # window override (default: the instant the last
+//                                            #    digest landed on main, #8225)
 //   ... --since=2026-10-10T16:00:00-05:00    # …or an exact instant: the decisions page (#5056)
 //                                            #    starts its reel at the previous page's Done
 //   node scripts/comms-scan.mjs --pictures   # the digest's picture slot: each PR's `## The picture`
@@ -30,7 +31,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
-import { latestDigestDate } from "./digest-scan.mjs";
+import { latestDigestSince } from "./digest-scan.mjs";
 import { isMain } from "./is-main.mjs";
 import { reexecWithProxy } from "./proxy-reexec.mjs";
 
@@ -168,25 +169,99 @@ function readLog(since) {
   return parseLog(raw);
 }
 
+const FENCE_RE = /^\s*```/;
+
+/** A GFM delimiter row (`|---|:--:|`): has a pipe, and every cell is dashes with optional colons. */
+const isDelimiterRow = (line) => {
+  const inner = line.trim().replace(/^\|/, "").replace(/\|$/, "");
+  return (
+    line.includes("|") &&
+    inner.includes("-") &&
+    inner.split("|").every((c) => /^\s*:?-+:?\s*$/.test(c))
+  );
+};
+
+/** Cells in a row that starts with `|`: unescaped pipes, less the closing one when it has it. */
+const cellCount = (row) => {
+  const s = row.trim().replace(/\\\|/g, "");
+  const pipes = (s.match(/\|/g) ?? []).length;
+  return s.endsWith("|") ? pipes - 1 : pipes;
+};
+
+const endsOpen = (row) => !/\|\s*$/.test(row);
+
+/** The rule for a run with no delimiter row: a row that does not end with `|` takes the next line. */
+function joinOpenRows(run) {
+  const out = [];
+  for (const line of run) {
+    const last = out.at(-1);
+    if (last !== undefined && /^\|/.test(last) && endsOpen(last)) {
+      out[out.length - 1] = `${last} ${line.trim()}`;
+    } else {
+      out.push(line);
+    }
+  }
+  return out;
+}
+
+/**
+ * One table's lines, re-joined against its delimiter's column count. GFM puts the delimiter right
+ * under the header, so every line between the run's first and the delimiter is header. Below it a
+ * row takes the next line while it is open (no closing `|`) or short of the column count — the
+ * wrap right after a pipe, which leaves a row that LOOKS finished (#8225: #8068's header) — but
+ * never when the join would overshoot the count, so a genuinely short row keeps its neighbour.
+ */
+function joinTableRun(run) {
+  const d = run.findIndex(isDelimiterRow);
+  if (d < 1) return joinOpenRows(run);
+  const cols = cellCount(run[d]);
+  const header = [run[0], ...run.slice(1, d).map((l) => l.trim())].join(" ");
+  const out = [header, run[d]];
+  let row = null;
+  for (const line of run.slice(d + 1)) {
+    if (row !== null) {
+      const joined = `${row} ${line.trim()}`;
+      if (endsOpen(row) || (cellCount(row) < cols && cellCount(joined) <= cols)) {
+        row = joined;
+        continue;
+      }
+      out.push(row);
+    }
+    row = line;
+  }
+  if (row !== null) out.push(row);
+  return out;
+}
+
 /**
  * Re-join the table rows a squash commit body wrapped. `git log` returns the stored body, which
  * GitHub hard-wraps near 72 columns, so a `| a | b |` row arrives split across lines and renders as
  * stray text (the 2026-11-24 review: 28 of 34 table pictures and 6 of 7 screenshot pictures were
- * split). A row starts with `|`; if it does not end with `|` the next lines continue it. Fenced
- * code is left alone — a mermaid line is never a table row. Pure.
+ * split). A table run starts at a line beginning with `|` and lasts to the next blank line or
+ * fence; inside it, rows are rebuilt against the delimiter row's column count (`joinTableRun`), so
+ * a wrap mid-cell AND a wrap right after a pipe both rejoin (#8225: 77 of 228 table pictures since
+ * 2026-10-20 still read split under the mid-cell-only rule). Fenced code is left alone — a mermaid
+ * line is never a table row. Pure.
  */
 export function unwrapRows(block) {
+  const lines = block.split("\n");
   const out = [];
   let fenced = false;
-  let open = false;
-  for (const line of block.split("\n")) {
-    if (/^\s*```/.test(line)) fenced = !fenced;
-    if (open) {
-      out[out.length - 1] += ` ${line.trim()}`;
-    } else {
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    if (FENCE_RE.test(line)) fenced = !fenced;
+    if (fenced || FENCE_RE.test(line) || !/^\|/.test(line)) {
       out.push(line);
+      i += 1;
+      continue;
     }
-    open = !fenced && /^\|/.test(out.at(-1)) && !/\|\s*$/.test(out.at(-1));
+    const run = [];
+    while (i < lines.length && lines[i].trim() !== "" && !FENCE_RE.test(lines[i])) {
+      run.push(lines[i]);
+      i += 1;
+    }
+    out.push(...joinTableRun(run));
   }
   return out.join("\n");
 }
@@ -307,7 +382,7 @@ function picturesReport(rows, window) {
 async function main() {
   reexecWithProxy();
   const fixture = arg("fixture");
-  const since = arg("since") ?? latestDigestDate();
+  const since = arg("since") ?? latestDigestSince();
   if (!fixture) {
     if (!since) throw new Error("comms-scan: no digest to measure from — pass --since=YYYY-MM-DD.");
     gitSince(since); // throws on a malformed window, before any git or GitHub call

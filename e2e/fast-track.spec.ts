@@ -8,7 +8,7 @@ test.describe("the first fast track", () => {
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/app/");
+    await page.goto("/app/campaign");
     const chip = page.getByRole("button", { name: "What's coming up that I should watch?" });
     await expect(chip).toHaveAttribute("aria-expanded", "false");
     await chip.click();
