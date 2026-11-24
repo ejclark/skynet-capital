@@ -37,6 +37,7 @@ export function OrdersSection({
         <OptionPositionsCard
           deskId={deskId}
           positions={desk.data.desk.positions}
+          {...(desk.data.desk.error ? { readError: desk.data.desk.error } : {})}
           {...(focus ? { focus } : {})}
         />
       ) : null}

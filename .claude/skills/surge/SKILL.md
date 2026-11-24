@@ -90,11 +90,15 @@ in a row (three at 03:29Z, three at 04:01Z) built or diagnosed, then stalled una
 were respawned at 04:18Z.
 Sources, in pull order (`npm run rank`):
 
-- **The Ready queue** — `/work-issues` in each child, one issue per child. **For an issue the
-  child will ship in more than one PR, its prompt names the hold**: `node
-  scripts/moneypenny/index.mjs --hold feedback-<n>` (or `plan-<n>`) before it starts, and
-  `--release` on every terminal outcome. A label alone comes off at the first merge, and the
-  feedback lane built the second PR beside the child twice in one hour on 2026-11-24 (#8314).
+- **The Ready queue** — `/work-issues` in each child, one issue per child. The orchestrator
+  admits the issue (`node scripts/moneypenny/admission.mjs --check <n>`) and labels it
+  `in-progress` before it dispatches, and its prompt tells the child to skip /work-issues' QUEUE
+  and `--check` steps and build #<n>: both refuse an `in-progress` issue.
+  **For an issue the child will ship in more than one PR, its prompt names the hold, taken once**:
+  `node scripts/moneypenny/index.mjs --hold feedback-<n>` (or `plan-<n>`) after admission, never
+  before it, since the hold's `session-held` label makes an admission check refuse the issue
+  (#8389), and `--release` on every terminal outcome. A label alone comes off at the first merge,
+  and the lane then builds the next PR beside the child (#8314).
 - **Triage backlogs** — Backlog `feedback` issues that might be clear: batch their numbers into
   **`.claude/workflows/clear-path-flip.js`** (`{issues: [...]}`), save the result as JSON, run
   `node scripts/clear-path-post.mjs <file> --dry-run`, then without `--dry-run`. Gate on its exit
