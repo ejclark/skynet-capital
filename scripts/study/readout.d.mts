@@ -19,6 +19,7 @@ export interface ReadoutOptions {
 }
 
 export const FRAME_CAP: number;
+export const FRAMES_SHOWN: number;
 export function jobMapOf(j: Record<string, unknown>): {
   stages: { stage: string; served?: boolean; outcomes?: string[]; holds?: string }[];
   measure: string[];

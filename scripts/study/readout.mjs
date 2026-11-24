@@ -51,6 +51,12 @@ import { findSessions, readJson, readJsonl } from "./round-files.mjs";
 import { CHAT_LOG } from "./world-chat.mjs";
 
 export const FRAME_CAP = 100 * 1024;
+/**
+ * Frames shown per problem: its first three. An expert's finding can cite forty census frames, and
+ * the cross-feature round's draft copied 196 (9.6MB) for ten problems, each a forty-column table on
+ * a phone (#8005). The rest stay in the round's folder, named on the finding.
+ */
+export const FRAMES_SHOWN = 3;
 const USAGE =
   "usage: readout.mjs --grade <grade.json> --round <dir> --study <name> --next-area <text> " +
   "--cost <text> [--owner-shot <path>] [--battle <file>] [--battle-reason <text>] " +
@@ -269,7 +275,9 @@ export function buildReadout(opts) {
   );
   const withFrames = (s) => ({
     ...s,
-    frames: framed.has(s) ? s.finding.frames.map(evidenceShot).filter(Boolean) : [],
+    frames: framed.has(s)
+      ? s.finding.frames.slice(0, FRAMES_SHOWN).map(evidenceShot).filter(Boolean)
+      : [],
   });
   const structural = ranked.map(withFrames);
   const grouped = rootGroups?.map((g) => ({ ...g, items: g.items.map(withFrames) })) ?? null;
