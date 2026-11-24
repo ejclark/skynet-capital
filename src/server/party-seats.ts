@@ -34,7 +34,8 @@ export class PartySeats {
    */
   async refresh(ids: readonly string[]): Promise<void> {
     if (this.running) {
-      this.queued = ids;
+      // Union, not replace: every waiter's ids get read, whichever call wakes first.
+      this.queued = [...new Set([...(this.queued ?? []), ...ids])];
       await this.running;
       // The first caller to wake takes the queued ids; the rest find them gone and are done.
       const next = this.queued;
