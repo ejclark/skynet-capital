@@ -146,6 +146,8 @@ export function claimPlan(
 /** The shipped sweep, degrading to `[]` on an exhausted budget and rethrowing anything else. */
 export function sweepShipped(readIssues: () => unknown[], deps: ShippedDeps): ShippedRow[];
 /** The audit tick's reads, `null` (and one warning) on an exhausted budget; anything else rethrows. */
+/** A push-tick pass's reads, `null` (and one warning naming `step`) on an exhausted budget. */
+export function tickOrSkip<T>(step: string, read: () => T, log?: (line: string) => void): T | null;
 export function auditIntentsOrSkip<T>(
   readIntents: () => T[],
   log?: (line: string) => void,

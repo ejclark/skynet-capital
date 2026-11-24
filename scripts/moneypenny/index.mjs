@@ -1156,12 +1156,27 @@ export function sweepShipped(readIssues, deps) {
  * Returns `null` on a skip, so the caller can tell "skipped" apart from "nothing to do".
  */
 export function auditIntentsOrSkip(readIntents, log = console.log) {
+  return tickOrSkip("audit", readIntents, log);
+}
+
+/**
+ * Any push-tick pass's reads, skipped when the token's hourly budget is spent: the rule above,
+ * named by `step` so the warning says which pass lost its tick (#6942, 2026-11-24).
+ *
+ * The audit got this guard in #6998, and the route and the retry-sweep peek did not. Run
+ * 45304863363 (push, 01:25Z) then died in `Run Moneypenny` on the router's first read of the open
+ * issue list, with the installation's REST budget at 0/5000 until 01:55Z, and #6942 reopened for
+ * the 24th time over a quota, not a defect. Both passes are level-based like the audit: the next
+ * push re-reads everything, so a skipped tick costs one tick of delay. Only the reads sit inside
+ * the thunk; a write that fails in `execute` still turns the run red. `null` means "skipped".
+ */
+export function tickOrSkip(step, read, log = console.log) {
   try {
-    return readIntents();
+    return read();
   } catch (err) {
     if (!isRateLimited(err)) throw err;
     log(
-      `::warning::audit skipped — this token's API budget is spent (${String(err.message).slice(0, 200)}). Nothing was flagged or cleared; the next push re-reads everything.`,
+      `::warning::${step} skipped — this token's API budget is spent (${String(err.message).slice(0, 200)}). Nothing was acted on; the next push re-reads everything.`,
     );
     return null;
   }
@@ -2008,7 +2023,9 @@ function runCliFlag(argv, ctx) {
     "--claim-feedback-reply": claimFeedbackReply,
     "--claim-plan": claimPlan,
     "--claim-next": () => claimNext(),
-    "--peek-next": () => peekNext(),
+    // Read-only, so a spent budget skips it (#6942): no `has_next`, no re-dispatch, and the next
+    // push peeks again. The claim (`--claim-next`) stays unguarded: it writes.
+    "--peek-next": () => tickOrSkip("retry sweep peek", () => peekNext()),
   };
   for (const [flag, claim] of Object.entries(claimers)) {
     if (argv.includes(flag)) {
@@ -2064,7 +2081,7 @@ function main(argv) {
         ...audit(fixtureDeps ?? gatherAuditDeps(Date.now(), hourly)),
         ...capsuleAudit(fixtureDeps),
       ])
-    : route(ctx, fixtureDeps ?? (dry ? {} : gatherDeps(ctx)));
+    : tickOrSkip("route", () => route(ctx, fixtureDeps ?? (dry ? {} : gatherDeps(ctx))));
   if (intents === null) return;
 
   if (dry) {
