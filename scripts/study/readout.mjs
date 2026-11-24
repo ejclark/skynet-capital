@@ -4,7 +4,7 @@
 //   node scripts/study/readout.mjs --grade <grade.json> --round <dir> --study <name>
 //        --next-area <text> --cost <text> [--owner-shot <path>] [--battle <battle.json>]
 //        [--battle-reason <text>] [--job-map <framer output .json|.md>] [--picture <session dir>]
-//        [--reveal --sealed <dir>] [--root <repo root>] [--ia <IA.md>]
+//        [--reveal --sealed <dir>] [--root <repo root>] [--ia <IA.md>] [--silence <text>]
 //
 // Writes <root>/docs/members/study/<study>/readout.md and copies every frame it shows, small
 // (≤ 100KB JPEG), to <root>/docs/shots/study-<study>/. The layout and words are readout-core.mjs.
@@ -37,6 +37,7 @@ import { basename, dirname, extname, isAbsolute, join, relative, resolve } from 
 import { isMain } from "./compat.mjs";
 import { parseGold } from "./grade-core.mjs";
 import { groupByRoot, ledgerRows, ROOTS_TOP, rootsProblems } from "./ia-roots.mjs";
+import { planScorecard } from "./plan-scorecard.mjs";
 import {
   rankStructural,
   renderReadout,
@@ -47,6 +48,7 @@ import {
 } from "./readout-core.mjs";
 import { FILES, findingView } from "./round-contract.mjs";
 import { findSessions, readJson, readJsonl } from "./round-files.mjs";
+import { CHAT_LOG } from "./world-chat.mjs";
 
 export const FRAME_CAP = 100 * 1024;
 /** The most evidence frames the page shows for one problem (see withFrames). */
@@ -55,7 +57,7 @@ const USAGE =
   "usage: readout.mjs --grade <grade.json> --round <dir> --study <name> --next-area <text> " +
   "--cost <text> [--owner-shot <path>] [--battle <file>] [--battle-reason <text>] " +
   "[--job-map <file>] [--picture <session dir>] [--reveal --sealed <dir>] [--root <dir>] " +
-  "[--ia <IA.md>]";
+  "[--ia <IA.md>] [--silence <text>]";
 
 /** The command line, checked; throws the usage line naming what is missing. */
 export function readoutArgs(argv) {
@@ -78,6 +80,9 @@ export function readoutArgs(argv) {
     sealed: get("--sealed"),
     root: get("--root") ?? process.cwd(),
     ia: get("--ia"),
+    // What happens if the owner says nothing, in plain words (#8037: a stop is a readout with a
+    // default, never an open-ended wait); printed under the one question.
+    silence: get("--silence"),
   };
   const missing = ["grade", "round", "study", "nextArea", "cost"].filter((k) => !opts[k]);
   if (missing.length) throw new Error(`missing ${missing.join(", ")}\n${USAGE}`);
@@ -87,7 +92,50 @@ export function readoutArgs(argv) {
   return opts;
 }
 
-/** Copy a frame as a JPEG of at most FRAME_CAP bytes; macOS `sips` shrinks one that is larger. */
+/**
+ * Shrink one frame to a JPEG whose longer side is `side` px: macOS `sips` on the laptop, else
+ * ImageMagick (`magick`, or `convert` before v7: a cloud session's Linux image has it and no sips —
+ * sessions run in the cloud by default, CLAUDE.md), else ffmpeg. → true when one wrote `dest`.
+ * `run` is the process runner, injected so the fallback order is specced without any of them.
+ */
+export function shrink(src, dest, side, quality, run = execFileSync) {
+  const q = String(quality);
+  const tries = [
+    [
+      "sips",
+      ["-s", "format", "jpeg", "-s", "formatOptions", q, "-Z", String(side), src, "--out", dest],
+    ],
+    ["magick", [src, "-resize", `${side}x${side}>`, "-quality", q, `jpeg:${dest}`]],
+    ["convert", [src, "-resize", `${side}x${side}>`, "-quality", q, `jpeg:${dest}`]],
+    // ffmpeg's JPEG scale is 2 (best) to 31; map the 40–60 quality ladder onto 6–10.
+    [
+      "ffmpeg",
+      [
+        "-y",
+        "-loglevel",
+        "error",
+        "-i",
+        src,
+        "-vf",
+        `scale='min(${side},iw)':-2`,
+        "-q:v",
+        String(Math.round(16 - quality / 10)),
+        dest,
+      ],
+    ],
+  ];
+  for (const [cmd, args] of tries) {
+    try {
+      run(cmd, args, { stdio: "ignore" });
+      return true;
+    } catch {
+      // not installed here, or it could not read the frame: try the next
+    }
+  }
+  return false;
+}
+
+/** Copy a frame as a JPEG of at most FRAME_CAP bytes; `shrink` makes a larger one smaller. */
 export function copySmall(src, dest) {
   if (statSync(src).size <= FRAME_CAP && /\.jpe?g$/i.test(extname(src))) {
     copyFileSync(src, dest);
@@ -100,27 +148,9 @@ export function copySmall(src, dest) {
     [540, 45],
     [400, 40],
   ]) {
-    try {
-      execFileSync(
-        "sips",
-        [
-          "-s",
-          "format",
-          "jpeg",
-          "-s",
-          "formatOptions",
-          String(quality),
-          "-Z",
-          String(side),
-          src,
-          "--out",
-          dest,
-        ],
-        { stdio: "ignore" },
-      );
-    } catch {
+    if (!shrink(src, dest, side, quality)) {
       throw new Error(
-        `${src} is over ${FRAME_CAP / 1024}KB or not a JPEG, and sips could not shrink it`,
+        `${src} is over ${FRAME_CAP / 1024}KB or not a JPEG, and neither sips nor ImageMagick could shrink it`,
       );
     }
     if (statSync(dest).size <= FRAME_CAP) return dest;
@@ -298,6 +328,25 @@ export function buildReadout(opts) {
     : null;
   const ownerShot = opts.ownerShot ? link(insideRoot(root, opts.ownerShot)) : null;
 
+  // The plan's rows (#8005): every session's verdict and path, its chat log, and the aware labels
+  // on what members told Moneypenny (chat-labels.json), when that read has been written.
+  const labelsFile = join(round, FILES.chatLabels);
+  const plan = planScorecard({
+    sessions: sessions.map((s) => ({
+      rel: s.rel,
+      viewport: s.summary.viewport,
+      success: Boolean(s.summary.oracle?.success),
+      answered: Boolean(s.summary.oracle?.answer?.matched),
+      lostness: s.summary.metrics?.lostness ?? null,
+      task: s.summary.task,
+      uniqueViews: s.summary.metrics?.uniqueViews,
+      totalViews: s.summary.metrics?.totalViews,
+      backtracks: s.summary.metrics?.backtracks ?? null,
+      chat: existsSync(join(s.dir, CHAT_LOG)) ? readJsonl(join(s.dir, CHAT_LOG)) : [],
+    })),
+    labels: existsSync(labelsFile) ? readJson(labelsFile) : null,
+  });
+
   const markdown = renderReadout({
     study: opts.study,
     grade,
@@ -311,6 +360,8 @@ export function buildReadout(opts) {
     jobMap,
     nextArea: opts.nextArea,
     cost: opts.cost,
+    silence: opts.silence,
+    plan,
   });
   writeFileSync(page, markdown);
   return { page, shots, markdown };

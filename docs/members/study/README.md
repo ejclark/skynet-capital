@@ -575,6 +575,13 @@ node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answe
   distraction"), added after the profile round, so no canary had read them. Asked what it knew,
   the expert recited them: every expert would have started primed. The checks stay; the quotes
   moved here. A role prompt carries method, never the owner's complaints.
+- 2026-11-23 · **the canary voided the thin slice's planted-defect control: the words role named
+  what its own prompt held.** Its picture-label rule carried three of this app's labels as examples
+  and the retro it came from (#5160 retro, 2026-10-14); asked what it knew, it listed them. The same
+  role had passed the main round's canary minutes before, so the risk is a die roll every round,
+  not a fixed fault. The rule stays in plain method words; the examples and the cite moved here, and
+  the actor role's line on easily-distracted members dropped the owner's words it quoted (Eric,
+  2026-10-14: "a good attribute to factor into personas in our user studies").
 - 2026-11-23 · **the thin slice's two other catches.** After three lint rewrites the tasks step
   crashed on a helper it never imported (that path had never run); and the oracle failed a right
   "down $4 so far today" for a −$4 day, because a sign counted only as a touching minus. Both fixed;
@@ -600,3 +607,25 @@ node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answe
 - 2026-11-24 · **the readout drew every frame a lead problem cited**: 24 in one row and 259 files
   (9MB) for the bot's loop, where the profile round's page carried 11. It now shows at most four a
   problem (`FRAMES_SHOWN`, readout.mjs), and every frame stays in the round directory.
+- 2026-11-24 · **the cross-feature round (586 calls, 40 sessions) re-found 6 of its 32 recorded
+  clashes but found 48 new structural problems at 86% validity.** The key was the IA ledger's
+  naming and placement clashes; the blind task author wrote fact lookups, which rarely walk a
+  collision. A key whose items no task can reach measures the tasks, not the evaluators: write an
+  area key from what that area's tasks can touch, and record touches.
+- 2026-11-24 · **with the chat in hand, the oracle's "place seen" rule fails right answers.** 11 of
+  24 failures reported the fact right, from Moneypenny or added up by hand, without seeing where the
+  page shows it. Success stays the oracle's; the readout now prints the right answers beside it,
+  never in its place (`plan-scorecard.mjs`).
+- 2026-11-24 · **a phone member's typing reached the page with no field focused** (#8126): a tap
+  aimed at the ask box hit the chip above it, the next keystrokes went to the document, and a "?"
+  opened the keyboard-shortcuts panel. A phone shows no keyboard then. The checker marked those
+  findings as the harness; the recorder now refuses such typing (#8151).
+- 2026-11-24 · **the task author never sets a task's fewest views, so lostness was null on every
+  session.** The plan's row now takes R from the fewest views any member needed to succeed at the
+  task. Two more: the lint still dropped one task after three rewrites over everyday words that are
+  also labels ("against", "strike"); and a desktop census in a world that renders the 3D landmark
+  costs ~5 minutes a route, so pre-run the censuses beside the sessions, never beside other
+  browsers (Chromium's GPU process ignores `nice`).
+- 2026-11-24 · **the session budget was over-projected:** 8.7 calls a session measured against 14
+  projected (the thin slice's one chatty session), so the round ran 2 runs a task where 3 (~770
+  calls) would have fit under the ≈830 approved. Project from the first five sessions, not one.
