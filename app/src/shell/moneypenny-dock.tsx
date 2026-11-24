@@ -5,6 +5,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { myConvictionsKey } from "../live/member-convictions";
 import { formatTranscript, type MpMessage, useMoneypenny } from "../live/moneypenny";
 import { latestLine, type Move, movesFor } from "../live/moneypenny-moves";
+import { isSceneKey } from "../live/moneypenny-scene";
 import { linesOf } from "../live/moneypenny-threads";
 import { stampTagged } from "../live/page-keys";
 import { taggedKeys, taggedLine, usePromptTags } from "../live/prompt-tags";
@@ -329,6 +330,8 @@ export function MoneypennyDock(): ReactElement {
   const collapse = useMoneypenny((s) => s.collapse);
   const leavePage = useMoneypenny((s) => s.leavePage);
   const closeThread = useMoneypenny((s) => s.closeThread);
+  const startScene = useMoneypenny((s) => s.startScene);
+  const gameMaster = useMoneypenny((s) => s.gameMaster === true);
   const router = useRouter();
   const href = useRouterState({ select: (s) => s.location.href });
   const queryClient = useQueryClient();
@@ -345,6 +348,8 @@ export function MoneypennyDock(): ReactElement {
     connected,
     firstTradeDone,
     latest,
+    gameMaster,
+    inScene: isSceneKey(thread?.key),
   });
   // A parked card's exits go on the card; the row keeps everything else (#7614).
   const parkedCard = draft || view || followup || research;
@@ -442,6 +447,10 @@ export function MoneypennyDock(): ReactElement {
       closeThread();
       return;
     }
+    if (m.kind === "scene") {
+      startScene();
+      return;
+    }
     goToPlace(router, m.href);
   };
 
@@ -481,7 +490,10 @@ export function MoneypennyDock(): ReactElement {
         </p>
         {/* minimized keeps only the header and the box: her moves wait with the pane (#7933) */}
         {!minimized && (rowMoves.length > 0 || tags.length > 0) ? (
-          <ul className="mp-moves" aria-label="Your moves">
+          <ul
+            className={isSceneKey(thread?.key) ? "mp-moves is-scene" : "mp-moves"}
+            aria-label="Your moves"
+          >
             {/* The tags lead the row, then her moves; the box below never moves for either. */}
             {tags.map((t) => (
               <li key={`tag:${t.label}`} className="mp-tag">
