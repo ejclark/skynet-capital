@@ -53,11 +53,12 @@ import { parseClock } from "./clock.mjs";
 import { isMain } from "./compat.mjs";
 import { instrument, marks, since, snapshot } from "./measure.mjs";
 import { pickerInitScript } from "./measure-picker.mjs";
-import { landingTop, onScreenControl, probeTap, tapRect } from "./measure-tap.mjs";
+import { landingTop, onScreenControl, probeTap, tapRect, typingFocus } from "./measure-tap.mjs";
 import { seenText } from "./measure-text.mjs";
 import {
   actionFindings,
   actionRefusal,
+  keyboardRefusal,
   landingScreens,
   SCROLL_TOL,
   taskMetrics,
@@ -269,8 +270,31 @@ async function perform(session, action, before) {
 }
 
 /**
+ * A phone `type` with no text field focused: there is no keyboard to type with (#8126). Refused
+ * like any other refusal — no step spent, the member reads why next turn — but it lands on the
+ * trace too, since the member DID act (a missed tap, then keys), and the analysts and
+ * `taskMetrics().noKeyboard` read it there. Null when the action may be played.
+ */
+async function keyboardCheck(session, action) {
+  if (action.kind !== "type" || !session.frameSize.hasTouch) return null;
+  const focused = await session.page.evaluate(typingFocus);
+  const refused = keyboardRefusal(action, session.frameSize, focused);
+  if (!refused) return null;
+  const record = {
+    refused,
+    ms: Date.now() - session.t0,
+    action,
+    focused: focused.what,
+    findings: [],
+  };
+  appendFileSync(session.trace, `${JSON.stringify(record)}\n`);
+  return { refused, action };
+}
+
+/**
  * Perform one member action and record what it did. Returns the trace record, or `{refused}` when
- * the action cannot be performed in this frame (nothing is recorded and no step is spent).
+ * the action cannot be performed in this frame (no step is spent; only a phone's missing keyboard
+ * is recorded, see `keyboardCheck`).
  */
 export async function act(session, action) {
   const { page } = session;
@@ -278,6 +302,8 @@ export async function act(session, action) {
     actionRefusal(action, session.frameSize) ||
     (action.kind === "back" && !(await page.evaluate(canGoBack)) && "back: no earlier page here");
   if (refused) return { refused, action };
+  const noKeys = await keyboardCheck(session, action);
+  if (noKeys) return noKeys;
   const terminal = action.kind === "done" || action.kind === "give_up";
   // What happened since the last action ended — a jump that missed its settle window lands here.
   const gap = await page.evaluate(since, session.mark);

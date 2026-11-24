@@ -118,7 +118,9 @@ Eric-sourced.
   behavior; 3 of the 10 largest untested files sit there. The candidate is always the largest file,
   so the coach stays wedged until someone confirms that file's behavior or the eye skips carve-out
   paths for `--candidate` (still counting them in `debt`, listed apart as needing a human).
-  _(src: Claude · while: governor cycle 7, 2026-11-02)_
+  _(src: Claude · while: governor cycle 7, 2026-11-02)_ **Done** in governed cycle 14
+  (2026-11-23), after the same stall recurred: `--candidate` skips the carve-out and lists it under
+  `needsHuman`; `tests/scripts/spec-gap-carve-out.spec.ts` reads the skill's list so the two can't drift.
 - **IPO discovery runs only when someone types it.** `npm run research:lockups` now files a listing
   from its public S-1 (#5912 slice 3), but no schedule calls it, so "Anthropic's S-1 lands and
   discovery files it within one run" (the slice's falsifier) waits on a person remembering the run:

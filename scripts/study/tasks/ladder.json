@@ -1,0 +1,109 @@
+{
+  "area": "ladder",
+  "about": "The area config for one study round over the ladder (#8005 slice 5; docs/IA.md §5.5: the rungs a member earns by trading, the courses and checks, onboarding and the human playbook chapter — the Profile page's Milestones section, with the rung's strip, chip and link on Trade). Read by scripts/study/round.mjs; everything area-specific lives here or in scripts/study/worlds/ladder-*. Worlds, all on bot-loop-today's league (the pin's Monday, the pin as corpus): ladder-today (the owner and the friend have each bought stock, rung 101; a third member owns nothing, so onboarding has not begun), ladder-first-sale (the owner's first stock sale this morning earned rung 102 and opened the course of the wheel's option legs) and ladder-first-day (an account linked this morning, nothing traded; the next step is a hello to Moneypenny, which a world cannot yet let open the ladder, #8070). Phone first: 7 of the 10 frames are phones. Members start where the app nav's Profile link lands; the ladder is a section of it. Census routes are links the ladder builds (a rung's way to Trade, Trade's way back to the chapter), never composed. `roles` is who each member is here, in plain words, read by the experts and the words pass instead of the cards (#5099), so it never quotes a card. No sealed key, framer or tasks yet: those come when the cross-feature round clears (#8005).",
+  "cutoff": "2026-11-23",
+  "tasksPer": 3,
+  "runs": 3,
+  "runsByWorld": { "ladder-first-sale": 2 },
+  "censusCap": 100,
+  "concurrency": 3,
+  "experts": 3,
+  "matrix": [
+    {
+      "member": "eric",
+      "world": "ladder-today",
+      "viewer": "eric",
+      "viewports": ["phone", "desktop"],
+      "start": "/app/accounts"
+    },
+    {
+      "member": "eric",
+      "world": "ladder-first-sale",
+      "viewer": "eric",
+      "viewports": ["phone"],
+      "start": "/app/accounts",
+      "note": "sold stock for the first time this morning"
+    },
+    {
+      "member": "returning-trader",
+      "world": "ladder-first-sale",
+      "viewer": "eric",
+      "viewports": ["phone", "desktop"],
+      "start": "/app/accounts"
+    },
+    {
+      "member": "phone-only",
+      "world": "ladder-today",
+      "viewer": "eric",
+      "viewports": ["phone"],
+      "start": "/app/accounts"
+    },
+    {
+      "member": "phone-only",
+      "world": "ladder-first-sale",
+      "viewer": "eric",
+      "viewports": ["phone"],
+      "start": "/app/accounts"
+    },
+    {
+      "member": "invited-friend",
+      "world": "ladder-today",
+      "viewer": "jordan",
+      "viewports": ["phone"],
+      "start": "/app/accounts"
+    },
+    {
+      "member": "first-timer",
+      "world": "ladder-today",
+      "viewer": "casey",
+      "viewports": ["phone"],
+      "start": "/app/accounts",
+      "note": "owns no account yet: onboarding has not begun"
+    },
+    {
+      "member": "first-timer",
+      "world": "ladder-first-day",
+      "viewer": "casey",
+      "viewports": ["desktop"],
+      "start": "/app/accounts",
+      "note": "linked a paper account this morning; nothing traded"
+    }
+  ],
+  "roles": {
+    "eric": "Runs the league; trades his own paper account by hand beside his bot, and wants to know what he has learned so far and what to try next. On a phone when away, at a desk at home.",
+    "returning-trader": "Has one paper account and some options vocabulary, is back after some weeks away, and sold some stock this morning; wants to know what that trade counted for and what comes next. Uses a phone and a desk.",
+    "phone-only": "Uses the app only on a phone, one-handed, a minute or two at a time.",
+    "invited-friend": "A friend the owner invited, with one small account of their own and a bot they took over; wants to know how far they have come and what to learn next. On a phone.",
+    "first-timer": "Invited last week; new to trading and to the app, and wants to know how to get started and what comes after. On a phone or a laptop."
+  },
+  "pages": [
+    "a member's own milestones: chapters for getting started, for learning to trade one kind of order at a time, and for proving a strategy by hand, each with its progress and points",
+    "the trading ladder: courses from buying stock to options strategies, each rung earned by a real paper trade and dated",
+    "getting started: linking a paper account, saying hello to the assistant, and a first trade",
+    "the ladder as the trade page shows it: which rungs are earned, the one this order would earn, and a way to the full ladder",
+    "where these pages send the member next: the trade page opened on the next rung's kind of order, and back"
+  ],
+  "census": [
+    { "world": "ladder-today", "viewer": "eric", "for": ["experts", "labels"] },
+    { "world": "ladder-today", "viewer": "jordan", "for": ["experts", "labels"] },
+    { "world": "ladder-today", "viewer": "casey", "for": ["experts", "labels"] },
+    { "world": "ladder-first-sale", "viewer": "eric", "for": ["experts", "labels"] },
+    {
+      "world": "ladder-first-sale",
+      "viewer": "eric",
+      "routes": [
+        "/app/trade?desk=eric&play=201",
+        "/app/accounts?section=milestones&chapter=trading"
+      ],
+      "for": ["handoff", "labels"]
+    },
+    { "world": "ladder-first-day", "viewer": "casey", "for": ["labels"] }
+  ],
+  "thin": {
+    "member": "eric",
+    "world": "ladder-first-sale",
+    "viewport": "phone",
+    "task": 1,
+    "expertRoute": "/app/accounts?section=milestones&chapter=trading"
+  }
+}

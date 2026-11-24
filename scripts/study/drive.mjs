@@ -9,7 +9,8 @@
 // THE LOOP: frame (the viewport JPEG) → the actor's turn → that action through the recorder →
 // append the turn and the trace record → repeat, until the member says `done` or `give_up`, or the
 // cap — min(2.5 × the task's optimal path, 15) actions — runs out. Then the ease question (1–7, a
-// reason at 5 or lower). A turn the recorder refuses (a tap outside the frame) is recorded with
+// reason at 5 or lower). A turn the recorder refuses (a tap outside the frame, or typing on a phone
+// with no text field focused, which has no keyboard: #8126) is recorded with
 // why, spends no recorder step, and still counts against the cap: a member who keeps trying the
 // impossible is a member running out of patience.
 //

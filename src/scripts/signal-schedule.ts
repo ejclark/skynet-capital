@@ -22,6 +22,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { researchCapNow } from "../../scripts/moneypenny/events.mjs";
 import { marketDayKey } from "../domain/market-day.js";
+import { DATE_RE } from "../domain/time.js";
 import {
   type DueRun,
   declaredRuns,
@@ -32,7 +33,6 @@ import {
 import { flag } from "./cli-flag.js";
 
 const RECORDS_DIR = join(process.cwd(), "docs", "research", "signal-runs");
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /** Every record on disk, keyed by the run's command. An unreadable file throws — a broken record
  *  must not read as "never ran" and buy a run the lane already made. */
