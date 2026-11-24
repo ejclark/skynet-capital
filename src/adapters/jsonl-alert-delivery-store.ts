@@ -5,6 +5,7 @@ import {
   parseChannel,
   parsePriority,
 } from "../alerts/alert-delivery.js";
+import type { FillWatch } from "../alerts/fill-watch.js";
 import type { AlertDeliveryRecord, AlertDeliveryStorePort } from "../ports/alert-delivery.js";
 import { JsonlKeyedStore } from "../storage/jsonl-store.js";
 
@@ -40,6 +41,21 @@ type Line =
       readonly consumerId: string;
       readonly at: string;
       readonly fingerprint: string;
+    }
+  | {
+      // #8251: a one-order watch armed from the receipt; `unwatch` ends it.
+      readonly kind: "watch";
+      readonly consumerId: string;
+      readonly at: string;
+      readonly orderId: string;
+      readonly destination: string;
+      readonly link: string;
+    }
+  | {
+      readonly kind: "unwatch";
+      readonly consumerId: string;
+      readonly at: string;
+      readonly orderId: string;
     };
 
 /** A stored prefs line back into the typed shape, or undefined when it is not one we understand —
@@ -67,12 +83,17 @@ export class JsonlAlertDeliveryStore implements AlertDeliveryStorePort {
     const lines = await this.store.list(consumerId);
     let prefs = DELIVERY_OFF;
     const sent = new Set<string>();
+    const watches = new Map<string, FillWatch>();
     for (const line of lines) {
       if (line.consumerId !== consumerId) continue;
       if (line.kind === "sent") sent.add(line.fingerprint);
+      else if (line.kind === "watch") {
+        const { orderId, destination, link, at } = line;
+        watches.set(orderId, { orderId, destination, link, at });
+      } else if (line.kind === "unwatch") watches.delete(line.orderId);
       else prefs = prefsFrom(line) ?? prefs;
     }
-    return { prefs, sent: [...sent] };
+    return { prefs, sent: [...sent], watches: [...watches.values()] };
   }
 
   savePrefs(consumerId: string, prefs: AlertDeliveryPrefs): Promise<void> {
@@ -92,6 +113,26 @@ export class JsonlAlertDeliveryStore implements AlertDeliveryStorePort {
       consumerId,
       at: this.now().toISOString(),
       fingerprint,
+    });
+  }
+
+  saveWatch(consumerId: string, watch: FillWatch): Promise<void> {
+    return this.store.append(consumerId, {
+      kind: "watch",
+      consumerId,
+      at: watch.at,
+      orderId: watch.orderId,
+      destination: watch.destination,
+      link: watch.link,
+    });
+  }
+
+  dropWatch(consumerId: string, orderId: string): Promise<void> {
+    return this.store.append(consumerId, {
+      kind: "unwatch",
+      consumerId,
+      at: this.now().toISOString(),
+      orderId,
     });
   }
 

@@ -2,7 +2,8 @@ import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "@rstest/core";
 import { parseConcepts, sectionOf, tableRows } from "../../scripts/crawl/cohesion-plan.mjs";
 
-// The phone-of-apps IA (docs/IA.md §8.4, #8247): one app per concept. §2f's App cell names exactly
+// The phone-of-apps IA (docs/IA.md §8.4, #8247): one app per concept. The names are the ones
+// #8291 gave the apps by their job (Eric, 2026-11-24): Trade, Who's who, Bots, Practice. §2f's App cell names exactly
 // one home for every concept, and §8.4's route table names every route file exactly once — so a
 // later move that adds a concept or a route without placing it fails here, not in review.
 
@@ -53,6 +54,8 @@ describe("the App cell's rule", () => {
     expect(appOf("Trade · Scoreboard")).toMatchObject({ error: expect.stringContaining("2 apps") });
     expect(appOf("Trade and Bots")).toMatchObject({ error: expect.stringContaining("2 apps") });
     expect(appOf("R&D")).toEqual({ error: '"R&D" is not an app' });
+    // The names Eric retired on 2026-11-24 (#8291) are off the list, so a stale cell fails here.
+    expect(appOf("Desk")).toEqual({ error: '"Desk" is not an app' });
   });
 });
 

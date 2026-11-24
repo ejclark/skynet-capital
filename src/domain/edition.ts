@@ -9,11 +9,13 @@
  * only on a tap. One narrator line rides each story in a mission voice; the headline stays news.
  * The tile leads with the reports, then works back to what moved (docs/IA.md §5.9, #7081).
  *
- * WRITTEN BY HAND, FOR NOW. Nothing produces an edition yet: #6949 slice 5 (the landscape read)
- * will, and #6948 slice 4 voices it. Until then each edition is a checked-in JSON file,
+ * WRITTEN BY CODE AFTER EACH CLOSE (#8252). `edition-writer.ts` builds the record from market data
+ * (closes, the news collector's files, the earnings table, the event calendar), and
+ * `npm run edition:write` runs it once a session has closed. Each edition is a checked-in JSON file,
  * `src/domain/editions/<YYYY-MM-DD>.json`, named for the market close it describes, the same
- * one-file-per-record shape `campaigns.ts` uses. When the writer lands it writes this same record,
- * so the page never learns where an edition came from.
+ * one-file-per-record shape `campaigns.ts` uses. The 2026-11-06 edition was written by hand before
+ * the writer existed; both are judged by the same checks, so the page never learns where an
+ * edition came from.
  *
  * HONESTY IS CHECKED HERE, NOT TRUSTED (#7077 criterion 7; docs/process/EVENT-RESEARCH.md →
  * Honesty rules). The loader refuses an edition that:
@@ -22,7 +24,9 @@
  *   - leaves a line unmarked: every line is measured, reported (shown as unconfirmed), modeled
  *     (shown as "modeled") or a house call, with its source;
  *   - borrows a franchise's catchphrase in the narrator line (criterion 4). A deny-list is a floor,
- *     not a proof: the narrator is still written to be original.
+ *     not a proof: the narrator is still written to be original;
+ *   - puts a number in its words (headline, line, narrator) that the story's own cards do not carry
+ *     (#8252 criterion 4; `checkWords`).
  *
  * NOTHING LOADS AT IMPORT. The server's whole import graph reaches this module, and the study
  * worlds run that graph inside a corpus pinned to an older commit (scripts/study/worlds/
@@ -158,6 +162,12 @@ const MAX_FACTS = 4;
  *  then is an explicit field, not a looser sign rule. */
 const SIGNED_RE = /^[+\-−]/;
 
+/** A number as copy carries it: a run of digits with any decimal or thousands parts ("11.2",
+ *  "2020", "1,250"). The words check compares these runs, so "11.2%" on a card covers "11.2" in a
+ *  headline. A sign is not compared: "falling 3.1%" beside a "+3.1%" card passes, so templates take
+ *  the verb from the same change that signs the value. */
+const NUMBER_RE = /\d+(?:[.,]\d+)*/g;
+
 /** Whether a fact's value is a level (a price, a yield, the VIX) rather than a change. */
 export const isLevel = (f: Pick<EditionFact, "value">): boolean => !SIGNED_RE.test(f.value);
 
@@ -183,6 +193,11 @@ function distinct(list: readonly Raw[], key: (r: Raw) => string, where: string, 
 }
 
 const dateKey = (d: Raw): string => `${String(d.date)} ${String(d.what)}`;
+
+/** Whether a writer may carry `text` as it stands: no buy framing and no base rate (which would
+ *  need its sample size). The edition writer drops a press title that fails rather than rewrite it. */
+export const isPlainCopy = (text: string): boolean =>
+  !(BUY_FRAMING_RE.test(text) || BASE_RATE_RE.test(text));
 
 /** Every word a member reads in one piece of copy, checked for buy framing. */
 function checkCopy(text: string, where: string, fail: Fail): void {
@@ -231,6 +246,38 @@ function checkLine(l: Raw, where: string, fail: Fail): void {
   checkCopy(l.text as string, where, fail);
 }
 
+/**
+ * NUMBERS COME FROM THE CARDS, NEVER FROM THE WORDS (#8252 criterion 4). A story's words (its
+ * headline, line and narrator) may only repeat a number its own cards carry: a fact, a report or a
+ * more line. Code fills the cards from market data; the words are a template today and a model's
+ * later (#8252 slice 2), and either way a figure the cards do not hold cannot reach the page. It
+ * runs on every edition, the hand-written ones included. Only member-read card text counts (a
+ * fact, a report's what and when, a more line's text), never a source or a raw date. Not caught
+ * yet, both slice 2's before a model writes a word: spelled-out numbers ("three"), and a sign the
+ * words contradict.
+ */
+function checkWords(s: Raw, facts: Raw[], reports: Raw[], more: Raw[], fail: Fail): void {
+  // What a member reads on the cards, never the provenance behind them: a source string's fetch
+  // stamps and accession numbers, or a report's ISO date, would let "20%" pass on a "2026-11-20".
+  const cards = [
+    ...facts.flatMap((f) => [f.label, f.value, f.change, f.note]),
+    ...reports.flatMap((d) => [d.when, d.what]),
+    ...more.map((l) => l.text),
+  ]
+    .filter(isText)
+    .join(" ");
+  const carried = new Set(cards.match(NUMBER_RE) ?? []);
+  for (const field of ["headline", "line", "narrator"] as const) {
+    const words = s[field];
+    if (!isText(words)) continue;
+    for (const n of words.match(NUMBER_RE) ?? [])
+      if (!carried.has(n))
+        fail(
+          `story "${String(s.id)}": its ${field} says "${n}", a number none of its facts, reports or more lines carry`,
+        );
+  }
+}
+
 function checkStory(s: Raw, fail: Fail): void {
   const id = String(s.id);
   if (!(isText(s.id) && SLUG_RE.test(s.id))) fail("a story id must be a slug");
@@ -261,6 +308,7 @@ function checkStory(s: Raw, fail: Fail): void {
   const more = objects(s.more, `story "${id}": more`, fail);
   for (const [i, l] of more.entries()) checkLine(l, `story "${id}" line ${i + 1}`, fail);
   distinct(more, (l) => String(l.text), `story "${id}": more`, fail);
+  checkWords(s, facts, reports, more, fail);
 }
 
 /**

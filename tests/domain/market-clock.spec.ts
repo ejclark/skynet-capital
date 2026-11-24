@@ -145,3 +145,13 @@ describe("marketHoursLine — the member context's Market line", () => {
     );
   });
 });
+
+describe("today's row after the close (#8248 review)", () => {
+  it("stays listed, so 'closed for the day' and 'no session today' read apart", () => {
+    const view = marketClockView(days, at("2026-11-25T22:00:00Z"), "broker"); // Wed 5:00 PM ET
+    expect(view.days[0]?.date).toBe("2026-11-25");
+    expect(view.isOpen).toBe(false);
+    expect(view.nextOpenAt).toBe("2026-11-27T14:30:00.000Z");
+    expect(view.nextCloseAt).toBe("2026-11-27T18:00:00.000Z");
+  });
+});
