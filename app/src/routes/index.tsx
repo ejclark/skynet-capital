@@ -5,7 +5,7 @@ import stillTower from "../assets/tower-still.jpg";
 import { parseBoardMetric } from "../live/board";
 import { type Desk, fetchDesk } from "../live/desk";
 import { markOf } from "../live/position-mark";
-import { fetchQuests } from "../live/quests";
+import { fetchQuests, unreadLine } from "../live/quests";
 import { fetchSettings } from "../live/settings";
 import { isCampaignAddress } from "../shell/campaign-forward";
 import { PageFrame } from "../shell/frame";
@@ -121,6 +121,44 @@ export function needsRows(input: {
   return rows.slice(0, 3);
 }
 
+/** What each read behind "Needs you" came back as (#8316). */
+export interface NeedsReads {
+  /** GET /api/settings failed: no account, desk or quest was read at all. */
+  readonly settingsFailed: boolean;
+  /** The All-accounts desk read rejected as a whole (one desk failing fails the `Promise.all`). */
+  readonly desksFailed: boolean;
+  /** Desks that answered error-tagged (`desk.error`, positions `[]`), and how many were read. */
+  readonly desksUnreachable: number;
+  readonly desksRead: number;
+  readonly questsFailed: boolean;
+  /** What the quest read did not judge this time: an underlying, or `conditions`. */
+  readonly questsUnread: readonly string[];
+}
+
+/**
+ * One line per read "Needs you" could not complete, in Profile's and Campaign's words where they
+ * have one (#8316). An all-clear is a claim, so it shows only when this is empty: a failed read is
+ * never an empty one. Settings failing stands alone, since nothing past it was read.
+ */
+export function readGaps(r: NeedsReads): readonly string[] {
+  if (r.settingsFailed) return ["Accounts are unreachable. What needs you can't be checked yet."];
+  const gaps: string[] = [];
+  if (r.desksFailed || (r.desksRead > 0 && r.desksUnreachable >= r.desksRead))
+    gaps.push("Account unreachable — positions can't be read right now.");
+  else if (r.desksUnreachable > 0)
+    gaps.push(
+      r.desksUnreachable === 1
+        ? "One account is unreachable — its positions can't be read right now."
+        : `${capitalize(countWords(r.desksUnreachable, "account"))} are unreachable — their positions can't be read right now.`,
+    );
+  if (r.questsFailed) gaps.push("Quests can't be read right now.");
+  else {
+    const unread = unreadLine(r.questsUnread);
+    if (unread) gaps.push(unread);
+  }
+  return gaps;
+}
+
 /** The tower's box: the phone still at ≤860, else the empty slot the session's frame lays over. */
 function TowerBox(): ReactElement {
   const phone = usePhoneWidth();
@@ -135,7 +173,7 @@ function TowerBox(): ReactElement {
   );
 }
 
-function NeedsYou(): ReactElement {
+export function NeedsYou(): ReactElement {
   const settings = useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
   const accounts = settings.data?.accounts ?? [];
   const ids = accounts.map((a) => a.id);
@@ -160,6 +198,14 @@ function NeedsYou(): ReactElement {
     bestQuest: quests.data?.available ? quests.data.quests[0]?.move.label : undefined,
   });
   const loading = settings.isPending || (ids.length > 0 && (desks.isPending || quests.isPending));
+  const gaps = readGaps({
+    settingsFailed: settings.isError,
+    desksFailed: desks.isError,
+    desksUnreachable: desks.data?.filter((s) => s.desk.error).length ?? 0,
+    desksRead: desks.data?.length ?? 0,
+    questsFailed: quests.isError,
+    questsUnread: quests.data?.available ? quests.data.unread : [],
+  });
   return (
     <section className="home-needs" aria-labelledby="home-needs-title">
       <h2 id="home-needs-title" className="home-eyebrow">
@@ -184,11 +230,20 @@ function NeedsYou(): ReactElement {
             </li>
           ))}
         </ul>
-      ) : (
+      ) : gaps.length > 0 ? null : (
         <p className="home-needs-none">
           {loading ? "Checking what needs you…" : "Nothing needs you right now."}
         </p>
       )}
+      {gaps.map((g) => (
+        // The words carry it; the mark only repeats them (hue never carries meaning alone).
+        <p key={g} className="home-needs-gap">
+          <span className="home-need-glyph" aria-hidden="true">
+            !
+          </span>
+          {g}
+        </p>
+      ))}
     </section>
   );
 }
