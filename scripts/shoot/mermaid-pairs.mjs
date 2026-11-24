@@ -35,6 +35,11 @@
 //    be posted beside the live block it came from and judged on a phone. A face that does not load
 //    stops the run (exit 5); it never falls back.
 //
+//  - **The live side names its face too** (#3981, slice 2): Verdana is not in the cloud container, so
+//    GitHub's side is drawn in an embedded Verdana-width stand-in (./mermaid-pairs-live.mjs), proved
+//    loaded before anything draws; the shot line and the sidecar name it, and rule 13's number is the
+//    one that face produced. A missing face stops the run (exit 5), never a Times fallback.
+//
 // A pairs file for a showcase lives on its issue, not in the tree; the only committed one is the
 // spec fixture, tests/fixtures/mermaid-pairs/example.json (docs/PICTURES.md → Screenshots).
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -62,6 +67,7 @@ import {
   inkMermaidConfig,
 } from "./mermaid-pairs-ink.mjs";
 import { MODES, parseArgs, validatePairs } from "./mermaid-pairs-input.mjs";
+import { LIVE_FACE, liveFaceCss, liveFaceRecord } from "./mermaid-pairs-live.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const MERMAID_DIR = join(ROOT, "node_modules/mermaid");
@@ -159,7 +165,7 @@ const liveConfig = (mode) => ({
 });
 
 /** Prove both weights of the face are loaded in the page, or stop: a fallback is a silent lie
- *  about the look. Runs IN THE PAGE. */
+ *  about the look (or, for a live side, about the phone number). Runs IN THE PAGE. */
 async function proveFace(family) {
   const missing = [];
   for (const weight of [400, 700]) {
@@ -181,7 +187,30 @@ async function proveFace(family) {
   return missing;
 }
 
-async function openPage(browser, mode, opts, anyInk) {
+/** Embed a face's rules in the page and prove both weights loaded, or stop with exit 5 naming it. A
+ *  file that cannot be read stops the run the same way. */
+async function loadFace(page, { family, label, css }) {
+  const stop = (why) =>
+    Object.assign(
+      new Error(
+        `the face "${family}" (${label}) ${why} — nothing rendered; a fallback face would misstate the look`,
+      ),
+      { exitCode: EXIT_FACE },
+    );
+  let rules;
+  try {
+    rules = css();
+  } catch (error) {
+    throw stop(`could not be read (${String(error?.message ?? error).split("\n")[0]})`);
+  }
+  await page.addStyleTag({ content: rules });
+  const missing = await page.evaluate(proveFace, family);
+  if (missing.length) throw stop(`did not load at weight ${missing.join(", ")}`);
+}
+
+/** The faces a run needs in the page: the ink face when any side is ours, and the live stand-in
+ *  when any diagram side is GitHub's. */
+async function openPage(browser, mode, opts, need) {
   const page = await browser.newPage({
     viewport: { width: 1600, height: 1000 },
     deviceScaleFactor: opts.scale,
@@ -189,19 +218,16 @@ async function openPage(browser, mode, opts, anyInk) {
   });
   await page.setContent(shellHtml(mode));
   await page.addScriptTag({ path: join(MERMAID_DIR, "dist/mermaid.min.js") });
-  if (anyInk) {
-    await page.addStyleTag({ content: `${faceCss(opts.face)}\n${inkCss(opts.face)}` });
-    const missing = await page.evaluate(proveFace, FACES[opts.face].family);
-    if (missing.length) {
-      const face = FACES[opts.face];
-      throw Object.assign(
-        new Error(
-          `the face "${face.family}" (${face.label}) did not load at weight ${missing.join(", ")} — nothing rendered; a fallback face would misstate the look`,
-        ),
-        { exitCode: EXIT_FACE },
-      );
-    }
+  if (need.ink) {
+    const face = FACES[opts.face];
+    await loadFace(page, {
+      family: face.family,
+      label: face.label,
+      css: () => `${faceCss(opts.face)}\n${inkCss(opts.face)}`,
+    });
   }
+  if (need.live)
+    await loadFace(page, { family: LIVE_FACE.family, label: LIVE_FACE.label, css: liveFaceCss });
   await page.evaluate((cfg) => window.mermaid.initialize(cfg), liveConfig(mode));
   return page;
 }
@@ -345,6 +371,9 @@ function sidecarFor(pair, lint, looks, opts, mermaidVersion) {
     face: anyInk
       ? { id: opts.face, family: FACES[opts.face].family, label: FACES[opts.face].label }
       : null,
+    liveFace: Object.entries(looks).some(([w, l]) => l === "live" && pair[w].kind === "mermaid")
+      ? liveFaceRecord()
+      : null,
     layout: null,
     natural: null,
     naturalHeight: null,
@@ -379,7 +408,7 @@ function phoneScreens(side, natural, height) {
   if (side?.kind !== "mermaid" || !natural || !height) return null;
   return Math.round(((phoneScale(natural) * height) / PHONE_HEIGHT) * 100) / 100;
 }
-function phoneLine(pair, laid) {
+function phoneLine(pair, laid, car) {
   const parts = [];
   for (const side of ["before", "after"]) {
     const px = phoneFont(pair[side], laid.natural?.[side]);
@@ -392,14 +421,20 @@ function phoneLine(pair, laid) {
     const tall = screens == null ? "" : ` ${screens} screens`;
     parts.push(`${side} ${px}px${tall}${flags.length ? ` ⚠ ${flags.join(", ")}` : ""}`);
   }
-  return parts.length ? ` · phone ${parts.join(", ")}` : "";
+  const face = car.liveFace
+    ? ` · live face ${car.liveFace.standIn} (${car.liveFace.family} stand-in)`
+    : "";
+  return parts.length ? ` · phone ${parts.join(", ")}${face}` : "";
 }
 
 /** Every pair in every requested mode — one page per mode, one frame per pair. */
 async function renderAll(browser, pairs, sidecars, opts, mermaidVersion) {
-  const anyInk = sidecars.some((car) => Object.values(car.looks).includes("ink"));
+  const need = {
+    ink: sidecars.some((car) => Object.values(car.looks).includes("ink")),
+    live: sidecars.some((car) => car.liveFace),
+  };
   for (const [m, mode] of MODES[opts.mode].entries()) {
-    const page = await openPage(browser, mode, opts, anyInk);
+    const page = await openPage(browser, mode, opts, need);
     for (const [i, pair] of pairs.entries()) {
       const car = sidecars[i];
       const { laid, image } = await shootPair(page, pair, car, mode, opts, mermaidVersion);
@@ -422,7 +457,7 @@ async function renderAll(browser, pairs, sidecars, opts, mermaidVersion) {
       const kb = (image.bytes / 1024).toFixed(1);
       const flag = image.overBudget ? ` ⚠ over ${opts.budget}KB at the quality floor` : "";
       console.log(
-        `shot ${join(opts.outDir, image.file)} ${image.width}×${image.height} ${kb}KB q${image.quality} ${laid.layout}${flag}${phoneLine(pair, laid)}`,
+        `shot ${join(opts.outDir, image.file)} ${image.width}×${image.height} ${kb}KB q${image.quality} ${laid.layout}${flag}${phoneLine(pair, laid, car)}`,
       );
       if (m === 0) car.sheets = await shootSheets(page, pair, car, opts);
     }
