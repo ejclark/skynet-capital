@@ -10,7 +10,7 @@ import { fetchSettings } from "../live/settings";
 import { isCampaignAddress } from "../shell/campaign-forward";
 import { PageFrame } from "../shell/frame";
 import { useParty } from "../shell/mission-windows";
-import { scoreboardTileLine } from "../shell/party-table";
+import { scoreboardTileLine, seatRead } from "../shell/party-table";
 import { usePhoneWidth } from "../shell/use-media";
 import { TowerSlot } from "../shell/vantage";
 
@@ -258,11 +258,16 @@ export function NeedsYou(): ReactElement {
  * Scoreboard either way: the page is open to every member, only the seat is earned. It reads the
  * Party window's own query (`useParty`), so the home adds no request the app did not already make.
  */
-function ScoreboardTile(): ReactElement {
+export function ScoreboardTile(): ReactElement {
   const settings = useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
   const party = useParty();
-  const ownedIds = (settings.data?.accounts ?? []).map((a) => a.id);
-  const { line, lit } = scoreboardTileLine(party.data?.party, ownedIds);
+  // Each read is its data, or "reading" / "unread": a pending or failed read is never "no seat" (#8368).
+  const accounts = seatRead(settings);
+  const board = seatRead(party);
+  const { line, lit } = scoreboardTileLine(
+    typeof board === "string" ? board : board.party,
+    typeof accounts === "string" ? accounts : accounts.accounts.map((a) => a.id),
+  );
   return (
     <li>
       <Link

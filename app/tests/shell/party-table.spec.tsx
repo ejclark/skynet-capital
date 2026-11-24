@@ -1,7 +1,14 @@
 import { render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { applyPatch, type BoardParty, type BoardSnapshot } from "../../src/live/board";
-import { PartyTable, SEAT_LINE, scoreboardTileLine } from "../../src/shell/party-table";
+import {
+  PartyTable,
+  SEAT_LINE,
+  SEAT_READING_LINE,
+  SEAT_UNREAD_LINE,
+  scoreboardTileLine,
+  seatRead,
+} from "../../src/shell/party-table";
 
 /**
  * The party's table (#8253): the members together against the house bot, a seat earned by a first
@@ -50,6 +57,19 @@ const PARTY: BoardParty = {
 };
 
 describe("PartyTable", () => {
+  it("says the seat can't be read, and marks no row, when the accounts read failed (#8368)", () => {
+    render(<PartyTable party={PARTY} ownedIds="unread" />);
+    expect(screen.queryByText(SEAT_LINE)).toBeNull();
+    expect(screen.getByText(SEAT_UNREAD_LINE)).toBeTruthy();
+    expect(screen.queryByText("you")).toBeNull();
+  });
+
+  it("shows no seat line while the accounts read is loading (#8368)", () => {
+    render(<PartyTable party={PARTY} ownedIds="reading" />);
+    expect(screen.queryByText(SEAT_LINE)).toBeNull();
+    expect(screen.queryByText(SEAT_UNREAD_LINE)).toBeNull();
+  });
+
   it("opens on the lead line in words, then the party beside the house bot", () => {
     render(<PartyTable party={PARTY} ownedIds={[]} />);
     expect(screen.getByText("The party leads the house bot by 0.20 points")).toBeTruthy();
@@ -105,6 +125,24 @@ describe("scoreboardTileLine", () => {
       line: "The party leads the house bot by 0.20 points",
       lit: true,
     });
+  });
+
+  it("never reads a pending or failed read as no seat (#8368)", () => {
+    const reading = { line: SEAT_READING_LINE, lit: false };
+    const unread = { line: SEAT_UNREAD_LINE, lit: false };
+    expect(scoreboardTileLine("reading", ["m-a"])).toEqual(reading);
+    expect(scoreboardTileLine(PARTY, "reading")).toEqual(reading);
+    expect(scoreboardTileLine("unread", ["m-a"])).toEqual(unread);
+    expect(scoreboardTileLine(PARTY, "unread")).toEqual(unread);
+    expect(scoreboardTileLine("reading", "unread")).toEqual(unread);
+  });
+});
+
+describe("seatRead", () => {
+  it("keeps data a query holds, else says reading or unread", () => {
+    expect(seatRead({ data: 1, isError: true })).toBe(1);
+    expect(seatRead({ data: undefined, isError: false })).toBe("reading");
+    expect(seatRead({ data: undefined, isError: true })).toBe("unread");
   });
 });
 
