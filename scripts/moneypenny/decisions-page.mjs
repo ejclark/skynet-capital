@@ -190,7 +190,7 @@ function heldLines(held) {
       continue;
     }
     const h = Math.floor(p.hours);
-    const clock = p.green ? `green ${h}h` : `open ${h}h, checks not green`;
+    const clock = p.green ? `green ${h}h` : `open ${h}h, ${checksWord(p)}`;
     const what = blocksPhrase(p.blocks);
     const silence = what
       ? `On silence: it stays open, and ${what} keeps waiting.`
@@ -200,6 +200,10 @@ function heldLines(held) {
   out.push("_No lane merges a held PR; each moves only on your click._");
   return out;
 }
+
+/** What a held PR that is not green says about its checks: "unknown" when nobody could read them,
+ *  never "not green" about checks that were never seen (#8212). */
+const checksWord = (p) => (p.unknown ? "checks unknown" : "checks not green");
 
 const isHis = (c) => trustedComment(c) && isEric(c?.user?.login) && !isClaudeComment(c?.body);
 
@@ -396,7 +400,9 @@ function pingFor({ state, prior, shown, held, askMap, assign, now }) {
 /** "#7030 (green 26h, blocks plan #6871)" — a held PR as the ping names it. */
 function heldPingItem(p) {
   if (typeof p.hours !== "number") return `#${p.number}`;
-  const facts = [p.green ? `green ${Math.floor(p.hours)}h` : `open ${Math.floor(p.hours)}h`];
+  const facts = [
+    p.green ? `green ${Math.floor(p.hours)}h` : `open ${Math.floor(p.hours)}h, ${checksWord(p)}`,
+  ];
   const what = blocksPhrase(p.blocks);
   if (what) facts.push(`blocks ${what}`);
   return `#${p.number} (${facts.join(", ")})`;
@@ -415,8 +421,10 @@ export function pingComment(newcomers, newHeld = []) {
   if (newHeld.length) {
     const list = newHeld.map(heldPingItem).join("; ");
     const lead = k ? "And" : `@${ERIC} —`;
+    // "Ready" is a claim about checks: only when no PR in the list is known red or unread (#8212).
+    const state = newHeld.some((p) => p.green === false) ? "waiting on" : "ready for";
     lines.push(
-      `${lead} ${newHeld.length} held PR${newHeld.length === 1 ? "" : "s"} ready for your merge: ${list}. Each is one click on its PR; on silence it stays open.`,
+      `${lead} ${newHeld.length} held PR${newHeld.length === 1 ? "" : "s"} ${state} your merge: ${list}. Each is one click on its PR; on silence it stays open.`,
     );
   }
   return [lines.join("\n\n"), "", PING_MARKER, "", FOOTER].join("\n");

@@ -42,6 +42,8 @@ export interface NeedsYouRow {
   green?: boolean;
   hours?: number;
   blocks?: HeldBlock[];
+  /** Its check runs could not be read: the page and the ping say "checks unknown" (#8212). */
+  unknown?: boolean;
 }
 /** A held PR as the page lists it: a criterion-4 row, or a merge ask with only its link. */
 export interface HeldRow {
@@ -50,6 +52,8 @@ export interface HeldRow {
   green?: boolean;
   hours?: number;
   blocks?: HeldBlock[];
+  /** Its check runs could not be read: the page and the ping say "checks unknown" (#8212). */
+  unknown?: boolean;
 }
 export interface ReadbackIntent {
   kind: "readback-eric";

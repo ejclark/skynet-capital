@@ -82,6 +82,8 @@ export interface NeedsYouRow {
   hours?: number;
   /** Criterion 4 only: the open issues the held PR names (`plan` flags a plan), when green. */
   blocks?: HeldBlock[];
+  /** Criterion 4 only: true when its check runs could not be read — "checks unknown" (#8212). */
+  unknown?: boolean;
 }
 /** An ask his answer cannot complete yet, or a `needs-session` issue (#6953 slice 2). */
 export interface NeedsSessionRow {

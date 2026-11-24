@@ -267,13 +267,15 @@ function planHeldPr(pr, { held = new Map(), markers, now, actions, ask, session,
   const facts = held.get(pr.number) ?? {};
   const due = heldDue(pr, { greenAt: facts.greenAt, now });
   if (!due) return;
-  if (logins(pr.assignees).some(isEric)) holding.add(pr.number);
+  const his = logins(pr.assignees).some(isEric);
+  if (his) holding.add(pr.number);
   const hours = due.hours;
   const blocks = due.green ? (facts.blocks ?? []) : [];
   const why = due.green
     ? `held PR green ${Math.floor(hours)}h`
     : `held PR unmerged ${Math.floor(hours)}h, checks not known green`;
-  // The decisions page reads `green`, `hours` and `blocks` off this row to write the PR's line.
+  // The decisions page reads `green`, `hours`, `blocks` and `unknown` off this row to write the
+  // PR's line; `unknown` (no check data read) makes it say "checks unknown", never "not green".
   const row = {
     number: pr.number,
     title: pr.title,
@@ -282,23 +284,27 @@ function planHeldPr(pr, { held = new Map(), markers, now, actions, ask, session,
     green: due.green,
     hours,
     blocks,
+    ...(due.unknown ? { unknown: true } : {}),
   };
   const gap = artifactGap(pr, gaps);
   if (gap) {
     session({ number: pr.number, title: pr.title, why: gap });
     // Already his (by hand, or asked before this rule): he holds it, so the digest says so.
-    if (logins(pr.assignees).some(isEric)) ask(row);
+    if (his) ask(row);
     return;
   }
+  // Criterion 3 applied to criterion 4, and it is load-bearing, not symmetry. Without it: Eric
+  // unassigns himself from a still-held PR, which drops it out of `gather()`'s issue reads (no
+  // `needs-eric`, no longer assigned to him) so nothing else can see it — and every later push
+  // re-assigns him and posts another marker comment, forever, with `stillHeld` blocking criterion
+  // 2 from ever clearing it. Marked means asked; an unassign after that is his answer. So it also
+  // stays off `needsYou`, as a marked criterion-1 issue he unassigned does (`planIssue`): the
+  // decisions page builds its held list, its assignment and its daily ping from `needsYou`, and
+  // listing it there re-pinged him every 24h about a PR he had already answered (#8212).
+  if (markers.has(pr.number) && !his) return;
   ask(row);
   if (actions.some((a) => a.kind === "assign" && a.number === pr.number)) return; // one ask each
-  // `!markers.has` is criterion 3 applied to criterion 4, and it is load-bearing, not symmetry.
-  // Without it: Eric unassigns himself from a still-held PR, which drops it out of `gather()`'s
-  // issue reads (no `needs-eric`, no longer assigned to him) so nothing else can see it — and
-  // every later push re-assigns him and posts another marker comment, forever, with `stillHeld`
-  // blocking criterion 2 from ever clearing it. Marked means asked; an unassign after that is his
-  // answer.
-  if (!(markers.has(pr.number) || logins(pr.assignees).some(isEric))) {
+  if (!his) {
     actions.push({
       kind: "assign",
       criterion: 4,
