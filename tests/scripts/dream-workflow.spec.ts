@@ -121,6 +121,15 @@ describe("dream.js when a memory row could not be checked", () => {
     expect(propose?.prompt).toMatch(/m\/a\.md/);
   });
 
+  it("a dead propose stage still raises notRun beside the unchecked row", async () => {
+    const deadPropose: Reply = (prompt, opts) =>
+      opts.label === "propose" ? null : withUnchecked(prompt, opts);
+    const { result } = await dream(deadPropose);
+    expect(result.notRun).toMatch(/propose/);
+    expect(result.notRun).not.toMatch(/cross-repo/);
+    expect(result.unchecked).toEqual(["m/cross-repo.md: claude-code #12345 unreadable"]);
+  });
+
   it("a clean run carries no unchecked list", async () => {
     const { result } = await dream(reply());
     expect(result.unchecked).toBeUndefined();
