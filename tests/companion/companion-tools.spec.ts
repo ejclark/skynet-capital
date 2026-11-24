@@ -344,7 +344,7 @@ describe("runCompanionTool — the closed allow-list (the structural half of 'ne
       const result = await runCompanionTool(name, depsFor(), "acct-1");
       expect(result).toEqual({
         ok: false,
-        error: `no such tool: ${name} (the declared tools are ${COMPANION_TOOL_NAMES.join(", ")})`,
+        error: `no such tool: ${name} (the declared tools are ${declaredToolNames("acct-1").join(", ")})`,
       });
     },
   );
@@ -366,7 +366,10 @@ describe("runCompanionTool — the closed allow-list (the structural half of 'ne
       "draft_feedback",
       "draft_research_ask",
     ]);
-    expect(declaredToolNames("acct-1")).toEqual(COMPANION_TOOL_NAMES);
+    // Every tool for a linked desk, except the scene read, declared only in game-master mode (#8191).
+    expect(declaredToolNames("acct-1")).toEqual(
+      COMPANION_TOOL_NAMES.filter((n) => n !== "get_scene_facts"),
+    );
   });
 
   it("draft_feedback hands the draft to the hook and files nothing — a malformed one is refused", async () => {

@@ -10,8 +10,10 @@ import type { HouseRosterReport } from "../autonomous/house-roster-wire.js";
 import type { PlaybookFunnelView } from "../autonomous/playbook-funnel.js";
 import type { SignalWindows } from "../autonomous/signal-windows.js";
 import type { CompanionTurn } from "../companion/companion-chat.js";
+import type { GameMasterPilot } from "../companion/game-master-flag.js";
 import type { Lesson } from "../domain/campaign-lessons.js";
 import type { OrderIntent, PlaybookVerdict } from "../domain/types.js";
+import type { AlpacaNewsClient } from "../news/alpaca-news-client.js";
 import type { ActivityEventBus } from "../observatory/activity-event.js";
 import type { TradeActivityRecord } from "../observatory/activity-store.js";
 import type { CapitalFlowReader } from "../observatory/capital-flow-ledger.js";
@@ -294,6 +296,9 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
   readonly activityLog?: Pick<ActivityEventBus, "list">;
   /** Options data (chains/spot) via a participant's own credentials, for the /trade ticket. */
   readonly optionsClientFor?: (participantId: string) => AlpacaOptionsClient | undefined;
+  /** News on held names via a participant's own credentials (`held-news-route.ts`, #8203) —
+   *  never the bots' shared key. Absent = the route says the session isn't linked. */
+  readonly newsClientFor?: (participantId: string) => AlpacaNewsClient | undefined;
   /** The underlying quote, pushed instead of polled (`quote-stream-route.ts`, #3407 P4) — one
    *  market-data socket per member, on that member's own credential. Absent = the route says so
    *  and the quote keeps its 15-second poll. */
@@ -338,6 +343,9 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * picker, whose authorization has no such bypass. Omit when OAuth isn't configured.
    */
   readonly isOwnerEmail?: (email: string) => boolean;
+  /** The game-master pilot's setting (#8191) — specs only. Absent, the committed
+   *  `GAME_MASTER_PILOT` in `companion/game-master-flag.ts` is the setting; boot never sets this. */
+  readonly gameMasterPilot?: GameMasterPilot;
   /** What waits on the owner's decision or merge (`owner-queue.ts`); read into Moneypenny's turn
    *  only when `isOwnerEmail` passes for the session. Omit when the feedback token is unset. */
   readonly readOwnerQueue?: ReadOwnerQueue;

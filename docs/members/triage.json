@@ -125,7 +125,7 @@
     "screen": "/ (the home screen, #8189)",
     "verdict": "keep",
     "home": "shell",
-    "mustBeSeenBy": "anyone signed in (the tower, what needs you, one tile per app; docs/IA.md §8.4; Campaign's old addresses ?w=/?show=/#story-/#event-/#calendar forward to /campaign, ?by=/a=/b= still go to /leaderboard)"
+    "mustBeSeenBy": "anyone signed in (the tower, what needs you, one tile per app; docs/IA.md §8.5; Campaign's old addresses ?w=/?show=/#story-/#event-/#calendar forward to /campaign, ?by=/a=/b= still go to /leaderboard)"
   },
   {
     "screen": "/campaign (Campaign's Overview window, its default — #7487; at / until #8189)",

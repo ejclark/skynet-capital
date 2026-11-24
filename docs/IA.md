@@ -194,40 +194,45 @@ that holds it as a section's or a window's body. A joint — a line, a chip, a l
 section — is never a home (§8's rule), so it is not listed. A screen's IA group is its `home` in
 `docs/members/triage.json` (a §5 group, or none when the IA places it nowhere); a concept whose
 screens sit in two groups has two homes, and slice 6 of #8005 settles each to one name and one home.
+The **App** cell is the one app that is the concept's home under the phone-of-apps model (§8.4):
+exactly one of Game Master, Desk, Journal, Cast, Scoreboard, Garage, Film Room, Home, Settings,
+before sign-in or retired (`tests/scripts/ia-apps.spec.ts` fails on none, two or another name).
+"Held on" stays today's screens until each move at its step re-points them.
 
-| Concept | A member reads | Entities (§2) | Held on |
-|---|---|---|---|
-| `the-book` | Overview · net worth · positions | Net worth · Equity curve · Desk tiles · Position · Option position · Needs-a-decision card | `/accounts ?section=overview` · `/u/$id` |
-| `history` | Ledger · Activity · fills | Activity event · Order · Wire trade (U1: one history, three homes) | `/accounts ?section=ledger` · `/u/$id/ledger` · `/activity` |
-| `balance` | Balance | Book health · Closed trades by who started them | `/accounts ?section=balance` |
-| `pulse` | Pulse | Pulse | `/u/$id/pulse` |
-| `bot-playbooks` | Playbooks (a bot's own) | Heartbeat · Decision cycle · Playbook subscription | `/accounts ?section=playbooks` · `/u/$id/playbooks` |
-| `thesis` | Thesis | Thesis | `/accounts ?section=thesis` · `/u/$id/thesis` |
-| `workbench` | Trade · the ticket · chart · chain | Quote · Bars · Option chain · Ticket / option / spread draft | `/trade ?section=ticket` · `/trade ?section=chart` · `/trade ?section=chain` |
-| `guidance` | Guidance · Outlook · saved positions | Position guidance | `/trade ?section=guidance` · `/trade ?section=outlook` · `/saved-positions` |
-| `watchlist` | Watchlist | none in §2 (#3407) | `/trade ?section=watchlist` |
-| `orders` | Orders · working orders | Order · Order event · Alert | `/trade ?section=orders` |
-| `calendar` | Calendar · Events · Board | Research event · Research call · Day range · Market closure | `/research ?section=board` · `/accounts ?section=events` · `/campaign ?w=calendar` |
-| `research-docs` | a ledger · a study | Research doc | `server /research/<slug>` |
-| `coverage` | Coverage | none in §2 (#3811) | `/research ?section=coverage` |
-| `house-playbooks` | Playbooks (the catalog) · Your playbooks · Your convictions | Playbook store card · Strategy card · Authored play · Conviction view · Pair conviction | `/research ?section=playbooks` |
-| `ladder` | Milestones · Onboarding · Trading progression | Play / rung · Journey · Onboarding | `/accounts ?section=milestones` · `/accounts ?section=milestones&chapter=onboarding` · `/accounts ?section=milestones&chapter=trading` |
-| `human-playbooks` | Playbooks (the chapter) | Human playbook | `/accounts ?section=milestones&chapter=playbooks` |
-| `filings` | Feedback · your filings | Feedback filing + community earn (the league's feed carries their mirror, #1977) | `/accounts ?section=feedback` · `/activity` |
-| `chat` | Moneypenny | Moneypenny thread | `shell Moneypenny dock` |
-| `standing` | Leaderboard · the party | Leaderboard row + compare | `/leaderboard` · `/campaign ?w=party` |
-| `whole-market` | Market · the sectors | the edition's sectors (`src/domain/edition-sectors.ts`) | `/campaign ?w=market` |
-| `where-things-stand` | Where things stand · your next step | the edition · Quest | `/campaign` |
-| `quests` | Quests | Quest | `/campaign ?w=quests` |
-| `preferences` | Preferences | member preferences (MISSING 24) | `/settings ?section=preferences` |
-| `my-accounts` | Account | Owned account · Fleet controls | `/settings ?section=account` |
-| `owner-tools` | Guests · GitHub | none in §2 (U13) | `/settings ?section=guests` · `/settings ?section=github` |
-| `target-split` | Target | none in §2 (#4607) | `/settings ?section=target` |
-| `status` | the status line | Market session clock · Ops status | `shell status line` |
-| `tower` | the tower | Landmark | `shell tower column` |
-| `sign-in` | Sign in · welcome | none (before sign-in) | `server /login` · `server /welcome` |
+| Concept | A member reads | Entities (§2) | App (§8.4) | Held on |
+|---|---|---|---|---|
+| `the-book` | Overview · net worth · positions | Net worth · Equity curve · Desk tiles · Position · Option position · Needs-a-decision card | Desk | `/accounts ?section=overview` · `/u/$id` |
+| `history` | Ledger · Activity · fills | Activity event · Order · Wire trade (U1: one history, three homes) | Desk | `/accounts ?section=ledger` · `/u/$id/ledger` · `/activity` |
+| `balance` | Balance | Book health · Closed trades by who started them | Desk | `/accounts ?section=balance` |
+| `pulse` | Pulse | Pulse | Scoreboard | `/u/$id/pulse` |
+| `bot-playbooks` | Playbooks (a bot's own) | Heartbeat · Decision cycle · Playbook subscription | Garage | `/accounts ?section=playbooks` · `/u/$id/playbooks` |
+| `thesis` | Thesis | Thesis | Garage | `/accounts ?section=thesis` · `/u/$id/thesis` |
+| `workbench` | Trade · the ticket · chart · chain | Quote · Bars · Option chain · Ticket / option / spread draft | Desk | `/trade ?section=ticket` · `/trade ?section=chart` · `/trade ?section=chain` |
+| `guidance` | Guidance · Outlook · saved positions | Position guidance | Desk | `/trade ?section=guidance` · `/trade ?section=outlook` · `/saved-positions` |
+| `watchlist` | Watchlist | none in §2 (#3407) | Desk | `/trade ?section=watchlist` |
+| `orders` | Orders · working orders | Order · Order event · Alert | Desk | `/trade ?section=orders` |
+| `calendar` | Calendar · Events · Board | Research event · Research call · Day range · Market closure | Scoreboard | `/research ?section=board` · `/accounts ?section=events` · `/campaign ?w=calendar` |
+| `research-docs` | a ledger · a study | Research doc | Cast | `server /research/<slug>` |
+| `coverage` | Coverage | none in §2 (#3811) | Cast | `/research ?section=coverage` |
+| `house-playbooks` | Playbooks (the catalog) · Your playbooks · Your convictions | Playbook store card · Strategy card · Authored play · Conviction view · Pair conviction | Garage | `/research ?section=playbooks` |
+| `ladder` | Milestones · Onboarding · Trading progression | Play / rung · Journey · Onboarding | Game Master | `/accounts ?section=milestones` · `/accounts ?section=milestones&chapter=onboarding` · `/accounts ?section=milestones&chapter=trading` |
+| `human-playbooks` | Playbooks (the chapter) | Human playbook | retired | `/accounts ?section=milestones&chapter=playbooks` |
+| `filings` | Feedback · your filings | Feedback filing + community earn (the league's feed carries their mirror, #1977) | Journal | `/accounts ?section=feedback` · `/activity` |
+| `chat` | Moneypenny | Moneypenny thread | Game Master | `shell Moneypenny dock` |
+| `standing` | Leaderboard · the party | Leaderboard row + compare | Scoreboard | `/leaderboard` · `/campaign ?w=party` |
+| `whole-market` | Market · the sectors | the edition's sectors (`src/domain/edition-sectors.ts`) | Game Master | `/campaign ?w=market` |
+| `where-things-stand` | Where things stand · your next step | the edition · Quest | Home | `/campaign` |
+| `quests` | Quests | Quest | Game Master | `/campaign ?w=quests` |
+| `preferences` | Preferences | member preferences (MISSING 24) | Settings | `/settings ?section=preferences` |
+| `my-accounts` | Account | Owned account · Fleet controls | Settings | `/settings ?section=account` |
+| `owner-tools` | Guests · GitHub | none in §2 (U13) | Settings | `/settings ?section=guests` · `/settings ?section=github` |
+| `target-split` | Target | none in §2 (#4607) | Settings | `/settings ?section=target` |
+| `status` | the status line | Market session clock · Ops status | Home | `shell status line` |
+| `tower` | the tower | Landmark | Home | `shell tower column` |
+| `sign-in` | Sign in · welcome | none (before sign-in) | before sign-in | `server /login` · `server /welcome` |
 
-**The calls on today's two-home concepts (#8005 slice 1, 2026-11-23).** Each stays counted until one
+**The calls on today's two-home concepts (#8005 slice 1, 2026-11-23).** §8.4 now names one app for
+each (the App cell); the census keeps counting two homes until the move at its step lands. Each stays counted until one
 home holds it — the census measures, slice 6 of #8005 settles — but none is an accident any more:
 
 - `history` (book · league) — U1: one history, three homes. Its own plan: #8008.
@@ -884,7 +889,7 @@ tests are its slices 1b (#7144, AT1–AT5) and 1c (AT3 revised, AT5b, AT8, AT9).
 | | |
 |---|---|
 | **Job** | An entry point whose first job is the member's goal (`.claude/rules/member-surfaces.md`): take the mission in their own words or a canned path, then show the whole market and what's coming as avenues to explore, and send them where they want to go. What belongs follows from that job: the mission box with its canned paths · the whole market · the event calendar, R&D's own, with its grid at desktop width (#7077 AT10, AT11). Anything that restates what the page already shows does not belong, a chat answer included (#7167). Eric, 2026-11-09: *"The first objective is to understand the goal; present options. This shoudl help outline features that do/don't belong to help us shape the page template"*. He first kept the overview above the mission box, then reversed it the same day on seeing it drawn (below) |
-| **Home** | `/app/campaign` (`app/src/routes/campaign.tsx`) since #8189: `/app/` is the home screen now (§8.4), and Campaign is one app among its tiles; every old Campaign address (`/?w=`, `/?show=`, Moneypenny's `/#story-`/`#event-`/`#calendar` links) forwards here with its search and hash. A member with no account still lands on onboarding. The first tab, labelled **"Campaign"** since #7487 ("Chronicles", his name on #7018 fork d, until then; `__root.tsx`). The Leaderboard leaves the tab bar and keeps its route, reached from Profile's league card ("Full leaderboard ›") |
+| **Home** | `/app/campaign` (`app/src/routes/campaign.tsx`) since #8189: `/app/` is the home screen now (§8.5), and Campaign is one app among its tiles; every old Campaign address (`/?w=`, `/?show=`, Moneypenny's `/#story-`/`#event-`/`#calendar` links) forwards here with its search and hash. A member with no account still lands on onboarding. The first tab, labelled **"Campaign"** since #7487 ("Chronicles", his name on #7018 fork d, until then; `__root.tsx`). The Leaderboard leaves the tab bar and keeps its route, reached from Profile's league card ("Full leaderboard ›") |
 | **Keys** | date (today's edition) · campaign (#6949) · symbol (a story's cast) · member (your account → quests) · what the party asked in a campaign: each question, who asked it by display name and what its research found, for every member who can read the campaign (#6949 slice 6, `GET /api/campaigns/questions`) |
 | **Holds, each with one owner** | the whole market: all 11 GICS sectors and the S&P 500, one SPDR fund each, with each one's move over Day · Week · Month · YTD and where its price sits in its 20-day range, as Lines or Tiles (round 3, AT1–AT3 and AT8; closes checked in beside the edition, `src/domain/edition-sectors.ts`) · the calendar: the edition's stories one line each, then each coming trading day's events under week headers that name closures, ◆ on one a story waits on (AT4–AT5b) · the edition: each story, opened from its line, leads with the reports that bear on it, then works back to what moved (a ▲ ▼ ∿ shape on each line), the rest on tap, one narrator line in a mission voice (#6948 slice 4, sources #6949 slices 4–5) · your own question first, its canned paths under it, an ask beside each story (#7034; discovery #6952) · quests by their source: a market quest under its story, your account's quests after the news (#7028) · who holds an open question (#7034 criterion 9) · on desktop, the tower in the right margin whose Eye lights what Moneypenny points to (`eye-light-layer.tsx`; #7167 criterion 10; right since #7487 slice 4a — superseded 2026-11-12, Eric: "Move it right"; it stood in a left rail from #7018 round 9 / #7216, 2026-11-09, while Moneypenny's rail opened on the right) |
 | **Hands on** | the owner-fired ticket with exits → Trade · a story's ledger → R&D · who you are → the character sheet (#7019) · standings → the Leaderboard |
@@ -1204,6 +1209,11 @@ scenarios asked; 33–36 were added by the red passes; 37 by plan #5496.
 
 ## 8. The IA decision — written down before any lift (#895)
 
+**§8.4 supersedes the homes below where they differ** (Eric's pick of shape 5 for #8161,
+2026-11-24: one app per concept, seven apps over one engine). §8.1–§8.3 stay as the record of the
+model they built and the forks they held; a route keeps its §8.1–§8.3 home until the move §8.4
+names for it lands.
+
 ```mermaid
 ---
 title: Seven groups, their homes, and the joints between them
@@ -1305,12 +1315,186 @@ call is made where the code or an issue already settles it; a taste or placement
 | `server /feedback/preview` | retire, as a screen | a JSON endpoint (the feedback form's markdown preview), no caller in `app/src` since the classic form retired; removing the endpoint is dead-code work (`/bury`), not IA |
 | unknown URL | keep (§5.8, Not found) | every dead link needs an honest answer; how it looks is polish, not placement |
 | Council (§2c, §4, §5.7, §6, §8) | marked retired | #5994 retired it 2026-10-25; the rows stay as the record |
-| `/trade ?section=chart` | **held for slice 6** — shapes: (A) keep the Chart pane · (B) fold the price into Guidance · (C) price only in the quote header, no pane · (D) chart only where the bench docks, never a phone pane | the one member who names the chart skips it (returning-trader §4); the blind round (#8005 slice 4) measures whether anyone reaches for it |
-| `/trade ?section=orders` | **held for slice 6** — shapes: (A) stays on Trade (#674) · (B) working orders move to Profile → Overview, Trade keeps this ticket's own · (C) a "working" filter on top of the one history (#8008) · (D) a count on Trade that links into the book | moving it reverses Eric's #674 / 2026-09-22 workbench call (§8.1); only he reverses it, on the round's evidence |
-| `/saved-positions` | **held for slice 6** — shapes: (A) fold into Trade → Guidance beside live positions · (B) an "outside Skynet" group on Profile → Overview · (C) its own route with a door from Guidance · (D) retire | Eric's own testbed (#3968, closed): "to learn what belongs before deciding placement" |
+| `/trade ?section=chart` | **held for slice 6** — shapes: (A) keep the Chart pane · (B) fold the price into Guidance · (C) price only in the quote header, no pane · (D) chart only where the bench docks, never a phone pane | the one member who names the chart skips it (returning-trader §4); the blind round (#8005 slice 4) measures whether anyone reaches for it. **2026-11-24 (§8.4):** the fork now sits inside the Desk, for the Desk move to place |
+| `/trade ?section=orders` | **held for slice 6** — shapes: (A) stays on Trade (#674) · (B) working orders move to Profile → Overview, Trade keeps this ticket's own · (C) a "working" filter on top of the one history (#8008) · (D) a count on Trade that links into the book | moving it reverses Eric's #674 / 2026-09-22 workbench call (§8.1); only he reverses it, on the round's evidence. **2026-11-24 (§8.4):** the book and the ticket are one app, the Desk, so (A) and (B) both land in it; only the section placement is left, for the Desk move to place |
+| `/saved-positions` | **held for slice 6** — shapes: (A) fold into Trade → Guidance beside live positions · (B) an "outside Skynet" group on Profile → Overview · (C) its own route with a door from Guidance · (D) retire | Eric's own testbed (#3968, closed): "to learn what belongs before deciding placement". **2026-11-24 (§8.4):** the fork now sits inside the Desk (a section or retired), for the Desk move to place |
 | Two words, one place | Moneypenny names the landing page "the landing page" and R&D "Research", while the tabs say "Campaign" (#7487) and "R&D" (§8's copy rule) | her place names follow the tabs: built in its own small PR |
 
-### 8.4 The home screen — the app shell is the page template (#8161, #8189), 2026-11-24
+### 8.4 The phone of apps — one app per concept, seven apps over one engine (#8161 shape 5, 2026-11-24)
+
+```mermaid
+---
+title: Home launches seven apps; every way in ends on one ticket over one engine
+config:
+  look: handDrawn
+---
+flowchart LR
+    accTitle: The phone-of-apps model
+    accDescr: Home holds the tower, what needs you and one tile per app. Seven apps open from it, each a view over one paper engine. Every trade, from any app or way in, is placed on the Desk's one ticket, which writes the one book and the one history.
+    HOME["Home: the tower · needs you · one tile per app"] --> GM["Game Master"]
+    HOME --> DESK["Desk"]
+    HOME --> JOURNAL["Journal"]
+    HOME --> CAST["Cast"]
+    HOME --> SCORE["Scoreboard"]
+    HOME --> GARAGE["Garage"]
+    HOME --> FILM["Film Room"]
+    GM -->|"a staged trade"| TICKET["the Desk's one ticket"]
+    DESK --> TICKET
+    SCORE -.->|"reads"| ENGINE
+    TICKET --> ENGINE["one paper engine: one book · one history · one league"]
+```
+
+_Caption — proposed shape, not yet built: Eric's pick of shape 5 (#8161, 2026-11-24, "Build 5"),
+written down before any route moves (#895). Each app ships at the build step named in call 2;
+until then today's routes stay where they are (call 6)._
+
+Every call below was settled by Eric's pick and #8161's body; this section writes them down and
+decides none. Where shape 5 was silent, the three calls at the end were made on evidence and each
+carries its falsifier.
+
+**1. The phone shell.** The home screen is the launcher and the page template (#8161 point 18;
+built by #8189). From the top: the tower, then "needs you" plus news on what you hold, then one
+tile per app. The tower lives on Home only; inside an app, the app picks its own page template.
+The launcher replaces the topbar's view tabs as the app-level nav. Inside an app the top row is
+Home · the app's name · the status line · the member menu. From desktop width the same tiles may
+sit in that row, same entries and order, never an extra destination. Settings stays behind the
+member menu and is not an app. The chat dock under every page retires; the chat lives in the Game
+Master app.
+
+- **Mobile-first, at 390, in order:** inside an app, Home · the app's name · the status line,
+  then the app's own first item; on Home, the tower still · "needs you" · the tiles (#8189).
+- **Hue never carries meaning alone:** every tile, duel marker, house-bot marker and filter chip
+  pairs a glyph with a word (`docs/BRAND.md` → *Accessibility*).
+
+**2. The apps, each a view over one engine** — one paper engine, one book, one history, one
+league. Paper only: no app names a real-money path.
+
+| App | Its job, in plain words | Ships at (shape 5 build order) |
+|---|---|---|
+| Game Master | Narrates scenes from real events and your holdings, answers questions, never recommends a trade | step 2 (#8191), step 7 |
+| Desk | The ticket, positions, orders, the ledger and portfolio value | the Desk move (with #8008) |
+| Journal | Wishes, trade notes and a log; says when a wish is picked up and shipped | step 8 (#8190) |
+| Cast | Who does what and whom to ask, generated from `docs/agents/seats.json` | step 8 (#8200 done) |
+| Scoreboard | Game days, box scores, the family table, stat lines | step 9, unlocked by a first fill |
+| Garage | Bots and their playbooks, watching only until member bots open (#5452) | step 10 |
+| Film Room | Replays of real past days for practice, no money involved | placed, not scheduled |
+
+**Honest numbers.** Every figure about a member's book reads from code (`/api/desk/:id`) and sits
+on a data card; narrator text (the Game Master's scenes, the Journal's lines) carries no digits
+about the book.
+
+**3. The rule.** A concept has exactly one app as its home (§2f's App cell). Another app may
+present it as a line, a chip or a link that opens the home; it never owns a copy, a second set of
+controls or its own computation. Example: a Scoreboard box score shows the Desk's own position
+read (`/api/desk/:id`); it never computes its own P/L. Today's warning is "Playbooks", one word on
+three screens with three meanings: R&D's catalog (`app/src/routes/research.tsx:50-52`), the
+Milestones chapter (`app/src/routes/playbooks.tsx:7-13`) and a bot's own
+(`app/src/shell/profile-sections.ts:48-51`).
+
+**4. Three ways in, one ticket.** A new member picks one of three pictures: told as a story (the
+Game Master), played as a league (team name and crest first, then the same steps in the sports
+voice), or a plain desk. Every way in ends, in the same order, on the Desk's ticket — the one that
+already serves the chat's staged trades (`src/companion/suggest-trades-tool.ts:159`, review and
+submit at `src/server/trade-api-routes.ts:173-190`). Returning members skip the choice. Until the
+Scoreboard ships, the league way in is the Game Master in the sports voice, crest step first.
+
+**5. Who the other side is.** By default the family table shows the party against the house bot,
+with no rank between members (#7487). A head-to-head duel is opt-in, offered once a friend has
+played two weeks running. Human or bot is a kind filter (`is:bot` / `is:human`), never a grouping
+(#5157) — the Bots vs Humans bar on `/leaderboard` (`app/src/routes/leaderboard.tsx:32-37`) retires
+with call 6.
+
+**6. Today's routes, mapped.** Routes move only at the step named; until then each stays where it
+is. The File column names every file in `app/src/routes/` but `__root.tsx`, the three shell parts
+and the server pages, each in exactly one row (`tests/scripts/ia-apps.spec.ts` checks it); a row
+with no file is another part of the file above it.
+
+| Today | File | App | Moves at |
+|---|---|---|---|
+| `/` the home screen: the tower, "needs you", one tile per app (§8.5) | `index.tsx` | Home | built, #8189 |
+| `/campaign` Campaign: "Where things stand" (at `/` until #8189) | `campaign.tsx` | Home's "needs you" | #8189 built the home's rows; the window stays until the Game Master move |
+| `/campaign` Campaign: Market, Quests windows | — | Game Master (scenes, side jobs) | steps 2 and 7 |
+| `/campaign` Campaign: Calendar window | — | Scoreboard's schedule; scenes cite it | step 9 |
+| `/campaign` Campaign: Party window | — | Scoreboard's family table | step 9 |
+| `/accounts` Overview, Balance, Ledger, Events | `accounts.tsx` | Desk (Events is the held-events line, a joint) | the Desk move |
+| `/accounts` Playbooks, Thesis (a bot's) | — | Garage | step 10 |
+| `/accounts` Milestones; `/learn`, `/learn/trading`, `/onboarding`, `/join` | `learn.tsx` · `learn_.trading.tsx` · `onboarding.tsx` · `join.tsx` | Game Master (the guided start and chapters); the Desk shows only the connect step to a member with no account | steps 2 and 5 |
+| `/accounts` Milestones' Playbooks chapter; `/playbooks` | `playbooks.tsx` | retired; its links point at the Garage | step 10 |
+| `/accounts` Feedback; `/feedback` | `feedback.tsx` | Journal | step 8 |
+| `/trade`: Ticket, Chart, Chain, Guidance, Outlook, Watchlist, Orders (`app/src/shell/trade-bench.tsx:38-44`) | `trade.tsx` | Desk, one app with the book | the Desk move |
+| `/saved-positions` | `saved-positions.tsx` | Desk (whether it is a section or retires is that move's call) | the Desk move |
+| `/activity` | `activity.tsx` | Scoreboard: everyone's fills as a view of the Desk's one history; `is:development` deleted | step 9 (the deletion may go sooner) |
+| `/leaderboard` | `leaderboard.tsx` | Scoreboard's family table; the Bots vs Humans bar deleted | step 9 |
+| `/research` Board | `research.tsx` | Scoreboard's schedule | step 9 |
+| `/research` Coverage; the server's write-ups | `server /research/<slug>` | Cast: the Scout's card and its sources | step 8 |
+| `/research` Playbooks | — | Garage | step 10 |
+| `/u/$id`, `/u/$id/ledger`, `/u/$id/activity` | `u.$id.tsx` · `u.$id.index.tsx` · `u.$id.ledger.tsx` · `u.$id.activity.tsx` | Desk, read-only for an account you don't own | the Desk move |
+| `/u/$id/pulse` | `u.$id.pulse.tsx` | Scoreboard: the account's stat line | step 9 |
+| `/u/$id/playbooks`, `/u/$id/thesis`, `/u/$id/decisions` | `u.$id.playbooks.tsx` · `u.$id.thesis.tsx` · `u.$id.decisions.tsx` | Garage | step 10 |
+| `/settings` (`app/src/shell/settings-toc.tsx:16-21`) | `settings.tsx` | not an app: the member menu | — |
+| the chat dock under every page | `shell dock` | Game Master | #8191 |
+| the tower column | `shell tower column` | Home | #8189 |
+| the status line | `shell status line` | every app's top row (Home's page template) | — |
+| the sign-in and invite pages | `server /login` · `server /welcome` | before sign-in | — |
+| the tower's frame | `server /tower` | Home's tower frame | #8189 |
+
+**7. The §10 roots this settles.** Each row's own Status cell in §10 carries the same line.
+
+| Root | Shape 5's call | Executed by |
+|---|---|---|
+| U1, U2 | The Desk holds the one history and the numbers; feeds and stat lines present them | #8008 |
+| U3 | Eased: fewer sections per app; the shared switch stays #5206's | #5206 |
+| U4, U17 | The Journal holds a wish or question, its answer and its status; the chat links to the entry | #8190 |
+| U5 | The Garage holds one play's status, stages and stop switch; the fleet-wide switch stays in Settings | step 10 |
+| U6 | The tower lives on Home only | #8189 |
+| U7 | R&D stops being a destination: calendar to the Scoreboard, coverage and write-ups to Cast, catalog to the Garage | steps 8-10 |
+| U8 | The guided start lives in its door app, so no account head renders before an account exists | step 5 |
+| U11 | The Milestones Playbooks chapter retires; the catalog lives in the Garage | step 10 |
+| U12 | Placed: a stat line opens the Desk's ledger by date, once the ledger takes a date key | step 9 with #8008 |
+| U14 | The Desk offers options sections only from the options rung; before it, a named, locked door | the Desk move |
+| U15 | The chapter writer writes Game Master scenes; the hand-fed edition retires | step 7 |
+| U9, U10, U13, U16 | Not settled by IA: research rewording, the ladder's seed rule (#5176), owner tools (#5462), the reward entity | unchanged |
+
+**8. The census contradictions this settles** (#8161, census comment 1).
+
+| # | Shape 5's call |
+|---|---|
+| 1 | Co-op family table by default, opt-in duels, human or bot as a filter (call 5) |
+| 2 | One guided start per way in, all ending on the Desk's ticket; the onboarding chapter, Quests' first steps and "choose a bot" fold into it |
+| 3 | Eased: the Scoreboard scores process beside P/L in one reporting mode; the reward entity stays open (U16) |
+| 4 | The Garage, watching only; the "Season 1 release" copy retires; the bots-only rule stays Eric's (#5452) |
+| 5 | Eased: the Garage is the one home of playbooks; the pair versus strategy model stays #6771's |
+| 6 | Moneypenny's member-facing role becomes the Game Master app; the dock retires; the GitHub App stays out of sight |
+| 7 | One history, homed on the Desk; one reporting mode for every P/L figure |
+| 8 | "Campaign" is the storyline record the Game Master runs; the tab retires; member campaigns (`src/server/member-campaigns-api-routes.ts:63`, no screen yet) live in the Game Master |
+| 9 | Held: the north-star beliefs page gets no app now; any later page uses a word other than "conviction" |
+| 10 | "Season" is a Scoreboard season with a recorded baseline; "Era" stays for product eras |
+| 11 | Not IA: the brand is #6616's |
+| 12 | `is:development` deleted (`app/src/live/activity-feed.ts:22`, `:162`); Cast shows characters, never build lanes; the Journal says "picked up" and "shipped", never a PR title |
+
+Two lower-ranked conflicts close too: working orders on the book or on Trade (§8.3's orders fork)
+both land in the Desk, so only the section placement is left, for the Desk move; the tower on every
+page is #8189's. Placed nowhere until their app ships: the encounter engine
+(`src/domain/campaign-encounters.ts:490`, called only by specs and
+`src/scripts/campaign-landscape.ts`) feeds Game Master scenes; the journal API
+(`src/server/journal-api-routes.ts`, #8219) is the Journal's; the `character` field in
+`docs/agents/seats.json` (#8200) is Cast's.
+
+**Calls made where shape 5 is silent** — decided on evidence, each with the dated observation that
+reverses it:
+
+| Call | Falsifier → what moves |
+|---|---|
+| Coverage and write-ups go to the Scout's card in Cast | by 2027-01-15, a blind-round member asking "what does the house know about X?" can't reach it in two taps → they move to the Game Master's sources |
+| Pulse becomes the Scoreboard's stat line | a lapsed member's first 10 minutes reach for it from the Desk → the Desk holds it and the table presents it |
+| The ladder's home is the Game Master | a member who chose the plain desk can't find what opens options in two taps → the ladder moves to the Desk |
+
+**Every later move cites this section:** #8189, #8191, #8190, #8203 (news on holdings is a Game
+Master scene; the Desk's badge and Home's strip are joints), #8008, and the issues for steps 3-10
+when they are filed. `app/src/shell/frame.tsx`'s doctrine lines and `docs/members/triage.json`'s
+homes change in the move that changes the frame or the route, not here.
+
+### 8.5 The home screen as built — §8.4 call 1 (#8189), 2026-11-24
 
 Eric placed it on #8161 (point 18): *"the tower … on the home screen above the app tiles"*; inside
 an app, the app picks its own page template. Written here in the slice that builds it (#895).
@@ -1388,23 +1572,23 @@ its evidence, and the row points at it. Until then it waits here, with its conte
 
 | # | Root, and where it sits | Screens that hit it (where it surfaced) | Why one screen can't fix it | Workaround in place | Status |
 |---|---|---|---|---|---|
-| U1 | **One history, three homes** — the league feed, Profile Activity and `/u/<id>/activity` each list orders with their own controls and rows (§5.1, §5.7) | activity, profile-activity, profile-overview (#5143 digest 2026-10-11: "one history, one set of controls"; two "Activity" labels 50px apart) | Merging lists moves a route and the nav; no single screen owns the order list | none | **plan filed as #8008** (3 screens; with U2) |
-| U2 | **Derived numbers on a log** — P/L, booked totals and Pulse's headline numbers sit on feeds instead of the book's ledger (§5.1) | profile-activity (Eric #5160: "a transaction log separately which cares about the transaction, not the enriched/derived data"), member-pulse, activity (booked strip) | Moving the numbers needs the Overview's ledger to exist first; each feed alone can only delete them | none | **plan filed as #8008** (3 screens; with U1) |
-| U3 | **A section switch that can't hold its sections at 390** — tabs cut off with no cue, a head taking half the first screen (§5.8, the shell) | trade-ticket, trade-chain, member-pulse, saved-positions (a third viewer section), activity (clipped chips), profile-milestones (#5169 round 1, 2026-10-18: the head and switch take about a fifth of the first screen at 390, above the page's own title), settings (#5170 round 1, 2026-10-18: the last tab cut in half at 390) | The switch and head are one shared shell component; a screen fixing its own copy forks it | none | **filed as #5206** (7 screens) |
-| U4 | **A filing's answer lives away from the conversation that made it** (§5.6) | profile-feedback, moneypenny | Joins Profile → Feedback with the Moneypenny panel; neither screen owns both | none | waiting (2 screens) · moved 2026-11: the chat now drafts a follow-up on the member's own filing, posted only on their tap (#7286); the lane's question still reaches them only on Profile → Feedback |
-| U5 | **One play's status, safety stages and stop switch spread over three places** — Thesis, Playbooks, `/settings` (§5.2) | profile-thesis, profile-playbooks | Re-homing controls crosses three routes; §5.2's moves are proposed, not built | none | waiting (2 screens) |
-| U6 | **Desktop adds no room** — the 3D landmark or league rail sits beside content that keeps an 800px column (§5.8) | research, profile-feedback, research-playbooks (#5163 r15: "having the confidence and how it trades in the same screen when possible is huge."; its build #5448 grows a third column when the room returns); saved-positions (#5181 round 0, Eric 2026-10-14 on the tower beside the page: "I wish there was a better design to keep the core elements of the eye in the tower without permanently locking up so much real estate.") | The rail is the shell's frame, on every route | none | **filed as #5207** (4 screens) |
-| U7 | **R&D as a destination, not a capability** — research, calls and playbooks live on their own screen (§5.4) while the book, the bot's loop and the workbench are where they're used | the round page's own test (Eric, #5350 round 0, 2026-10-14: "long term, i feel like R&D is a feature that belongs folded into other system(s). identifying newsworthy and public datasources to glean information helps recognize patterns and/or opportunity to forecast trades. Strategies codify patterns to enable AI driven automation."); research-playbooks (#5451 r0 page note, 2026-10-16: "I like the idea of converting R&D onto Playbooks; research/curiosity converted to engagement and action.") | Folding R&D into other screens re-homes a whole group and its routes; no single screen can do it | none | waiting (2 notes; long term) |
-| U8 | **The Profile head assumes an account** — with none linked, the head still renders account rows (a "No account linked yet — connect one in Onboarding" line pointing at the page it sits on, "Net worth shows once an account is linked", a section switch offering Activity and Events, both empty) above the onboarding chapter (§5.5 amendments, §5.8) | onboarding (#5162 round 3, 2026-10-18: the head takes about 300px of the 844px first screen at 390, and keeps step 1's first tap 1.16 screens down even after the chapter's own fixes; Eric, round 1: "nothing meaningful can happen until after that point") | The head and its section switch are one shell part every Profile section shares; the profile-overview redesign owns them, and hiding account rows for a no-account member is a head state, not a chapter change | none — the chapter fixes only what sits under the head | waiting (1 screen) |
+| U1 | **One history, three homes** — the league feed, Profile Activity and `/u/<id>/activity` each list orders with their own controls and rows (§5.1, §5.7) | activity, profile-activity, profile-overview (#5143 digest 2026-10-11: "one history, one set of controls"; two "Activity" labels 50px apart) | Merging lists moves a route and the nav; no single screen owns the order list | none | **plan filed as #8008** (3 screens; with U2) · **§8.4 (2026-11-24):** settled: the Desk holds the one history; executed by #8008 |
+| U2 | **Derived numbers on a log** — P/L, booked totals and Pulse's headline numbers sit on feeds instead of the book's ledger (§5.1) | profile-activity (Eric #5160: "a transaction log separately which cares about the transaction, not the enriched/derived data"), member-pulse, activity (booked strip) | Moving the numbers needs the Overview's ledger to exist first; each feed alone can only delete them | none | **plan filed as #8008** (3 screens; with U1) · **§8.4 (2026-11-24):** settled: the Desk holds the numbers, feeds and stat lines present them; executed by #8008 |
+| U3 | **A section switch that can't hold its sections at 390** — tabs cut off with no cue, a head taking half the first screen (§5.8, the shell) | trade-ticket, trade-chain, member-pulse, saved-positions (a third viewer section), activity (clipped chips), profile-milestones (#5169 round 1, 2026-10-18: the head and switch take about a fifth of the first screen at 390, above the page's own title), settings (#5170 round 1, 2026-10-18: the last tab cut in half at 390) | The switch and head are one shared shell component; a screen fixing its own copy forks it | none | **filed as #5206** (7 screens) · **§8.4 (2026-11-24):** eased: fewer sections per app; the shared switch stays #5206's |
+| U4 | **A filing's answer lives away from the conversation that made it** (§5.6) | profile-feedback, moneypenny | Joins Profile → Feedback with the Moneypenny panel; neither screen owns both | none | waiting (2 screens) · moved 2026-11: the chat now drafts a follow-up on the member's own filing, posted only on their tap (#7286); the lane's question still reaches them only on Profile → Feedback · **§8.4 (2026-11-24):** settled: the Journal holds the wish, its answer and status, the chat links to it; executed by #8190 |
+| U5 | **One play's status, safety stages and stop switch spread over three places** — Thesis, Playbooks, `/settings` (§5.2) | profile-thesis, profile-playbooks | Re-homing controls crosses three routes; §5.2's moves are proposed, not built | none | waiting (2 screens) · **§8.4 (2026-11-24):** settled: the Garage holds one play's status, stages and stop switch, the fleet-wide switch stays in Settings; executed at step 10 |
+| U6 | **Desktop adds no room** — the 3D landmark or league rail sits beside content that keeps an 800px column (§5.8) | research, profile-feedback, research-playbooks (#5163 r15: "having the confidence and how it trades in the same screen when possible is huge."; its build #5448 grows a third column when the room returns); saved-positions (#5181 round 0, Eric 2026-10-14 on the tower beside the page: "I wish there was a better design to keep the core elements of the eye in the tower without permanently locking up so much real estate.") | The rail is the shell's frame, on every route | none | **filed as #5207** (4 screens) · **§8.4 (2026-11-24):** settled: the tower lives on Home only; executed by #8189 |
+| U7 | **R&D as a destination, not a capability** — research, calls and playbooks live on their own screen (§5.4) while the book, the bot's loop and the workbench are where they're used | the round page's own test (Eric, #5350 round 0, 2026-10-14: "long term, i feel like R&D is a feature that belongs folded into other system(s). identifying newsworthy and public datasources to glean information helps recognize patterns and/or opportunity to forecast trades. Strategies codify patterns to enable AI driven automation."); research-playbooks (#5451 r0 page note, 2026-10-16: "I like the idea of converting R&D onto Playbooks; research/curiosity converted to engagement and action.") | Folding R&D into other screens re-homes a whole group and its routes; no single screen can do it | none | waiting (2 notes; long term) · **§8.4 (2026-11-24):** settled: calendar to the Scoreboard, coverage and write-ups to Cast, catalog to the Garage; executed at steps 8-10 |
+| U8 | **The Profile head assumes an account** — with none linked, the head still renders account rows (a "No account linked yet — connect one in Onboarding" line pointing at the page it sits on, "Net worth shows once an account is linked", a section switch offering Activity and Events, both empty) above the onboarding chapter (§5.5 amendments, §5.8) | onboarding (#5162 round 3, 2026-10-18: the head takes about 300px of the 844px first screen at 390, and keeps step 1's first tap 1.16 screens down even after the chapter's own fixes; Eric, round 1: "nothing meaningful can happen until after that point") | The head and its section switch are one shell part every Profile section shares; the profile-overview redesign owns them, and hiding account rows for a no-account member is a head state, not a chapter change | none — the chapter fixes only what sits under the head | waiting (1 screen) · **§8.4 (2026-11-24):** settled: the guided start lives in its door app, no account head before an account; executed at step 5 |
 | U9 | **A call's words go stale while its date stays fresh** — a ledger's horizon row is authored once and each later check appends a new *Last assessed* stamp without rewording the call, so a card can say "read the 2026-09-09 September edition" under "checked Oct 7" (§5.4; `docs/process/EVENT-RESEARCH.md`) | research (#5158 round 1, 2026-10-18: the EIA card; its why line "Still 15 days out" on an event already past) | The board shows calls exactly as authored and never rewrites one; only the research lane's check (or the contract) can reword a row or mark it unchanged-since | none — the card shows *checked* beside the call | waiting (1 screen) |
 | U10 | **The ladder opens every rung for an account that traded before it existed** — the seed rule turns training wheels off for any account with a filled order when its progression record is first created (`src/server/progression-service-support.ts:31`), so that member climbs nothing (§5.5, §2d) | learn-trading (#5176 round 3, 2026-10-18: Eric's own account reads "nothing is locked", so the chapter's locks and "what opens each level" never show him; Eric, 2026-10-11 on #5171's page: "This section is intended to be a progression the blocks functionality until it has been manually executed"); trade-chain (#5171, the same note: options offered "when … options trading hasn't been unlocked") | The lock is the progression service's seed rule and a policy call (should pre-ladder accounts climb from rung 101?); the chapter and the chain only draw what the server decides | none — round 3 draws the chapter with training wheels on, labelled illustrative | waiting (2 screens; the deciding question is on #5176, 2026-10-11) |
-| U11 | **The human playbook chapter sits apart from the playbook catalog** — Profile → Milestones carries a Playbooks chapter ("prove a play by hand, then arm it") while R&D → Playbooks lists the playbooks a member would prove and arm (§5.5 amendments: the chapter card becomes a link into R&D's page, unbuilt) | profile-milestones (#5169 round 0 redraw, 2026-10-13, and round 1, 2026-10-18: the chapter reads "0 / 4" and "Season 1" with nothing to do on this page) | Joining the chapter to the catalog moves content across two groups (§5.5 ladder, §5.4 R&D) and their routes; Milestones can only link out | none — the card stays as it is | waiting (1 screen; related to U7) |
-| U12 | **A record can't open the trades that made it** — Pulse's weeks, runs and biggest dip are dated, but the Ledger takes no date in its address (`narrowingFromSearch` reads only `symbol` and `playbook`, `app/src/shell/account-ledger.tsx:40`), so the Pulse × Activity joint (13/13, §5.1) stays unrendered (§3: date/range has no URL carrier on the account's Ledger) | member-pulse (#5180 round 1, 2026-10-18: "a week can't open its trades"; the +$55 week of Sep 28 is a −$230 loss and a +$285 win, visible only by filtering Activity by hand) | The fix is a date key on Activity's route and its list; Pulse can only link to it once that exists | none — round 1 writes what made each week under its bar ("1 won · 1 lost") | waiting (1 screen) |
+| U11 | **The human playbook chapter sits apart from the playbook catalog** — Profile → Milestones carries a Playbooks chapter ("prove a play by hand, then arm it") while R&D → Playbooks lists the playbooks a member would prove and arm (§5.5 amendments: the chapter card becomes a link into R&D's page, unbuilt) | profile-milestones (#5169 round 0 redraw, 2026-10-13, and round 1, 2026-10-18: the chapter reads "0 / 4" and "Season 1" with nothing to do on this page) | Joining the chapter to the catalog moves content across two groups (§5.5 ladder, §5.4 R&D) and their routes; Milestones can only link out | none — the card stays as it is | waiting (1 screen; related to U7) · **§8.4 (2026-11-24):** settled: the chapter retires, the catalog lives in the Garage; executed at step 10 |
+| U12 | **A record can't open the trades that made it** — Pulse's weeks, runs and biggest dip are dated, but the Ledger takes no date in its address (`narrowingFromSearch` reads only `symbol` and `playbook`, `app/src/shell/account-ledger.tsx:40`), so the Pulse × Activity joint (13/13, §5.1) stays unrendered (§3: date/range has no URL carrier on the account's Ledger) | member-pulse (#5180 round 1, 2026-10-18: "a week can't open its trades"; the +$55 week of Sep 28 is a −$230 loss and a +$285 win, visible only by filtering Activity by hand) | The fix is a date key on Activity's route and its list; Pulse can only link to it once that exists | none — round 1 writes what made each week under its bar ("1 won · 1 lost") | waiting (1 screen) · **§8.4 (2026-11-24):** placed: a stat line opens the Desk's ledger by date once it takes a date key; executed at step 9 with #8008 |
 | U13 | **The owner's tools have no home of their own** — every bot's switches, Moneypenny's model and the unclaimed accounts render inside one member's Account section, under that member's own account card (§5.8 places fleet controls in "Settings, never a page") | settings (#5170 round 1, 2026-10-18: the switch that stops every bot sits under Eric's own card at 390; Eric, 2026-10-10: "more features are being pushed into drawers/section where they belong"); #5462 (Eric, 2026-10-16: "Similar to an admin panel with application the ability to manage app level feature toggles, configurations.") | An owner's area of its own adds a section or a route, a nav move; #5462's admin panel would hold the same tools and its grants, so the home is decided there, not in one screen | Settings round 1 draws a folded drawer inside Account (works around U13) | waiting (1 screen; joins #5462) |
-| U14 | **Options tools offered before options open, and beside a stock ticket**: the bench docks the chain under whatever ticket is open, Buy stock included, and the section switch offers Chain and Outlook on every rung; neither reads the member's rungs (§5.3 the bench, §5.5 the ladder) | trade-chain (#5171 round 2, 2026-10-18: with options rungs 201–501 locked, the desktop frame docks the full chain under a Buy stock ticket and the phone switch offers Chain; Eric, round 1: "I don't like how features for options are available when 1) \"buying stock\" is selected, 2) options trading hasn't been unlocked"), trade-ticket (#5174, the order form that frame showed) | Which sections dock beside the ticket, and which tabs the switch offers, is the bench's rule (`trade.tsx`), shared by the ticket, chain and outlook; the chain alone can only stop trading from itself | the chain's round 2 draws it read-only with one line naming the rung that opens options (proposed, awaiting his pick) | waiting (2 screens) |
-| U15 | **Nothing writes the day's edition** — the landing page's stories, key facts and dated reports are hand-fed; the landscape read is unbuilt (§5.9, §7) | landing (#7018 round 1, 2026-11-08: every frame drawn on hand-fetched closes) | The edition is #6949 slice 5's data and #6948 slice 4's voice; a screen can only render what they write | #7077 slice 1 renders hand-fed data | waiting (1 screen) · #6949 closed without an edition writer (`src/domain/edition.ts`: still written by hand); owned by #6948 |
+| U14 | **Options tools offered before options open, and beside a stock ticket**: the bench docks the chain under whatever ticket is open, Buy stock included, and the section switch offers Chain and Outlook on every rung; neither reads the member's rungs (§5.3 the bench, §5.5 the ladder) | trade-chain (#5171 round 2, 2026-10-18: with options rungs 201–501 locked, the desktop frame docks the full chain under a Buy stock ticket and the phone switch offers Chain; Eric, round 1: "I don't like how features for options are available when 1) \"buying stock\" is selected, 2) options trading hasn't been unlocked"), trade-ticket (#5174, the order form that frame showed) | Which sections dock beside the ticket, and which tabs the switch offers, is the bench's rule (`trade.tsx`), shared by the ticket, chain and outlook; the chain alone can only stop trading from itself | the chain's round 2 draws it read-only with one line naming the rung that opens options (proposed, awaiting his pick) | waiting (2 screens) · **§8.4 (2026-11-24):** settled: the Desk offers options sections only from the options rung, a named locked door before it; executed at the Desk move |
+| U15 | **Nothing writes the day's edition** — the landing page's stories, key facts and dated reports are hand-fed; the landscape read is unbuilt (§5.9, §7) | landing (#7018 round 1, 2026-11-08: every frame drawn on hand-fetched closes) | The edition is #6949 slice 5's data and #6948 slice 4's voice; a screen can only render what they write | #7077 slice 1 renders hand-fed data | waiting (1 screen) · #6949 closed without an edition writer (`src/domain/edition.ts`: still written by hand); owned by #6948 · **§8.4 (2026-11-24):** settled: the chapter writer writes Game Master scenes, the hand-fed edition retires; executed at step 7 |
 | U16 | **No reward a quest can carry** — a quest record has no reward field (#7028); the only honest reward today is a ladder rung's first fill (`src/domain/curriculum.ts`); loot and Renown are designed, unbuilt (`docs/THE-GAME.md` Moves 2–3, forks 1–2) | landing (#7018 round 0, Eric: "quests to steer research/development, level up, and acquire loot") | Rewards are a game-layer entity (§2d) behind Eric's open THE-GAME forks; a screen can only show what is earned | the cash quest shows "+35 pts on your first real put sale" | waiting (1 screen; Eric's forks 1–2) · #7028 closed with no reward field on a quest |
-| U17 | **A member's question has no route** — an ask is stored and read by nothing, and no line says who holds it (#7034 slices 3–4, #6952 slice 2b) | landing (#7018 rounds 1–2: "R&D is on it" drawn as proposed) | Routing a question to research is a lane and a queue inside the work gate, not a page | none — the frames caption it proposed | **resolved** by #6952 slice 2b and #7034 — an uncovered question joins the discovery queue, which `moneypenny-discovery.yml` drains inside the lane's ceiling; the reply says where it stands and her `get_my_research_questions` reads it back |
+| U17 | **A member's question has no route** — an ask is stored and read by nothing, and no line says who holds it (#7034 slices 3–4, #6952 slice 2b) | landing (#7018 rounds 1–2: "R&D is on it" drawn as proposed) | Routing a question to research is a lane and a queue inside the work gate, not a page | none — the frames caption it proposed | **resolved** by #6952 slice 2b and #7034 — an uncovered question joins the discovery queue, which `moneypenny-discovery.yml` drains inside the lane's ceiling; the reply says where it stands and her `get_my_research_questions` reads it back · **§8.4 (2026-11-24):** settled: the Journal holds the question, its answer and status; executed by #8190 |
 
 Seeded from the commons digest posted on #5143 (2026-10-11, 16 IA moves from 10 screens); later
 rows are added by redesign sessions as they find them.

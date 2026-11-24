@@ -65,6 +65,10 @@ would have missed a loop.
      never two classes in one.
    - For each class in `sendBack`: the same branch steps with `--send-back "<class>"` and a normal
      `/ship` PR (no `--hold`): sending a class back only returns asks to him, so it needs no tap.
+   - Then `node scripts/profile-scan.mjs --misses --route` (#8197): every miss no line in
+     `docs/members/eric.md` or `docs/READERS.md` cites as `ALIGNMENT <date> · <ask id>` goes to ONE
+     ready `feedback` issue (opened, or its body refreshed), which the build lane closes by editing
+     the profile. `profile clean` → nothing filed. Keep `profile <clean|routed N>` for step 7.
 6. **Scorecard** (#8199, the sense step of #8161 stage 3). `npm run -s loop:scorecard -- --json`
    prints #8161's six numbers, each with its goal and its source, and a ready-made `clause`. It
    always exits 0 and never gates: a row it cannot read says `unavailable`, one whose source is not
@@ -72,7 +76,7 @@ would have missed a loop.
    off-goal row is reported, never acted on here. About 20 REST reads.
 7. **Report in one line.** `loops: audit <due|not due>[, filed N bugs, M proposals] · flip <due|not
    due>[, readied N of M] · platter <clean|rebuilt #N → #M>[, adopted N] · graduate <none|opened #N for
-   <class>|PR open|sent back <class>> · scorecard <n> open · <n> asks · <n> two-home · journeys
+   <class>|PR open|sent back <class>> · profile <clean|routed N> · scorecard <n> open · <n> asks · <n> two-home · journeys
    <green|red|unknown> · phone <value|pending> · back <value|pending>` (the last clause is step 6's
    `clause`, verbatim; a number it could not read is `?`). A day with nothing due ends here: that
    line is the whole run. The Routine writes no digest of its own.
@@ -85,7 +89,7 @@ would have missed a loop.
 - Use `fast-track` beyond what `audit-file.mjs` applies (member, money and state findings, five a run,
   #6319).
 - Run on a `due: false` day beyond the cheap reads: the two due-checks, the platter sweep, step
-  5's ledger read and check, and step 6's scorecard.
+  5's ledger read, check and profile scan, and step 6's scorecard.
 - Merge, arm or un-hold the platter, or push any branch but the `platter/<date>` it rebuilds or
   boards onto and step 5's `alignment/graduate-*` or `docs/` branches. It never force-pushes and
   never resolves a conflict on a platter.

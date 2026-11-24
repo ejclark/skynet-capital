@@ -157,7 +157,7 @@ ${found
   .slice(0, 3)
   .map((l) => `- ${cut(l, BULLET_CAP)}`)
   .join("\n")}
-- ${cut(lesson, BULLET_CAP + 40)}
+- ${cut(lesson, BULLET_CAP)}
 
 Picture: waived — a prevention line; the findings below are the evidence.
 
@@ -168,6 +168,8 @@ Picture: waived — a prevention line; the findings below are the evidence.
 ${clean(p.line)}
 
 Why it would have caught these: ${oneLine(p.why ?? "not stated")}
+
+${lesson}
 
 ### Findings behind it
 

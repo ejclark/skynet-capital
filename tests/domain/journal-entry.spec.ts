@@ -135,6 +135,38 @@ describe("wishTitle", () => {
     );
   });
 
+  it("reads past a mid-sentence abbreviation, ellipsis or list number (#8261)", () => {
+    for (const text of [
+      "I wish the leaderboard showed my return vs. the bots over the same week.",
+      "I wish I could sort the board by e.g. return or win rate.",
+      "Could Moneypenny explain theta decay, i.e. why my option loses value?",
+      "I really wish the chart... showed IV rank next to price.",
+      "1. Show IV rank on the chart 2. Show my streak",
+      "Compare my returns vs. Apple over the same week.",
+      "Let the bot copy J. Smith style picks for a week",
+    ]) {
+      expect(wishTitle(text)).toBe(text);
+    }
+  });
+
+  it("still ends at a real sentence break after an abbreviation was skipped", () => {
+    expect(wishTitle("Show my return vs. the bots. Weekly would be best.")).toBe(
+      "Show my return vs. the bots.",
+    );
+    expect(wishTitle("Could the chart show IV rank? would help a lot")).toBe(
+      "Could the chart show IV rank?",
+    );
+  });
+
+  it("marks with an ellipsis a title cut short of its sentence (#8261)", () => {
+    const text =
+      "I wish the leaderboard showed my return vs. the bots over the same week and the same tickers too.";
+    const title = wishTitle(text);
+    expect(title.endsWith("…")).toBe(true);
+    expect(title.length).toBeLessThanOrEqual(WISH_TITLE_MAX_CHARS);
+    expect(text.startsWith(title.slice(0, -1))).toBe(true);
+  });
+
   it("never splits an emoji when it cuts", () => {
     const title = wishTitle(`${"a".repeat(70)}🚀🚀🚀`);
     expect(title).toBe(`${"a".repeat(70)}🚀…`);

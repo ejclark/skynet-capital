@@ -13,7 +13,7 @@ import { usePhoneWidth } from "../shell/use-media";
 import { TowerSlot } from "../shell/vantage";
 
 /**
- * THE HOME SCREEN (#8189, #8161 stage 2 slice 1; the IA decision is docs/IA.md §8.3). `/` is the
+ * THE HOME SCREEN (#8189, #8161 stage 2 slice 1; the IA decision is docs/IA.md §8.5, under the phone-of-apps model of §8.4). `/` is the
  * app's home now: the tower on top, then what needs you, then one tile per app. Eric placed it on
  * #8161 (point 18: "the tower … on the home screen above the app tiles"). Campaign, which `/` used
  * to be, is one app among the tiles at `/campaign`.
