@@ -4,7 +4,7 @@
  * (`scripts/paper-checks.mjs`) owns the process: flags, signals, writing the record, the exit code.
  *
  * Exit codes: 2 refused before anything was placed (`guard.ts`), 1 something it placed is still
- * open after cleanup, 130 interrupted (and cleaned up), 0 otherwise. A broker refusal is an answer and never fails the run.
+ * open after cleanup, or the broker's open orders or positions couldn't be read to confirm it, 130 interrupted (and cleaned up), 0 otherwise. A broker refusal is an answer and never fails the run.
  */
 import { calendarDays } from "../../domain/market-clock.js";
 import type { AlpacaTradingTransport } from "../trading-transport.js";
@@ -165,19 +165,28 @@ export function createRun(options: RunOptions): PaperCheckRun {
         done = await runCleanup();
       }
       const open = new Set(done.stillOpen);
+      // #8371: an unread list is never "cancelled" — the row says it could not be confirmed.
+      const left = done.ordersUnread
+        ? `not confirmed closed, open orders unread (${done.ordersUnread})`
+        : "still open";
       const rows = finished.map((row) => {
         const placed = [...ledger.orders]
           .filter(([, check]) => check === row.check)
           .map(([id]) => id);
         if (placed.length === 0) return row;
-        const left = placed.filter((id) => open.has(id));
+        const named = placed.filter((id) => open.has(id));
         return {
           ...row,
           orderIds: placed,
-          cleanup: left.length ? `still open: ${left.join(", ")}` : "cancelled",
+          cleanup: named.length ? `${left}: ${named.join(", ")}` : "cancelled",
         };
       });
-      const leftover = done.stillOpen.length > 0 || done.positionsLeft.length > 0;
+      const unread = [
+        ...(done.ordersUnread ? [`open orders (${done.ordersUnread})`] : []),
+        ...(done.positionsUnread ? [`positions (${done.positionsUnread})`] : []),
+      ];
+      const leftover =
+        done.stillOpen.length > 0 || done.positionsLeft.length > 0 || unread.length > 0;
       const exitCode = leftover ? 1 : ledger.interrupted ? 130 : 0;
       return {
         runId: options.runId,
@@ -187,6 +196,7 @@ export function createRun(options: RunOptions): PaperCheckRun {
         rows,
         stillOpen: done.stillOpen,
         positionsLeft: done.positionsLeft,
+        ...(unread.length ? { unread } : {}),
       };
     },
     cleanup: runCleanup,
