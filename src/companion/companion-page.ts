@@ -27,7 +27,7 @@ import {
 const MAX_PAGE_CHARS = 400;
 
 /** The SPA's basepath, as a prefix of the path the browser reports. */
-const APP_BASEPATH = /^\/app(?=\/|$)/;
+export const APP_BASEPATH = /^\/app(?=\/|$)/;
 
 const TRADE_SECTIONS: Readonly<Record<string, string>> = {
   chart: "the chart view",

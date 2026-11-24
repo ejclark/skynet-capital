@@ -1,4 +1,6 @@
 import type { OnboardingView } from "../server/onboarding-api-routes.js";
+import { APP_BASEPATH } from "./companion-page.js";
+import { placeHref } from "./places.js";
 
 /**
  * THE MEMBER'S LIVE CONTEXT — the volatile half of Moneypenny's system prompt, rebuilt on every
@@ -56,12 +58,21 @@ export interface FixedFiling {
   readonly tryAt?: { readonly name: string; readonly route: string };
 }
 
+/** The try-it screen as she may offer it (#8079): the ledger writes routes in the browser's
+ *  `/app/…` form, but her links take app-relative paths on the allow-list (`placeHref`). Hand her
+ *  the path only when it will link; a screen off the list (a league page) is named bare, since a
+ *  path she can't link shows in her reply as raw text. */
+function tryItOn(tryAt: { readonly name: string; readonly route: string }): string {
+  const href = placeHref(tryAt.route.replace(APP_BASEPATH, "") || "/");
+  return href ? `${tryAt.name} (${href})` : tryAt.name;
+}
+
 /** At most this many fixes are announced in one reply; the rest wait for the next turn. */
 export const MAX_FIXED_ANNOUNCED = 2;
 
 function fixedClause(f: FixedFiling): string {
   return `#${f.issueNumber} ${quoteTitle(f.title)} counted toward a known problem (${quoteTitle(f.problem)}), and its fix has shipped${
-    f.tryAt ? `: they can try it on ${f.tryAt.name} (${f.tryAt.route})` : ""
+    f.tryAt ? `: they can try it on ${tryItOn(f.tryAt)}` : ""
   }`;
 }
 
