@@ -1,6 +1,7 @@
 import { AlpacaApiError } from "../alpaca/alpaca-api-error.js";
-import type { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
+import type { AlpacaOrder, AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
 import type { Participant } from "../participants/participant.js";
+import { type EchoedExits, echoedExits } from "./bracket-exits.js";
 import type { OrderAuditRecord } from "./order-audit-log.js";
 
 /**
@@ -21,8 +22,14 @@ export type DeskSubmitResult =
       readonly symbol: string;
       /** The broker's echo of the time in force it accepted (#3407 P1) — shown, never assumed. */
       readonly timeInForce?: string;
+      /** A bracket's take-profit and stop as the broker echoed them (#8249); absent on any other
+       *  order, so every answer that isn't a bracket reads exactly as before. */
+      readonly exits?: EchoedExits;
     }
   | { readonly ok: false; readonly refusals: string[] };
+
+/** What a placed order answers with — the fields the result is built from. */
+type PlacedOrder = Pick<AlpacaOrder, "id" | "status" | "symbol" | "time_in_force" | "legs">;
 
 /** An unknown clock makes no claim in either direction — the preview omits the hours line. */
 export async function marketOpen(client: AlpacaTradingClient): Promise<boolean | undefined> {
@@ -64,17 +71,17 @@ function brokerRefusal(error: unknown): string {
 }
 
 /** Shared submit wrapper: a broker throw becomes a refusal string, never an exception. */
-async function submitToBroker(
-  place: () => Promise<{ id: string; status: string; symbol: string; time_in_force?: string }>,
-): Promise<DeskSubmitResult> {
+async function submitToBroker(place: () => Promise<PlacedOrder>): Promise<DeskSubmitResult> {
   try {
     const order = await place();
+    const exits = echoedExits(order.legs);
     return {
       ok: true,
       orderId: order.id,
       status: order.status,
       symbol: order.symbol,
       ...(order.time_in_force ? { timeInForce: order.time_in_force } : {}),
+      ...(exits ? { exits } : {}),
     };
   } catch (error) {
     return { ok: false, refusals: [brokerRefusal(error)] };
@@ -88,7 +95,7 @@ async function submitToBroker(
  * the fill later; the symbol comes from the broker's own echo, never the form.
  */
 export async function submitAndAudit(
-  place: () => Promise<{ id: string; status: string; symbol: string; time_in_force?: string }>,
+  place: () => Promise<PlacedOrder>,
   participant: Participant,
   deps: {
     recordAudit?: (entry: OrderAuditRecord) => Promise<void>;

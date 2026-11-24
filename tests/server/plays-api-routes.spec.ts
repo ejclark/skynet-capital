@@ -242,3 +242,24 @@ describe("servePlaysApi wheels", () => {
     expect(reasons.find((r) => r.code === "102")?.lockedReason).toContain("first filled 101");
   });
 });
+
+describe("servePlaysApi plays — the exit-at-entry setting (#8249)", () => {
+  const read = async (cfg: DashboardServerConfig, session: unknown) => {
+    const { res, out } = fakeRes();
+    await servePlaysApi(get(), res, "/api/trade/plays", cfg, session as never);
+    return JSON.parse(out.body ?? "{}");
+  };
+
+  it("says nothing about it with the setting as committed (off) — the answer is as before", async () => {
+    expect(await read(config(), ann)).not.toHaveProperty("exitAtEntry");
+  });
+
+  it("says so for a session the setting admits, and only that session", async () => {
+    const owner = config({ exitAtEntry: "owner", isOwnerEmail: (e: string) => e === "ann@x.com" });
+    expect((await read(owner, ann)).exitAtEntry).toBe(true);
+    expect(await read(owner, { email: "bo@x.com" })).not.toHaveProperty("exitAtEntry");
+    expect(await read(config({ exitAtEntry: "members" }), undefined)).not.toHaveProperty(
+      "exitAtEntry",
+    );
+  });
+});
