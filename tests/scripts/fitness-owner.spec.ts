@@ -75,6 +75,7 @@ describe("fitness: the owner is assigned last", () => {
       "main-deploys": "wait",
       "alerts-reach-owner": "owner",
       "owner-assignment-path": "owner",
+      "misses-reach-profile": "wait",
       "memory-has-history": "session",
     });
     for (const c of CONTRACTS) expect(RUNGS).toContain(c.rung);

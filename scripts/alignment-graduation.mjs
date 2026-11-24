@@ -96,7 +96,7 @@ function cells(line) {
 }
 
 /** The table rows under a `## <heading>` section, header and separator dropped. */
-function sectionRows(md, heading) {
+export function sectionRows(md, heading) {
   const lines = String(md ?? "").split("\n");
   const from = lines.findIndex((l) => new RegExp(`^##\\s+${heading}\\b`, "i").test(l));
   if (from === -1) return [];

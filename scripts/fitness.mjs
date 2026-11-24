@@ -46,7 +46,7 @@
 // Exit codes: 0 all passing, unknown, quiet or not-here, or --report · 1 something fails, or a
 // probe crashed. A write that GitHub refused is printed, not fatal: the next tick retries it.
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import nodeModule, { createRequire } from "node:module";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
@@ -79,6 +79,7 @@ import {
 } from "./fitness-judges.mjs";
 import { OWNER } from "./fitness-rungs.mjs";
 import { isMain } from "./is-main.mjs";
+import { judge as judgeProfile, FILES as PROFILE_FILES } from "./profile-scan.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 // Deadlines. The exec also gets flyctl's own --timeout, because its session can outlive ours.
@@ -542,6 +543,26 @@ export const CONTRACTS = [
         nowMs,
       );
     },
+  },
+  {
+    // Eric, 2026-11-23 (#8197): "the key is the ability to capture datapoints and refine". A
+    // prediction he overturns in the alignment ledger must change his profile, or the ledger only
+    // measures and nothing learns. Seven days covers the daily Routine, a weekend and one failed build.
+    id: "misses-reach-profile",
+    mustBeTrue: "Every prediction Eric overturned has changed his profile within 7 days",
+    home: "clock",
+    reads: "this repository",
+    corrector: "scripts/profile-scan.mjs --misses --route (the one ready feedback issue)",
+    budget: "one routed issue, body refreshed each tick",
+    rung: "wait",
+    reaches: ISSUE_TO_OWNER,
+    gap: "It sees only public files: a private miss is cleared by a Score reading 'no profile change: private', which it cannot verify, and a cited line that does not actually change what the profile says passes",
+    probe: (nowMs) =>
+      judgeProfile({
+        ledgerMd: readFileSync(PROFILE_FILES.ledger, "utf8"),
+        profileTexts: PROFILE_FILES.profile.map((f) => readFileSync(f, "utf8")),
+        today: new Date(nowMs).toISOString().slice(0, 10),
+      }),
   },
   {
     id: "memory-has-history",

@@ -117,11 +117,13 @@ export function questionsFor(
   readable: Readable,
 ): readonly QuestionView[] {
   const log = config.campaignQuestions?.load() ?? [];
-  const queue = withoutAnswered(config.discoveryQueue?.load() ?? [], shelfAnswered());
+  // One shelf read for both the queue filter and the on-the-shelf state, through the config seam:
+  // a spec that injects it never depends on which write-ups the checkout holds (#8224).
+  const shelved = config.campaignShelfAnswered ?? shelfAnswered();
+  const queue = withoutAnswered(config.discoveryQueue?.load() ?? [], shelved);
   const found = config.campaignFindings ?? lessonsAnswering;
   // A member's campaign has no lesson record yet (records are checked in per house campaign).
   const house = campaignById(readable.scope) !== undefined;
-  const shelved = config.campaignShelfAnswered ?? shelfAnswered();
   const byId = new Map(log.map((q) => [q.id, q]));
   return questionsIn(
     log,
