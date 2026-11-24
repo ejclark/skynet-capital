@@ -1,3 +1,5 @@
+import { LIFECYCLE_STATUS } from "../trading/option-lifecycle.js";
+import { OPTION_MULTIPLIER, parseOccSymbol } from "../trading/option-symbols.js";
 import type { TradeActivityRecord } from "./activity-record.js";
 import type { CapitalFlow } from "./capital-flow.js";
 
@@ -24,11 +26,16 @@ import type { CapitalFlow } from "./capital-flow.js";
  * assignment's share leg moves cash by the whole strike notional (the lifecycle row closes at $0, so
  * the detector leaves that cash unexplained), and a covered call assigned away also flattens the
  * book: the held-book witness reads it as a reset. So each line is checked against its window and
- * the fill journal's lifecycle rows before its witnesses (#4563 asked for exactly that): a line with
- * an assignment, exercise or expiry for the same member within `LIFECYCLE_MARGIN_MS` of its window
- * disagrees, whatever its witnesses say. Without the journal the census can still count, but it
- * never prints the all-clear — it cannot rule that source out. What stays uncaught even with the
- * journal: a book-flattening cash event that leaves no lifecycle row, in a window the market moved.
+ * the fill journal's lifecycle rows before its witnesses (#4563 asked for exactly that): a line
+ * whose unexplained cash a lifecycle row for the same member within `LIFECYCLE_MARGIN_MS` of its
+ * window could have moved disagrees, whatever its witnesses say. Only a row that could have moved
+ * THAT cash condemns it (#8083): an expiry moves none, and an assignment or exercise moves its
+ * share leg's notional, so a genuine reset the day after either still agrees. A row whose cash
+ * cannot be known condemns the line, as every near row once did. Without the journal the census
+ * can still count, but it never prints the all-clear — it cannot rule that source out. What stays
+ * uncaught even with the journal: a book-flattening cash event that leaves no lifecycle row, in a
+ * window the market moved; and an assignment on an adjusted contract, whose deliverable is not 100
+ * shares at the strike, that flattens the book.
  *
  * A line recorded before `heldAfter` existed can prove only the cash-matches story; when it does
  * not, and no lifecycle row condemns it, it is `ungraded` — counted and named, never folded into
@@ -55,38 +62,78 @@ export type WitnessVerdict = "agree" | "disagree" | "ungraded";
 /**
  * How far from a line's window a lifecycle row still explains its cash. A row without a time of day
  * is stamped at the END of its date (`option-lifecycle.ts`), so the broker's cash move can sit most
- * of a day before the stamp; a day either side covers that, and only ever withholds an all-clear.
+ * of a day before the stamp; a day either side covers that. A row inside the margin condemns a
+ * line only when its cash matches the line's (`lifecycleExplains`), so the margin's width withholds
+ * an all-clear only from a line a lifecycle row could have caused.
  */
 export const LIFECYCLE_MARGIN_MS = 24 * 60 * 60_000;
 
-/** Does the journal hold a lifecycle row (assignment, exercise, expiry) for this line's member near
- *  its window? Then the unexplained cash has a known cause that is not capital arriving. */
-export function lifecycleNear(flow: CapitalFlow, journal: readonly TradeActivityRecord[]): boolean {
+/** More near rows than this and the combinations are not worth walking: the line disagrees. */
+const MAX_CASH_ROWS = 8;
+
+/**
+ * The cash one lifecycle row's share leg moves, unsigned: 0 for an expiry (nothing changes hands),
+ * the strike notional for an assignment or exercise of an OCC contract, the price times the shares
+ * for a priced settlement (OPTRD), and undefined when it cannot be known. Unsigned because the
+ * direction depends on the side the member held, which the row does not reliably carry; matching
+ * either way only ever condemns more lines.
+ */
+function lifecycleCash(record: TradeActivityRecord): number | undefined {
+  if (record.status === LIFECYCLE_STATUS.OPEXP) return 0;
+  const contract = parseOccSymbol(record.symbol);
+  if (contract) return contract.strike * OPTION_MULTIPLIER * record.quantity;
+  if (record.status === LIFECYCLE_STATUS.OPTRD && record.price !== undefined && record.price > 0) {
+    return record.price * record.quantity;
+  }
+  return undefined;
+}
+
+/**
+ * Does the journal hold a lifecycle row (assignment, exercise, expiry) for this line's member near
+ * its window that could have moved the line's unexplained cash? Then that cash has a known cause
+ * that is not capital arriving. "Could have": the cash of some of the near rows together, each
+ * either way, lands within `slack` of it — rows landing in one window move cash as one. A near row
+ * whose cash cannot be known, or more near rows than `MAX_CASH_ROWS`, condemns the line outright.
+ */
+export function lifecycleExplains(
+  flow: CapitalFlow,
+  journal: readonly TradeActivityRecord[],
+  slack = 1_000,
+): boolean {
   const start = Date.parse(flow.from) - LIFECYCLE_MARGIN_MS;
   const end = Date.parse(flow.at) + LIFECYCLE_MARGIN_MS;
-  return journal.some((record) => {
-    if (record.source !== "lifecycle" || record.participantId !== flow.participantId) return false;
+  const cash: number[] = [];
+  for (const record of journal) {
+    if (record.source !== "lifecycle" || record.participantId !== flow.participantId) continue;
     const at = Date.parse(record.at);
-    return at >= start && at <= end;
-  });
+    if (at < start || at > end) continue;
+    const moved = lifecycleCash(record);
+    if (moved === undefined) return true;
+    if (moved > 0) cash.push(moved);
+  }
+  if (cash.length > MAX_CASH_ROWS) return true;
+  // Every sum some of the rows could make, each row left out, paid or received.
+  let sums = [0];
+  for (const moved of cash) sums = sums.flatMap((sum) => [sum, sum + moved, sum - moved]);
+  return sums.some((sum) => sum !== 0 && Math.abs(flow.unexplainedCash - sum) <= slack);
 }
 
 /**
  * Do the witnesses tell a flow's story? First the journal: a lifecycle row near the line's window
- * is a known cause that is not capital arriving, so the line disagrees (#7730) — checked before the
- * held book, which a covered call assigned away would otherwise pass as a reset. Then the line
- * agrees when the unexplained cash matches the equity move (capital that arrived with the book
- * untouched) or the later book is flat (a reset, which clears every position whatever the cash then
- * did), each give or take `slack` (the tolerance a rounding or a fee is allowed). A line with no
- * `heldAfter` that fails the cash test is `ungraded`: it predates the witness that would tell a
- * reset from a false line (#7729).
+ * that could have moved its cash is a known cause that is not capital arriving, so the line
+ * disagrees (#7730) — checked before the held book, which a covered call assigned away would
+ * otherwise pass as a reset. Then the line agrees when the unexplained cash matches the equity
+ * move (capital that arrived with the book untouched) or the later book is flat (a reset, which
+ * clears every position whatever the cash then did), each give or take `slack` (the tolerance a
+ * rounding or a fee is allowed). A line with no `heldAfter` that fails the cash test is
+ * `ungraded`: it predates the witness that would tell a reset from a false line (#7729).
  */
 export function witnesses(
   flow: CapitalFlow,
   journal: readonly TradeActivityRecord[] = [],
   slack = 1_000,
 ): WitnessVerdict {
-  if (lifecycleNear(flow, journal)) return "disagree";
+  if (lifecycleExplains(flow, journal, slack)) return "disagree";
   if (Math.abs(flow.unexplainedCash - flow.amount) <= slack) return "agree";
   if (flow.heldAfter === undefined) return "ungraded";
   return Math.abs(flow.heldAfter) <= slack ? "agree" : "disagree";
@@ -107,8 +154,9 @@ export interface FlowCensus {
   /** Lines recorded before `heldAfter` that only a reset or a false line could explain: out of the
    *  floor table (#7729). */
   readonly ungraded: number;
-  /** Lines with a lifecycle row near their window — each one counted in `disagree`. */
-  readonly lifecycleNear: number;
+  /** Lines whose cash a lifecycle row near their window could have moved — each one counted in
+   *  `disagree`. */
+  readonly lifecycleExplained: number;
   /** The fill journal was read. Without it no all-clear is printed (#7730). */
   readonly journalRead: boolean;
   /** Whole days from `FLOWS_RECORDED_FROM` to `now`. */
@@ -152,7 +200,7 @@ export function censusFlows(
     agree,
     disagree: graded.length - agree,
     ungraded: flows.length - graded.length,
-    lifecycleNear: flows.filter((flow) => lifecycleNear(flow, rows)).length,
+    lifecycleExplained: flows.filter((flow) => lifecycleExplains(flow, rows)).length,
     journalRead: journal !== undefined,
     shadowDays,
     floors,
@@ -200,7 +248,7 @@ export function censusMarkdown(census: FlowCensus): string {
     "",
     `- Lines: ${census.lines} across ${census.participants} participant(s); witnesses agree on ${census.agree}, disagree on ${census.disagree}.`,
     census.journalRead
-      ? `- Near an assignment, exercise or expiry in the fill journal: ${census.lifecycleNear} line(s), graded disagree.`
+      ? `- Cash an assignment, exercise or settlement in the fill journal could have moved: ${census.lifecycleExplained} line(s), graded disagree.`
       : "- Fill journal: not read; lines were graded on their witnesses alone.",
     ...(census.ungraded > 0
       ? [
