@@ -17,6 +17,7 @@ import {
   type MemberVisitStore,
   memberActivity,
   noteAppVisit,
+  noteMemberPresence,
   VISIT_RETENTION_DAYS,
 } from "../../src/server/member-visits.js";
 import { ObservatoryHub } from "../../src/server/observatory-hub.js";
@@ -158,12 +159,57 @@ describe("noteAppVisit — never fails the request", () => {
       record: () => {
         throw new Error("disk full");
       },
+      touch: () => {
+        throw new Error("disk full");
+      },
       list: () => [],
     };
     const warn = rstest.spyOn(process, "emitWarning").mockImplementation(() => undefined);
     expect(() => noteAppVisit(broken, session, "/app", at("2026-11-20"))).not.toThrow();
+    expect(() => noteMemberPresence(broken, session, "/api/board", at("2026-11-20"))).not.toThrow();
     expect(warn).toHaveBeenCalledWith(expect.stringContaining("disk full"));
     warn.mockRestore();
+  });
+});
+
+describe("noteMemberPresence — an open tab's API call marks the day, once (#8262)", () => {
+  const session: Session = { email: "member@gmail.com", provider: "google", exp: 0 };
+  const id = opaqueMemberId("member@gmail.com");
+
+  it("adds a no-load row for an API call and leaves a page load's row as it was", () => {
+    const store = new JsonMemberVisitStore(dir);
+    noteMemberPresence(store, session, "/api/board", at("2026-11-19"));
+    noteAppVisit(store, session, "/app/trade", at("2026-11-20"));
+    noteMemberPresence(store, session, "/api/board", at("2026-11-20"));
+    expect(store.list(at("2026-11-20")).map((r) => [r.day, r.loads, r.routes])).toEqual([
+      ["2026-11-19", 0, []],
+      ["2026-11-20", 1, ["/app/trade"]],
+    ]);
+    expect(memberActivity(store.list(at("2026-11-20")), at("2026-11-20")).get(id)).toEqual({
+      lastSeen: "2026-11-20",
+      activeDays7: 2,
+      activeDays30: 2,
+    });
+  });
+
+  it("ignores the board stream, the shell and requests without a session", () => {
+    const store = new JsonMemberVisitStore(dir);
+    noteMemberPresence(store, session, "/events", at("2026-11-20"));
+    noteMemberPresence(store, session, "/app/trade", at("2026-11-20"));
+    noteMemberPresence(store, undefined, "/api/board", at("2026-11-20"));
+    expect(store.list(at("2026-11-20"))).toEqual([]);
+  });
+
+  it("reads the day's file once per member per day, not per request", async () => {
+    await writeFile(join(dir, "2026-11-20.json"), "{not json", "utf8");
+    const warnings: string[] = [];
+    const store = new JsonMemberVisitStore(dir, (m) => warnings.push(m));
+    store.touch(id, at("2026-11-20"));
+    const afterFirst = warnings.length;
+    expect(afterFirst).toBeGreaterThan(0);
+    store.touch(id, at("2026-11-20"));
+    store.touch(id, at("2026-11-20"));
+    expect(warnings).toHaveLength(afterFirst);
   });
 });
 
@@ -233,6 +279,54 @@ describe("the dashboard server records signed-in shell loads only", () => {
           routes: ["/app/trade"],
         },
       ]);
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+  it("counts every day a member uses a tab left open, not only the day it loaded (#8262)", async () => {
+    const store = new JsonMemberVisitStore(dir);
+    let now = at("2026-11-16");
+    const server = createDashboardServer({
+      hub: new ObservatoryHub(board()),
+      ...(auth ? { auth } : {}),
+      memberVisits: store,
+      now: () => now,
+    });
+    await new Promise<void>((resolve) => server.listen(0, resolve));
+    const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    const cookie = `skynet_session=${encodeURIComponent(
+      signSession(
+        { email: "member@gmail.com", provider: "google", exp: Date.now() + 60_000 },
+        SECRET,
+      ),
+    )}`;
+    const id = opaqueMemberId("member@gmail.com");
+    try {
+      // Monday: the one full page load.
+      await fetch(`${base}/app/`, { headers: { cookie }, redirect: "manual" });
+      // Tuesday to Friday: the open tab only talks to the API.
+      for (const day of ["2026-11-17", "2026-11-18", "2026-11-19", "2026-11-20"]) {
+        now = at(day);
+        const res = await fetch(`${base}/api/board`, { headers: { cookie } });
+        expect(res.status).toBe(200);
+        await fetch(`${base}/api/board`, { headers: { cookie } }); // a second call writes nothing new
+      }
+      expect(memberActivity(store.list(now), now).get(id)).toEqual({
+        lastSeen: "2026-11-20",
+        activeDays7: 5,
+        activeDays30: 5,
+      });
+      // Presence is not a page load: the API days carry no load and no screen.
+      expect(store.list(now).map((r) => [r.day, r.loads, r.routes])).toEqual([
+        ["2026-11-16", 1, ["/app"]],
+        ["2026-11-17", 0, []],
+        ["2026-11-18", 0, []],
+        ["2026-11-19", 0, []],
+        ["2026-11-20", 0, []],
+      ]);
+      // A visitor's API call records nothing.
+      await fetch(`${base}/api/board`);
+      expect(store.list(now)).toHaveLength(5);
     } finally {
       await new Promise<void>((resolve) => server.close(() => resolve()));
     }

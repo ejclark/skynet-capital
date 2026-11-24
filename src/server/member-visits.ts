@@ -14,7 +14,13 @@
  *    log uses (`opaqueMemberId`), never the email. Bots hold no session, so they never appear.
  *  - **A page load is a server hit for the shell's page** (`index.html`), not each screen change
  *    inside the app: the shell routes client-side, so `routes` is the screens a member LANDED on.
- *    "Last seen" and "days active" need only one load a day, so they are whole.
+ *  - **A day counts as active on any signed-in `/api/*` request, page load or not** (#8262). A tab
+ *    left open (or a phone resuming one from memory) never loads the shell again: it only calls
+ *    the API, so counting loads alone said a member active five days had been seen once. Such a
+ *    day keeps a row with `loads: 0` and no screens. `/events` does not count: the board stream
+ *    stays connected in a hidden tab, while the API queries pause there (TanStack Query polls only
+ *    a visible tab), so an API call is a member actually using the app. One write per member per
+ *    day at most: the store remembers who it has already marked today.
  *  - **Never fails a request.** A store error is reported once per call and swallowed.
  *  - **Keeps 180 days.** One JSON file per day under the dir; older files are deleted on the first
  *    write of each new day, and ignored on read if a prune ever missed them.
@@ -62,7 +68,7 @@ export interface MemberVisitDay {
   readonly memberId: string;
   /** Market day, YYYY-MM-DD (New York). */
   readonly day: string;
-  /** Page loads of the shell that day. */
+  /** Page loads of the shell that day — 0 when the member only used a tab already open. */
   readonly loads: number;
   /** Top-level screens opened, e.g. `/app/trade` — sorted, each once. */
   readonly routes: readonly string[];
@@ -80,6 +86,8 @@ export interface MemberActivity {
 export interface MemberVisitStore {
   /** Count one page load of `route` (already reduced by `appScreenOf`) for this member today. */
   record(memberId: string, route: string, now: Date): void;
+  /** Mark this member present today without counting a page load (an API call from an open tab). */
+  touch(memberId: string, now: Date): void;
   /** Every kept row, oldest day first. */
   list(now: Date): readonly MemberVisitDay[];
 }
@@ -129,6 +137,9 @@ const DAY_FILE = /^(\d{4}-\d{2}-\d{2})\.json$/;
 /** File-backed store: `<dir>/<YYYY-MM-DD>.json`, one small object keyed by opaque member id. */
 export class JsonMemberVisitStore implements MemberVisitStore {
   private prunedFor: string | undefined;
+  /** Members already holding a row on `seenOn` — so `touch` writes once a day, not per request. */
+  private seenOn: string | undefined;
+  private readonly seen = new Set<string>();
 
   constructor(
     private readonly dir: string,
@@ -136,22 +147,44 @@ export class JsonMemberVisitStore implements MemberVisitStore {
   ) {}
 
   record(memberId: string, route: string, now: Date): void {
+    this.upsert(memberId, now, (row) => {
+      const routes = new Set(row?.routes ?? []);
+      routes.add(route);
+      return { loads: (row?.loads ?? 0) + 1, routes: [...routes].sort() };
+    });
+  }
+
+  touch(memberId: string, now: Date): void {
+    const day = marketDayKey(now.toISOString());
+    if (this.seenOn === day && this.seen.has(memberId)) return;
+    this.upsert(memberId, now, (row) => row ?? { loads: 0, routes: [] });
+  }
+
+  /** Rewrite one member's row for today, pruning on the first write of a new day. */
+  private upsert(
+    memberId: string,
+    now: Date,
+    next: (row: DayFile[string] | undefined) => DayFile[string],
+  ): void {
     const day = marketDayKey(now.toISOString());
     if (this.prunedFor !== day) {
       this.prune(day);
       this.prunedFor = day;
     }
+    if (this.seenOn !== day) {
+      this.seenOn = day;
+      this.seen.clear();
+    }
+    // Marked before the read: a day's file that cannot be read stays unwritten either way, and
+    // `touch` must not re-read (and re-warn about) it on every API call.
+    this.seen.add(memberId);
     const file = this.dayFile(day);
     // A file that exists but cannot be read whole is left alone: rewriting it would erase the day.
     const state = file.loadIfReadable();
     if (state === undefined) return;
     const row = state[memberId];
-    const routes = new Set(row?.routes ?? []);
-    routes.add(route);
-    file.write({
-      ...state,
-      [memberId]: { loads: (row?.loads ?? 0) + 1, routes: [...routes].sort() },
-    });
+    const updated = next(row);
+    if (updated !== row) file.write({ ...state, [memberId]: updated });
   }
 
   list(now: Date): readonly MemberVisitDay[] {
@@ -223,7 +256,28 @@ export function noteAppVisit(
   }
 }
 
-/** "Last seen" and "days active in the last 7 / 30" per member, from the kept rows. */
+/**
+ * Mark the signed-in member present today when the request is an API call (#8262): the one kind
+ * of request an already-open tab still makes. Never throws, like `noteAppVisit`.
+ */
+export function noteMemberPresence(
+  store: MemberVisitStore | undefined,
+  session: Session | undefined,
+  path: string,
+  now: Date = new Date(),
+): void {
+  if (!(store && session && path.startsWith("/api/"))) return;
+  try {
+    store.touch(opaqueMemberId(session.email), now);
+  } catch (error) {
+    process.emitWarning(`[member-visits] presence failed: ${String(error)}`);
+  }
+}
+
+/**
+ * "Last seen" and "days active in the last 7 / 30" per member, from the kept rows. Any row is a
+ * day seen, page load or not (`loads: 0` is a day spent in a tab already open).
+ */
 export function memberActivity(
   rows: readonly MemberVisitDay[],
   now: Date,
@@ -233,7 +287,7 @@ export function memberActivity(
   const from30 = daysBefore(today, 29);
   const byMember = new Map<string, Set<string>>();
   for (const row of rows) {
-    if (row.loads <= 0 || row.day > today) continue;
+    if (row.day > today) continue;
     const days = byMember.get(row.memberId) ?? new Set<string>();
     days.add(row.day);
     byMember.set(row.memberId, days);
