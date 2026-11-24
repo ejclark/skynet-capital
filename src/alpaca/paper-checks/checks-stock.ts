@@ -2,7 +2,8 @@
  * The stock-side paper checks (#8256): 1 bracket-after-close, 2 extended-hours, 3 evening-quotes,
  * 4 fractional-exits. Every entry is a limit that can't fill (30% of the last IEX trade); the one
  * exception is check 4's 0.5-share market buy and its sell-back, which exist to give the OCO a
- * position to sit on. Cleanup (`cleanup.ts`) cancels whatever these leave open.
+ * position to sit on. Check 1 and check 4 cancel their own resting orders before the next order
+ * goes out (#8373); cleanup (`cleanup.ts`) cancels whatever is still open at the end.
  */
 import { type CheckAnswer, sayAll, verdict } from "./answer.js";
 import {
@@ -59,10 +60,20 @@ export async function bracketAfterClose(desk: Desk): Promise<CheckAnswer> {
       afterOpen = await readAll("after the open");
     }
   }
+  // Polled and recorded, so cancel (#8373): in a run that crosses the open, check 4 sells SPY next,
+  // and an open SPY buy limit beside a sell is what Alpaca's wash-trade guard refuses. After a
+  // signal, the run's cleanup cancels them instead. The cancels are instrumentation: kept in the
+  // attempts, left out of the answer the README prints.
+  const cancelled: Attempt[] = [];
+  for (const s of sent) {
+    if (desk.ledger.interrupted) break;
+    const gone = await cancel(desk, `${s.label}, cancelled`, s.orderId);
+    if (gone) cancelled.push(gone);
+  }
   return {
     outcome: verdict(sent),
     answer: sayAll([...sent, ...reads, ...afterOpen]),
-    attempts: [...sent, ...reads, ...afterOpen],
+    attempts: [...sent, ...reads, ...afterOpen, ...cancelled],
   };
 }
 
