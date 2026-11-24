@@ -20,7 +20,8 @@ Eric, the owner.
    recorded words, quoted with the date; every inference is marked
    `_hypothesis Hn (<date written>) — <the guess>. Proves it wrong (check by YYYY-MM-DD): <an
    observable event>._`, the way a research call sheet carries its falsifier. The check-by date is
-   when a session settles it (refuted · known · held · stale; `npm run profile:due`), and
+   when a session settles it (refuted · known · held · stale; `npm run profile:due`; held sets a new
+   check-by date, at most twice without new evidence), and
    `scripts/profile-scan.mjs --validate` (run by its spec) fails a numbered one without it. The file is theirs to edit (below).
 2. **What they own** — the fixture participant (or none), rungs earned, accounts, device.
 3. **What they are trying to do** — goals, ranked; **needs in their words**.

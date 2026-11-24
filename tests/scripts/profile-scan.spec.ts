@@ -105,11 +105,12 @@ describe("profile-scan: the fitness verdict (misses-reach-profile)", () => {
     ]);
   });
 
-  it("passes on the real ledger and profile today", () => {
+  it("passes on the real ledger and profile as of this slice", () => {
     const v = judge({
       ledgerMd: readFileSync(FILES.ledger, "utf8"),
       profileTexts: FILES.profile.map((f) => readFileSync(f, "utf8")),
-      today: new Date().toISOString().slice(0, 10),
+      // Pinned: a time check here would turn unrelated PRs red; the clock contract owns "now".
+      today: "2026-11-24",
     });
     expect(v).toMatchObject({ status: "pass" });
   });
@@ -149,6 +150,38 @@ describe("profile-scan: hypotheses", () => {
     expect(
       parseHypotheses(readFileSync(join(FILES.members, "eric.md"), "utf8")).length,
     ).toBeGreaterThanOrEqual(8);
+  });
+});
+
+describe("profile-scan: review fixes", () => {
+  it("cites the whole cell when a bare #N would be shared by two asks on one day", () => {
+    const rows = ledgerRows(
+      ledger(
+        "| 2026-11-05 | x | #6870 S1: archive? | A | B | miss |",
+        "| 2026-11-05 | x | #6870 S2: merge? | A | B | miss |",
+      ),
+    );
+    expect(rows.map((r) => r.askId)).toEqual(["#6870 S1: archive?", "#6870 S2: merge?"]);
+    const owed = uncitedMisses(rows, ["ALIGNMENT 2026-11-05 · #6870 S1: archive?"], "2026-12-01");
+    expect(owed.map((r) => r.askId)).toEqual(["#6870 S2: merge?"]);
+  });
+
+  it("never swallows the next hypothesis when text follows a closing underscore", () => {
+    const md = [
+      "- _hypothesis H9 (2026-12-01) — guess. Proves it wrong: x._ (#9001)",
+      "- _hypothesis H10 (2026-12-01) — guess. Proves it wrong (check by 2027-01-01): y._",
+    ].join("\n");
+    const hyps = parseHypotheses(md, "eric.md");
+    expect(hyps.map((h) => [h.id, h.checkBy])).toEqual([
+      ["H9", null],
+      ["H10", "2027-01-01"],
+    ]);
+  });
+
+  it("escapes a pipe in a routed row", () => {
+    const rows = ledgerRows(ledger("| 2026-11-20 | x | #1 · a? | A | A \\| B, both | miss |"));
+    const issue = missesIssue(uncitedMisses(rows, [""], "2026-12-01"));
+    expect(issue.body).toContain("| A \\| B, both |");
   });
 });
 

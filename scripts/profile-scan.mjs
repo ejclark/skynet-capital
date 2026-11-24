@@ -47,7 +47,9 @@ const flat = (s) => String(s ?? "").replace(/\s+/g, " ");
 /** Every `_hypothesis …_` in a markdown file, with its id, dates and whether it can be checked. */
 export function parseHypotheses(md, file = "") {
   const out = [];
-  for (const m of String(md ?? "").matchAll(/_hypothesis\b([\s\S]*?)_(?=[ \t]*(?:\n|$))/g)) {
+  for (const m of String(md ?? "").matchAll(
+    /_hypothesis\b((?:(?!_hypothesis\b)[\s\S])*?)_(?=\s|$)/g,
+  )) {
     const text = flat(m[1]).trim();
     out.push({
       file,
@@ -93,7 +95,13 @@ export function ledgerRows(ledgerMd) {
         raw: c[5],
         skip: /no profile change:/i.test(c[5]),
       };
-    });
+    })
+    .map((r, _, all) =>
+      // A bare `#N` shared by two asks on one day would let one line clear both: cite the cell.
+      !r.ask.includes(" · ") && all.some((o) => o !== r && o.cite === r.cite)
+        ? { ...r, askId: flat(r.ask).trim(), cite: `ALIGNMENT ${r.date} · ${flat(r.ask).trim()}` }
+        : r,
+    );
 }
 
 /** The misses still owed a profile line: a `miss…` Score, not marked `no profile change:`. */
@@ -146,12 +154,14 @@ export function judge({ ledgerMd, profileTexts, today, graceDays = GRACE_DAYS })
       };
 }
 
+const cell = (s) => flat(s).replace(/\|/g, "\\|");
+
 /** The one routed issue: title, labels and a capsule body. */
 export function missesIssue(misses) {
   const n = misses.length;
   const rows = misses.map(
     (r) =>
-      `| \`${r.cite}\` | ${r.predicted} | ${r.given} | ${r.predicted.match(/eric\.md (H\d+)/)?.[1] ?? "—"} |`,
+      `| \`${r.cite}\` | ${cell(r.predicted)} | ${cell(r.given)} | ${r.predicted.match(/eric\.md (H\d+)/)?.[1] ?? "—"} |`,
   );
   return {
     title: `Change Eric's profile for ${n} overturned prediction${n === 1 ? "" : "s"}`,
@@ -206,6 +216,8 @@ function route(issue) {
       const args = ["api", `repos/{owner}/{repo}/issues/${open.number}`, "-X", "PATCH"];
       gh([...args, "-f", `title=${issue.title}`, "-f", `body=${issue.body}`]);
     }
+    // A lane that dropped `ready` after a failed build would leave the misses to age out unseen.
+    gh(["issue", "edit", String(open.number), "--add-label", issue.labels.join(",")]);
     return open.number;
   }
   const url = gh([
@@ -261,7 +273,7 @@ function main(argv) {
         ? "none scored yet"
         : `${Math.round(s.share * 100)}% (${s.match} of ${s.scored})`;
     console.log(
-      `match share since ${AUDIT_DATE}: ${share}; the loop is wrong at ${MATCH_BAR * 100}% or lower with 15+ rows`,
+      `match share after ${AUDIT_DATE}: ${share}; the loop is wrong at ${MATCH_BAR * 100}% or lower with 15+ rows`,
     );
     return 0;
   }
