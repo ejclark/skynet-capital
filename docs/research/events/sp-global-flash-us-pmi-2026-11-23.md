@@ -79,6 +79,7 @@ Forward tests registered in [`forward-tests/sp-global-flash-us-pmi-2026-11-23.md
 | 2026-11-15 | D-8 | **Date/slot** re-read direct (HTTP 200, browser UA, 24,452 bytes): `November 23 ... 14:45 UTC S&P Global Flash US PMI`; stays `estimate`. **Vol regime (Cboe, direct):** VIX 25.64 (11-06) → 19.92 (11-09) → 17.49 (11-11) → 19.30 (11-13); **kill switch 5 fired (under 20)**: the shock had faded before the panel opened, so FT-2's premise (a shock the panel answers) is weaker, not void; the bar is unchanged. **Rates (Yahoo ^TNX / FRED):** 10Y 4.84 (11-05) → 5.15 (11-13); CPI Oct core +0.30%, PPI +0.3% (both per their ledgers). **Window baseline re-run** (Yahoo 5m, 11-13, floor 0.02%): median share SPY 38.1%, QQQ 38.5%, TLT 34.2%, IWM 44.6%, ^TNX 52.7% (44-57 sessions each); informational only, FT-1's medians are still fixed at 11-20 by the scorer. **Peers:** none new; no consensus yet. **Geopolitics:** none touching a PMI. **Adjacency:** `--on-date` 11-22/23/24 all tracked; 11-23 gains the Japan flash (11-24 00:30 UTC) and UK sentiment on S&P's listing, non-US, named not filed. New tracked adjacent id: `china-ga-ge-sb-suspension-expiry-2026-11-27` (not strong). Proposals filed: none. Conviction proposals and declared intents: both `[]`. | **None — stand aside holds** | 2026-11-22 (low, 0+ every 7d) |
 | 2026-11-22 | D-1 | **Date/slot** re-read direct (HTTP 200, browser UA, 26,052 bytes): `November 23 ... 14:45 UTC S&P Global Flash US PMI`, same listing as 11-08/11-15; stays `estimate`. **Vol regime (Cboe, direct, 11-20 close):** VIX 19.30 (11-13) → 22.91 → 25.46 → 24.56 → 28.44 → **35.89** (11-20, intraday 40.03); **kill switch 5 fired, above 30 this time**: the regime is deepening, not fading, and the panel (about 11-10 to 11-19) straddles the slide. Sibling ledgers (Treasury par, primary): 2y 4.76 → 4.63, 10y 5.04 → 4.92 on 11-20; SPX 7,561.67 (11-13) → 6,910.39 (−8.6%); cause press-grade only (AI-led selloff), not verified here. **Peer print (secondary, Newsquawk 11-04):** Oct *final* composite **55.9** vs 57.6 expected, prior 58.4, i.e. **1.7 under the flash** (the manufacturing −1.1 was only part). **FT-2 note:** its bar stays the first-print 57.6 as registered, but with the revised October already at 55.9 a sub-57.6 November is now the likely outcome, so a pass is weak evidence the shock reached the panel; read it against 55.9 at scoring. No November consensus found (one search); Yahoo 429, no window re-run, FT-1 medians still fixed by rule at 11-20. Nothing tracked inside 09:30-10:30 ET 11-23 (2y note is afternoon). **Proposals:** none; `--on-date` 11-23 lists 3 tracked, the non-US flashes stay named in leg 1. Conviction proposals and declared intents: none. | None — stand aside holds; impact stays `low` | 2026-11-23 (low, 0+ every 7d; scoring due 2026-11-24) |
 | 2026-11-22 | D-1 | **Date/slot** re-read direct (HTTP 200, browser UA, 26,052 bytes): `November 23 ... 14:45 UTC S&P Global Flash US PMI`, same listing; stays `estimate`. **Vol regime (Cboe VIX_History, direct):** VIX 19.30 (11-13) → 22.91 → 25.46 → 24.56 → 28.44 (11-19) → **35.89 (11-20, intraday high 40.03)**; **kill switch 5 fired (above 30)**, and it fired after the panel (roughly 11-10 to 11-19) was mostly collected, so FT-2 now asks whether a survey answered mostly at VIX 17-28 reads the shock; bar unchanged at 57.6. At VIX 36 raw window moves widen, FT-1's share statistic is regime-robust and its medians stay fixed at 11-20. **Rates/tape:** 10Y 5.07% (11-18, relay); Oct-minutes 10-2 hike dissent, December hike odds quoted ~94% (11-18, relay); 11-20 equity close not read (Yahoo 429 on all five symbols; FRED timed out), so no fresh window re-run. **Consensus:** none found by search (no 2026 preview indexed); the print is a first read with no surprise bar. **Peers/geopolitics:** none touching a PMI. **Adjacency:** `--on-date=2026-11-23` shows only the Tokyo closure and 2Y note auction (afternoon), both tracked; Eurozone/Germany/France/UK/India/Japan/Australia flashes on S&P's listing are non-US, named not filed. Proposals filed: none. Conviction proposals and declared intents: both `[]`. | **None — stand aside holds** (regime read in leg 4 is stale; vol 36 makes any options play dearer still) | 2026-11-24 (close-out) |
+| 2026-11-24 | D+1 | **Close-out.** Printed on schedule: S&P Global's own PDF masthead 'Embargoed until 0945 EST (1445UTC) 23 November 2026', data collected 12-20 Nov. Composite **54.6** (Oct 55.9), services 54.7 (56.1), manufacturing PMI 54.5 (54.9). FT-1 **pass** (3 of 5 above median, fragile), FT-2 **pass** (54.6 < 57.6). VIX 35.89 (11-20) to 26.62 (11-23). Adjacency: no peer print or policy item touching a PMI; nothing tracked in 09:30-10:30 ET. Proposals filed: none (past the event). Conviction proposals and declared intents: both `[]`. Detail in Outcome. | **None; stand aside held**, impact stays `low` | — (closed) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -92,3 +93,61 @@ notes any row past ~1,200 chars): it is a note to the next session, not an essay
 
 **Last assessed:** 2026-11-22
 <!-- probe-ref: {"symbols":{},"vix":35.89,"daysBand":"low:0+","adjacentIds":["advance-economic-indicators-2026-11-27","advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","china-ga-ge-sb-suspension-expiry-2026-11-27","consumer-confidence-2026-11-24","durable-goods-2026-11-25","eurostat-hicp-final-2026-11-18","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","fomc-minutes-2026-11-18","gdp-q3-2026-second-2026-11-25","housing-starts-2026-11-18","industrial-production-annual-revision-2026-11-24","japan-cpi-2026-11-20","japan-cpi-tokyo-flash-2026-11-27","jgb-20y-auction-2026-11-18","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-1-5y-2026-11-20","jgb-liquidity-enhancement-5-11y-2026-11-27","jpx-market-closure-2026-11-23","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","opex-2026-11-20","pce-2026-11-25","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","retail-ecommerce-q3-2026-11-19","sifma-bond-early-close-2026-11-27","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25"],"screenStreak":0} -->
+
+**Last assessed:** 2026-11-24
+<!-- probe-ref: {"symbols":{},"vix":26.62,"daysBand":"low:0+","adjacentIds":["advance-economic-indicators-2026-11-27","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","china-ga-ge-sb-suspension-expiry-2026-11-27","consumer-confidence-2026-11-24","durable-goods-2026-11-25","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","gdp-q3-2026-second-2026-11-25","industrial-production-annual-revision-2026-11-24","japan-cpi-tokyo-flash-2026-11-27","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-5-11y-2026-11-27","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","pce-2026-11-25","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","sifma-bond-early-close-2026-11-27","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out, 2026-11-24 (D+1).** The release's own PDF was fetched direct and every window figure comes from a fresh Yahoo
+5-minute pull (SPY, QQQ, TLT, IWM, `^TNX`; `range=60d&interval=5m`, 60 sessions, 51 for `^TNX`), with the registered window
+construction (open of the bar starting 09:45 to close of the bar starting 09:55, against 09:30 to 10:25 bars; ET) and the
+0.02% degeneracy floor. `node_modules` was absent on this runner, so there was no instrument cache to bust. Nothing here is
+carried from a prior row or from memory of the tape.
+
+**What printed (primary: S&P Global press-release PDF, HTTP 200, via the release index).** Masthead: "Embargoed until 0945 EST
+(1445UTC) 23 November 2026", data collected 12-20 November. **Flash US Composite PMI Output Index 54.6 (October 55.9), a
+four-month low; services business activity 54.7 (56.1), four-month low; manufacturing PMI 54.5 (54.9), three-month low;
+manufacturing output 53.7 (54.5).** Selling-price and input-cost inflation both moderated but stayed elevated, with
+manufacturing selling prices rising especially sharply. The slot landed exactly where every row said it would. The entry stays
+`estimate` (the schema gap for a private PMI compiler is unchanged; this lane may not promote its own entry). Consensus, from
+one secondary relay (Econoday via search, not verified): services 55.7 (a 1.0 miss), manufacturing 54.5 (in line); no
+composite consensus was found, so the composite "surprise" is only against the prior month.
+
+**FT-1 - PASS (fragile).** Share of the 09:30-10:30 move made by the 09:45-10:00 window, against trailing medians (the last
+60 sessions ending 11-20, counted sessions only):
+
+| Instrument | Window move | Hour move | Share | Trailing median | Above? |
+|---|---|---|---|---|---|
+| SPY | +0.540% | +0.250% | 216.0% | 31.9% | yes |
+| QQQ | +0.628% | -0.055% | 1143.5% | 34.0% | yes (hour barely above floor) |
+| TLT | +0.111% | +0.358% | 31.0% | 39.0% | no |
+| IWM | +0.205% | -0.239% | 85.9% | 39.2% | yes |
+| `^TNX` | -0.121% | -0.442% | 27.4% | 44.3% | no |
+
+3 of 5 is the registered pass, and it does not depend on the median: the 11-15 baseline medians (38.1, 38.5, 34.2, 44.6, 52.7)
+give the same three. Two cautions go with it. QQQ's hour was nearly flat (-0.055%), the same near-degenerate shape the
+11-02 ledger flagged for SPY in October, and without it the count is 2 of 4, a kill by the registered rule. And the pass is
+equity-led: the two rates series were quiet in the window relative to their own hour. The window also sat inside a rebound
+(SPY fell 0.8% in the first five minutes, then rose to its 10:25 high), so it is a loud slot on a loud morning, not a clean
+isolation of the PMI. No non-PMI catalyst turned up in 09:30-10:30 ET. Three flash days now read 5/5 (Sep, ranks), 2-2-1
+(Oct, shares) and 3/5 (Nov, shares). **The registered license to raise this entry's impact `low` to `medium` exists, and I am
+not using it:** the entry's date has passed, nothing is dated ahead for it to re-tier, and a fragile 3 of 5 is the evidence
+the next flash's own initial research should weigh with the other two, not a basis for editing a closed entry.
+
+**FT-2 - PASS (weak evidence).** Composite 54.6 is below the registered 57.6 bar. The bar was already 1.3 above the revised
+October composite (55.9, itself 1.7 under the October flash), so any print near the revised trend passed it. What the print
+does say: the panel (12-20 Nov, with VIX 17 to 28 for most of it and 35.89 on the last day) cooled across output, orders and
+price indices without breaking the range (nothing near 50). The September-to-November path in first prints is 58.4, 57.6,
+54.6.
+
+**The stance held.** Stand aside was the call and nothing about the print or the tape licensed more. The "Today" falsifier
+asked for 4 of 5 instruments moving the direction the surprise implies; the rates pair moved bond-friendly (TLT up, `^TNX` down)
+on a miss, while the three equity series rose in the window, so at most 2 of 5 were consistent and the falsifier did not
+fire. The reaction function has still not resolved on any flash. VIX closed **26.62** on 11-23, down from 35.89 on 11-20.
+
+**Honest limits.** The consensus figures are one secondary relay. n=3 flash days on the share statistic, and this one passes
+by a single near-flat instrument. The window study cannot separate the PMI from a morning rebound already under way. No
+conviction reads either forward test (`conviction-proposals.mjs`, `intents.mjs` both `[]`), so no claims to update. Next live
+test of the window question: the December flash, which is not on the calendar yet. This document goes quiet on its own stance
+as of this section.
