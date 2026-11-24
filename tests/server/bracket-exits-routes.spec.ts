@@ -156,4 +156,49 @@ describe("a bracket's exits as the broker echoes them (#8249)", () => {
       working.filter((r) => r.exitRole === undefined).every((r) => !r.id.startsWith(entry.id)),
     ).toBe(true);
   });
+
+  it("keeps the list when the naming read fails: the exits read as plain order types", async () => {
+    const { client } = paper();
+    const entry = await client.placeOrder({
+      symbol: "XLE",
+      qty: 3,
+      side: "buy",
+      type: "limit",
+      limit_price: 91,
+      bracket: { takeProfit: 95, stop: 85 },
+    });
+    const flaky = {
+      listOrders: (params: { nested?: boolean }) =>
+        params.nested ? Promise.reject(new Error("429")) : client.listOrders(params),
+    };
+    const config = { tradingClientFor: () => flaky } as unknown as DashboardServerConfig;
+    const { res, out } = fakeRes();
+    const url = "/api/trade/orders?participantId=member";
+    await serveTradeOrdersApi(get(url), res, "/api/trade/orders", config, undefined as never);
+    const body = JSON.parse(out.body ?? "{}");
+    expect(body.available).toBe(true);
+    const tp = body.working.find((r: { id: string }) => r.id === `${entry.id}-tp`);
+    expect(tp).toMatchObject({ orderType: "limit" });
+    expect(tp.exitRole).toBeUndefined();
+  });
+
+  it("costs one read once the bracket has finished", async () => {
+    const { client, transport, reads } = paper();
+    const entry = await client.placeOrder({
+      symbol: "XLE",
+      qty: 3,
+      side: "buy",
+      type: "limit",
+      limit_price: 91,
+      bracket: { takeProfit: 95, stop: 85 },
+    });
+    await transport.delete(`/v2/orders/${entry.id}-tp`);
+    await transport.delete(`/v2/orders/${entry.id}-sl`);
+    reads.length = 0;
+    const config = { tradingClientFor: () => client } as unknown as DashboardServerConfig;
+    const { res } = fakeRes();
+    const url = "/api/trade/orders?participantId=member";
+    await serveTradeOrdersApi(get(url), res, "/api/trade/orders", config, undefined as never);
+    expect(reads).toHaveLength(1);
+  });
 });

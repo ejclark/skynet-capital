@@ -57,6 +57,9 @@ const STATE_WORD: Record<DeskOrderState, string> = {
 };
 
 function priceLabel(row: DeskOrderRow): string {
+  // A stop-limit names both: the price that triggers it, then the one it fills at or better.
+  if (row.stopPrice !== undefined && row.limitPrice !== undefined)
+    return `stop ${money(row.stopPrice)} · limit ${money(row.limitPrice)}`;
   if (row.limitPrice !== undefined) return `limit ${money(row.limitPrice)}`;
   if (row.stopPrice !== undefined) return `stop ${money(row.stopPrice)}`;
   return "market";
@@ -133,7 +136,8 @@ export function RowActions({
  *  (#8249); every other row keeps the order type's own name. */
 function rowTypeLabel(row: DeskOrderRow): string {
   if (row.exitRole === "take-profit") return "Take-profit";
-  if (row.exitRole === "stop") return "Stop";
+  // Never a bare "Stop" (the ticket's own rule, `ticket.ts`): it sells at the market once triggered.
+  if (row.exitRole === "stop") return "Stop (sells at market)";
   return orderTypeLabel(row.orderType);
 }
 

@@ -1,4 +1,5 @@
 import type { AlpacaOrder } from "../alpaca/alpaca-trading-client.js";
+import { brokerStatusState } from "./desk-orders-view.js";
 
 /**
  * A BRACKET'S EXITS, AS THE BROKER ECHOES THEM (#8249). A bracket is one Alpaca order whose two
@@ -57,6 +58,11 @@ export function exitRoles(nested: readonly AlpacaOrder[]): ReadonlyMap<string, E
   return roles;
 }
 
-/** Whether a flat read holds any bracket piece — the one case worth a second, nested read. */
+/** Whether a flat read holds a bracket piece still WORKING — the one case worth a second, nested
+ *  read. A finished bracket (filled, cancelled) costs nothing: its rows read as their plain order
+ *  types, which is true of them, and every later poll keeps to one read. */
 export const hasBracket = (orders: readonly AlpacaOrder[]): boolean =>
-  orders.some((o) => o.order_class === "bracket");
+  orders.some((o) => {
+    const state = o.order_class === "bracket" ? brokerStatusState(o.status) : undefined;
+    return state === "working" || state === "partial";
+  });

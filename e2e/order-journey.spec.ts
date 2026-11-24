@@ -419,16 +419,18 @@ test.describe("Exits at entry: a member on a phone", () => {
       page.getByText("Take-profit $530.00 · $10.00 gained against your limit"),
     ).toBeVisible();
     await expect(
-      page.getByText("Stop $500.00 · about $20.00 lost against your limit"),
+      page.getByText("Stop $500.00, sells at market · about $20.00 lost against your limit"),
     ).toBeVisible();
     await page.getByRole("button", { name: /^Submit order/ }).click();
     await expect(
-      page.getByText("Exits held by the broker · Take-profit $530.00 · Stop $500.00"),
+      page.getByText(
+        "Exits held by the broker · Take-profit $530.00 · Stop $500.00, sells at market once triggered",
+      ),
     ).toBeVisible();
 
     await page.goto(`${ROUTES.stockForm}?section=orders`);
     await expect(page.getByText(/^Take-profit · limit \$530\.00/)).toBeVisible();
-    await expect(page.getByText(/^Stop · stop \$500\.00/)).toBeVisible();
+    await expect(page.getByText(/^Stop \(sells at market\) · stop \$500\.00/)).toBeVisible();
 
     await page.goto(ROUTES.book);
     await expect(page.getByRole("link", { name: /^QQQ ,.* 1 shares? ,/ })).toBeVisible();

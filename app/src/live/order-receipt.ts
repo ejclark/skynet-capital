@@ -46,7 +46,7 @@ export interface SentOrder {
 
 /** The receipt's exit line, in words, from the broker's echo (#8249). */
 export function exitWords(exits: NonNullable<SentOrder["exits"]>): string {
-  return `Exits held by the broker · Take-profit ${money(exits.takeProfit)} · Stop ${money(exits.stop)}`;
+  return `Exits held by the broker · Take-profit ${money(exits.takeProfit)} · Stop ${money(exits.stop)}, sells at market once triggered`;
 }
 
 /** Where the order stands: the order list's own states, plus a cancel the broker hasn't confirmed. */

@@ -16,6 +16,7 @@ import {
   orderTypeLabel,
   orderTypeNote,
   orderTypesFor,
+  panelSubtitle,
   priceFieldFor,
   reviewTicket,
   submitTicket,
@@ -285,7 +286,7 @@ export function TradeGate({
   const priceId = useId();
   const whyId = useId();
 
-  const draft = () => buildDraft(deskId, fields);
+  const draft = () => buildDraft(deskId, fields, exitAtEntry);
 
   /** Any edit disarms a standing review — straight back to draft. Changing the order type counts:
    *  a review of a market order says nothing about the stop order that replaced it. */
@@ -529,9 +530,7 @@ export function TradeGate({
     <section className="panel gate-panel" aria-label="New trade">
       {header}
       <h2 className="panel-title">New trade</h2>
-      <p className="panel-sub">
-        Paper account · market, limit or stop · the gate reviews before anything is sent
-      </p>
+      <p className="panel-sub">{panelSubtitle(exitAtEntry)}</p>
       <QuoteHeader symbol={quoteSym} />
       {/* Sent, the form steps aside for the receipt — an order that went out never sits under
           fields that still hold it (Eric, 2026-11-06). */}

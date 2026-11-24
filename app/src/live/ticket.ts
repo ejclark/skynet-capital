@@ -125,6 +125,13 @@ export function orderTypesFor(exitAtEntry: boolean): readonly TicketOrderType[] 
 export const exitAllowed = (exitAtEntry: boolean, fields: TicketFields): boolean =>
   exitAtEntry && fields.action === "buy" && fields.orderType === "limit";
 
+/** The panel's subtitle names the order types the select actually offers. */
+export function panelSubtitle(exitAtEntry: boolean): string {
+  return exitAtEntry
+    ? "Paper account · market, limit, stop or stop-limit, and an exit on a limit buy · the gate reviews before anything is sent"
+    : "Paper account · market, limit or stop · the gate reviews before anything is sent";
+}
+
 /** The one sentence on when a bracket's exits act — Alpaca's own rule, stated before the order. */
 export const EXIT_HOURS_NOTE =
   "Guards regular hours only: the take-profit and stop don't act between 4pm and 9:30am ET.";
@@ -177,7 +184,10 @@ export function carryAcrossSide(fields: TicketFields, priced: boolean): TicketCa
   return {
     symbol: fields.symbol.trim().toUpperCase(),
     quantity: fields.quantity,
-    ...(priced ? { priced: { orderType: fields.orderType, limitPrice: fields.limitPrice } } : {}),
+    // A stop-limit's limit is tied to its stop, which never crosses sides: neither goes (#8249).
+    ...(priced && fields.orderType !== "stop_limit"
+      ? { priced: { orderType: fields.orderType, limitPrice: fields.limitPrice } }
+      : {}),
     ...(fields.timeInForce ? { timeInForce: fields.timeInForce } : {}),
   };
 }
@@ -225,7 +235,11 @@ const parsePrice = (raw: string): number | undefined => {
  * is carried: a stop price left over from a previous edit must never ride along on a market
  * order, where the server would have no reason to look at it and the member no way to see it.
  */
-export function buildDraft(participantId: string, fields: TicketFields): TicketDraft {
+export function buildDraft(
+  participantId: string,
+  fields: TicketFields,
+  exitAtEntry = false,
+): TicketDraft {
   const field = priceFieldFor(fields.orderType);
   const price = field === undefined ? undefined : parsePrice(fields[field]);
   return {
@@ -237,7 +251,7 @@ export function buildDraft(participantId: string, fields: TicketFields): TicketD
     ...(field !== undefined && price !== undefined ? { [field]: price } : {}),
     ...stopLimitPrices(fields),
     ...(fields.timeInForce ? { timeInForce: fields.timeInForce } : {}),
-    ...exitOf(fields),
+    ...(exitAtEntry ? exitOf(fields) : {}),
   };
 }
 
@@ -277,7 +291,7 @@ export function exitLines(exit: ExitPreview): readonly string[] {
   };
   return [
     `Take-profit ${money(exit.takeProfit)}${vs(exit.takeProfitDollars, false)}`,
-    `Stop ${money(exit.stop)}${vs(exit.stopDollars, true)}`,
+    `Stop ${money(exit.stop)}, sells at market${vs(exit.stopDollars, true)}`,
   ];
 }
 

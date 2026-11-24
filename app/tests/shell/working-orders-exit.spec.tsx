@@ -90,9 +90,24 @@ describe("WorkingOrders — a bracket's exits (#8249)", () => {
     await waitFor(() =>
       expect(screen.getByText(/Take-profit · limit \$95\.00/)).toBeInTheDocument(),
     );
-    expect(screen.getByText(/^Stop · stop \$85\.00/)).toBeInTheDocument();
+    expect(screen.getByText(/^Stop \(sells at market\) · stop \$85\.00/)).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Cancel" })).toHaveLength(2);
     expect(screen.queryByRole("button", { name: "Modify" })).not.toBeInTheDocument();
+  });
+
+  it("shows a stop-limit row with both of its prices", async () => {
+    nextOrders = {
+      available: true,
+      asOf: "t",
+      working: [
+        { ...exit, exitRole: undefined, orderType: "stop_limit", stopPrice: 92, limitPrice: 92.5 },
+      ],
+      recent: [],
+    };
+    render(withClient(<WorkingOrders deskId="human-eric" />));
+    await waitFor(() =>
+      expect(screen.getByText(/^Stop-Limit · stop \$92\.00 · limit \$92\.50/)).toBeInTheDocument(),
+    );
   });
 
   it("keeps the order type's own name on every other row", async () => {

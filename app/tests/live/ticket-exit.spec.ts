@@ -1,6 +1,7 @@
 import { exitWords } from "../../src/live/order-receipt";
 import {
   buildDraft,
+  carryAcrossSide,
   EXIT_HOURS_NOTE,
   exitLines,
   orderTypeLabel,
@@ -40,14 +41,24 @@ describe("the ticket model — stop-limit and an exit (#8249)", () => {
 
   it("sends the exit only on a limit buy with 'Add an exit' on", () => {
     const on = { ...base, withExit: true, takeProfit: "95", exitStop: "85" };
-    expect(buildDraft("p", on).exit).toEqual({ takeProfit: 95, stop: 85 });
-    expect(buildDraft("p", { ...on, withExit: false }).exit).toBeUndefined();
-    expect(buildDraft("p", { ...on, action: "sell" }).exit).toBeUndefined();
-    expect(buildDraft("p", { ...on, orderType: "market" }).exit).toBeUndefined();
+    expect(buildDraft("p", on, true).exit).toEqual({ takeProfit: 95, stop: 85 });
+    expect(buildDraft("p", { ...on, withExit: false }, true).exit).toBeUndefined();
+    expect(buildDraft("p", { ...on, action: "sell" }, true).exit).toBeUndefined();
+    expect(buildDraft("p", { ...on, orderType: "market" }, true).exit).toBeUndefined();
+  });
+
+  it("never sends an exit for a session no longer admitted, whatever the fields still hold", () => {
+    const on = { ...base, withExit: true, takeProfit: "95", exitStop: "85" };
+    expect(buildDraft("p", on).exit).toBeUndefined();
+    expect(buildDraft("p", on, false).exit).toBeUndefined();
   });
 
   it("sends a blank exit price as absent, for the server to name", () => {
-    const draft = buildDraft("p", { ...base, withExit: true, takeProfit: "95", exitStop: "" });
+    const draft = buildDraft(
+      "p",
+      { ...base, withExit: true, takeProfit: "95", exitStop: "" },
+      true,
+    );
     expect(draft.exit).toEqual({ takeProfit: 95 });
   });
 
@@ -66,16 +77,22 @@ describe("the ticket model — stop-limit and an exit (#8249)", () => {
       exitLines({ takeProfit: 95, stop: 85, takeProfitDollars: 12, stopDollars: -18 }),
     ).toEqual([
       "Take-profit $95.00 · $12.00 gained against your limit",
-      "Stop $85.00 · about $18.00 lost against your limit",
+      "Stop $85.00, sells at market · about $18.00 lost against your limit",
     ]);
     expect(EXIT_HOURS_NOTE).toBe(
       "Guards regular hours only: the take-profit and stop don't act between 4pm and 9:30am ET.",
     );
   });
 
+  it("carries neither a stop-limit's type nor its limit across Buy ⇄ Sell", () => {
+    const stopLimit = { ...base, orderType: "stop_limit" as const, limitPrice: "92.50" };
+    expect(carryAcrossSide(stopLimit, true).priced).toBeUndefined();
+    expect(carryAcrossSide(base, true).priced).toEqual({ orderType: "limit", limitPrice: "91" });
+  });
+
   it("names the broker's echoed exits on the receipt", () => {
     expect(exitWords({ takeProfit: 95, stop: 85 })).toBe(
-      "Exits held by the broker · Take-profit $95.00 · Stop $85.00",
+      "Exits held by the broker · Take-profit $95.00 · Stop $85.00, sells at market once triggered",
     );
   });
 });

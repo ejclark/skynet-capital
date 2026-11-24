@@ -28,6 +28,15 @@ describe("the stock form with the setting off (#8249)", () => {
     expect(optionNames()).toEqual(["Market", "Limit", "Stop-Market"]);
   });
 
+  it("keeps its subtitle as on main", () => {
+    renderGate();
+    expect(
+      screen.getByText(
+        "Paper account · market, limit or stop · the gate reviews before anything is sent",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("shows no exit control on any order type", () => {
     renderGate();
     for (const type of ["market", "limit", "stop"]) {
@@ -60,9 +69,20 @@ describe("the stock form for an admitted session (#8249)", () => {
     expect(screen.getByText(/Guards regular hours only/)).toBeInTheDocument();
   });
 
-  it("offers no exit on a sell, or on a Market or Stop-Market buy", () => {
+  it("offers no exit on a sell", () => {
     renderGate({ exitAtEntry: true, initialAction: "sell" });
     fireEvent.change(typeSelect(), { target: { value: "limit" } });
     expect(screen.queryByLabelText("Add an exit")).not.toBeInTheDocument();
+  });
+
+  it.each(["market", "stop", "stop_limit"])("offers no exit on a %s buy", (type) => {
+    renderGate({ exitAtEntry: true });
+    fireEvent.change(typeSelect(), { target: { value: type } });
+    expect(screen.queryByLabelText("Add an exit")).not.toBeInTheDocument();
+  });
+
+  it("names the order types it offers in the panel's subtitle", () => {
+    renderGate({ exitAtEntry: true });
+    expect(screen.getByText(/market, limit, stop or stop-limit/)).toBeInTheDocument();
   });
 });
