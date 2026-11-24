@@ -47,7 +47,10 @@ The end time comes from **`get_usage`'s `resetsAt`**, never from a clock rule: t
 2026-10-26. A surge's label needs no revert scheduled, because it reads `normal` at its end time by
 itself, and the reader holds any surge to the next weekly reset whatever its comment says.
 
-1. **Read the reset.** Call `get_usage` and take `resetsAt`, in UTC. If it differs from the next
+1. **Read the reset.** Call `get_usage` and take `resetsAt`, in UTC. Not every session has
+   `get_usage`; then `get_session` on any running child gives the same reading as
+   `external_metadata.rate_limit_info.resetsAt` (epoch seconds; 2026-11-24 read 1795496400 =
+   05:00Z). If it differs from the next
    reset by `weeklyResetAnchor` in `work-mode.json`, also open a small PR correcting the anchor:
    a phone tap's surge and the reader's limit both come from that value.
 2. **Set the dial.** One command; the comment quotes Eric's words with a UTC time and carries
@@ -76,6 +79,11 @@ over surge's `inFlightCap` in `work-mode.json` (10 since 2026-11-23), start noth
 
 A wave is 4–8 child sessions (`create_session`, tagged `issue:<n>`, cloud, `docs/COMPUTE.md`
 routing — never a tier picked to save tokens; this is the one time spare quota is the point).
+**Every child gets `source_url: https://github.com/ejclark/skynet-capital` and an
+`outcome_branch`** (its own, or the PR branch it is finishing). A child created without them has
+no repo it may push to, and its own `add_repo` is refused by its permission classifier: on
+2026-11-24 all 6 children of the first two waves built or diagnosed, then stalled unable to push,
+and were respawned 50 minutes in.
 Sources, in pull order (`npm run rank`):
 
 - **The Ready queue** — `/work-issues` in each child, one issue per child.
