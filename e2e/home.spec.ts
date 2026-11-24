@@ -112,24 +112,22 @@ test("keeps the stage's left edge and width identical across pages at 1280 (crit
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
-  const boxes: { path: string; x: number; width: number }[] = [];
-  for (const path of [
-    "/app/accounts",
-    "/app/activity",
-    "/app/research",
-    "/app/trade",
-    "/app/u/sauron",
-  ]) {
-    await page.goto(path);
-    await expect(page.locator("main.stage")).toBeVisible();
-    // Layout boxes, not painted ones: a page's entrance animation scales its stage for a moment.
-    const box = await page
+  // Layout boxes, not painted ones: a page's entrance animation scales its stage for a moment, and
+  // a page that reads first (an account's) swaps its loading frame for the real one, so each page
+  // is polled until its stage settles.
+  const stageBox = () =>
+    page
       .locator("main.stage")
+      .first()
       .evaluate((el: HTMLElement) => ({ x: el.offsetLeft, width: el.offsetWidth }));
-    boxes.push({ path, ...box });
+  await page.goto("/app/accounts");
+  await expect(page.locator(".cockpit")).toBeVisible();
+  const first = await stageBox();
+  expect(first.width).toBeGreaterThan(1000);
+  for (const path of ["/app/activity", "/app/research", "/app/trade", "/app/u/sauron"]) {
+    await page.goto(path);
+    await expect.poll(stageBox, { message: path }).toEqual(first);
   }
-  for (const b of boxes)
-    expect({ x: b.x, width: b.width }, b.path).toEqual({ x: boxes[0]?.x, width: boxes[0]?.width });
 });
 
 test("a fresh load at /app/ reopens the last app's root; a Home tap shows the home (criterion 7)", async ({
