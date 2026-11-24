@@ -81,7 +81,8 @@ something explains it. Baselines are Linux-only, so off Linux re-baseline from C
 reading, then `--run <id> --apply --commit` copies the actuals over the baselines. It refuses
 anything that is not a pixel mismatch on an existing baseline. A cloud session, whose proxy refuses
 the artifact's blob host, adds `--from-git`: it reads the same report from the
-`refs/ci-shots/pr-<n>/run-<id>` ref CI pushes on a failed PR run (#8295).
+`refs/ci-shots/pr-<n>/run-<id>` ref that pipeline.yml's `ci shots` job pushes on a failed PR run,
+once that job is on main (#8295).
 
 ### Requirements in EARS (the upstream half of BDD)
 

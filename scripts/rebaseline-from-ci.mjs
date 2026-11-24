@@ -33,11 +33,11 @@
 //
 // --from-git (#8295, 2026-11-24). The artifact lives on an Azure blob host whose name changes per
 // run (`productionresultssa<N>.blob.core.windows.net`), and a cloud session's proxy refuses every
-// one, so #8044 and #8288 sat red on their own intended page changes waiting for a person. When
-// `integration tests` fails on a PR, pipeline.yml's `ci shots` job pushes the report's index.html
-// and its PNG attachments to `refs/ci-shots/pr-<n>/run-<id>` (pruned after 14 days). --from-git
-// fetches that ref over git, which every session reaches, and lays it out exactly as the download
-// would, so everything after it — the mapping, the refusals, the dry-run default — is the same code.
+// one. When `integration tests` fails on a PR, pipeline.yml's `ci shots` job pushes the report's
+// index.html and its PNG attachments to `refs/ci-shots/pr-<n>/run-<id>` (pruned after 14 days).
+// --from-git fetches that ref over git, which every session reaches, and lays it out exactly as the
+// download would, so everything after it — the mapping, the refusals, the dry-run default — is the
+// same code.
 // It is the report, not only the actual PNGs, on purpose: the refusals read the report's errors.
 import { execFileSync } from "node:child_process";
 import {
@@ -403,7 +403,8 @@ function download(run, reportDir) {
   } catch (err) {
     throw new Exit(
       2,
-      `rebaseline: could not download ${ARTIFACT} from run ${run.id} (expired?)` +
+      `rebaseline: could not download ${ARTIFACT} from run ${run.id} (expired, or a proxy` +
+        " refusing its blob host? a cloud session adds --from-git)" +
         `\n  ${String(err.stderr ?? err.message).trim()}`,
     );
   }
@@ -423,15 +424,21 @@ const SHOT_FILE = /^(?:index\.html|data\/[0-9a-f]+\.png)$/;
  */
 export function fetchShots({ pr, runId, reportDir, cwd, remote = "origin" }) {
   const ref = shotsRef(pr, runId);
+  // cwd names the repo, so an inherited GIT_DIR (a pre-push hook in a worktree exports one) must
+  // not outrank it.
+  const env = { ...process.env };
+  for (const k of ["GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR"]) delete env[k];
   const git = (args, opts = {}) =>
-    execFileSync("git", args, { cwd, stdio: "pipe", maxBuffer: 256 << 20, ...opts });
+    execFileSync("git", args, { cwd, env, stdio: "pipe", maxBuffer: 256 << 20, ...opts });
   try {
     git(["fetch", "--quiet", "--no-tags", remote, `+${ref}:${ref}`]);
   } catch (err) {
     throw new Exit(
       2,
-      `rebaseline: no ${ref} on ${remote} — the \`ci shots\` job pushes it only for a failed PR` +
-        ` run, and prunes it after 14 days\n  ${String(err.stderr ?? err.message).trim()}`,
+      `rebaseline: no ${ref} on ${remote}. The \`ci shots\` job pushes it when integration tests` +
+        " fail on a PR, from the first run after it reached main (#8295); a re-run of an older" +
+        " run keeps that run's workflow, so push or edit the PR to get a new run. Refs are pruned" +
+        ` after 14 days.\n  ${String(err.stderr ?? err.message).trim()}`,
     );
   }
   const names = git(["ls-tree", "-r", "--name-only", "-z", ref])
