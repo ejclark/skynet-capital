@@ -315,6 +315,30 @@ describe("cadenceFills", () => {
     const [fill] = cadenceFills([est("GOOG", "2026-04-29")], ["GOOG"], "2026-11-02");
     expect(fill?.date).toBe("2027-01-27");
   });
+
+  it("moves an estimate that lands on a closed day to the next session (#8252: MRVL on Thanksgiving)", () => {
+    const [fill] = cadenceFills([est("MRVL", "2026-08-27")], ["MRVL"], "2026-11-24");
+    expect(fill?.date).toBe("2026-11-27");
+    expect(fill?.window).toEqual({ start: "2026-11-20", end: "2026-12-11" });
+  });
+
+  it("fills a campaign's names beside the playbook's, and skips a fund with no row (#8252)", () => {
+    const prints = [est("AVGO", "2026-09-02"), est("MRVL", "2026-08-27")];
+    const fills = cadenceFills(prints, ["NVDA", "AVGO", "MRVL", "SMH"], "2026-11-24");
+    expect(fills.map((f) => `${f.symbol} ${f.date}`)).toEqual([
+      "AVGO 2026-12-02",
+      "MRVL 2026-11-27",
+    ]);
+  });
+});
+
+describe("refreshExitCode for a campaign-only name (#8252 criterion 7)", () => {
+  it("keeps exit 3 for the playbook's names: an unanswered campaign name is a warning", () => {
+    expect(refreshExitCode({ outcome: "found", failed: ["MRVL"] }, ["NVDA", "GOOG"])).toBe(0);
+    expect(refreshExitCode({ outcome: "found", failed: ["MRVL", "NVDA"] }, ["NVDA", "GOOG"])).toBe(
+      3,
+    );
+  });
 });
 
 describe("rewriteCalendar", () => {

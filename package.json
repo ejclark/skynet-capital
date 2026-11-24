@@ -121,6 +121,7 @@
     "shoot:feedback": "tsx scripts/shoot/feedback.mjs",
     "shoot:landing": "tsx scripts/shoot/landing.mjs",
     "edition:sectors": "tsx scripts/edition-sectors.mjs",
+    "edition:write": "tsx src/scripts/edition-write.ts",
     "shoot:steady": "tsx --import ./scripts/shoot/steady-preload.mjs",
     "shoot:diff": "node scripts/shoot/frame-diff.mjs",
     "shoot:trade": "tsx scripts/shoot/trade.mjs",
