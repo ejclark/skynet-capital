@@ -23,6 +23,7 @@
  * cached five minutes like the other GitHub reads.
  */
 
+import { DAY_MS } from "../domain/time.js";
 import { fetchJson } from "../http/fetch-json.js";
 import { githubHeaders } from "./github-api.js";
 import { trustedAuthor } from "./work-status.js";
@@ -54,7 +55,6 @@ const ROWS_KEPT = 5;
 const TITLE_CHARS = 80;
 const PER_PAGE = 100;
 const OWNER_QUEUE_CACHE_TTL_MS = 5 * 60_000;
-const DAY_MS = 86_400_000;
 const WITHHELD = "(withheld — opened by someone outside the project)";
 
 interface IssueJson {

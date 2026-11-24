@@ -5,6 +5,7 @@ import {
   landingRow,
   storyAnchor,
 } from "../domain/edition-keys.js";
+import { DATE_RE } from "../domain/time.js";
 import { quoteTitle } from "./companion-context.js";
 
 /**
@@ -32,7 +33,6 @@ export interface PageKeys {
 }
 
 const MAX_KEYS = 40;
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /** At most this many of each are named to her; an edition carries far fewer today. */
 const MAX_STORIES_NAMED = 8;

@@ -106,6 +106,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import type { ImpactTier, MarketEvent } from "./market-events-types.js";
+import { DATE_RE } from "./time.js";
 
 export type { ImpactTier, MarketEvent };
 
@@ -126,7 +127,6 @@ const MARKET_EVENTS_DIR = join("src", "domain", "market-events");
 const PROPOSALS_SUBDIR = "proposals";
 const PROPOSAL_FILE_RE = /^([a-z0-9][a-z0-9-]*)\.from-([a-z0-9][a-z0-9-]*)\.json$/;
 
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const isString = (v: unknown): v is string => typeof v === "string" && v.length > 0;
 
 /**

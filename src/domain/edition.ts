@@ -28,8 +28,9 @@
  * worlds run that graph inside a corpus pinned to an older commit (scripts/study/worlds/
  * compose.mjs), where neither `editions/` nor `campaigns/` exists. So the files are read on the
  * first request (`editions()`), the campaign's title is handed in by the caller, and the spec
- * proves every edition's campaign is a real record. It is also why the small regexes and `isText`
- * below are local: importing campaigns.ts loads every campaign file.
+ * proves every edition's campaign is a real record. It is also why the small regexes below are
+ * local and `isText` comes from its own leaf module: importing campaigns.ts loads every campaign
+ * file.
  *
  * Paper only; educational. An edition never places an order and never sizes one.
  */
@@ -41,8 +42,10 @@ import {
   type SectorsView,
   sectorsView,
 } from "./edition-sectors.js";
+import { isText } from "./is-text.js";
 import { daysBetween } from "./market-calendar.js";
 import { marketDayKey } from "./market-day.js";
+import { DATE_RE } from "./time.js";
 
 /** How a line knows what it says. `reported` renders as unconfirmed, `modeled` says so. */
 export const EDITION_MARKS = ["measured", "reported", "modeled", "call"] as const;
@@ -143,7 +146,6 @@ const BUY_FRAMING_RE =
 const FRANCHISE_RE =
   /\b(?:captain'?s log|stardate|star ?fleet|uss enterprise|make it so|final frontier|boldly go|beam (?:me|us) up|warp speed|resistance is futile|live long and prosper|may the force|jedi|wookiee|klingon)\b/i;
 
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
 const SYMBOL_RE = /^[A-Z][A-Z0-9.]{0,9}$/;
 const MAX_NARRATOR = 160;
@@ -162,7 +164,6 @@ export const isLevel = (f: Pick<EditionFact, "value">): boolean => !SIGNED_RE.te
 type Raw = Record<string, unknown>;
 type Fail = (what: string) => never;
 
-const isText = (v: unknown): v is string => typeof v === "string" && v.trim().length > 0;
 const isMark = (v: unknown): v is EditionMark => (EDITION_MARKS as readonly unknown[]).includes(v);
 const isN = (v: unknown): boolean => typeof v === "number" && Number.isInteger(v) && v > 0;
 const isObject = (v: unknown): v is Raw => typeof v === "object" && v !== null && !Array.isArray(v);
