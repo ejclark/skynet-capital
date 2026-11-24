@@ -101,6 +101,12 @@ describe("partyView", () => {
     expect(view.partyCount).toBe("Average of 1 seated account · 1 not synced yet");
   });
 
+  it("never says it averages zero accounts", () => {
+    const view = partyView(state, seated("m-c"));
+    expect(view.partyReturn).toBe("—");
+    expect(view.partyCount).toBe("1 seat taken · 1M return not synced yet");
+  });
+
   it("names who leads in words, with a signed figure and a glyph", () => {
     const ahead = partyView(state, seated("m-a", "m-b")).lead;
     expect(ahead).toEqual({

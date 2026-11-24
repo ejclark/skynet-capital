@@ -150,9 +150,11 @@ export function partyView(
   const partyCount =
     seated.length === 0
       ? "No seat taken yet"
-      : `Average of ${plural(synced.length, "seated account", "seated accounts")}${
-          unsynced > 0 ? ` · ${String(unsynced)} not synced yet` : ""
-        }`;
+      : synced.length === 0
+        ? `${plural(seated.length, "seat", "seats")} taken · 1M return not synced yet`
+        : `Average of ${plural(synced.length, "seated account", "seated accounts")}${
+            unsynced > 0 ? ` · ${String(unsynced)} not synced yet` : ""
+          }`;
 
   const house = data.participants.find(isHouseBot);
   const houseRead = house && !house.error ? house.monthReturnPct : undefined;
