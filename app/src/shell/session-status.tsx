@@ -3,6 +3,7 @@ import {
   localTimeSuffix,
   type MarketSessionView,
   marketSession,
+  nextOpenInstant,
   nextOpenLabel,
   sessionSentence,
   statusLineCue,
@@ -50,6 +51,8 @@ export function SessionStatus({ now }: { readonly now?: Date }): ReactElement {
   const ticking = useNow();
   const at = now ?? ticking;
   const view = marketSession(at);
+  /** The next open in the viewer's own time, beside the ET label, when their zone differs. */
+  const local = localTimeSuffix(nextOpenInstant(at), viewerTimeZone());
   const fleet = useFleet();
   const [open, setOpen] = useState(false);
   const panelId = useId();
@@ -126,8 +129,8 @@ export function SessionStatus({ now }: { readonly now?: Date }): ReactElement {
           <p className="status-panel-row">
             <span>Next open</span>
             <span className="num">
-              {nextOpenLabel(at)}
-              {localTimeSuffix(view.nextOpenAt, viewerTimeZone())}
+              <span>{nextOpenLabel(at)}</span>
+              {local ? <span className="status-panel-local">{local}</span> : null}
             </span>
           </p>
           <HoursNotes view={view} />

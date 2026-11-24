@@ -98,3 +98,38 @@ describe("when the broker's hours are missing", () => {
     expect(refetchDelay(passed, now)).toBe(30_000);
   });
 });
+
+describe("the broker's word on today is final (code review)", () => {
+  /** A session the table lists that the broker says is shut: Tue Dec 1, 2026, at 11:00 ET. */
+  const DEC1_11AM = new Date("2026-12-01T16:00:00Z");
+
+  it("a holiday only the broker knows reads closed, never the table's open", () => {
+    const without = days.filter((d) => d.date !== "2026-12-01");
+    setMarketClock(marketClockView(without, DEC1_11AM, "broker"));
+    const view = marketSession(DEC1_11AM);
+    expect(view.state).toBe("closed");
+    expect(view.nextOpen).toBe("Wed 9:30");
+    expect(marketOpenNow(DEC1_11AM)).toBe(false);
+  });
+
+  it("a half day only the broker knows stays closed after its 1:00 close, on every refetch", () => {
+    const early = days.map((d) =>
+      d.date === "2026-12-01" ? { ...d, closeAt: Date.parse("2026-12-01T18:00:00Z") } : d,
+    );
+    const at = new Date("2026-12-01T18:05:00Z"); // 1:05 PM ET
+    setMarketClock(marketClockView(early, at, "broker"));
+    const view = marketSession(at);
+    expect(view.state).toBe("closed");
+    expect(view.elapsed).toBe(1);
+    expect(view.closeLabel).toBe("1:00");
+  });
+});
+
+describe("step 3's note across a clock change (code review)", () => {
+  it("names the zone at the coming session: PST on the Monday after DST ends", () => {
+    // Saturday 2026-10-31, still PDT; the next session, Mon Nov 2, is in PST.
+    expect(localSessionSuffix(new Date("2026-10-31T16:00:00Z"), "America/Los_Angeles")).toBe(
+      " (6:30 AM–1:00 PM PST)",
+    );
+  });
+});

@@ -54,8 +54,9 @@ const EARLY_CLOSE = 13 * 60;
 const POWER_HOUR = 60;
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 
-/** One formatter, built once (src/domain/intl-format.ts → ONE FORMATTER PER SHAPE). */
-const EASTERN = cachedDateTimeFormat("en-US", {
+/** New York's wall clock: one shared formatter (src/domain/intl-format.ts), built on first use, so
+ *  a runtime without time-zone data throws in a call its caller can catch, never at import. */
+const EASTERN: Intl.DateTimeFormatOptions = {
   timeZone: ET,
   year: "numeric",
   month: "2-digit",
@@ -63,11 +64,11 @@ const EASTERN = cachedDateTimeFormat("en-US", {
   hour: "2-digit",
   minute: "2-digit",
   hourCycle: "h23",
-});
+};
 
 /** The New York calendar day and minute-of-day for `now`. */
 function easternParts(now: Date | number): { date: string; minutes: number } {
-  const parts = EASTERN.formatToParts(now);
+  const parts = cachedDateTimeFormat("en-US", EASTERN).formatToParts(now);
   const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "0";
   const date = `${get("year")}-${get("month")}-${get("day")}`;
   return { date, minutes: Number(get("hour")) * 60 + Number(get("minute")) };
@@ -82,15 +83,20 @@ interface Day {
   readonly halfDay: boolean;
 }
 
-/** Whether the stored broker answer speaks for `date`: from its first listed day (today's, if it
- *  is still running when fetched) through its last. Before or past that, the table answers. */
+/** The New York date a stored answer was read on, worked out once per answer. */
+let asOfDay: { readonly view: object; readonly date: string } | undefined;
+
+/** Whether the stored broker answer speaks for `date`: from the day it was read (it lists that
+ *  day's session even after the close, so no row means no session) through its last listed day.
+ *  Before or past that, the table answers. */
 function brokerCovers(date: string): boolean {
   const view = marketClock();
   if (!view || view.source !== "broker" || view.days.length === 0) return false;
-  const first = easternParts(Date.parse(view.asOf)).date;
+  if (asOfDay?.view !== view) {
+    asOfDay = { view, date: easternParts(Date.parse(view.asOf)).date };
+  }
   const last = view.days[view.days.length - 1]?.date ?? "";
-  if (date === first) return view.days.some((d) => d.date === date);
-  return date > first && date <= last;
+  return date >= asOfDay.date && date <= last;
 }
 
 /** The session on `date`, or undefined when the market is closed all day. */
@@ -215,8 +221,13 @@ export function marketSession(now: Date = new Date()): MarketSessionView {
 /** True while the regular session trades — the onboarding fallback's answer, holidays and half
  *  days included (it replaced the weekday-only `marketIsOpen`, #8248). */
 export function marketOpenNow(now: Date = new Date()): boolean {
-  const state = marketSession(now).state;
-  return state === "open" || state === "power";
+  try {
+    const state = marketSession(now).state;
+    return state === "open" || state === "power";
+  } catch {
+    // No time-zone data to judge by: closed is the answer that can't mislead (#8248).
+    return false;
+  }
 }
 
 /** The viewer's own time zone, or undefined when the browser won't say. */
@@ -284,11 +295,12 @@ export function localSessionSuffix(now = new Date(), timeZone?: string): string 
     const when = today && minutes < today.close ? date : tradingDayAfter(date);
     const day = when ? dayFor(when) : undefined;
     if (!day) return "";
+    // The zone's name AT that session — a session past a clock change is PST, not today's PDT.
     const zone = cachedDateTimeFormat("en-US", {
       ...(timeZone ? { timeZone } : {}),
       timeZoneName: "short",
     })
-      .formatToParts(now)
+      .formatToParts(day.openAt)
       .find((p) => p.type === "timeZoneName")?.value;
     const eastern = !zone || zone === "EDT" || zone === "EST";
     if (day.halfDay) {
@@ -388,6 +400,15 @@ const MONTHS = [
  * the bell on a trading day it is today's ("Today · 9:30 ET"); otherwise the first trading day
  * after today, holidays skipped by the exchange's own calendar.
  */
+/** The instant `nextOpenLabel` names, so the opened panel can say it in the viewer's own time. */
+export function nextOpenInstant(now: Date = new Date()): number | undefined {
+  const { date, minutes } = easternParts(now);
+  const today = dayFor(date);
+  if (today && minutes < today.open) return today.openAt;
+  const d = tradingDayAfter(date);
+  return d ? dayFor(d)?.openAt : undefined;
+}
+
 export function nextOpenLabel(now: Date = new Date()): string {
   const { date, minutes } = easternParts(now);
   const today = dayFor(date);

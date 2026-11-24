@@ -60,6 +60,8 @@ export function useMarketClockFeed(): void {
     queryKey: ["market-clock"],
     queryFn: fetchMarketClock,
     refetchInterval: (q) => refetchDelay(q.state.data, Date.now()),
+    // The status line remounts per route; a route change reuses the answer instead of re-asking.
+    staleTime: 30_000,
     retry: 1,
   });
   // A failed refetch keeps the last good answer (react-query holds it); only no answer at all
