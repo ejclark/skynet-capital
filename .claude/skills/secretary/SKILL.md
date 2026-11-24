@@ -115,8 +115,9 @@ a few digests before acting on any of them, and never ratchet a gate on them. Wi
 that is the honest state, not a broken run.
 
 **The picture slot** (#3748 slice 7c): `node scripts/digest-scan.mjs --pictures` prints the
-`## The picture` blocks of the PRs merged after the last digest's date — newest first, waived
-ones skipped, the 5 newest at most (the overflow is counted, never hidden). The picture is the
+`## The picture` blocks of the PRs merged since the last digest landed on main (its commit
+instant, #8225) — newest first, waived ones skipped, the 5 newest at most (the overflow is
+counted, never hidden). The picture is the
 PR's own, so paste it as printed under `## The picture` rather than re-drawing it; it ranks by
 merge time, not importance, so the Headlines still carry the ranking. Advisory for now:
 `digest-scan --validate` names a digest without the slot, and prints "ratchet due" once 2 digests

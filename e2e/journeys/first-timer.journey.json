@@ -32,7 +32,7 @@
         {
           "id": "s1",
           "goto": "/app/",
-          "sees": "the landing page (the Campaign tab): the day's market news, the lead story's coming reports then what moved (#7077); the topbar's Profile tab one tap away — it always lands on the Profile page, which opens on the connect guide for a member with no account (#3807 slice 2b)",
+          "sees": "the home screen (#8189): the tower, what needs you ('Connect your paper account' first) and a tile per app; the topbar's Profile tab one tap away — it always lands on the Profile page, which opens on the connect guide for a member with no account (#3807 slice 2b)",
           "ears": "WHEN a signed-in member with no linked account opens the app, the app shall keep a one-tap way into onboarding on screen: the Profile tab, landing on the connect guide.",
           "expect": [
             { "role": "link", "name": "Profile", "within": "nav.topnav", "href": "/app/accounts" }
@@ -135,7 +135,7 @@
       "steps": [
         {
           "id": "s1",
-          "goto": "/app/",
+          "goto": "/app/campaign",
           "sees": "the landing page with no account: Where things stand, its next step 'Connect your paper account', and Moneypenny's box under the page",
           "ears": "WHEN a signed-in member with no linked account opens the landing page, the app shall lead with connecting a paper account and keep Moneypenny's box on screen.",
           "expect": [
@@ -146,7 +146,7 @@
         },
         {
           "id": "s1b",
-          "goto": "/app/",
+          "goto": "/app/campaign",
           "sees": "the two canned paths over the next step: 'What's coming up that I should watch?' and 'How are my positions doing?', a question about positions this member does not have",
           "ears": "WHILE a member has no linked account, the landing page shall offer only canned paths that can be answered for them.",
           "expect": [{ "role": "button", "name": "How are my positions doing?", "absent": true }],
