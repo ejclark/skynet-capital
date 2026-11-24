@@ -139,6 +139,9 @@ function liveDataSource(env: Env): DataSource {
       participantId: participant.id,
       apiKey: participant.credentials.apiKey,
       apiSecret: participant.credentials.apiSecret,
+      ...(participant.credentials.accessToken
+        ? { accessToken: participant.credentials.accessToken }
+        : {}),
       baseUrl: participant.credentials.baseUrl ?? ALPACA_PAPER_BASE_URL,
       onEvent: sink,
       ...(onActivity ? { onActivity } : {}),
