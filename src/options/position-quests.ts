@@ -1,7 +1,8 @@
+import { fixedPct } from "../domain/percent.js";
 import { type Quest, type QuestExit, withQuest } from "../domain/quest.js";
 import { buildOccSymbol, occStrikeLabel } from "../trading/option-symbols.js";
 import { BUY_BACK_AT_KEPT } from "./position-guidance-manage.js";
-import { dayText, pct } from "./position-guidance-rules.js";
+import { dayText } from "./position-guidance-rules.js";
 import type {
   Confidence,
   GuidanceReason,
@@ -96,7 +97,7 @@ function soldCallQuest(deskId: string, symbol: string, c: ManageCall): Quest | u
     ? [
         {
           kind: "take-profit",
-          text: `Buy the new call back once you've kept ${pct(BUY_BACK_AT_KEPT)} of what it pays — the guidance's buy-back rule.`,
+          text: `Buy the new call back once you've kept ${fixedPct(BUY_BACK_AT_KEPT)} of what it pays — the guidance's buy-back rule.`,
         },
         {
           kind: "time",
