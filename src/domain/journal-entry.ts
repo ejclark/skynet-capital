@@ -23,8 +23,12 @@ export const JOURNAL_FIELD_MAX_CHARS = 4_000;
 /** The longest title `wishTitle` cuts, in characters. */
 export const WISH_TITLE_MAX_CHARS = 72;
 
-/** A ticker as a member types it, after uppercasing: letters and a share-class dot (BRK.B). */
-const SYMBOL = /^[A-Z.]{1,6}$/;
+/** A ticker as a member types it, after uppercasing: a letter first, then letters and a
+ *  share-class dot (BRK.B). A run of dots is not a ticker. */
+const SYMBOL = /^[A-Z][A-Z.]{0,5}$/;
+
+/** A sentence break shorter than this is an abbreviation ("e.g.", "U.S.", "Dr."), not a title. */
+const MIN_TITLE_SENTENCE_CHARS = 20;
 
 export interface WishPost {
   readonly kind: "wish";
@@ -68,20 +72,26 @@ const refuse = (reason: string): JournalPostParse => ({ ok: false, reason });
 const overCap = (field: keyof typeof FIELD_NAME): string =>
   `Keep ${FIELD_NAME[field]} to ${JOURNAL_FIELD_MAX_CHARS.toLocaleString("en-US")} characters.`;
 
-/** A text field's trimmed words, `""` when absent or blank, or `undefined` when it is not text
- *  or is over the cap — the caller names which. */
-function textField(raw: unknown): string | undefined {
-  if (raw === undefined || raw === null) return "";
-  if (typeof raw !== "string") return undefined;
+const notText = (field: keyof typeof FIELD_NAME): string =>
+  `Send ${FIELD_NAME[field]} as words, and send it again.`;
+
+/** A text field's trimmed words (`""` when absent or blank), or the refusal naming the field:
+ *  not text and over the cap are told apart, so the member hears what actually happened. */
+function textField(
+  field: keyof typeof FIELD_NAME,
+  raw: unknown,
+): { readonly text: string } | { readonly refusal: string } {
+  if (raw === undefined || raw === null) return { text: "" };
+  if (typeof raw !== "string") return { refusal: notText(field) };
   const text = raw.trim();
-  return text.length > JOURNAL_FIELD_MAX_CHARS ? undefined : text;
+  return text.length > JOURNAL_FIELD_MAX_CHARS ? { refusal: overCap(field) } : { text };
 }
 
 function parseText(kind: "wish" | "experience", raw: unknown): JournalPostParse {
-  const text = textField(raw);
-  if (text === undefined) return refuse(overCap(kind));
-  if (!text) return refuse(`Write a few words for ${FIELD_NAME[kind]} first.`);
-  return { ok: true, post: { kind, text } };
+  const field = textField(kind, raw);
+  if ("refusal" in field) return refuse(field.refusal);
+  if (!field.text) return refuse(`Write a few words for ${FIELD_NAME[kind]} first.`);
+  return { ok: true, post: { kind, text: field.text } };
 }
 
 function parseSymbol(raw: unknown): { symbol?: string } | undefined {
@@ -97,9 +107,9 @@ function parseTrade(body: Readonly<Record<string, unknown>>): JournalPostParse {
   if (!symbol) return refuse("A symbol is 1 to 6 letters, like SPY or BRK.B.");
   const boxes: Partial<Record<"whyIn" | "leaveIf" | "learned", string>> = {};
   for (const field of ["whyIn", "leaveIf", "learned"] as const) {
-    const text = textField(body[field]);
-    if (text === undefined) return refuse(overCap(field));
-    if (text) boxes[field] = text;
+    const box = textField(field, body[field]);
+    if ("refusal" in box) return refuse(box.refusal);
+    if (box.text) boxes[field] = box.text;
   }
   // A symbol alone is a heading with no note under it.
   if (Object.keys(boxes).length === 0) {
@@ -128,18 +138,28 @@ export function parseJournalPost(body: Readonly<Record<string, unknown>>): Journ
   }
 }
 
+/** The first line's first sentence — skipping a break too short to be one (an abbreviation). */
+function firstSentence(line: string): string {
+  for (const m of line.matchAll(/[.!?](?=\s|$)/g)) {
+    const end = m.index + 1;
+    if (end >= MIN_TITLE_SENTENCE_CHARS) return line.slice(0, end);
+  }
+  return line;
+}
+
 /**
  * A wish's issue title: its first line, then its first sentence, cut at a word boundary to at
  * most {@link WISH_TITLE_MAX_CHARS} characters (an ellipsis marks a cut). The member's words,
- * never rewritten.
+ * never rewritten. Cut by code point, so an emoji is never split into a lone surrogate.
  */
 export function wishTitle(text: string): string {
   const firstLine = text.trim().split(/\r?\n/, 1)[0]?.trim() ?? "";
-  const sentenceEnd = firstLine.search(/[.!?](\s|$)/);
-  const sentence = sentenceEnd >= 0 ? firstLine.slice(0, sentenceEnd + 1) : firstLine;
-  if (sentence.length <= WISH_TITLE_MAX_CHARS) return sentence;
-  const room = sentence.slice(0, WISH_TITLE_MAX_CHARS - 1);
+  const sentence = firstSentence(firstLine);
+  const points = Array.from(sentence);
+  if (points.length <= WISH_TITLE_MAX_CHARS) return sentence;
+  const room = points.slice(0, WISH_TITLE_MAX_CHARS - 1).join("");
   const lastSpace = room.lastIndexOf(" ");
-  const cut = lastSpace > 0 ? room.slice(0, lastSpace) : room;
+  // A word boundary near the front would leave one word ("I…"); hard-cut instead.
+  const cut = lastSpace >= room.length / 2 ? room.slice(0, lastSpace) : room;
   return `${cut.replace(/[\s,;:.!?-]+$/, "")}…`;
 }

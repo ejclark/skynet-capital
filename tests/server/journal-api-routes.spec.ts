@@ -6,7 +6,7 @@ import type { DashboardServerConfig } from "../../src/server/dashboard-server-co
 import { opaqueMemberId } from "../../src/server/feedback-issue.js";
 import type { FeedbackLogEntry } from "../../src/server/feedback-log.js";
 import type { FeedbackInput } from "../../src/server/feedback-service.js";
-import { serveJournalApi } from "../../src/server/journal-api-routes.js";
+import { JOURNAL_LIST_LIMIT, serveJournalApi } from "../../src/server/journal-api-routes.js";
 import { InMemoryJournalStore } from "../../src/server/journal-memory-store.js";
 import { journalNote } from "../../src/server/journal-store.js";
 
@@ -216,6 +216,36 @@ describe("serveJournalApi", () => {
     expect(out.status).toBe(400);
     expect(json().error).toContain("why you're in");
     expect(await journal.list(opaqueMemberId(session.email))).toEqual([]);
+  });
+
+  it("says a note was not saved when the store write fails", async () => {
+    const { config } = wired({
+      journal: { append: () => Promise.reject(new Error("disk full")), list: () => [] },
+    });
+    const { res, out, json } = fakeRes();
+    await serveJournalApi(
+      post({ kind: "experience", text: "x" }),
+      res,
+      "/api/journal",
+      config,
+      sessionFor(),
+    );
+    expect(out.status).toBe(500);
+    expect(json()).toMatchObject({ ok: false, error: expect.stringContaining("wasn't saved") });
+  });
+
+  it("returns at most one screen's worth of notes, the newest", async () => {
+    const { config, journal } = wired();
+    const session = sessionFor();
+    const me = opaqueMemberId(session.email);
+    for (let i = 0; i < JOURNAL_LIST_LIMIT + 5; i++) {
+      await journal.append(journalNote({ kind: "experience", text: `n${i}` }, me, `t${i}`));
+    }
+    const { res, json } = fakeRes();
+    await serveJournalApi(get(), res, "/api/journal", config, session);
+    const notes = json().notes as { text: string }[];
+    expect(notes).toHaveLength(JOURNAL_LIST_LIMIT);
+    expect(notes[0]?.text).toBe(`n${JOURNAL_LIST_LIMIT + 4}`);
   });
 
   it("says a note was not saved when no store is wired", async () => {

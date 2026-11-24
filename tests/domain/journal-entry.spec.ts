@@ -76,7 +76,7 @@ describe("parseJournalPost", () => {
   });
 
   it("refuses a symbol that is not a ticker", () => {
-    for (const symbol of ["TOOLONGX", "SP Y", "$SPY", 42]) {
+    for (const symbol of ["TOOLONGX", "SP Y", "$SPY", 42, ".", "...", ".B"]) {
       expect(parseJournalPost({ kind: "trade", symbol, whyIn: "x" })).toMatchObject({
         ok: false,
         reason: expect.stringContaining("symbol"),
@@ -89,8 +89,15 @@ describe("parseJournalPost", () => {
     expect(parseJournalPost({ kind: "bug", text: "hi" }).ok).toBe(false);
   });
 
-  it("refuses a text field that is not text", () => {
-    expect(parseJournalPost({ kind: "wish", text: ["a"] }).ok).toBe(false);
+  it("refuses a text field that is not text as not text, never as too long", () => {
+    expect(parseJournalPost({ kind: "experience", text: 123 })).toEqual({
+      ok: false,
+      reason: "Send what happened as words, and send it again.",
+    });
+    expect(parseJournalPost({ kind: "trade", whyIn: ["x"] })).toMatchObject({
+      ok: false,
+      reason: expect.stringContaining("why you're in as words"),
+    });
   });
 });
 
@@ -117,6 +124,27 @@ describe("wishTitle", () => {
     expect(title.endsWith("…")).toBe(true);
     expect(text.startsWith(title.slice(0, -1))).toBe(true);
     expect(title.slice(0, -1).endsWith(" ")).toBe(false);
+  });
+
+  it("reads past an abbreviation instead of titling a wish with it", () => {
+    expect(wishTitle("e.g. let me pin a bot to the leaderboard. Then more.")).toBe(
+      "e.g. let me pin a bot to the leaderboard.",
+    );
+    expect(wishTitle("U.S. options should show the settlement style")).toBe(
+      "U.S. options should show the settlement style",
+    );
+  });
+
+  it("never splits an emoji when it cuts", () => {
+    const title = wishTitle(`${"a".repeat(70)}🚀🚀🚀`);
+    expect(title).toBe(`${"a".repeat(70)}🚀…`);
+    expect(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/.test(title)).toBe(false);
+  });
+
+  it("hard-cuts rather than leaving one word when the only space is near the front", () => {
+    const title = wishTitle(`I ${"x".repeat(100)}`);
+    expect(title.length).toBe(WISH_TITLE_MAX_CHARS);
+    expect(title.startsWith("I xxx")).toBe(true);
   });
 
   it("hard-cuts a single word longer than the cap", () => {

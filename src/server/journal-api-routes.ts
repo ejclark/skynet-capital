@@ -48,6 +48,11 @@ const NOTE_BURST_WINDOW_MS = 600_000;
 const SIGN_IN = "Sign in to keep a journal.";
 const NOT_STORED = "Notes aren't stored on this deployment yet, so this one wasn't saved.";
 const TOO_MANY = "You've sent a bunch just now — give it a few minutes and try again.";
+const NOT_SAVED =
+  "Your note wasn't saved — something went wrong on our side. Try again in a moment.";
+
+/** The most notes one read returns, newest first: a journal open stays one screen's worth. */
+export const JOURNAL_LIST_LIMIT = 200;
 
 async function serveList(
   res: ServerResponse,
@@ -73,7 +78,10 @@ async function serveList(
     available: true,
     wishesEnabled,
     // Saved in order, so newest first is the reverse; a copy, never the store's own array.
-    notes: [...notes].reverse().map(({ opaqueMemberId: _id, ...note }) => note),
+    notes: notes
+      .slice(-JOURNAL_LIST_LIMIT)
+      .reverse()
+      .map(({ opaqueMemberId: _id, ...note }) => note),
   });
 }
 
@@ -129,7 +137,13 @@ async function serveNote(
     return;
   }
   const note = journalNote(body, opaqueMemberId(session.email), new Date().toISOString());
-  await config.journal.append(note);
+  try {
+    await config.journal.append(note);
+  } catch (error) {
+    process.emitWarning(`[journal] note save failed: ${String(error)}`);
+    sendJson(res, 500, { ok: false, error: NOT_SAVED });
+    return;
+  }
   const { opaqueMemberId: _id, ...shown } = note;
   sendJson(res, 200, { ok: true, kind: body.kind, note: shown });
 }
