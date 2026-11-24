@@ -36,7 +36,8 @@ import { FOOTER } from "./moneypenny/labels.mjs";
 import { appendLedgerRows } from "./pr-review/ledger.mjs";
 
 const REPO = () => process.env.GITHUB_REPOSITORY ?? "ejclark/skynet-capital";
-const CHECKS = ["criteria", "size", "noFork", "notBlocked"];
+// `placed` (#8005 slice 2): the build named its IA home, from the flip workflow or the filing check.
+const CHECKS = ["criteria", "size", "noFork", "notBlocked", "placed"];
 const PARKED = ["needs-eric", "needs-info"];
 
 // ─── pure core (specced in tests/scripts/clear-path-post.spec.ts) ─────────────────────────────────
