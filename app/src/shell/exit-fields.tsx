@@ -50,7 +50,7 @@ export function ExitFields({
         />
         <PriceInput
           id={stopId}
-          label="Stop"
+          label="Stop-Market"
           value={exit.stop}
           onChange={(stop) => onChange({ ...exit, stop })}
         />

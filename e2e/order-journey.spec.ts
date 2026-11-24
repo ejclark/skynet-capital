@@ -416,15 +416,15 @@ test.describe("Exits at entry: the form at 390×844", () => {
     await page.getByLabel("Limit price", { exact: true }).fill(String(limit));
     await page.getByRole("button", { name: "Add an exit" }).click();
     await page.getByLabel("Take-profit", { exact: true }).fill(String(takeProfit));
-    await page.getByLabel("Stop", { exact: true }).fill(String(stop));
+    await page.getByLabel("Stop-Market", { exact: true }).fill(String(stop));
     await expect(page.getByText(/^Guards regular hours only/)).toBeVisible();
     await page.getByRole("button", { name: "Review order" }).click();
     await expect(page.getByText(`Take-profit ${dollars(takeProfit)} · +`)).toBeVisible();
-    await expect(page.getByText(`Stop ${dollars(stop)} · about −`)).toBeVisible();
+    await expect(page.getByText(`Stop-Market ${dollars(stop)} · about −`)).toBeVisible();
     await page.getByRole("button", { name: /^Submit order/ }).click();
     await expect(
       page.getByText(
-        `Sent with its exits: Take-profit ${dollars(takeProfit)} · Stop ${dollars(stop)}.`,
+        `Sent with its exits: Take-profit ${dollars(takeProfit)} · Stop-Market ${dollars(stop)}.`,
       ),
     ).toBeVisible();
 
@@ -439,7 +439,7 @@ test.describe("Exits at entry: the form at 390×844", () => {
 
     await page.goto(ROUTES.orders);
     await expect(page.getByText(`Take-profit ${dollars(takeProfit)} · GTC`)).toBeVisible();
-    await expect(page.getByText(`Stop ${dollars(stop)} · GTC`)).toBeVisible();
+    await expect(page.getByText(`Stop-Market ${dollars(stop)} · GTC`)).toBeVisible();
 
     await page.goto(ROUTES.book);
     await expect(page.getByRole("link", { name: /^QQQ ,.* 2 shares ,/ })).toBeVisible();
