@@ -1,5 +1,10 @@
 import { execFileSync } from "node:child_process";
-import { gitSince } from "../../scripts/comms-scan.mjs";
+import { gitSince, harvestPictures, unwrapRows } from "../../scripts/comms-scan.mjs";
+import {
+  carryingPictureSlot,
+  missingPictureSlot,
+  RATCHET_AFTER,
+} from "../../scripts/digest-scan.mjs";
 
 /**
  * The landing meter (#456) — the picture-first redesign's own scoreboard.
@@ -165,5 +170,89 @@ describe("the landing meter — a window that starts at an exact moment (#5056)"
         stdio: "pipe",
       }),
     ).toThrow();
+  });
+});
+
+// The digest's picture slot (#3748 slice 7c): the harvest of each merged PR's `## The picture`
+// block. Driven through the same fixture, so the cases pin what a digest would print.
+describe("the digest picture slot — what it harvests", () => {
+  it("prints each PR's picture block newest first and skips the waived and the missing", () => {
+    const out = run("--pictures");
+    const heads = out.split("\n").filter((l) => l.startsWith("### "));
+    expect(heads.map((h) => h.split(" ")[1])).toEqual(["#601", "#602", "#605"]);
+    expect(out).toContain("```mermaid");
+    expect(out).not.toContain("#603"); // waived: nothing to look at
+    expect(out).not.toContain("#604"); // no picture section at all
+  });
+
+  it("caps at the newest N and says how many it left out, never silently truncating", () => {
+    const out = run("--pictures", "--limit=2");
+    expect(out.split("\n").filter((l) => l.startsWith("### "))).toHaveLength(2);
+    expect(out).toContain("1 older picture(s) not shown");
+  });
+
+  it("refuses a --limit that is not a positive integer", () => {
+    expect(() => run("--pictures", "--limit=0")).toThrow();
+  });
+
+  it("emits a block the mermaid gate accepts", () => {
+    const out = run("--pictures");
+    const lint = execFileSync("node", ["scripts/mermaid-lint.mjs", "--stdin"], {
+      cwd: process.cwd(),
+      input: out,
+      encoding: "utf8",
+    });
+    expect(lint).not.toMatch(/✗|error/i);
+  });
+
+  it("keeps the harvested block out of the meter's own JSON rows", () => {
+    expect(Object.keys(report().rows[0] ?? {})).not.toContain("block");
+  });
+});
+
+describe("the digest picture slot — squash bodies wrap, the slot must not show it", () => {
+  it("re-joins a table row the squash body wrapped, and nothing else", () => {
+    const wrapped = [
+      "| a | b |",
+      "|---|---|",
+      "| the long first",
+      "cell | second |",
+      "",
+      "_Caption._",
+    ].join("\n");
+    expect(unwrapRows(wrapped)).toBe(
+      ["| a | b |", "|---|---|", "| the long first cell | second |", "", "_Caption._"].join("\n"),
+    );
+  });
+
+  it("leaves a fenced diagram untouched, even a line that starts with a pipe", () => {
+    const fence = ["```mermaid", "flowchart LR", "| not a row", "  A --> B", "```"].join("\n");
+    expect(unwrapRows(fence)).toBe(fence);
+  });
+
+  it("is what the harvest prints", () => {
+    const rows = [
+      {
+        number: 9,
+        subject: "feat: x",
+        picture: "table",
+        block: "| k | v |\n|---|---|\n| one\ntwo | 3 |",
+      },
+    ];
+    expect(harvestPictures(rows)).toContain("| one two | 3 |");
+  });
+});
+
+describe("the digest picture slot — the advisory ratchet has a reader", () => {
+  const files = ["2026-11-23.md", "2026-11-25.md", "2026-11-26.md", "2026-11-27.md"];
+  const text = (f: string) => (f === "2026-11-26.md" ? "## The picture\n" : "no slot");
+
+  it("names a digest from the advisory day on that lacks the slot, and never an older one", () => {
+    expect(missingPictureSlot(files, text)).toEqual(["2026-11-25.md", "2026-11-27.md"]);
+  });
+
+  it("counts the digests that carry it, so the ratchet fires on a number", () => {
+    expect(carryingPictureSlot(files, text)).toEqual(["2026-11-26.md"]);
+    expect(RATCHET_AFTER).toBe(2);
   });
 });
