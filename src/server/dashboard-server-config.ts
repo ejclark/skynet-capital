@@ -10,6 +10,7 @@ import type { HouseRosterReport } from "../autonomous/house-roster-wire.js";
 import type { PlaybookFunnelView } from "../autonomous/playbook-funnel.js";
 import type { SignalWindows } from "../autonomous/signal-windows.js";
 import type { CompanionTurn } from "../companion/companion-chat.js";
+import type { GameMasterPilot } from "../companion/game-master-flag.js";
 import type { Lesson } from "../domain/campaign-lessons.js";
 import type { OrderIntent, PlaybookVerdict } from "../domain/types.js";
 import type { ActivityEventBus } from "../observatory/activity-event.js";
@@ -338,6 +339,9 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * picker, whose authorization has no such bypass. Omit when OAuth isn't configured.
    */
   readonly isOwnerEmail?: (email: string) => boolean;
+  /** The game-master pilot's setting (#8191) — specs only. Absent, the committed
+   *  `GAME_MASTER_PILOT` in `companion/game-master-flag.ts` is the setting; boot never sets this. */
+  readonly gameMasterPilot?: GameMasterPilot;
   /** What waits on the owner's decision or merge (`owner-queue.ts`); read into Moneypenny's turn
    *  only when `isOwnerEmail` passes for the session. Omit when the feedback token is unset. */
   readonly readOwnerQueue?: ReadOwnerQueue;

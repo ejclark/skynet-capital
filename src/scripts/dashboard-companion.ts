@@ -15,6 +15,7 @@ import { resolveCompanionChat } from "../companion/companion-chat.js";
 import type { CompanionDeskDeps } from "../companion/companion-tools.js";
 import { evidenceByRow } from "../domain/known-problems.js";
 import { marketDayKey } from "../domain/market-day.js";
+import { regularSessionOpen } from "../domain/market-session.js";
 import type { TradeActivityRecord } from "../observatory/activity-store.js";
 import { rankStructures } from "../options/recommend.js";
 import type { BotControlsStore } from "../server/bot-controls-store.js";
@@ -45,6 +46,7 @@ import { createProgressionStore } from "../server/progression-store.js";
 import { createResearchAnswersReader } from "../server/research-answers.js";
 import { researchedEventIds } from "../server/research-service.js";
 import { resolveRoadmap } from "../server/roadmap.js";
+import { sceneFacts } from "../server/scene-facts.js";
 import { shelfWriteUps } from "../server/shelf-write-ups.js";
 import { upcomingEvents } from "../server/upcoming-events.js";
 import { resolveWhatMembersAsk } from "../server/what-members-ask.js";
@@ -144,6 +146,13 @@ export function setupCompanion(env: NodeJS.ProcessEnv, deps: CompanionSetupDeps)
         asOf: marketDayKey(new Date().toISOString()),
         held,
         ...(underlying ? { underlying } : {}),
+      }),
+    // One game-master scene (#8191): the same baked-in calendar and ledgers, plus the clock.
+    readSceneFacts: (query) =>
+      sceneFacts({
+        asOf: marketDayKey(new Date().toISOString()),
+        marketOpen: regularSessionOpen(),
+        ...query,
       }),
     // The ledgers, campaigns and lessons are checked in; the research list is on the volume.
     readResearchOn,
