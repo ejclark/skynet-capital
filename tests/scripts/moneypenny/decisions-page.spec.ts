@@ -335,6 +335,90 @@ describe("his reply fans out through answer-readback's path", () => {
     });
   });
 
+  // #8060: #7957's fix kept an answered ask only while it was still on the selector. When tick 1
+  // applied 1A, then found 2A's lease busy (or its receipt POST failed), 1A's ask had left by tick 2
+  // and the retry read his applied answer as "cleared before this was read". The ask now keeps a
+  // snapshot of its card until the reply's receipt lands, so the retry reads it, finds the ledger
+  // row tick 1 wrote, and reports it as read.
+  describe("an answer that landed before the receipt did (#8060)", () => {
+    const reply = his(55, "1A 2A");
+    const tick1 = planDecisions(deps([reply]));
+    const sync1 = tick1.intents[1] as Extract<DecisionsIntent, { kind: "decisions-sync" }>;
+    // #7669's answer landed: needs-eric came off, so it is no longer on the selector.
+    const tick2 = planDecisions({
+      needsYou: [row(7670)],
+      issues: [issue(7670)],
+      page: page({ body: sync1.body ?? "" }),
+      comments: [reply] as never[],
+      now: NOW + 60_000,
+    });
+    const ans2 = tick2.intents[0] as Extract<DecisionsIntent, { kind: "decisions-answer" }>;
+
+    it("re-reads the applied answer instead of reporting it as not read", () => {
+      expect(ans2.kind).toBe("decisions-answer");
+      expect(ans2.unread).toEqual([]);
+      expect(ans2.readbacks.map((r) => [r.n, r.number, r.said])).toEqual([
+        [1, 7669, "A"],
+        [2, 7670, "A"],
+      ]);
+    });
+
+    it("receipts it as read, because its ledger row from this reply is already on the issue", () => {
+      const calls: string[] = [];
+      const run = (_cmd: string, args: readonly string[]) => {
+        calls.push(`${args[2]} ${String(args[3]).replace("repos/{owner}/{repo}/", "")}`);
+        return "";
+      };
+      const landed = [{ body: ans2.readbacks[0]?.body, user: BOT }];
+      const line = executeDecisions(ans2, {
+        run,
+        retry: <T>(fn: () => T) => fn(),
+        rest: (p: string) => (p === "issues/7669/comments" ? landed : []),
+        read: () => ({ state: "open", body: "", labels: [{ name: "needs-eric" }] }),
+      });
+      expect(calls).not.toContain("POST issues/7669/comments");
+      expect(line).toContain("Read: 1 → #7669 A · 2 → #7670 A.");
+      expect(line).not.toContain("Not read");
+    });
+
+    it("reads the single-ask case the same way when only the receipt POST failed", () => {
+      const solo = planDecisions(deps([his(56, "1A")]));
+      const sync = solo.intents[1] as Extract<DecisionsIntent, { kind: "decisions-sync" }>;
+      const next = planDecisions({
+        needsYou: [row(7670)],
+        issues: [issue(7670)],
+        page: page({ body: sync.body ?? "" }),
+        comments: [his(56, "1A")] as never[],
+        now: NOW + 60_000,
+      });
+      const ans = next.intents[0] as Extract<DecisionsIntent, { kind: "decisions-answer" }>;
+      expect(ans.unread).toEqual([]);
+      expect(ans.readbacks.map((r) => r.number)).toEqual([7669]);
+    });
+
+    it("never draws the answered ask on the page while it waits for its receipt", () => {
+      expect(tick2.body).toContain("**Nothing waits on you.**");
+      expect(tick2.body).not.toContain("#7669");
+    });
+
+    it("retires the number once the receipt lands, and drops the snapshot", () => {
+      const receipt = { body: receiptComment({ replyId: 55 }), user: BOT };
+      const tick3 = planDecisions({
+        needsYou: [],
+        issues: [],
+        page: page({ body: tick2.body }),
+        comments: [reply, receipt] as never[],
+        now: NOW + 120_000,
+      });
+      expect(tick3.state.entries).toEqual([]);
+      expect(tick3.state.retired.map((r) => [r.n, r.issue])).toEqual([
+        [1, 7669],
+        [2, 7670],
+      ]);
+      expect(JSON.stringify(tick3.state)).not.toContain("items");
+    });
+  });
+
   it("never answers a reply twice, and says nothing to a note with no number in it", () => {
     const receipt = {
       body: receiptComment({ replyId: 55 }),
