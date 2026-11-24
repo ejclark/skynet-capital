@@ -13,6 +13,7 @@ import { resolveFeedbackFollowup } from "../server/feedback-followup.js";
 import { createFeedbackLogStore } from "../server/feedback-log.js";
 import { resolveFeedback } from "../server/feedback-service.js";
 import { resolveFeedbackStatus } from "../server/feedback-status.js";
+import { createJournalStore } from "../server/journal-store.js";
 import { resolveBuiltPlanReader } from "../server/plan-fix-built.js";
 
 export interface FeedbackSetup {
@@ -25,6 +26,8 @@ export interface FeedbackSetup {
   feedbackFollowup: ReturnType<typeof resolveFeedbackFollowup>;
   /** The community milestone track — filing feedback earns it, never a trade code. */
   communityProgression: ReturnType<typeof createCommunityProgressionService>;
+  /** The wish journal's private notes (#8190) — on the volume via `storePath`, never filed. */
+  journal: ReturnType<typeof createJournalStore>;
 }
 
 /** Resolve every feedback-pipeline dependency for one boot, warning on anything left dark. */
@@ -55,6 +58,9 @@ export function setupFeedback(env: NodeJS.ProcessEnv): FeedbackSetup {
     store: createCommunityProgressionStore(env, (m) => console.error(m)),
   });
 
+  // A member's private experience and trade notes; their wishes file through `feedback` above.
+  const journal = createJournalStore(env);
+
   return {
     feedback,
     feedbackCoach,
@@ -63,5 +69,6 @@ export function setupFeedback(env: NodeJS.ProcessEnv): FeedbackSetup {
     builtPlans,
     feedbackFollowup,
     communityProgression,
+    journal,
   };
 }

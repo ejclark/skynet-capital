@@ -21,7 +21,7 @@ import { join } from "node:path";
 
 import type { ProblemMatch } from "../domain/known-problems.js";
 import { JsonlKeyedStore, type JsonlTail } from "../storage/jsonl-store.js";
-import type { FeedbackKind } from "./feedback-issue.js";
+import type { FeedbackKind, FeedbackSource } from "./feedback-issue.js";
 
 export interface FeedbackLogEntry {
   /** This log entry's own identity — distinct from the issue-body marker, which stays
@@ -36,7 +36,17 @@ export interface FeedbackLogEntry {
   /** The known problem the filing was matched to in the chat (#8005 slice 7): what counts it on
    *  its ledger row, and what tells the member when that row's fix ships. Absent on most. */
   readonly match?: ProblemMatch;
+  /** `journal` when the filing was a wish from the wish journal (#8190). Absent on the rest. */
+  readonly source?: FeedbackSource;
 }
+
+/** What a log entry keeps of the filed input. */
+type FiledInput = {
+  readonly kind: FeedbackKind;
+  readonly title: string;
+  readonly match?: ProblemMatch;
+  readonly source?: FeedbackSource;
+};
 
 /** Where the feedback log is kept. Interface-first (like `ActivityStore`) so tests stay I/O-free. */
 export interface FeedbackLogStore {
@@ -86,7 +96,7 @@ export function createFeedbackLogStore(env: NodeJS.ProcessEnv): FeedbackLogStore
 
 /** One successful filing → one log entry. */
 export function feedbackLogEntry(
-  input: { readonly kind: FeedbackKind; readonly title: string; readonly match?: ProblemMatch },
+  input: FiledInput,
   opaqueMemberId: string,
   filed: { readonly url: string; readonly number: number },
   filedAt: string,
@@ -100,6 +110,7 @@ export function feedbackLogEntry(
     title: input.title.trim(),
     filedAt,
     ...(input.match ? { match: input.match } : {}),
+    ...(input.source ? { source: input.source } : {}),
   };
 }
 
@@ -107,7 +118,7 @@ export function feedbackLogEntry(
  *  member their filed issue. Shared by the form route and the JSON API (one door, one discipline). */
 export async function recordFilingSafely(
   record: ((entry: FeedbackLogEntry) => Promise<void>) | undefined,
-  input: { readonly kind: FeedbackKind; readonly title: string; readonly match?: ProblemMatch },
+  input: FiledInput,
   memberId: string | undefined,
   filed: { readonly url: string; readonly number: number },
 ): Promise<void> {
