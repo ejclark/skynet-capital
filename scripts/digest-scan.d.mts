@@ -24,6 +24,10 @@ export function quietReason(
 
 export function digestFiles(): string[];
 export function latestDigestDate(): string | null;
+/** The instant the commit adding the newest digest landed (#8225), or its date when git cannot
+ *  say (uncommitted, shallow clone, git failing); null when there is no digest. `gitRead` is the
+ *  specs' seam: it gets git's argv and returns its stdout. */
+export function latestDigestSince(gitRead?: (args: string[]) => string): string | null;
 export function needsYouLines(planned: Pick<Planned, "needsYou">): string[];
 /** The Needs-you list with the asks on the Decisions page folded to one line (#7939). */
 export function foldedNeedsYouLines(

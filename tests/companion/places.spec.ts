@@ -117,7 +117,7 @@ describe("PLACES — the list itself", () => {
       }),
     );
     expect(tabs.map((t) => t.path)).toEqual(
-      expect.arrayContaining(["/", "/accounts", "/trade", "/research"]),
+      expect.arrayContaining(["/campaign", "/accounts", "/trade", "/research"]),
     );
     for (const tab of tabs) {
       const place = PLACES.find((p) => p.path === tab.path);

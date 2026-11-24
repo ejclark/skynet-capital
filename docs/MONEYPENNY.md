@@ -33,6 +33,21 @@ member's own reply ("send", or an answer to her one question) is what posts it t
 `/api/feedback`. The scripted lines in
 `app/src/live/moneypenny-script.ts` are the fallback when the key isn't set.
 
+### A game-master scene (#8191)
+
+A pilot for #8161 point 16. When the committed setting `GAME_MASTER_PILOT`
+(`src/companion/game-master-flag.ts`: off · owner · members) admits the session, the main
+conversation at rest offers one more move, **Play a scene from this week's market**. It opens a
+fresh side thread (`app/src/live/moneypenny-scene.ts`) whose every turn carries
+`mode: "game-master"`; the server honours that only for an admitted session and otherwise runs an
+ordinary turn. In a scene she speaks as the game master: one event from the calendar's next 14
+days (`get_scene_facts`, `src/server/scene-facts.ts`: calendar and house ledgers only, no news),
+its date words and the house's stance, questions answered from the record, then three unranked
+choices as moves. "Take a paper position" gets a link to the ticket's review screen, the event's
+quest link when the ledger derives one; nothing in a scene places an order. "Back to the main
+conversation" leaves it, and the next tap starts a fresh scene. The rules are a second cached
+system block (`src/companion/companion-game-master.ts`); three eval fixtures judge them.
+
 ### Screenshots in the chat (#6007)
 
 A member can attach up to 3 screenshots to a message (the **Attach screenshot** button, paste, or

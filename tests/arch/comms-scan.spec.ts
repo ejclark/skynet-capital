@@ -2,6 +2,8 @@ import { execFileSync } from "node:child_process";
 import { gitSince, harvestPictures, unwrapRows } from "../../scripts/comms-scan.mjs";
 import {
   carryingPictureSlot,
+  digestFiles,
+  latestDigestSince,
   missingPictureSlot,
   RATCHET_AFTER,
 } from "../../scripts/digest-scan.mjs";
@@ -240,6 +242,95 @@ describe("the digest picture slot — squash bodies wrap, the slot must not show
       },
     ];
     expect(harvestPictures(rows)).toContain("| one two | 3 |");
+  });
+
+  // #8225: a wrap right after a pipe leaves a line that LOOKS finished. #8068's 5-column header
+  // was stored like this, so the slot printed loose text where a table should be.
+  it("re-joins a header wrapped right after a pipe, so the delimiter sits under one header row", () => {
+    const wrapped = [
+      "| Where it runs | Browser before | Browser after |",
+      "Result before | Result after |",
+      "|---|---|---|---|---|",
+      "| Cloud | rev 1243 | rev 1234 | 16 failed | 17 passed |",
+    ].join("\n");
+    expect(unwrapRows(wrapped).split("\n")).toEqual([
+      "| Where it runs | Browser before | Browser after | Result before | Result after |",
+      "|---|---|---|---|---|",
+      "| Cloud | rev 1243 | rev 1234 | 16 failed | 17 passed |",
+    ]);
+  });
+
+  it("re-joins a body row wrapped right after a pipe, by the delimiter's column count", () => {
+    const wrapped = [
+      "| a | b | c |",
+      "|---|---|---|",
+      "| one | two |",
+      "three |",
+      "| four | five | six |",
+    ].join("\n");
+    expect(unwrapRows(wrapped).split("\n")).toEqual([
+      "| a | b | c |",
+      "|---|---|---|",
+      "| one | two | three |",
+      "| four | five | six |",
+    ]);
+  });
+
+  it("keeps a genuinely short row apart from the next, rather than overshooting the columns", () => {
+    const table = ["| a | b | c |", "|---|---|---|", "| short |", "| x | y | z |"].join("\n");
+    expect(unwrapRows(table)).toBe(table);
+  });
+
+  it("counts an escaped pipe as cell text, not a column", () => {
+    const wrapped = ["| a | b |", "|---|---|", "| x \\| y |", "z |"].join("\n");
+    expect(unwrapRows(wrapped).split("\n").at(-1)).toBe("| x \\| y | z |");
+  });
+
+  it("leaves a caption paragraph after the blank line alone", () => {
+    const table = ["| a | b |", "|---|---|", "| 1 | 2 |", "", "_A caption | with a pipe._"].join(
+      "\n",
+    );
+    expect(unwrapRows(table)).toBe(table);
+  });
+});
+
+// #8225: digests land ~13:25Z on their own date; a date-only window started at 23:59:59Z that day,
+// so every PR merged between the digest and midnight UTC fell into no digest's slot.
+describe("the digest picture slot — the window starts when the last digest landed", () => {
+  const latest = digestFiles()[0];
+  const date = latest?.slice(0, 10) ?? null;
+
+  it("is the instant of the commit that added the newest digest, not the end of its day", () => {
+    const calls: string[][] = [];
+    const since = latestDigestSince((args: string[]) => {
+      calls.push(args);
+      return args[0] === "rev-parse" ? "false\n" : "2026-11-23T13:25:05Z\n";
+    });
+    if (!latest) return expect(since).toBeNull();
+    expect(since).toBe("2026-11-23T13:25:05Z");
+    expect(calls[1]).toEqual(
+      expect.arrayContaining(["--diff-filter=A", "--", `docs/digests/${latest}`]),
+    );
+    expect(gitSince(since as string)).toBe("2026-11-23T13:25:05Z");
+  });
+
+  it("falls back to the date when the digest is not committed yet", () => {
+    const since = latestDigestSince((args: string[]) => (args[0] === "rev-parse" ? "false" : ""));
+    expect(since).toBe(date);
+  });
+
+  it("falls back to the date in a shallow clone, which would date every file at the graft", () => {
+    const since = latestDigestSince((args: string[]) =>
+      args[0] === "rev-parse" ? "true" : "2026-11-24T02:00:00Z",
+    );
+    expect(since).toBe(date);
+  });
+
+  it("falls back to the date when git itself fails", () => {
+    const since = latestDigestSince(() => {
+      throw new Error("not a git repository");
+    });
+    expect(since).toBe(date);
   });
 });
 

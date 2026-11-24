@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccountsRouteImport } from './routes/accounts'
 import { Route as ActivityRouteImport } from './routes/activity'
+import { Route as CampaignRouteImport } from './routes/campaign'
 import { Route as FeedbackRouteImport } from './routes/feedback'
 import { Route as JoinRouteImport } from './routes/join'
 import { Route as LeaderboardRouteImport } from './routes/leaderboard'
@@ -45,6 +46,11 @@ const AccountsRoute = AccountsRouteImport.update({
 const ActivityRoute = ActivityRouteImport.update({
   id: '/activity',
   path: '/activity',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CampaignRoute = CampaignRouteImport.update({
+  id: '/campaign',
+  path: '/campaign',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FeedbackRoute = FeedbackRouteImport.update({
@@ -147,6 +153,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/accounts': typeof AccountsRoute
   '/activity': typeof ActivityRoute
+  '/campaign': typeof CampaignRoute
   '/feedback': typeof FeedbackRoute
   '/join': typeof JoinRoute
   '/leaderboard': typeof LeaderboardRoute
@@ -171,6 +178,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/accounts': typeof AccountsRoute
   '/activity': typeof ActivityRoute
+  '/campaign': typeof CampaignRoute
   '/feedback': typeof FeedbackRoute
   '/join': typeof JoinRoute
   '/leaderboard': typeof LeaderboardRoute
@@ -195,6 +203,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/accounts': typeof AccountsRoute
   '/activity': typeof ActivityRoute
+  '/campaign': typeof CampaignRoute
   '/feedback': typeof FeedbackRoute
   '/join': typeof JoinRoute
   '/leaderboard': typeof LeaderboardRoute
@@ -221,6 +230,7 @@ export interface FileRouteTypes {
     | '/'
     | '/accounts'
     | '/activity'
+    | '/campaign'
     | '/feedback'
     | '/join'
     | '/leaderboard'
@@ -245,6 +255,7 @@ export interface FileRouteTypes {
     | '/'
     | '/accounts'
     | '/activity'
+    | '/campaign'
     | '/feedback'
     | '/join'
     | '/leaderboard'
@@ -268,6 +279,7 @@ export interface FileRouteTypes {
     | '/'
     | '/accounts'
     | '/activity'
+    | '/campaign'
     | '/feedback'
     | '/join'
     | '/leaderboard'
@@ -293,6 +305,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccountsRoute: typeof AccountsRoute
   ActivityRoute: typeof ActivityRoute
+  CampaignRoute: typeof CampaignRoute
   FeedbackRoute: typeof FeedbackRoute
   JoinRoute: typeof JoinRoute
   LeaderboardRoute: typeof LeaderboardRoute
@@ -328,6 +341,13 @@ declare module '@tanstack/react-router' {
       path: '/activity'
       fullPath: '/activity'
       preLoaderRoute: typeof ActivityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/campaign': {
+      id: '/campaign'
+      path: '/campaign'
+      fullPath: '/campaign'
+      preLoaderRoute: typeof CampaignRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/feedback': {
@@ -492,6 +512,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountsRoute: AccountsRoute,
   ActivityRoute: ActivityRoute,
+  CampaignRoute: CampaignRoute,
   FeedbackRoute: FeedbackRoute,
   JoinRoute: JoinRoute,
   LeaderboardRoute: LeaderboardRoute,
