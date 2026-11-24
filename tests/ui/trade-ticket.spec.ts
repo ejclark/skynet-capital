@@ -40,7 +40,8 @@ describe("order type labels", () => {
   });
 
   it("renders an unrecognized server type as itself rather than guessing", () => {
-    expect(orderTypeLabel("stop_limit")).toBe("stop_limit");
+    // A type this build has no name for. (Stop-limit served as this example until #8249 named it.)
+    expect(orderTypeLabel("trailing_stop")).toBe("trailing_stop");
   });
 });
 
