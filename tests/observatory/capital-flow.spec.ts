@@ -75,6 +75,26 @@ describe("inferCapitalFlow", () => {
     expect(flow?.heldAfter).toBe(0);
   });
 
+  // #8064 — the reset clears what a fill before it opened, so that fill's cash is not added back.
+  it("reads a reset's book as flat when a bot filled before the reset in the same window", () => {
+    // Flat at $700k; a bot buys $50,000 of SPY at 14:01; the member resets to $1M at 14:03.
+    const flow = inferCapitalFlow(sample(T0, 700_000, 700_000), sample(T1, 1_000_000, 1_000_000), [
+      fill({ quantity: 100, filledQuantity: 100, at: "2026-10-05T14:01:00.000Z" }),
+    ]);
+    expect(flow?.amount).toBe(300_000);
+    expect(flow?.unexplainedCash).toBe(350_000);
+    expect(flow?.heldAfter).toBe(0);
+  });
+
+  it("reads a reset's book as flat when bots filled both before and after it", () => {
+    // $50,000 bought at 14:01, the reset at 14:03, then $20,000 bought at 14:04 and still held.
+    const flow = inferCapitalFlow(sample(T0, 700_000, 700_000), sample(T1, 1_000_000, 980_000), [
+      fill({ orderId: "a", quantity: 100, filledQuantity: 100, at: "2026-10-05T14:01:00.000Z" }),
+      fill({ orderId: "b", quantity: 40, filledQuantity: 40, at: "2026-10-05T14:04:00.000Z" }),
+    ]);
+    expect(flow?.heldAfter).toBe(0);
+  });
+
   it("still reads a book carried into the window as held when a fill also lands in it", () => {
     // $500k of positions held throughout, a $5,000 buy, and $42,000 of cash nobody journaled.
     const flow = inferCapitalFlow(sample(T0, 1_000_000, 500_000), sample(T1, 993_000, 453_000), [

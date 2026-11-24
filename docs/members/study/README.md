@@ -579,3 +579,24 @@ node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answe
   crashed on a helper it never imported (that path had never run); and the oracle failed a right
   "down $4 so far today" for a −$4 day, because a sign counted only as a touching minus. Both fixed;
   rescored, the session passes. Before quoting task success, read one answer by hand.
+- 2026-11-24 · **the bot's loop round: the facts sheet holds the book, not the loop.** Its 768 facts
+  are balances, positions and orders; none says whether a bot is running, what holds it, when it
+  last checked or why it placed an order, and the order facts' regions no longer match the pin's
+  Ledger rows, so no order fact reached a task. All 21 tasks became book reads framed around the
+  bots; the loop reached members only through those scenarios, and the experts carried it (#8109).
+- 2026-11-24 · **the steered world listed one page for its watcher and two for its owner**, so no
+  fact of the watcher's sheet was on a census screen and the task step refused. A census entry now
+  names its `routes` where a viewer's surfaces list is thin; widening it means re-taking the harvest
+  too (`0-preflight/harvest` is kept while its `labels.txt` exists).
+- 2026-11-24 · **price the census before the round.** Seven viewer × world censuses at phone and
+  desktop measured toward three hours and ~570 expert calls; the round ran every census at phone
+  only (members still ran desktop), three at a time, beside the round rather than inside it, and
+  took the thin slice's identical census as its own. A control's census can narrow to the views its
+  fixed and planted mechanisms live on (`tasks/bot-loop-control.json`; logged as config drift).
+- 2026-11-24 · **a cloud session's background job stops at 30 minutes unless given the 2-hour
+  ceiling, and a container restart stops all of them.** A round resumes from its `done.json`
+  files, but a census restarts from its first route, so long censuses are worth running as their
+  own jobs.
+- 2026-11-24 · **the readout drew every frame a lead problem cited**: 24 in one row and 259 files
+  (9MB) for the bot's loop, where the profile round's page carried 11. It now shows at most four a
+  problem (`FRAMES_SHOWN`, readout.mjs), and every frame stays in the round directory.

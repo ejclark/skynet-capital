@@ -323,6 +323,7 @@ async function main(): Promise<void> {
     feedbackCoach,
     feedbackLog,
     feedbackStatus,
+    builtPlans,
     feedbackFollowup,
     communityProgression,
   } = setupFeedback(process.env);
@@ -349,6 +350,7 @@ async function main(): Promise<void> {
     progression: progressionService,
     companionMessageLog,
     companionScreenshots,
+    fixAnnouncements,
   } = setupCompanion(process.env, {
     hub,
     readFills: (id) => activity.list(id),
@@ -489,6 +491,7 @@ async function main(): Promise<void> {
     recordFeedback: (entry) => feedbackSinks.log.record(entry),
     readFeedback: (id) => feedbackLog.list(id),
     ...(feedbackSinks.status ? { fetchFeedbackStatus: feedbackSinks.status } : {}),
+    ...(builtPlans ? { fetchBuiltPlans: builtPlans } : {}),
     ...(feedbackFollowup ? { submitFollowup: feedbackFollowup } : {}),
     communityProgression,
     ...(companion ? { companion } : {}),
@@ -496,6 +499,7 @@ async function main(): Promise<void> {
     readMessages: (id) => companionMessageLog.list(id),
     recordMessage: (id) => companionMessageLog.record(id),
     companionScreenshots,
+    fixAnnouncements,
     refreshParticipant: (id) => brokerSync.syncParticipant(id),
     readPulseHistory,
     readHeldLedger,

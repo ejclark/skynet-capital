@@ -20,8 +20,8 @@
  *   - `plans`: the issue numbers the status cell says own the fix ("filed as #N", "owned by #N",
  *     "joins #N");
  *   - `state`: fixed · plan filed · ready for a plan · waiting, from the status cell's words.
- *     "fixed" reads only a cell that OPENS with it in bold — "**fixed in #N**" or "**done in #N**"
- *     — because the word turns up in other statuses ("not fixed by #5448", "#5176 closed without
+ *     "fixed" reads only a cell that OPENS with it in bold — "**fixed in #N**", "**done in #N**"
+ *     or "**resolved** by #N" (U17's spelling, #8080) — because the word turns up in other statuses ("not fixed by #5448", "#5176 closed without
  *     a decision") and a loose read would have Moneypenny tell members a problem is fixed. `fixedBy`
  *     keeps that number. §10 does not name this spelling yet; #8005's log proposes it.
  *
@@ -143,11 +143,12 @@ export function plansIn(status) {
   return [...new Set(plans)];
 }
 
-const FIXED_CELL = /^\s*\*\*\s*(?:fixed|done)\b/i;
+const FIXED_CELL = /^\s*\*\*\s*(?:fixed|done|resolved)\b/i;
 
 function fixedByIn(status) {
   if (!FIXED_CELL.test(status)) return undefined;
-  const m = status.match(/^\s*\*\*\s*(?:fixed|done)\b[^#*]{0,12}#(\d+)/i);
+  // "**resolved** by #N" closes its bold before the number, so a `**` may sit between them.
+  const m = status.match(/^\s*\*\*\s*(?:fixed|done|resolved)\b(?:\*\*)?[^#*]{0,12}#(\d+)/i);
   return m ? Number(m[1]) : undefined;
 }
 

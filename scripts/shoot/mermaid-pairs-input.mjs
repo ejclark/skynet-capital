@@ -10,6 +10,10 @@
 const BUDGET_KB = 100;
 const LAYOUTS = ["auto", "side", "stacked"];
 export const MODES = { light: ["light"], dark: ["dark"], both: ["light", "dark"] };
+/** `live` draws every side as GitHub does; `ink` draws every AFTER side with our own renderer
+ *  (./mermaid-pairs-ink.mjs). A side whose source carries `%% look: ink` is ink either way. */
+const LOOKS = ["live", "ink"];
+const FACE_IDS = ["serif", "sans"];
 
 const KINDS = ["mermaid", "markdown"];
 const PAIR_KEYS = new Set(["id", "title", "caption", "before", "after", "layout"]);
@@ -73,12 +77,14 @@ const FLAGS = {
   budget: [Number, (v) => v >= 0, "--budget must be KB ≥ 0 (0 = no budget)"],
   mode: [String, (v) => Boolean(MODES[v]), "--mode must be light|dark|both"],
   layout: [String, (v) => LAYOUTS.includes(v), `--layout must be ${LAYOUTS.join("|")}`],
+  look: [String, (v) => LOOKS.includes(v), `--look must be ${LOOKS.join("|")}`],
+  face: [String, (v) => FACE_IDS.includes(v), `--face must be ${FACE_IDS.join("|")}`],
 };
 
 /** Flags → options, with every bad value named. `budget` defaults to 100KB at scale ≤ 1 only —
  *  a scale > 1 frame is the shareable set for an issue comment, never the tree. */
 export function parseArgs(argv) {
-  const opts = { scale: 1, quality: 82, mode: "both", layout: "auto" };
+  const opts = { scale: 1, quality: 82, mode: "both", layout: "auto", look: "live", face: "serif" };
   const positional = [];
   const errors = [];
   for (let i = 0; i < argv.length; i++) {

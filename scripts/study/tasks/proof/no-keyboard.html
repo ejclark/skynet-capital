@@ -1,0 +1,34 @@
+<!doctype html>
+<!-- Harness proof for #8126, NOT an app page: the shape #8005 slice 4 caught. A "File feedback" chip
+     sits just above Moneypenny's ask box; a document-level "?" opens a shortcuts panel, as the app's
+     KeyboardChords does. A member who taps the chip and then types has nothing focused: a phone has
+     no keyboard then, so the recorder must refuse the typing; a desktop types as it always has. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>no-keyboard proof</title>
+    <style>
+      body { font: 16px system-ui, sans-serif; margin: 0; padding: 24px; background: #111; color: #eee; }
+      button, label { display: block; margin: 0 0 12px; }
+      button { padding: 10px 14px; }
+      label { padding: 8px 0; }
+      input { display: block; width: 100%; box-sizing: border-box; padding: 10px; margin-top: 6px; }
+      #shortcuts { position: fixed; left: 0; right: 0; bottom: 0; padding: 16px; background: #333; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <button type="button" id="chip">File feedback</button>
+      <label>Ask Moneypenny<input id="ask" type="text" /></label>
+      <section id="shortcuts" hidden>Keyboard shortcuts</section>
+    </main>
+    <script>
+      document.addEventListener("keydown", (e) => {
+        const t = e.target;
+        const typing = t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement;
+        if (e.key === "?" && !typing) document.getElementById("shortcuts").hidden = false;
+      });
+    </script>
+  </body>
+</html>

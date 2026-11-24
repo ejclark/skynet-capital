@@ -2,6 +2,7 @@ import { describe, expect, it } from "@rstest/core";
 import {
   batchSize,
   decide,
+  feedbackPile,
   main,
   pickCandidates,
   pullableCount,
@@ -26,6 +27,8 @@ const DAY = 86_400_000;
 
 type Over = {
   labels?: string[];
+  ageDays?: number; // created this long before NOW
+  idleDays?: number; // last touched this long before NOW
   state?: string;
   blockedBy?: number;
   pr?: boolean;
@@ -36,6 +39,12 @@ const issue = (number: number, over: Over = {}) => ({
   title: `issue ${number}`,
   body: "",
   state: over.state ?? "open",
+  ...(over.ageDays === undefined
+    ? {}
+    : { created_at: new Date(NOW - over.ageDays * DAY).toISOString() }),
+  ...(over.idleDays === undefined
+    ? {}
+    : { updated_at: new Date(NOW - over.idleDays * DAY).toISOString() }),
   labels: (over.labels ?? ["feedback"]).map((name) => ({ name })),
   issue_dependencies_summary: { blocked_by: over.blockedBy ?? 0, blocking: 0 },
   ...(over.subs ? { sub_issues_summary: over.subs } : {}),
@@ -90,6 +99,72 @@ describe("which unready feedback issues are worth judging", () => {
     const rows = [issue(30), issue(31), issue(32)];
     const out = pickCandidates(rows, { refused: new Set([31]), now: NOW });
     expect(out).toEqual({ ranked: [30, 32], skippedRefused: 1 });
+  });
+});
+
+describe("plans in the flip's list (#8037 slice 2)", () => {
+  const plan = (n: number, idleDays: number, extra: string[] = []) =>
+    issue(n, { labels: ["plan", ...extra], idleDays });
+
+  it("lists a plan without ready only once nobody has touched it for 14 days", () => {
+    const rows = [plan(50, 15), plan(51, 3), plan(52, 40), issue(53)];
+    expect(pickCandidates(rows, { now: NOW }).ranked).toEqual([50, 52, 53]);
+  });
+
+  it("leaves out a ready, parked or in-progress plan, and a plan with open sub-issues", () => {
+    const rows = [
+      plan(60, 30, ["ready"]),
+      plan(61, 30, ["needs-eric"]),
+      plan(62, 30, ["in-progress"]),
+      { ...plan(63, 30), sub_issues_summary: { total: 2, completed: 0 } },
+      plan(64, 30),
+    ];
+    expect(pickCandidates(rows, { now: NOW }).ranked).toEqual([64]);
+  });
+
+  it("leaves a plan with no update date out rather than calling it old", () => {
+    expect(pickCandidates([issue(70, { labels: ["plan"] })], { now: NOW }).ranked).toEqual([]);
+  });
+});
+
+describe("the pile of feedback waiting for ready (#8037 slice 2)", () => {
+  const waiting = (count: number, ageDays = 1) =>
+    Array.from({ length: count }, (_, i) => issue(200 + i, { ageDays }));
+
+  it("is piled past 20 waiting, and not at 20", () => {
+    expect(feedbackPile(waiting(21), NOW)).toMatchObject({ unready: 21, piled: true });
+    expect(feedbackPile(waiting(20), NOW)).toMatchObject({ unready: 20, piled: false });
+  });
+
+  it("is piled when the oldest has waited over 14 days, and not at 14", () => {
+    expect(feedbackPile([...waiting(2), issue(300, { ageDays: 15 })], NOW)).toMatchObject({
+      oldestDays: 15,
+      piled: true,
+    });
+    expect(feedbackPile([issue(301, { ageDays: 14 })], NOW).piled).toBe(false);
+  });
+
+  it("does not count a ready, parked or in-progress issue, or a plan", () => {
+    const rows = [
+      readyIssue(1),
+      issue(2, { labels: ["feedback", "needs-eric"] }),
+      issue(3, { labels: ["feedback", "in-progress"] }),
+      issue(4, { labels: ["plan"], ageDays: 90 }),
+      issue(5, { ageDays: 2 }),
+    ];
+    expect(feedbackPile(rows, NOW)).toEqual({ unready: 1, oldestDays: 2, piled: false });
+  });
+
+  it("does not count a filing matched to a known IA problem", () => {
+    const rows = [
+      issue(7, { labels: ["feedback", "ia-U12"], ageDays: 40 }),
+      issue(8, { ageDays: 1 }),
+    ];
+    expect(feedbackPile(rows, NOW)).toEqual({ unready: 1, oldestDays: 1, piled: false });
+  });
+
+  it("reads an age it was not given as unknown, never as old", () => {
+    expect(feedbackPile([issue(6)], NOW)).toEqual({ unready: 1, oldestDays: null, piled: false });
   });
 });
 
@@ -182,11 +257,34 @@ describe("whether a flip is due", () => {
     expect(v.issues).toEqual([100, 101, 102, 103, 104, 105]);
   });
 
-  it("is not due once the pullable count reaches the cap", () => {
+  it("is not due once the pullable count reaches the cap and the pile is small", () => {
     const ready = [readyIssue(1), readyIssue(2), readyIssue(3)];
-    const v = decide({ gate: gate("normal", 3), ready, candidates: candidates(5) });
+    const pile = { unready: 4, oldestDays: 3, piled: false };
+    const v = decide({ gate: gate("normal", 3), ready, pile, candidates: candidates(5) });
     expect(v.due).toBe(false);
     expect(v.why).toContain("fed");
+    expect(v.why).toContain("4 feedback waiting");
+  });
+
+  it("is due with the lanes fed when the pile is big or old, and says it is the pile", () => {
+    const ready = [readyIssue(1), readyIssue(2), readyIssue(3)];
+    const pile = { unready: 56, oldestDays: 22, piled: true };
+    const v = decide({ gate: gate("normal", 3), ready, pile, candidates: candidates(9) });
+    expect(v).toMatchObject({ due: true, because: ["piled"], pullable: 3 });
+    expect(v.issues).toEqual([100, 101, 102, 103, 104, 105]);
+    expect(render(v)).toContain("piled: 3 pullable against the in-flight cap of 3, 56 feedback");
+  });
+
+  it("names both reasons when the lanes are starved and the pile is big", () => {
+    const pile = { unready: 30, oldestDays: 2, piled: true };
+    const v = decide({ gate: gate("normal", 3), ready: [], pile, candidates: candidates(2) });
+    expect(v.because).toEqual(["starved", "piled"]);
+  });
+
+  it("still lists nothing under halt, however big the pile", () => {
+    const pile = { unready: 90, oldestDays: 60, piled: true };
+    const v = decide({ gate: gate("halt", 0, false), ready: [], pile, candidates: candidates(9) });
+    expect(v).toMatchObject({ due: false, why: "refused: work-mode is halt" });
   });
 
   it("halves the batch under conserve, and lists nothing under halt", () => {
@@ -201,7 +299,7 @@ describe("whether a flip is due", () => {
   it("is not due, and says why, when the lanes are starved but nothing is worth judging", () => {
     const v = decide({ gate: gate(), ready: [], candidates: candidates(0, 4) });
     expect(v.due).toBe(false);
-    expect(v.why).toContain("no unready feedback issue");
+    expect(v.why).toContain("no unready issue is worth judging");
   });
 
   it("prints the run line a Routine follows, and a one-line reason when not due", () => {
@@ -219,7 +317,7 @@ describe("whether a flip is due", () => {
 
 describe("the CLI", () => {
   const seams = (over: Record<string, unknown> = {}) => {
-    const reads = { ready: 0, feedback: 0, refusals: 0 };
+    const reads = { ready: 0, feedback: 0, plans: 0, refusals: 0 };
     return {
       reads,
       io: {
@@ -234,6 +332,10 @@ describe("the CLI", () => {
           reads.feedback++;
           return [issue(40), issue(41), issue(42)];
         },
+        readPlans: () => {
+          reads.plans++;
+          return [issue(50, { labels: ["plan"], idleDays: 20 })];
+        },
         readRefusals: () => {
           reads.refusals++;
           return JSON.stringify({
@@ -247,22 +349,46 @@ describe("the CLI", () => {
     };
   };
 
-  it("lists the starved queue's candidates, minus the one refused yesterday", () => {
+  it("lists the starved queue's candidates (a stale plan too), minus the one refused yesterday", () => {
     const { io } = seams();
     const v = JSON.parse(main(["--json"], io));
-    expect(v).toMatchObject({ due: true, pullable: 1, issues: [40, 42], refusedRecently: 1 });
+    expect(v).toMatchObject({ due: true, pullable: 1, issues: [40, 42, 50], refusedRecently: 1 });
   });
 
-  it("costs one read when the lanes are fed: no feedback list, no refusals file", () => {
+  it("costs two reads when the lanes are fed and the pile is small: no plans, no refusals file", () => {
     const { io, reads } = seams({ readReady: () => [readyIssue(1), readyIssue(2), readyIssue(3)] });
     expect(main([], io)).toContain("due: false");
-    expect(reads.feedback + reads.refusals).toBe(0);
+    expect(reads).toMatchObject({ feedback: 1, plans: 0, refusals: 0 });
+  });
+
+  it("is due with the lanes fed once more than 20 feedback issues wait", () => {
+    const { io } = seams({
+      readReady: () => [readyIssue(1), readyIssue(2), readyIssue(3)],
+      readFeedback: () => Array.from({ length: 21 }, (_, i) => issue(400 + i, { ageDays: 1 })),
+    });
+    const v = JSON.parse(main(["--json"], io));
+    expect(v).toMatchObject({ due: true, because: ["piled"], pullable: 3 });
+    expect(v.issues).toHaveLength(6);
+  });
+
+  it("is due with the lanes fed once the oldest feedback has waited over 14 days", () => {
+    const { io } = seams({
+      readReady: () => [readyIssue(1), readyIssue(2), readyIssue(3)],
+      readFeedback: () => [issue(410, { ageDays: 15 }), issue(411, { ageDays: 1 })],
+    });
+    expect(JSON.parse(main(["--json"], io))).toMatchObject({ due: true, issues: [50, 410, 411] });
+  });
+
+  it("lists a plan that carries feedback once, not twice", () => {
+    const both = issue(420, { labels: ["feedback", "plan"], idleDays: 30, ageDays: 1 });
+    const { io } = seams({ readFeedback: () => [both], readPlans: () => [both] });
+    expect(JSON.parse(main(["--json"], io)).issues).toEqual([420]);
   });
 
   it("reads nothing but the dial under halt", () => {
     const { io, reads } = seams({ gate: () => gate("halt", 0, false) });
     expect(main([], io)).toBe("due: false · refused: work-mode is halt");
-    expect(reads).toEqual({ ready: 0, feedback: 0, refusals: 0 });
+    expect(reads).toEqual({ ready: 0, feedback: 0, plans: 0, refusals: 0 });
   });
 
   it("throws, rather than print due: false, when a read fails", () => {
@@ -271,6 +397,7 @@ describe("the CLI", () => {
     };
     expect(() => main([], seams({ readReady: boom }).io)).toThrow("502");
     expect(() => main([], seams({ readFeedback: boom }).io)).toThrow("502");
+    expect(() => main([], seams({ readPlans: boom }).io)).toThrow("502");
     expect(() => main([], seams({ readRefusals: boom }).io)).toThrow("502");
     expect(() => main([], seams({ gate: boom }).io)).toThrow("502");
   });

@@ -4,6 +4,7 @@
 //
 //   npm run shoot:mermaid-pairs -- <pairs.json> <outdir> [--scale N] [--quality Q]
 //                                  [--mode light|dark|both] [--layout auto|side|stacked] [--budget KB]
+//                                  [--look live|ink] [--face serif|sans]
 //
 // WHY THIS EXISTS. The Mermaid grammar work (2026-09-25/26, #3747/#3760) was argued in pairs — the
 // diagram a PR drew vs the one the grammar prescribes — and each round hand-ran a scratchpad
@@ -27,6 +28,13 @@
 //    bytes, dimensions and quality; per side the lint result) — a gallery comment is generated from
 //    it, never retyped.
 //
+//  - **The owned look, beside the live one** (#3981): `--look ink` draws each AFTER side with our
+//    own renderer (./mermaid-pairs-ink.mjs: the ink snippet as a theme, an embedded face, depth),
+//    and a side whose source carries `%% look: ink` is drawn that way in any run. Each ink side is
+//    also written alone (`<id>-<side>-ink-<face>.jpg`), the image a PR frame would carry, so it can
+//    be posted beside the live block it came from and judged on a phone. A face that does not load
+//    stops the run (exit 5); it never falls back.
+//
 // A pairs file for a showcase lives on its issue, not in the tree; the only committed one is the
 // spec fixture, tests/fixtures/mermaid-pairs/example.json (docs/PICTURES.md → Screenshots).
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -45,15 +53,27 @@ import {
   shellHtml,
   WIDTHS,
 } from "./mermaid-pairs-frame.mjs";
+import {
+  COVERAGE,
+  FACES,
+  faceCss,
+  INK_MARKER,
+  inkCss,
+  inkMermaidConfig,
+} from "./mermaid-pairs-ink.mjs";
 import { MODES, parseArgs, validatePairs } from "./mermaid-pairs-input.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const MERMAID_DIR = join(ROOT, "node_modules/mermaid");
 /** The lowest JPEG quality the budget loop steps down to before it flags a frame as over. */
 const QUALITY_FLOOR = 40;
-/** Exit codes: 2 = bad input (file or flags), 4 = no browser to render with. */
+/** Exit codes: 2 = bad input (file or flags), 4 = no browser to render with, 5 = a face that did
+ *  not load (the owned look never falls back to another). */
 const EXIT_INPUT = 2;
 const EXIT_BROWSER = 4;
+const EXIT_FACE = 5;
+/** The diagram types the ink look dresses: decision pictures are flowcharts (docs/PICTURES.md). */
+const INK_TYPES = new Set(["flowchart", "flowchart-v2"]);
 
 /** Width and height from a JPEG's start-of-frame marker — the sidecar reports the file, not a guess. */
 function jpegDimensions(buf) {
@@ -68,12 +88,27 @@ function jpegDimensions(buf) {
   return null;
 }
 
-/** One side's lint verdict. Markdown sides are not diagrams, so they pass by construction. */
-async function lintSide(side) {
+/** Which renderer draws a side: ours when the run asks for ink on the after side, or the source
+ *  carries the marker; GitHub's otherwise. A table is never a diagram, so it is always live. */
+function lookOf(which, side, opts) {
+  if (side.kind !== "mermaid") return "live";
+  return (opts.look === "ink" && which === "after") || INK_MARKER.test(side.source)
+    ? "ink"
+    : "live";
+}
+
+/** One side's lint verdict. Markdown sides are not diagrams, so they pass by construction. An ink
+ *  side must also be a type the ink look covers; any other gets a panel that names the scope. */
+async function lintSide(side, look) {
   if (side.kind === "markdown") return { kind: "markdown", ok: true, problems: [], notes: [] };
   const r = await lintMermaid(`\`\`\`mermaid\n${side.source}\n\`\`\``);
   const strip = (m) => m.replace(/^line \d+: /, "");
   const problems = r.diagrams.length ? r.problems.map(strip) : ["no diagram found in the source"];
+  const type = r.diagrams[0]?.type;
+  if (look === "ink" && type && !INK_TYPES.has(type))
+    problems.push(
+      `the ink look dresses flowcharts only (decision pictures, docs/PICTURES.md → ink mode); this is ${type}`,
+    );
   return {
     kind: "mermaid",
     type: r.diagrams[0]?.type,
@@ -97,55 +132,118 @@ function altText(pair, mode) {
   return `${pair.title} — ${side("before")} vs ${side("after")}${where}. ${plain(pair.caption)}`;
 }
 
-function sideBody(which, side, lint) {
+function sideBody(which, side, lint, look) {
   if (!lint.ok) return failPanel(lint.problems.join(" · "));
   if (side.kind === "markdown") return `<div class="md">${marked.parse(side.source)}</div>`;
-  return `<div class="diagram" data-side="${which}"></div>`;
+  return `<div class="diagram" data-side="${which}" data-look="${look}"></div>`;
 }
 
-/** Screenshot the frame, stepping quality down until it fits the budget (0 = no budget). */
-async function encode(page, quality, budgetKB) {
+/** Screenshot an element (the frame by default), stepping quality down until it fits the budget
+ *  (0 = no budget). */
+async function encode(page, quality, budgetKB, selector = "#frame") {
   let q = quality;
   for (;;) {
-    const buf = await page.locator("#frame").screenshot({ type: "jpeg", quality: q });
+    const buf = await page.locator(selector).screenshot({ type: "jpeg", quality: q });
     const over = budgetKB > 0 && buf.length > budgetKB * 1024;
     if (!over || q <= QUALITY_FLOOR) return { buf, quality: q, overBudget: over };
     q = Math.max(QUALITY_FLOOR, q - 6);
   }
 }
 
-async function openPage(browser, mode, scale) {
+/** GitHub's settings for a live side in this mode. */
+const liveConfig = (mode) => ({
+  startOnLoad: false,
+  theme: PALETTE[mode].mermaidTheme,
+  securityLevel: "strict",
+  suppressErrorRendering: true,
+});
+
+/** Prove both weights of the face are loaded in the page, or stop: a fallback is a silent lie
+ *  about the look. Runs IN THE PAGE. */
+async function proveFace(family) {
+  const missing = [];
+  for (const weight of [400, 700]) {
+    const spec = `${weight} 20px "${family}"`;
+    try {
+      await document.fonts.load(spec);
+    } catch {
+      // A face that will not decode rejects here; the lookup below names it as missing.
+    }
+    // `check` alone says true when no face matches at all, so the loaded face itself is looked up.
+    const loaded = [...document.fonts].some(
+      (f) =>
+        f.family.replace(/"/g, "") === family &&
+        String(f.weight) === String(weight) &&
+        f.status === "loaded",
+    );
+    if (!loaded) missing.push(weight);
+  }
+  return missing;
+}
+
+async function openPage(browser, mode, opts, anyInk) {
   const page = await browser.newPage({
     viewport: { width: 1600, height: 1000 },
-    deviceScaleFactor: scale,
+    deviceScaleFactor: opts.scale,
     colorScheme: mode,
   });
   await page.setContent(shellHtml(mode));
   await page.addScriptTag({ path: join(MERMAID_DIR, "dist/mermaid.min.js") });
-  await page.evaluate((theme) => {
-    window.mermaid.initialize({
-      startOnLoad: false,
-      theme,
-      securityLevel: "strict",
-      suppressErrorRendering: true,
-    });
-  }, PALETTE[mode].mermaidTheme);
+  if (anyInk) {
+    await page.addStyleTag({ content: `${faceCss(opts.face)}\n${inkCss(opts.face)}` });
+    const missing = await page.evaluate(proveFace, FACES[opts.face].family);
+    if (missing.length) {
+      const face = FACES[opts.face];
+      throw Object.assign(
+        new Error(
+          `the face "${face.family}" (${face.label}) did not load at weight ${missing.join(", ")} — nothing rendered; a fallback face would misstate the look`,
+        ),
+        { exitCode: EXIT_FACE },
+      );
+    }
+  }
+  await page.evaluate((cfg) => window.mermaid.initialize(cfg), liveConfig(mode));
   return page;
 }
 
-async function shootPair(page, pair, lint, mode, opts, mermaidVersion) {
+/** The eyebrow label of a side, plus the renderer that drew it when that is ours — the frame says
+ *  which side GitHub drew and which side is an image we made. */
+function sideLabel(side, look, opts) {
+  if (look !== "ink") return side.label;
+  const ours = `our renderer, ink, ${FACES[opts.face].label}`;
+  return side.label ? `${side.label} · ${ours}` : ours;
+}
+
+async function shootPair(page, pair, car, mode, opts, mermaidVersion) {
+  const { lint, looks } = car;
+  const column = (which) =>
+    columnHtml(
+      which,
+      sideLabel(pair[which], looks[which], opts),
+      sideBody(which, pair[which], lint[which], looks[which]),
+    );
   const html = frameHtml({
     title: pair.title,
     captionHtml: marked.parseInline(pair.caption),
     mode,
     mermaidVersion,
-    before: columnHtml("before", pair.before.label, sideBody("before", pair.before, lint.before)),
-    after: columnHtml("after", pair.after.label, sideBody("after", pair.after, lint.after)),
+    before: column("before"),
+    after: column("after"),
   });
   const sources = { before: pair.before.source, after: pair.after.source };
   const layout = opts.layout === "auto" ? (pair.layout ?? "auto") : opts.layout;
   const key = `${pair.id}-${mode}`.replace(/[^A-Za-z0-9-]/g, "-");
-  const laid = await page.evaluate(layoutInPage, { html, sources, layout, widths: WIDTHS, key });
+  const ink = Object.values(looks).includes("ink")
+    ? { config: inkMermaidConfig(opts.face), live: liveConfig(mode), coverage: COVERAGE }
+    : null;
+  const laid = await page.evaluate(layoutInPage, {
+    html,
+    sources,
+    layout,
+    widths: WIDTHS,
+    key,
+    ink,
+  });
   await page.setViewportSize({ width: Math.max(laid.width, 320), height: laid.height });
   const shot = await encode(page, opts.quality, opts.budget);
   const file = `${pair.id}-${mode}.jpg`;
@@ -188,13 +286,65 @@ function readPairs(file) {
   return { data, errors: validatePairs(data).map((e) => `${file}: ${e}`) };
 }
 
+/**
+ * Each ink side alone, at its natural size: the image a PR frame would carry. The sheet is the same
+ * paper in either GitHub mode (an image does not follow the page), so it is shot once.
+ */
+async function shootSheets(page, pair, car, opts) {
+  const sheets = [];
+  for (const side of ["before", "after"]) {
+    if (car.looks[side] !== "ink" || !car.lint[side].ok) continue;
+    const size = await page.evaluate((s) => {
+      const sheet = document.querySelector(`#frame .col.${s} .sheet`);
+      if (!sheet) return null;
+      // Alone, the drawing takes its natural width: the frame's column no longer bounds it.
+      const svg = sheet.querySelector("svg");
+      Object.assign(svg.style, { width: `${svg.viewBox.baseVal.width}px`, maxWidth: "none" });
+      Object.assign(sheet.style, { borderRadius: "0", boxShadow: "none" });
+      sheet.id = "solo";
+      document.getElementById("root").replaceChildren(sheet);
+      const box = sheet.getBoundingClientRect();
+      return { width: Math.ceil(box.width), height: Math.ceil(box.height) };
+    }, side);
+    if (!size) continue;
+    await page.setViewportSize(size);
+    const shot = await encode(page, opts.quality, opts.budget, "#solo");
+    const file = `${pair.id}-${side}-ink-${opts.face}.jpg`;
+    writeFileSync(join(opts.outDir, file), shot.buf);
+    const sheet = {
+      side,
+      face: opts.face,
+      file,
+      bytes: shot.buf.length,
+      ...jpegDimensions(shot.buf),
+      quality: shot.quality,
+      overBudget: shot.overBudget,
+      phone: car.phone[side],
+      phoneScreens: car.phoneScreens[side],
+      alt: `${pair.title} — drawn by our renderer in ink, ${FACES[opts.face].label}. ${plain(pair.caption)}`,
+    };
+    sheets.push(sheet);
+    const kb = (sheet.bytes / 1024).toFixed(1);
+    const flag = sheet.overBudget ? ` ⚠ over ${opts.budget}KB at the quality floor` : "";
+    console.log(
+      `sheet ${join(opts.outDir, file)} ${sheet.width}×${sheet.height} ${kb}KB q${sheet.quality}${flag} · phone ${sheet.phone}px ${sheet.phoneScreens} screens`,
+    );
+  }
+  return sheets;
+}
+
 /** The per-pair record a gallery comment is generated from; images and layout fill in per mode. */
-function sidecarFor(pair, lint, opts, mermaidVersion) {
+function sidecarFor(pair, lint, looks, opts, mermaidVersion) {
+  const anyInk = Object.values(looks).includes("ink");
   return {
     id: pair.id,
     title: pair.title,
     caption: pair.caption,
     alt: altText(pair),
+    looks,
+    face: anyInk
+      ? { id: opts.face, family: FACES[opts.face].family, label: FACES[opts.face].label }
+      : null,
     layout: null,
     natural: null,
     naturalHeight: null,
@@ -203,6 +353,7 @@ function sidecarFor(pair, lint, opts, mermaidVersion) {
     githubMermaidVersion: GITHUB_MERMAID_VERSION,
     lint,
     images: [],
+    sheets: [],
   };
 }
 
@@ -246,11 +397,12 @@ function phoneLine(pair, laid) {
 
 /** Every pair in every requested mode — one page per mode, one frame per pair. */
 async function renderAll(browser, pairs, sidecars, opts, mermaidVersion) {
-  for (const mode of MODES[opts.mode]) {
-    const page = await openPage(browser, mode, opts.scale);
+  const anyInk = sidecars.some((car) => Object.values(car.looks).includes("ink"));
+  for (const [m, mode] of MODES[opts.mode].entries()) {
+    const page = await openPage(browser, mode, opts, anyInk);
     for (const [i, pair] of pairs.entries()) {
       const car = sidecars[i];
-      const { laid, image } = await shootPair(page, pair, car.lint, mode, opts, mermaidVersion);
+      const { laid, image } = await shootPair(page, pair, car, mode, opts, mermaidVersion);
       Object.assign(car, {
         layout: laid.layout,
         natural: laid.natural,
@@ -272,6 +424,7 @@ async function renderAll(browser, pairs, sidecars, opts, mermaidVersion) {
       console.log(
         `shot ${join(opts.outDir, image.file)} ${image.width}×${image.height} ${kb}KB q${image.quality} ${laid.layout}${flag}${phoneLine(pair, laid)}`,
       );
+      if (m === 0) car.sheets = await shootSheets(page, pair, car, opts);
     }
     await page.close();
   }
@@ -302,7 +455,7 @@ async function main() {
   if (opts.help) {
     const usage = readFileSync(fileURLToPath(import.meta.url), "utf8")
       .split("\n")
-      .slice(1, 6);
+      .slice(1, 7);
     console.log(usage.join("\n"));
     return;
   }
@@ -321,13 +474,25 @@ async function main() {
   // Lint everything before the browser opens: lintMermaid parses in jsdom, off the render path.
   const sidecars = [];
   for (const pair of data.pairs) {
-    const lint = { before: await lintSide(pair.before), after: await lintSide(pair.after) };
-    sidecars.push(sidecarFor(pair, lint, opts, pkg.version));
+    const looks = {
+      before: lookOf("before", pair.before, opts),
+      after: lookOf("after", pair.after, opts),
+    };
+    const lint = {
+      before: await lintSide(pair.before, looks.before),
+      after: await lintSide(pair.after, looks.after),
+    };
+    sidecars.push(sidecarFor(pair, lint, looks, opts, pkg.version));
   }
   mkdirSync(opts.outDir, { recursive: true });
   const browser = await launch();
   try {
     await renderAll(browser, data.pairs, sidecars, opts, pkg.version);
+  } catch (error) {
+    if (!error?.exitCode) throw error;
+    console.error(`✗ mermaid-pairs: ${error.message}`);
+    process.exitCode = error.exitCode;
+    return;
   } finally {
     await browser.close();
   }

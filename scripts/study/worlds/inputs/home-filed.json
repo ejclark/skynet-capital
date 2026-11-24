@@ -1,0 +1,45 @@
+{
+  "$comment": "World 'home-filed' (#8005, the landing page with Me and the chat: docs/IA.md §5.9, §5.6), layered over bot-loop-today: the same league on the same Monday, with what Eric has filed through the app. Three filings, each in the feedback log under his opaque id, each issue's state and labels as GitHub answers them; production's own fetcher classifies each (feedback-status.ts), so the badges are the code's: one closed as built (Shipped), one that asks him a question (Needs your input), one queued (Up next). Issue numbers sit past the repo's real ones, so a filing's link names no real issue. Nobody else has filed.",
+  "base": "bot-loop-today",
+  "feedback": {
+    "log": {
+      "eric@study.world": [
+        {
+          "issueNumber": 9101,
+          "kind": "idea",
+          "title": "Show which of my positions report earnings this week",
+          "filedAt": "@-16d 21:05"
+        },
+        {
+          "issueNumber": 9102,
+          "kind": "bug",
+          "title": "The leaderboard leaves out an account it can't read",
+          "filedAt": "@-5d 19:30"
+        },
+        {
+          "issueNumber": 9103,
+          "kind": "feature",
+          "title": "Let me see what my bot would have done on a day I paused it",
+          "filedAt": "@-1d 08:10"
+        }
+      ]
+    },
+    "issues": {
+      "9101": {
+        "state": "closed",
+        "state_reason": "completed",
+        "labels": [{ "name": "feedback" }, { "name": "member-eric" }]
+      },
+      "9102": {
+        "state": "open",
+        "state_reason": null,
+        "labels": [{ "name": "feedback" }, { "name": "bug" }, { "name": "needs-info" }]
+      },
+      "9103": {
+        "state": "open",
+        "state_reason": null,
+        "labels": [{ "name": "feedback" }, { "name": "ready" }]
+      }
+    }
+  }
+}

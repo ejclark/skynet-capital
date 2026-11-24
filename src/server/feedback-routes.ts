@@ -17,6 +17,7 @@ import type { FeedbackLogEntry } from "./feedback-log.js";
 import { handleFeedbackPreview } from "./feedback-preview.js";
 import type { FeedbackInput, FeedbackResult } from "./feedback-service.js";
 import type { FetchFeedbackStatuses } from "./feedback-status.js";
+import type { FetchBuiltPlans } from "./plan-fix-built.js";
 
 /** What the feedback surface needs from the server config — never the whole config object. */
 export interface FeedbackRouteDeps {
@@ -31,6 +32,9 @@ export interface FeedbackRouteDeps {
    *  (undefined) means unwired, same as the other feedback deps; the list still renders, just
    *  without status badges. */
   readonly fetchFeedbackStatus?: FetchFeedbackStatuses;
+  /** Which plans had their fix built — the "try it" trigger's stricter reading of a plan
+   *  (`plan-fix-built.ts`, #8077). Unwired means no filing ever reads as fixed. */
+  readonly fetchBuiltPlans?: FetchBuiltPlans;
   /** Posts a follow-up comment on an issue the signed-in member already filed, and restarts its
    *  build when it is already `ready` (feedback-followup.ts). Requires `readFeedback` too — ownership is checked against the
    *  member's own logged filings, never trusted from the form. */

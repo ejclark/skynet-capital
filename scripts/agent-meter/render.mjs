@@ -70,6 +70,17 @@ function lanes(l) {
   return lines;
 }
 
+/** One row per held PR open now: its green-to-now age, apart from open-to-merge (#7317). */
+export function heldRows(held) {
+  if (held === undefined) return [];
+  if (typeof held === "string") return [`  held PRs: ${held}`];
+  if (!held.length) return ["  held PRs: none open"];
+  return held.map(
+    (h) =>
+      `  held #${h.number}: ${h.greenHours === null ? "not green" : `green to now ${h.greenHours.toFixed(1)}h`} (open ${h.openHours.toFixed(1)}h, live)`,
+  );
+}
+
 function speed(s) {
   const merge = s.openToMergeMinutes;
   const lines = [
@@ -79,6 +90,7 @@ function speed(s) {
       ? `  ${merge}`
       : `  open to merge: p50 ${merge.p50?.toFixed(1)} min, p90 ${merge.p90?.toFixed(1)} min (n=${merge.n})`,
   ];
+  lines.push(...heldRows(s.heldWaits));
   for (const run of s.runs)
     lines.push(
       `  run ${run.run}: ${run.attempts} attempts, ${run.verified ? `verified in ${run.minutesToVerified.toFixed(0)} min` : "not verified"}`,

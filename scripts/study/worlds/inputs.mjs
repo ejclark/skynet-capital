@@ -100,6 +100,7 @@ export function loadInput(name) {
     ...(raw.wired ? { wired: raw.wired } : {}),
     ...(raw.stores ? { stores: raw.stores } : {}),
     ...(raw.writes ? { writes: [...(base.writes ?? []), ...raw.writes] } : {}),
+    ...(raw.feedback ? { feedback: raw.feedback } : {}),
     ...byAccount,
     participants,
     ...(base.bots
@@ -143,7 +144,22 @@ export function vixAnswer(input) {
 export function worldNetwork(input) {
   const edgar = edgarAnswer(input);
   const vix = vixAnswer(input);
-  return (url) => edgar(url) ?? vix(url);
+  const github = githubAnswer(input);
+  return (url) => edgar(url) ?? vix(url) ?? github(url);
+}
+
+/** GitHub's issue reads production's feedback status fetcher makes (`feedback-status.ts`),
+ *  answered from the input's `feedback.issues` — each issue's state, its `state_reason` and its
+ *  labels, as GitHub returns them (#8005, Me: member-filings.mjs). */
+export function githubAnswer(input) {
+  const issues = input.feedback?.issues ?? {};
+  const prefix = "https://api.github.com/repos/ejclark/skynet-capital/issues/";
+  return (url) => {
+    if (!url.startsWith(prefix)) return undefined;
+    const n = url.slice(prefix.length);
+    const issue = issues[n];
+    return issue ? { number: Number(n), ...issue } : undefined;
+  };
 }
 
 /** SEC EDGAR's two documents the guidance route reads, answered from the input's `edgar` block. */
