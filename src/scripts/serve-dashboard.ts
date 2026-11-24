@@ -323,6 +323,7 @@ async function main(): Promise<void> {
     feedbackCoach,
     feedbackLog,
     feedbackStatus,
+    builtPlans,
     feedbackFollowup,
     communityProgression,
   } = setupFeedback(process.env);
@@ -489,6 +490,7 @@ async function main(): Promise<void> {
     recordFeedback: (entry) => feedbackSinks.log.record(entry),
     readFeedback: (id) => feedbackLog.list(id),
     ...(feedbackSinks.status ? { fetchFeedbackStatus: feedbackSinks.status } : {}),
+    ...(builtPlans ? { fetchBuiltPlans: builtPlans } : {}),
     ...(feedbackFollowup ? { submitFollowup: feedbackFollowup } : {}),
     communityProgression,
     ...(companion ? { companion } : {}),

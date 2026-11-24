@@ -13,12 +13,15 @@ import { resolveFeedbackFollowup } from "../server/feedback-followup.js";
 import { createFeedbackLogStore } from "../server/feedback-log.js";
 import { resolveFeedback } from "../server/feedback-service.js";
 import { resolveFeedbackStatus } from "../server/feedback-status.js";
+import { resolveBuiltPlanReader } from "../server/plan-fix-built.js";
 
 export interface FeedbackSetup {
   feedback: ReturnType<typeof resolveFeedback>;
   feedbackCoach: ReturnType<typeof resolveFeedbackCoach>;
   feedbackLog: ReturnType<typeof createFeedbackLogStore>;
   feedbackStatus: ReturnType<typeof resolveFeedbackStatus>;
+  /** Which known-problem plans were built, for "try it" (#8077) — same token, stricter reading. */
+  builtPlans: ReturnType<typeof resolveBuiltPlanReader>;
   feedbackFollowup: ReturnType<typeof resolveFeedbackFollowup>;
   /** The community milestone track — filing feedback earns it, never a trade code. */
   communityProgression: ReturnType<typeof createCommunityProgressionService>;
@@ -42,6 +45,7 @@ export function setupFeedback(env: NodeJS.ProcessEnv): FeedbackSetup {
   const feedbackLog = createFeedbackLogStore(env);
   // Live status for those filings — GitHub itself, never a local store.
   const feedbackStatus = resolveFeedbackStatus(env);
+  const builtPlans = resolveBuiltPlanReader(env);
   // A member adding more to a filing they already own, and the build restart that comes with it
   // when it is in Ready — a filing left without `ready` by a failed restart is logged here.
   const feedbackFollowup = resolveFeedbackFollowup(env, (line) => console.warn(line));
@@ -56,6 +60,7 @@ export function setupFeedback(env: NodeJS.ProcessEnv): FeedbackSetup {
     feedbackCoach,
     feedbackLog,
     feedbackStatus,
+    builtPlans,
     feedbackFollowup,
     communityProgression,
   };
