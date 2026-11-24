@@ -54,6 +54,8 @@ describe("the App cell's rule", () => {
     expect(appOf("Trade · Scoreboard")).toMatchObject({ error: expect.stringContaining("2 apps") });
     expect(appOf("Trade and Bots")).toMatchObject({ error: expect.stringContaining("2 apps") });
     expect(appOf("R&D")).toEqual({ error: '"R&D" is not an app' });
+    // The names Eric retired on 2026-11-24 (#8291) are off the list, so a stale cell fails here.
+    expect(appOf("Desk")).toEqual({ error: '"Desk" is not an app' });
   });
 });
 
