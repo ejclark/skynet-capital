@@ -82,6 +82,16 @@ describe("serveFeedbackApi", () => {
     ]);
   });
 
+  it("marks a wish from the journal in the member's history (#8190)", async () => {
+    const config = configWith({
+      readFeedback: () => Promise.resolve([{ ...entry(8, "I wish"), source: "journal" }]),
+    });
+    const { res, out } = fakeRes();
+    await serveFeedbackApi(get(), res, "/api/feedback", config, session);
+    const recent = JSON.parse(out.body ?? "{}").recent;
+    expect(recent[0].source).toBe("journal");
+  });
+
   it("stamps the response with this server's own running version (#429)", async () => {
     const config = configWith();
     const { res, out } = fakeRes();

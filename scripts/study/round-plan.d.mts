@@ -94,7 +94,7 @@ export function modeChanges(
   recorded: Partial<RoundMode> | null | undefined,
   now: RoundMode,
 ): string[];
-export function profileProblems(p: unknown): string[];
+export function profileProblems(p: unknown, opts?: { control?: boolean }): string[];
 export function selectMatrix(
   p: AreaConfig,
   opts?: { thin?: boolean; onlyWorld?: string },

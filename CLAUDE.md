@@ -195,6 +195,7 @@ falsifiers: [`docs/process/WORKING-AGREEMENTS.md`](docs/process/WORKING-AGREEMEN
 - **Governance & credentials are Eric's.** Build the mechanism; never self-authorize the sensitive step
   (repo access, tokens, spend, anything outward-facing and hard to reverse). Hand him the one credentialed
   step with clear instructions.
+- **Spend arrives as a pitch, never a build:** a five-line `pitch` + `needs-eric` issue (who, $/month, what it buys, the free try, the rollback number). Full rule: [`docs/process/WORKING-AGREEMENTS.md`](docs/process/WORKING-AGREEMENTS.md).
 - **Removing friction on a protected file is a PR, not a chat ask** (Eric, 2026-08-29: "remove the
   friction, make it easy to contribute," after a confirmed-dead-code deletion in an envelope-protected
   file sat blocked pending a chat exchange). When the change is confirmed-safe and fully scoped — e.g.

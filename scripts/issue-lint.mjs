@@ -28,6 +28,7 @@ import { AUDIT_LIST_LIMIT, audit, auditReport } from "./issue-lint-audit.mjs";
 import { readinessNotes } from "./issue-readiness.mjs";
 import { LABEL_NAMES } from "./moneypenny/labels.mjs";
 import { BUILDING, STATUS_OPTIONS, WAITING_ON_PERSON } from "./moneypenny/projects.mjs";
+import { isPitchLine, pitchProblems } from "./pitch-issue.mjs";
 import { fleschKincaidGrade, stripMarkdown } from "./readability.mjs";
 
 /** Above this, an advisory note fires — chosen generous (college-graduate level) so the necessarily
@@ -194,7 +195,7 @@ function collectNotes(text, notes) {
       "no picture — a table, a flowchart, or an explicit `Picture: waived — <reason>` line",
     );
   }
-  const bullets = (top.match(/^\s*[-*] /gm) ?? []).length;
+  const bullets = top.split("\n").filter((l) => /^\s*[-*] /.test(l) && !isPitchLine(l)).length;
   if (bullets > 4) notes.push(`${bullets} talking points above the fold — 2–4 is the scan budget`);
   const grade = fleschKincaidGrade(stripMarkdown(top));
   if (grade !== null && grade >= READABILITY_GRADE_NOTE_FLOOR) {
@@ -452,6 +453,8 @@ export function lintIssue({ title = "", body = "", labels } = {}) {
   if (Array.isArray(labels)) checkLabels(labels, notes);
   checkStateBlock(text, labels, notes);
   checkBottleneckBaseline(text, labels, problems);
+  // A spend ask's five lines, its needs-eric and its spend class (docs/ISSUES.md → Pitch issues).
+  problems.push(...pitchProblems(text, labels));
   checkStateBlockTop(text, notes);
   checkStatusRow(text, labels, notes);
   checkNeedsFromYou(text, labels, problems, notes);

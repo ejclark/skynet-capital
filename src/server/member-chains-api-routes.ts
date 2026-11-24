@@ -20,6 +20,7 @@ import {
   requireGet,
   sendJson,
 } from "./page-shell.js";
+import { parseFormSaveBody } from "./save-body.js";
 
 /**
  * A MEMBER'S OWN CHAINS API (#6959 slice 3b) — the chains a member draws, returned to their author
@@ -69,18 +70,6 @@ export function chainViewOf(
   };
 }
 
-function parseSaveBody(
-  raw: string,
-): { readonly form: ChainForm; readonly replaceId?: string } | undefined {
-  const body = parseJsonRecord(raw);
-  if (!body) return undefined;
-  const form = parseChainForm(body.form);
-  if (!form) return undefined;
-  if (body.replaceId === undefined) return { form };
-  const replaceId = boundedString(body.replaceId, CHAIN_MAX_ID);
-  return replaceId ? { form, replaceId } : undefined;
-}
-
 function save(
   res: ServerResponse,
   raw: string,
@@ -88,7 +77,7 @@ function save(
   session: Session,
   memberKey: string,
 ): void {
-  const body = parseSaveBody(raw);
+  const body = parseFormSaveBody(raw, parseChainForm, CHAIN_MAX_ID);
   if (!body) {
     sendJson(res, 400, { error: "malformed save body" });
     return;
