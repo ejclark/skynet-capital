@@ -624,7 +624,7 @@ describe("the section switch", () => {
       "Playbooks",
       "Thesis",
       "Milestones",
-      "Feedback",
+      "Journal",
     ]);
   });
 
@@ -636,7 +636,7 @@ describe("the section switch", () => {
     expect(slot).toHaveAttribute("data-current");
     expect(slot.querySelector(".cockpit-nav-chev svg")).not.toBeNull();
     fireEvent.click(slot);
-    fireEvent.click(screen.getByRole("button", { name: "Feedback" }));
+    fireEvent.click(screen.getByRole("button", { name: "Journal" }));
     expect(calls.sections).toEqual(["feedback"]);
   });
 
@@ -651,7 +651,7 @@ describe("the section switch", () => {
       "Playbooks",
       "Thesis",
       "Milestones",
-      "Feedback",
+      "Journal",
     ]);
     const divide = group().querySelector(".cockpit-nav-divide");
     expect(divide?.nextElementSibling).toHaveTextContent("Milestones");

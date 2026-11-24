@@ -81,8 +81,8 @@ const VIEWER: Record<"milestones" | "feedback", { readonly who: string; readonly
     line: "Chapters of your own ladder — no account's numbers here.",
   },
   feedback: {
-    who: "Your filings",
-    line: "What you've sent Moneypenny — no account's numbers here.",
+    who: "Your journal",
+    line: "Your wishes, filings and notes — no account's numbers here.",
   },
 };
 
