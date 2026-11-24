@@ -115,7 +115,7 @@ export async function deskAlertsFor(
   const desk = config.hub.getState().participants.find((p) => p.id === id);
   const bot = desk?.kind === "bot" && config.readDecisions ? desk : undefined;
   // An unlinked account's row can be error-tagged too: either way its held names are unknown.
-  const positionsUnread = desk?.error !== undefined;
+  const positionsUnread = Boolean(desk?.error);
   if (positions.kind !== "ok" && !log && !bot) {
     return {
       kind: "unavailable",
