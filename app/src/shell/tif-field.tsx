@@ -1,7 +1,6 @@
 import type { ReactElement } from "react";
-import { marketSession } from "../live/market-session";
 import { TIF_LABELS, type TicketTimeInForce, tifNote } from "../live/ticket";
-import { useNow } from "./market-session";
+import { useMarketSession } from "./market-session";
 
 /**
  * TIME IN FORCE (#3407 P1 slice 2; parity study row 13) — Day / GTC as one segmented control on
@@ -28,7 +27,7 @@ export function TimeInForceField({
   readonly now?: Date;
 }): ReactElement {
   const effective = value ?? fallback;
-  const ticking = useNow();
+  const market = useMarketSession(now);
   return (
     <fieldset className="ticket-nav-group tif-field">
       <legend className="ticket-nav-label">Time in force</legend>
@@ -44,7 +43,7 @@ export function TimeInForceField({
           </button>
         ))}
       </div>
-      <span className="seg-why">{tifNote(effective, marketSession(now ?? ticking))}</span>
+      <span className="seg-why">{tifNote(effective, market)}</span>
     </fieldset>
   );
 }

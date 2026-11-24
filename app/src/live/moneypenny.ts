@@ -8,7 +8,8 @@ import {
   type ResearchAskDraft,
   streamCompanionTurn,
 } from "./companion";
-import { marketIsOpen } from "./market-hours";
+import { currentMarketClock } from "./market-clock";
+import { isTrading, marketSession } from "./market-session";
 import { answerFor, convictionCardText, createConvictionLane } from "./moneypenny-conviction";
 import { createFilingLane, NEVER_MIND, SUBMIT } from "./moneypenny-filing";
 import {
@@ -418,7 +419,8 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
     const intro = introLines({
       connected: ob?.account !== undefined,
       firstTradeDone: ob?.steps.some((s) => s.id === "first-trade" && s.done) ?? false,
-      marketOpen: ob?.marketOpen ?? marketIsOpen(),
+      // The onboarding read's answer, else the shell's one read of the broker's hours (#8248).
+      marketOpen: ob?.marketOpen ?? isTrading(marketSession(new Date(), currentMarketClock())),
       returning: get().messages.length > 0,
     });
     save({ introDone: true, flow: intro.flow });

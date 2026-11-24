@@ -2,10 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { parseOccSymbol } from "../../../src/trading/option-symbols";
-import { marketSession } from "../live/market-session";
 import type { PlayInfo, PlaysIndex } from "../live/options";
 import { type DeskOrderRow, fetchOrders } from "../live/orders";
-import { useNow } from "./market-session";
+import { useMarketSession } from "./market-session";
 
 /**
  * THE MILESTONE LAYER OF THE TRADE PAGE (#1461, slice 1) — the rail over the ticket.
@@ -156,7 +155,7 @@ export function queuedRung(
  *  `desk-orders` read the working-orders list makes, so no second request. Read only when it could
  *  matter: an account, a share rung next, and no session running. */
 function useQueuedRung(deskId: string, linked: boolean, nextUp?: string): string | undefined {
-  const state = marketSession(useNow()).state;
+  const state = useMarketSession().state;
   const shut = state === "closed" || state === "pre";
   const orders = useQuery({
     queryKey: ["desk-orders", deskId],

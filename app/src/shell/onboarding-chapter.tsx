@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useState } from "react";
 import { fetchJoin } from "../live/join";
-import { localSessionSuffix } from "../live/market-hours";
+import { type MarketSessionView, sessionWindowWords } from "../live/market-session";
 import { meetMoneypenny } from "../live/moneypenny";
 import {
   fetchOnboarding,
@@ -12,6 +12,7 @@ import {
   type OnboardingStepId,
 } from "../live/onboarding";
 import { AlpacaGuide } from "./alpaca-guide";
+import { useMarketSession, viewerZone } from "./market-session";
 import { MilestonePanel } from "./milestone-panel";
 
 /**
@@ -66,10 +67,14 @@ function StepAction({ step }: { readonly step: OnboardingStep }): ReactElement |
   return null;
 }
 
-/** Step 3's note carries the session window in the viewer's own zone after "4:00 PM ET". */
-function stepDetail(step: OnboardingStep): string {
+/** The regular hours as `src/domain/onboarding.ts` words them in step 3's note. */
+const REGULAR_HOURS = "9:30 AM to 4:00 PM ET, Monday through Friday";
+
+/** Step 3's note carries the session window from the broker's calendar (#8248): the viewer's own
+ *  zone after the ET hours, and today's real close on a half day — never 4:00 PM. */
+function stepDetail(step: OnboardingStep, market: MarketSessionView): string {
   return step.id === "first-trade"
-    ? step.detail.replace("4:00 PM ET", `4:00 PM ET${localSessionSuffix()}`)
+    ? step.detail.replace(REGULAR_HOURS, sessionWindowWords(market, viewerZone()))
     : step.detail;
 }
 
@@ -212,13 +217,14 @@ function Step({
   readonly step: OnboardingStep;
   readonly active: boolean;
 }): ReactElement {
+  const market = useMarketSession();
   return (
     <li className={`ob-step${step.done ? " ob-step-done" : ""}`}>
       <div className="ob-step-head">
         <StepGlyph done={step.done} active={active} />
         <div className="ob-step-body">
           <div className="ob-step-title">{step.title}</div>
-          <div className="ob-step-detail">{stepDetail(step)}</div>
+          <div className="ob-step-detail">{stepDetail(step, market)}</div>
         </div>
         <StepAction step={step} />
       </div>

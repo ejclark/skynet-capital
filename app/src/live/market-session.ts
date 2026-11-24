@@ -1,4 +1,15 @@
+import { cachedDateTimeFormat } from "../../../src/domain/intl-format";
 import { isMarketClosed, MARKET_CLOSURES } from "../../../src/domain/market-calendar";
+import {
+  CLOCK_HORIZON_DAYS,
+  etTime,
+  isHalfDay,
+  type MarketClockView,
+  newYorkDate,
+  type SessionDay,
+  shiftDate,
+  tableDays,
+} from "../../../src/domain/market-clock";
 
 /**
  * The topbar's market clock (#3689 slice 1): where today's regular session stands, as the handful
@@ -6,11 +17,15 @@ import { isMarketClosed, MARKET_CLOSURES } from "../../../src/domain/market-cale
  * run, and where power hour starts. Eric's ask: "static information that should always be visible
  * to reflect the remaining time to execute trades."
  *
- * Holidays and 1:00 p.m. early closes come from `src/domain/market-calendar.ts` (the exchange's own
- * published dates), so the clock never says OPEN on Thanksgiving and never promises three hours on
- * Christmas Eve. `marketIsOpen` in `market-hours.ts` stays the cheap weekday-only check its
- * onboarding callers were written against; this is the richer view the shell draws. Pure in `now`
- * so specs pin the clock.
+ * WHERE THE HOURS COME FROM (#8248 PR 2). The days — each session's real open and close — come
+ * from the broker's calendar, served by `GET /api/market/clock` (`live/market-clock.ts` fetches
+ * it once for the whole shell). When that read fails, or a date falls outside what it lists, the
+ * checked-in table (`src/domain/market-calendar.ts`, the exchange's own published dates) builds the
+ * same days through `tableDays`, and the view says `source: "table"` so the opened panel can say so.
+ * Either way the math below is one code path, and it never guesses an hour: a moment no listed day
+ * covers is closed. The 30-second tick stays local math — only the days are fetched.
+ *
+ * Pure in `now` (and the fetched view), so specs pin the clock.
  */
 
 export type SessionState = "pre" | "open" | "power" | "closed";
@@ -25,20 +40,33 @@ export interface MarketSessionView {
   readonly powerAt: number;
   /** "4:00" or "1:00" (an early close), ET, for the track's right label. */
   readonly closeLabel: string;
+  /** "9:30", ET — the open the track starts at and the pre-market cue names. */
+  readonly openLabel: string;
   /** "Mon 9:30" — the next session's open, ET; empty while a session is running or due today. */
   readonly nextOpen: string;
+  /** Today's session, when today is one (its close may have passed). */
+  readonly today?: SessionDay;
+  /** The next session to open, strictly after now — today's before the bell. */
+  readonly next?: SessionDay;
+  /** Minutes until `next` opens — the receipt's countdown. */
+  readonly minutesToOpen?: number;
+  /** "6:30 AM PST", or "Wed 1:30 AM AEDT" across midnight: `next`'s open on the viewer's own
+   *  clock. Set only when a zone was given and it is not New York's. */
+  readonly localOpen?: string;
+  /** Where the days came from: the broker's calendar, or the checked-in table. */
+  readonly source: "broker" | "table";
 }
 
 const ET = "America/New_York";
 const OPEN = 9 * 60 + 30;
 const CLOSE = 16 * 60;
-const EARLY_CLOSE = 13 * 60;
 const POWER_HOUR = 60;
+const MINUTE = 60_000;
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 
 /** The New York calendar day and minute-of-day for `now`. */
 function easternParts(now: Date): { date: string; minutes: number } {
-  const parts = new Intl.DateTimeFormat("en-US", {
+  const parts = cachedDateTimeFormat("en-US", {
     timeZone: ET,
     year: "numeric",
     month: "2-digit",
@@ -53,31 +81,19 @@ function easternParts(now: Date): { date: string; minutes: number } {
 }
 
 function closeFor(date: string): number {
-  return MARKET_CLOSURES.some((c) => c.date === date && c.early) ? EARLY_CLOSE : CLOSE;
+  return MARKET_CLOSURES.some((c) => c.date === date && c.early) ? 13 * 60 : CLOSE;
 }
 
-function addDays(date: string, n: number): string {
-  const d = new Date(`${date}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + n);
-  return d.toISOString().slice(0, 10);
-}
-
-/** The first trading day strictly after `date` (two weeks covers any holiday run), or "". */
+/** The first trading day strictly after `date` by the table (two weeks covers any holiday run). */
 function tradingDayAfter(date: string): string {
   for (let i = 1; i <= 14; i += 1) {
-    const d = addDays(date, i);
+    const d = shiftDate(date, i);
     if (!isMarketClosed(d)) return d;
   }
   return "";
 }
 
 const dayOf = (date: string) => DAYS[new Date(`${date}T00:00:00Z`).getUTCDay()];
-
-/** "Mon 9:30" for the first trading day strictly after `date`. */
-function nextOpenAfter(date: string): string {
-  const d = tradingDayAfter(date);
-  return d ? `${dayOf(d)} 9:30` : "";
-}
 
 /** The first trading day strictly after today in New York (`YYYY-MM-DD`): the session a row's
  *  "Not now" waits out (#5070), so a mark set aside on a Thursday afternoon is back after
@@ -97,45 +113,147 @@ export function closeHasPassed(date: string, now: Date = new Date()): boolean {
   return e.date > date || (e.date === date && e.minutes >= closeFor(date));
 }
 
+/**
+ * The session days the clock reads at `now`: the broker's, for every date the fetched view covers
+ * (from the day it was read to its last listed day — inside that window a missing date IS a
+ * closure), and the table's outside it. Without a view, the table's alone.
+ */
+export function sessionDays(now: Date, clock?: MarketClockView): readonly SessionDay[] {
+  const today = newYorkDate(now);
+  const table = tableDays(today, shiftDate(today, CLOCK_HORIZON_DAYS));
+  const last = clock?.days[clock.days.length - 1]?.date;
+  if (!clock || last === undefined) return table;
+  const from = newYorkDate(new Date(clock.asOf));
+  const covered = (date: string) => date >= from && date <= last;
+  const broker = clock.days
+    .filter((d) => d.date >= today)
+    .map((d) => ({ date: d.date, openAt: Date.parse(d.openAt), closeAt: Date.parse(d.closeAt) }));
+  return [...table.filter((d) => !covered(d.date)), ...broker].sort((a, b) =>
+    a.date.localeCompare(b.date),
+  );
+}
+
+const ET_CLOCK: Intl.DateTimeFormatOptions = { timeZone: ET, hour: "numeric", minute: "2-digit" };
+
+/** "9:30", "1:00" — an instant on New York's clock, no AM/PM (the track's own labels). */
+function etClock(ms: number): string {
+  return cachedDateTimeFormat("en-US", ET_CLOCK)
+    .format(ms)
+    .replace(/\s?[AP]M$/, "");
+}
+
+const isNewYork = (zone: string, short: string) =>
+  zone === ET || short === "EST" || short === "EDT";
+
+/** An instant on the viewer's clock — "6:30 AM PST", with the weekday when it falls on another
+ *  calendar day than New York's — or undefined for a New York viewer or an unreadable zone. */
+function localClock(ms: number, timeZone: string): string | undefined {
+  try {
+    const parts = cachedDateTimeFormat("en-US", {
+      timeZone,
+      weekday: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZoneName: "short",
+    }).formatToParts(ms);
+    const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+    const zone = get("timeZoneName");
+    if (!zone || isNewYork(timeZone, zone)) return undefined;
+    const time = `${get("hour")}:${get("minute")} ${get("dayPeriod")} ${zone}`;
+    const etDay = cachedDateTimeFormat("en-US", { timeZone: ET, day: "numeric" }).format(ms);
+    return get("day") === etDay ? time : `${get("weekday")} ${time}`;
+  } catch {
+    return undefined;
+  }
+}
+
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 
-export function marketSession(now: Date = new Date()): MarketSessionView {
-  const { date, minutes } = easternParts(now);
-  const close = closeFor(date);
-  const length = close - OPEN;
-  const powerAt = (close - POWER_HOUR - OPEN) / length;
-  const closeLabel = close === EARLY_CLOSE ? "1:00" : "4:00";
-  const base = { powerAt, closeLabel };
+type SessionBase = Omit<MarketSessionView, "state" | "minutesLeft" | "elapsed" | "nextOpen">;
 
-  if (isMarketClosed(date) || minutes >= close) {
-    const trading = !isMarketClosed(date);
+/** The facts that hold whatever the state: today's track, the next open and where it is local. */
+function sessionBase(
+  today: SessionDay | undefined,
+  next: SessionDay | undefined,
+  minuteStart: number,
+  source: MarketSessionView["source"],
+  timeZone?: string,
+): SessionBase {
+  const opening = today ?? next;
+  const length = today ? (today.closeAt - today.openAt) / MINUTE : CLOSE - OPEN;
+  const localOpen = next && timeZone ? localClock(next.openAt, timeZone) : undefined;
+  return {
+    powerAt: (length - POWER_HOUR) / length,
+    closeLabel: today ? etClock(today.closeAt) : "4:00",
+    openLabel: opening ? etClock(opening.openAt) : "9:30",
+    source,
+    ...(today ? { today } : {}),
+    ...(next ? { next, minutesToOpen: Math.round((next.openAt - minuteStart) / MINUTE) } : {}),
+    ...(localOpen ? { localOpen } : {}),
+  };
+}
+
+/**
+ * Where the regular session stands at `now`. `clock` is `GET /api/market/clock`'s answer (absent →
+ * the table's days); `timeZone` is the viewer's, for the next open on their own clock.
+ */
+export function marketSession(
+  now: Date = new Date(),
+  clock?: MarketClockView,
+  timeZone?: string,
+): MarketSessionView {
+  const days = sessionDays(now, clock);
+  const t = now.getTime();
+  const minuteStart = t - (t % MINUTE);
+  const date = newYorkDate(now);
+  const today = days.find((d) => d.date === date);
+  const next = days.find((d) => d.openAt > t);
+  const source = clock?.source === "broker" ? "broker" : "table";
+  const base = sessionBase(today, next, minuteStart, source, timeZone);
+
+  if (!today || t >= today.closeAt) {
     return {
       ...base,
       state: "closed",
       minutesLeft: 0,
-      elapsed: trading ? 1 : 0,
-      nextOpen: nextOpenAfter(date),
+      elapsed: today ? 1 : 0,
+      nextOpen: next ? `${dayOf(next.date)} ${etClock(next.openAt)}` : "",
     };
   }
-  if (minutes < OPEN) {
-    return { ...base, state: "pre", minutesLeft: OPEN - minutes, elapsed: 0, nextOpen: "" };
+  if (t < today.openAt) {
+    return {
+      ...base,
+      state: "pre",
+      minutesLeft: base.minutesToOpen ?? 0,
+      elapsed: 0,
+      nextOpen: "",
+    };
   }
+  const minutesLeft = Math.round((today.closeAt - minuteStart) / MINUTE);
   return {
     ...base,
-    state: close - minutes <= POWER_HOUR ? "power" : "open",
-    minutesLeft: close - minutes,
-    elapsed: clamp01((minutes - OPEN) / length),
+    state: minutesLeft <= POWER_HOUR ? "power" : "open",
+    minutesLeft,
+    elapsed: clamp01((minuteStart - today.openAt) / (today.closeAt - today.openAt)),
     nextOpen: "",
   };
 }
 
+/** True while the regular session is running. */
+export const isTrading = (view: MarketSessionView): boolean =>
+  view.state === "open" || view.state === "power";
+
 /** The open an order placed now waits for — "the Tue 9:30 ET open", or "today's 9:30 ET open"
- *  before the bell — and undefined while the regular session is running. The trade form's notes
- *  read it so a ticket never promises an immediate fill the market is closed to give (#6257). */
+ *  before the bell, with the viewer's own time beside it when they are not on New York's clock
+ *  ("the Fri 9:30 ET open (6:30 AM PST)") — and undefined while the regular session is running.
+ *  The trade form's notes read it so a ticket never promises an immediate fill the market is
+ *  closed to give (#6257); the hour is the broker's calendar's (#8248). */
 export function waitsForOpen(view: MarketSessionView): string | undefined {
-  if (view.state === "open" || view.state === "power") return undefined;
-  if (view.state === "pre") return "today's 9:30 ET open";
-  return view.nextOpen ? `the ${view.nextOpen} ET open` : "the next session's open";
+  if (isTrading(view)) return undefined;
+  const local = view.localOpen ? ` (${view.localOpen})` : "";
+  if (view.state === "pre") return `today's ${view.openLabel} ET open${local}`;
+  return view.nextOpen ? `the ${view.nextOpen} ET open${local}` : "the next session's open";
 }
 
 /** "1h 28m", "42m", "6h" — the compact duration the widget prints. */
@@ -144,6 +262,14 @@ export function formatMinutes(total: number): string {
   const m = total % 60;
   if (h === 0) return `${m}m`;
   return m === 0 ? `${h}h` : `${h}h ${m}m`;
+}
+
+/** "2d 23h" past a day, else `formatMinutes` — the receipt's countdown to the open. */
+export function formatCountdown(total: number): string {
+  if (total < 24 * 60) return formatMinutes(total);
+  const d = Math.floor(total / (24 * 60));
+  const h = Math.floor((total % (24 * 60)) / 60);
+  return h === 0 ? `${d}d` : `${d}d ${h}h`;
 }
 
 /** The whole widget as one sentence, for its accessible name. */
@@ -175,7 +301,7 @@ export function statusLineCue(view: MarketSessionView): string {
     case "power":
       return "Open";
     case "pre":
-      return "Opens 9:30";
+      return `Opens ${view.openLabel}`;
     case "closed":
       return "Closed";
   }
@@ -198,15 +324,68 @@ const MONTHS = [
 
 /**
  * "Fri Sep 25 · 9:30 ET" — the next session's open, for the opened clock's "Next open" row. Before
- * the bell on a trading day it is today's ("Today · 9:30 ET"); otherwise the first trading day
- * after today, holidays skipped by the exchange's own calendar.
+ * the bell on a trading day it is today's ("Today · 9:30 ET"); otherwise the first session after
+ * today, holidays skipped by the broker's calendar (or the table's, when it answered).
  */
-export function nextOpenLabel(now: Date = new Date()): string {
-  const { date, minutes } = easternParts(now);
-  if (!isMarketClosed(date) && minutes < OPEN) return "Today · 9:30 ET";
-  const d = tradingDayAfter(date);
-  if (!d) return "";
-  const month = Number(d.slice(5, 7));
-  const day = Number(d.slice(8, 10));
-  return `${dayOf(d)} ${MONTHS[month - 1]} ${day} · 9:30 ET`;
+export function nextOpenLabel(view: MarketSessionView): string {
+  const next = view.next;
+  if (!next) return "";
+  const at = etClock(next.openAt);
+  if (view.state === "pre") return `Today · ${at} ET`;
+  const month = Number(next.date.slice(5, 7));
+  const day = Number(next.date.slice(8, 10));
+  return `${dayOf(next.date)} ${MONTHS[month - 1]} ${day} · ${at} ET`;
+}
+
+/**
+ * The opened panel's half-day line (#8248 criterion 10), in words: "Half day: closes 1:00 PM ET"
+ * for today's session while it is ahead or running, "Half day Fri: closes 1:00 PM ET" for the next
+ * one once today's is over — undefined when the session on screen is a full day.
+ */
+export function halfDayLine(view: MarketSessionView): string | undefined {
+  const running = view.today && view.state !== "closed" ? view.today : undefined;
+  const day = running ?? view.next;
+  if (!(day && isHalfDay(day))) return undefined;
+  const when = running ? "" : ` ${dayOf(day.date)}`;
+  return `Half day${when}: closes ${etTime(new Date(day.closeAt).toISOString())}`;
+}
+
+/** The opened panel's source line when the checked-in table answered (#8248 criterion 9). */
+export function sourceLine(view: MarketSessionView): string | undefined {
+  return view.source === "table"
+    ? "Hours from the exchange's published table: the broker's calendar didn't answer."
+    : undefined;
+}
+
+/**
+ * The first-trade note's session window (#8248 criterion 12): "9:30 AM to 4:00 PM ET (6:30 AM–1:00
+ * PM PST), Monday through Friday" on a full day — the viewer's own hours after the ET ones when
+ * they are not on New York's clock — and today's real hours on a half day, never 4:00 PM.
+ */
+export function sessionWindowWords(view: MarketSessionView, timeZone?: string): string {
+  const day = view.today ?? view.next;
+  const local = day && timeZone ? localSessionSuffix(day, timeZone) : "";
+  if (view.today && isHalfDay(view.today)) {
+    const close = etTime(new Date(view.today.closeAt).toISOString());
+    return `${etTime(new Date(view.today.openAt).toISOString()).replace(" ET", "")} to ${close}${local} today, a half day`;
+  }
+  return `9:30 AM to 4:00 PM ET${local}, Monday through Friday`;
+}
+
+/**
+ * " (6:30 AM–1:00 PM PDT)" — `day`'s session on the viewer's clock, or "" for a viewer on New
+ * York's (or when the zone can't be read).
+ */
+export function localSessionSuffix(day: SessionDay, timeZone: string): string {
+  try {
+    const opts: Intl.DateTimeFormatOptions = { timeZone, hour: "numeric", minute: "2-digit" };
+    const zone = cachedDateTimeFormat("en-US", { timeZone, timeZoneName: "short" })
+      .formatToParts(day.openAt)
+      .find((p) => p.type === "timeZoneName")?.value;
+    if (!zone || isNewYork(timeZone, zone)) return "";
+    const at = (ms: number) => cachedDateTimeFormat("en-US", opts).format(ms);
+    return ` (${at(day.openAt)}–${at(day.closeAt)} ${zone})`;
+  } catch {
+    return "";
+  }
 }

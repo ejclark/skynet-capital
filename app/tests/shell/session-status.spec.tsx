@@ -1,6 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactElement } from "react";
+import {
+  calendarDays,
+  type MarketClockView,
+  marketClockView,
+} from "../../../src/domain/market-clock";
+import { resetMarketClock } from "../../src/live/market-clock";
 import { SessionStatus } from "../../src/shell/session-status";
 import statusCss from "../../src/styles/session-status.css?raw";
 
@@ -45,12 +51,23 @@ const alarmed = {
 
 let ops: unknown = healthy;
 let opsFails = false;
+/** `GET /api/market/clock`'s answer; undefined → the route fails and the shell reads the table. */
+let marketClock: MarketClockView | undefined;
 const realFetch = globalThis.fetch;
 beforeEach(() => {
   ops = healthy;
   opsFails = false;
+  marketClock = undefined;
+  resetMarketClock();
   globalThis.fetch = ((input: RequestInfo | URL) => {
     const url = String(input);
+    if (url.includes("/api/market/clock")) {
+      return Promise.resolve(
+        marketClock
+          ? new Response(JSON.stringify(marketClock), { status: 200 })
+          : new Response("down", { status: 502 }),
+      );
+    }
     if (url.includes("/api/ops-status")) {
       return Promise.resolve(
         opsFails
@@ -327,5 +344,56 @@ describe("the status line beside a fleet alarm on a 390 phone", () => {
     mount(SATURDAY);
     await screen.findByText("fleet status unknown");
     expect(shownWords()).toBe("Market closed | opens Mon 9:30 | fleet status unknown");
+  });
+});
+
+// #8248 PR 2: the line draws the broker's calendar from GET /api/market/clock, and the opened
+// panel says a half day in words, and when the table answered instead.
+describe("the status line on the broker's hours", () => {
+  // Thanksgiving week 2026 as Alpaca's calendar lists it: Thursday absent, Friday a 1:00 PM close.
+  const days = calendarDays(
+    [
+      ["2026-11-23", "16:00"],
+      ["2026-11-24", "16:00"],
+      ["2026-11-25", "16:00"],
+      ["2026-11-27", "13:00"],
+      ["2026-11-30", "16:00"],
+    ].map(([date, close]) => ({ date, open: "09:30", close })),
+  );
+  const brokerAt = (iso: string): MarketClockView =>
+    marketClockView(days ?? [], new Date(iso), "broker");
+  const panel = () => screen.getByRole("region", { name: "Market clock and fleet health" });
+  const TABLE = /exchange's published table/;
+
+  it("pinned at Thanksgiving 10:00 ET: closed, next open Fri 9:30 ET, Friday's half day said", async () => {
+    marketClock = brokerAt("2026-11-26T15:00:00Z");
+    mount("2026-11-26T15:00:00Z");
+    fireEvent.click(line());
+    // the broker's answer has landed once the table's source line is gone
+    await waitFor(() => expect(within(panel()).queryByText(TABLE)).toBeNull());
+    expect(within(panel()).getByText("Fri Nov 27 · 9:30 ET")).toBeInTheDocument();
+    expect(within(panel()).getByText("Half day Fri: closes 1:00 PM ET")).toBeInTheDocument();
+    fireEvent.click(line());
+    expect(widgetWords()).toBe("Market closed | opens Fri 9:30");
+  });
+
+  it("pinned at the half day's 12:30 ET: 30 minutes left, the track ends at 1:00", async () => {
+    marketClock = brokerAt("2026-11-27T17:30:00Z");
+    mount("2026-11-27T17:30:00Z");
+    expect(widgetWords()).toBe("Market open | 30m left today");
+    fireEvent.click(line());
+    await waitFor(() => expect(within(panel()).queryByText(TABLE)).toBeNull());
+    expect(within(panel()).getByText("Half day: closes 1:00 PM ET")).toBeInTheDocument();
+    expect(panel().querySelector(".session-ticks")).toHaveTextContent("→ 1:00 ET");
+  });
+
+  it("says the hours are the exchange's published table when the broker's read fails", async () => {
+    mount("2026-11-26T15:00:00Z");
+    fireEvent.click(line());
+    expect(within(panel()).getByText(TABLE)).toBeInTheDocument();
+    // the table knows Thanksgiving too: the clock still never guesses open
+    expect(within(panel()).getByRole("timer")).toHaveAccessibleName(
+      "Market closed, opens Fri 9:30 ET",
+    );
   });
 });

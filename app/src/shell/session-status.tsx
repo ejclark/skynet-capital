@@ -1,8 +1,9 @@
 import { type KeyboardEvent, type ReactElement, useId, useRef, useState } from "react";
 import {
-  marketSession,
+  halfDayLine,
   nextOpenLabel,
   sessionSentence,
+  sourceLine,
   statusLineCue,
 } from "../live/market-session";
 import { FleetHealth, useFleet } from "./fleet-health";
@@ -11,7 +12,7 @@ import {
   SessionTrack,
   SessionWords,
   sessionTrackStyle,
-  useNow,
+  useMarketSession,
 } from "./market-session";
 
 /**
@@ -37,14 +38,18 @@ import {
  * alarm crowds a phone bar, the widget steps aside for the market's one word (`statusLineCue`)
  * beside its own mark, so its state never rides on hue.
  *
+ * The panel also carries what a glance can't (#8248): a half day in words ("Half day: closes 1:00 PM
+ * ET") and, when the broker's calendar didn't answer, that the hours are the exchange's published
+ * table — one tap down, so the 390px line stays the state word and the time.
+ *
  * The panel does not close on a click elsewhere, on purpose: it sits in the flow, so closing it on
  * pointerdown would pull the page up under the finger mid-tap. The line toggles it, Escape closes
  * it from inside, and the shell remounts it per route (`__root.tsx`), so a new page starts folded.
  */
 export function SessionStatus({ now }: { readonly now?: Date }): ReactElement {
-  const ticking = useNow();
-  const at = now ?? ticking;
-  const view = marketSession(at);
+  const view = useMarketSession(now);
+  const halfDay = halfDayLine(view);
+  const source = sourceLine(view);
   const fleet = useFleet();
   const [open, setOpen] = useState(false);
   const panelId = useId();
@@ -117,11 +122,13 @@ export function SessionStatus({ now }: { readonly now?: Date }): ReactElement {
           aria-label="Market clock and fleet health"
           onKeyDown={onKeyDown}
         >
-          <MarketSession now={at} />
+          <MarketSession view={view} />
           <p className="status-panel-row">
             <span>Next open</span>
-            <span className="num">{nextOpenLabel(at)}</span>
+            <span className="num">{nextOpenLabel(view)}</span>
           </p>
+          {halfDay ? <p className="status-panel-row status-panel-note">{halfDay}</p> : null}
+          {source ? <p className="status-panel-row status-panel-note">{source}</p> : null}
           <FleetHealth fleet={fleet} />
         </section>
       ) : null}

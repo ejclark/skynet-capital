@@ -5,7 +5,6 @@ import { useRef, useState } from "react";
 import { parseOccSymbol } from "../../../src/trading/option-symbols";
 import { useOrderFill } from "../live/desk-events";
 import { manageSearch } from "../live/manage-handoff";
-import { marketSession } from "../live/market-session";
 import {
   followRow,
   isLive,
@@ -19,7 +18,7 @@ import {
 import type { DeskOrderRow, OrderChange } from "../live/orders";
 import { useFillFlare } from "./fill-flare";
 import { GateHead } from "./gate-frame";
-import { useNow } from "./market-session";
+import { useMarketSession } from "./market-session";
 import { sellSharesSearch } from "./trade-search";
 import { ModifyForm } from "./working-order-modify";
 import { deskOrdersQuery, FALLBACK_POLL_MS, RowActions, useOrderActions } from "./working-orders";
@@ -76,7 +75,7 @@ export function OrderReceipt({
   const row = followRow(orders.data, now.orderId);
   const fill = useOrderFill(deskId, row?.id ?? now.orderId);
   useFillFlare(fill);
-  const market = marketSession(useNow());
+  const market = useMarketSession();
   const { pendingId, notice, cancel, replace } = useOrderActions(deskId);
   /** The gate took the member's cancel; until the broker confirms it the card says so, and offers
    *  no second cancel. */

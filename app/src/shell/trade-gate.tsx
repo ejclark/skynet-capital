@@ -1,7 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { FocusEvent, ReactElement } from "react";
 import { useEffect, useId, useState } from "react";
-import { marketSession } from "../live/market-session";
 import type { PlayInfo } from "../live/options";
 import type { SentOrder } from "../live/order-receipt";
 import { quoteQuery } from "../live/quote-query";
@@ -25,7 +24,7 @@ import {
 } from "../live/ticket";
 import { DisarmNote, GateHead, keepFocus } from "./gate-frame";
 import { LockedPanel } from "./locked-panel";
-import { useNow } from "./market-session";
+import { useMarketSession } from "./market-session";
 import { OrderReceipt } from "./order-receipt";
 import { QuoteHeader } from "./quote-header";
 import { RecentOrdersStrip } from "./recent-orders-strip";
@@ -245,7 +244,7 @@ export function TradeGate({
     onCarry?.(orderSent ? undefined : carryAcrossSide(fields, priced));
   }, [onCarry, orderSent, fields, priced]);
   /** The topbar's own clock (#6257): the order-type note says which open a closed market waits for. */
-  const market = marketSession(useNow());
+  const market = useMarketSession();
   const symId = useId();
   const qtyId = useId();
   const sideId = useId();

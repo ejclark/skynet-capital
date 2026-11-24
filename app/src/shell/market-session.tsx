@@ -1,4 +1,6 @@
 import { type CSSProperties, type ReactElement, useEffect, useState } from "react";
+import { cachedDateTimeFormat } from "../../../src/domain/intl-format";
+import { useMarketClock } from "../live/market-clock";
 import {
   formatMinutes,
   type MarketSessionView,
@@ -19,9 +21,9 @@ import {
  *     labels — "the bigger version in the after, line tapped widget", kept as it was.
  *
  * Deliberately NOT here: a "decisions today" counter (rejected in review as overly prescriptive).
- * The clock is local (`live/market-session.ts`), not a query: the session is a pure function of
- * the time, so a 30s tick is all it needs. The knob moves without transition, so no motion
- * budget is spent on a clock.
+ * The DAYS are the broker's calendar, read once for the shell (`live/market-clock.ts`, #8248); the
+ * session within a day is a pure function of the time, so a 30s tick is all the clock needs. The
+ * knob moves without transition, so no motion budget is spent on a clock.
  */
 
 const TICK_MS = 30_000;
@@ -34,6 +36,27 @@ export function useNow(): Date {
     return () => window.clearInterval(id);
   }, []);
   return now;
+}
+
+/** The viewer's own time zone, or undefined when it can't be read — the clock then says ET alone. */
+export function viewerZone(): string | undefined {
+  try {
+    return cachedDateTimeFormat("en-US", {}).resolvedOptions().timeZone || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Where the market stands, on the shell's one read of the broker's hours: the status line, the
+ * trade form's notes and the receipt all call this, so they can never tell two different clocks.
+ * `now` pins the instant (specs, a parent's tick); omitted, the 30s tick.
+ */
+export function useMarketSession(now?: Date): MarketSessionView {
+  const ticking = useNow();
+  const at = now ?? ticking;
+  const clock = useMarketClock(at);
+  return marketSession(at, clock, viewerZone());
 }
 
 const pct = (x: number) => `${(x * 100).toFixed(2)}%`;
@@ -93,10 +116,17 @@ export function SessionTrack({ view }: { readonly view: MarketSessionView }): Re
   );
 }
 
-/** The opened clock — the bigger version, in the status line's panel. */
-export function MarketSession({ now }: { readonly now?: Date }): ReactElement {
+/** The opened clock — the bigger version, in the status line's panel. Handed the status line's
+ *  own view, so the two never read different days; alone, it reads the table at `now`. */
+export function MarketSession({
+  now,
+  view: given,
+}: {
+  readonly now?: Date;
+  readonly view?: MarketSessionView;
+}): ReactElement {
   const ticking = useNow();
-  const view = marketSession(now ?? ticking);
+  const view = given ?? marketSession(now ?? ticking);
 
   return (
     <div
@@ -112,7 +142,7 @@ export function MarketSession({ now }: { readonly now?: Date }): ReactElement {
       <div className="session-track-wrap" aria-hidden="true">
         <SessionTrack view={view} />
         <div className="session-ticks">
-          <span>9:30</span>
+          <span>{view.openLabel}</span>
           <span>
             <span className="session-power-label">power hour</span> → {view.closeLabel} ET
           </span>

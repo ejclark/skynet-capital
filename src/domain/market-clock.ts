@@ -239,7 +239,9 @@ export function marketClockView(
     ...(live ? { phase: live.phase, phaseUntil: new Date(live.phaseUntil).toISOString() } : {}),
     ...(nextOpenAt ? { nextOpenAt } : {}),
     ...(nextCloseAt ? { nextCloseAt } : {}),
-    days: listed.map(servedDay),
+    // Today's session stays listed after its close (#8248 PR 2): the shell reads "today is absent"
+    // as "today is not a session", so dropping a closed one would draw a trading day as a holiday.
+    days: days.filter((d) => d.date >= newYorkDate(now) || d.closeAt > t).map(servedDay),
   };
 }
 

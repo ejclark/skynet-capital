@@ -1,4 +1,5 @@
 import { type ReactElement, useEffect, useState } from "react";
+import { useMarketClock } from "../live/market-clock";
 import { marketSession } from "../live/market-session";
 import type { ChainQuoteCoverage } from "../live/options";
 
@@ -136,7 +137,7 @@ export function ChainAsOf({
 }): ReactElement {
   const ticking = useTick();
   const at = now ?? ticking;
-  const session = marketSession(at).state;
+  const session = marketSession(at, useMarketClock(at)).state;
   const view = chainAsOf(quotes, at, session === "open" || session === "power");
   return (
     <div className="chain-as-of" data-state={view.state} role="status" aria-live="polite">

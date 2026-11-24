@@ -1,7 +1,7 @@
 import { brokerStatusState } from "../../../src/server/desk-orders-view";
 import { humanizeOptionSymbol } from "../../../src/trading/option-symbols";
 import type { DeskOrderEvent } from "./desk-events";
-import { type MarketSessionView, waitsForOpen } from "./market-session";
+import { formatCountdown, type MarketSessionView, waitsForOpen } from "./market-session";
 import type { DeskOrderRow, DeskOrderState, DeskOrders } from "./orders";
 import { money, orderTypeLabel, tifLabel } from "./ticket";
 
@@ -252,9 +252,15 @@ export function receiptNote(read: ReceiptRead, market: MarketSessionView): strin
     case "replaced":
       return "The broker cancels the old order and answers with the changed one — this updates when it does.";
     default: {
+      // The broker's next open, the viewer's own time beside it, and the time left until it,
+      // re-read on the clock's 30s tick (#8248 criterion 11).
       const open = waitsForOpen(market);
+      const left =
+        market.minutesToOpen !== undefined
+          ? `, ${formatCountdown(market.minutesToOpen)} from now`
+          : "";
       return open
-        ? `Queued — nothing fills before ${open}.`
+        ? `Queued — nothing fills before ${open}${left}.`
         : "Working at the paper broker — this updates the moment it fills.";
     }
   }

@@ -209,7 +209,20 @@ describe("the note", () => {
     receiptNote(read(order, r, fill), market);
 
   it("says queued, with the open it waits for, while the market is closed and nothing filled", () => {
-    expect(note(undefined, closed)).toBe("Queued — nothing fills before the Tue 9:30 ET open.");
+    expect(note(undefined, closed)).toBe(
+      "Queued — nothing fills before the Tue 9:30 ET open, 13h 30m from now.",
+    );
+  });
+
+  it("names a viewer's own time beside the broker's open and counts down to it (#8248)", () => {
+    const thanksgiving = marketSession(
+      new Date("2026-11-26T15:00:00Z"),
+      undefined,
+      "America/Denver",
+    );
+    expect(note(undefined, thanksgiving)).toBe(
+      "Queued — nothing fills before the Fri 9:30 ET open (7:30 AM MST), 23h 30m from now.",
+    );
   });
 
   it("never says 'simulated fill' in session before a source carries a fill", () => {
