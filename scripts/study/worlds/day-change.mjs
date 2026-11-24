@@ -16,12 +16,15 @@ export const DAY_CHANGE_SLACK = 1;
 
 /** Each participant's header day change, the sum of its rows', and what the input declares apart. */
 export function dayChangeRows(book) {
-  return book.participants.map((p) => {
-    const header = p.equity - (book.lastEquity?.[p.id] ?? Number.NaN);
-    const rows = p.positions.reduce((s, x) => s + x.marketValue - x.quantity * x.lastdayPrice, 0);
-    const declared = book.closedToday?.[p.id] ?? 0;
-    return { id: p.id, header, rows, declared, gap: header - rows - declared };
-  });
+  // An account whose read failed has no header to hold to its rows: production shows the failure.
+  return book.participants
+    .filter((p) => !p.error)
+    .map((p) => {
+      const header = p.equity - (book.lastEquity?.[p.id] ?? Number.NaN);
+      const rows = p.positions.reduce((s, x) => s + x.marketValue - x.quantity * x.lastdayPrice, 0);
+      const declared = book.closedToday?.[p.id] ?? 0;
+      return { id: p.id, header, rows, declared, gap: header - rows - declared };
+    });
 }
 
 /** The participants whose header and rows disagree by a dollar or more beyond what is declared. */

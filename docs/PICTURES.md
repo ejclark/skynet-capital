@@ -123,9 +123,10 @@ _The door, in ink mode with its second layer (rules 18 and 11; both Eric's calls
 new path thick and declared first (it lands left), the old path one dotted lane declared last (it
 lands right); the fork asks a question and wears the gold, the cross-head says no, the double circle
 says done, the tense lives in the box; every node a bold headline and one line of fact, broken by
-hand so the drawing stays as narrow as it was without them (rule 13's number: 15.7 px on a phone
-before the second layer, 15.6 px with it; the first draft with three fact lines measured 10.4 px and
-was reflowed). No edge labels. Drop the four colour lines for the plain dress; never mix in the
+hand so the drawing stays as narrow as it was without them (rule 13's number: 12.8 px on a phone
+with the second layer, in the Verdana stand-in the renderer embeds; the 15.7 px before it and 15.6 px
+with it first on record, and the 10.4 px of the first draft with three fact lines, were read off a
+Times fallback, so compare them with each other, not with 12.8). No edge labels. Drop the four colour lines for the plain dress; never mix in the
 teal snippet._
 
 For a page with room, the same door with boxes of detail beside the spine (rule 18, shape A). It
@@ -336,8 +337,8 @@ dotted, phone direction, and labels a friend with no context reads without stopp
     defect beside the decision · three coloured boxes · the fork gets the accent, the rest is paper.
 13. **Narrow the drawing first; then the font.** Text on a phone is 390 ÷ drawing width × font,
     and `npm run shoot:mermaid-pairs` prints that number per side on every shot line (`phone before
-    15.7px …, after 15.6px …`, the screen count beside each), flagging anything under 12 px · 10.6 px
-    effective on a 720 px drawing ·
+    12.8px …, after 12.8px …`, the screen count beside each, then the face that measured it),
+    flagging anything under 12 px · 10.6 px effective on a 720 px drawing ·
     lines of about 16 characters,
     `config: flowchart: { nodeSpacing: 24, rankSpacing: 36, padding: 10 }`, and
     `classDef default font-size:20px,font-family:Verdana`, the one font lever that works on
@@ -480,6 +481,23 @@ flowchart TD
   gallery comment from. Scale 1 fits the 100KB budget; `--scale 1.5` is the crisp shareable set;
   `--layout stacked` is the phone read. **The pairs file for a showcase lives on its issue, not in
   the tree** — the only committed one is the spec fixture, `tests/fixtures/mermaid-pairs/example.json`.
+- **The owned look, on trial: `--look ink --face serif|sans`** (plan #3981, slice 1). The after
+  side of each pair (or any side whose source carries `%% look: ink`) is drawn by our renderer:
+  the ink snippet as a theme, an embedded face (`scripts/shoot/fonts/`, never a fallback; a face
+  that does not load stops the run), depth GitHub will not draw. Each such side is also written
+  alone as `<id>-<side>-ink-<face>.jpg`, the image a PR frame would carry, with rule 13's number
+  for its own width. Flowcharts only, ink's scope. Not yet a PR-frame lane: that is slice 3, after
+  Eric judges the image beside the live block on his phone.
+- **The face rule 13's number is measured in** (plan #3981, slice 2). The cloud container has no
+  Verdana (`fc-list`: DejaVu, Liberation, Bitstream Charter, FreeSerif), and Chromium drew a narrow
+  Times fallback for `font-family:Verdana` without saying so; every number on record before
+  2026-11-24 came from it, which is why the door fell from 15.6 px to 12.8 px with no change to the
+  diagram. The pair renderer now embeds DejaVu Sans under the name "Verdana" for every live side
+  (`scripts/shoot/mermaid-pairs-live.mjs`), proves it loaded before drawing (a face that does not load
+  stops the run, exit 5), and names it on the shot line and in the sidecar's `liveFace`. It is a
+  Verdana-width stand-in, not Verdana: the number is the stand-in's, and real Verdana is not measured
+  here. A source that never names Verdana (Mermaid's own default stack leads with Trebuchet MS) is
+  drawn in the same stand-in, which a phone may not be.
 
 **The fold is not guaranteed to survive even through `ship.sh`/REST — always re-fetch and check.**
 The GitHub **MCP** write tools strip `<details>`/`<summary>` outright while leaving `<img>` and

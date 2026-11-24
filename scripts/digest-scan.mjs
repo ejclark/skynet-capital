@@ -13,6 +13,7 @@
 //   node scripts/digest-scan.mjs --needs-you   # the "Needs you" list, from the assignment query
 //   node scripts/digest-scan.mjs --needs-session  # the "needs a session" line, from the same plan()
 //   node scripts/digest-scan.mjs --learning    # the unlearned-incident line for "Noise absorbed"
+//   node scripts/digest-scan.mjs --pictures   # the "The picture" slot: merged PRs' picture blocks (comms-scan)
 //   node scripts/digest-scan.mjs --stuck       # the green-but-not-merging PR line (stuck-pr-scan.mjs)
 //   node scripts/digest-scan.mjs --member-filings  # the unseen-member-filings line (feedback-scan.mjs)
 //   ... --today=YYYY-MM-DD                     # deterministic date override for tests
@@ -78,6 +79,14 @@ const HEARTBEAT_DAYS = 7;
 export const QUIET_HOURS = 24;
 
 const REQUIRED_SECTIONS = ["## Needs you", "## Headlines", "## Noise absorbed"];
+// The picture slot (#3748 slice 7c) lands advisory-first: a digest dated on or after this day that
+// lacks the section is reported, never failed, until two digests on cadence carry it and the
+// ratchet moves it into REQUIRED_SECTIONS (docs/IDEAS.md, "Digest picture slot"). Older digests
+// are shipped history and are never rewritten.
+const ADVISORY_SECTION = "## The picture";
+const ADVISORY_FROM = "2026-11-25";
+/** Digests carrying the slot before the ratchet is due — the number the template and skill name. */
+export const RATCHET_AFTER = 2;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 const arg = (name) => {
@@ -389,6 +398,20 @@ function quietLine(s) {
   return `${base}: ready to start ${ready}, research due ${research}${why}`;
 }
 
+/** Digests that should carry the advisory picture slot and do not. Pure. */
+export function missingPictureSlot(files, readText) {
+  return files.filter(
+    (f) => f.slice(0, 10) >= ADVISORY_FROM && !readText(f).includes(ADVISORY_SECTION),
+  );
+}
+
+/** Digests dated from the advisory day on that carry the slot. Pure. */
+export function carryingPictureSlot(files, readText) {
+  return files.filter(
+    (f) => f.slice(0, 10) >= ADVISORY_FROM && readText(f).includes(ADVISORY_SECTION),
+  );
+}
+
 function validate() {
   const problems = [];
   for (const f of digestFiles()) {
@@ -398,6 +421,18 @@ function validate() {
     for (const section of REQUIRED_SECTIONS) {
       if (!text.includes(section)) problems.push(`docs/digests/${f}: missing "${section}"`);
     }
+  }
+  const readDigest = (n) => readFileSync(join(DIGEST_DIR, n), "utf8");
+  const carrying = carryingPictureSlot(digestFiles(), readDigest).length;
+  if (carrying >= RATCHET_AFTER) {
+    console.log(
+      `· ratchet due: ${carrying} digests carry "${ADVISORY_SECTION}" — move it into REQUIRED_SECTIONS.`,
+    );
+  }
+  for (const f of missingPictureSlot(digestFiles(), readDigest)) {
+    console.log(
+      `· advisory: docs/digests/${f} has no "${ADVISORY_SECTION}" slot (not yet required).`,
+    );
   }
   for (const p of problems) console.error(`✗ ${p}`);
   if (problems.length) {
@@ -447,45 +482,61 @@ async function needsYouReport() {
   return [...lines, unseenLine(unseen, why)].join("\n");
 }
 
+/** Run a sibling scan and return its stdout, for the flags that only forward to one. */
+const scan = (file, args, maxBuffer = 1024 * 1024) =>
+  execFileSync("node", [join(ROOT, "scripts", file), ...args], {
+    cwd: ROOT,
+    encoding: "utf8",
+    maxBuffer,
+  });
+
+/**
+ * The output of the flags that forward to a sibling scan (`--learning`, `--pictures`, `--stuck`,
+ * `--member-filings`), or null when none was asked for. `--pictures` forwards to comms-scan, which
+ * owns the git-log read (and imports this file).
+ */
+function forwardedLine() {
+  if (has("learning"))
+    return `${learningLine(JSON.parse(scan("incident-scan.mjs", ["--count"])))}\n`;
+  if (has("pictures")) {
+    const since = arg("since") ?? latestDigestDate();
+    return scan(
+      "comms-scan.mjs",
+      ["--pictures", "--offline", ...(since ? [`--since=${since}`] : [])],
+      32 * 1024 * 1024,
+    );
+  }
+  if (has("stuck"))
+    return `${stuckLine(JSON.parse(scan("stuck-pr-scan.mjs", ["--count"])).stuck)}\n`;
+  if (has("member-filings")) {
+    const out = scan("feedback-scan.mjs", ["--json"], 8 * 1024 * 1024);
+    return `${memberFilingsLine(JSON.parse(out).unseen)}\n`;
+  }
+  return null;
+}
+
+/** A missing docs/digests/ is a named state, not a silent pass (stderr under --due: its stdout is JSON). */
+function noteAbsentDigests() {
+  if (existsSync(DIGEST_DIR)) return;
+  (has("due") ? console.error : console.log)(
+    "· docs/digests/ absent — no digest yet; nothing to validate, next one is due (no-digest).",
+  );
+}
+
 async function main() {
   const nowMs = arg("now") ? Date.parse(arg("now")) : Date.now();
   if (!Number.isFinite(nowMs)) throw new Error("digest-scan: --now must be an ISO instant.");
   const today = arg("today") ?? new Date(nowMs).toISOString().slice(0, 10);
   if (!DATE_RE.test(today)) throw new Error("digest-scan: --today must be YYYY-MM-DD.");
-  if (!existsSync(DIGEST_DIR)) {
-    // stderr under --due, whose stdout is the JSON the Routine parses.
-    (has("due") ? console.error : console.log)(
-      "· docs/digests/ absent — no digest yet; nothing to validate, next one is due (no-digest).",
-    );
-  }
+  noteAbsentDigests();
 
   if (has("validate")) {
     validate();
     return;
   }
-  if (has("learning")) {
-    const out = execFileSync("node", [join(ROOT, "scripts/incident-scan.mjs"), "--count"], {
-      cwd: ROOT,
-      encoding: "utf8",
-    });
-    console.log(learningLine(JSON.parse(out)));
-    return;
-  }
-  if (has("stuck")) {
-    const out = execFileSync("node", [join(ROOT, "scripts/stuck-pr-scan.mjs"), "--count"], {
-      cwd: ROOT,
-      encoding: "utf8",
-    });
-    console.log(stuckLine(JSON.parse(out).stuck));
-    return;
-  }
-  if (has("member-filings")) {
-    const out = execFileSync("node", [join(ROOT, "scripts/feedback-scan.mjs"), "--json"], {
-      cwd: ROOT,
-      encoding: "utf8",
-      maxBuffer: 8 * 1024 * 1024,
-    });
-    console.log(memberFilingsLine(JSON.parse(out).unseen));
+  const forwarded = forwardedLine();
+  if (forwarded !== null) {
+    process.stdout.write(forwarded);
     return;
   }
   if (has("needs-you")) {

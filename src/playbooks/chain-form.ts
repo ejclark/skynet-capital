@@ -29,6 +29,7 @@
  *
  * Paper only and shadow only: a chain built here is a record; it trades nothing (criterion 5).
  */
+import { DATE_RE } from "../domain/time.js";
 import { slugFromName } from "./authored-play-form.js";
 import {
   type ChainLink,
@@ -257,8 +258,6 @@ export const emptyChainForm = (): ChainForm => ({
   links: [{ from: "", on: "", date: "", to: "" }],
 });
 
-const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
-
 /** The blanks one link leaves, each said once, and a date not written year-month-day. */
 function blankRefusals(link: ChainLinkForm, i: number): ChainRefusal[] {
   const field = `link.${i}` as const;
@@ -269,7 +268,7 @@ function blankRefusals(link: ChainLinkForm, i: number): ChainRefusal[] {
     link.to === "" && "the playbook that takes over",
   ].filter((m): m is string => typeof m === "string");
   if (missing.length > 0) return [{ field, reason: `Pick ${missing.join(", ")}.` }];
-  if (link.on === "on-date" && !ISO_DAY.test(link.date)) {
+  if (link.on === "on-date" && !DATE_RE.test(link.date)) {
     return [{ field, reason: "Write the date as year-month-day, like 2027-01-15." }];
   }
   return [];

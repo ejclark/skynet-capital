@@ -5,10 +5,12 @@ import {
   actionRefusal,
   changeKind,
   displacement,
+  keyboardRefusal,
   landingScreens,
   lateScroll,
   lostness,
   matchesTarget,
+  NO_KEYBOARD,
   noVisibleEffect,
   scrollPath,
   scrollSplit,
@@ -101,6 +103,39 @@ describe("actionRefusal — the member acts only inside its own frame", () => {
     expect(actionRefusal({ kind: "type", text: "" }, frame)).toMatch(/text/);
     expect(actionRefusal({ kind: "zoom" }, frame)).toMatch(/unknown/);
     expect(actionRefusal({ kind: "give_up", why: "lost" }, frame)).toBeNull();
+  });
+});
+
+describe("keyboardRefusal — a phone types only into a focused field (#8126)", () => {
+  const phone = { hasTouch: true };
+  const desktop = { hasTouch: false };
+  const type = { kind: "type", text: "?" };
+  it("refuses phone typing with nothing editable focused, naming why", () => {
+    expect(keyboardRefusal(type, phone, { editable: false, what: "button#chip" })).toBe(
+      NO_KEYBOARD,
+    );
+    expect(keyboardRefusal(type, phone, null)).toBe(NO_KEYBOARD);
+  });
+  it("plays phone typing once a text field has focus", () => {
+    expect(keyboardRefusal(type, phone, { editable: true, what: "input#ask" })).toBeNull();
+  });
+  it("plays desktop typing whatever has focus, as a physical keyboard does", () => {
+    expect(keyboardRefusal(type, desktop, { editable: false, what: "body" })).toBeNull();
+  });
+  it("judges only typing: a key press or tap is not its business", () => {
+    expect(keyboardRefusal({ kind: "key", key: "Enter" }, phone, null)).toBeNull();
+    expect(keyboardRefusal({ kind: "tap", x: 1, y: 1 }, phone, null)).toBeNull();
+  });
+  it("counts the refusal on the trace as noKeyboard, and measures nothing else from it", () => {
+    const refused = {
+      refused: NO_KEYBOARD,
+      ms: 5,
+      action: type,
+      focused: "body",
+      findings: [] as [],
+    };
+    const m = taskMetrics([refused]);
+    expect([m.noKeyboard, m.steps, m.totalViews]).toEqual([1, 0, 0]);
   });
 });
 

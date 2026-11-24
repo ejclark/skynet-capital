@@ -1,0 +1,109 @@
+{
+  "area": "league",
+  "about": "The area config for one study round over the league (#8005 slice 5; docs/IA.md §5.7: everyone's standing and everyone's fills — the leaderboard with its match, field and compare, the Activity feed with booked P&L, and each account's public page they open). Read by scripts/study/round.mjs; everything area-specific lives here or in scripts/study/worlds/league-*. Worlds, all on bot-loop-today's league (the pin's Monday, the pin as corpus, two bots and their owners): league-today (the league as it stands), league-read-failed (the same day with the friend's own account unreadable at the instant: the field ranks the other three and says nothing of it, §5.7's 'fails open') and league-first-day (a member who linked a paper account this morning joins the field). Phone first: 7 of the 10 frames are phones. Members start where the app nav's Activity link lands, except those who come to the league from a league card's link to the full board. Census routes are links the league builds (a row's name, a row's Compare), never composed. `roles` is who each member is here, in plain words, read by the experts and the words pass instead of the cards (#5099), so it never quotes a card. No sealed key, framer or tasks yet: those come when the cross-feature round clears (#8005).",
+  "cutoff": "2026-11-23",
+  "tasksPer": 3,
+  "runs": 3,
+  "runsByWorld": { "league-read-failed": 2 },
+  "censusCap": 100,
+  "concurrency": 3,
+  "experts": 3,
+  "matrix": [
+    {
+      "member": "eric",
+      "world": "league-today",
+      "viewer": "eric",
+      "viewports": ["phone", "desktop"],
+      "start": "/app/activity"
+    },
+    {
+      "member": "eric",
+      "world": "league-read-failed",
+      "viewer": "eric",
+      "viewports": ["phone"],
+      "start": "/app/activity",
+      "note": "one account could not be read at the instant; the field ranks the rest and does not say so"
+    },
+    {
+      "member": "invited-friend",
+      "world": "league-today",
+      "viewer": "jordan",
+      "viewports": ["phone"],
+      "start": "/app/activity"
+    },
+    {
+      "member": "invited-friend",
+      "world": "league-read-failed",
+      "viewer": "jordan",
+      "viewports": ["phone"],
+      "start": "/app/activity",
+      "note": "their own account is the one that could not be read"
+    },
+    {
+      "member": "bot-watcher",
+      "world": "league-today",
+      "viewer": "casey",
+      "viewports": ["phone"],
+      "start": "/app/leaderboard?by=month",
+      "note": "owns nothing; starts where a league card's link to the full board lands"
+    },
+    {
+      "member": "phone-only",
+      "world": "league-today",
+      "viewer": "eric",
+      "viewports": ["phone"],
+      "start": "/app/activity"
+    },
+    {
+      "member": "returning-trader",
+      "world": "league-today",
+      "viewer": "eric",
+      "viewports": ["phone", "desktop"],
+      "start": "/app/activity"
+    },
+    {
+      "member": "first-timer",
+      "world": "league-first-day",
+      "viewer": "casey",
+      "viewports": ["desktop"],
+      "start": "/app/leaderboard?by=month"
+    }
+  ],
+  "roles": {
+    "eric": "Runs the league and owns one of its two bots; checks how everyone is doing against everyone else and what was traded today. On a phone when away, at a desk at home.",
+    "invited-friend": "A friend the owner invited, with one small account and a bot of their own; wants to know where they stand and what others are trading. On a phone.",
+    "bot-watcher": "Owns no account at all; follows the league's bots against its people the way a fan follows a table, and reads who traded what. On a phone.",
+    "phone-only": "Uses the app only on a phone, one-handed, a minute or two at a time.",
+    "returning-trader": "Has one paper account and some options vocabulary, and is back after some weeks away; wants to see what changed in the standings and who traded what while they were gone. Uses a phone and a desk.",
+    "first-timer": "Invited last week and linked a paper account this morning; owns no bot and has traded nothing yet. On a laptop."
+  },
+  "pages": [
+    "a table of every account in the league, bots and people alike, ranked by a figure the member picks: equity, the month's return, unrealized or realized gains, return on open positions",
+    "a running match between the league's bots and its people, with each side's totals",
+    "two accounts picked from the table and compared side by side",
+    "every account's trades, newest first, grouped by day, with filters by side, by bots or people, and by text",
+    "each account's booked gains and losses, side by side",
+    "one account's own public page: what it holds and where it stands in the league",
+    "where these pages send the member next: an account's own page from a row or a trade, and back"
+  ],
+  "census": [
+    { "world": "league-today", "viewer": "eric", "for": ["experts", "labels"] },
+    { "world": "league-today", "viewer": "jordan", "for": ["experts", "labels"] },
+    { "world": "league-today", "viewer": "casey", "for": ["experts", "labels"] },
+    { "world": "league-read-failed", "viewer": "jordan", "for": ["experts", "labels"] },
+    {
+      "world": "league-today",
+      "viewer": "eric",
+      "routes": ["/app/u/day-trader", "/app/leaderboard?by=month&a=sauron"],
+      "for": ["handoff", "labels"]
+    },
+    { "world": "league-first-day", "viewer": "casey", "for": ["labels"] }
+  ],
+  "thin": {
+    "member": "eric",
+    "world": "league-read-failed",
+    "viewport": "phone",
+    "task": 1,
+    "expertRoute": "/app/leaderboard"
+  }
+}

@@ -22,7 +22,7 @@
 // src/server/feedback-followup.ts). That last one is judged as a fresh filing, so a small ask that
 // readied itself cannot carry a large one past these checks in a follow-up. The judge and the two refuters each run on their OWN runner with a read-only token and
 // hand back one JSON blob as a job output; `--post` runs on a fresh runner, holds the App token, and
-// computes "clear" from the four checks itself, never from a session's summary (clear-path-flip.js's
+// computes "clear" from the checks itself, never from a session's summary (clear-path-flip.js's
 // rule). Every string a session wrote is flattened and capped before it is posted (`clean`), and the
 // flip comment is built here from the checks, so a session never authors free markdown under the
 // App's name. Sessions read only the thread `--fetch` filtered to repo members and bots (#2224).
@@ -37,6 +37,14 @@
 //     said no) → a plain note that it waits for a person's look, and no label: the member has
 //     nothing to answer, so `needs-info` would be a false promise.
 // Refusals and flips are recorded in the same ledger the daily flip keeps (flip-refusals.mjs).
+//
+// THE IA HOME, FIRST (#8005 slice 2). Every build names its IA home before it is built: a fifth
+// check, `placed`, records the docs/IA.md §5 group the filing extends ("no new place" for a fix
+// inside a screen that already has one), and fails when the ask adds a place no group holds — a
+// person's call (Eric places patterns), so such a filing never self-readies. A filing Moneypenny
+// matched to a known IA problem (`ia-<row>`, #8019) is not judged at all: it is evidence on that
+// row, whose plan owns the fix, so judging it as a new build would start a second fix beside the
+// plan (index.mjs's triageFeedbackDecision holds the same line for a coach-shaped filing).
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { planPosts, unescapeHtml } from "../clear-path-post.mjs";
@@ -49,12 +57,14 @@ import { isClaudeComment } from "./plan-claim.mjs";
 import { isHeldForRecheck, isRelayedFollowup } from "./reply-resume.mjs";
 import { workGate } from "./work-gate.mjs";
 
-export const CHECKS = ["criteria", "size", "noFork", "notBlocked"];
+export const CHECKS = ["criteria", "size", "noFork", "notBlocked", "placed"];
 /** The checks a member can fix by answering a question. The other two are a person's call. */
 export const MEMBER_ANSWERABLE = ["criteria", "size"];
 /** Dial positions this check runs under. `conserve` defers to the daily flip; `halt` runs nothing. */
 export const ASSESS_POSITIONS = ["normal", "surge"];
 const MEMBER_LABEL = /^member-/;
+/** A filing Moneypenny matched to a row of the IA ledger (docs/IA.md §10): evidence, not a build. */
+export const KNOWN_PROBLEM = /^ia-U\d+$/;
 
 // ─── pure core (specced in tests/scripts/moneypenny/triage-assess.spec.ts) ────────────────────────
 
@@ -71,6 +81,21 @@ const no = (reason) => ({ assess: false, reason });
  * fresh filing (the same outcome comment, the same labels). Only the app ends a body with the mark,
  * so a follow-up on a Backlog filing never re-rolls the judge.
  */
+/** Why this issue's own labels keep it out of an assessment on any event, or undefined. */
+function labelBar(number, names) {
+  const has = (n) => names.includes(n);
+  if (!has(LABELS.feedback.name)) return `#${number} is not a feedback filing`;
+  if (!names.some((n) => MEMBER_LABEL.test(n))) {
+    return `#${number} carries no member- label — not a member's filing`;
+  }
+  if (has(LABELS.plan.name)) return `#${number} is a plan — the plan lane's to flip`;
+  const row = names.find((n) => KNOWN_PROBLEM.test(n));
+  if (row) return `#${number} is evidence on known problem ${row.slice(3)} — its plan owns the fix`;
+  if (has(LABELS.ready.name)) return `#${number} is already ready`;
+  if (has(LABELS.inProgress.name)) return `#${number} is in progress`;
+  return undefined;
+}
+
 export function assessIntent(ctx, gate) {
   const issue = ctx?.payload?.issue;
   if (!issue) return no("no issue in the payload");
@@ -80,13 +105,8 @@ export function assessIntent(ctx, gate) {
   }
   const names = labelNames(issue.labels);
   const has = (n) => names.includes(n);
-  if (!has(LABELS.feedback.name)) return no(`#${issue.number} is not a feedback filing`);
-  if (!names.some((n) => MEMBER_LABEL.test(n))) {
-    return no(`#${issue.number} carries no member- label — not a member's filing`);
-  }
-  if (has(LABELS.plan.name)) return no(`#${issue.number} is a plan — the plan lane's to flip`);
-  if (has(LABELS.ready.name)) return no(`#${issue.number} is already ready`);
-  if (has(LABELS.inProgress.name)) return no(`#${issue.number} is in progress`);
+  const barred = labelBar(issue.number, names);
+  if (barred) return no(barred);
 
   let mode;
   if (ctx.eventName === "issues") {
@@ -126,12 +146,14 @@ export function assessIntent(ctx, gate) {
   return { assess: true, mode, number: issue.number, reason: `member ${mode} on #${issue.number}` };
 }
 
-/** Which checks failed, read from the judge's own evidence. Mirrors clear-path-flip.js. */
+/** Which checks failed, read from the judge's own evidence. Mirrors clear-path-flip.js, plus
+ *  `placed` (#8005) and a known-problem match that landed after the intent was read. */
 export function failedChecks(judged, mode = "filing") {
   if (!judged || typeof judged !== "object") return ["judge: no result"];
   const failed = CHECKS.filter((k) => judged.checks?.[k]?.pass !== true);
   if (judged.state && judged.state !== "open") failed.push("state");
   const labels = labelNames(judged.labels);
+  if (labels.some((l) => KNOWN_PROBLEM.test(l))) failed.push("evidence");
   if (labels.includes(LABELS.ready.name)) failed.push("ready");
   // In followup mode `needs-info` is the question being answered, not a blocker.
   const parked = parkedBy(labels).filter((l) => mode !== "followup" || l !== LABELS.needsInfo.name);
@@ -206,7 +228,7 @@ export function clean(text, max = 300) {
   return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
 }
 
-/** The flip comment, from the four checks alone. */
+/** The flip comment, from the checks alone — its `placed` row is the filing's recorded IA home. */
 export function flipComment(judged) {
   const rows = CHECKS.map((k) => `| ${k} | pass | ${clean(judged?.checks?.[k]?.evidence)} |`);
   return [
@@ -225,7 +247,7 @@ const checkTable = (judged) => {
     return `| ${k} | ${verdict} | ${clean(c?.evidence ?? "no evidence")} |`;
   });
   return [
-    "<details><summary>The four checks (docs/ISSUES.md → Who may flip it)</summary>",
+    "<details><summary>The checks (docs/ISSUES.md → Who may flip it, plus the IA home)</summary>",
     "",
     "| Check | Verdict | Evidence |",
     "|---|---|---|",
@@ -234,6 +256,14 @@ const checkTable = (judged) => {
     "</details>",
   ].join("\n");
 };
+
+// Never a promise of a fix (known-problems-tool.ts): 13 of the ledger's 17 rows had no plan when
+// this was written, so it says what happens IF a fix ships, not that one will.
+const EVIDENCE =
+  "**This matches a problem already on the list of known problems, so your filing counts " +
+  "there.** It is not built on its own: that problem is fixed as a whole, never one filing at a " +
+  "time. If a fix for it ships, this filing reads *Fixed — try it* in the app. Nothing is needed " +
+  "from you.";
 
 const QUEUED =
   "**Queued to build.** This filing passed the automatic check, so it is now in line. " +
@@ -258,6 +288,16 @@ export function planWrite(result, judged, mode = "filing") {
   }
   const entry = result.refuted[0] ?? result.notClear[0];
   const failed = entry?.failed ?? [];
+  if (failed.includes("evidence")) {
+    return {
+      kind: "evidence",
+      issue: entry.issue,
+      body: [EVIDENCE, "", FOOTER, ""].join("\n"),
+      // The member answered a question this check no longer needs answered.
+      remove: mode === "followup" ? [LABELS.needsInfo.name] : [],
+      add: [],
+    };
+  }
   const asks = (judged?.memberAsks ?? [])
     .slice(0, 3)
     .map((a) => clean(a))
@@ -321,6 +361,7 @@ export function liveSkip(issue, mode = "filing") {
   const names = labelNames(issue.labels);
   if (names.includes(LABELS.ready.name)) return "already carries ready";
   if (names.includes(LABELS.inProgress.name)) return "in progress";
+  if (names.some((n) => KNOWN_PROBLEM.test(n))) return "matched to a known problem since judging";
   const parked = parkedBy(names).filter((l) => mode !== "followup" || l !== LABELS.needsInfo.name);
   if (parked.length) return `parked since judging: ${parked.join(", ")}`;
   if (mode === "followup" && !names.includes(LABELS.needsInfo.name)) {

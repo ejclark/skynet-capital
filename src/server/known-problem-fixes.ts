@@ -5,29 +5,30 @@
  * row marked fixed in `docs/IA.md` §10. This reads both, so the Feedback section and Moneypenny's
  * member context can tell the member who asked and offer the fixed screen.
  *
- * One status read for every plan the member's matched filings point at, through the same cached
- * fetcher the Feedback badges use (five minutes, `feedback-status.ts`); nothing is read when no
- * filing carries a match. A failed read leaves a plan unread, so nothing reads as fixed that is
- * not.
+ * One read for every plan the member's matched filings point at, through `plan-fix-built.ts`,
+ * which asks whether each plan was BUILT, not merely closed (#8077: a plan closed as a duplicate or
+ * with its remainder relayed on read "shipped" to the badge and told the member "Fixed — try it").
+ * Nothing is read when no filing carries a match. A failed read leaves a plan unbuilt, so nothing
+ * reads as fixed that is not.
  */
 import { fixFor, fixPlansFor, type ProblemFix } from "../domain/known-problems.js";
 import type { FeedbackLogEntry } from "./feedback-log.js";
-import type { FetchFeedbackStatuses } from "./feedback-status.js";
+import type { FetchBuiltPlans } from "./plan-fix-built.js";
 
 export async function knownProblemFixes(
   filings: readonly Pick<FeedbackLogEntry, "issueNumber" | "match">[],
-  fetchStatuses: FetchFeedbackStatuses | undefined,
+  fetchBuiltPlans: FetchBuiltPlans | undefined,
 ): Promise<ReadonlyMap<number, ProblemFix>> {
   const matched = filings.filter((f) => f.match);
   if (matched.length === 0) return new Map();
   const plans = [...new Set(matched.flatMap((f) => (f.match ? fixPlansFor(f.match) : [])))];
-  const statuses =
-    fetchStatuses && plans.length > 0
-      ? await fetchStatuses(plans).catch(() => new Map<number, string>())
-      : new Map<number, string>();
+  const built =
+    fetchBuiltPlans && plans.length > 0
+      ? await fetchBuiltPlans(plans).catch(() => new Set<number>())
+      : new Set<number>();
   const fixes = new Map<number, ProblemFix>();
   for (const f of matched) {
-    const fix = fixFor(f.match, (plan) => statuses.get(plan) === "shipped");
+    const fix = fixFor(f.match, (plan) => built.has(plan));
     if (fix) fixes.set(f.issueNumber, fix);
   }
   return fixes;

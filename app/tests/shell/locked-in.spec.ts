@@ -97,6 +97,21 @@ describe("lockInFlag — what a close remembers as it is sent", () => {
     const sold = { ...CALL, quantity: "-3", returnPct: "+70.0%" };
     expect(lockInFlag(sold)).toBeUndefined();
   });
+
+  it("flags a written option with its stock's price clear of the strike, as the badge reads it (#7383)", () => {
+    // Sold 3 AMD $180 calls for $2.00 ($200 per contract); the stock at $150 is well clear of it.
+    const sold = { ...CALL, quantity: "-3", returnPct: "+70.0%" };
+    expect(lockInFlag(sold, 150)).toEqual({
+      fact: "70% of premium kept",
+      held: 3,
+      buys: [{ qty: 3, unitCost: 200 }],
+    });
+  });
+
+  it("never flags a written option whose stock has run through its strike, whatever the premium says", () => {
+    const sold = { ...CALL, quantity: "-3", returnPct: "+70.0%" };
+    expect(lockInFlag(sold, 185)).toBeUndefined();
+  });
 });
 
 describe("lockedIn — the fill of a flagged close, said with its reason", () => {

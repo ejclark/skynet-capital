@@ -11,6 +11,7 @@ import { GlossaryTerm } from "./glossary-term";
 import type { HoldingGreeks } from "./holding-decay";
 import { type LockInFlag, lockInFlag } from "./locked-in";
 import { BestWorstContent, EventContent, GreeksContent } from "./position-columns";
+import { useHeldSpot } from "./use-held-spot";
 
 /**
  * A DESK ROW, OPENED (#5071): what the ranked columns leave out, under the row's guidance line —
@@ -180,8 +181,10 @@ export function PositionRowOpen({
   const whyId = useId();
   const refusal = closeRefusal(position);
   const many = (position.lots?.length ?? 0) > 0;
-  // Taken from the whole row, where the Consider badge is, before any close shrinks it (#4609).
-  const lockIn = lockInFlag(position);
+  // Taken from the whole row, where the Consider badge is, before any close shrinks it (#4609); a
+  // sold option's badge is judged on its stock's price first, so it reads the same one (#7383).
+  const spot = useHeldSpot(deskId, position);
+  const lockIn = lockInFlag(position, spot);
   return (
     <div className="pos-open">
       {position.plainName ? <p className="pos-open-plain">{position.plainName}</p> : null}

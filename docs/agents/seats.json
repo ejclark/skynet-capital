@@ -656,10 +656,11 @@
       "status": "hired",
       "codeRoots": [
         "src/server/guidance-route.ts",
+        "src/server/guidance-market-read.ts",
         "src/server/guidance-pulse.ts",
         "src/server/guidance-market.ts"
       ],
-      "cite": "src/server/guidance-route.ts:40-56 and :148 \"its nearest ledger... feeds the levers below\"; src/server/guidance-pulse.ts:6-14"
+      "cite": "src/server/guidance-route.ts:18-33; src/server/guidance-market-read.ts:39-55 and :153 \"its nearest ledger... feeds the levers below\"; src/server/guidance-pulse.ts:6-14"
     },
     {
       "id": "campaigns",

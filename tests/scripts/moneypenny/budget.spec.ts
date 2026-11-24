@@ -133,7 +133,7 @@ describe("the audit step, run end to end with GitHub refusing every call", () =>
   let dir = "";
   afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
-  const runAudit = (said: string) => {
+  const runAudit = (said: string, args: string[] = ["--audit"]) => {
     dir = mkdtempSync(join(tmpdir(), "audit-budget-"));
     writeFileSync(join(dir, "gh"), `#!/bin/sh\necho "gh: ${said} (HTTP 403)" >&2\nexit 1\n`);
     writeFileSync(
@@ -150,7 +150,7 @@ describe("the audit step, run end to end with GitHub refusing every call", () =>
     };
     delete env.GITHUB_EVENT_PATH;
     delete env.GITHUB_STEP_SUMMARY;
-    return spawnSync("node", ["scripts/moneypenny/index.mjs", "--audit"], {
+    return spawnSync("node", ["scripts/moneypenny/index.mjs", ...args], {
       encoding: "utf8",
       env,
     });
@@ -168,5 +168,35 @@ describe("the audit step, run end to end with GitHub refusing every call", () =>
 
     expect(out.status).not.toBe(0);
     expect(out.stdout).not.toMatch(/audit skipped/);
+  });
+
+  // #6942, 2026-11-24: run 45304863363 died one step earlier, in `Run Moneypenny` (the router, no
+  // flag), on its first read of the open issue list. The peek that follows it reads the same way.
+  it("passes the router's push tick with one warning when the budget is spent", () => {
+    const out = runAudit("API rate limit exceeded for installation ID 157155153.", []);
+
+    expect(out.status).toBe(0);
+    expect(out.stdout).toMatch(/::warning::route skipped — this token's API budget is spent/);
+  });
+
+  it("still fails the router's push tick on a refusal that is not the budget", () => {
+    const out = runAudit("Bad credentials", []);
+
+    expect(out.status).not.toBe(0);
+    expect(out.stdout).not.toMatch(/route skipped/);
+  });
+
+  it("passes the retry-sweep peek with no has_next when the budget is spent", () => {
+    const out = runAudit("API rate limit exceeded for installation ID 157155153.", ["--peek-next"]);
+
+    expect(out.status).toBe(0);
+    expect(out.stdout).toMatch(/::warning::retry sweep peek skipped — this token's API budget/);
+    expect(out.stdout).not.toMatch(/retry sweep peek —/);
+  });
+
+  it("still fails the peek on a refusal that is not the budget", () => {
+    const out = runAudit("Bad credentials", ["--peek-next"]);
+
+    expect(out.status).not.toBe(0);
   });
 });

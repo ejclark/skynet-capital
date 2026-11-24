@@ -4,6 +4,9 @@
 import botLoopSteered from "./bot-loop-steered.mjs";
 import botLoopToday from "./bot-loop-today.mjs";
 import crossToday from "./cross-today.mjs";
+import { HOME_WORLDS } from "./home-worlds.mjs";
+import { LADDER_WORLDS } from "./ladder-worlds.mjs";
+import { LEAGUE_WORLDS } from "./league-worlds.mjs";
 import noAccount from "./no-account.mjs";
 import profileBadDay from "./profile-bad-day.mjs";
 import profileToday from "./profile-today.mjs";
@@ -23,4 +26,7 @@ export const WORLDS = [
   botLoopToday,
   botLoopSteered,
   ...RD_WORLDS,
+  ...LEAGUE_WORLDS,
+  ...LADDER_WORLDS,
+  ...HOME_WORLDS,
 ];

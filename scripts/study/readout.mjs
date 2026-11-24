@@ -51,12 +51,8 @@ import { findSessions, readJson, readJsonl } from "./round-files.mjs";
 import { CHAT_LOG } from "./world-chat.mjs";
 
 export const FRAME_CAP = 100 * 1024;
-/**
- * Frames shown per problem: its first three. An expert's finding can cite forty census frames, and
- * the cross-feature round's draft copied 196 (9.6MB) for ten problems, each a forty-column table on
- * a phone (#8005). The rest stay in the round's folder, named on the finding.
- */
-export const FRAMES_SHOWN = 3;
+/** The most evidence frames the page shows for one problem (see withFrames). */
+export const FRAMES_SHOWN = 4;
 const USAGE =
   "usage: readout.mjs --grade <grade.json> --round <dir> --study <name> --next-area <text> " +
   "--cost <text> [--owner-shot <path>] [--battle <file>] [--battle-reason <text>] " +
@@ -280,6 +276,9 @@ export function buildReadout(opts) {
       ? rootGroups.slice(0, ROOTS_TOP).map((g) => g.items[0])
       : ranked.slice(0, STRUCTURAL_TOP),
   );
+  // At most FRAMES_SHOWN a problem (its first two before/after pairs): an expert's lead problem
+  // can cite a whole batch, and the bot's-loop readout (2026-11-24) drew 24 frames in one row and
+  // copied 259 files (9MB) into the repo, unreadable on a phone; every frame stays in the round.
   const withFrames = (s) => ({
     ...s,
     frames: framed.has(s)

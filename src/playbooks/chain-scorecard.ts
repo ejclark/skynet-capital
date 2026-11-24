@@ -18,6 +18,7 @@
  * Pure and browser-safe (types only come from the replay); nothing here routes an order.
  */
 
+import { meanOrZero } from "../domain/mean.js";
 import { chainStart, type PlaybookChain } from "./chain.js";
 import type { ChainRun } from "./chain-replay.js";
 
@@ -69,8 +70,7 @@ export function chainPlaybooks(chain: PlaybookChain): readonly string[] {
 }
 
 /** Whole dollars: the replay's premiums are modeled, so cents would claim a precision it lacks. */
-const mean = (xs: readonly number[]): number =>
-  xs.length === 0 ? 0 : Math.round(xs.reduce((a, b) => a + b, 0) / xs.length);
+const meanDollars = (xs: readonly number[]): number => Math.round(meanOrZero(xs));
 
 /** Fold a chain's replay runs into its scorecard. `from`/`to` come from the tape the runs read. */
 export function scorecardOf(
@@ -84,7 +84,7 @@ export function scorecardOf(
       const own = r.links.find((l) => l.playbook === playbook);
       return own ? [own.result] : [];
     });
-    return { playbook, runs: owned.length, mean: owned.length > 0 ? mean(owned) : null };
+    return { playbook, runs: owned.length, mean: owned.length > 0 ? meanDollars(owned) : null };
   });
   return {
     shape: chainShape(chain),
@@ -92,7 +92,10 @@ export function scorecardOf(
     runs: runs.length,
     open: runs.filter((r) => r.status === "open").length,
     links,
-    total: { mean: mean(runs.map((r) => r.total)), won: runs.filter((r) => r.total > 0).length },
+    total: {
+      mean: meanDollars(runs.map((r) => r.total)),
+      won: runs.filter((r) => r.total > 0).length,
+    },
     ownership,
   };
 }

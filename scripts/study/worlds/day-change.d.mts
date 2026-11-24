@@ -4,6 +4,8 @@ export interface DayChangeBook {
   participants: {
     id: string;
     equity: number;
+    /** A broker read that failed (production's degraded row): no header to hold to its rows. */
+    error?: string;
     positions: { quantity: number; marketValue: number; lastdayPrice: number }[];
   }[];
   lastEquity?: Record<string, number>;
