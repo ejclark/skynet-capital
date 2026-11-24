@@ -11,9 +11,12 @@ let feedback: FeedbackIndex;
 let journal: JournalIndex;
 let answer: JournalAnswer;
 let posted: JournalPost[] = [];
+/** When true, the feedback read rejects (a deploy restart, a dropped network). */
+let feedbackDown = false;
 
 rstest.mock("../../src/live/feedback", () => ({
-  fetchFeedbackIndex: () => Promise.resolve(feedback),
+  fetchFeedbackIndex: () =>
+    feedbackDown ? Promise.reject(new Error("503")) : Promise.resolve(feedback),
 }));
 rstest.mock("../../src/live/journal", () => ({
   fetchJournal: () => (journal ? Promise.resolve(journal) : Promise.reject(new Error("down"))),
@@ -26,6 +29,7 @@ rstest.mock("../../src/live/moneypenny", () => ({ meetMoneypenny: () => Promise.
 
 beforeEach(() => {
   posted = [];
+  feedbackDown = false;
   feedback = {
     enabled: true,
     coachEnabled: false,
@@ -75,11 +79,9 @@ beforeEach(() => {
   answer = { ok: true, kind: "wish", url: "https://github.com/x/y/issues/42", number: 42 };
 });
 
-function mount() {
+function mount(client = new QueryClient({ defaultOptions: { queries: { retry: false } } })) {
   return render(
-    <QueryClientProvider
-      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
-    >
+    <QueryClientProvider client={client}>
       <JournalSection />
     </QueryClientProvider>,
   );
@@ -186,5 +188,51 @@ describe("JournalSection — the screen (#8190)", () => {
     await screen.findByRole("heading", { name: "Your journal" });
     await waitFor(() => expect(screen.getAllByText(/unreachable/).length).toBeGreaterThan(0));
     expect(screen.getByText(/Chart glitch/)).toBeInTheDocument();
+  });
+
+  // #8355: a failed READ must never take a member's unsent words with it.
+  it("keeps the draft, the composer and the last list when a background refetch fails", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    mount(client);
+    fireEvent.click(await screen.findByRole("button", { name: /Trade note/ }));
+    fireEvent.change(screen.getByLabelText("Symbol (optional)"), { target: { value: "QQQ" } });
+    fireEvent.change(screen.getByLabelText("What I learned"), { target: { value: "Size down." } });
+    feedbackDown = true;
+    await client.refetchQueries({ queryKey: ["feedback"] });
+    await screen.findByText(/couldn't refresh/);
+    expect(screen.queryByText("Your journal is unreachable.")).toBeNull();
+    expect(screen.getByLabelText("What I learned")).toHaveValue("Size down.");
+    expect(screen.getByText(/Chart glitch/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Your notes" })).toBeInTheDocument();
+    // The read recovers: the same composer, the same draft, the stale line gone.
+    feedbackDown = false;
+    await client.refetchQueries({ queryKey: ["feedback"] });
+    await waitFor(() => expect(screen.queryByText(/couldn't refresh/)).toBeNull());
+    expect(screen.getByRole("button", { name: /Trade note/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByLabelText("Symbol (optional)")).toHaveValue("QQQ");
+    expect(screen.getByLabelText("What I learned")).toHaveValue("Size down.");
+  });
+
+  it("keeps a sent wish's issue number when the refetch its send triggers fails", async () => {
+    mount();
+    const box = await screen.findByPlaceholderText("I wish it…");
+    fireEvent.change(box, { target: { value: "I wish for a calmer chart." } });
+    feedbackDown = true;
+    fireEvent.click(sendWish());
+    await screen.findByText(/Sent to the builders as issue #42/);
+    await screen.findByText(/couldn't refresh/);
+    expect(screen.getByText(/Sent to the builders as issue #42/)).toBeInTheDocument();
+  });
+
+  it("on a failed first load says the filings are unreachable but still lets a note be written", async () => {
+    feedbackDown = true;
+    mount();
+    await screen.findByText(/wishes and filings are unreachable/);
+    fireEvent.click(screen.getByRole("button", { name: /What happened/ }));
+    expect(screen.getByRole("heading", { name: "Your notes" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Write a wish or a note" })).toBeInTheDocument();
   });
 });
