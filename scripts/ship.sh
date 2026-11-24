@@ -335,15 +335,17 @@ $mm"
   # 5. A closing keyword closes its issue on merge WHEREVER it sits (#4509): #4496's Follow-ups
   #    bullet "#4315 — … Closes #3811." described a LATER PR and closed live plan #3811 mid-flight.
   #    The house format already says where intent lives — `Closes #N` / `Part of #N` in a Summary
-  #    bullet — so a keyword anywhere else, or one contradicting a `Part of`, fails. Fenced blocks
-  #    and inline code are skipped (GitHub links neither), so a body can still quote the syntax.
+  #    bullet — so a keyword anywhere else, or one contradicting a `Part of`, fails.
+  #    Code spans and fences are read like any other line (#8370): markdown links neither, but the
+  #    squash commit message is the body as PLAIN TEXT, and GitHub closes from the commit. #8310's
+  #    Follow-ups line quoted "`Closes #8256`" and closed its parent two seconds after merge, with
+  #    slice 2 unbuilt. Quote the syntax with a placeholder (`Closes #N`) — the pattern needs digits.
   local kw='\b(close[sd]?|fix(e[sd])?|resolve[sd]?):?[[:space:]]+([[:alnum:]_.-]+/[[:alnum:]_.-]+)?#[0-9]+'
   local prose; prose="$(awk '
-    /^[[:space:]]*```/ { fence = !fence; next }
-    fence { next }
-    /^## Summary/ { sum = 1; next }
-    /^## |^<details>/ { sum = 0 }
-    { gsub(/`[^`]*`/, ""); print (sum ? "S" : "O") NR ": " $0 }' "$f")"
+    /^[[:space:]]*```/ { fence = !fence }
+    !fence && /^## Summary/ { sum = 1; next }
+    !fence && /^## |^<details>/ { sum = 0 }
+    { print (sum ? "S" : "O") NR ": " $0 }' "$f")"
   local stray; stray="$(grep -iE "^O[0-9]+: .*$kw" <<<"$prose" | head -3 | sed -E 's/^O/line /' || true)"
   [ -z "$stray" ] || fail "closing keyword outside the Summary — GitHub closes that issue on merge wherever it sits. Move it to a Summary bullet if this PR finishes it; otherwise reword (\"finishes\", \"will close\"):
 $stray"

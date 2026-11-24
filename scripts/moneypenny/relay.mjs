@@ -39,7 +39,7 @@ import { isMain } from "../is-main.mjs";
 // specced from data in tests/scripts/moneypenny/relay.spec.ts.
 import { ghRestAll, sh, sleepSync, withRetry } from "./gh.mjs";
 import { ensureLabel, FOOTER, LABELS, labelNames } from "./labels.mjs";
-import { keywordIssuesOf } from "./pr-issues.mjs";
+import { keywordIssuesOf, REPO } from "./pr-issues.mjs";
 
 /** The labels that each mean "a remainder is written on this issue and nobody has built it".
  *  `needs-session` is here for the same reason as `next-slice`: it names WHO can pick the remainder
@@ -151,6 +151,19 @@ function statesRemainder(text) {
   return REMAINDER_TEXT.test(String(text ?? "").replace(HTML_COMMENT, " "));
 }
 
+/** Does this PR body say `Part of #n` — the house contract's mark of a NON-final slice?
+ *
+ *  #8370: #8310 said "Part of #8256 (slice 1 of 2)" in its Summary and quoted "`Closes #8256`" in a
+ *  Follow-ups line; GitHub closed #8256 from the plain-text squash commit, and reading the keyword
+ *  alone took #8310 for the last slice. When a body says both, the author's stated intent is the
+ *  `Part of`, and the keyword is the slip. Only `part of` counts: `slice 2 of #n` is how a final
+ *  slice can name itself too. */
+function saysPartOf(body, n) {
+  return new RegExp(String.raw`\bpart\s+of\b:?\s+(?:${REPO}|(?<![\w&/#]))#${n}\b`, "i").test(
+    String(body ?? ""),
+  );
+}
+
 /**
  * WAS THE REMAINDER BUILT BY THE PR THAT CLOSED THE ISSUE? Returns that PR's number, or null.
  *
@@ -191,7 +204,7 @@ export function finalSliceBy(issue) {
     const mergedMs = Date.parse(String(pr.pull_request.merged_at ?? ""));
     if (!Number.isFinite(mergedMs) || mergedMs > closedMs + 1000) return false;
     if (closedMs - mergedMs > CLOSE_WINDOW_MS) return false;
-    return keywordIssuesOf(pr.body ?? "").closes.includes(n);
+    return keywordIssuesOf(pr.body ?? "").closes.includes(n) && !saysPartOf(pr.body, n);
   });
   if (!closer) return null;
   if (statesRemainder(closer.source.issue.body)) return null;

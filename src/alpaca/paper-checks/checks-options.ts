@@ -50,7 +50,11 @@ export async function optionsExtendedHours(desk: Desk): Promise<CheckAnswer> {
       attempts: reads,
     };
   }
-  const contract = await pricedCall(desk, flagged, `expiration_date_gte=${etDate(desk.now())}`);
+  // Tomorrow or later, never today: the broker refuses an opening order on a contract expiring that
+  // day after its 15:15 ET cutoff, so a same-day pick in the 16:00-16:15 window would answer
+  // "refused" for the expiry-day rule, not for extended hours (#8374).
+  const after = shiftDate(etDate(desk.now()), 1);
+  const contract = await pricedCall(desk, flagged, `expiration_date_gte=${after}`);
   if (!contract) {
     return {
       outcome: "error",

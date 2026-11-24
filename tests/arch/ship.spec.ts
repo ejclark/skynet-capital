@@ -186,14 +186,40 @@ describe("ship checkbody — the picture/format contract", () => {
       expect(stderr).toContain("both 'Part of' and closed");
     });
 
-    it("passes keywords in Summary bullets, and quoted ones in code anywhere", () => {
+    it("passes keywords in Summary bullets, and the syntax quoted with a placeholder anywhere", () => {
       const { code } = run([
         "checkbody",
         body(
-          `${WAIVED}## Summary\n\n- Closes #4509 · Part of #3811\n\n<details>\n\n- write \`Closes #N\` in a Summary bullet\n\n\`\`\`\nResolves #10\n\`\`\`\n</details>\n`,
+          `${WAIVED}## Summary\n\n- Closes #4509 · Part of #3811\n\n<details>\n\n- write \`Closes #N\` in a Summary bullet\n\n\`\`\`\nResolves #<n>\n\`\`\`\n</details>\n`,
         ),
       ]);
       expect(code).toBe(0);
+    });
+
+    // #8370: #8310's Follow-ups line quoted "(writes `Closes #8256` when …)". Markdown links no
+    // code span, but the squash commit message is plain text — GitHub closed #8256 from the commit
+    // two seconds after merge, with slice 2 unbuilt. Code spans and fences protect nothing.
+    it.each([
+      ["inline code", "- the script writes `Closes #8256` when every row is answered\n"],
+      ["a fenced block", "```\nResolves #8256\n```\n"],
+    ])("refuses a real issue number quoted in %s below the fold (#8370)", (_, quoted) => {
+      const { code, stderr } = run([
+        "checkbody",
+        body(
+          `${WAIVED}## Summary\n\n- Part of #8256 (slice 1 of 2)\n\n<details>\n\n### Follow-ups\n\n${quoted}</details>\n`,
+        ),
+      ]);
+      expect(code).toBe(1);
+      expect(stderr).toContain("closing keyword outside the Summary");
+    });
+
+    it("refuses `Part of #n` beside a code-quoted `Closes #n` in the Summary (#8370)", () => {
+      const { code, stderr } = run([
+        "checkbody",
+        body(`${WAIVED}## Summary\n\n- Part of #8256 · writes \`Closes #8256\` later\n`),
+      ]);
+      expect(code).toBe(1);
+      expect(stderr).toContain("both 'Part of' and closed");
     });
   });
 
