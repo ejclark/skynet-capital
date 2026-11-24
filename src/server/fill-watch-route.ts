@@ -86,7 +86,11 @@ async function serveRead(
   sendJson(res, 200, {
     available: reason === undefined,
     ...(reason ? { reason } : {}),
-    watching: watches.some((w) => w.orderId === orderId),
+    // Only a watch this caller armed: after a handover, the dispatcher drops the previous owner's
+    // watch unsent, so the new owner must not read it as theirs.
+    watching: watches.some(
+      (w) => w.orderId === orderId && w.destination.toLowerCase() === destination?.toLowerCase(),
+    ),
     ...(destination && !reason ? { destination } : {}),
   });
 }

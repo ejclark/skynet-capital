@@ -148,6 +148,16 @@ describe("/api/trade/alerts/fill-watch", () => {
     expect(watch?.link).toBe("https://configured.example/app/trade?desk=human-acct&section=orders");
   });
 
+  it("does not report a previous owner's watch as the caller's", async () => {
+    await store.saveWatch("human-acct", {
+      orderId: "ord-1",
+      destination: "previous-owner@x.com",
+      link: "https://app.example/app/trade?desk=human-acct&section=orders",
+      at: "2026-11-20T02:00:00.000Z",
+    });
+    expect(await read("ord-1")).toMatchObject({ available: true, watching: false });
+  });
+
   it("refuses another account's order", async () => {
     const answer = await arm({ participantId: "human-acct", orderId: "ord-1" }, config(), stranger);
     expect(answer.body).toEqual({
