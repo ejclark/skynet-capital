@@ -177,6 +177,15 @@ describe("the capsules", () => {
       proposalCapsule({ ...proposal, lesson: "exit status is lost in a pipe" }).body,
     ).toContain("LESSONS.md already names it");
   });
+
+  it("keeps a long lesson inside the lint's bullet cap, so it never refuses the run", () => {
+    // 2026-11-24: an 83-character lesson grew to a 147-character talking point and audit-file
+    // refused the whole run, so a surge audit's 3 confirmed findings sat unfiled.
+    const lesson =
+      "A check read a proxy as the outcome: job success, one lumped kind, or a page load.";
+    const item = { ...proposalCapsule({ ...proposal, lesson }), labels: ["feedback"] };
+    expect(lintAll([item])).toEqual([]);
+  });
 });
 
 describe("duplicates are commented, not refiled", () => {
