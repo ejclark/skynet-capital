@@ -66,6 +66,7 @@ import type {
   RotateResult,
 } from "./participant-service.js";
 import type { PlayMilestoneLedger } from "./play-milestone-ledger.js";
+import type { PracticeData } from "./practice-puzzle.js";
 import type { ProgressionService } from "./progression-service.js";
 import type { QuoteStreamPort } from "./quote-stream-hub.js";
 import type { SavedPositionsStore } from "./saved-positions-store.js";
@@ -124,6 +125,9 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * paper account (`alpaca-connect-wiring.ts`); omit and the chapter keeps the key-paste guide.
    */
   readonly alpacaConnect?: AlpacaConnect;
+  /** The newcomer puzzle's bars, on a house data login (#8250, `practice-puzzle.ts`). Omit and
+   *  the puzzle answers an honest note instead. */
+  readonly practiceData?: PracticeData;
   /**
    * Self-service credential rotation. When provided, `GET /rotate` serves a compact form and
    * `POST /rotate` swaps an EXISTING account's key/secret in place — the sanctioned path for

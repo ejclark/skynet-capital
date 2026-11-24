@@ -49,6 +49,8 @@ export interface StageProps {
   /** A `?desk=` that isn't the session's own, by name — see `DeskTicket`'s `notYours`. */
   readonly notYours?: string;
   readonly symbol: string;
+  /** `?shares=` (#8250): a practice pick's whole-share count, seeded into the share ticket. */
+  readonly initialShares?: number;
   readonly play: string;
   readonly strike: string;
   readonly expiration: string;
@@ -166,6 +168,7 @@ function Pane({
       code={play}
       onPreset={props.onPreset}
       initialSymbol={symbol || undefined}
+      {...(props.initialShares !== undefined ? { initialShares: props.initialShares } : {})}
       onSymbolCommit={props.onSymbolCommit}
       initialStrike={strike || undefined}
       onStrikeCommit={props.onStrikeCommit}

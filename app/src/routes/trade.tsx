@@ -144,6 +144,13 @@ export function normalizeQty(v: unknown): number | undefined {
   return Number.isInteger(n) && n >= 1 && n <= 100 ? n : undefined;
 }
 
+/** `?shares=` (#8250): whole shares, 1–100,000 — a practice pick's count, carried into the share
+ *  ticket for the member to review and submit. Anything else is dropped. */
+export function normalizeShares(v: unknown): number | undefined {
+  const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : Number.NaN;
+  return Number.isInteger(n) && n >= 1 && n <= 100_000 ? n : undefined;
+}
+
 /** `?limit=`: a positive per-share price in whole cents, under $100,000. Anything else is dropped. */
 export function normalizeLimit(v: unknown): number | undefined {
   const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : Number.NaN;
@@ -166,6 +173,7 @@ function TradePage(): ReactElement {
     manage,
     rollTo,
     qty,
+    shares,
     limit,
     tier,
     ...carried
@@ -384,6 +392,7 @@ function TradePage(): ReactElement {
   });
   const stageProps: StageProps = {
     section,
+    ...(shares !== undefined ? { initialShares: shares } : {}),
     ...(notYours ? { notYours } : {}),
     symbol: symbol ?? "",
     play: play ?? "101",
@@ -514,6 +523,7 @@ export const Route = createFileRoute("/trade")({
         : undefined;
     // `?qty=&limit=&tier=` (#7547): a suggestion link's count, price and tier, each shape-checked.
     const qty = normalizeQty(search.qty);
+    const shares = normalizeShares(search.shares);
     const limit = normalizeLimit(search.limit);
     const tier =
       typeof search.tier === "string" && Object.hasOwn(TIER_WORDS, search.tier)
@@ -530,6 +540,7 @@ export const Route = createFileRoute("/trade")({
       ...(manage !== undefined ? { manage } : {}),
       ...(rollTo !== undefined ? { rollTo } : {}),
       ...(qty !== undefined ? { qty } : {}),
+      ...(shares !== undefined ? { shares } : {}),
       ...(limit !== undefined ? { limit } : {}),
       ...(tier !== undefined ? { tier } : {}),
       // `?plan=&stop=&exit=` (#7034 slice 2): a fast track's carried plan, kept only whole.

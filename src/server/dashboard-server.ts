@@ -48,6 +48,7 @@ import { serveOptionLifecycleApi } from "./option-lifecycle-route.js";
 import { serveOptionPositionsApi } from "./option-positions-route.js";
 import { servePlaybooksApi } from "./playbooks-api-routes.js";
 import { servePlaysApi } from "./plays-api-routes.js";
+import { servePracticePuzzle } from "./practice-puzzle.js";
 import { serveQuestsApi } from "./quests-route.js";
 import { serveQuestsTakenApi } from "./quests-taken-route.js";
 import { serveQuoteStream } from "./quote-stream-route.js";
@@ -251,6 +252,7 @@ async function serveWriteApis(
   if (await serveAdminApi(req, res, path, config, session)) return true;
   if (await serveClientErrorApi(req, res, path, session, config.logLine)) return true;
   if (await serveAlpacaConnect(req, res, path, config, session)) return true;
+  if (await servePracticePuzzle(res, path, config)) return true;
   return serveJoinApi(req, res, path, config, session);
 }
 

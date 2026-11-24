@@ -2,7 +2,7 @@
 // (/app/accounts?section=milestones&chapter=onboarding, once /app/onboarding, #3807 slice 2b) — milestone M·01 from the REAL built shell (app/dist) over a
 // stub API, five frames: a brand-new member at 390 first (phone-first; steps lead, steps 2–3 held as
 // one line each, the milestones list folded below — #5256), the same at 1280, the member with step 5
-// opened (the connect form inside it), Moneypenny's History open over her dock with her intro from
+// opened (the connect form inside it), the #8250 puzzle → practice pick → Connect cards at 390, Moneypenny's History open over her dock with her intro from
 // step 2's held line (#7487 slice 2; the page stays put above it), and a connected member (step 1 done, steps 2–3 open in full).
 // JPEG ≤100KB (docs/PICTURES.md) — quality 55, not the harness default, because these
 // frames are 1100px tall and need it to clear the cap.
@@ -72,11 +72,38 @@ const connected = {
     nextUp: { code: "101", title: "Buy stock" },
   },
 };
-const joinIndex = {
+let connectOn = false;
+const joinIndex = () => ({
   wired: true,
+  connect: connectOn,
   canAddBots: false,
   classes: [],
   timezones: [{ value: "America/New_York", label: "Eastern (New York)" }],
+});
+// The newcomer puzzle (#8250): invented closes, labelled as such on the card itself.
+const name = (symbol, reportDate, afterDate, before, after, last) => ({
+  symbol,
+  reportDate,
+  timing: "after-close",
+  beforeDate: reportDate,
+  beforeClose: before,
+  afterDate,
+  afterClose: after,
+  movePct: Math.round(((after - before) / before) * 1000) / 10,
+  lastClose: last,
+  lastCloseDate: "2026-11-20",
+});
+const puzzle = {
+  question: "Which of these moved most after its last earnings report?",
+  names: [
+    name("AMZN", "2026-10-29", "2026-10-30", 200, 218, 220.5),
+    name("GOOG", "2026-10-28", "2026-10-29", 180, 187.2, 188.4),
+    name("META", "2026-10-21", "2026-10-22", 600, 576, 590),
+    name("MSFT", "2026-10-28", "2026-10-29", 400, 406, 410.25),
+  ],
+  answer: "AMZN",
+  source: "Picture fixture, not market data",
+  readAt: "2026-11-24T14:00:00.000Z",
 };
 const feedbackIndex = {
   enabled: true,
@@ -116,6 +143,8 @@ const { page, origin, shoot, close } = await openShell({
     // The connected frame's tower column reads Uncle Joe's desk; an unstubbed `{}` broke that frame.
     "/api/desk/*": { desk: { id: "human-joe", name: "Uncle Joe", kind: "human", positions: [] } },
     "/api/join": joinIndex,
+    "/api/practice/puzzle": puzzle,
+    "/api/connect/alpaca": { enabled: true, result: null },
     "/api/feedback": feedbackIndex,
     "/api/playbooks": playbooks,
     "/api/learn": () => ({ ...journey, linked: state !== fresh }),
@@ -127,6 +156,18 @@ await page.setViewportSize({ width: 390, height: 844 });
 await page.goto(`${origin}/app/accounts?section=milestones&chapter=onboarding`);
 await page.getByRole("button", { name: "Create a free Alpaca account" }).waitFor();
 await shoot("onboarding-fresh-390");
+// #8250: the puzzle answered and a practice pick made, then Connect on — each at 390.
+await page.getByRole("button", { name: /^META/ }).click();
+await page.getByRole("button", { name: /0\.5%/ }).click();
+await page.locator(".np-card").nth(1).scrollIntoViewIfNeeded();
+await shoot("onboarding-practice-pick-390");
+connectOn = true;
+await page.goto(`${origin}/app/accounts?section=milestones&chapter=onboarding`);
+await page.getByRole("button", { name: "Connect with Alpaca" }).scrollIntoViewIfNeeded();
+await shoot("onboarding-connect-390");
+connectOn = false;
+await page.goto(`${origin}/app/accounts?section=milestones&chapter=onboarding`);
+await page.getByRole("button", { name: "Create a free Alpaca account" }).waitFor();
 await page.setViewportSize({ width: 1280, height: 1100 });
 await shoot("onboarding-fresh");
 
@@ -138,6 +179,18 @@ await page
   .scrollIntoViewIfNeeded();
 await shoot("onboarding-step5-form");
 
+state = connected;
+await page.goto(`${origin}/app/accounts?section=milestones&chapter=onboarding`);
+await page.getByText("PAPER · LIVE").waitFor();
+await shoot("onboarding-connected");
+// #8250: the practice pick (kept in this browser) offered as a real paper order, at 390.
+await page.setViewportSize({ width: 390, height: 844 });
+await page
+  .getByRole("link", { name: "Place this on your paper account ›" })
+  .scrollIntoViewIfNeeded();
+await shoot("onboarding-place-pick-390");
+
+state = fresh;
 // Moneypenny's History — step 2's held line still opens it with her intro (ordered, never locked);
 // the answer is typed in the dock's box. Text waits are scoped to History: her latest line in the
 // dock repeats the same words.
@@ -149,10 +202,5 @@ await page.locator(".mp-dock .mp-box-input").fill("yes");
 await page.keyboard.press("Enter");
 await history.getByText(/the short path: create a free account/).waitFor();
 await shoot("onboarding-moneypenny-history");
-
-state = connected;
-await page.goto(`${origin}/app/accounts?section=milestones&chapter=onboarding`);
-await page.getByText("PAPER · LIVE").waitFor();
-await shoot("onboarding-connected");
 
 await close();

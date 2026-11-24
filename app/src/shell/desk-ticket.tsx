@@ -47,6 +47,7 @@ export function DeskTicket({
   code,
   onPreset,
   initialSymbol,
+  initialShares,
   onSymbolCommit,
   initialStrike,
   onStrikeCommit,
@@ -76,6 +77,9 @@ export function DeskTicket({
   readonly onPreset: (code: PlayCode) => void;
   /** `?symbol=` — the value a fresh (or remounted) ticket starts from. */
   readonly initialSymbol?: string;
+  /** `?shares=` (#8250): a practice pick's count. It seeds the share ticket's carry for the same
+   *  symbol, so the ticket opens filled and the member still reviews and submits it. */
+  readonly initialShares?: number;
   /** Committing a symbol in either gate writes it back to `?symbol=` (cockpit plan, red-team
    *  finding): both gates remount on every Instrument/Side switch (`key={info.code}` /
    *  `key={code}` below), which used to drop a hand-typed symbol on every switch. */
@@ -117,7 +121,11 @@ export function DeskTicket({
   // rendered this header on every keystroke (code review, change-scenarios PR). Each carry knows
   // its symbol and is offered back only to a ticket for that symbol (`carryFits`): keyed on the
   // rung alone, 100 NVDA at a $140 limit pre-filled an AAPL sell opened from a position card.
-  const shareCarry = useRef<TicketCarry | undefined>(undefined);
+  const shareCarry = useRef<TicketCarry | undefined>(
+    initialShares !== undefined && initialSymbol
+      ? { symbol: initialSymbol.trim().toUpperCase(), quantity: String(initialShares) }
+      : undefined,
+  );
   const contractCarry = useRef<{ readonly symbol: string; readonly count: string } | undefined>(
     undefined,
   );

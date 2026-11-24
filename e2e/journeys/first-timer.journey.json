@@ -86,6 +86,22 @@
           "judge": "can this reader tell what to do next in ten seconds?"
         },
         {
+          "id": "s4c",
+          "goto": "/app/accounts?section=milestones&chapter=onboarding",
+          "sees": "the connect step opens on a 60-second puzzle that needs no account: 'Which of these moved most after its last earnings report?' with one button per name; a tap answers at once with each move, its two closes and dates, the right one marked 'Moved most' with a check, then a practice pick under a PRACTICE PICK pill ('not saved to an account yet'), then the connect card's reason line (#8250)",
+          "ears": "WHEN a member with no account opens the Onboarding chapter, the puzzle SHALL come first and need no account; WHEN they tap an answer, the answer SHALL render with no model call.",
+          "expect": [
+            {
+              "role": "heading",
+              "name": "Which of these moved most after its last earnings report?"
+            },
+            {
+              "text": "Connect a free practice account. No card, no money. Your pick counts on the family table."
+            }
+          ],
+          "judge": "does this reader want to tap an answer, and know connecting comes after?"
+        },
+        {
           "id": "s4b",
           "goto": "/app/accounts?section=feedback",
           "sees": "Profile → Feedback: what a filing is for, and one button — Talk to Moneypenny — that opens her History over the dock and puts the cursor in her box, where hello is said (#7487 slice 2); offline, a line that feedback is not switched on yet",
