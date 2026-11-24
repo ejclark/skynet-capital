@@ -8,4 +8,4 @@
 {"date":"2026-11-24","loop":"governor-backfill","before":40,"after":39,"tokensM":1.67,"usd":null,"changed":"added behavioral specs for src/options/drawdown-base-rates.ts, one untested file covered"}
 {"date":"2026-11-24","loop":"governor-backfill","before":39,"after":38,"tokensM":1.67,"usd":null,"changed":"behavioral specs for src/domain/ticker-directory/technology.ts (one untested file covered)"}
 {"date":"2026-11-24","loop":"governor-backfill","before":39,"after":38,"tokensM":1.67,"usd":null,"changed":"specs for src/evals/companion/stage-trade-fixture.ts (11 behaviors)"}
-{"date":"2026-11-24","loop":"governor-backfill","before":37,"after":36,"tokensM":null,"usd":null,"changed":"behavioral specs for src/server/outlook-route.ts (14 behaviors, one untested file covered)"}
+{"date":"2026-11-24","loop":"governor-backfill","before":37,"after":36,"tokensM":1.69,"usd":null,"changed":"behavioral specs for src/server/outlook-route.ts (14 behaviors, one untested file covered)"}
