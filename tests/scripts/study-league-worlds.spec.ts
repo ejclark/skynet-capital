@@ -42,7 +42,7 @@ describe("an account whose broker read timed out", () => {
       const jordan = book.participants.find((p) => p.id === "jordan");
       const history = book.history.jordan;
       console.log(JSON.stringify({ jordan, ms: SNAPSHOT_READ_TIMEOUT_MS, last: history.at(-1),
-        fills: book.activity.jordan.length }));
+        lastEquity: book.lastEquity.jordan, fills: book.activity.jordan.length }));
     `;
     const run = spawnSync("npx", ["tsx", "--input-type=module", "-e", script], {
       encoding: "utf8",
@@ -62,7 +62,10 @@ describe("an account whose broker read timed out", () => {
     });
     // Friday's close is its last sample; its fills stay on the feed.
     expect(Date.parse(out.last.at)).toBeLessThan(Date.parse("2026-11-23T15:00:00-05:00"));
-    expect(out.last.equity).toBeGreaterThan(0);
+    // ...and it is what he held at Friday's close, not the empty degraded row (#8214): cash
+    // 20,111 + 7 SPY × 719.90 = 25,150.30. Reading the snapshot put it at 20,111, a false ~20% fall.
+    expect(out.last.equity).toBeCloseTo(25_150.3, 2);
+    expect(out.lastEquity).toBeCloseTo(25_150.3, 2);
     expect(out.fills).toBeGreaterThan(0);
   }, 60_000);
 });

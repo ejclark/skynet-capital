@@ -307,14 +307,21 @@ function snapshotOf(p, saleFill) {
  * at yesterday's close, less what the input declares was booked today on positions already closed
  * (`closedToday` — the one gap a header may show beyond its rows). Never typed: a hand-typed figure
  * put Eric's header at −$71 beside rows adding to −$4 (day-change.mjs).
+ *
+ * Read from the INPUT's positions, never the snapshot's (#8214): an account whose broker read timed
+ * out at the instant serves production's degraded row with no holdings, but it still closed Friday
+ * holding them — reading the empty snapshot put Jordan's close at cash alone, a false ~20% fall.
  */
-export function yesterdayEquity(p, snapshot) {
+export function yesterdayEquity(p) {
   if (p.lastEquity !== undefined) {
     throw new Error(
       `book: ${p.id} types lastEquity — it is derived from cash and each position's lastday; declare a closed-today amount (closedToday) for any gap`,
     );
   }
-  const atClose = snapshot.positions.reduce((s, x) => s + x.quantity * x.lastdayPrice, p.cash);
+  const atClose = p.positions.reduce(
+    (s, x) => s + x.quantity * x.lastday * contractMultiplier(x.symbol),
+    p.cash,
+  );
   return Math.round((atClose - (p.closedToday ?? 0)) * 100) / 100;
 }
 
@@ -366,9 +373,7 @@ export function buildBook(name) {
     }));
   }
   for (const b of bots) activity[b.input.id] = b.fills;
-  const lastEquity = Object.fromEntries(
-    input.participants.map((p, i) => [p.id, yesterdayEquity(p, participants[i])]),
-  );
+  const lastEquity = Object.fromEntries(input.participants.map((p) => [p.id, yesterdayEquity(p)]));
   const closedToday = Object.fromEntries(
     input.participants.filter((p) => p.closedToday).map((p) => [p.id, p.closedToday]),
   );
