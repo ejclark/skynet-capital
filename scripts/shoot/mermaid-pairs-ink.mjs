@@ -42,8 +42,16 @@ const FONT_DIR =
   process.env.MERMAID_PAIRS_FONT_DIR ?? join(dirname(fileURLToPath(import.meta.url)), "fonts");
 
 /**
- * The faces a render may name. Both are OFL, subset to the glyphs `COVERAGE` lists; provenance and
- * the licence live in ./fonts/README.md. Slice 1 renders both and Eric picks by eye (#3981).
+ * The faces a render may name. Both are OFL, subset by ./fonts/subset.py; provenance and the
+ * licence live in ./fonts/README.md. Slice 1 renders both and Eric picks by eye (#3981).
+ *
+ * `coverage` is a regex character-class body: the code points BOTH weights of that face really
+ * carry, read from the shipped woff2 character maps, never the range subset.py asked for. The
+ * subsetter keeps only the requested characters a source font has, so the request overstates the
+ * file (#8217: neither face has ✕ U+2715, Charis has no U+0149, Lato lacks eleven punctuation
+ * marks), and a class built from the request let those labels through to a system fallback.
+ * tests/scripts/mermaid-pairs-coverage.spec.ts parses each file's cmap and fails on any code point
+ * listed here that the file lacks; re-derive the list from it after re-running subset.py.
  */
 export const FACES = {
   serif: {
@@ -51,18 +59,18 @@ export const FACES = {
     label: "Charter cut (Charis SIL, renamed subset)",
     files: { 400: "ink-serif-regular.woff2", 700: "ink-serif-bold.woff2" },
     generic: "serif",
+    coverage:
+      "\\u0020-\\u007E\\u00A0-\\u0148\\u014A-\\u017F\\u2010-\\u2027\\u2030-\\u203A\\u2190-\\u2199\\u2212",
   },
   sans: {
     family: "Lato",
     label: "Lato",
     files: { 400: "lato-regular.woff2", 700: "lato-bold.woff2" },
     generic: "sans-serif",
+    coverage:
+      "\\u0020-\\u007E\\u00A0-\\u017F\\u2010\\u2012-\\u2022\\u2026\\u2030\\u2032-\\u2034\\u2039\\u203A\\u2190-\\u2199\\u2212",
   },
 };
-
-/** The code points both subsets carry (scripts/shoot/fonts/README.md → the subset command). */
-export const COVERAGE =
-  "\\u0020-\\u007E\\u00A0-\\u017F\\u2010-\\u2027\\u2030-\\u203A\\u2190-\\u2199\\u2212\\u2715";
 
 /** `@font-face` rules for one family, embedded so nothing is fetched and nothing falls back. A file
  *  that is not there throws, naming it: a face that cannot be read is a stop, never a fallback. */
