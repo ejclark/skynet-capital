@@ -96,6 +96,8 @@ async function serveIndex(
       kind: e.kind,
       filedAt: e.filedAt,
       url: e.url,
+      // A wish from the journal (#8190) — the screen marks it "Wish" in words.
+      ...(e.source ? { source: e.source } : {}),
       ...(statuses?.get(e.issueNumber) ? { status: statuses.get(e.issueNumber) } : {}),
       ...(fixes.get(e.issueNumber) ? { fixed: fixes.get(e.issueNumber) } : {}),
     })),

@@ -33,6 +33,7 @@ import { serveFeedbackApi } from "./feedback-api-routes.js";
 import { serveFeedbackRoute } from "./feedback-routes.js";
 import { serveFilingCommentsApi } from "./filing-comments-api-routes.js";
 import { serveJoinApi } from "./join-api-routes.js";
+import { serveJournalApi } from "./journal-api-routes.js";
 import { serveLearnApi } from "./learn-api-routes.js";
 import { serveLegacyRedirect } from "./legacy-redirects.js";
 import { serveMemberCampaignsApi } from "./member-campaigns-api-routes.js";
@@ -242,6 +243,7 @@ async function serveWriteApis(
   if (serveCouncilRepliesApi(req, res, path, config.councilReplies, session)) return true;
   if (await serveFilingCommentsApi(req, res, path, config.filingComments, session)) return true;
   if (await serveFeedbackApi(req, res, path, config, session)) return true;
+  if (await serveJournalApi(req, res, path, config, session)) return true;
   if (await serveCompanionApi(req, res, path, config, session)) return true;
   if (await serveAdminApi(req, res, path, config, session)) return true;
   if (await serveClientErrorApi(req, res, path, session, config.logLine)) return true;
