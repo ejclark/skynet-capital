@@ -101,6 +101,19 @@ export interface TraceRecord {
   seen?: Seen[];
 }
 
+/**
+ * The one refusal the trace carries (#8126): phone typing with no text field focused. It spends no
+ * step and has no frame; every reader skips it as a measured action (`!r.refused`).
+ */
+export interface RefusedRecord {
+  refused: string;
+  ms: number;
+  action: Action;
+  /** What had focus instead (measure-tap.mjs → `typingFocus`). */
+  focused: string;
+  findings: [];
+}
+
 export interface Seen {
   text: string;
   ratio: number;
@@ -113,6 +126,12 @@ export const SCROLL_TOL: number;
 export function actionRefusal(
   action: Action | null | undefined,
   frame: { width: number; height: number; hasTouch: boolean },
+): string | null;
+export const NO_KEYBOARD: string;
+export function keyboardRefusal(
+  action: Action | null | undefined,
+  frame: { hasTouch: boolean },
+  focused: { editable: boolean; what?: string } | null | undefined,
 ): string | null;
 export function viewKey(v: {
   pathname: string;
@@ -165,12 +184,14 @@ export interface TaskMetrics {
   deadTaps: number;
   nearMisses: number;
   unlabelledTaps: number;
+  /** Phone typing refused because no text field had focus (#8126). */
+  noKeyboard: number;
   gaveUp: boolean;
   answer: string | null;
   findings: Finding[];
 }
 
 export function taskMetrics(
-  trace: TraceRecord[],
+  trace: (TraceRecord | RefusedRecord)[],
   opts?: { startPath?: string; optimal?: number; expectFirst?: { role?: string; name?: string } },
 ): TaskMetrics;

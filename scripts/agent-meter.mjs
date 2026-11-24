@@ -12,21 +12,23 @@
 //
 //   npm run meter -- [--json] [--hours N | --days N | --since ISO [--until ISO]] [--max-rest N]
 //   npm run meter -- --row "<loop>" --before N --after N --tokens N [--usd N] [--minutes N]
-//   npm run meter -- --audit-receipt --prs 6307,6323 --confirmed N [--local-only]
-//     (also appends the row to the data/pr-review branch, which later meter runs read: #6683)
+//   npm run meter -- --audit-receipt --prs 6307,6323 --confirmed N [--through <sha>] [--local-only]
+//     (also appends the row to the data/pr-review branch, which later meter runs read: #6683;
+//     --through, from scripts/audit-due.mjs, moves the marker the next due-check reads: #7311)
 //   npm run meter -- --failure-to-fix [--json] [--days N | ...] [--write-ledger [--date D] [--ledger DIR]]
 //   npm run meter:workers -- [--json] [--days N | ...]   # exits 1 if the worker's oracle fails
 //   npm run meter:flow -- [--json] [--days N | ...]      # the same as npm run meter -- --flow
 //   npm run meter -- --jobs [--json] [--days N | ...]    # tokens per verified result, per job (#6609)
 //
 // Seams (env, so a spec can drive it): AGENT_RUNS_DIR, AGENT_TRANSCRIPTS_DIR, AGENT_PROJECTS_DIR,
-// AGENT_MEMORY_DIR, AGENT_GIT_DIR; `gh` on PATH is the REST layer.
+// AGENT_MEMORY_DIR, AGENT_GIT_DIR, AGENT_CHECKOUT_DIR; `gh` on PATH is the REST layer. Transcripts are
+// read from the folders named for this checkout (agent-meter/project.mjs, #6689); with none, every
+// section that reads them says unknown, never zero.
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import {
   agentSummary,
-  listDirs,
   scanWorkflowAgents,
   stagesByType,
   workerOracle,
@@ -40,7 +42,7 @@ import {
 } from "./agent-meter/defects.mjs";
 import { quantile, readFailureToFix, writeLedgerRow } from "./agent-meter/failure-to-fix.mjs";
 import { readFlow } from "./agent-meter/flow.mjs";
-import { defectIssues, mergedPrs, pipelineRuns } from "./agent-meter/github.mjs";
+import { defectIssues, mergedPrs, openHeldPrs, pipelineRuns } from "./agent-meter/github.mjs";
 import { readJobs } from "./agent-meter/jobs.mjs";
 import {
   createRest,
@@ -49,6 +51,7 @@ import {
   SESSION_FLOOR_SEC,
   saveCache,
 } from "./agent-meter/lanes.mjs";
+import { currentProject, NO_TRANSCRIPTS, projectFolders } from "./agent-meter/project.mjs";
 import {
   render,
   renderFailureToFix,
@@ -56,12 +59,12 @@ import {
   renderJobs,
   renderWorkerStages,
 } from "./agent-meter/render.mjs";
+import { heldAge } from "./held-pr.mjs";
 import { isMain } from "./is-main.mjs";
 
 export { quantile };
 
 const CHARS_PER_TOKEN = 4;
-const PROJECT = "-Users-eric-Developer-skynet-capital";
 const HOUR = 3600000;
 /** GitHub's shared REST bucket also feeds the lanes; one meter run stays well under it. */
 const DEFAULT_MAX_REST = 250;
@@ -138,19 +141,41 @@ export function mainFailuresByJob(runs) {
   return out;
 }
 
+/** Inside [sinceMs, untilMs]: a fixed past window must read the same on every run (#6690). */
+const inWindow = (at, sinceMs, untilMs) => {
+  const ms = Date.parse(at);
+  return ms >= sinceMs && ms <= untilMs;
+};
+
 /** Open-to-merge minutes for merged feat and fix PRs; research and docs merges would swamp it. */
-export function mergeMinutes(prs, sinceMs) {
+export function mergeMinutes(prs, sinceMs, untilMs = Number.POSITIVE_INFINITY) {
   const minutes = prs
     .filter(
-      (pr) => pr.mergedAt && Date.parse(pr.mergedAt) >= sinceMs && /^(feat|fix)\b/.test(pr.title),
+      (pr) =>
+        pr.mergedAt && inWindow(pr.mergedAt, sinceMs, untilMs) && /^(feat|fix)\b/.test(pr.title),
     )
     .map((pr) => (Date.parse(pr.mergedAt) - Date.parse(pr.createdAt)) / 60000);
   return { n: minutes.length, p50: quantile(minutes, 0.5), p90: quantile(minutes, 0.9) };
 }
 
+/**
+ * Each held PR open now, both clocks: hours green (null when its head is not green) and hours open,
+ * longest green first (#7317). A live reading — the window does not bound it, because a held PR's
+ * wait is what is happening now, and open-to-merge cannot see it until it merges.
+ */
+export function heldWaits(rows, now = Date.now()) {
+  return rows
+    .map(({ pr, greenAt }) => heldAge(pr, { greenAt, now }))
+    .sort((a, b) => (b.greenHours ?? -1) - (a.greenHours ?? -1) || b.openHours - a.openHours);
+}
+
+/** What local verify prints when this machine holds no ship.sh log. It names no home path. */
+export const NO_VERIFY_LOG =
+  "unknown: no ship.sh verify log on this machine; run it where ship.sh ran";
+
 /** Counts of local verify outcomes from ship.sh's log, failures named by the step that failed. */
-export function localVerify(rows, sinceMs) {
-  const recent = rows.filter((row) => Date.parse(row.at) >= sinceMs);
+export function localVerify(rows, sinceMs, untilMs = Number.POSITIVE_INFINITY) {
+  const recent = rows.filter((row) => inWindow(row.at, sinceMs, untilMs));
   const bySteps = {};
   for (const row of recent.filter((r) => r.ok === false)) {
     const step =
@@ -256,8 +281,14 @@ async function measure(w, { maxRest }) {
   const home = homedir();
   const runsDir = process.env.AGENT_RUNS_DIR ?? join(home, ".claude", "runs");
   const projectsDir = process.env.AGENT_PROJECTS_DIR ?? join(home, ".claude", "projects");
-  const transcripts = process.env.AGENT_TRANSCRIPTS_DIR ?? join(projectsDir, PROJECT);
+  const project = currentProject();
+  const transcripts = process.env.AGENT_TRANSCRIPTS_DIR ?? join(projectsDir, project);
   const memoryDir = process.env.AGENT_MEMORY_DIR ?? join(transcripts, "memory");
+  // No folder for this checkout is no reading, not a quiet window: a cloud session's sessions sit
+  // under its own checkout's name, and the laptop's name matched none of them (#6689).
+  const hasAgents = projectFolders(projectsDir, project).length > 0;
+  const hasStartup = existsSync(transcripts);
+  const hasMemory = Boolean(process.env.AGENT_MEMORY_DIR) || hasStartup;
   const rest = createRest();
   const cachePath = join(runsDir, "agent-meter-cache.json");
   const cache = loadCache(cachePath);
@@ -275,6 +306,7 @@ async function measure(w, { maxRest }) {
 
   const pipeline = attempt(() => pipelineRuns(rest, cache, w, maxRest, persist));
   const prs = attempt(() => mergedPrs(rest, w.sinceMs));
+  const held = attempt(() => heldWaits(openHeldPrs(rest)));
   const issues = attempt(() => defectIssues(rest, w.sinceMs));
   const lanes = attempt(() =>
     readLanes({ rest, cache, sinceMs: w.sinceMs, untilMs: w.untilMs, maxRest, persist }),
@@ -305,7 +337,9 @@ async function measure(w, { maxRest }) {
     .slice(0, 5)
     .map((file) => startupFromTranscript(readLines(file.path)))
     .filter(Boolean);
-  const agents = await scanWorkflowAgents(projectsDir, PROJECT, w.sinceMs, w.untilMs);
+  const agents = hasAgents
+    ? agentSummary(await scanWorkflowAgents(projectsDir, project, w.sinceMs, w.untilMs))
+    : NO_TRANSCRIPTS;
   const audited = auditedInWindow(
     mergeReceipts(
       readJsonl(join(runsDir, "post-merge-audit.jsonl")),
@@ -323,31 +357,40 @@ async function measure(w, { maxRest }) {
           : { ...defectsFromIssues(issues, w.sinceMs, w.untilMs), audited },
       mainFailures: typeof pipeline === "string" ? pipeline : mainFailuresByJob(pipeline.main),
       ci: typeof pipeline === "string" ? pipeline : ciByTrigger(pipeline.all),
-      localVerify: localVerify(readJsonl(join(runsDir, "ship-verify.jsonl")), w.sinceMs),
+      // No log on this machine is no reading (#6694): "0 of 0 failed" would read as nothing failed.
+      localVerify: existsSync(join(runsDir, "ship-verify.jsonl"))
+        ? localVerify(readJsonl(join(runsDir, "ship-verify.jsonl")), w.sinceMs, w.untilMs)
+        : NO_VERIFY_LOG,
       note: "pull_request CI is a floor; local verify is the other half; defects without an audit receipt read unknown, not zero",
     },
     lanes: typeof lanes === "string" ? lanes : { ...lanes, floorSec: SESSION_FLOOR_SEC },
     speed: {
-      openToMergeMinutes: typeof prs === "string" ? prs : mergeMinutes(prs, w.sinceMs),
+      openToMergeMinutes: typeof prs === "string" ? prs : mergeMinutes(prs, w.sinceMs, w.untilMs),
+      heldWaits: held,
       runs: runRows,
       note: "open-to-merge excludes local verify and agent time; run rows are the fuller measure",
     },
     failureToFix,
     flow: await readFlow(w),
-    agents: agentSummary(agents),
-    startup: {
-      recentFirstCalls: startups.map((s) => s.firstCall),
-      newest: startups[0] ?? null,
-      note: "the first-call total is measured; the named source rows are chars/4 and run about 25% low, so unitemized reads high by the same amount",
-    },
+    agents,
+    startup: hasStartup
+      ? {
+          recentFirstCalls: startups.map((s) => s.firstCall),
+          newest: startups[0] ?? null,
+          note: "the first-call total is measured; the named source rows are chars/4 and run about 25% low, so unitemized reads high by the same amount",
+        }
+      : NO_TRANSCRIPTS,
     limits: {
       claudeMdBytes: fileBytes(resolve("CLAUDE.md")),
       orientBytes: fileBytes(resolve(".claude/output-styles/orient.md")),
-      memoryIndexLines: readLines(join(memoryDir, "MEMORY.md")).length,
+      // null when no transcript folder was found: the memory index lives inside it.
+      memoryIndexLines: hasMemory ? readLines(join(memoryDir, "MEMORY.md")).length : null,
       memoryIndexLimit: 200,
-      memoryFiles: existsSync(memoryDir)
-        ? readdirSync(memoryDir).filter((n) => n.endsWith(".md")).length
-        : 0,
+      memoryFiles: !hasMemory
+        ? null
+        : existsSync(memoryDir)
+          ? readdirSync(memoryDir).filter((n) => n.endsWith(".md")).length
+          : 0,
     },
     rest: { calls: rest.calls, cap: maxRest },
   };
@@ -356,14 +399,12 @@ async function measure(w, { maxRest }) {
 /** Local transcripts only, so the worker's oracle is free to read as often as a check wants. */
 async function workerStages(args, w) {
   const projectsDir = process.env.AGENT_PROJECTS_DIR ?? join(homedir(), ".claude", "projects");
-  const stages = stagesByType(await scanWorkflowAgents(projectsDir, PROJECT, w.sinceMs, w.untilMs));
+  const project = currentProject();
+  const stages = stagesByType(await scanWorkflowAgents(projectsDir, project, w.sinceMs, w.untilMs));
   // loop-check posts this from a runner, which holds no transcripts: unknown there, not "0 of 20".
-  const oracle = listDirs(projectsDir).some((name) => name.startsWith(PROJECT))
+  const oracle = projectFolders(projectsDir, project).length
     ? workerOracle(stages.find((row) => row.type === "worker"))
-    : {
-        verdict: "unknown",
-        line: "worker oracle: unknown: no transcripts on this machine; run it where the stages ran",
-      };
+    : { verdict: "unknown", line: `worker oracle: ${NO_TRANSCRIPTS}` };
   if (oracle.verdict === "fail") process.exitCode = 1;
   const reading = { window: w, stages, oracle };
   return args.includes("--json") ? JSON.stringify(reading, null, 2) : renderWorkerStages(reading);
@@ -392,7 +433,7 @@ async function jobsOnly(args, w, maxRest) {
   const reading = await readJobs({
     w,
     projectsDir,
-    project: PROJECT,
+    project: currentProject(),
     runsDir: process.env.AGENT_RUNS_DIR ?? join(homedir(), ".claude", "runs"),
     sharedReceipts: branchReceipts(createRest(), w.sinceMs, w.untilMs),
     readFixes: () => {
@@ -434,6 +475,7 @@ async function main(args) {
     return recordAuditReceipt({
       prs: flag(args, "--prs"),
       confirmed: flag(args, "--confirmed"),
+      through: flag(args, "--through"),
       localOnly: args.includes("--local-only"),
       runsDir: process.env.AGENT_RUNS_DIR ?? join(homedir(), ".claude", "runs"),
     });

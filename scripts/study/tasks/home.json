@@ -1,0 +1,107 @@
+{
+  "area": "home",
+  "about": "The area config for one study round over the landing page with Me and the chat (#8005 slice 5; docs/IA.md §5.9: the page sign-in opens — the day's news, the member's question, the next step and the windows on the market, the calendar, quests and the party — and §5.6: the member's own channel to Moneypenny in the dock, their filings on the Profile's Feedback section, and their Settings). Read by scripts/study/round.mjs; everything area-specific lives here or in scripts/study/worlds/home-*. Worlds, all on bot-loop-today's league (the pin's Monday, the pin as corpus): home-today (the league as it stands; a member who owns nothing is asked to connect an account), home-filed (the owner's three filings, one shipped, one waiting on his answer, one up next, each classified by production's own reading of GitHub's answer) and home-first-day (an account linked this morning, nothing in it). Moneypenny's chat is in hand in every world. Phone first: 7 of the 10 frames are phones. Members start where sign-in lands, the app nav's Campaign. Census routes are links these pages build (Settings' own section links), never composed; the landing's windows open by buttons, so the census walks them as surfaces. `roles` is who each member is here, in plain words, read by the experts and the words pass instead of the cards (#5099), so it never quotes a card. No sealed key, framer or tasks yet: those come when the cross-feature round clears (#8005).",
+  "cutoff": "2026-11-23",
+  "tasksPer": 3,
+  "runs": 3,
+  "runsByWorld": { "home-filed": 2 },
+  "censusCap": 100,
+  "concurrency": 3,
+  "experts": 3,
+  "matrix": [
+    {
+      "member": "eric",
+      "world": "home-today",
+      "viewer": "eric",
+      "viewports": ["phone", "desktop"],
+      "start": "/app/"
+    },
+    {
+      "member": "eric",
+      "world": "home-filed",
+      "viewer": "eric",
+      "viewports": ["phone"],
+      "start": "/app/",
+      "note": "has filed three times; one filing is waiting on his answer"
+    },
+    {
+      "member": "returning-trader",
+      "world": "home-today",
+      "viewer": "eric",
+      "viewports": ["phone", "desktop"],
+      "start": "/app/"
+    },
+    {
+      "member": "phone-only",
+      "world": "home-today",
+      "viewer": "eric",
+      "viewports": ["phone"],
+      "start": "/app/"
+    },
+    {
+      "member": "phone-only",
+      "world": "home-filed",
+      "viewer": "eric",
+      "viewports": ["phone"],
+      "start": "/app/"
+    },
+    {
+      "member": "invited-friend",
+      "world": "home-today",
+      "viewer": "jordan",
+      "viewports": ["phone"],
+      "start": "/app/"
+    },
+    {
+      "member": "bot-watcher",
+      "world": "home-today",
+      "viewer": "casey",
+      "viewports": ["phone"],
+      "start": "/app/",
+      "note": "owns nothing: the landing page's next step is connecting an account"
+    },
+    {
+      "member": "first-timer",
+      "world": "home-first-day",
+      "viewer": "casey",
+      "viewports": ["desktop"],
+      "start": "/app/"
+    }
+  ],
+  "roles": {
+    "eric": "Runs the league and owns one of its bots; checks first thing what needs him today, asks the assistant when stuck, and files what should change. On a phone when away, at a desk at home.",
+    "returning-trader": "Has one paper account and some options vocabulary, and is back after some weeks away; wants to catch up on what happened and what to do next. Uses a phone and a desk.",
+    "phone-only": "Uses the app only on a phone, one-handed, a minute or two at a time.",
+    "invited-friend": "A friend the owner invited, with one small account and a bot of their own; checks how things stand and asks the assistant when lost. On a phone.",
+    "bot-watcher": "Owns no account at all; follows the league's bots and the day's news. On a phone.",
+    "first-timer": "Invited last week and linked a paper account this morning; owns no bot and has traded nothing yet. On a laptop."
+  },
+  "pages": [
+    "the page sign-in opens: the member's next step, a box to ask or say anything, and at a glance the market, the calendar, their quests and the party",
+    "the day's news, dated",
+    "windows that open over the page: the whole market, the calendar of what is coming, quests from the member's own positions and cash, and the party playing together",
+    "an assistant docked under every page: suggested moves, a conversation, a box to ask, and a way to file a bug or an idea",
+    "the member's own filings: each one's title, when it was filed and where it stands, with a way to follow up",
+    "the member's own settings: display preferences, their accounts, and the split they want between shares, options and cash"
+  ],
+  "census": [
+    { "world": "home-today", "viewer": "eric", "for": ["experts", "labels"] },
+    { "world": "home-today", "viewer": "jordan", "for": ["experts", "labels"] },
+    { "world": "home-today", "viewer": "casey", "for": ["experts", "labels"] },
+    { "world": "home-filed", "viewer": "eric", "for": ["experts", "labels"] },
+    {
+      "world": "home-filed",
+      "viewer": "eric",
+      "routes": ["/app/settings", "/app/accounts"],
+      "for": ["handoff", "labels"]
+    },
+    { "world": "home-first-day", "viewer": "casey", "for": ["labels"] }
+  ],
+  "thin": {
+    "member": "eric",
+    "world": "home-filed",
+    "viewport": "phone",
+    "task": 1,
+    "expertRoute": "/app/accounts?section=feedback"
+  }
+}

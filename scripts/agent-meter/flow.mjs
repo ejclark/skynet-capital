@@ -10,10 +10,17 @@
 // to restate, a stalled session he nudged, and a page he could not read, because those read like work.
 // So this compares with its own earlier readings, never with the hand read, and prints both.
 //
+// WHOSE SESSIONS (#6702). A reading counts only the transcripts on the machine it runs on, and a cloud
+// session's go with its container. So each reading names the sessions it read (laptop, cloud or both)
+// and says whether they are the population the baseline was read over; when they are not, the reading
+// is unknown against it, and the falsifier in docs/process/LEARNING-LOOP.md records unknown.
+//
 // Transcript text is his own and never leaves this machine: only counts are printed.
 import { createReadStream, statSync } from "node:fs";
+import { basename, dirname } from "node:path";
 import { createInterface } from "node:readline";
 import { digestLines, recent } from "../dream-digest.mjs";
+import { isProjectFolder } from "./project.mjs";
 
 /**
  * The first (and only) hand read, and what these rules made of the same messages. Those messages are
@@ -26,6 +33,43 @@ export const HAND_READ = Object.freeze({
   typed: 184,
   rulesCaught: 71,
 });
+
+/**
+ * The reading the 2026-12-15 falsifier compares with, and the sessions it was read over (#6702). It was
+ * taken on the laptop, from that checkout's folders, over a window that began 2026-08-21
+ * (loop-iterations/messages-spent-managing-sessions.jsonl): mostly weeks when his sessions ran there.
+ */
+export const BASELINE = Object.freeze({
+  date: "2026-11-01",
+  since: "2026-08-21",
+  until: "2026-11-02",
+  managing: 84,
+  typed: 217,
+});
+
+/**
+ * The laptop checkout's transcript folder, the one the baseline was read from. This names a population,
+ * never where to read: which folders are read is project.mjs's rule, the running checkout's own (#6689).
+ * Any other checkout's folder is a cloud session's.
+ */
+const LAPTOP_FOLDER = "-Users-eric-Developer-skynet-capital";
+
+/**
+ * The day sessions moved to the cloud by default (CLAUDE.md, Eric 2026-10-13). A cloud session keeps
+ * its transcripts on its own container, which is gone before any later meter run, so after this day
+ * the laptop holds only the exception (files that exist only there, a real GPU), not his sessions.
+ */
+export const CLOUD_DEFAULT = "2026-10-13";
+
+/**
+ * Below this many typed messages a share is not compared: one message moves 30 of them by 3 points.
+ * A guess at a floor, not a measure; the 2026-11-02 audit's batch B (#4153) named the missing minimum.
+ */
+export const MIN_TYPED = 30;
+
+/** Where a session ran, from its folder alone: the laptop's checkout, or any other (a cloud one). */
+export const sessionKind = (path) =>
+  isProjectFolder(basename(dirname(path)), LAPTOP_FOLDER) ? "laptop" : "cloud";
 
 const KINDS = [
   "status",
@@ -126,15 +170,57 @@ const nothingRead = (undated) =>
     ? `${undated} typed message${undated === 1 ? "" : "s"} had no readable time, so no typed message could be placed in this window`
     : "no typed message was read in this window";
 
+/** The sessions read, named the way the falsifier's reader needs them: laptop, cloud or both. */
+function sessionsRead(spoken) {
+  const kinds = [...spoken.values()];
+  const laptop = kinds.filter((kind) => kind === "laptop").length;
+  const cloud = kinds.length - laptop;
+  const sessions = laptop && cloud ? "both" : cloud ? "cloud" : laptop ? "laptop" : "none";
+  return { laptop, cloud, sessions };
+}
+
+const notComparable = (line) => ({ verdict: "unknown", line });
+
+/**
+ * Whether a reading is the population the baseline was read over (#6702): laptop sessions only, from a
+ * window that began before sessions moved to the cloud, with enough messages to state a share. Anything
+ * else is unknown against it, never "not wrong": a share can fall on the laptop's few sessions while
+ * the cloud sessions it cannot see hold where they were.
+ */
+export function againstBaseline(reading, window) {
+  if (!reading.typed) return notComparable("nothing was read in this window");
+  const { laptop, cloud } = reading.read;
+  if (cloud) {
+    return notComparable(
+      `${cloud} of the ${laptop + cloud} sessions read ran in the cloud, and the baseline read laptop sessions only`,
+    );
+  }
+  if (window.sinceMs >= Date.parse(CLOUD_DEFAULT)) {
+    return notComparable(
+      `sessions run in the cloud by default since ${CLOUD_DEFAULT} and their transcripts go with their containers, so this window's laptop sessions are the exception, not the sessions the baseline read`,
+    );
+  }
+  if (reading.typed < MIN_TYPED) {
+    return notComparable(
+      `${reading.typed} typed messages is under the ${MIN_TYPED} a share needs before it is compared`,
+    );
+  }
+  return {
+    verdict: "comparable",
+    line: `laptop sessions from a window that began before ${CLOUD_DEFAULT}, as the baseline's were`,
+  };
+}
+
 /**
  * A count of each kind, the share that manage the session, and the status questions asked again. With
  * nothing typed in the window the verdict is unknown: transcripts that hold no message, rows with no
  * time and rows in a shape nothing here recognises all arrive as nothing, and none of them means zero.
+ * A session with no kind named is a cloud one: only the laptop's folder is the baseline's.
  */
 export function flowOf(sessions, window) {
   const counted = new Set();
   const byKind = Object.fromEntries(KINDS.map((kind) => [kind, 0]));
-  const spoken = new Set(); // the sessions he typed in during the window, not every file it touched
+  const spoken = new Map(); // the sessions he typed in during the window, not every file it touched
   let typed = 0;
   let repeatedStatus = 0;
   let undated = 0;
@@ -150,17 +236,18 @@ export function flowOf(sessions, window) {
       const key = `${message.at}|${message.text.slice(0, 40)}`;
       if (counted.has(key)) return;
       counted.add(key);
-      spoken.add(session.path);
+      spoken.set(session.path, session.kind === "laptop" ? "laptop" : "cloud");
       typed += 1;
       byKind[kinds[i].kind] += 1;
       if (kinds[i].repeat) repeatedStatus += 1;
     });
   }
   const managing = typed - byKind.other;
-  return {
+  const reading = {
     verdict: typed ? "read" : "unknown",
     ...(typed ? {} : { line: nothingRead(undated) }),
     sessions: spoken.size,
+    read: sessionsRead(spoken),
     typed,
     managing,
     share: typed ? Math.round((managing / typed) * 100) : null,
@@ -169,6 +256,7 @@ export function flowOf(sessions, window) {
     undated,
     handRead: HAND_READ,
   };
+  return { ...reading, baseline: againstBaseline(reading, window) };
 }
 
 // Text a session or a stage wrote, which reaches a transcript looking like a person typed it. The
@@ -223,6 +311,7 @@ const unknown = (window, line) => ({
   window,
   line,
   share: null,
+  baseline: notComparable("nothing was read in this run"),
   handRead: HAND_READ,
 });
 
@@ -243,7 +332,9 @@ export async function readFlow(window) {
     // A file last written before the window began holds nothing in it.
     const inWindow = all.filter((path) => statSync(path).mtimeMs >= window.sinceMs);
     const sessions = [];
-    for (const path of inWindow) sessions.push({ path, typed: typedBy(await userLines(path)) });
+    for (const path of inWindow) {
+      sessions.push({ path, kind: sessionKind(path), typed: typedBy(await userLines(path)) });
+    }
     return { window, ...flowOf(sessions, window) };
   } catch {
     return unknown(window, "a transcript could not be read in this run; run it again");

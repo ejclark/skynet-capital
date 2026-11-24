@@ -25,6 +25,11 @@ export function quietReason(
 export function digestFiles(): string[];
 export function latestDigestDate(): string | null;
 export function needsYouLines(planned: Pick<Planned, "needsYou">): string[];
+/** The Needs-you list with the asks on the Decisions page folded to one line (#7939). */
+export function foldedNeedsYouLines(
+  planned: Pick<Planned, "needsYou">,
+  page?: { number: number; entries: number[] } | null,
+): string[];
 /** The "needs a session" line for "Noise absorbed" (#6953 slice 2). */
 export function calloutIncompleteLine(planned: Partial<Pick<Planned, "incomplete">>): string;
 export function needsSessionLine(planned: Partial<Pick<Planned, "needsSession">>): string;
@@ -39,3 +44,14 @@ export function learningLine(count: {
 export function memberFilingsLine(
   unseen: readonly { number: number; title?: string; ageHours: number }[],
 ): string;
+/** Digests dated from the advisory day on that lack the `## The picture` slot (#3748 slice 7c). */
+export function missingPictureSlot(
+  files: readonly string[],
+  readText: (file: string) => string,
+): string[];
+/** Digests carrying the picture slot before it is ratcheted into the required sections. */
+export const RATCHET_AFTER: number;
+export function carryingPictureSlot(
+  files: readonly string[],
+  readText: (file: string) => string,
+): string[];

@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import type { FocusEvent, ReactElement } from "react";
 import { useState } from "react";
 import type { DeskOrderRow, OrderChange, ReplaceResult } from "../live/orders";
 import { TIF_LABELS, type TicketTimeInForce } from "../live/ticket";
@@ -25,12 +25,16 @@ function parseField(text: string): number | undefined | null {
   return value > 0 ? value : null;
 }
 
-/** The change a form holds against the row it started from — only what differs. */
+/** A prefilled amount is selected whole on focus, so typing replaces it — "400" then "405" is
+ *  405, never "400405" (scenario OM-02: a member typing into the drawer gave up on the append). */
+const selectAll = (event: FocusEvent<HTMLInputElement>): void => event.currentTarget.select();
+
 /** "Contracts" for an option order, "Shares" otherwise — the word the broker's quantity means. */
 export function unitWord(row: Pick<DeskOrderRow, "unit">): "Contracts" | "Shares" {
   return row.unit === "contracts" ? "Contracts" : "Shares";
 }
 
+/** The change a form holds against the row it started from — only what differs. */
 export function orderChange(
   row: DeskOrderRow,
   form: { quantity: string; price: string; timeInForce: TicketTimeInForce | undefined },
@@ -75,13 +79,24 @@ export function ModifyForm({
   const [refusal, setRefusal] = useState<string | undefined>();
   const { change, refusal: shapeRefusal } = orderChange(row, { quantity, price, timeInForce });
   const unchanged = Object.keys(change).length === 0;
+  // An edit answers the last refusal: it no longer describes what the form holds.
+  const edit =
+    <T,>(set: (value: T) => void) =>
+    (value: T) => {
+      setRefusal(undefined);
+      set(value);
+    };
   const send = async () => {
     if (shapeRefusal) {
       setRefusal(shapeRefusal);
       return;
     }
     setRefusal(undefined);
-    await onSend(change);
+    // The server re-checks the change like a fresh order (no short, no spending past cash). Its
+    // first sentence lands here, in the drawer the member is looking at, not only in the pane's
+    // notice line below the list.
+    const answer = await onSend(change);
+    if (answer && !answer.ok) setRefusal(answer.refusals[0]);
   };
   const qtyId = `wo-mod-qty-${row.id}`;
   const priceId = `wo-mod-price-${row.id}`;
@@ -99,7 +114,8 @@ export function ModifyForm({
             step={1}
             value={quantity}
             disabled={busy}
-            onChange={(event) => setQuantity(event.target.value)}
+            onFocus={selectAll}
+            onChange={(event) => edit(setQuantity)(event.target.value)}
           />
         </label>
         <label htmlFor={priceId}>
@@ -113,7 +129,8 @@ export function ModifyForm({
             step={0.01}
             value={price}
             disabled={busy}
-            onChange={(event) => setPrice(event.target.value)}
+            onFocus={selectAll}
+            onChange={(event) => edit(setPrice)(event.target.value)}
           />
         </label>
         <fieldset className="wo-modify-tif">
@@ -125,7 +142,7 @@ export function ModifyForm({
                 type="button"
                 aria-pressed={(timeInForce ?? row.timeInForce) === tif}
                 disabled={busy}
-                onClick={() => setTimeInForce(tif)}
+                onClick={() => edit(setTimeInForce)(tif)}
               >
                 {TIF_LABELS[tif]}
               </button>
@@ -133,7 +150,7 @@ export function ModifyForm({
           </div>
         </fieldset>
       </div>
-      <p className="wo-modify-note">
+      <p className="wo-modify-note" aria-live="polite">
         {shapeRefusal ??
           refusal ??
           (unchanged

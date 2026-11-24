@@ -1,0 +1,57 @@
+/* The locked-in ceremony (#4609 slice 2): `shell/lock-in-ceremony.tsx`, on the shared takeover
+ * (`new-high.css` owns the overlay, rain, eyebrow, value, recap and actions). Curated at 390px:
+ * the figure, what it was on, whether the rest is still running, then the reason — four lines a
+ * phone reads without scrolling; desktop adds air, never width. The figure keeps the "charged"
+ * highlight every celebration uses; the ▲ and the words carry the meaning (docs/BRAND.md →
+ * Accessibility), so the P/L green is never the only signal. */
+
+.lk {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: min(100%, 560px);
+}
+.lk-value {
+  font-size: clamp(44px, 13vw, 88px);
+}
+.lk-what {
+  margin: -4px 0 0;
+  font-size: var(--text-md, 15px);
+  font-weight: 600;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.lk-rest {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.lk-why {
+  max-width: 44ch;
+}
+.lk .nh-actions .decision-btn {
+  min-width: 140px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .lk-value {
+    animation: lk-rise 640ms var(--ease-spatial, cubic-bezier(0.2, 0.8, 0.2, 1)) 160ms both;
+  }
+}
+@keyframes lk-rise {
+  from {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@media (max-width: 700px) {
+  .lk .nh-actions .decision-btn {
+    min-height: 44px;
+  }
+}

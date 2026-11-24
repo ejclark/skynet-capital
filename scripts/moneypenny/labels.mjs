@@ -73,6 +73,15 @@ export const LABELS = {
     description: "A decision only Eric can make — the irreversible class or a genuine taste fork",
     managed: true,
   },
+  // #7939 slice 2 — the one standing "Decisions for Eric" issue (decisions-page.mjs). Managed so
+  // the page's first create never 404s on its own label, and excluded from the board by
+  // `isBacklogCandidate` so it never reads as work a lane could pull.
+  decisionsPage: {
+    name: "decisions-page",
+    color: "d93f0b",
+    description: "Eric's one page of open decisions, regenerated each push — never built",
+    managed: true,
+  },
   // #1357 — the fifth waiting-room, and deliberately NOT a fifth outcome. A Sliced build whose
   // remainder lands under `.claude/` is finished as far as this lane is concerned (`next-slice`
   // still marks it); this label only names WHO can pick the remainder up, because an unattended
@@ -198,18 +207,20 @@ export const LABELS = {
   // #4064 slice 2 — priority, set by hand. Eric picked labels over the board field (2026-09-29): one
   // tap on the phone, and every lane and script can read them, which the board field is not. No lane
   // applies them; `scripts/rank.mjs` reads them, and a hand-set class always wins over its own.
-  p0: {
-    name: "P0",
-    color: "B60205",
-    description: "Pull first: unblocks another lane or removes a recurring Eric touch",
-  },
+  // The lane meanings (#6871 §4), each ≤100 characters (GitHub's cap) and the text the board's lane
+  // names stand for. Unmanaged: no lane rewrites them; `priority-labels.mjs` PATCHes the four once.
+  p0: { name: "P0", color: "B60205", description: "Fix first: pulled before all other work" },
   p1: {
     name: "P1",
     color: "D93F0B",
-    description: "Pull soon: something is broken, or a member or Eric feels it",
+    description: "Pull next: broken, blocking other work, slowing delivery, or a member asked",
   },
-  p2: { name: "P2", color: "FBCA04", description: "Normal: improves a surface or a process" },
-  p3: { name: "P3", color: "C5DEF5", description: "Someday: parked for later" },
+  p2: { name: "P2", color: "FBCA04", description: "Standard: improves a screen or a process" },
+  p3: {
+    name: "P3",
+    color: "C5DEF5",
+    description: "Later: pulled only when nothing above is ready",
+  },
   // GitHub's own defaults. Registering them is exactly why `managed` had to exist: this script has
   // no business rewriting labels it did not create.
   bug: { name: "bug", color: "d73a4a", description: "Something isn't working" },

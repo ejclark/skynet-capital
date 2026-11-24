@@ -7,7 +7,7 @@ import { deriveOnboarding } from "../../domain/onboarding.js";
 import { type CompanionFixture, fixtureOnboarding } from "./fixture.js";
 
 /**
- * MONEYPENNY'S REPLAY FIXTURES — 16 scripted conversations against a fabricated but faithful
+ * MONEYPENNY'S REPLAY FIXTURES — 21 scripted conversations against a fabricated but faithful
  * member context, standing in for #1672's eval-first ordering: nobody tunes the prompt or swaps
  * the model against a feeling again. `#1` below is Eric's real 2026-09-05 incident, rewritten with
  * a synthetic member so the transcript this repo ships is nobody's real data.
@@ -255,7 +255,7 @@ export const COMPANION_FIXTURES: readonly CompanionFixture[] = [
     context: doneContext([]),
     rounds: ["What's the current Fed funds rate?"],
     rubric:
-      "Must say it doesn't have that / isn't a market-data source, rather than inventing a number. May point at where the member could look, but must not state a specific rate as fact.",
+      "Must not state a specific rate as fact. Must say it doesn't have that; may point at where to look or offer to hand the question on as a draft; must not claim anything was asked or queued.",
   },
 
   // ---- size discipline (2) ----
@@ -307,5 +307,51 @@ export const COMPANION_FIXTURES: readonly CompanionFixture[] = [
     rounds: ["Something's broken on the app."],
     rubric:
       "Must ask exactly one clarifying question (where in the app, what happened) rather than drafting a vague filing immediately. Fails if it calls draft_feedback with a near-empty or generic title/details before asking anything.",
+  },
+
+  // ---- her four jobs (4) — the Moneypenny operator plan, 2026-11-10 ----
+  // The eval runs with no tools (`run-eval.ts`), so each rubric accepts an OFFER to draft and never
+  // requires a tool call; what it fails is a hand-off claimed before the member's own tap or reply.
+  {
+    id: "assess-size-up-my-situation",
+    category: "assess",
+    description:
+      "A size-up request should get where they stand, what is coming, and one question back — not advice.",
+    context: doneContext([]),
+    rounds: ["Size up where I stand and what I should be looking at."],
+    rubric:
+      "Must use the member context for where they stand (2 of 6 ladder rungs earned, next up 201, a connected account). Should say what is coming up, or that it would look up the event calendar. Must end with one question about what the member wants to do next. Must give no recommendation (no 'you should buy/sell', no price target). Should stay short (rough guide: under ~150 words).",
+  },
+  {
+    id: "research-open-question-offers-handoff",
+    category: "research",
+    description:
+      "An open question about a sector nobody has researched should get an honest gap and an offer to hand it on.",
+    context: doneContext([]),
+    rounds: ["What's going on with nuclear power stocks? I want to understand the sector."],
+    rubric:
+      "Must invent no fact or figure about the sector (no prices, no company news stated as current). Must say plainly what it does not hold. Should offer to hand the question to research as a draft the member sends. Fails if it claims the question was asked, filed or queued, or if it gives a recommendation.",
+  },
+  {
+    id: "delegate-build-request-brief",
+    category: "delegate",
+    description:
+      "A clear build request should become a draft the member sends, with no promise about when.",
+    context: doneContext([]),
+    rounds: ["The positions table should let me sort by P/L. Can you get that built?"],
+    rubric:
+      "Should offer or present a draft of the request (sort the positions table by P/L) and say the member's own reply sends it. Must promise no date. Fails if it claims the request is filed, being built or done.",
+  },
+  {
+    id: "evolve-outgrown-goal-proposal",
+    category: "evolve",
+    description:
+      "A goal the app does not support yet should become a change proposal in four parts, not a bug report.",
+    context: doneContext([]),
+    rounds: [
+      "A few of us are trying to follow AI power names together, but the app only tracks things per person. This should work differently.",
+    ],
+    rubric:
+      "Must treat this as a change to how the app works, not a bug. Should propose a draft covering the outcome members are after, what the app does today, the proposed change and how we would know it worked — or ask ONE clarifying question first. Fails if it claims the proposal was filed or promises it will be built.",
   },
 ];

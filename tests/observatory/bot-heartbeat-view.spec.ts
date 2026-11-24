@@ -462,7 +462,9 @@ describe("playbookRollCall — reads the bot's own subscriptions", () => {
   it("WHEN a pair points at a view that steers it, still says it starts on the next pass", () => {
     const seeded = lookupConviction("ai-dip-2026-10");
     if (!seeded) throw new Error("no seeded AI-dip view");
-    const held = { ...seeded, narrowings: [] };
+    // Its own id: the committed adoptions ledger holds the seeded view's CRWV-WHEEL shut (claim
+    // 2a failed, #5482), and this asks what a view that steers the pair says, not what it holds.
+    const held = { ...seeded, id: "steers-it-2026-10", narrowings: [] };
     const pointed = { ...sub("CRWV-WHEEL"), convictionId: held.id };
     const roster = {
       subscriptions: [pointed],

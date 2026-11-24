@@ -158,6 +158,17 @@ function timeStop(p: DeskPosition): PositionMark | null {
   };
 }
 
+/**
+ * Is this position marked Consider for the LOCK-IN reason, its return past the decision engine's
+ * bar — not for the time stop, which is a clock, not a win (#4609)? What a close of it later gets
+ * celebrated against. Same `markOf`, so the badge the member saw and the celebration never disagree.
+ */
+export function atLockInBar(p: DeskPosition, spot?: number): boolean {
+  if (markOf(p, spot).kind !== "consider") return false;
+  const ret = percent(p.returnPct);
+  return ret !== undefined && ret >= (p.isOption ? CONSIDER_OPTION_PCT : CONSIDER_SHARE_PCT);
+}
+
 export function markOf(p: DeskPosition, spot?: number): PositionMark {
   const ret = percent(p.returnPct);
   const { short } = held(p.quantity);

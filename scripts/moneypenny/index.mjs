@@ -66,6 +66,7 @@ import {
   readOpenIssues,
   readOpenPlans,
   recheckPullable,
+  recountAfterMark,
   sweepHold,
   waitingPlans,
 } from "./admission.mjs";
@@ -79,6 +80,12 @@ import {
   claimStamp,
   leaseOf,
 } from "./claim-lease.mjs";
+import {
+  buildEndVerdict,
+  EXPIRED_SWEEP_CAP,
+  gatherExpiredClaims,
+  gatherMergeReleases,
+} from "./claim-release.mjs";
 import { closeClockIssue, openClockIssue } from "./clock-watch.mjs";
 import {
   CONTINUED_MODEL,
@@ -97,10 +104,13 @@ import {
   withLaneAsk,
   writeIssueBody,
 } from "./decision-callout.mjs";
+import { isDecisionsReply } from "./decisions-page.mjs";
+import { executeDecisions, gatherDecisions, routeDecisions } from "./decisions-run.mjs";
 import { executeDialTap, executeDialTidy, routeDial } from "./dial-tap.mjs";
+import { closeStaleDiscovery, flagStaleDiscovery } from "./discovery-pr-sweep.mjs";
 import { dueForResearch, RECEIPT_TITLE_RE, routeSweep } from "./events.mjs";
 import { guardFeedbackOutcome } from "./feedback-guard.mjs";
-import { ghRest, ghRestAll, sh, withRetry } from "./gh.mjs";
+import { ghRest, ghRestAll, isRateLimited, sh, withRetry } from "./gh.mjs";
 import { nudgeHeadless } from "./headless-pr.mjs";
 import {
   boardedReason,
@@ -110,6 +120,7 @@ import {
   LABELS,
   labelNames,
   MANAGED_LABELS,
+  notPullable,
   setInProgress,
 } from "./labels.mjs";
 import { draftLesson, routeLessonDraft } from "./lesson-draft.mjs";
@@ -119,7 +130,7 @@ import { feedbackReadyIntent, planReadyIntent } from "./plan-claim.mjs";
 import { executePlanClose, gatherPlanCloseDeps } from "./plan-close.mjs";
 import { openPrsByIssue } from "./pr-issues.mjs";
 import { closeRedLanePr } from "./red-lane-pr.mjs";
-import { executeRelay, gatherRelayDeps, routeRelay } from "./relay.mjs";
+import { executeRelay, gatherRelayDeps, RELAY_KINDS, routeRelay } from "./relay.mjs";
 import { replyResumeIntent } from "./reply-resume.mjs";
 import {
   closeSupersededResearch,
@@ -175,7 +186,9 @@ export const slugify = (s) =>
  * a second: `in-progress` coming off an issue wakes the build queue — wake.mjs.)
  */
 export function route(ctx, deps = {}) {
-  if (ctx.eventName === "push" || ctx.inputs?.command === "scan") return routeSweep(deps);
+  // #7313: the push tick also hands back the leases whose build is done (claim-release.mjs).
+  if (ctx.eventName === "push" || ctx.inputs?.command === "scan")
+    return [...routeSweep(deps), ...releaseIntents(deps.claimReleases)];
   // #5056 slice 2: `in-progress` coming off is a freed build slot, and wakes the queue (wake.mjs).
   // One tap on the dial clears the others and writes the end time (dial-tap.mjs).
   if (ctx.eventName === "issues")
@@ -183,8 +196,17 @@ export function route(ctx, deps = {}) {
   if (ctx.eventName === "workflow_dispatch" && ctx.inputs?.command === "release-claim") {
     return routeRelease(ctx);
   }
+  // #7939 slice 2: his reply on the decisions page is read the moment he posts it. The "Run
+  // Moneypenny" step already runs on every `issue_comment` with the App token, so this needs no
+  // workflow edit; `gatherDeps` reads the page only when `isDecisionsReply` says it is his reply
+  // there, and the push sweep reads the same replies again if this run is lost (level-based).
+  if (ctx.eventName === "issue_comment") return routeDecisions(deps);
   return [];
 }
+
+/** The early releases `gatherDeps` found (#7313), as intents; a skipped read (`null`) is none. */
+const releaseIntents = (releases) =>
+  (releases ?? []).map((r) => ({ kind: "release-claim-early", slug: r.slug, reason: r.reason }));
 
 /**
  * Break a wedged lease by hand.
@@ -308,6 +330,20 @@ export function releaseBuild(slug) {
 }
 
 /**
+ * THE RECOUNT AFTER THE MARK (#7316, `recountAfterMark` in admission.mjs). Every claim lane runs it
+ * after `in-progress` goes on and before the build gets its `number=`: a claim that finds itself
+ * past the cap takes the mark and the lease back off and leaves `ready` on, so the retry sweep
+ * starts it once a seat frees. `admission` carries the gate's injected reads, for specs.
+ */
+function keepSeat(issue, slug, admission = {}) {
+  const seat = recountAfterMark(issue, admission);
+  if (seat.keep) return seat;
+  setInProgress(issue.number, false);
+  releaseClaim(slug);
+  return seat;
+}
+
+/**
  * READ-ONLY peek at a lease — never claims, never reclaims a stale one, never writes anything.
  * Exists so a caller that only wants to SKIP work Moneypenny already holds (e.g. `/work-issues`,
  * which checks for an open PR but had no visibility into a claim taken before any PR exists) can
@@ -387,12 +423,15 @@ export function claimFeedback(
     console.log(`::notice::not building feedback #${issue.number} — ${result.reason}`);
     return result;
   }
+  // #3960: the board's In Progress column reads this label; the release path takes it back off.
+  // #7316: marked BEFORE the build gets its number, so the recount can still give the seat back.
+  setInProgress(issue.number, true);
+  const seat = keepSeat(issue, `feedback-${issue.number}`, admission);
+  if (!seat.keep) return { claimed: false, reason: seat.reason };
   const tier = modelTier(issue.body ?? "");
   const out = process.env.GITHUB_OUTPUT;
   if (out) appendFileSync(out, `number=${issue.number}\nmodel=${tier.model}\n`);
   console.log(`::notice::claimed feedback issue #${issue.number} — building in this run`);
-  // #3960: the board's In Progress column reads this label; the release path takes it back off.
-  setInProgress(issue.number, true);
   adoptFeedbackLabel(issue);
   console.log(`::notice::feedback #${issue.number} — model tier: ${tier.model} — ${tier.reason}`);
   return { ...result, number: issue.number, model: tier.model };
@@ -474,6 +513,12 @@ export function claimFeedbackReply(
     console.log(`::notice::not resuming feedback #${issue.number} — ${result.reason}`);
     return result;
   }
+  setInProgress(issue.number, true);
+  const seat = keepSeat(issue, `feedback-${issue.number}`, admission); // #7316
+  if (!seat.keep) {
+    unpark(issue.number, intent.answered, edit); // a withdrawal is a refusal: same contract
+    return { claimed: false, reason: seat.reason };
+  }
   const reply = ctx.payload?.comment?.id ?? "";
   // The reply's timestamp is the baseline #1028's stall guard needs on this path: "more than one
   // comment" is trivially true on an issue that already holds a receipt, a question and an answer.
@@ -489,7 +534,6 @@ export function claimFeedbackReply(
   console.log(
     `::notice::resuming feedback #${issue.number} from reply ${reply} — building in this run`,
   );
-  setInProgress(issue.number, true);
   unpark(issue.number, intent.answered, edit);
   console.log(`::notice::feedback #${issue.number} — model tier: ${tier.model} — ${tier.reason}`);
   return { ...result, number: issue.number, model: tier.model, reply, replyAt };
@@ -576,6 +620,19 @@ export function triageFeedbackDecision({ labels = [] } = {}) {
     return {
       ready: false,
       reason: "flagged needs-eric/needs-info/needs-design — stays in Backlog",
+    };
+  }
+  // A FILING MATCHED TO A KNOWN PROBLEM IS EVIDENCE, NOT A BUILD (#8005; #8019 files it, #8026
+  // tells the member if its fix ships). Moneypenny files a member's ask that matches a row of the IA
+  // ledger (docs/IA.md §10) with `ia-<row>`; the row is fixed as a whole (by its plan, once one is
+  // filed: 4 of 17 rows had one on 2026-11-23), and its evidence counts the members who asked.
+  // Self-readying it would start one screen's patch beside that fix: the clash plan #8005 exists to
+  // stop. A person who applies `fast-track` to a bug has decided otherwise, and wins.
+  const row = labels.find((l) => /^ia-U\d+$/.test(l));
+  if (row && !(has("bug") && has("fast-track"))) {
+    return {
+      ready: false,
+      reason: `evidence on known problem ${row.slice(3)} — fixed as a whole, never alone; stays in Backlog`,
     };
   }
   if (has("curated")) {
@@ -731,15 +788,18 @@ export function claimPlan(
   // Opus (no plan carries a `skynet-spec` block), which is right for a first slice off a brief and
   // wrong for one whose scope is already written in the state block. `ctx.continuation` is set only
   // by `claimNext`'s continuation branch — never by a label or comment event.
+  // Before `in-progress`: the go outlives this slice, so continuation can carry the next one — and
+  // a slice the recount withdraws stays `ready` for the sweep, as a refused flip does (#5334).
+  recordPlanFlip(ctx, issue, edit);
+  setInProgress(issue.number, true); // #3960 — same in-flight signal as the feedback claim
+  const seat = keepSeat(issue, `plan-${issue.number}`, admission); // #7316
+  if (!seat.keep) return { claimed: false, reason: seat.reason };
   const tier = ctx.continuation
     ? { model: CONTINUED_MODEL, reason: "continued slice — below the top tier (criterion 9)" }
     : modelTier(issue.body ?? "");
   const out = process.env.GITHUB_OUTPUT;
   if (out) appendFileSync(out, `number=${issue.number}\nmodel=${tier.model}\n`);
   console.log(`::notice::claimed plan issue #${issue.number} — building in this run`);
-  // Before `in-progress`: the go outlives this slice, so continuation can carry the next one.
-  recordPlanFlip(ctx, issue, edit);
-  setInProgress(issue.number, true); // #3960 — same in-flight signal as the feedback claim
   console.log(`::notice::plan #${issue.number} — model tier: ${tier.model} — ${tier.reason}`);
   return { ...result, number: issue.number, model: tier.model };
 }
@@ -1046,15 +1106,9 @@ function continueNext(pick, { claims, nowMs, sha, gateDeps }) {
  * harness-engineering research called this the top gap). A dependency that cannot be read is a
  * hard stop, not an empty list.
  */
-/**
- * Is this failure the GraphQL budget running out, rather than a wrong answer?
- *
- * `RATE_LIMIT_EXHAUSTED` in the extensions, or the message GitHub prints for it. Matched on the
- * message too because `gh` surfaces the latter and swallows the former.
- */
-export function isRateLimited(err) {
-  return /rate limit|RATE_LIMITED|RATE_LIMIT_EXCEEDED/i.test(String(err?.message ?? ""));
-}
+// Is this failure a spent budget, rather than a wrong answer? Defined in gh.mjs (#6942) so the
+// capsule stall check can share it; re-exported here for the callers and specs that read it here.
+export { isRateLimited };
 
 /**
  * The shipped sweep, degrading on an exhausted budget ONLY.
@@ -1102,12 +1156,27 @@ export function sweepShipped(readIssues, deps) {
  * Returns `null` on a skip, so the caller can tell "skipped" apart from "nothing to do".
  */
 export function auditIntentsOrSkip(readIntents, log = console.log) {
+  return tickOrSkip("audit", readIntents, log);
+}
+
+/**
+ * Any push-tick pass's reads, skipped when the token's hourly budget is spent: the rule above,
+ * named by `step` so the warning says which pass lost its tick (#6942, 2026-11-24).
+ *
+ * The audit got this guard in #6998, and the route and the retry-sweep peek did not. Run
+ * 45304863363 (push, 01:25Z) then died in `Run Moneypenny` on the router's first read of the open
+ * issue list, with the installation's REST budget at 0/5000 until 01:55Z, and #6942 reopened for
+ * the 24th time over a quota, not a defect. Both passes are level-based like the audit: the next
+ * push re-reads everything, so a skipped tick costs one tick of delay. Only the reads sit inside
+ * the thunk; a write that fails in `execute` still turns the run red. `null` means "skipped".
+ */
+export function tickOrSkip(step, read, log = console.log) {
   try {
-    return readIntents();
+    return read();
   } catch (err) {
     if (!isRateLimited(err)) throw err;
     log(
-      `::warning::audit skipped — this token's API budget is spent (${String(err.message).slice(0, 200)}). Nothing was flagged or cleared; the next push re-reads everything.`,
+      `::warning::${step} skipped — this token's API budget is spent (${String(err.message).slice(0, 200)}). Nothing was acted on; the next push re-reads everything.`,
     );
     return null;
   }
@@ -1219,6 +1288,13 @@ function gatherDeps(ctx) {
   // single-page version cost. Read ONCE here and shared, rather than paged a second time for the
   // reconcile's sake.
   const open = needsScan ? openIssues() : [];
+  // #7939 slice 2: the decisions page reads the assignment gather (one selector), on a sweep and on
+  // his reply there. Fail-open like the assignment read itself, for the reasons recorded below.
+  const pageReply = ctx.eventName === "issue_comment" && isDecisionsReply(ctx.payload);
+  const assignments = needsScan || pageReply ? gatherAssignmentsSafely() : null;
+  const decisions = assignments
+    ? gatherSafely("decisions", () => gatherDecisions({ assignments }))
+    : null;
   return {
     shippedFeedback: needsScan ? shippedSweep("feedback") : [],
     // `event-research` deliberately does NOT get the reference sweep any more (#2968). Its receipts
@@ -1248,14 +1324,44 @@ function gatherDeps(ctx) {
     // lost by skipping a tick, because the next push re-reads the same queue from GitHub — this lane
     // keeps no state of its own. (Contrast `readReceipts`, which refuses outright: there a false
     // empty would CLOSE the whole queue.)
-    assignments: needsScan ? gatherAssignmentsSafely() : null,
+    assignments: needsScan ? assignments : null,
+    decisions,
     // Continuation's stop half (#3818 slice 8, criterion 10). Sweep-only and FAIL-OPEN, for both
     // of the reasons the assignment read above records: only a push can have merged the slice that
     // makes a plan continuable, and this read is chatty enough (a comments page and a run lookup
     // per candidate plan) to meet a transient 5xx. A skipped tick costs nothing — the next push
     // re-reads the same state, and the only thing waiting is a stop that was already late.
     continuations: needsScan ? gatherSafely("continuations", gatherContinuationDeps) : null,
+    // #7313: the leases whose build is done. Push only (a merge is what frees one) and FAIL-OPEN —
+    // a skipped tick costs one tick of delay, and the 2h TTL is still the backstop under it.
+    claimReleases: ctx.eventName === "push" ? gatherClaimReleases(ctx.payload, open) : null,
   };
+}
+
+/** `gatherDeps`' early releases (#7313): the push's merged feedback PRs, then a bounded sweep of
+ *  expired leases on closed issues. Each half fails open on its own, so a refs read that fails
+ *  never costs the merge release this tick exists for. */
+function gatherClaimReleases(payload, open) {
+  const merged = gatherSafely("merge release", () =>
+    gatherMergeReleases(payload, {
+      readPr: (n) => ghRest(`pulls/${n}`),
+      readLease,
+      readIssueLabels: (n) => labelNames(ghRest(`issues/${n}`).labels),
+      log: console.log,
+    }),
+  );
+  const expired = gatherSafely("expired-claim sweep", () =>
+    gatherExpiredClaims({
+      // Not `ghRestAll`: matching-refs answers with the whole list and no paging.
+      readRefs: () => ghRest("git/matching-refs/tags/claim/"),
+      openNumbers: new Set(open.map((i) => i.number)),
+      readLease,
+      nowMs: Date.now(),
+      ttlMs: CLAIM_TTL_MS,
+      cap: EXPIRED_SWEEP_CAP,
+    }),
+  );
+  return [...(merged ?? []), ...(expired ?? [])];
 }
 
 /** `gatherAssignmentDeps` with the fail-open wrapper `gatherDeps` explains above. */
@@ -1576,6 +1682,12 @@ function executeSweepIntent(i) {
     console.log(`::notice::${line}`);
     return line;
   }
+  if (i.kind.startsWith("decisions-")) {
+    // The writes live in decisions-run.mjs so its own `--apply` CLI reuses them (#7939 slice 2).
+    const line = executeDecisions(i, { lease: ASK_LEASE });
+    console.log(`::notice::${line}`);
+    return line;
+  }
   if (i.kind === "stop-continuation") {
     // The label write and the assignment live in continuation.mjs so its own CLI can reuse them
     // without importing this router — the same cycle-avoidance as the relay and the assignments.
@@ -1583,11 +1695,11 @@ function executeSweepIntent(i) {
     console.log(`::warning::${line}`);
     return line;
   }
-  if (i.kind === "relay-remainder") {
-    // The three writes (file the relay, receipt the source, clear the remainder label) live in
+  if (RELAY_KINDS.has(i.kind)) {
+    // The writes (file the relay or not, receipt the source, clear the remainder label) live in
     // relay.mjs so its own CLI can reuse them without importing this router.
     const line = executeRelay(i);
-    console.log(`::notice::relayed #${i.source}'s remainder — ${i.title}`);
+    console.log(`::notice::${line}`);
     return line;
   }
   return undefined;
@@ -1620,6 +1732,9 @@ const ONE_CALL_INTENTS = {
   "close-superseded-research": (i) => closeSupersededResearch(i),
   "flag-red-research": (i) => flagRedResearch(i),
   "report-research-sweep": (i) => reportResearchSweep(i),
+  // #7341 — the discovery-PR sweep: the writes live in discovery-pr-sweep.mjs beside the decision.
+  "close-stale-discovery": (i) => closeStaleDiscovery(i),
+  "flag-stale-discovery": (i) => flagStaleDiscovery(i),
   "edit-issue-body": (i) => {
     sh("gh", ["issue", "edit", String(i.issueNumber), "--body", i.body]);
     console.log(`· refreshed the body of #${i.issueNumber}`);
@@ -1635,6 +1750,17 @@ const ONE_CALL_INTENTS = {
   // #6470 — the clock's watcher: the writes live in clock-watch.mjs beside the decision.
   "open-clock-issue": (i) => openClockIssue(i),
   "close-clock-issue": (i) => closeClockIssue(i),
+  // #7313 — `releaseClaim` alone, not `releaseBuild`: a merge release found `in-progress` already
+  // off, and an expired lease's issue is closed, so neither has a label left to take off.
+  "release-claim-early": (i) => {
+    const freed = releaseClaim(i.slug);
+    console.log(
+      `::notice::claim/${i.slug} ${freed ? "released" : "was already gone"} — ${i.reason}`,
+    );
+    return freed
+      ? `🔓 released \`claim/${i.slug}\` — ${i.reason}`
+      : `· \`claim/${i.slug}\` was already gone — ${i.reason}`;
+  },
 };
 
 /**
@@ -1757,9 +1883,13 @@ export function executeOne(i, stallRepairs = []) {
  * so a payload-supplied string is never interpolated into a `run:` block.
  *
  * Then the lease: a build that ended on `needs-info` is WAITING, not running, so its lease goes back
- * — see `guardFeedbackOutcome`'s own note for the two restart paths that unblocks. `releaseClaim`,
- * not `releaseBuild`: the latter also strips `in-progress`, which the session itself already removed
- * at its ending, and this step holds GITHUB_TOKEN, whose label writes start no workflow run.
+ * — see `guardFeedbackOutcome`'s own note for the two restart paths that unblocks. Since #7313 so does
+ * a build that left no open PR on `feedback/<n>` (none opened, or one that already merged): nothing
+ * is left to wait for, and holding the lease only idles a `next-slice` remainder for the TTL
+ * (`buildEndVerdict`, claim-release.mjs). An open PR keeps it; the push tick of its merge releases it.
+ * `releaseClaim`, not `releaseBuild`: the latter also strips `in-progress`, which the session itself
+ * already removed at its ending, and this step holds GITHUB_TOKEN, whose label writes start no
+ * workflow run.
  */
 function guardThenRelease(issueNumber) {
   const runUrl =
@@ -1767,14 +1897,51 @@ function guardThenRelease(issueNumber) {
       ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
       : undefined;
   const guarded = guardFeedbackOutcome(issueNumber, runUrl, process.env.RESUME_SINCE || undefined);
-  if (!guarded.waitingOnMember) return guarded;
-  const slug = `feedback-${Number(issueNumber)}`;
+  const n = Number(issueNumber);
+  const slug = `feedback-${n}`;
+  const verdict = guarded.waitingOnMember
+    ? buildEndVerdict({ waitingOnMember: true })
+    : buildEndVerdict({
+        lanePrs: lanePrsOf(n),
+        leaseTakenMs: readLease(slug)?.takenMs ?? Number.NaN,
+        stillPullable: stillPullable(n),
+      });
+  if (!verdict.release) {
+    console.log(`::notice::keeping ${slug} — ${verdict.reason}`);
+    return guarded;
+  }
   console.log(
     releaseClaim(slug)
-      ? `::notice::released ${slug} — the build ended waiting on the member, not running`
+      ? `::notice::released ${slug} — ${verdict.reason}`
       : `::notice::no lease held for ${slug} — nothing to release`,
   );
   return guarded;
+}
+
+/** The PRs on the feedback lane's own branch for #n, newest first, or null when the read fails — a
+ *  null keeps the lease (`buildEndVerdict`), because an unread PR must never read as "no PR". */
+function lanePrsOf(n) {
+  try {
+    const owner = (process.env.GITHUB_REPOSITORY ?? "ejclark/skynet-capital").split("/")[0];
+    const prs = ghRest(`pulls?state=all&head=${owner}:feedback/${n}&per_page=10`);
+    if (!Array.isArray(prs)) return null;
+    return prs.map((p) => ({ state: p.state, createdMs: Date.parse(p.created_at) }));
+  } catch (err) {
+    console.log(`::warning::feedback #${n} — lane PR read failed: ${String(err).slice(0, 200)}`);
+    return null;
+  }
+}
+
+/** Could the lane pull #n again, setting aside the `in-progress` this build may still carry (its
+ *  `--end-build` step runs after this one)? A failed read answers yes, which keeps the lease. */
+function stillPullable(n) {
+  try {
+    const issue = ghRest(`issues/${n}`);
+    const labels = labelNames(issue.labels).filter((l) => l !== LABELS.inProgress.name);
+    return notPullable({ ...issue, labels }) === null;
+  } catch {
+    return true;
+  }
 }
 
 // The narrow, single-purpose CLI flags — each one does its own thing and exits, never reaching
@@ -1856,7 +2023,9 @@ function runCliFlag(argv, ctx) {
     "--claim-feedback-reply": claimFeedbackReply,
     "--claim-plan": claimPlan,
     "--claim-next": () => claimNext(),
-    "--peek-next": () => peekNext(),
+    // Read-only, so a spent budget skips it (#6942): no `has_next`, no re-dispatch, and the next
+    // push peeks again. The claim (`--claim-next`) stays unguarded: it writes.
+    "--peek-next": () => tickOrSkip("retry sweep peek", () => peekNext()),
   };
   for (const [flag, claim] of Object.entries(claimers)) {
     if (argv.includes(flag)) {
@@ -1912,7 +2081,7 @@ function main(argv) {
         ...audit(fixtureDeps ?? gatherAuditDeps(Date.now(), hourly)),
         ...capsuleAudit(fixtureDeps),
       ])
-    : route(ctx, fixtureDeps ?? (dry ? {} : gatherDeps(ctx)));
+    : tickOrSkip("route", () => route(ctx, fixtureDeps ?? (dry ? {} : gatherDeps(ctx))));
   if (intents === null) return;
 
   if (dry) {

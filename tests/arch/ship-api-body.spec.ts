@@ -5,16 +5,23 @@ import { join, resolve } from "node:path";
 import { hermeticGitEnv } from "../support/hermetic-git.js";
 
 /**
- * ship.sh's REST writes carry their JSON on stdin, never as one argv string (#6212).
+ * ship.sh's REST writes carry their JSON on stdin, never as one argv string (#6212), and never a PR
+ * body GitHub would refuse (#6879).
  *
  * Linux caps a single argument at 128 KiB (MAX_ARG_STRLEN). On 2026-10-26 a platter ledger of
  * ~122 KB boarded and pushed, then the body sync died at `curl -d "$3"` with "Argument list too
  * long" — and that bare curl error was the run's last line. These specs drive the real sync path
- * against a stub `curl` with a body past the cap; under the old argv shape the exec itself fails.
+ * against a stub `curl`; under the old argv shape the exec itself fails.
+ *
+ * Behind that wall is a lower one: GitHub refuses a PR body over 65,536 characters with a 422. The
+ * first version of this spec sent 200,000 characters to a stub that accepted anything, so it passed
+ * while the real API would still have refused the ledger. The stub now answers like GitHub, and the
+ * argv proof uses a body that fits in characters but not in argv: 60,000 `é`, which JSON-escapes to
+ * `\u00e9` — 360,000 bytes on the wire.
  */
 describe("ship api() — a body past the 128 KiB argv cap still sends", () => {
   let dir: string;
-  const BIG = 200_000; // comfortably past 131,072
+  const FITS = 60_000; // characters: under GitHub's 65,536, yet 360,000 bytes once JSON-escaped
   let head: string;
   const env = (patchCode = "200", extra: Record<string, string> = {}) =>
     hermeticGitEnv({
@@ -28,15 +35,19 @@ describe("ship api() — a body past the 128 KiB argv cap still sends", () => {
       ...extra,
     });
 
-  /** Source ship.sh, swap the ledger for a BIG-char body, and run the platter body sync. */
-  const sync = (patchCode?: string, extra?: Record<string, string>) => {
+  /** Source ship.sh, swap the ledger for `len` copies of `char`, and run the platter body sync. */
+  const sync = (
+    patchCode?: string,
+    extra?: Record<string, string>,
+    body: { char: string; len: number } = { char: "é", len: FITS },
+  ) => {
     const script = `source "${resolve("scripts/ship.sh")}"
-platter_body() { head -c ${BIG} /dev/zero | tr '\\0' x; }
+platter_body() { python3 -c 'import sys; sys.stdout.buffer.write((sys.argv[1] * int(sys.argv[2])).encode())' "$BODY_CHAR" "$BODY_LEN"; }
 platter_sync_body platter/2026-10-26`;
     try {
       const out = execFileSync("bash", ["-c", script], {
         cwd: dir,
-        env: env(patchCode, extra),
+        env: env(patchCode, { BODY_CHAR: body.char, BODY_LEN: String(body.len), ...extra }),
         stdio: "pipe",
       });
       return { code: 0, stdout: out.toString(), stderr: "" };
@@ -49,13 +60,14 @@ platter_sync_body platter/2026-10-26`;
       };
     }
   };
+  const patched = () => readFileSync(join(dir, "argv.log"), "utf8").includes("PATCH");
 
   beforeEach(() => {
     dir = mkdtempSync(join(tmpdir(), "ship-api-body-"));
     mkdirSync(join(dir, "bin"));
     // A curl that records its argv and whatever arrived on stdin, then answers like GitHub: the open
     // PR list for a GET of the list, the PR's head and commit count for a GET of the PR itself, and
-    // STUB_PATCH_CODE for the PATCH.
+    // for the PATCH a 422 past 65,536 body characters, else STUB_PATCH_CODE.
     writeFileSync(
       join(dir, "bin", "curl"),
       `#!/bin/bash
@@ -68,7 +80,13 @@ if [ "$method" = GET ]; then case "$url" in
   */pulls/42) printf '{"commits":%s,"head":{"sha":"%s"}}\\n__SHIP_HTTP__200' "$STUB_PR_COMMITS" "$STUB_PR_HEAD" ;;
   *) printf '[{"number":42}]\\n__SHIP_HTTP__200' ;;
 esac
-else printf '{}\\n__SHIP_HTTP__%s' "$STUB_PATCH_CODE"; fi
+else
+  # GitHub refuses a PR body past 65,536 characters with a 422 (#6879); the stub does too, so a
+  # spec that sends one cannot pass on a lenient stub the way #6216's did.
+  len=$(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1])).get("body","")))' "$STUB_DIR/stdin.json")
+  if [ "$len" -gt 65536 ]; then printf '{"message":"body is too long (maximum is 65536 characters)"}\\n__SHIP_HTTP__422'
+  else printf '{}\\n__SHIP_HTTP__%s' "$STUB_PATCH_CODE"; fi
+fi
 `,
     );
     chmodSync(join(dir, "bin", "curl"), 0o755);
@@ -94,14 +112,33 @@ else printf '{}\\n__SHIP_HTTP__%s' "$STUB_PATCH_CODE"; fi
     const sent = JSON.parse(readFileSync(join(dir, "stdin.json"), "utf8")) as {
       body: string;
     };
-    expect(sent.body).toHaveLength(BIG);
+    expect(sent.body).toBe("é".repeat(FITS));
+    // The proof this body could not have gone as one argument: its JSON is past 128 KiB.
+    expect(readFileSync(join(dir, "stdin.json")).length).toBeGreaterThan(131_072);
   });
 
   it("keeps the body off curl's argv entirely", () => {
     sync();
     const argv = readFileSync(join(dir, "argv.log"), "utf8");
-    expect(argv).not.toContain("x".repeat(1000));
+    expect(argv).not.toContain("\\u00e9".repeat(100));
     expect(argv).toContain("--data-binary");
+  });
+
+  it("sends a body of exactly 65,536 characters, GitHub's own maximum", () => {
+    const { code, stdout } = sync(undefined, undefined, { char: "x", len: 65_536 });
+    expect(code).toBe(0);
+    expect(stdout).toContain("ledger refreshed on #42");
+  });
+
+  // #6879: #5852's ~122 KB ledger. Before the guard this PATCHed, the stub answered 422 like
+  // GitHub, and the ledger never synced; now it is refused by name before any request goes out.
+  it("refuses a body past 65,536 characters by name, sending nothing", () => {
+    const { code, stderr } = sync(undefined, undefined, { char: "x", len: 122_000 });
+    expect(code).toBe(1);
+    expect(stderr).toContain("#42's platter body is 122000 characters");
+    expect(stderr).toContain("GitHub refuses a PR body over 65536");
+    expect(stderr).toContain("ship platter open");
+    expect(patched()).toBe(false);
   });
 
   it("fails non-zero with the cause named when GitHub refuses the PATCH", () => {
@@ -109,6 +146,38 @@ else printf '{}\\n__SHIP_HTTP__%s' "$STUB_PATCH_CODE"; fi
     expect(code).toBe(1);
     expect(stderr).toContain("PATCH body returned HTTP 422");
     expect(stderr).toContain("refresh #42's ledger by hand");
+  });
+});
+
+// cmd_open's POST carries the body too (`ship platter open` sends the first ledger through it), so
+// the same limit is checked there before verify or a push is spent.
+describe("ship body_fits — the PR-body length check every body write runs first", () => {
+  const fits = (len: number) => {
+    const script = `source "${resolve("scripts/ship.sh")}"
+python3 -c 'import sys; sys.stdout.write("x" * int(sys.argv[1]))' ${len} | body_fits "the PR body" "shorten it."`;
+    try {
+      execFileSync("bash", ["-c", script], { env: hermeticGitEnv({}), stdio: "pipe" });
+      return { code: 0, stderr: "" };
+    } catch (error) {
+      const e = error as { status?: number; stderr?: Buffer };
+      return { code: e.status ?? -1, stderr: e.stderr?.toString() ?? "" };
+    }
+  };
+
+  it("passes a body at the limit and refuses one character past it, naming the limit", () => {
+    expect(fits(65_536).code).toBe(0);
+    const over = fits(65_537);
+    expect(over.code).toBe(1);
+    expect(over.stderr).toContain("the PR body is 65537 characters");
+    expect(over.stderr).toContain("over 65536");
+  });
+
+  it("is run on cmd_open's body before the push", () => {
+    const source = readFileSync("scripts/ship.sh", "utf8");
+    const open = source.slice(source.indexOf("cmd_open() {"));
+    const check = open.indexOf('body_fits "the PR body"');
+    expect(check).toBeGreaterThan(-1);
+    expect(check).toBeLessThan(open.indexOf('cmd_push "$branch"'));
   });
 });
 

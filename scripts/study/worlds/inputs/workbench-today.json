@@ -1,0 +1,64 @@
+{
+  "$comment": "World 'workbench-today' (#8005, the workbench area), layered over profile-today: the same league on the same Thursday, with the trade page's own state filled in. Eric's account holds 100 AAPL (two buys, so a covered call is possible; the cost is derived from the buys, book.mjs → derivedFields) and has one working limit buy on MSFT that has not filled; he watches three names. Jordan watches nothing yet. The bot's book is profile-today's (shares in NVDA and CRWV, the sold CRWV put). Cash is cut by the second AAPL buy, so equity stays where the month's history left it.",
+  "base": "profile-today",
+  "participants": {
+    "eric": {
+      "cash": 52240,
+      "positions": [
+        { "symbol": "MSFT", "quantity": 45, "avgPrice": 498.2, "mark": 507.4, "lastday": 509.1 },
+        { "symbol": "AAPL", "quantity": 100, "mark": 236.1, "lastday": 234.9 }
+      ]
+    }
+  },
+  "humanFills": {
+    "eric": [
+      {
+        "orderId": "eric-aapl-1",
+        "symbol": "AAPL",
+        "side": "buy",
+        "quantity": 60,
+        "price": 228.4,
+        "at": "@-13d 10:40"
+      },
+      {
+        "orderId": "eric-msft-1",
+        "symbol": "MSFT",
+        "side": "buy",
+        "quantity": 45,
+        "price": 498.2,
+        "at": "@-6d 13:15"
+      },
+      {
+        "orderId": "eric-aapl-2",
+        "symbol": "AAPL",
+        "side": "buy",
+        "quantity": 40,
+        "price": 231.0,
+        "at": "@-2d 11:20"
+      }
+    ]
+  },
+  "workingOrders": {
+    "$comment": "Orders the broker holds open: placed, nothing filled. A limit buy under the market waits for the price to come to it.",
+    "eric": [
+      {
+        "orderId": "eric-msft-2",
+        "symbol": "MSFT",
+        "side": "buy",
+        "quantity": 10,
+        "type": "limit",
+        "limitPrice": 495,
+        "timeInForce": "gtc",
+        "at": "@0d 10:12"
+      }
+    ]
+  },
+  "watchlists": {
+    "$comment": "Keyed by the account a member's session resolves to (the watchlist route's key): Eric's first account.",
+    "eric": [
+      { "symbol": "GOOG", "at": "@-9d 20:15" },
+      { "symbol": "NVDA", "at": "@-5d 08:02" },
+      { "symbol": "SPY", "at": "@-1d 21:40" }
+    ]
+  }
+}

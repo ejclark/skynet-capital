@@ -2,7 +2,7 @@
   {
     "id": "machine-halt-marker-misspelt",
     "contract": "bots-running",
-    "file": "scripts/fitness.mjs",
+    "file": "scripts/fitness-judges.mjs",
     "find": "metadata?.[\"skynet-halt\"]",
     "replace": "metadata?.[\"skynet-halted\"]",
     "why": "a machine a person deliberately halted (the marker bots-start-stopped.sh respects) is reported as a failure and an issue is assigned to the owner for their own decision"
@@ -10,15 +10,15 @@
   {
     "id": "machine-stopped-passes",
     "contract": "bots-running",
-    "file": "scripts/fitness.mjs",
-    "find": "primary.state === \"started\" ? pass(\"started\")",
-    "replace": "primary.state !== \"destroyed\" ? pass(\"started\")",
+    "file": "scripts/fitness-judges.mjs",
+    "find": "primary.state === \"started\") return pass(\"started\")",
+    "replace": "primary.state !== \"destroyed\") return pass(\"started\")",
     "why": "a stopped primary, the 10-22 outage flyctl called a good state, reads as running"
   },
   {
     "id": "stamp-fresh-units",
     "contract": "bots-responsive",
-    "file": "scripts/fitness.mjs",
+    "file": "scripts/fitness-judges.mjs",
     "find": "const STAMP_FRESH_MS = 5 * 60_000;",
     "replace": "const STAMP_FRESH_MS = 5 * 60;",
     "why": "the freshness limit becomes 300 ms, so every live stamp reads stale and the owner gets a false alarm every tick"
@@ -26,7 +26,7 @@
   {
     "id": "stamp-age-boundary",
     "contract": "bots-responsive",
-    "file": "scripts/fitness.mjs",
+    "file": "scripts/fitness-judges.mjs",
     "find": "if (ageMs > STAMP_FRESH_MS)",
     "replace": "if (ageMs >= STAMP_FRESH_MS)",
     "why": "a poll exactly at the limit must still pass; the boundary is the limit, not one tick before it"
@@ -34,7 +34,7 @@
   {
     "id": "stamp-missing-poll-passes",
     "contract": "bots-responsive",
-    "file": "scripts/fitness.mjs",
+    "file": "scripts/fitness-judges.mjs",
     "find": "if (!Number.isFinite(ageMs)) return fail(\"the stamp has no controls poll\");",
     "replace": "if (ageMs === undefined) return fail(\"the stamp has no controls poll\");",
     "why": "a stamp that never polled has a NaN age, which no compare catches, so a process that never reached Mission Control reads as alive"
@@ -42,7 +42,7 @@
   {
     "id": "stamp-bridge-any-state",
     "contract": "bots-responsive",
-    "file": "scripts/fitness.mjs",
+    "file": "scripts/fitness-judges.mjs",
     "find": "return stamp.bridge === \"armed\"",
     "replace": "return stamp.bridge !== \"failed\"",
     "why": "a bridge that is disarmed or still arming (the smoke signal that rolled back six releases) reads as reachable"
@@ -50,7 +50,7 @@
   {
     "id": "deploy-grace-units",
     "contract": "main-deploys",
-    "file": "scripts/fitness.mjs",
+    "file": "scripts/fitness-judges.mjs",
     "find": "const DEPLOY_GRACE_MS = 20 * 60_000;",
     "replace": "const DEPLOY_GRACE_MS = 20 * 1_000;",
     "why": "a 20 second grace makes every push read red for the minutes its own deploy takes, the 65 of 729 healthy ticks the study measured"
@@ -58,7 +58,7 @@
   {
     "id": "deploy-future-date-passes",
     "contract": "main-deploys",
-    "file": "scripts/fitness.mjs",
+    "file": "scripts/fitness-judges.mjs",
     "find": "undated.push(unknown(`the ${name} lag is dated in the future`));",
     "replace": "continue;",
     "why": "a lag dated ahead of the runner's clock passes as current for as long as the skew lasts, instead of being unknown"
@@ -66,7 +66,7 @@
   {
     "id": "deploy-bots-reads-dashboard-field",
     "contract": "main-deploys",
-    "file": "scripts/fitness.mjs",
+    "file": "scripts/fitness-judges.mjs",
     "find": "[\"bots\", lag.bots?.lagging, lag.bots?.since],",
     "replace": "[\"bots\", lag.lagging, lag.since],",
     "why": "the bots half judges the dashboard's lag, so a bots-only lag (the class of the four-day outage) is invisible"
@@ -74,7 +74,7 @@
   {
     "id": "alert-one-secret-enough",
     "contract": "alerts-reach-owner",
-    "file": "scripts/fitness.mjs",
+    "file": "scripts/fitness-judges.mjs",
     "find": "const ALERT_SECRETS = [\"SKYNET_ALERT_EMAIL_API_KEY\", \"SKYNET_ALERT_EMAIL_FROM\"];",
     "replace": "const ALERT_SECRETS = [\"SKYNET_ALERT_EMAIL_API_KEY\"];",
     "why": "delivery needs the sender address too; with only the key set the contract says configured while alerts reach nobody"
@@ -98,8 +98,8 @@
     "id": "probe-machine-list-no-json-flag",
     "contract": "bots-running",
     "file": "scripts/fitness.mjs",
-    "find": "BOTS_APP, \"--json\"]);\n      return machines ? judgeMachine(machines)",
-    "replace": "BOTS_APP]);\n      return machines ? judgeMachine(machines)",
+    "find": "BOTS_APP, \"--json\"]);\n      return machines ? judgeMachine(machines, nowMs)",
+    "replace": "BOTS_APP]);\n      return machines ? judgeMachine(machines, nowMs)",
     "why": "fly prints a table, the parse fails, and bots-running is unknown on every tick: blind forever, never a failure"
   },
   {
@@ -319,7 +319,7 @@
   },
   {
     "id": "self-assignment-passes",
-    "file": "scripts/fitness.mjs",
+    "file": "scripts/fitness-judges.mjs",
     "find": "issue.title.startsWith(\"[fitness] \") && newest && !byBot(newest)",
     "replace": "false",
     "why": "#6501's silent self-assignment reads as a working path",
@@ -327,7 +327,7 @@
   },
   {
     "id": "assignment-path-never-stale",
-    "file": "scripts/fitness.mjs",
+    "file": "scripts/fitness-judges.mjs",
     "find": "return ageMs <= ASSIGNMENT_FRESH_MS",
     "replace": "return ageMs <= Infinity",
     "why": "a path nothing has used for a year reads as working",

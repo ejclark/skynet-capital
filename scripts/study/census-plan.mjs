@@ -189,6 +189,25 @@ export function leaveReason(link, origin) {
   return null;
 }
 
+/** The world's write a message to Moneypenny makes (world-chat.mjs answers it in a session). */
+const CHAT_WRITE = "/api/companion/chat";
+
+/**
+ * Why a tap the census just made must not count as operated, or null: it sent Moneypenny a message
+ * (a write to her chat among `writes` from index `from` on). The census is model-free, so in it she
+ * cannot answer, and its frames would show the experts a dock that fails where production's
+ * answers (the cross-feature thin slice, 2026-11-23: "every assistant shortcut fails with
+ * 'companion 200'"). Members ask her live in their sessions; the census records the control as
+ * skipped, with this reason, and keeps no frame of it.
+ * @param {{method: string, url: string}[]} writes  the world's recorded writes (world-route.mjs)
+ */
+export function chatReason(writes, from) {
+  const sent = (writes ?? [])
+    .slice(from)
+    .some((w) => w.method === "POST" && String(w.url).split("?")[0] === CHAT_WRITE);
+  return sent ? "sends Moneypenny a message: a census never asks her, members do, live" : null;
+}
+
 /** A control's identity on a page: role, name and its occurrence among same-named ones. */
 export function keyed(controls) {
   const seen = new Map();

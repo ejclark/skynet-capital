@@ -6,6 +6,7 @@ import {
   capControls,
   censusArgs,
   censusFindings,
+  chatReason,
   DEFAULT_CAP,
   keyed,
   leaveReason,
@@ -327,5 +328,24 @@ describe("routes and arguments", () => {
         "tablet",
       ]),
     ).toThrow(/--viewport/);
+  });
+});
+
+describe("chatReason — a census never asks Moneypenny (#8005)", () => {
+  const before = [{ method: "POST", url: "/api/companion/ack" }];
+  it("names a tap that sent her a message, and only one made after `from`", () => {
+    const after = [...before, { method: "POST", url: "/api/companion/chat" }];
+    expect(chatReason(after, before.length)).toMatch(/a census never asks her/);
+    expect(chatReason(after, after.length)).toBeNull();
+  });
+
+  it("leaves every other write alone: an ack, a filing, a read", () => {
+    const writes = [
+      ...before,
+      { method: "POST", url: "/api/feedback" },
+      { method: "GET", url: "/api/companion/chat" },
+    ];
+    expect(chatReason(writes, 0)).toBeNull();
+    expect(chatReason(undefined, 0)).toBeNull();
   });
 });

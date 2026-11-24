@@ -100,9 +100,51 @@ the Cabinet Office's own release.
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-11-07 | 9 | Initial research. Date re-read on ESRI's page (08:50 JST, estimate). Q2: first +1.1% vs median +2.1%, revised +1.4%. Q3 forecasts: MUFG +0.1%, Daiichi Life +0.4% annualized; JCER monthly Jul +1.1% / Aug −0.7%. Adjacency: VIX 25.64 (was 19.42 on the 11-01 sibling read), USD/JPY 158.4; NVDA print 11-18 and US retail sales 11-17 inside the corridor, no tracked name keyed here; Oct 30 BoJ held 8-1 (own ledger). Past the horizon: nothing named. Conviction proposals: none for this event. Declared intents: none for this event. | — (baseline: stand aside) | 2026-11-14 (D-2: read the Jiji consensus, if published) |
+| 2026-11-14 | 2 | **Pulse; stance holds (stand aside); no kill fired.** *Consensus found:* Jiji, 10 private think tanks (nippon.com 11-11) — Q3 **+0.1% q/q, +0.4% annualized**, consumption −0.2%, capex the support; equals Daiichi Life, +0.3pp over MUFG; inside `FT-1`'s −0.9…+1.1 band, below `FT-2`'s +1.4 line, so both open and unscored (11-17). *Date:* ESRI page re-read 11-14: still 11-16 08:50, estimate. *Adjacency:* JGB 5Y 11-12 cover 3.67x, tail 0.4bp (sibling ledger); USD/JPY **159.9** (158.4 on 11-07), VIX **19.3** (25.64 on 11-07, −6.3pt, Yahoo secondary) — no regime shift against the stance; US 10Y ^TNX 5.10 (sibling read), NVDA −4.3% 11-13 tied to tape, not Tokyo. US PPI 11-13 not read. NVDA print 11-17/18 and US retail sales 11-17 sit in the corridor; no tracked name is keyed here. Past the horizon: nothing named. Conviction proposals: none. Declared intents: none. | — (stand aside holds) | 2026-11-17 (D+1 close-out; score FT-1/FT-2 from the Cabinet Office release) |
+| 2026-11-17 | 1 | **Close-out (D+1); stance holds; no kill fired.** Print landed 11-16 08:50 JST: real GDP **−0.02% q/q, −0.1% annualized** (consumption −0.3%, capex +1.6%, exports −0.2%, imports +2.5%; Kyodo via Qazinform, Admiral Markets), a miss of 0.5pp vs the Jiji +0.4% and 0.3–0.4pp vs Reuters +0.2/+0.3; inside `FT-1`'s band, below `FT-2`'s +1.4 line. USD/JPY 159.9 → 159.78 (11-16 close), "barely moved"; VIX 19.3 → **22.91**. NVDA/AVGO/MRVL/CRWV closed −4.1/−3.9/−7.3/−6.1% on 11-16 inside a semis slide (NVDA 5 down closes into its 11-18 print); cause not found in any source read, headline not credited. Past the horizon: nothing named. Conviction proposals: none. Declared intents: none. | — (stand aside holds) | closed — see Outcome |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
 *change* earns its sentence in the Stance section with the row as its receipt. Close-out fills
 `## Outcome` below from re-run instrument data, never from memory.
 
+**Last assessed:** 2026-11-14
+<!-- probe-ref: {"symbols":{},"vix":19.3,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","bund-30y-auction-2026-11-11","cbrs-q3-2026-results-2026-11-11","empire-state-mfg-2026-11-16","erock-q3-2026-results-2026-11-12","eurostat-hicp-final-2026-11-18","existing-home-sales-2026-11-12","fomc-minutes-2026-11-18","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-cpi-2026-11-20","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-5y-auction-2026-11-12","jgb-liquidity-enhancement-1-5y-2026-11-20","msft-ignite-2026-11-17","mtis-2026-11-17","mts-october-2026-11-12","nahb-hmi-2026-11-17","nbis-2026-11-12-print","nvda-2026-11-18-print","opex-2026-11-20","pbls-q3-2026-results-2026-11-12","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","ppi-2026-11-13","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-30y-bond-2026-11-12","treasury-coupon-announcement-2026-11-12","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-gdp-q3-first-2026-11-12","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["cbrs-q3-2026-results-2026-11-11","nbis-2026-11-12-print","nvda-2026-11-18-print","retail-sales-2026-11-17"],"screenStreak":0,"blocked":[]} -->
+
+## Outcome
+
+**Close-out (2026-11-17, D+1; inside `closeOutWithinDays`).** Scored from the Cabinet Office's 11-16 first
+preliminary as reported by Kyodo (via [Qazinform](https://qazinform.com/news/japans-economy-contracts-01-in-third-quarter-first-decline-in-a-year-76967f))
+and [Admiral Markets](https://admiralmarkets.com/analytics/traders-blog/japan-gdp-q3-2026-yen-usdjpy-160), and Yahoo's
+daily chart API for prices. ESRI's own result page was not fetchable (deep link 404); its release-schedule page lists the
+7–9月期 first preliminary on 2026-11-16, so the date held. The event has `symbols: []`, so no earnings or intraday
+instrument applies and none was re-run; the entry stays `estimate`.
+
+**What printed vs the stance (stand aside).** Real GDP **−0.02% q/q, −0.1% annualized**, the first contraction in four
+quarters. Consumption **−0.3%** (second straight fall; prices, a Kumamoto earthquake and August rain are the cited
+causes), capex **+1.6%**, exports **−0.2%**, imports **+2.5%**. Against the forecasts found: Jiji think-tank median
+**+0.4%** (a **0.5pp** miss), Daiichi Life +0.4%, MUFG **+0.1%** (a 0.2pp miss, the nearest), Reuters poll about
++0.2/+0.3%. Q2's first print missed its median by 1.0pp; this one missed by 0.3–0.5pp, same sign.
+
+**Stance and kill switches.** Stand aside held; nothing we hold was keyed to this print. Kill switches: (1) release moved
+off 11-16, no; (2) the print outside −1.0%…+2.5%, no (−0.1%); (3) a tracked name moving >2% **attributed to the
+headline**: the moves happened but the attribution is not supported. NVDA **−4.1%** (178.67 → 156.14 over 11-09→11-16,
+five straight down closes into its 11-18 print), AVGO −3.9%, MRVL −7.3%, CRWV −6.1% on 11-16, VIX 19.30 → 22.91. USD/JPY
+159.88 → 159.78, a **−0.06%** move, so the headline did not move the one channel it could. No source read gave a cause for
+the 11-16 US session; a miss of this size on a low-impact print is not a credible driver of a −7% MRVL day, and the sibling
+11-14 ledger already tied NVDA's slide to the tape. Not a fired kill, not a proven non-driver either.
+
+**Forward tests.** `FT-…-1` **pass** (−0.1% inside −0.9…+1.1); `FT-…-2` **pass** (below +1.4). Neither is a kill, so
+nothing moves to the sweep doc's kill list. A caution on reading the pass: both were registered with the consensus at
++0.1…+0.4 in view, so they test that the first print stayed inside a band around it, not a deep forecast.
+
+**What a person still had to do (loop census).** Find the print: the primary page's result summary was unfetchable and
+the figure came from two secondary wires. A scripted ESRI result-page read would remove that, and the unattributed
+11-16 US tape needs a dated-news source this lane lacks.
+
+**Context for the 12-08 second preliminary and 12-17/18 BoJ.** A −0.1% first print puts the revision (capex and the
+Ministry of Finance's corporate survey) in play: Q2 was revised +0.3pp. Economists reportedly still expect a December
+hike (83% in a post-October survey, Admiral Markets); this ledger measured no market-implied odds and makes no call.
+
+**Last assessed:** 2026-11-17
+<!-- probe-ref: {"symbols":{},"vix":22.91,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","bund-30y-auction-2026-11-11","cbrs-q3-2026-results-2026-11-11","empire-state-mfg-2026-11-16","erock-q3-2026-results-2026-11-12","eurostat-hicp-final-2026-11-18","existing-home-sales-2026-11-12","fomc-minutes-2026-11-18","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-cpi-2026-11-20","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-5y-auction-2026-11-12","jgb-liquidity-enhancement-1-5y-2026-11-20","msft-ignite-2026-11-17","mtis-2026-11-17","mts-october-2026-11-12","nahb-hmi-2026-11-17","nbis-2026-11-12-print","nvda-2026-11-18-print","opex-2026-11-20","pbls-q3-2026-results-2026-11-12","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","ppi-2026-11-13","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-30y-bond-2026-11-12","treasury-coupon-announcement-2026-11-12","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-gdp-q3-first-2026-11-12","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["cbrs-q3-2026-results-2026-11-11","nbis-2026-11-12-print","nvda-2026-11-18-print","retail-sales-2026-11-17"],"screenStreak":0,"blocked":[{"url":"https://www.esri.cao.go.jp/jp/sna/data/sokuhou/files/2026/qe263/gdemenuja.html","status":"404","at":"2026-11-17"}]} -->

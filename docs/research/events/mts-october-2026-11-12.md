@@ -4,6 +4,10 @@
 **Last assessed:** 2026-09-05
 <!-- probe-ref: {"symbols":{},"vix":14.53,"daysBand":"medium:31+","adjacentIds":["cpi-2026-11-10","crwv-2026-11-10-print","import-export-prices-2026-11-17","ppi-2026-11-13","retail-sales-2026-11-17","us-china-tariff-truce-expiry-2026-11-10"],"screenStreak":0} -->
 
+> **Closed out 2026-11-13 (D+1).** The print landed at **$404.06B** and this ledger goes quiet — see
+> [**`## Outcome`**](#outcome). The decision header below is preserved **as it stood before the print**, not
+> rewritten: its stand-aside was right, its $320B base case and the later $370B were both too low.
+
 ## At a glance
 
 **TL;DR.** **Still never a trade — but unlike its August sibling, this print is worth reading, because
@@ -376,6 +380,8 @@ Estimates widen caution only; `confirmed` date, model-derived number, no positio
 | 2026-11-05 | D-7 | **Pulse; stance holds (stand aside, y/y worse), but the number moved: base case ~$370B, above FT-1's $280–365B band. Trigger: band `medium:8+` → `medium:0+`, VIX −4.5pt, NBIS print (11-12) and NVDA print (11-18) joined the corridor.** **(1) October DTS is closed (last business day 10-30, fetched today).** The five benefit lines sum to **$124.65B** (Medicare Rx 48.09, VA 39.28, active-duty pay 14.61, military retirement 11.95, SSI 10.72): **FT-3 passes**, $0.35B under its ceiling, two batches as modeled (Oct-25 $108.5B). **(2) The DTS→MTS mapping, run as August's close-out handed it over.** Ex-debt gap **$311.4B** (deposits $448.2B, withdrawals $759.7B; the same code reproduces Oct-25's $215.1B). Cash interest only **$11.6B** (Oct-25 $40.4B): Oct 31 is a Saturday, so month-end coupon cash falls in November (inference, not checked on the DTS). Estimates: constant bias +30.6 → **$342B**; October-only mean +46.2 → **$358B**; interest fit (87.4 − 0.970×interest, SE 21.2) → **$388B**, extrapolated at the sample floor; the Jan-26 analog (Jan 31 also a Saturday, interest $11.9B, bias +58.4) → **$370B**. **Central ~$370B, band $345–395B** vs $284.35B a year ago: FT-2 (>$285B) looks safe, FT-1 more likely fails on the top side. Registered **FT-mts-october-2026-11-12-4** on the amended mapping. Customs deposits $27.1B MTD (inside the $22–30B band), CBP withdrawals $8.8B MTD (under the $25B watch line). **(3) The FY2026 final statement is out, unscheduled.** Fiscal Data's MTS API carries a 2026-09-30 row (the 10-13 row had August latest): Sept deficit **$26.9B**, FY2026 **$1,992.5B** vs $1,775.4B (**+$217.1B, +12.2%**), net interest $1,051.8B (+8.4%), customs (Table 9, net of refunds) $173.2B vs $194.9B. The release API still lists only 11-12 and 12-10, so the kill switch as worded (a scheduled date) did not fire; its substance did, and this print is the second look at the fiscal year. Table 9's net customs line (Oct-25 $31.4B; May–Sep $0.0 / −25.6 / −8.5 / 12.8 / 5.9) is not the gross series the receipts build uses. Publication date not determined. **(4) Refunding 11-04** (sibling's close-out; I read sb0678 direct): sizes unchanged, "at least" dropped from the several-quarters guidance, the dated trigger this header named. Tape that day: TLT +0.80%, SPY +1.65%, VIX 20.83 → 16.61, not attributable (ISM services, first session after the midterms). Borrowing estimates 11-02: $618B Q4. FOMC 10-28 held 3.75–4.00%, 10–2 on two hike dissents (sibling ledger). **(5) Tape (11-04 close):** VIX **16.61** (21.15 on 11-02, 20.83 on 11-03: two closes at or above 20, the FT-51 caveat live then, dormant now), TLT 81.76, ^TNX 4.89%, SPY 766.81. Debt $40.547T on 11-03, headroom ~$0.55T to the $41.1T limit this ledger carries (was ~$0.997T on 09-03); the debt-limit kill switch has not fired. **(6) Corridor:** 35 tracked adjacents; 8 entries on 11-12 itself. NBIS reports before the open (IR, per the calendar), so the 13:30→close window is clear, but the **30y auction at 13:00 ET** (estimate) sits 30 minutes ahead of FT-51's window start: a caution for FT-51's owner, not edited here. **No proposals:** every dated adjacent is tracked; conviction proposals and declared intents: none. | — (stance unchanged; base-case number raised) | 2026-11-07 (medium, 0+ band: every 2d) |
 | 2026-11-07 | D-5 | **Pulse; stance holds (stand aside, y/y worse), FT-4 band $345–395B unchanged. Trigger: VIX +9.0pt since the last probe (16.61 → 25.64).** **(1) Vol regime:** VIX closed **28.18** on 11-05 (+11.6pt) and **25.64** on 11-06, two closes over 20 with the print five sessions out. SPY 766.81 → 733.00 (−4.4%) → 735.29; TLT 81.76 → 81.93 → 81.92 and ^TNX 4.89% → 4.84% → 4.86%, so risk-off with yields flat to down, not a rates shock (sibling ledgers tie it to a chip/AI slide; press, not re-verified). **FT-51's ±0.60% window is now a ~1.7σ test (7.6% false-positive, leg 8) if VIX stays above 20 into 11-12;** the kill switch is worded on the 11-12 close, so it has not fired. FT-51 belongs to the August sibling, not edited. **(2) The 11-05 interest inference is now checked:** DTS interest on Treasury securities was **$33.5B on Mon 11-02** and ~0 on 11-03/04/05, so October's month-end coupon cash did land in November, as FT-4's Jan-26 analog assumed. **(3) Macro:** October payrolls **159,293K vs 159,128K for September, about +165K** (BLS API, preliminary, level difference); par 2y 4.51, 10y 4.86 on 11-06 (Treasury XML). No CPI/FOMC print since the last row; CPI is 11-10. **(4) Date:** Treasury's release API lists 11-12 and 12-10 for `015-BFS-2014Q1-13` (19:00 UTC = 14:00 ET, `released: false`), unchanged. **(5) Corridor:** 37 adjacents (strong: cbrs lockup, cbrs print, cpi, nbis print, nvda print, retail sales); new since last row `empire-state-mfg-2026-11-16`, `erock-q3-2026-results-2026-11-12`. Nothing lands on the MTS afternoon except the 30y auction at 13:00 ET. **No proposals:** `--on-date` shows every dated adjacent already tracked; conviction proposals and declared intents: none. | — (stance unchanged) | 2026-11-09 (medium, 0+ band: every 2d) |
 | 2026-11-09 | D-3 | **Deterministic screen (no Claude session).** Readings — VIX 25.6 (+0.0pt since last), band unchanged (medium:0+), 40 adjacent event(s) tracked, new in corridor since last pulse: `japan-balance-of-payments-2026-11-10`, `japan-gdp-q3-prelim-2026-11-16`, `pbls-q3-2026-results-2026-11-12` (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-11-11 |
+| 2026-11-11 | D-1 | **Pulse; stance holds (stand aside, y/y worse), FT-4 band $345–395B unchanged, print is tomorrow 14:00 ET. Trigger: interval elapsed (screen at 11-09).** **(1) Date:** Treasury's release API still lists 11-12 and 12-10 for `015-BFS-2014Q1-13` (19:00 UTC = 14:00 ET, `released: false`): nothing moved. **(2) Macro:** October CPI (BLS API, SA index) headline **+0.35% m/m**, core **+0.30%**; par 2y **4.56 → 4.73**, 10y **4.88 → 4.98** on 11-10, TLT 81.96 → 80.88, so a hot print with the front end leading, supporting FT-2's direction through net interest; FT-4's mapping is cash-based and unaffected. **(3) Vol:** VIX **19.92** (11-09) and **19.46** (11-10), back under 20 from 25.64 (11-06): the FT-51 high-VIX caveat is dormant unless 11-12 closes above 20 (11-11 close not yet in). SPY 749.92. US bond market is shut today (Veterans Day). **(4) Adjacency:** corridor unchanged at 40 ids; same-day 11-12 events are NBIS print, 30y bond auction (1:00pm ET), coupon announcement, ERock print; none has a channel into a backward-looking accounting release. **No proposals:** every dated adjacent is tracked. No conviction proposals or declared intents name this event. | — (stance unchanged) | 2026-11-13 (close-out) |
+| 2026-11-13 | D+1 | **Close-out. Printed $404.06B: FT-1 KILLED (band $280–365B), FT-4 KILLED (band $345–395B), FT-2 PASSES (>$285B); FT-51 (legacy, inherited from the August sibling) PASSES.** Receipts **$368.94B**, outlays **$773.00B** vs $404.37B / $688.72B in Oct-25 (`mts_table_1`/`_4`/`_9` plus the PDF, re-fetched today). Stance (stand aside) was right; the number was not, and the miss is on both legs: ex-customs receipts **−6.2%** y/y, individual income tax net **−14.1%**, customs net **$19.22B** (under the $22B kill line; gross $25.95B, refunds $6.73B), outlays **+12.2%** (defense +$28.9B, Medicare +$19.5B, interest +$12.2B). DTS bias was **+$92.7B**; the interest-corrected fit alone said $387.5B, residual +$16.6B (+0.78 SE). FT-51: TLT **−0.155%**, SPY **−0.434%** over 1:30pm→close, inside ±0.60% / ±0.72%. VIX closed 18.7. Secondary, not fetched: CBO's monthly review estimated ~$409B. **The "calendar-clean" premise never tested the 2025 shutdown in the Oct-25 base** (secondary headline only). No proposals (every dated adjacent is tracked); conviction proposals and declared intents: none. | **Closed — see `## Outcome`**; stance not rewritten | — (closed; this doc goes quiet) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -405,3 +411,107 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-11-09
 <!-- probe-ref: {"symbols":{},"vix":25.64,"daysBand":"medium:0+","adjacentIds":["asean-summit-manila-2026-11-16","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","empire-state-mfg-2026-11-16","erock-q3-2026-results-2026-11-12","existing-home-sales-2026-11-12","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-balance-of-payments-2026-11-10","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-30y-auction-2026-11-10","jgb-5y-auction-2026-11-12","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","nbis-2026-11-12-print","nvda-2026-11-18-print","pbls-q3-2026-results-2026-11-12","ppi-2026-11-13","retail-sales-2026-11-17","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","sp-global-investment-manager-index-2026-11-10","survey-of-professional-forecasters-q4-2026-11-16","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-3y-note-2026-11-09","treasury-coupon-announcement-2026-11-12","uk-gdp-q3-first-2026-11-12","uk-gilt-auction-long-2026-11-10","uk-labour-market-2026-11-17","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","nbis-2026-11-12-print","nvda-2026-11-18-print","retail-sales-2026-11-17"],"screenStreak":1} -->
+
+**Last assessed:** 2026-11-11
+<!-- probe-ref: {"symbols":{},"vix":19.46,"daysBand":"medium:0+","adjacentIds":["asean-summit-manila-2026-11-16","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","empire-state-mfg-2026-11-16","erock-q3-2026-results-2026-11-12","existing-home-sales-2026-11-12","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-balance-of-payments-2026-11-10","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-30y-auction-2026-11-10","jgb-5y-auction-2026-11-12","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","nbis-2026-11-12-print","nvda-2026-11-18-print","pbls-q3-2026-results-2026-11-12","ppi-2026-11-13","retail-sales-2026-11-17","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","sp-global-investment-manager-index-2026-11-10","survey-of-professional-forecasters-q4-2026-11-16","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-3y-note-2026-11-09","treasury-coupon-announcement-2026-11-12","uk-gdp-q3-first-2026-11-12","uk-gilt-auction-long-2026-11-10","uk-labour-market-2026-11-17","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","nbis-2026-11-12-print","nvda-2026-11-18-print","retail-sales-2026-11-17"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out (2026-11-13, D+1).** A macro print runs no `earnings-cycle` / `intraday-edges` instrument
+(`symbols: []` by design), so "re-run instrument data" is the statement re-fetched from Treasury's
+primaries: `mts_table_1`, `mts_table_4` and `mts_table_9` from Fiscal Data (HTTP 200), plus
+`MonthlyTreasuryStatement_202610.pdf` (38 pages, text-extracted, receipts and outlays agree to the
+rounding), and 1-hour TLT/SPY bars pulled after the mandated cache bust. Nothing is scored from a press
+level where a primary exists.
+
+**Verdict: stand-aside right, number wrong, twice.** The $404.06B print landed **$39B above FT-1's
+ceiling and $9B above FT-4's**, with FT-2's direction call passing by $119B. FT-1's band came from growth rates and
+FT-4's from the DTS mapping, and both missed on the high side.
+
+| | Registered | Printed | Result |
+|---|---|---|---|
+| FT-1 deficit $280–365B | central ~$320B | **$404.06B** | **kill**, +$39.1B over ceiling |
+| FT-2 deficit > $285B | Oct-25 $284.33B | **$404.06B** (+$119.7B, +42.1%) | **pass** |
+| FT-3 benefit lines $100–125B | — | $124.65B (scored 11-05) | pass (already scored) |
+| FT-4 deficit $345–395B | central ~$370B | **$404.06B** | **kill**, +$9.1B over ceiling |
+| FT-51 (legacy) TLT ±0.60%, SPY ±0.72% | null | **−0.155% / −0.434%** | **pass** |
+
+### What printed
+
+| Line ($B) | Oct 2026 | Oct 2025 | Δ |
+|---|---|---|---|
+| Receipts | **368.94** | 404.37 | −35.43 |
+| of which individual income taxes (net) | 186.38 | 216.95 | −30.57 (−14.1%) |
+| of which customs duties (net; gross 25.95, refunds 6.73) | **19.22** | 31.35 | −12.13 |
+| Outlays | **773.00** | 688.72 | **+84.28 (+12.2%)** |
+| National Defense | 128.88 | 99.94 | +28.94 |
+| Medicare | 170.05 | 150.56 | +19.49 |
+| Net interest | 103.08 | 90.87 | +12.21 |
+| **Deficit** | **404.06** | **284.33** | **+119.73 (+42.1%)** |
+
+Ex-customs receipts fell **−6.2%** ($349.7B vs $373.0B); the registered build carried +0.24% to +3%.
+The receipts leg is the larger surprise to this ledger, because its thesis was that ex-customs receipts
+were flat; they were not even flat. This session did not establish why individual income taxes fell
+$30.6B (gross $207.0B vs $235.4B, refunds $20.6B vs $18.5B); that is a question for the next statement.
+
+### Why the DTS mapping, not the growth build, was the right tool, and why FT-4 still missed
+
+The October DTS ex-debt gap ($311.4B, 11-05 row) maps to a **+$92.7B** bias against the printed
+deficit, larger than the +$60.7B and +$69.2B of the last two Octobers. Re-scoring the four estimates
+registered at D-7 against the print:
+
+| Estimate (registered 11-05) | Value | Miss vs $404.06B |
+|---|---|---|
+| Constant bias +$30.6B | $342B | −$62B |
+| October-only mean bias | $358B | −$46B |
+| Jan-26 analog | $370B (the central) | −$34B |
+| **Interest fit** (87.4 − 0.970 × $11.6B cash interest) | **$387.5B** | **−$16.6B (+0.78 SE of $21.2B)** |
+
+The fit August's close-out handed over was the best of the four and inside its own error. FT-4 failed
+because the registered central was a **blend** that gave weight to three variants August had just shown
+misspecified. **Prevention (applied next time, not retroactively):** when a close-out hands over an
+amended model, register the amended model alone, with its own SE as the band, not averaged with its
+refuted ancestors. The interest fit is extrapolated at the floor of its range (n=11), so one hit is
+not a validation either.
+
+### The premise this ledger never tested
+
+The "calendar-clean comparison" argument covered the **payment-batch calendar**, and Treasury's own
+footnote 3 on the October statement confirms the 2026 side: *"Outlays for military active duty and
+retirement, veterans' benefits, Supplemental Security Income, and Medicare payments to health
+maintenance organizations and prescription drug plans accelerated into October, because November 1,
+2026, the normal payment date, fell on a non-business day."* It did not ask whether **October 2025 was
+itself a distorted base**: the 2025 federal shutdown ran across that month, and press headlines on the
+Oct-25 print carry "impacted by shutdown" (secondary; not fetched). A +29% defense line and +12.2%
+outlays against that base may owe part of their size to Oct-25 being low, so FT-2's pass says the
+deficit is above last October, not that FY2027's trend is +42%. **Falsifier, dated:** the 2026-12-10
+statement (November data, a zero-batch month) against Nov-25's $173.28B; a 12-10 print that also
+runs more than 15% above its prior-year month makes the structural reading stand.
+
+### The market side
+
+TLT 79.854 → 79.730 (**−0.155%**, −0.51σ against the measured 0.304% window σ) and SPY 760.490 →
+757.190 (**−0.434%**, −1.21σ against 0.359%) from the 13:30 ET bar's open to the last regular-hours
+close; **FT-51 passes**, both inside their bands. VIX closed 18.7, so the high-VIX caveat never
+engaged. Checked and not ruled out: the calendar carries no tracked headline in 13:30–16:00 ET (the
+30y auction result is at 1:00 p.m., NBIS and ERock print before the open), but an afternoon newswire
+was not read. One observation, weak by construction; the null is the base case. **The stand-aside cost
+nothing**: a $9B miss above the top of a registered band moved a 20-year-duration ETF 0.155% in the
+window.
+
+### Kill-switch audit
+
+- **Customs**: net **$19.22B**, under the ~$22B line, so the tariff prop is unwinding at least as fast as
+  the receipts leg assumed; gross $25.95B sits inside the band, and refunds ($6.73B vs $1.74B) are the gap.
+- **FY2026 final statement got a date**: it never did; it published unscheduled on 11-05 (already logged).
+- **VIX at or above 20 on 11-12**: closed 18.7, did not fire. **Debt-limit constraint live**: no.
+- Secondary, not fetched: CBO's monthly review had the month at about **$409B**, within $5B of the print;
+  the primary is the statement.
+
+### Loop census
+
+Stage still done by hand: **decide**, choosing a central and a band from four estimates. The fix is the
+prevention above (register the one amended model with its own SE), which a template line can carry.
+
+**Last assessed:** 2026-11-13
+<!-- probe-ref: {"symbols":{},"vix":18.69,"daysBand":"medium:0+","adjacentIds":["asean-summit-manila-2026-11-16","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","empire-state-mfg-2026-11-16","erock-q3-2026-results-2026-11-12","existing-home-sales-2026-11-12","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-balance-of-payments-2026-11-10","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-30y-auction-2026-11-10","jgb-5y-auction-2026-11-12","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","nbis-2026-11-12-print","nvda-2026-11-18-print","pbls-q3-2026-results-2026-11-12","ppi-2026-11-13","retail-sales-2026-11-17","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","sp-global-investment-manager-index-2026-11-10","survey-of-professional-forecasters-q4-2026-11-16","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-3y-note-2026-11-09","treasury-coupon-announcement-2026-11-12","uk-gdp-q3-first-2026-11-12","uk-gilt-auction-long-2026-11-10","uk-labour-market-2026-11-17","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","nbis-2026-11-12-print","nvda-2026-11-18-print","retail-sales-2026-11-17"],"screenStreak":0} -->

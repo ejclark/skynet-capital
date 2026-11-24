@@ -4,7 +4,7 @@
 //   node scripts/study/readout.mjs --grade <grade.json> --round <dir> --study <name>
 //        --next-area <text> --cost <text> [--owner-shot <path>] [--battle <battle.json>]
 //        [--battle-reason <text>] [--job-map <framer output .json|.md>] [--picture <session dir>]
-//        [--reveal --sealed <dir>] [--root <repo root>]
+//        [--reveal --sealed <dir>] [--root <repo root>] [--ia <IA.md>]
 //
 // Writes <root>/docs/members/study/<study>/readout.md and copies every frame it shows, small
 // (≤ 100KB JPEG), to <root>/docs/shots/study-<study>/. The layout and words are readout-core.mjs.
@@ -15,7 +15,10 @@
 // STRUCTURAL FINDINGS are the ones grade.json counted as new, one per checker `same_as` group,
 // ranked (severity · times reported · members reached): the top ten with their evidence frames, the
 // rest folded, text only, with no frames copied; the groups not counted (re-found on the key, held
-// on a dispute) follow.
+// on a dispute) follow. BY ROOT (#8005): when the round holds `roots.json` (root.mjs, the aware
+// rooter, after grading), the same groups are gathered under their IA roots — a §10 row of
+// `--ia` (default <root>/docs/IA.md) or a new root — and the top ten ROOTS are shown, each lead
+// problem with its frames, the rest folded (ia-roots.mjs). Without it the page is the flat list.
 // The battle file is {fork, least?, shapes: [{name, success, wrongTurns, involuntaryScroll, ease,
 // frame?}]} (frame paths relative to the file); without it the section says why it did not run.
 // Key item wording appears only with `--reveal`, read from the sealed folder given — a readout
@@ -33,10 +36,12 @@ import {
 import { basename, dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
 import { isMain } from "./compat.mjs";
 import { parseGold } from "./grade-core.mjs";
+import { groupByRoot, ledgerRows, ROOTS_TOP, rootsProblems } from "./ia-roots.mjs";
 import {
   rankStructural,
   renderReadout,
   STRUCTURAL_TOP,
+  severityRank,
   worstMoment,
   worstSeverity,
 } from "./readout-core.mjs";
@@ -44,10 +49,13 @@ import { FILES, findingView } from "./round-contract.mjs";
 import { findSessions, readJson, readJsonl } from "./round-files.mjs";
 
 export const FRAME_CAP = 100 * 1024;
+/** The most evidence frames the page shows for one problem (see withFrames). */
+export const FRAMES_SHOWN = 4;
 const USAGE =
   "usage: readout.mjs --grade <grade.json> --round <dir> --study <name> --next-area <text> " +
   "--cost <text> [--owner-shot <path>] [--battle <file>] [--battle-reason <text>] " +
-  "[--job-map <file>] [--picture <session dir>] [--reveal --sealed <dir>] [--root <dir>]";
+  "[--job-map <file>] [--picture <session dir>] [--reveal --sealed <dir>] [--root <dir>] " +
+  "[--ia <IA.md>]";
 
 /** The command line, checked; throws the usage line naming what is missing. */
 export function readoutArgs(argv) {
@@ -69,6 +77,7 @@ export function readoutArgs(argv) {
     reveal: argv.includes("--reveal"),
     sealed: get("--sealed"),
     root: get("--root") ?? process.cwd(),
+    ia: get("--ia"),
   };
   const missing = ["grade", "round", "study", "nextArea", "cost"].filter((k) => !opts[k]);
   if (missing.length) throw new Error(`missing ${missing.join(", ")}\n${USAGE}`);
@@ -213,7 +222,7 @@ export function buildReadout(opts) {
   };
   // Ranked here as the page ranks them, so only the ten shown get their frames copied; the
   // folded rest are text only and copy nothing (#5845: 66 uncapped findings made 48MB).
-  const structural = rankStructural(
+  const ranked = rankStructural(
     Object.values(grade.structural.groups).map((ids) => {
       const f = findingView(text.get(ids[0]));
       const members = new Set(ids.map((id) => text.get(id)?.member).filter(Boolean)).size;
@@ -221,6 +230,7 @@ export function buildReadout(opts) {
       // lands in the top ten instead of the fold.
       const severity = worstSeverity(ids.map((id) => text.get(id)?.severity));
       return {
+        ids,
         finding: f,
         class: graded.get(f.id)?.class,
         also: ids.length - 1,
@@ -228,10 +238,25 @@ export function buildReadout(opts) {
         severity,
       };
     }),
-  ).map((s, i) => ({
+  );
+  const rootGroups = byRoot(ranked, { round, root, ia: opts.ia, text });
+  // Frames for what the page shows in full: each shown root's lead problem, or the top ten.
+  const framed = new Set(
+    rootGroups
+      ? rootGroups.slice(0, ROOTS_TOP).map((g) => g.items[0])
+      : ranked.slice(0, STRUCTURAL_TOP),
+  );
+  // At most FRAMES_SHOWN a problem (its first two before/after pairs): an expert's lead problem
+  // can cite a whole batch, and the bot's-loop readout (2026-11-24) drew 24 frames in one row and
+  // copied 259 files (9MB) into the repo, unreadable on a phone; every frame stays in the round.
+  const withFrames = (s) => ({
     ...s,
-    frames: i < STRUCTURAL_TOP ? s.finding.frames.map(evidenceShot).filter(Boolean) : [],
-  }));
+    frames: framed.has(s)
+      ? s.finding.frames.slice(0, FRAMES_SHOWN).map(evidenceShot).filter(Boolean)
+      : [],
+  });
+  const structural = ranked.map(withFrames);
+  const grouped = rootGroups?.map((g) => ({ ...g, items: g.items.map(withFrames) })) ?? null;
 
   let battle = null;
   if (opts.battle) {
@@ -279,6 +304,7 @@ export function buildReadout(opts) {
     picture,
     ownerShot,
     structural,
+    rootGroups: grouped,
     titles,
     battle,
     battleReason,
@@ -288,6 +314,21 @@ export function buildReadout(opts) {
   });
   writeFileSync(page, markdown);
   return { page, shots, markdown };
+}
+
+/**
+ * The round's structural groups under their IA roots, or null when no rooter has placed them
+ * (`roots.json` absent). A roots.json that places an unknown finding or names a row §10 lacks is
+ * refused — a readout never groups on a placing it cannot read.
+ */
+function byRoot(ranked, { round, root, ia, text }) {
+  const file = join(round, FILES.roots);
+  if (!existsSync(file)) return null;
+  const roots = readJson(file);
+  const rows = ledgerRows(readFileSync(ia ?? join(root, "docs/IA.md"), "utf8"));
+  const problems = rootsProblems(roots, { rows, ids: new Set(text.keys()) });
+  if (problems.length > 0) throw new Error(`readout: ${problems.join("; ")}`);
+  return groupByRoot(ranked, { roots, rows, rank: severityRank });
 }
 
 if (isMain(import.meta.url)) {

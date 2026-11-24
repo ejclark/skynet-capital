@@ -1,7 +1,10 @@
 import { describe, expect, it } from "@rstest/core";
+// @ts-expect-error plain .mjs script, no declarations
+import { heldRows } from "../../scripts/agent-meter/render.mjs";
 import {
   ciByTrigger,
   crossesRepeatedHour,
+  heldWaits,
   iterationRow,
   localVerify,
   mainFailuresByJob,
@@ -180,6 +183,38 @@ describe("agent meter", () => {
     });
   });
 
+  // #6690: a fixed past window must read the same on every run, whatever landed after it.
+  describe("given a window that ends before the newest row", () => {
+    const since = Date.parse("2026-10-27T05:00:00Z");
+    const until = Date.parse("2026-11-01T12:15:00Z");
+
+    it("counts only local verify rows at or before --until", () => {
+      expect(
+        localVerify(
+          [
+            { at: "2026-10-30T00:00:00Z", ok: true },
+            { at: "2026-11-01T12:15:00Z", ok: true },
+            { at: "2026-11-02T09:00:00Z", ok: false, step: "lint" },
+          ],
+          since,
+          until,
+        ),
+      ).toEqual({ runs: 2, failed: 0, bySteps: {} });
+    });
+
+    it("times only merges at or before --until", () => {
+      const merge = mergeMinutes(
+        [
+          { title: "feat: a", createdAt: "2026-10-30T00:00:00Z", mergedAt: "2026-10-30T00:20:00Z" },
+          { title: "fix: b", createdAt: "2026-11-01T17:00:00Z", mergedAt: "2026-11-01T18:00:00Z" },
+        ],
+        since,
+        until,
+      );
+      expect(merge).toEqual({ n: 1, p50: 20, p90: 20 });
+    });
+  });
+
   it("reports an unverified run as null time, never a partial", () => {
     expect(runLoop([{ kind: "attempt", at: "2026-10-02T00:00:00Z", verified: false }])).toEqual({
       attempts: 1,
@@ -220,5 +255,38 @@ describe("agent meter", () => {
 
   it("has no startup to report before the first answer", () => {
     expect(startupFromTranscript(["{}"])).toBeNull();
+  });
+});
+
+// #7317: nothing measured a held PR's wait; `npm run meter` folded it into open-to-merge, which only
+// sees a PR once it merges. Each held PR open now gets its own green-to-now row.
+describe("held PRs: green-to-now, apart from open-to-merge", () => {
+  const now = Date.parse("2026-11-23T20:00:00Z");
+  const pr = (number: number, openHours: number) => ({
+    number,
+    title: `held ${number}`,
+    created_at: new Date(now - openHours * 36e5).toISOString(),
+  });
+
+  it("reads both clocks per PR, longest green first, a not-green PR last", () => {
+    const rows = heldWaits(
+      [
+        { pr: pr(7211, 5), greenAt: now - 2 * 36e5 },
+        { pr: pr(7080, 40), greenAt: null },
+        { pr: pr(7030, 30), greenAt: now - 26 * 36e5 },
+      ],
+      now,
+    );
+    expect(rows.map((r: { number: number }) => r.number)).toEqual([7030, 7211, 7080]);
+    expect(heldRows(rows)).toEqual([
+      "  held #7030: green to now 26.0h (open 30.0h, live)",
+      "  held #7211: green to now 2.0h (open 5.0h, live)",
+      "  held #7080: not green (open 40.0h, live)",
+    ]);
+  });
+
+  it("says none open when none is, and unavailable when the read failed", () => {
+    expect(heldRows([])).toEqual(["  held PRs: none open"]);
+    expect(heldRows("unavailable: 502")).toEqual(["  held PRs: unavailable: 502"]);
   });
 });

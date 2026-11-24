@@ -209,14 +209,21 @@ test.describe("an order's full detail at 1280px (#5101)", () => {
     const row = page.locator(`tr[id="${DEEPEST_CLOSE}"]`);
     await expect(row).toBeVisible();
     // Not modal, and not over the list: the panel docks over the tower's column, on the stage's
-    // left since #7216, so its right edge stops short of the table.
-    const [table, side] = await Promise.all([
+    // right since #7487 slice 4a (it was the left from #7216), so its left edge starts past the
+    // table's right edge and it sits inside the tower's column.
+    const [table, side, tower] = await Promise.all([
       page.locator("table.blotter").boundingBox(),
       panel.boundingBox(),
+      page.locator(".tower-column").first().boundingBox(),
     ]);
     expect(side).not.toBeNull();
     expect(table).not.toBeNull();
-    expect((side?.x ?? 0) + (side?.width ?? 0)).toBeLessThanOrEqual(table?.x ?? 0);
+    expect(tower).not.toBeNull();
+    expect(side?.x ?? 0).toBeGreaterThanOrEqual((table?.x ?? 0) + (table?.width ?? 0));
+    expect(side?.x ?? 0).toBeGreaterThanOrEqual((tower?.x ?? 0) - 1);
+    expect((side?.x ?? 0) + (side?.width ?? 0)).toBeLessThanOrEqual(
+      (tower?.x ?? 0) + (tower?.width ?? 0) + 1,
+    );
     await panel.getByRole("button", { name: /Close/ }).click();
     await expect(panel).toHaveCount(0);
     await expect(row).toBeInViewport();

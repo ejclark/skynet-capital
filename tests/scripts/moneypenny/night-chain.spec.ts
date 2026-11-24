@@ -248,6 +248,54 @@ describe("a freed build slot wakes the queue — merge or no merge", () => {
   });
 });
 
+// #6942, 2026-11-24: run 45304863363's wake died on the peek's read of the `ready` list with the
+// App's REST budget at 0, and the red run reopened the CI capsule over a quota. The message is the
+// one `gh` printed there.
+describe("a wake when the token's API budget is spent", () => {
+  const SPENT = new Error("gh: API rate limit exceeded for installation ID 157155153. (HTTP 403)");
+  const spentPeek = () => {
+    throw SPENT;
+  };
+
+  it("skips the dispatch with a warning when the peek's read hits the budget", () => {
+    let dispatches = 0;
+    const result = wakeNext({ freed: 4469, peek: spentPeek, dispatch: () => dispatches++ });
+    expect(dispatches).toBe(0);
+    expect(result).toMatchObject({ dispatched: false });
+    expect(result.line).toMatch(/API budget spent; the wake waits for the next push/);
+  });
+
+  it("skips too when the lease check behind a self-pick hits the budget", () => {
+    let dispatches = 0;
+    const result = wakeNext({
+      freed: 4469,
+      peek: () => ({ number: 4469 }) as never,
+      isHeld: () => {
+        throw SPENT;
+      },
+      dispatch: () => dispatches++,
+    });
+    expect(dispatches).toBe(0);
+    expect(result.dispatched).toBe(false);
+  });
+
+  it("still fails on a read failure that is not the budget", () => {
+    const peek = () => {
+      throw new Error("gh: Not Found (HTTP 404)");
+    };
+    expect(() => wakeNext({ freed: 4469, peek, dispatch: () => undefined })).toThrow(/HTTP 404/);
+  });
+
+  it("still fails when the dispatch itself is refused, since that is the write", () => {
+    const dispatch = () => {
+      throw SPENT;
+    };
+    expect(() =>
+      wakeNext({ freed: 4469, peek: () => ({ number: 4616 }) as never, dispatch }),
+    ).toThrow(/rate limit/);
+  });
+});
+
 describe("--end-build: every ending takes in-progress off; the lease stays", () => {
   it("takes the label off the build's issue, and writes nothing else", () => {
     const writes: string[] = [];

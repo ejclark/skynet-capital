@@ -32,7 +32,7 @@
         {
           "id": "s1",
           "goto": "/app/",
-          "sees": "the landing page (the Chronicles tab): the day's market news, the lead story's coming reports then what moved (#7077); the topbar's Profile tab one tap away — it always lands on the Profile page, which opens on the connect guide for a member with no account (#3807 slice 2b)",
+          "sees": "the landing page (the Campaign tab): the day's market news, the lead story's coming reports then what moved (#7077); the topbar's Profile tab one tap away — it always lands on the Profile page, which opens on the connect guide for a member with no account (#3807 slice 2b)",
           "ears": "WHEN a signed-in member with no linked account opens the app, the app shall keep a one-tap way into onboarding on screen: the Profile tab, landing on the connect guide.",
           "expect": [
             { "role": "link", "name": "Profile", "within": "nav.topnav", "href": "/app/accounts" }
@@ -88,7 +88,7 @@
         {
           "id": "s4b",
           "goto": "/app/accounts?section=feedback",
-          "sees": "Profile → Feedback: what a filing is for, and one button — Talk to Moneypenny — that opens her rail, where hello is said; offline, a line that feedback is not switched on yet",
+          "sees": "Profile → Feedback: what a filing is for, and one button — Talk to Moneypenny — that opens her History over the dock and puts the cursor in her box, where hello is said (#7487 slice 2); offline, a line that feedback is not switched on yet",
           "ears": "WHEN a member with no linked account opens Profile → Feedback, the app shall offer one control that opens Moneypenny.",
           "expect": [
             { "url": "/app/accounts?section=feedback" },
@@ -124,6 +124,108 @@
             { "role": "heading", "name": "One fill unlocks the next rung" },
             { "text": "101" }
           ],
+          "judge": "can this reader tell what to do next in ten seconds?"
+        }
+      ]
+    },
+    {
+      "id": "j3",
+      "name": "hello, and the way in (cross-feature, #8005)",
+      "viewports": ["phone"],
+      "steps": [
+        {
+          "id": "s1",
+          "goto": "/app/",
+          "sees": "the landing page with no account: Where things stand, its next step 'Connect your paper account', and Moneypenny's box under the page",
+          "ears": "WHEN a signed-in member with no linked account opens the landing page, the app shall lead with connecting a paper account and keep Moneypenny's box on screen.",
+          "expect": [
+            { "role": "button", "name": "Connect your paper account" },
+            { "role": "textbox", "name": "Message Moneypenny" }
+          ],
+          "judge": "can this reader tell what to do next in ten seconds?"
+        },
+        {
+          "id": "s1b",
+          "goto": "/app/",
+          "sees": "the two canned paths over the next step: 'What's coming up that I should watch?' and 'How are my positions doing?', a question about positions this member does not have",
+          "ears": "WHILE a member has no linked account, the landing page shall offer only canned paths that can be answered for them.",
+          "expect": [{ "role": "button", "name": "How are my positions doing?", "absent": true }],
+          "known_gap": "the canned paths are one fixed pair for every member (QUICK_QUESTIONS), so a member with no account is offered 'How are my positions doing?' about a book that does not exist",
+          "where": "app/src/live/landing-ask.ts:42",
+          "severity": "low",
+          "fix": "S",
+          "judge": "can this reader tell what to do next in ten seconds?"
+        },
+        {
+          "id": "s2",
+          "goto": "/app/",
+          "sees": "she offers 'Help me get set up'; tapped, she answers with the short path and names the onboarding page as a link",
+          "ears": "WHEN a member with no account asks Moneypenny how to get set up, the app shall answer with the onboarding page as a link.",
+          "expect": [{ "role": "button", "name": "Help me get set up" }],
+          "act": [{ "click": { "role": "button", "name": "Help me get set up" } }],
+          "after": [
+            {
+              "role": "link",
+              "name": "onboarding page",
+              "href": "/app/onboarding",
+              "within": "aside[aria-label='Moneypenny']"
+            }
+          ],
+          "judge": "can this reader tell where to go next?"
+        },
+        {
+          "id": "s2b",
+          "goto": "/app/",
+          "sees": "the desk's line on her first message: 'trading milestone M·02 is now unlocked on your account. buy your first stock (rung 101)', to a member with no account, one line above her steps to connect one",
+          "ears": "WHEN a member with no linked account first messages Moneypenny, the app shall not tell them to trade on an account they do not have.",
+          "expect": [{ "role": "button", "name": "Help me get set up" }],
+          "act": [
+            { "click": { "role": "button", "name": "Help me get set up" } },
+            {
+              "await": {
+                "role": "link",
+                "name": "onboarding page",
+                "within": "aside[aria-label='Moneypenny']"
+              }
+            }
+          ],
+          "after": [
+            {
+              "text": "buy your first stock",
+              "absent": true,
+              "within": "aside[aria-label='Moneypenny']"
+            }
+          ],
+          "known_gap": "her first-message line is the same for every member: any first message appends MESSAGE_OPS_LINE, 'trading milestone M·02 is now unlocked on your account. buy your first stock (rung 101)', so a member with no account is told to trade on one, one line above her steps to connect one",
+          "where": "app/src/live/moneypenny.ts:725",
+          "severity": "medium",
+          "fix": "S",
+          "judge": "does this reader know what to do first?"
+        },
+        {
+          "id": "s3",
+          "goto": "/app/",
+          "sees": "her link, tapped, lands on Profile's onboarding chapter: the steps to connect a paper account",
+          "ears": "WHEN a member taps the place Moneypenny names, the app shall land them on it.",
+          "expect": [{ "role": "button", "name": "Help me get set up" }],
+          "act": [
+            { "click": { "role": "button", "name": "Help me get set up" } },
+            {
+              "await": {
+                "role": "link",
+                "name": "onboarding page",
+                "within": "aside[aria-label='Moneypenny']"
+              }
+            },
+            {
+              "click": {
+                "role": "link",
+                "name": "onboarding page",
+                "within": "aside[aria-label='Moneypenny']"
+              }
+            }
+          ],
+          "after": [{ "url": "/app/accounts?section=milestones&chapter=onboarding" }],
           "judge": "can this reader tell what to do next in ten seconds?"
         }
       ]

@@ -72,6 +72,13 @@ export interface ParticipantSnapshot {
    */
   readonly accountNumber?: string;
   readonly cash: number;
+  /**
+   * Alpaca's `options_buying_power`: what an options order may actually draw on (Eric,
+   * 2026-11-13: the head said "$757,918 ready to use" while the broker allowed $42,999 — the rest
+   * of the cash already secures his sold puts, and Alpaca never lets one dollar secure two). Absent
+   * when the account didn't report one; then `cash` is the only figure there is.
+   */
+  readonly optionsBuyingPower?: number;
   readonly equity: number;
   /**
    * Cumulative realized P/L booked on this account since the reducer began folding — the gain/loss
@@ -166,6 +173,7 @@ async function readAccount(
       accountId: account.id,
       ...(account.account_number ? { accountNumber: account.account_number } : {}),
       cash: Number(account.cash),
+      ...optionsBuyingPowerField(account.options_buying_power),
       equity: Number(account.portfolio_value),
       positions: positionsFrom(positions),
       // Activity is supplementary — a failure to read it must not blank the account.
@@ -192,4 +200,24 @@ async function readActivity(client: AlpacaTradingClient): Promise<ActivityView[]
   } catch {
     return [];
   }
+}
+
+/** `{ optionsBuyingPower }` when the account reports a usable figure, else nothing. */
+export function optionsBuyingPowerField(raw: unknown): { optionsBuyingPower?: number } {
+  if (typeof raw !== "string" || raw.trim() === "") return {};
+  const value = Number(raw);
+  return Number.isFinite(value) ? { optionsBuyingPower: value } : {};
+}
+
+/**
+ * What an options order can spend: the lesser of cash and the broker's options buying power. Cash
+ * alone overstates it once sold puts are open — their collateral is still counted in `cash`.
+ */
+export function optionsSpendable(account: {
+  readonly cash: number;
+  readonly optionsBuyingPower?: number;
+}): number {
+  return account.optionsBuyingPower === undefined
+    ? account.cash
+    : Math.min(account.cash, account.optionsBuyingPower);
 }

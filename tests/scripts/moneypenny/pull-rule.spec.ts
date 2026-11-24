@@ -149,6 +149,36 @@ describe("pullQueue / nextAdmissible — the sweep pulls only what pullable allo
     expect(pullQueue(rows).map((i) => i.number)).toEqual([5, 4]);
   });
 
+  // THE PULL ORDER IS THE BOARD'S LANE ORDER (#6871 §4): class, then Kind, then issue number.
+  it("pulls by class, then Kind, then lowest number", () => {
+    const rows = [
+      issue(10, ["ready", "plan"]),
+      issue(11, ["ready", "idea"]),
+      issue(12, ["ready", "feedback", "member-sam"]),
+      issue(13, ["ready", "bottleneck"]),
+      issue(14, ["ready", "plan"], { issue_dependencies_summary: { blocking: 1 } }),
+      issue(15, ["ready", "bug"]),
+      issue(16, ["ready", "plan", "fast-track"]),
+      issue(17, ["ready", "bug"]),
+    ];
+    // P0 fast-track · P1 by Kind: bug (15, 17), blocks (14), slows (13), member (12) · P2 · P3.
+    expect(pullQueue(rows).map((i) => i.number)).toEqual([16, 15, 17, 14, 13, 12, 10, 11]);
+  });
+
+  it("holds a fast-track card hand-set to a lower lane in that lane", () => {
+    const rows = [issue(1, ["ready", "plan", "fast-track", "P3"]), issue(2, ["ready", "plan"])];
+    expect(pullQueue(rows).map((i) => i.number)).toEqual([2, 1]);
+  });
+
+  it("lets a hand-set P0 pull ahead of a bug, and a bug ahead of standard work", () => {
+    const rows = [
+      issue(1, ["ready", "plan"]),
+      issue(2, ["ready", "bug"]),
+      issue(3, ["ready", "plan", "P0"]),
+    ];
+    expect(pullQueue(rows).map((i) => i.number)).toEqual([3, 2, 1]);
+  });
+
   it("steps past a blocked slice to the next pullable issue", () => {
     const rows = [
       issue(4301, ["ready", "plan"], {

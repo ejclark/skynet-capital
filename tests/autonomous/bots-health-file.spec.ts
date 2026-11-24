@@ -40,6 +40,10 @@ describe("bots health file", () => {
       bootedAt: "2026-09-04T19:37:00.000Z",
       bridge: "armed",
       lastControlsPollAt: "2026-09-04T19:37:00.000Z",
+      lastTickAt: null,
+      lastEvalAt: null,
+      lastOrderAt: null,
+      bots: [],
       restored: null,
       updatedAt: "2026-09-04T19:37:00.000Z",
     });

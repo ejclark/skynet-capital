@@ -12,10 +12,13 @@ this: scope lived scattered across five near-identical `.github/prompts/*.md` fi
 "orchestrator" already meant something else in this repo (`docs/COACHES.md`'s in-session head
 coach). Nothing named who owns the whole board. This does.
 
-## In the app — the rail is her voice
+## In the app — the dock is her voice
 
-Members meet her directly: the ✦ button in the shell's top bar opens a right
-rail (`app/src/shell/moneypenny-rail.tsx`) where she answers questions live and files feedback.
+Members meet her directly in the dock under every page (`app/src/shell/moneypenny-dock.tsx`,
+#7487 slice 2; it replaced the ✦ toggle and the right rail): the conversation, her moves as
+buttons, and a one-line box. Since 2026-11-13 the conversation is always in the dock, compact or
+expanded (Eric: "Consolidate the chat and history windows"), and it opens on the first line of her
+latest answer; expanded adds side threads, Copy and New conversation. There she answers questions live and files feedback.
 Her voice there is the companion chat (`src/companion/*`, `/api/companion/chat`) — Claude on the
 same key the feedback coach uses, with nine read-only lookups and two hand-offs (the member's own desk, progress and market views,
 the play catalog, a chain read through their own linked account, and the public work record,
@@ -25,10 +28,44 @@ asked from, reduced to fixed words (`companion-page.ts`, #2224), with their own 
 page's symbol (`companion-holding.ts`), and a cached help desk
 (`companion-help.ts`) so "how do I…" answers come from this app's facts. She cannot place an
 order (no such tool exists — `tests/companion/companion-no-order-path.spec.ts`). Filing is hers to
-draft: `draft_feedback` hands the rail a draft built from the whole thread and files nothing; the
+draft: `draft_feedback` hands the chat a draft built from the whole thread and files nothing; the
 member's own reply ("send", or an answer to her one question) is what posts it through
 `/api/feedback`. The scripted lines in
 `app/src/live/moneypenny-script.ts` are the fallback when the key isn't set.
+
+### Screenshots in the chat (#6007)
+
+A member can attach up to 3 screenshots to a message (the **Attach screenshot** button, paste, or
+drop) when the live chat is on. The box (`app/src/shell/mp-composer.tsx`) fits each one in the
+browser to 1568 px on its long edge and re-encodes it as PNG or JPEG under 1.5 MB
+(`app/src/live/mp-screenshots.ts`), shows it as a thumbnail with a remove control, and uploads it
+only on Send; the chat turn and the saved conversation carry ids, never bytes. The server keeps them
+on the volume (`src/server/companion-screenshots-store.ts`, 20 MB a member, 100 MB in all, oldest
+removed first) and hands the model at most 3 as image blocks a request. Any signed-in member may open
+one by id; nothing before sign-in does, and none is ever copied into a filing, since filings land on
+the public repo (a drafted filing says so in one line). A removed one reads `Screenshot no longer
+kept`. The 1568 px edge is the plan's number: the vision limits were not read from the docs in
+slices 2 or 3 (the docs tools were denied in both sessions), so check them before relying on it.
+
+### Four jobs
+
+Eric, 2026-11-10: "her ability to assess and evaluate the situation to perform research, delegate
+work, and evolve our systems to meet the ever changing outcomes users are pursuing." Her prompt
+names four jobs and one rule for sorting each message (`src/companion/routing-rule.ts`):
+
+| The ask | What she does by herself | What goes out, and where |
+|---|---|---|
+| The record answers it (their desk, the calendar, the build queue, the help desk) | Looks it up with her read-only tools and answers | Nothing |
+| It needs research nobody has done | Says what her tools show and what they don't | A draft feedback idea titled "Research: …", which lands as a feedback issue |
+| Something to build or fix | Writes the brief | A draft feedback issue (bug, feature or idea) |
+| How the app works has fallen behind what members are after | Checks the roadmap for a plan that already covers it | A draft feedback idea in four lines: outcome members are after, what the app does today, proposed change, how we would know it worked |
+
+She only ever reads by herself. Every write is a draft card, and the member's own tap or reply
+sends it; she never says something was asked, filed or started before that. Asked to size up where
+a member stands, she answers in three short beats (their desk, what is coming, one question back)
+and never recommends a trade. One eval fixture per job (`assess-`, `research-`, `delegate-`,
+`evolve-` in `src/evals/companion/fixtures.ts`) makes a change to any of them measurable with
+`npm run eval:companion`.
 
 ## Mandate
 
@@ -95,6 +132,59 @@ a comment asking for a fix PR or `needs-eric`, and a capsule whose failing job h
 runs on `main` since its last recurrence (push or dispatch) is closed with the run links
 (`scripts/moneypenny/capsule-stall.mjs`)._
 
+### Which label lets a lane build an issue — generated from the code
+
+<!-- label-lifecycle:start — generated by scripts/label-lifecycle.mjs; do not edit -->
+```mermaid
+---
+title: "Which label lets a lane build an issue"
+---
+stateDiagram-v2
+    direction TB
+    state "Backlog: not ready yet" as Backlog
+    state "Ready: a lane may start it" as Ready
+    state "Parked: waiting on someone" as Parked
+    state "Building now" as Building
+    state "Handed to a live session" as Session
+    state "Blocked by an open issue" as Blocked
+    state "On a held PR, waiting for a merge" as HeldPR
+    state "Closed" as Closed
+    [*] --> Backlog: opened
+    Backlog --> Ready: add ready
+    Ready --> Parked: add needs-eric
+    Ready --> Parked: add needs-info
+    Ready --> Parked: add needs-design
+    Ready --> Parked: add hold-merge
+    Parked --> Ready: remove that label
+    Ready --> Building: add in-progress
+    Building --> Ready: remove in-progress
+    Ready --> Session: add needs-session
+    Session --> Ready: remove needs-session
+    Ready --> Blocked: an open blocked-by link
+    Blocked --> Ready: the blocker closes
+    Ready --> HeldPR: its last item boards a held PR
+    HeldPR --> Closed: the PR merges
+    Building --> Closed: the PR merges
+    Closed --> [*]
+    note right of Parked
+        parking labels:
+        needs-eric, needs-info, needs-design, hold-merge
+    end note
+    note left of Ready
+        the one pull rule:
+        ready, not parked,
+        not in-progress, not blocked
+    end note
+```
+<!-- label-lifecycle:end -->
+
+_Caption — the board's pull rule (`notPullable` in `scripts/moneypenny/labels.mjs`) drawn as the
+states an issue moves through; each arrow is one label change. Generated, never hand-edited:
+`node scripts/label-lifecycle.mjs --write` redraws it, and `tests/arch/label-lifecycle.spec.ts`
+fails when the block is stale or an arrow is one the code does not honour — it replays every arrow
+through `notPullable`, so a label added to the parking set shows up here or the build goes red
+(#3748 slice 7c; the stall behind #3271 is the incident this makes visible)._
+
 ### Priority on the board — labels lead, a drag writes back
 
 The board's Priority field is a copy of the issue's priority, never a second opinion (#4064): a
@@ -139,6 +229,33 @@ you" tier is a dated snapshot of the same query, never a second list to reconcil
   rule yields. Answering is a comment on the waiting issue itself: an authorized reply on a
   `needs-info` / `needs-eric` feedback or plan issue restarts the waiting lane without a session
   noticing it (#3959 slices 1–2, `docs/FEEDBACK.md`).
+
+### How an ask reaches Eric — one page, one reply (#7939 slice 2)
+
+The board is where an ask *lives*; the decisions page is how it *reaches him*. Every open
+`needs-eric` ask with a `Needs from you` callout (the one selector, `plan().needsYou` in
+`assignments.mjs`) is numbered on one standing issue, *Decisions for Eric*, labelled
+`decisions-page` and kept off the board (`isBacklogCandidate`). The push sweep rewrites its body
+each tick (`scripts/moneypenny/decisions-page.mjs`, reads and writes in `decisions-run.mjs`); he is
+assigned to that one issue while it holds asks, and a ping comment goes out at most once per batch
+window (14:00Z and 21:30Z) for asks he has not yet been told about. Per-issue assignment cards for
+issue asks stopped here (`routeAssignments`' `issueCards` switch, off); the issue's own callout stays
+the source of truth, and held PRs keep their card, since merges are slice 1's platter.
+
+- **One reply answers many.** `1A 2B 3 not now`, or `7669 A, 7670 B`. `decisions-reply.mjs` reads
+  it purely: whatever parses unambiguously against each ask's card is applied, and the rest is echoed
+  in a one-line receipt on the page with its reason, never guessed. Only unfooted text by `ejclark`
+  counts (`isClaudeComment`), and a number means the ask it named when he wrote it.
+- **Each answer goes through `answer-readback.mjs`.** The issue gets its "Read as:" comment and
+  ledger row, `needs-eric` comes off, and a feedback or plan issue answered with a letter or a yes
+  also gets `ready`, as his reply on the issue would have.
+- **Merges are never read from text.** Held PRs, and an ask whose question is a merge, are listed as
+  links; the click on the PR is the only merge.
+- **No workflow edit.** His reply is read on its own `issue_comment` event (the existing "Run
+  Moneypenny" step routes it), and again on the next push if that run is lost.
+- **Why GitHub-native, not #5056's steer page.** That page needs a live session with Artifact tools
+  to assemble and read back, and has been dormant since 2026-10-12; this one runs on the App token
+  every push. By hand: `node scripts/moneypenny/decisions-run.mjs` prints today's body.
 
 ## Authority — she drives the architecture, within the same fence as everyone else
 

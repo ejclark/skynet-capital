@@ -1,0 +1,9 @@
+{
+  "$comment": "World 'workbench-first-day' (#8005, the workbench area), layered over workbench-today: the same league, and one more member, signed in for the first time, who owns no account — profile's no-account member, on the trade page. They can look a symbol up; nothing is theirs to trade from.",
+  "base": "workbench-today",
+  "members": [
+    { "email": "eric@study.world", "name": "Eric", "owns": ["eric", "sauron"] },
+    { "email": "jordan@study.world", "name": "Jordan", "owns": ["jordan"] },
+    { "email": "casey@study.world", "name": "Casey", "owns": [] }
+  ]
+}

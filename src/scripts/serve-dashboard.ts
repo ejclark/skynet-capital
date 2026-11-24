@@ -57,9 +57,11 @@ import { resolveDevelopmentActivity } from "../server/development-activity.js";
 import { discoveryPerPass } from "../server/discovery-queue-store.js";
 import { bootGithubToken } from "../server/github-token.js";
 import { installGracefulShutdown } from "../server/graceful-shutdown.js";
+import { guidanceMarketFor, withWindowChain } from "../server/guidance-route.js";
 import { heldActivity, heldOrderOrigins } from "../server/held-activity.js";
 import { ladderEvidenceReader } from "../server/ladder-evidence.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
+import { ownerQueueWiring } from "../server/owner-queue.js";
 import { ParticipantService } from "../server/participant-service.js";
 import { recordPasses } from "../server/play-milestone-sync.js";
 import { publicOriginFrom } from "../server/public-url.js";
@@ -84,6 +86,7 @@ import { wireOpsStatus } from "./dashboard-ops-status.js";
 import { wireOptionLifecycleSweep } from "./dashboard-option-lifecycle.js";
 import { bootTelemetry } from "./dashboard-telemetry.js";
 import { startIvClock } from "./iv-clock-wiring.js";
+import { offlineClock } from "./offline-clocks.js";
 import { assertProductionAccess } from "./production-access.js";
 
 const PORT = resolvePort(process.env);
@@ -99,13 +102,12 @@ async function main(): Promise<void> {
   // Before anything resolves a GitHub-backed feature: a token saved from Settings beats the host secret.
   const githubToken = bootGithubToken(process.env);
   const dataSource = resolveDataSource(process.env);
-  // E2E DETERMINISM (#4683): `freezePage` pins the browser's clock, but the Council computes its
-  // week label from the server's own `new Date()`, so every baseline carrying it changed on
-  // Mondays. playwright.config.ts passes its FIXED_CLOCK here. Offline only — a server holding
-  // real accounts never reads a frozen clock, whatever its environment says.
-  const fixedNowMs =
-    dataSource.mode === "offline" ? Date.parse(process.env.SKYNET_FIXED_NOW ?? "") : Number.NaN;
-  const councilClock = Number.isNaN(fixedNowMs) ? {} : { now: () => new Date(fixedNowMs) };
+  // E2E DETERMINISM (#4683, #7901): the server reads that compute "today" themselves take a pinned
+  // instant on an offline boot — the Council's week label and the edition's today. Why each, and
+  // why offline only: offline-clocks.ts.
+  const fixedNow = offlineClock(process.env, dataSource.mode, "SKYNET_FIXED_NOW");
+  const councilClock = fixedNow ? { now: fixedNow } : {};
+  const editionNow = offlineClock(process.env, dataSource.mode, "SKYNET_EDITION_NOW");
   // First, before any slow boot step: read whether the LAST run exited cleanly, then claim the
   // run marker for this one (#4618). The gauge and any incident start once we are listening.
   const telemetry = bootTelemetry(process.env, dataSource.mode);
@@ -275,8 +277,10 @@ async function main(): Promise<void> {
     filingComments,
     subscriptions,
     savedPositions,
+    targetSplits,
     exitPlans,
     takenQuests,
+    bookWaits,
     authoredPlays,
     memberCampaigns,
     memberChains,
@@ -319,6 +323,7 @@ async function main(): Promise<void> {
     feedbackCoach,
     feedbackLog,
     feedbackStatus,
+    builtPlans,
     feedbackFollowup,
     communityProgression,
   } = setupFeedback(process.env);
@@ -344,6 +349,8 @@ async function main(): Promise<void> {
     companion,
     progression: progressionService,
     companionMessageLog,
+    companionScreenshots,
+    fixAnnouncements,
   } = setupCompanion(process.env, {
     hub,
     readFills: (id) => activity.list(id),
@@ -354,6 +361,16 @@ async function main(): Promise<void> {
     // The same per-participant resolver the server config gets below — the recommender tool reads
     // its chain through the member's OWN linked options client, never a shared one.
     optionsClientFor: (id) => clientFor(id, dataSource.optionsClientFactory),
+    // #7547 "stage a trade for NVDA": the guidance route's own market read, through the member's
+    // own client. `dashboardConfig` is declared below; this runs per question, long after boot.
+    suggestMarketFor: async (id, symbol, need) => {
+      const client = clientFor(id, dataSource.optionsClientFactory);
+      if (!client) return undefined;
+      const market = await guidanceMarketFor(client, dashboardConfig, id, symbol);
+      return need && !("reason" in market)
+        ? withWindowChain(client, market, need.window, need.type)
+        : market;
+    },
   });
 
   // Alert delivery (#3407 P4 slice 3) — the member's own switch, durable; plus the two triggers
@@ -395,6 +412,7 @@ async function main(): Promise<void> {
   const dashboardConfig: DashboardServerConfig = {
     hub,
     healthHistory,
+    ...(editionNow ? { editionNow } : {}),
     logLine: (line) => console.log(line),
     // Ceremonies ride the board's seq-numbered patch stream as fire-once cues.
     ceremonies,
@@ -407,8 +425,10 @@ async function main(): Promise<void> {
     accountAdmin: buildAccountAdmin(accounts, store),
     subscriptions,
     savedPositions,
+    targetSplits,
     exitPlans,
     takenQuests,
+    bookWaits,
     authoredPlays,
     memberCampaigns,
     memberChains,
@@ -438,6 +458,10 @@ async function main(): Promise<void> {
           resolveOwnerId,
           resolveOwnerIds,
           isOwnerEmail: (email: string) => owners.has(email.toLowerCase()),
+          // What waits on the owner, for his own Moneypenny turn only (owner-queue.ts) — read
+          // behind `isOwnerEmail` in companion-routes.ts, so it rides the same OAuth-only branch.
+          // Two read-only GETs on the feedback lane's token; inert without it.
+          ...ownerQueueWiring(process.env),
           rosterIds: () => new Set(envRoster.map((p) => p.id)),
         }
       : {}),
@@ -467,12 +491,15 @@ async function main(): Promise<void> {
     recordFeedback: (entry) => feedbackSinks.log.record(entry),
     readFeedback: (id) => feedbackLog.list(id),
     ...(feedbackSinks.status ? { fetchFeedbackStatus: feedbackSinks.status } : {}),
+    ...(builtPlans ? { fetchBuiltPlans: builtPlans } : {}),
     ...(feedbackFollowup ? { submitFollowup: feedbackFollowup } : {}),
     communityProgression,
     ...(companion ? { companion } : {}),
     // `/api/companion/ack`'s store — the caller there already has the session's own opaque id.
     readMessages: (id) => companionMessageLog.list(id),
     recordMessage: (id) => companionMessageLog.record(id),
+    companionScreenshots,
+    fixAnnouncements,
     refreshParticipant: (id) => brokerSync.syncParticipant(id),
     readPulseHistory,
     readHeldLedger,

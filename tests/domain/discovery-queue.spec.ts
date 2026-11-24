@@ -172,13 +172,18 @@ describe("passesUntil and tellMember — roughly when", () => {
     expect(tellMember(deep, 1, true)).toMatch(/3 ahead of it, so about 4 research passes/);
   });
 
-  it("promises no wait while no lane reads the queue (#7034 slice 3b)", () => {
-    expect(LANE_READS_QUEUE).toBe(false);
+  it("a lane reads the queue, so the wait is said in days (#7034 slice 3b)", () => {
+    expect(LANE_READS_QUEUE).toBe(true);
+    const first = queueAsk([], ask("PLTR"), CAMPAIGNS, none, AT);
+    expect(tellMember(first, 6)).toMatch(/runs once a day/);
+  });
+
+  it("promises no wait if the lane is ever switched off", () => {
     const deep = queueAsk(queued(["A1", "B1", "C1"]), ask("D1"), CAMPAIGNS, none, AT);
-    const text = tellMember(deep, 1);
+    const text = tellMember(deep, 1, false);
     expect(text).toMatch(/doesn't read this list yet, so there is no wait to promise/);
     expect(text).not.toMatch(/passes|next in line|ahead|Queued/i);
-    const joined = tellMember({ status: "joined", queue: deep.queue, ahead: 3 }, 1);
+    const joined = tellMember({ status: "joined", queue: deep.queue, ahead: 3 }, 1, false);
     expect(joined).toMatch(/^Someone already asked this/);
     expect(joined).not.toMatch(/passes|ahead/i);
   });

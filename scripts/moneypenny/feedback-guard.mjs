@@ -9,7 +9,7 @@
 // SPLIT OUT ON PURPOSE, same doctrine as plan-claim.mjs/audit.mjs: `visibleOutcome` is the PURE
 // decision (fixture-drivable, no network); `guardFeedbackOutcome` is the impure half the workflow
 // step calls once the build step has already run (or been skipped by the oauth gate).
-import { withLaneAsk, writeIssueBody } from "./decision-callout.mjs";
+import { LANE_RECOVERY, withLaneAsk, writeIssueBody } from "./decision-callout.mjs";
 import { sh } from "./gh.mjs";
 import { ensureLabel, FOOTER, LABELS } from "./labels.mjs";
 
@@ -64,8 +64,13 @@ export function visibleOutcome(issue = {}, hasMatchingPR = false) {
  * The phrases a Sliced hand-off uses when the remainder is an interactive-session item. Both are
  * the lane's own vocabulary, not a member's: `.claude/` is a harness-protected directory for an
  * unattended lane (`docs/grind/README.md`), so a build that runs into it says so in those words.
+ *
+ * …or names the directory and neither phrase (#7361): #6719's hand-off read "a session that can
+ * edit `.claude/`", got no label, and a second build session hit the same wall. So a `.claude/`
+ * path in a Sliced parting comment is itself the marker — `next-slice` already scopes this to a
+ * remainder the lane did not build, and a lane names `.claude/` there because it could not edit it.
  */
-const HANDOFF_MARKER = /interactive session|protected director/i;
+const HANDOFF_MARKER = /interactive session|protected director|\.claude\//i;
 
 /**
  * Did this build hand its remainder to an interactive session? (#1357)
@@ -78,7 +83,8 @@ const HANDOFF_MARKER = /interactive session|protected director/i;
  *
  * Two signals, both required:
  *   1. `next-slice` — this really was a Sliced ending, not a stall the guard is about to flag
- *   2. the last comment on the issue names an interactive session or a protected directory
+ *   2. the last comment on the issue names an interactive session, a protected directory, or a
+ *      `.claude/` path (#7361)
  *
  * Reading only the LAST comment is deliberate: it is the lane's parting word, so a hand-off that
  * has since been answered (a member replying, a session reporting back) stops matching and the
@@ -186,7 +192,7 @@ export function guardFeedbackOutcome(
   const ask =
     "Retry this build, or close the issue? — the session ended and said nothing anyone can see.";
   const body = view.body ?? "";
-  const stated = withLaneAsk(body, ask);
+  const stated = withLaneAsk(body, ask, undefined, STALL_ASK);
   // This step runs once per build, so the alarm below must land even when the body write does not:
   // the label then draws the gap comment, which is the smaller failure.
   try {
@@ -198,6 +204,20 @@ export function guardFeedbackOutcome(
   run("gh", ["issue", "edit", String(n), "--add-label", LABELS.needsEric.name]);
   return { visible: false, handedOff, waitingOnMember };
 }
+
+/**
+ * The stall's ask, answerable by letter on the Decisions page (#7939). Retry is the prediction:
+ * the guard cannot see why the session stopped, and a stall is far more often a crash than a
+ * verdict that the ask is not worth building.
+ */
+export const STALL_ASK = {
+  options: [
+    { key: "A", text: "retry: build it again", predicted: true, confidence: "medium" },
+    { key: "B", text: "close it: not worth building" },
+  ],
+  onSilence: "nothing builds; the issue waits on you with `needs-eric`.",
+  cls: LANE_RECOVERY,
+};
 
 /**
  * Apply `needs-session` when this build handed its remainder to an interactive session (#1357).

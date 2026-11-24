@@ -40,6 +40,9 @@ import { routeRequest, wantsEventStream } from "./routing.mjs";
 import { sceneBundle } from "./scene-bundle.mjs";
 import { SIGNED_OUT_PAGE } from "./signed-out.mjs";
 
+/** Production's research-page route, when the pin has it (a missing module reads as empty). */
+const researchDocs = await import("../../src/server/research-page-routes.ts").catch(() => ({}));
+
 /** The `/tower` page and its bundle — the shoot's cached build or a hand-built one (scene-bundle.mjs). */
 const scenePath = (path) =>
   path === "/tower"
@@ -77,7 +80,7 @@ const WORLD_AUTH = {
 
 /** The static half: the production shell handler, plus held-open empty event streams. A path
  *  neither serves is flagged in `session.unstubbed` (`PAGE <path>`) like an uncomposed read. */
-function startServer(dist, streams, session) {
+function startServer(dist, streams, session, researchRoot) {
   const channel = createBoardChannel();
   const server = createServer(async (req, res) => {
     const url = new URL(req.url ?? "/", "http://127.0.0.1");
@@ -117,6 +120,12 @@ function startServer(dist, streams, session) {
       return;
     }
     if (isAppShellPath(path)) return serveAppShell(res, path, { distDir: dist });
+    // A research write-up, server-rendered as production's own route renders it, from the world's
+    // corpus — the shelf as it stood at the instant (#8005: the thin slice's census met 8 of these
+    // links as unanswered pages). A pin without the route, or a run without a corpus, falls through.
+    if (researchRoot && researchDocs.isResearchDocPath?.(path)) {
+      return researchDocs.serveResearchDoc(res, path, researchRoot);
+    }
     // The front door (`dashboard-server.ts` serveHomePage): a bare visit lands in the shell.
     if (path === "/" || path === "/index.html") {
       res.writeHead(302, { location: `/app/${url.search}` });
@@ -140,6 +149,13 @@ function startServer(dist, streams, session) {
  * @param {{viewport: {width: number, height: number}, hasTouch: boolean}} opts.frame  a VIEWPORTS entry
  * @param {string} [opts.out]           where `shoot(tag)` writes frames
  * @param {{timeZone: string, locale: string}} [opts.clock]  the member's clock (./clock.mjs)
+ * @param {{handles: (req: {method: string, path: string}) => boolean,
+ *          respond: (req: {method: string, path: string, body: string | null})
+ *            => Promise<{status: number, contentType: string, body: string}>}} [opts.chat]
+ *   Moneypenny's chat in this world (world-chat.mjs): the writes it handles are still recorded in
+ *   `session.writes`, then answered by it — her streamed reply, a draft recorded and never filed.
+ * @param {string} [opts.researchRoot]  the world's corpus `docs/research`: `/research/<slug>` pages
+ *   are served from it by production's own route (session-world.mjs → `researchRootOf`)
  * @returns {Promise<{page, origin, shoot,
  *                    session: {unstubbed: string[], writes: object[], offsite: string[]},
  *                    reframe: (frame) => Promise<void>, signIn: () => Promise<void>,
@@ -152,6 +168,8 @@ export async function openWorld({
   out = ".",
   colorScheme = "dark",
   clock = DEFAULT_CLOCK,
+  chat,
+  researchRoot,
 }) {
   const dist = resolve("app/dist");
   if (!existsSync(join(dist, "index.html"))) {
@@ -159,7 +177,7 @@ export async function openWorld({
   }
   const streams = new Set();
   const session = { unstubbed: [], writes: [], offsite: [] };
-  const server = await startServer(dist, streams, session);
+  const server = await startServer(dist, streams, session, researchRoot);
   const origin = `http://127.0.0.1:${server.address().port}`;
   const exe = resolveChromium();
   const browser = await chromium.launch({
@@ -194,6 +212,17 @@ export async function openWorld({
       // The gate stands in front of `/api` too: signed out, every read and write is its 302.
       if (!signedIn(await request.headerValue("cookie"))) {
         return route.fulfill({ status: 302, headers: { location: "/login" } });
+      }
+      // The chat's writes (world-chat.mjs): recorded like any write, then answered by the chat.
+      if (chat?.handles({ method: request.method(), path: url.pathname })) {
+        const body = request.postData() ?? null;
+        session.writes.push({ method: request.method(), url: url.pathname + url.search, body });
+        const answered = await chat.respond({ method: request.method(), path: url.pathname, body });
+        return route.fulfill({
+          status: answered.status,
+          contentType: answered.contentType,
+          body: answered.body,
+        });
       }
       const decided = routeRequest(
         { method: request.method(), url, accept: request.headers().accept },

@@ -1,9 +1,10 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { Readable } from "node:stream";
+import { shelfFileFor } from "../../src/domain/discovery-pass.js";
 import { CampaignQuestionsStore } from "../../src/server/campaign-questions-store.js";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
 import { DiscoveryQueueStore } from "../../src/server/discovery-queue-store.js";
@@ -73,6 +74,43 @@ const FORM = {
   mode: "explore",
 };
 
+/**
+ * A hostile research shelf (#7446). With no `campaignShelfAnswered` injected, the route reads
+ * `docs/research/discovery/` under `process.cwd()`, so a real write-up merging for a subject this
+ * spec asks about (gold, RIVN, PLTR…) flipped its `queued`/`joined` answers to `answered`. Every
+ * test here runs from a temp root whose shelf already holds those write-ups: a config that forgets
+ * the seam reads them and goes red, the same way the live shelf would turn it red later.
+ */
+const SHELVED = [
+  { kind: "market", subject: "gold" },
+  { kind: "sector", subject: "Healthcare" },
+  { kind: "name", subject: "PLTR" },
+  { kind: "name", subject: "RIVN" },
+  { kind: "name", subject: "LCID" },
+  { kind: "name", subject: "DD" },
+  { kind: "name", subject: "PLTR", campaign: "energy-for-ai" },
+  { kind: "name", subject: "NVDA", campaign: "ai-buildout" },
+  { kind: "name", subject: "AMD", campaign: "ai-buildout" },
+] as const;
+let realCwd: string;
+let shelfRoot: string;
+beforeAll(async () => {
+  realCwd = process.cwd();
+  shelfRoot = await mkdtemp(join(tmpdir(), "skynet-hostile-shelf-"));
+  for (const ask of SHELVED) {
+    const file = join(shelfRoot, shelfFileFor(ask));
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, "# planted write-up\n");
+  }
+  process.chdir(shelfRoot);
+});
+afterAll(async () => {
+  process.chdir(realCwd);
+  await rm(shelfRoot, { recursive: true, force: true });
+});
+/** The seam every config below injects, so no answer here rides on what the shelf holds. */
+const OFF_SHELF = () => false;
+
 describe("serveMemberCampaignsApi", () => {
   let dir: string;
   let file: string;
@@ -91,6 +129,7 @@ describe("serveMemberCampaignsApi", () => {
       memberCampaigns: store,
       // The house has a ledger on XOM only, in this spec's world.
       campaignShelf: (symbol: string) => symbol === "XOM",
+      campaignShelfAnswered: OFF_SHELF,
       ...over,
     }) as unknown as DashboardServerConfig;
 
@@ -376,6 +415,7 @@ describe("a question starts discovery (#6952 slice 2b)", () => {
       memberCampaigns: campaigns,
       discoveryQueue: queue,
       campaignShelf: (symbol: string) => symbol === "XOM",
+      campaignShelfAnswered: OFF_SHELF,
       discoveryPerPass: 6,
       ...over,
     }) as unknown as DashboardServerConfig;
@@ -392,8 +432,7 @@ describe("a question starts discovery (#6952 slice 2b)", () => {
     const answer = await askAbout({ kind: "name", subject: "pltr" });
     expect(answer.status).toBe(200);
     expect(answer.body).toMatchObject({ ok: true, status: "queued" });
-    expect(answer.body.tell).toMatch(/^Kept\. The house's research doesn't read this list yet/);
-    expect(answer.body.tell).not.toMatch(/passes|next in line/i);
+    expect(answer.body.tell).toMatch(/^Queued\. It is next in line .* runs once a day/);
     expect(queue.load().map((a) => a.id)).toEqual(["name:PLTR"]);
     expect(queue.load()[0]?.askers).toEqual([ADA]);
   });
@@ -406,9 +445,45 @@ describe("a question starts discovery (#6952 slice 2b)", () => {
 
   it("starts nothing for a subject a campaign covers", async () => {
     const answer = await askAbout({ kind: "sector", subject: "Utilities" });
-    expect(answer.body).toMatchObject({ ok: true, status: "covered" });
+    expect(answer.body).toMatchObject({ ok: true, status: "covered", cover: "house" });
     expect(answer.body.tell).toMatch(/energy-for-ai/);
     expect(queue.load()).toEqual([]);
+  });
+
+  it("marks a name the research shelf already holds as the house's cover, not a campaign's (#7443)", async () => {
+    const answer = await askAbout(
+      { kind: "name", subject: "AAPL" },
+      ada,
+      config({ campaignShelf: (s: string) => s === "AAPL" }),
+    );
+    expect(answer.body).toMatchObject({
+      ok: true,
+      status: "covered",
+      cover: "house",
+      campaign: "the research shelf",
+    });
+    expect(answer.body.tell).toMatch(/in the research shelf/);
+    expect(queue.load()).toEqual([]);
+  });
+
+  it("keeps the member's cleaned words on a bare ask, so a question drafted in the chat reaches the list", async () => {
+    const answer = await askAbout({
+      kind: "name",
+      subject: "PLTR",
+      question: "  Why is it\nmoving   this week?  ",
+    });
+    expect(answer.body).toMatchObject({ ok: true, status: "queued" });
+    expect(queue.load()).toMatchObject([
+      { id: "name:PLTR", question: "Why is it moving this week?", askers: [ADA] },
+    ]);
+    expect(queue.load()[0]?.campaign).toBeUndefined();
+  });
+
+  it("caps a bare ask's words at 200 characters and keeps none when they are blank", async () => {
+    await askAbout({ kind: "name", subject: "PLTR", question: "q".repeat(900) });
+    await askAbout({ kind: "market", subject: "gold", question: "   " });
+    expect(queue.load()[0]?.question).toHaveLength(200);
+    expect(queue.load()[1]?.question).toBeUndefined();
   });
 
   it("lets a second member join the same question instead of queueing it twice", async () => {
@@ -419,16 +494,15 @@ describe("a question starts discovery (#6952 slice 2b)", () => {
     expect(queue.load()[0]?.askers).toHaveLength(2);
   });
 
-  it("gives no estimate while nothing reads the queue, however deep the ask sits", async () => {
+  it("counts the research passes in days for a deep ask, from the lane's per-pass number", async () => {
     for (const s of ["AA", "BB", "CC"]) await askAbout({ kind: "name", subject: s });
     const answer = await askAbout(
       { kind: "name", subject: "DD" },
       ada,
       config({ discoveryPerPass: 2 }),
     );
-    // Nothing reads the queue yet, so no count of passes is promised (#7034 slice 3b).
-    expect(answer.body.tell).toMatch(/no wait to promise/);
-    expect(answer.body.tell).not.toMatch(/passes/);
+    // The discovery lane reads the queue once a day (#7034 slice 3b): 3 ahead at 2 a pass is 2 passes.
+    expect(answer.body.tell).toMatch(/3 ahead of it, so about 2 research passes .* once a day/);
   });
 
   it("refuses a malformed or unknown ask with 400 and writes nothing", async () => {
@@ -586,6 +660,7 @@ describe("a question asked inside a campaign (#6952 slice 2c)", () => {
       memberCampaigns: campaigns,
       discoveryQueue: queue,
       campaignShelf: () => false,
+      campaignShelfAnswered: OFF_SHELF,
       discoveryPerPass: 6,
     }) as unknown as DashboardServerConfig;
   const askIn = async (body: unknown, who: unknown = ada) => {
@@ -740,6 +815,7 @@ describe("campaigns are communal (#6949 slice 6, criteria 8, 10, 11)", () => {
       discoveryQueue: queue,
       campaignQuestions: questions,
       campaignShelf: () => false,
+      campaignShelfAnswered: OFF_SHELF,
       discoveryPerPass: 6,
       campaignFindings: (campaign: string, ask: string) =>
         campaign === "ai-buildout" && ask === FOUND.answers ? [FOUND] : [],
@@ -890,7 +966,12 @@ describe("campaigns are communal (#6949 slice 6, criteria 8, 10, 11)", () => {
     await save({ ...FORM, title: "EV pumps", symbols: ["XOM", "RIVN"] });
     queue.write([]);
     const answer = await call("/api/campaigns/ask", post({ kind: "name", subject: "RIVN" }), grace);
-    expect(answer.body).toMatchObject({ ok: true, status: "covered", campaign: "ev-pumps" });
+    expect(answer.body).toMatchObject({
+      ok: true,
+      status: "covered",
+      campaign: "ev-pumps",
+      cover: "party",
+    });
     expect(answer.body.tell).toMatch(/"EV pumps", a campaign the party shares/);
     expect(queue.load()).toEqual([]);
   });

@@ -96,6 +96,8 @@ Three predictions carry score-by dates and are registered in [`forward-tests/uk-
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-11-05 | D-15 | **Initial research.** Canonical `market-events/uk-consumer-confidence-2026-11-20.json` written from the single proposal (`from-uk-consumer-confidence-2026-10-23`, read in full, now inert), correcting its fieldwork guess: both November windows on record opened **Oct 30** (2024 Oct 30–Nov 15; 2025 Oct 30–Nov 14), so 2026 should be about Oct 29–Nov 13. **Oct print** −24 (−11), Oct 1–14, no named driver, no Budget wording (NIQ primary re-fetched). **Sweep:** peers n/a; macro — Budget 10-28 priced in (headroom about £15bn, 10y gilt −1.4bp), UK CPI 3.5%, BoE decision today (hike priced, secondary); VIX **16.61** (19.45 at 10-23; 21.15 on 11-02), no regime shift; geopolitics — Iran-war energy/OBR growth cut (2027 GDP 1.0%); tape — same-day `uk-retail-sales-2026-11-20`, `uk-public-sector-finances-2026-11-20`, `umich-sentiment-final-2026-11-20`; no consensus findable. **Beyond horizon, named only:** the Dec 18 edition. **No proposal filed** (`--on-date=2026-11-20` shows every same-day entry; Dec 18 is D-43, past the low-impact horizon). No conviction proposal or declared intent names this event. | **Initial stance set** — stand aside; lean "partial reversal" at low confidence. FT-…-1/-2/-3 registered | 2026-11-20 is the print; low-band pulse in 7 days, close-out from D+1 (2026-11-21) |
+| 2026-11-12 | D-8 | **Pulse (trigger: band low:15+ → low:0+, interval elapsed).** Date holds: NIQ's October release (re-fetched direct) still lists "October 23rd, November 20th and December 18th"; `estimate` stays (taxonomy gap, not date doubt). No NIQ November fieldwork notice exists, so FT-…-1 stays unscoreable until 11-20; the window should be closing about now (Nov 12–14 close, Oct 29–30 open). **Sweep:** peers n/a; macro — **BoE hiked 25bp to 4.00%, 8–1** (Mann for 50bp; BoE MPR, 11-05), mid-window as the FT-…-2 headwind case assumed, first rise in 3+ years; Budget reception still only markets/press (no post-Budget household survey found); UK CPI (11-18) after the window, sibling ledger's Oct centre ~3.5%; VIX **17.49** (11-11 close, Yahoo; 16.61 at last row) after a **28.18** spike on 11-05 (US chip crash, not UK) and 19.46 on 11-10 — no regime shift left standing; geopolitics unchanged (Iran-war energy). Same-day neighbours unchanged: `uk-retail-sales-2026-11-20`, `uk-public-sector-finances-2026-11-20`, `umich-sentiment-final-2026-11-20` (different country). **Beyond horizon, named only:** Dec 18 edition. **No proposal filed** (`--on-date=2026-11-20`: 8 entries, nothing new; no conviction proposal or declared intent names this event). | — (stance holds; lean −23 or better stays low confidence; the hike is a mild headwind, not a flip) | 2026-11-20 is the print; close-out from D+1 (2026-11-21) |
+| 2026-11-19 | D-1 | **Pulse (trigger: interval elapsed).** Date holds: NIQ's October release (re-fetched direct) still lists "October 23rd, November 20th and December 18th"; `estimate` stays (taxonomy gap, not date doubt). No November fieldwork notice or consensus findable (search returns 2025 vintages only), so FT-…-1 and FT-…-2 stay unscored until the 11-20 print; the survey has been closed about a week. **Sweep:** peers n/a; macro — **UK CPI Oct 3.6%** (Sep 3.5%, ONS via `uk-cpi-2026-11-18` close-out, 11-19), published *after* fieldwork so it cannot be in the survey, but it is the first thing the print's commentary will cite; BoE hiked to 4.00% 8–1 on 11-05 (mid-window, as assumed); UK labour 11-17 not found; VIX **24.56** (11-18 close, Yahoo; 17.49 at last row, **+7.1pt**; 25.46 on 11-17) — a US-led regime move, unattributable to a UK survey, `symbols: []` so no channel; geopolitics unchanged (Iran-war energy). Same-day neighbours unchanged (8 entries on 11-20, `--on-date`). **Beyond horizon, named only:** Dec 18 edition. **No proposal filed.** No conviction proposal or declared intent names this event. | — (stance holds; lean −23 or better stays low confidence; CPI 3.6% post-dates the window, not a flip) | 2026-11-20 is the print; close-out from D+1 (2026-11-21) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -109,3 +111,87 @@ same PR — your own file, never another event's canonical one (#1717). One past
 in the row instead (#2946). Close-out fills `## Outcome` from re-run instrument data (cache busted
 first), never from memory. After that the assessment is closed; the doc reopens only to score a
 registered forward test whose `Score by` has arrived (`forward-test-due`).
+
+**Last assessed:** 2026-11-12
+<!-- probe-ref: {"symbols":{},"vix":17.49,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","consumer-confidence-2026-11-24","durable-goods-2026-11-25","empire-state-mfg-2026-11-16","eurostat-hicp-final-2026-11-18","fhfa-hpi-2026-11-24","fomc-minutes-2026-11-18","gdp-q3-2026-second-2026-11-25","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","industrial-production-annual-revision-2026-11-24","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-1-5y-2026-11-20","jpx-market-closure-2026-11-23","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","new-home-sales-2026-11-25","nvda-2026-11-18-print","ofgem-price-cap-announcement-2026-11-25","opex-2026-11-20","pce-2026-11-25","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","sp-global-flash-us-pmi-2026-11-23","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","treasury-coupon-announcement-2026-11-19","uk-cpi-2026-11-18","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","nvda-2026-11-18-print","pce-2026-11-25","retail-sales-2026-11-17"],"screenStreak":0,"blocked":[]} -->
+
+**Last assessed:** 2026-11-19
+<!-- probe-ref: {"symbols":{},"vix":24.56,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","consumer-confidence-2026-11-24","durable-goods-2026-11-25","empire-state-mfg-2026-11-16","eurostat-hicp-final-2026-11-18","fhfa-hpi-2026-11-24","fomc-minutes-2026-11-18","gdp-q3-2026-second-2026-11-25","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","industrial-production-annual-revision-2026-11-24","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-1-5y-2026-11-20","jpx-market-closure-2026-11-23","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","new-home-sales-2026-11-25","nvda-2026-11-18-print","ofgem-price-cap-announcement-2026-11-25","opex-2026-11-20","pce-2026-11-25","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","sp-global-flash-us-pmi-2026-11-23","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","treasury-coupon-announcement-2026-11-19","uk-cpi-2026-11-18","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","nvda-2026-11-18-print","pce-2026-11-25","retail-sales-2026-11-17"],"screenStreak":0,"blocked":[]} -->
+
+## Outcome
+
+**Close-out (2026-11-21, D+1 — inside the `closeOutWithinDays` window; all three fragment rows carry a
+2026-11-21 score-by, arrived).** Macro-print mode runs no symbol-keyed instrument (`symbols: []`
+throughout); both instrument caches were busted per the lane's standing instruction though nothing
+here reads them. Scored from NIQ's own November 2026 release
+(`nielseniq.com/global/en/news-center/2026/consumer-confidence-up-two-points-to-22-in-november/`),
+fetched direct today through a summarising fetcher (extracted three times, not hand-transcribed from
+the HTML), with Trading Economics (secondary) for the consensus and release time.
+
+**The release.** Headline **−22, up two points** from October's −24 — two measures fell, three rose;
+in line with the **−22** consensus (Trading Economics; its own forecast was −23). n=**2,009** (16+, UK).
+Sub-measures (change on October): personal finances past-12m **−11** (−1), next-12m **−5** (−2);
+general economy past-12m **−45** (+3), next-12m **−32** (+4); major purchase index **−17** (+5, "ahead
+of Black Friday", two lower than Nov 2024); savings **+27** (−1, outside the headline). Neil Bellamy:
+confidence "fragile and vulnerable to further economic pressures"; the lift is concentrated in
+major purchases and in younger consumers (+11) and £50k+ households (+6); personal-finance views kept
+weakening on persistent inflation and higher interest rates. **No Budget wording on the page** — NIQ
+names neither the Budget nor the BoE hike; Trading Economics adds the hike to 4.00%, October CPI 3.6%
+and a January energy-bill rise as the strain.
+
+**A defect in the release itself.** The page says "Interviewing was conducted between October 1st and
+October 14th" and repeats the October template's list "October 23rd, November 20th and December 18th".
+Both are carried over from the October release; the sub-scores prove the data is November's (each
+November "change" is exactly the movement from October's printed value). **The November fieldwork
+window was therefore never published**, and whether the survey was fielded wholly after the Budget is
+unverifiable from NIQ's page. Treat any recap that quotes this window as a copy error.
+
+**Leg 1 / FT-…-1 (window Oct 29–Nov 2 open, Nov 11–14 close) — FAIL on the letter, frame unscored.**
+The stated window is Oct 1–14, which trips the kill line as worded; the honest reading is a stale
+template, so the premise (fieldwork after the Budget, containing the BoE decision) is neither
+confirmed nor refuted. Lesson for the next barometer: score the window only when the page states one
+that is not the prior month's, and register that condition in the prediction.
+
+**Leg 2–4 / FT-…-2 (partial reversal, −23 or better) — PASS, small.** −22 is one point inside the bar
+and exactly the consensus. The direction followed the three post-Budget analogues (up), but the cause
+was not the Budget: NIQ credits major purchases, and the "relief the Budget was priced in" channel is
+unproven (no household read separates it). A low-confidence lean (about 65%) that hit; one
+observation, not a validated model.
+
+**Leg 5 / FT-…-3 (date and next-release line) — PASS.** Published **2026-11-20** (Trading Economics:
+00:01 GMT, so the release-time convention held on a secondary source); the next edition is
+**December 18th**. The `estimate` label stays: the taxonomy has no GfK/NIQ slot, which this lane may
+not fix by self-confirming.
+
+**Leg 6 (no market channel) — stand-aside held, untested by construction.** `symbols: []`; zero
+capital was keyed to this date. VIX closed **35.89** on 2026-11-20 (28.44 on 11-19, 24.56 on 11-18,
+25.46 on 11-17; Yahoo chart endpoint, secondary): a +7.5pt day and +11.3pt over two sessions, US-led
+and unattributable to a UK survey (the barometer printed at 00:01 London, hours before the US open).
+No tracked name's move is attributable to this print, so kill switch 1 did not fire.
+
+**The call, scored against the tape.** Two of three registered predictions passed; the one that
+carried real information (FT-2) passed with a margin of one point and no surprise against consensus.
+Nothing here licensed, or would have rewarded, a position.
+
+**Adjacency at close-out.** Sweep: macro — BoE 4.00%, CPI 3.6% (Oct), both already in the stance;
+geopolitics unchanged (Iran-war energy); VIX regime move above is a US story. Same-day neighbours
+(`--on-date=2026-11-20`: eight entries) are other lanes'. The **December 18** edition is now D-27,
+inside `allImpactsWithinDays: 30` (it was D-43 at initial research), so it is proposed as
+`proposals/uk-consumer-confidence-2026-12-18.from-uk-consumer-confidence-2026-11-20.json`
+(`estimate`, low). No conviction proposal or declared intent names this event.
+
+**Honest limits at close-out.** Release figures came through a summarising fetcher; the consensus and
+release time are from one secondary source; the November fieldwork window was never published, so the
+Budget-timing frame is unscored; NIQ does not isolate why confidence moved. This doc goes quiet.
+
+### Forward tests scored
+
+| Test | Prediction | Result | Verdict |
+|---|---|---|---|
+| `FT-uk-consumer-confidence-2026-11-20-1` | Window opens Oct 29–Nov 2, closes Nov 11–14 | page states **Oct 1–14** (stale October template; real window unpublished) | **fail on the letter** |
+| `FT-uk-consumer-confidence-2026-11-20-2` | Headline −23 or better | **−22**, up 2 (consensus −22) | **pass** |
+| `FT-uk-consumer-confidence-2026-11-20-3` | Publishes 11-20; next release 12-18 | **2026-11-20**; next "December 18th" | **pass** |
+
+**Last assessed:** 2026-11-21 (close-out — this event goes quiet; all three registered forward tests
+are now scored, none remain open)
+<!-- probe-ref: {"symbols":{},"vix":35.89,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","consumer-confidence-2026-11-24","durable-goods-2026-11-25","empire-state-mfg-2026-11-16","eurostat-hicp-final-2026-11-18","fhfa-hpi-2026-11-24","fomc-minutes-2026-11-18","gdp-q3-2026-second-2026-11-25","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","industrial-production-annual-revision-2026-11-24","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-1-5y-2026-11-20","jpx-market-closure-2026-11-23","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","opex-2026-11-20","pce-2026-11-25","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","sp-global-flash-us-pmi-2026-11-23","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","treasury-coupon-announcement-2026-11-19","uk-cpi-2026-11-18","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25","retail-sales-2026-11-17"],"screenStreak":0,"blocked":[]} -->

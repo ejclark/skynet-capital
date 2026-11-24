@@ -2,7 +2,7 @@
 // <projects>/<project folder>/<session>/subagents/workflows/<run>/agent-*.jsonl, with the agent
 // type in the sibling .meta.json and the workflow's name in <session>/workflows/<run>.json. The
 // project has one folder per checkout (the main one and each worktree), and all of them launch
-// agents, so every folder that starts with the project's name is scanned.
+// agents, so every folder named for the checkout or one of its worktrees is scanned (project.mjs).
 //
 // Usage is deduped by message id: a streamed reply writes one row per content block, all with the
 // same id and the same usage, and counting rows overstated an Opus agent's calls by 60%.
@@ -13,6 +13,7 @@
 import { createReadStream, existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
+import { isProjectFolder } from "./project.mjs";
 
 /** Calls deduped by message id; the first call is the first message's input plus both cache sides. */
 export function agentUsage(lines) {
@@ -60,9 +61,30 @@ export function agentUsage(lines) {
 }
 
 const NO_SUCH_TOOL = /No such tool available/i;
-/** How a stage says it lacks a tool. worker.md tells it to: "report the missing tool". */
-const REPORTS_MISSING_TOOL =
-  /\b(?:no|missing|lacks?|lacking|without|do(?:es)? not have|don't have)\s+(?:access to\s+)?(?:the\s+|a\s+|an\s+)?[`\w:-]*\s*tool\b|\btool\b[^.]{0,30}\b(?:not available|unavailable)\b|No such tool available/i;
+// How a stage says it lacks a tool. worker.md tells it to "report the missing tool", in its own
+// words, so this reads the common shapes rather than asking for a fixed marker: a marker only covers
+// stages that remember it, and the oracle also reads transcripts written before any marker (#6692).
+const APOS = "['’]";
+/** Said before the tool: "no Skill tool", "I do not have", "I can't invoke the Skill tool". */
+const DENIES = `no|missing|lacks?|lacking|without|do(?:es)? not have|do(?:es)?n${APOS}t have|(?:can${APOS}t|cannot|can not|unable to|not able to)\\s+(?:use|call|invoke|access)`;
+/** Said after it: "isn't available", "is not in my tool list", "is not in this agent's tools". */
+const ABSENT = `(?:(?:is|are)\\s+not|(?:is|are)n${APOS}t|not)\\s+(?:available|in\\s+(?:my|this|the|its|your)\\s+(?:[\\w'’-]+\\s+)?(?:tools?|tool\\s*list|toolset|list|allowlist))\\b|(?:(?:is|are)\\s+)?unavailable\\b`;
+/**
+ * Tools a worker stage lacks, named without the word "tool" ("Skill is not available to a
+ * worker"). Matched case-sensitively, so "the review agent is not available" is not a tool.
+ */
+const LACKED =
+  "(?-i:Skill|Agent|ReportFindings|NotebookEdit|ToolSearch|SendMessage|Workflow|mcp__[\\w-]+)";
+const REPORTS_MISSING_TOOL = new RegExp(
+  [
+    `\\b(?:${DENIES})\\s+(?:access to\\s+)?(?:the\\s+|a\\s+|an\\s+)?[\`\\w:-]*\\s*tool\\b`,
+    `\\btool\\b[^.]{0,30}?\\b(?:${ABSENT})`,
+    `\\b${LACKED}\\b\\s+(?:${ABSENT})`,
+    `\\b(?:${DENIES})\\s+(?:access to\\s+)?(?:the\\s+)?${LACKED}\\b`,
+    "No such tool available",
+  ].join("|"),
+  "i",
+);
 const FINISHED = new Set(["done", "pass", "passed", "ok", "success", "green"]);
 /**
  * Over this, a return with no status is a stage that did its work. All 8 stages today whose returns
@@ -230,7 +252,7 @@ export function listDirs(path) {
  */
 export async function scanWorkflowAgents(projectsDir, project, sinceMs, untilMs) {
   const agents = [];
-  for (const folder of listDirs(projectsDir).filter((name) => name.startsWith(project))) {
+  for (const folder of listDirs(projectsDir).filter((name) => isProjectFolder(name, project))) {
     for (const session of listDirs(join(projectsDir, folder))) {
       const sessionDir = join(projectsDir, folder, session);
       for (const run of listDirs(join(sessionDir, "subagents", "workflows")))

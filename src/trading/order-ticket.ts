@@ -57,6 +57,9 @@ export interface TicketRequest {
 export interface TicketContext {
   /** Settled cash available to spend. */
   readonly cash: number;
+  /** Alpaca's options buying power, when known — an option order is checked against the lesser
+   *  of this and `cash` (`ParticipantSnapshot.optionsBuyingPower`). */
+  readonly optionsBuyingPower?: number;
   readonly positions: readonly TicketHolding[];
   /**
    * Whether member-initiated trading is switched on for this deployment. Off by default: the
@@ -130,7 +133,9 @@ function validateQuantity(quantity: number, refusals: string[]): void {
   }
 }
 
-function validateSell(
+/** The no-short rule: a sell may never exceed the shares held. Exported for the working-order
+ *  change re-check (`order-change-review.ts`), so a Modify obeys the same sentence as a submit. */
+export function validateSell(
   quantity: number,
   held: TicketHolding | undefined,
   refusals: string[],
@@ -208,7 +213,9 @@ function pricedFields(
   return {};
 }
 
-function validateBuy(
+/** The cash rule: a buy may never cost more than the cash on hand. Exported for the same re-check
+ *  as `validateSell`. */
+export function validateBuy(
   notional: number | undefined,
   cash: number,
   refusals: string[],

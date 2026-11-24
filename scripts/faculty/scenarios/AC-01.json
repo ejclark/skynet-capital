@@ -1,0 +1,22 @@
+{
+  "id": "AC-01",
+  "member": "invited-friend",
+  "viewport": "phone",
+  "start": "/app",
+  "optimal": 9,
+  "scenario": "You were invited to this app by a friend and have your own paper account with some energy fund XLE in it. Sell 30 of your own XLE shares at the market price \u2014 make sure it comes out of YOUR account.",
+  "end": {
+    "orders": [
+      {
+        "symbol": "XLE",
+        "side": "sell",
+        "quantity": 30,
+        "orderType": "market",
+        "state": ["working", "filled"]
+      }
+    ]
+  },
+  "note": "The friend also owns the Day Trader bot's account; an order placed there is invisible to this oracle and fails the session (which account an order hits shows only in a small picker, S34).",
+  "email": "friend@example.test",
+  "participant": "human-friend"
+}

@@ -75,17 +75,42 @@ globalThis.steerStatus = (() => {
       line: `Read back ${clock(ms)}${summary ? ` · ${summary}` : ""}`,
     };
   }
+  // A read-back's time is a session's guess too: of 50 `readBackAt` stamps in the transcripts, 49
+  // were a whole minute and 7 sat behind the real time (docs/IDEAS.md). A page opened later can't
+  // see it land, so a read-back stamped up to this far behind the press still answers it (#6730).
+  // Order still counts past it: a Done re-armed after an older read-back (#7119) has none yet.
+  const SKEW_MS = 5 * 60 * 1000;
+  /** Does the read-back `rb` (readBackOf) on the round's document answer the Done at `doneAt`, as a
+   *  page opening reads it? One at or after the press does; one within SKEW_MS behind it does too,
+   *  unless the session's `ackFor` names another press — then the read-back was that press's. */
+  function readsBack(rb, d, doneAt) {
+    if (!rb) return false;
+    const doneMs = doneAt ? Date.parse(doneAt) : Number.NaN;
+    if (Number.isNaN(doneMs) || rb.ms >= doneMs) return true;
+    if (typeof d?.ackFor === "string" && d.ackFor !== doneAt) return false;
+    return rb.ms > doneMs - SKEW_MS;
+  }
   /** Does the session's stamp answer the press at `doneAt`? A session has no clock: of 4 `ackAt`
    *  stamps in the transcripts (#6606), 3 were a whole-minute guess minutes ahead and 1 sat 21 seconds
    *  behind, so the times can't decide it. `ackFor`, the press's own stamp copied from the Done
    *  comment, decides when it is there. Without it (a page or a session from before it), a stamp that
    *  `landed` after the press answers it, whatever time it claims; on opening a page, where a landing
-   *  can't be seen, the times are all there is. */
+   *  can't be seen, the times are all there is.
+   *  An `ackFor` naming an earlier press may be stale: Reopen's merging save leaves it on the doc,
+   *  and a session that then stamps only `ackAt` leaves the same doc as one late-acking that earlier
+   *  press. Neither can be told apart on the doc, so only a stamp seen to `land` after this press may
+   *  let the times decide it (#6729). On opening a page the landing is gone, and the earlier press's
+   *  own ack, its guessed clock minutes ahead, would read as this one's: there `ackFor` alone decides,
+   *  and the not-received line stays armed (#7727). */
   function acks(d, doneAt, landed) {
     if (!doneAt) return false;
-    if (typeof d?.ackFor === "string") return d.ackFor === doneAt;
     const ms = typeof d?.ackAt === "string" ? Date.parse(d.ackAt) : Number.NaN;
-    return landed ? !Number.isNaN(ms) : ms >= Date.parse(doneAt);
+    const doneMs = Date.parse(doneAt);
+    if (typeof d?.ackFor === "string") {
+      if (d.ackFor === doneAt) return true;
+      return landed && Date.parse(d.ackFor) < doneMs && ms >= doneMs;
+    }
+    return landed ? !Number.isNaN(ms) : ms >= doneMs;
   }
   return {
     ACK,
@@ -108,6 +133,7 @@ globalThis.steerStatus = (() => {
     notSaved,
     notTold,
     readBackOf,
+    readsBack,
     refused,
     unable,
   };

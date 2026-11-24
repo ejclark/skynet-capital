@@ -10,11 +10,13 @@ import type { PageSection } from "./sections";
  *  every later page share ONE mechanism; this file is now just Settings' section list.
  *  @category navigation
  */
-export type SettingsSection = "preferences" | "account" | "guests" | "github";
+export type SettingsSection = "preferences" | "account" | "target" | "guests" | "github";
 
 export const SETTINGS_SECTIONS: readonly PageSection<SettingsSection>[] = [
   { id: "preferences", label: "Preferences" },
   { id: "account", label: "Account" },
+  // A member's target split (#4607) — book data kept on the server, so its own section.
+  { id: "target", label: "Target split" },
   { id: "guests", label: "Guest list" },
   { id: "github", label: "GitHub access" },
 ];

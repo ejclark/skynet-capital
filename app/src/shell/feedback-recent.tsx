@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import { useState } from "react";
 import { FEEDBACK_STATUS_LABEL } from "../../../src/domain/feedback-status";
-import { type FollowupOutcome, followupRequest, type RecentFiling } from "../live/feedback";
+import { followupRequest, followupSentLine, type RecentFiling } from "../live/feedback";
 import { InlineResult } from "../ui";
 import { Toggle } from "./toggle";
 
@@ -34,6 +34,12 @@ import { Toggle } from "./toggle";
  * An open filing is in one of three places (#6316): filed and waiting to be picked, up next
  * (`ready`), or being built (`in-progress`) — the only one that lights the middle step. Their
  * words are the server's own (`FEEDBACK_STATUS_LABEL`), so Moneypenny answers with the same ones.
+ *
+ * TRY IT (#8005 slice 7; #7031's "the member who asked plays it"). A filing Moneypenny matched to
+ * a known problem is evidence on that problem, so its own issue can stay open while the fix lands
+ * through the problem's plan. Once the server reads that fix as shipped (`fixed`), the row says
+ * so in its own words and links the screen to try it on, with the shipped row's wash: the
+ * member's ask going right is the thing worth celebrating.
  */
 
 const RECENT_FILTERS = [
@@ -95,22 +101,26 @@ function StatusTrack({ steps }: { readonly steps: readonly Step[] }): ReactEleme
   );
 }
 
-/** What a sent follow-up did (#5848): the server restarts the build only when the claim would
- *  take it, and names why when it didn't, so the line never promises a build that isn't coming.
- *  An unknown or missing outcome gets the plain line — the comment posted, nothing more claimed. */
-const SENT = "Sent — it's on your issue.";
-const SENT_LINES: Readonly<Record<FollowupOutcome, string>> = {
-  restarted: "Sent — it's on your issue, and the build starts again with it.",
-  backlog: "Sent — it's on your issue; it builds once it's picked from the queue.",
-  held: "Sent — it's on your issue; the build waits on a person first.",
-  building: "Sent — it's on your issue; it's being built right now.",
-  blocked: "Sent — it's on your issue; the build starts once the issues it waits on close.",
-  closed: "Sent — it's on your issue. This one is closed, so nothing rebuilds from it.",
-  stranded: "Sent — it's on your issue, but the build couldn't be restarted.",
-  unchanged: SENT,
-};
-const sentLine = (outcome: FollowupOutcome | undefined): string =>
-  outcome && Object.hasOwn(SENT_LINES, outcome) ? SENT_LINES[outcome] : SENT;
+type Fixed = NonNullable<RecentFiling["fixed"]>;
+
+/** The fixed row's words: "try it" only when there is a screen to try it on. */
+const fixedWords = (fixed: Fixed): string => (fixed.tryAt ? "Fixed — try it" : "Fixed");
+
+/** "Profile: Activity" reads as the place it is: Profile → Activity, the house's way to say it. */
+const placeName = (name: string): string => name.replace(": ", " → ");
+
+function FixedLine({ fixed }: { readonly fixed: Fixed }): ReactElement {
+  return (
+    <span className="fb-meta fb-shipped-version fb-fixed-line">
+      Fixed as part of “{fixed.problem}”
+      {fixed.tryAt ? (
+        <a className="fb-try" href={fixed.tryAt.route}>
+          Try it on {placeName(fixed.tryAt.name)}
+        </a>
+      ) : null}
+    </span>
+  );
+}
 
 function FollowupFold({ filing }: { readonly filing: RecentFiling }): ReactElement {
   const [open, setOpen] = useState(false);
@@ -126,8 +136,8 @@ function FollowupFold({ filing }: { readonly filing: RecentFiling }): ReactEleme
       });
       setNote(
         reply.ok
-          ? { ok: true, text: sentLine(reply.outcome) }
-          : { ok: false, text: reply.error ?? "Couldn't send that." },
+          ? { ok: true, text: followupSentLine(reply.outcome) }
+          : { ok: false, text: reply.error ?? "Couldn't submit that." },
       );
       if (reply.ok) setDetails("");
     } catch (err) {
@@ -159,7 +169,7 @@ function FollowupFold({ filing }: { readonly filing: RecentFiling }): ReactEleme
             disabled={busy || details.trim() === ""}
             onClick={() => void send()}
           >
-            {busy ? "Sending…" : "Send follow-up"}
+            {busy ? "Submitting…" : "Submit follow-up"}
           </button>
           {note ? <InlineResult tone={note.ok ? "ok" : "err"}>{note.text}</InlineResult> : null}
         </div>
@@ -200,9 +210,18 @@ export function RecentFeedback({
         <ul className="fb-list">
           {visible.map((filing) => {
             const shipped = filing.status === "shipped";
-            const view = filing.status ? STATUS_VIEW[filing.status] : undefined;
+            const fixed = filing.fixed;
+            const view = fixed
+              ? { words: fixedWords(fixed), track: STATUS_VIEW.shipped.track }
+              : filing.status
+                ? STATUS_VIEW[filing.status]
+                : undefined;
+            const celebrated = shipped || fixed !== undefined;
             return (
-              <li key={filing.issueNumber} className={shipped ? "fb-row fb-row-shipped" : "fb-row"}>
+              <li
+                key={filing.issueNumber}
+                className={celebrated ? "fb-row fb-row-shipped" : "fb-row"}
+              >
                 <a className="fb-title" href={filing.url} target="_blank" rel="noopener noreferrer">
                   #{filing.issueNumber} · {filing.title}
                 </a>
@@ -211,12 +230,13 @@ export function RecentFeedback({
                 </span>
                 {view?.track ? <StatusTrack steps={view.track} /> : null}
                 {view ? (
-                  <span className={`fb-status fb-${filing.status}`}>
-                    {shipped ? <span aria-hidden="true">🚀 </span> : null}
+                  <span className={`fb-status fb-${fixed ? "shipped" : filing.status}`}>
+                    {celebrated ? <span aria-hidden="true">🚀 </span> : null}
                     {view.words}
                   </span>
                 ) : null}
-                {shipped && appVersion ? (
+                {fixed ? <FixedLine fixed={fixed} /> : null}
+                {shipped && appVersion && !fixed ? (
                   <span className="fb-meta fb-shipped-version num">
                     confirmed live in v{appVersion}
                   </span>

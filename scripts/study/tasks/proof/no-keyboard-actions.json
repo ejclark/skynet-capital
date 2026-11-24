@@ -1,0 +1,17 @@
+{
+  "purpose": "the scripted actor for no-keyboard.html (#8126): miss the ask box onto the chip above it, type, then hit the box and type again",
+  "turns": [
+    { "action": { "type": "tap", "text": "File feedback" } },
+    {
+      "expect": "the question goes into the ask box",
+      "action": { "type": "type", "text": "?" }
+    },
+    { "action": { "type": "tap", "text": "Ask Moneypenny" } },
+    { "action": { "type": "type", "text": "why" } },
+    { "action": { "type": "done", "answer": "asked" } }
+  ],
+  "ease": {
+    "score": 4,
+    "reason": "scripted: the first tap missed the box, so the first typing went nowhere"
+  }
+}

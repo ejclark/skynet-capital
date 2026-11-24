@@ -28,9 +28,9 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { currentProject, projectFolders } from "./agent-meter/project.mjs";
 import { isMain } from "./is-main.mjs";
 
-const PROJECT = "-Users-eric-Developer-skynet-capital";
 const MAX_USER_CHARS = 1200;
 const MAX_ERROR_CHARS = 300;
 const MAX_FINAL_CHARS = 1500;
@@ -172,13 +172,11 @@ export function memoryClaims(text) {
   };
 }
 
-/** The folders holding this project's session transcripts: the main checkout's and one per worktree. */
+/** The folders holding this checkout's session transcripts: the main one's and one per worktree (#6689). */
 function transcriptDirs() {
   if (process.env.AGENT_TRANSCRIPTS_DIR) return [process.env.AGENT_TRANSCRIPTS_DIR];
-  const root = join(homedir(), ".claude", "projects");
-  return readdirSync(root)
-    .filter((name) => name === PROJECT || name.startsWith(`${PROJECT}-`))
-    .map((name) => join(root, name));
+  const root = process.env.AGENT_PROJECTS_DIR ?? join(homedir(), ".claude", "projects");
+  return projectFolders(root, currentProject());
 }
 
 /** When a session started: the first timestamp in its transcript, read from the file's head. */
@@ -224,12 +222,25 @@ const onMain = memo((path) => {
   return res.status === 0 ? res.stdout : null;
 });
 
-/** One gh call per issue however many memories cite it: this bucket is shared with every lane. */
-const isClosed = memo((n) => {
-  const res = spawnSync("gh", ["issue", "view", String(n), "--json", "state", "--jq", ".state"], {
+/** What a check could not run, by issue number: printed on stderr so a person sees it too. */
+const unreadWhy = new Map();
+
+/**
+ * "open", "closed", or null when gh could not say. One call per issue however many memories cite it:
+ * this bucket is shared with every lane. A failed read is null, never "open": reading every failure
+ * as open let a memory waiting on a closed issue pass the review as clean (#6717). REST, not `gh issue
+ * view`, because a cloud session's GraphQL call can be refused while REST answers, and REST also
+ * answers for a PR number.
+ */
+const issueState = memo((n) => {
+  const res = spawnSync("gh", ["api", `repos/{owner}/{repo}/issues/${n}`, "--jq", ".state"], {
     encoding: "utf8",
   });
-  return res.stdout?.trim() === "CLOSED";
+  const state = res.status === 0 ? res.stdout.trim() : "";
+  if (state === "open" || state === "closed") return state;
+  const why = res.error?.message ?? (res.stderr?.trim() || `gh printed "${res.stdout?.trim()}"`);
+  unreadWhy.set(n, why.split("\n")[0]);
+  return null;
 });
 
 function memo(read) {
@@ -260,27 +271,53 @@ function deadFlags(claims, scripts) {
   return [...new Set(rows)];
 }
 
+/**
+ * A column the report could not check says so. `[]` means "checked, nothing found", so writing it for
+ * a check that never ran told the review a memory was clean when nothing had looked (#6717). The value
+ * explains itself because the review agent reads this report as text, with no key beside it.
+ */
+const UNREAD = "unread: not checked, so not clean";
+
+/** Whether origin/main is there to read at all: without it every cited path would read as gone. */
+function mainReadable() {
+  return (
+    spawnSync("git", ["rev-parse", "--verify", "--quiet", "origin/main^{commit}"]).status === 0
+  );
+}
+
 function staleCandidates(dir) {
+  const main = mainReadable();
   // No package.json on main means no answer, not that every npm script is gone.
-  const pkg = onMain("package.json");
+  const pkg = main ? onMain("package.json") : null;
   const scripts = pkg ? (JSON.parse(pkg).scripts ?? {}) : null;
+  const unless = (readable, claimed, check) => (readable ? check() : claimed ? UNREAD : []);
   const out = [];
   for (const name of readdirSync(dir).filter((n) => n.endsWith(".md"))) {
     const claims = memoryClaims(readFileSync(join(dir, name), "utf8"));
-    const missing = claims.paths.filter(
-      (path) => !(path.startsWith("/") || path.startsWith("~")) && onMain(path) === null,
+    const repoPaths = claims.paths.filter(
+      (path) => !(path.startsWith("/") || path.startsWith("~")),
     );
-    const closed = claims.issues.filter(isClosed);
+    const cited = [...new Set([...claims.issues, ...claims.futureOnIssue])];
     out.push({
       file: name,
       modified: statSync(join(dir, name)).mtime.toISOString().slice(0, 10),
-      missingPaths: missing,
-      closedIssues: closed,
-      missingNpmScripts: scripts ? claims.npmScripts.filter((s) => !Object.hasOwn(scripts, s)) : [],
-      flagsNotInScript: scripts ? deadFlags(claims, scripts) : [],
-      futureOnClosedIssue: claims.futureOnIssue.filter(isClosed),
+      missingPaths: unless(main, repoPaths.length > 0, () =>
+        repoPaths.filter((path) => onMain(path) === null),
+      ),
+      closedIssues: claims.issues.filter((n) => issueState(n) === "closed"),
+      unreadIssues: cited.filter((n) => issueState(n) === null),
+      missingNpmScripts: unless(scripts, claims.npmScripts.length > 0, () =>
+        claims.npmScripts.filter((s) => !Object.hasOwn(scripts, s)),
+      ),
+      flagsNotInScript: unless(scripts, claims.flags.length > 0, () => deadFlags(claims, scripts)),
+      futureOnClosedIssue: claims.futureOnIssue.filter((n) => issueState(n) === "closed"),
     });
   }
+  if (!main)
+    console.error("dream-digest: no origin/main to read; cited paths and npm rows say unread");
+  else if (!pkg) console.error("dream-digest: no package.json on origin/main; npm rows say unread");
+  for (const [n, why] of unreadWhy)
+    console.error(`dream-digest: could not read #${n} (${why}); listed under unreadIssues`);
   return out;
 }
 

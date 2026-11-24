@@ -2,10 +2,11 @@
 // 3b-2). PHONE FIRST (docs/PICTURES.md): 390 with the head's events line (no tower on phones), then
 // 1280 with the tower in the page frame's own column (#3977). JPEG ≤100KB.
 //
-// THE NUMBER. The Bench must stay docked at 1280, rail closed (beside the tower's column, #3977) and
-// open (the column steps aside, `use-tower-column.ts` — it once left the Bench 353px wide). Every
-// run prints the Bench's width both ways and the column's — run it on main and on the branch, and
-// the lines are the before/after the PR quotes. A Bench that folds (`docked: false`) is the failure.
+// THE NUMBER. The Bench must stay docked at 1280 with Moneypenny's History closed (beside the
+// tower's column, #3977) and open (History rises from her dock under the page, #7487 slice 2 — the
+// right rail that once left the Bench 353px wide is gone). Every run prints the Bench's width both
+// ways, the column's and the dock's — run it on main and on the branch, and the lines are the
+// before/after the PR quotes. A Bench that folds (`docked: false`) is the failure.
 //
 // It serves the REAL offline dashboard signed in as the crawl member (scripts/crawl/server.mjs +
 // mint-session.ts — the same boot the persona crawl uses), so the events line reads the real
@@ -51,20 +52,21 @@ async function settle(page, path) {
 
 try {
   const rows = [];
-  for (const rail of [false, true]) {
+  for (const history of [false, true]) {
     const page = await open({ width: 1280, height: 900 });
     await settle(page, PLAIN);
-    if (rail) {
-      await page.getByRole("button", { name: /Moneypenny/ }).click();
+    if (history) {
+      await page.locator(".mp-dock-history").click();
+      await page.locator(".mp-history").waitFor();
       await page.waitForTimeout(600);
     }
     rows.push({
-      moneypenny: rail ? "open" : "closed",
+      moneypenny: history ? "open" : "closed",
       ...(await page.evaluate(() => {
         const px = (el) => (el ? Math.round(el.getBoundingClientRect().width) : null);
         const head = document.querySelector("main .cal-head");
         return {
-          rail: px(document.querySelector(".mp-rail")),
+          dock: px(document.querySelector(".mp-dock")),
           stage: px(document.querySelector("main.stage")),
           tower: px(document.querySelector(".tower-column")),
           bench: px(document.querySelector(".bench")),

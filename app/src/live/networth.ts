@@ -38,6 +38,9 @@ export interface NetWorthStatsView {
   readonly dayTone: Tone;
   readonly dayKnown: boolean;
   readonly cash: string;
+  /** What an options order can actually spend, sent only when it is below `cash` — the rest
+   *  already secures sold puts. When present, this is what "ready to use" names. */
+  readonly ready?: string;
   readonly cashKnown: boolean;
   readonly positionCount: number;
   /** Cumulative realized P/L — gains/losses actually booked by a sell, distinct from the day move

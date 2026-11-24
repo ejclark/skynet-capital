@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "@rstest/core";
 import { admitBuild, waitingPlans } from "../../../scripts/moneypenny/admission.mjs";
+import { parseAsk } from "../../../scripts/moneypenny/ask-card.mjs";
 import {
   ASSIGN_MARKER,
   askOnce,
@@ -636,5 +637,38 @@ describe("the sweep's executor takes the lease (wiring)", () => {
     expect(at("--method PATCH")).toBeLessThan(at("--add-label"));
     expect(at("--add-label")).toBeLessThan(at("issues/7/assignees"));
     expect(log.at(-1)).toContain("git/refs/tags/claim/ask-7");
+  });
+});
+
+// #7939: both lane-written asks were born with a question and nothing else, so each landed under the
+// digest's "callout incomplete" until a session lettered it by hand (#6886, 2026-11-23). They now
+// carry options, a prediction, a silence line and a class, the grammar the Decisions page reads.
+describe("a lane-written ask is answerable by letter", () => {
+  const complete = (body: string) => {
+    const [item] = parseAsk(body);
+    expect(item?.options.map((o) => o.key)).toEqual(["A", "B"]);
+    expect(item).toMatchObject({ predicted: "A", confidence: "medium", cls: "lane recovery" });
+    expect(item?.onSilence).toBeTruthy();
+  };
+
+  it("when the plan lane stops continuing a plan", () => {
+    const { calls, run, retry } = stubGithub();
+    const live = { ...parkedPlan(1), labels: [{ name: "plan" }, { name: "ready" }] };
+    executeStopContinuation(STOP, { run, retry, read: () => live, assign: () => "assigned" });
+    complete(bodyWrites(calls)[0] as string);
+  });
+
+  it("when the stall guard catches a silent feedback build", () => {
+    const calls: string[][] = [];
+    const run = (cmd: string, args: readonly string[]) => {
+      calls.push([cmd, ...args]);
+      if (args[0] === "issue" && args[1] === "view") {
+        return JSON.stringify({ state: "OPEN", labels: [], comments: [{}], body: "**Ask.**" });
+      }
+      if (args[0] === "pr") return "[]";
+      return "";
+    };
+    guardFeedbackOutcome(9, "https://run/1", undefined, { run, ensure: noop });
+    complete(bodyWrites(calls)[0] as string);
   });
 });

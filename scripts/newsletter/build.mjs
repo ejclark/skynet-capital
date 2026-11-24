@@ -4,7 +4,9 @@
 //
 // A source gather could not read arrives as its own words ("unavailable: …") and leaves as them:
 // the metric reads unknown, and the rest of the object is unaffected.
+import { flipYield } from "../flip-refusals.mjs";
 import { asksDue, openAsks } from "./asks.mjs";
+import { backlogFlow, backlogStock, rework } from "./backlog.mjs";
 import { decisionsReport } from "./decisions.mjs";
 import { knownGaps, memberChanges } from "./member-changes.mjs";
 import {
@@ -101,6 +103,9 @@ export function buildNewsletter(inputs) {
     metrics: {
       mergedPrs: over(inputs.prs, (prs) => mergedByKind(prs, w)),
       defects: defectReading,
+      // The clear-path flip's yield (#7311 slice 4), from `flip/refusals.jsonl` as `{ text }`; the audit's
+      // is `defects.perPr` above. Unknown, not zero, in a week nobody flipped.
+      flip: over(inputs.flipLedger, ({ text }) => flipYield(text, w.sinceMs, w.untilMs)),
       failureToFix: failureToFix(inputs.failureToFix),
       verifyFirstTry: verifyFirstTry(inputs.jobs, isList(inputs.ciRuns) ? inputs.ciRuns : null),
       tokensPerVerified: rows,
@@ -111,6 +116,10 @@ export function buildNewsletter(inputs) {
             ? paceReading(tracker.title, tracker.body)
             : inputs.tracker,
       needsEric: over(inputs.needsEric, (r) => needsEric(r, asOfMs)),
+      // Backlog flow and rework (#8037 slice 1): is the pile shrinking, and what does speed cost.
+      backlogStock: over(inputs.openIssues, (i) => backlogStock(i, asOfMs)),
+      backlogFlow: over(inputs.issueActivity, (i) => backlogFlow(i, w)),
+      rework: over(inputs.prs, (prs) => rework(prs, w, asOfMs, inputs.prFiles)),
       playthroughGaps: knownGaps(inputs.journeyGaps),
       memberChanges: memberChanges(inputs.memberPrs, inputs.memberIssues, w),
       fitness: over(inputs.fitness, (f) => fitness(f.contracts, f.issues, w)),

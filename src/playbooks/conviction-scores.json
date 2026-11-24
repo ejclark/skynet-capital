@@ -59,17 +59,19 @@
     {
       "statement": "7. The floor: more pullback first. CRWV's floor is probably $48–$52, likely after the print.",
       "score": {
-        "outcome": "pending",
-        "basis": "Not due: scored on 2027-01-20.",
-        "dueOn": "2027-01-20"
+        "outcome": "fail",
+        "basis": "CRWV closed at $39.51 on 2026-11-20, under $41.00: its lowest close 2026-10-16 to 2027-01-19 lands outside $41.00 to $60.90 whatever comes next.",
+        "dueOn": "2027-01-20",
+        "scoredOn": "2026-11-24"
       }
     },
     {
       "statement": "8. How long the drop lasts: back above today's price in 3 to 6 months is the base case.",
       "score": {
-        "outcome": "pending",
-        "basis": "Not due: scored on 2027-02-02.",
-        "dueOn": "2027-02-02"
+        "outcome": "pass",
+        "basis": "CRWV closed at $63.93 on 2026-10-28, at or above $63.15.",
+        "dueOn": "2027-02-02",
+        "scoredOn": "2026-11-21"
       }
     },
     {

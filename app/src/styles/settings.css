@@ -240,3 +240,50 @@
 .set-fields .toggle-group:disabled button[aria-pressed="false"] {
   opacity: 0.55;
 }
+
+/* Target split (#4607 slice 1): label · number · unit rows, one column at 390px. The preview bar is
+   the money row's own `.money-bar` (money-strip.css), so a target looks like what it is compared to. */
+.tsplit-lede {
+  margin-bottom: 14px;
+}
+.tsplit-bar {
+  background: var(--surface-2);
+}
+.tsplit-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tsplit-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 72px 6ch;
+  align-items: center;
+  gap: 10px;
+  max-width: 34ch;
+}
+.tsplit-row label {
+  margin-bottom: 0;
+  color: var(--text);
+}
+.tsplit-row input {
+  text-align: right;
+  font-family: var(--mono);
+}
+.tsplit-unit {
+  font-size: 12px;
+  color: var(--muted);
+}
+.tsplit-sum {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.tsplit-sum--ok {
+  color: var(--text);
+  font-weight: 600;
+}
+.tsplit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

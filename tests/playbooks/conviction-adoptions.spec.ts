@@ -62,6 +62,21 @@ describe("holdIn — which pair a view holds shut", () => {
     expect(hold("someone-elses-view", "CRWV-WHEEL")).toBeUndefined();
   });
 
+  it("names a pair two failed claims hold by the earlier adoption, whichever key sorts first", () => {
+    const line = (adoptedOn: string) => ({ change: "stop-new-entries", adoptedOn, basis: "" });
+    const later = {
+      "ai-dip-2026-10/10/CRWV-WHEEL": line("2026-11-24"),
+      "ai-dip-2026-10/2a/CRWV-WHEEL": line("2026-11-09"),
+    } as AdoptionLedger;
+    const reversed = {
+      "ai-dip-2026-10/2a/CRWV-WHEEL": line("2026-11-09"),
+      "ai-dip-2026-10/7/CRWV-WHEEL": line("2026-11-24"),
+    } as AdoptionLedger;
+    const first = { claim: "2a", adoptedOn: "2026-11-09" };
+    expect(holdIn(later)("ai-dip-2026-10", "CRWV-WHEEL")).toEqual(first);
+    expect(holdIn(reversed)("ai-dip-2026-10", "CRWV-WHEEL")).toEqual(first);
+  });
+
   it("holds nothing for a change this build cannot read", () => {
     const odd = {
       "ai-dip-2026-10/2a/CRWV-WHEEL": { change: "retire", adoptedOn: "2026-11-10", basis: "" },

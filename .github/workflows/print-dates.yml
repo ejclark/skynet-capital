@@ -1,0 +1,113 @@
+# Earnings calendar refresh (#4479 slice 1b).
+#
+# S1-NVDA and G1-GOOG only open a window on a CONFIRMED print, and the table they read
+# (`src/domain/earnings-calendar.ts`) went stale for weeks with nobody running the refresh by hand:
+# GOOG sat on an estimate and NVDA's next print was missing outright (#4479). This runs the refresh
+# on a weekday clock and ships whatever it changes as an ordinary PR.
+#
+# WHY A CLOCK, against docs/ROUTINES.md's "event-driven first — no crons" (Eric, 2026-08-19): the
+# event here is a company announcing its date on its own site, and nothing in this repository
+# hears it. The same argument carried bots-catchup.yml and moneypenny-discovery.yml's daily run.
+# Once a weekday, after the US close, is enough: a print is dated weeks ahead, and S1's window
+# opens D-20 trading sessions out.
+#
+# WHAT IT MAY DO: run `npm run confirm:print-dates` (src/scripts/confirm-print-dates.ts — flips an
+# estimate to confirmed only on the company's own date, adds cadence estimates, never touches
+# credentials or orders), then force-push ONE fixed branch from `main` and open a PR if none is
+# open (scripts/print-dates-pr.mjs). That PR touches no protected path, so pipeline.yml arms its
+# auto-merge after verify and integration tests, like any other plumbing change.
+#
+# HOW IT READS: green with no PR = nothing changed. A `needs-ir` outcome is a warning on a green
+# run: a company date moved and stays an estimate until someone reads IR. RED means the source did
+# not answer — exit 2, every fetch failed, or exit 3, a playbook symbol's fetch failed — so a dead
+# source can never read as a clean pass (EARS 3). A changed table still gets its PR before the red.
+name: Earnings calendar refresh
+
+on:
+  schedule:
+    - cron: "43 21 * * 1-5" # weekdays 21:43 UTC, after the US close
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: print-dates
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    # The 2026-10-02 run that hung took ~3 minutes over 90 fetches; the script now asks only the
+    # symbols with an estimate in its lookahead, each fetch bounded by a timeout.
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .nvmrc
+
+      - name: Install dependencies
+        run: npm ci --no-audit # tsx runs the script; biome formats the table it rewrites
+
+      - name: Refresh the calendar
+        id: refresh
+        # Never fails here: the exit code is kept for the last step, so a changed table still
+        # reaches its PR when one fetch failed. The script appends `outcome=` to GITHUB_OUTPUT itself.
+        run: |
+          set +e
+          npm run -s confirm:print-dates 2>&1 | tee "$RUNNER_TEMP/print-dates.log"
+          code=${PIPESTATUS[0]}
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          if git diff --quiet -- src/domain/earnings-calendar.ts; then changed=false; else changed=true; fi
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Earnings calendar refresh"
+            echo
+            echo "Exit ${code} · table changed: ${changed}"
+            echo
+            echo '```'
+            grep -E 'CONFIRMED|ESTIMATED|NEEDS IR|UNCHECKED|UNREACHABLE|outcome:|nothing to change' "$RUNNER_TEMP/print-dates.log" | sed 's/^\[confirm-print-dates\] //'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+
+      - name: Flag rows that need an IR read
+        if: ${{ steps.refresh.outputs.outcome == 'needs-ir' }}
+        run: echo "::warning::A company date moved off our estimate — it stays an estimate until someone reads IR. See the run summary."
+
+      # Scoped to the two writes the next step makes. The App token, not GITHUB_TOKEN: a PR opened
+      # with GITHUB_TOKEN starts no workflow, so verify would never run and nothing would arm it.
+      - id: app-token
+        if: ${{ steps.refresh.outputs.changed == 'true' }}
+        uses: ./.github/actions/app-token
+        with:
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Open or update the refresh PR
+        if: ${{ steps.refresh.outputs.changed == 'true' }}
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          OUTCOME: ${{ steps.refresh.outputs.outcome }}
+        run: |
+          BRANCH=chore/print-dates-refresh
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$BRANCH"
+          git add src/domain/earnings-calendar.ts
+          git commit -m "chore(calendar): refresh earnings print dates ($(date -u +%F))" -m "Part of #4479"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          git push --force origin "$BRANCH"
+          node scripts/print-dates-pr.mjs "$BRANCH" "$RUNNER_TEMP/print-dates.log" "${OUTCOME:-found}"
+
+      - name: Fail when the source did not answer
+        if: ${{ steps.refresh.outputs.code != '0' }}
+        run: |
+          echo "::error::confirm-print-dates exited ${{ steps.refresh.outputs.code }} (2 = every fetch failed, 3 = a playbook symbol went unchecked). Nothing about the unchecked prints is known."
+          exit 1

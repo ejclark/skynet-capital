@@ -64,6 +64,23 @@ describe("withinTolerance — absolute or relative, either holds", () => {
   });
 });
 
+describe("gradeAnswer — a loss said in words, where the sign matters", () => {
+  const DAY = { kind: "number" as const, value: -4, abs: 1 };
+  it("reads 'down $4' as −4, the cross-feature thin slice's real answer (2026-11-23)", () => {
+    const given =
+      "My whole paper account is down $4 so far today, at $98,479. I found it in the header at the top of the Profile tab.";
+    expect(gradeAnswer(given, DAY).matched).toBe(true);
+    expect(gradeAnswer("lost $4 today", DAY).matched).toBe(true);
+    expect(gradeAnswer("a loss of about $4", DAY).matched).toBe(true);
+  });
+
+  it("keeps a gain a gain, and leaves numbersIn as written", () => {
+    expect(gradeAnswer("up $4 today", DAY).matched).toBe(false);
+    expect(gradeAnswer("$4 today", DAY).matched).toBe(false);
+    expect(numbersIn("down $4")).toEqual([4]);
+  });
+});
+
 describe("gradeAnswer — the fact the member reports", () => {
   it("matches a number anywhere in the answer", () => {
     expect(gradeAnswer("CRWV is down $412", NUMBER_TASK.answer).matched).toBe(true);
@@ -82,7 +99,9 @@ describe("gradeAnswer — the fact the member reports", () => {
   });
   it("keeps a right answer that also carries a date, a share count and a percentage", () => {
     const given = "I hold 3 CRWV shares bought 10/01, down $412 (−8.3%)";
-    expect(gradeAnswer(given, { kind: "number", value: 412, abs: 1 }).matched).toBe(true);
+    // A position down $412 is −412: until "down" signed its amount (2026-11-23) this passed only
+    // because the oracle dropped the word, and a right "down $4" day failed the same way.
+    expect(gradeAnswer(given, { kind: "number", value: -412, abs: 1 }).matched).toBe(true);
   });
   it("refuses a guess between numbers of one unit, keeps one fact said in two units", () => {
     expect(hedged("maybe $100, $200, $412 or $500")).toBe(true);

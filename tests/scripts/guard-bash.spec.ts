@@ -135,6 +135,21 @@ describe("guard-bash — removing worktrees", () => {
       'git -C "$P" worktree remove x/$n',
       "bash -c 'git worktree remove \"$w\"'",
       "ls | xargs -n1 git worktree remove",
+      // #6698: the shapes sessions actually write. An indented loop line, and the while-read variant.
+      'for w in .claude/worktrees/*; do\n  echo "$w" | grep -qE "$KEEP" && continue\n  git worktree remove --force "$w"\ndone',
+      "git worktree list --porcelain | awk '/^worktree /{print $2}' | while read -r w; do\n  git worktree remove \"$w\"\ndone",
+      // A prefix is still the command.
+      'GIT_DIR=x git worktree remove "$w"',
+      'command git worktree remove "$w"',
+      'sudo git worktree remove "$w"',
+      'time git worktree remove "$w"',
+      // What another shell will run is a command too.
+      'eval "git worktree remove $w"',
+      "sh -c 'git worktree remove \"$1\"' _ x",
+      'bash -lc "git worktree remove $w"',
+      '{ git worktree remove "$w"; }',
+      'rm_wt() { git worktree remove "$1"; }',
+      "find .claude/worktrees -mindepth 1 -maxdepth 1 -exec git worktree remove {} \\;",
     ]) {
       expect(guardVerdict(bash(command))).toMatchObject({
         allow: false,
@@ -152,6 +167,12 @@ describe("guard-bash — removing worktrees", () => {
       // Naming the command is not running it: its first draft refused this PR's own title.
       'scripts/ship.sh open "fix(hooks): refuse git worktree remove on a computed path" --body-file $S/b.md',
       'echo "git worktree remove $w" > notes.md',
+      // #6698: text that only names it, in a heredoc body or a commit message, is not a command.
+      "cat > notes.md <<'EOF'\n  git worktree remove \"$w\"\nEOF",
+      'git commit -m "docs: never git worktree remove \\"$w\\" in a loop"',
+      'echo "use find -exec git worktree remove {}"',
+      // A `$` in a redirect after one typed path does not make the path computed.
+      'git worktree remove .claude/worktrees/x 2>> "$LOG"',
     ]) {
       expect(guardVerdict(bash(command)).allow).toBe(true);
     }

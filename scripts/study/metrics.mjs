@@ -30,7 +30,7 @@ const NEAR_PX = 12;
 const FRAME_TOL = 8;
 
 const KINDS = ["tap", "scroll", "type", "key", "back", "hover", "done", "give_up"];
-const KEYS = ["Enter", "Escape"];
+const KEYS = ["Enter", "Escape", "Tab", "Backspace"];
 const TERMINAL = new Set(["done", "give_up"]);
 /** The actions whose own job is to change which screen the member is on. */
 const MEMBER_MOVES = new Set(["scroll", "back"]);
@@ -63,6 +63,22 @@ export function actionRefusal(action, frame) {
   if (!(action && KINDS.includes(action.kind))) return `unknown action ${action?.kind ?? "(none)"}`;
   if (action.kind === "tap" || action.kind === "hover") return pointRefusal(action, frame);
   return ARG_RULES[action.kind]?.(action) ?? null;
+}
+
+/** What the member reads next turn when they typed on a phone with no field to type into. */
+export const NO_KEYBOARD = "no keyboard is open: nothing is focused for typing";
+
+/**
+ * A phone has no keyboard until a text field has focus (#8126). Three members in #8005 slice 4
+ * tapped just above the ask box, then typed: the recorder played the keys into the document and
+ * "?" opened the shortcuts panel, which no phone can do. `focused` is the in-page answer
+ * (measure-tap.mjs → `typingFocus`): `{editable, what}`. A desktop types whatever has focus, as a
+ * physical keyboard does. Refuse, never auto-focus the nearest field: a person whose tap missed
+ * sees no keyboard and taps again, and the member must see the same.
+ */
+export function keyboardRefusal(action, frame, focused) {
+  if (action?.kind !== "type" || !frame.hasTouch) return null;
+  return focused?.editable ? null : NO_KEYBOARD;
 }
 
 /**
@@ -493,6 +509,8 @@ export function taskMetrics(trace, { startPath, optimal, expectFirst } = {}) {
     deadTaps: outcomes.filter((o) => o === "dead" || o === "covered").length,
     nearMisses: outcomes.filter((o) => o === "near-miss").length,
     unlabelledTaps: outcomes.filter((o) => o === "unlabelled").length,
+    // Phone typing refused for want of a keyboard (#8126): the only refusal the trace carries.
+    noKeyboard: trace.filter((r) => r.refused === NO_KEYBOARD).length,
     gaveUp: end?.action.kind === "give_up",
     answer: end?.action.kind === "done" ? (end.action.answer ?? "") : null,
     findings: dedupe(recs.flatMap((r) => actionFindings(r))),

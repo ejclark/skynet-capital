@@ -51,8 +51,12 @@ export function readSchema(name) {
   return JSON.stringify(schema);
 }
 
-/** The exact flag set of a blind call (docs/members/study/README.md → Blind and aware roles). */
-export function sealedArgs({ rolePath, schema }) {
+/**
+ * The exact flag set of a blind call (docs/members/study/README.md → Blind and aware roles). A
+ * `model` pins the answering model (Moneypenny in a world asks for production's, chat-transport.mjs);
+ * without one the CLI's default answers, as every blind role does.
+ */
+export function sealedArgs({ rolePath, schema, model }) {
   return [
     "-p",
     "--safe-mode",
@@ -70,6 +74,7 @@ export function sealedArgs({ rolePath, schema }) {
     "stream-json",
     "--verbose",
     "--no-session-persistence",
+    ...(model ? ["--model", model] : []),
   ];
 }
 
@@ -181,12 +186,12 @@ export function signedIn(run = spawnSync) {
  * what it cost (`resultUsage`) — or rejects with the reason. ASYNC on purpose: a synchronous spawn would freeze the event loop for the whole call —
  * and with it a member's page route handlers, so in-page requests would queue and land as drift.
  */
-export async function sealedCall({ rolePath, schema, message, timeoutMs = 180_000 }) {
+export async function sealedCall({ rolePath, schema, message, model, timeoutMs = 180_000 }) {
   const cwd = mkdtempSync(join(tmpdir(), "study-sealed-"));
   let err = "";
   try {
     const stdout = await new Promise((done, fail) => {
-      const child = spawn("claude", sealedArgs({ rolePath, schema }), {
+      const child = spawn("claude", sealedArgs({ rolePath, schema, model }), {
         cwd,
         stdio: ["pipe", "pipe", "pipe"],
       });
@@ -239,6 +244,8 @@ export function stubPick(present, n) {
   return below.length > 0 ? { n: Math.max(...below), repeated: true } : null;
 }
 
+const sha256Of = (bytes) => createHash("sha256").update(bytes).digest("hex");
+
 /** A message as recorded: every image's bytes replaced by their sha256 and size. */
 export function redactImages(message) {
   const content = message.message.content.map((b) => {
@@ -260,14 +267,27 @@ export function redactImages(message) {
  * `n` numbers the call explicitly. Calls made in parallel finish in any order, so a counter would
  * hand a batch another batch's number on the next run, and the replay (and the stub, which answers
  * by number) would miss. A step that runs a role's calls at once numbers every one of them;
- * otherwise the caller counts per role.
+ * otherwise the caller counts per role. `exec` is the live call (sealedCall unless a role reads its
+ * answer another way: Moneypenny's, chat-transport.mjs → toolCatchingCall, gets `toolNames`).
  */
-export function makeCaller({ stub, record } = {}) {
+export function makeCaller({ stub, record, exec = sealedCall } = {}) {
   const counts = new Map();
-  return async function call({ role, rolePath, schema, message, timeoutMs, n: fixed }) {
+  return async function call({
+    role,
+    rolePath,
+    schema,
+    message,
+    model,
+    timeoutMs,
+    toolNames,
+    n: fixed,
+  }) {
     const n = fixed ?? (counts.get(role) ?? 0) + 1;
     if (fixed === undefined) counts.set(role, n);
-    const entry = { role, n, rolePath, args: sealedArgs({ rolePath, schema: "<schema>" }) };
+    const entry = { role, n, rolePath, args: sealedArgs({ rolePath, schema: "<schema>", model }) };
+    // The prompt's own bytes, by hash: a role whose prompt is written per call (Moneypenny's, with
+    // its volatile half) must not replay an answer given to another prompt with the same message.
+    if (existsSync(rolePath)) entry.rolePrompt = sha256Of(readFileSync(rolePath));
     entry.message = redactImages(message);
     const file = record ? join(record, `${role}-${String(n).padStart(3, "0")}.json`) : null;
     const save = (extra) => {
@@ -279,14 +299,19 @@ export function makeCaller({ stub, record } = {}) {
     // same message (images compared by hash). The first full round's controls lost nothing but their
     // last call to a timeout, and re-asking 35 expert batches would have cost ~95 minutes each.
     const prior = file && existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : null;
-    if (prior?.answer && JSON.stringify(prior.message) === JSON.stringify(entry.message)) {
+    const samePrompt = !prior?.rolePrompt || prior.rolePrompt === entry.rolePrompt;
+    if (
+      prior?.answer &&
+      samePrompt &&
+      JSON.stringify(prior.message) === JSON.stringify(entry.message)
+    ) {
       save({ ...prior, replayed: true });
       return prior.answer;
     }
     try {
       const answer = stub
         ? stubAnswer(stub, role, n, schema)
-        : await sealedCall({ rolePath, schema, message, timeoutMs });
+        : await exec({ rolePath, schema, message, model, timeoutMs, toolNames });
       save({
         stub: answer.from ?? null,
         repeated: answer.repeated ?? false,

@@ -478,3 +478,84 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-11-10
 <!-- probe-ref: {"symbols":{},"vix":19.92,"daysBand":"low:0+","adjacentIds":["boe-decision-2026-11-05","boj-minutes-2026-11-05","bund-30y-auction-2026-11-11","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","erock-q3-2026-results-2026-11-12","existing-home-sales-2026-11-12","japan-balance-of-payments-2026-11-10","jgb-10y-auction-2026-11-05","jgb-30y-auction-2026-11-10","jgb-5y-auction-2026-11-12","jobs-2026-11-06","mts-october-2026-11-12","nbis-2026-11-12-print","pbls-q3-2026-results-2026-11-12","ppi-2026-11-13","productivity-costs-q3-2026-11-05","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","sp-global-investment-manager-index-2026-11-10","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-3y-note-2026-11-09","treasury-buyback-1mo2y-2026-11-05","treasury-coupon-announcement-2026-11-12","uk-gdp-q3-first-2026-11-12","uk-gilt-auction-long-2026-11-10","umich-sentiment-prelim-2026-11-06","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","jobs-2026-11-06","nbis-2026-11-12-print"],"screenStreak":1} -->
+
+## Outcome
+
+**Close-out written 2026-11-12, D+2 — inside `closeOutWithinDays`, after the Bank's own 2026-11-10
+publication and after the last score-by (FT-3, 2026-11-12).** The stance held as filed: no position was
+licensed (`symbols: []`, `estimate`, `impact: low`) and none was taken. Of three registered tests, **two
+pass and one is killed**: the date test passes, the yen test passes only weakly (the bar it was written
+on turned out to be the session before the release), and the Tokyo-bar test is killed — the Nikkei moved
+far more than the cohort median. The kill is a loud move in a loud tape, not evidence about the document.
+
+**Sourcing note.** `symbols: []`, so `earnings-cycle.mjs` / `intraday-edges.mjs` have no target; their
+caches were busted anyway (`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`).
+Every price is a fresh Yahoo v8 chart pull this session, parsed from raw JSON (daily and 1-hour bars for
+`^N225` and `JPY=X`, daily for `^GSPC` and `^VIX`). boj.or.jp's schedule page was re-fetched direct (HTTP
+200, 42,437 bytes). A web search for same-day tape naming the Summary found none, so no move is credited
+to it.
+
+### 1. What happened, against what was filed
+
+| Filed | What happened | Verdict |
+|---|---|---|
+| Summary of Opinions publishes **2026-11-10** at 08:50 JST (`estimate`) | The October row's cell is a live link, `opinion_2026/opi261030.pdf`, "Nov. 10 (Tues.) [PDF 200KB]"; the page's release-time note still reads "8:50 a.m." | **Correct** |
+| This meeting carries an Outlook Report; its Minutes publish 2026-12-23 | Row reads `Oct. 30 \| Nov. 10 \| Dec. 23`, Outlook PDF linked | **Correct** |
+| No position keyed to the date | None taken | **Correct** |
+| The 11-10 US bar is unusable (CPI, tariff-truce expiry, CRWV all in it) | S&P 500 **-0.384%** (7,549.94 to 7,520.93) with VIX 19.92 to 19.46; nothing there to attribute to Tokyo | **Consistent — the bar stayed uninformative** |
+| Tokyo's 11-10 bar holds the Summary and not the CPI | Confirmed: bar is 09:00-15:30 JST on 11-10, CPI came 08:30 ET later | **Correct** |
+
+### 2. The forward tests, scored
+
+**`FT-boj-summary-of-opinions-2026-11-10-1` — `kill`.** Prediction: the 11-10 Nikkei close-to-close
+abs move at or below 1.264%. Actual: 58,775.50 to 60,459.58 = **+2.865%** (2.27x the threshold). Intraday
+shape: open 59,372.28 = **+1.02%** gap on the prior close, then +1.83% open-to-close (the first hourly bar
+alone ran +1.5%). The kill switch as registered fires. Three reasons it still says little about the
+document: (a) the threshold was a quiet-regime median, while the five preceding sessions (11-02 to 11-09,
+Tokyo shut 11-03) averaged **2.37%** abs move, with -5.96% on 11-06 and +2.33% on 11-09, so 11-10 ran
+**1.21x** its own recent tape; (b) the S&P rose **2.35%** on 11-09 before the 09:00 JST open, so the gap
+has an obvious overnight driver; (c) the release (08:50 JST) and the open (09:00 JST) are ten minutes
+apart, so the gap cannot separate them. What the kill does show: a fixed threshold taken from a calm-regime
+cohort median breaks when the tape is loud. Moved to the sweep doc's kill list.
+
+**`FT-boj-summary-of-opinions-2026-11-10-2` — `pass` (weak).** Prediction: the 11-10 USD/JPY abs move
+at or below 0.318%. The Yahoo daily bar labelled 11-10 reads 158.292 to 157.983 = **-0.195%**, a pass as
+registered. The row warned of an off-by-one, and the hourly bars confirm it: the labelled bar's close
+(157.983) equals the **23:00Z** hourly open, the instant of the release (08:50 JST = 23:50Z on 11-09), so
+that bar is the session *before* the release. Re-cut on hourly bars, release-aligned (11-09 23:00Z close
+157.988 to 11-10 23:00Z close 158.704) the day moved **+0.453%**, a breach. But the tape inside that day
+splits cleanly: release to the hour before CPI (13:00Z open 158.175) **+0.12%** (range -0.08% to +0.17%
+around 157.988), then the 13:00Z CPI hour **+0.21%** and 14:00Z another +0.10%. The registered kill needs a
+breach "that the tape attributes to the Summary rather than to the CPI"; under both readings the move rides
+the CPI hour, so the kill does not fire. The February sibling's Outlook-meeting yen premium is neither
+supported nor refuted by one day on a CPI day; it stays an unrejected hypothesis (p = 0.119).
+
+**`FT-boj-summary-of-opinions-2026-11-10-3` — `pass`.** Prediction: publication on 2026-11-10 at 08:50
+JST, inside the Nov 8-11 window at an 11-day lag. The date is as filed (live link above). The time is not
+independently observed: the PDF's `Last-Modified` is 2026-11-09 08:15:42 GMT, a staging time ahead of the
+23:50 GMT embargo, and the page's note says 8:50 a.m. No evidence contradicts it. The event stays
+`estimate` (the confirmed-prefix taxonomy has no Bank of Japan slot; this lane does not self-confirm).
+
+### 3. The measurement
+
+| Reading | 11-06 | 11-09 | 11-10 | 11-11 |
+|---|---|---|---|---|
+| Nikkei 225 (close) | 57,434.77 | 58,775.50 | **60,459.58** | no bar at fetch |
+| S&P 500 (close) | 7,376.86 | 7,549.94 | 7,520.93 | 7,619.38 |
+| VIX | 25.64 | 19.92 | 19.46 | 17.49 |
+| USD/JPY (labelled daily close) | 157.498 | 158.292 | 157.983 | 158.705 |
+
+### 4. What this changes
+
+- **Stance unchanged: no position, none was licensed.** Nothing here lifts the calendar's standing view of
+  this venue as a read-it-don't-trade-it document.
+- **For the next Summary-of-Opinions ledger (2026-12-28):** state a Tokyo-bar threshold relative to the
+  trailing 5-session abs move, not a cohort median alone; and score a JPY=X test on hourly bars, since the
+  daily bar rolls at 23:00Z, ahead of an 08:50 JST release.
+- **Loop census:** sense (re-fetch the schedule, pull bars) and verify (score from instruments) ran
+  unattended; the step a person would still do is joining a move to its news, which no feed here supplies.
+  Registered thresholds written in absolute terms and scored later is the repeat failure; a relative-to-
+  trailing-vol field in the forward-test recipe would close it.
+
+**Last assessed:** 2026-11-12
+<!-- probe-ref: {"symbols":{},"vix":17.49,"daysBand":"low:0+","adjacentIds":["boe-decision-2026-11-05","boj-minutes-2026-11-05","bund-30y-auction-2026-11-11","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","erock-q3-2026-results-2026-11-12","existing-home-sales-2026-11-12","japan-balance-of-payments-2026-11-10","jgb-10y-auction-2026-11-05","jgb-30y-auction-2026-11-10","jgb-5y-auction-2026-11-12","jobs-2026-11-06","mts-october-2026-11-12","nbis-2026-11-12-print","pbls-q3-2026-results-2026-11-12","ppi-2026-11-13","productivity-costs-q3-2026-11-05","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","sp-global-investment-manager-index-2026-11-10","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-3y-note-2026-11-09","treasury-buyback-1mo2y-2026-11-05","treasury-coupon-announcement-2026-11-12","uk-gdp-q3-first-2026-11-12","uk-gilt-auction-long-2026-11-10","umich-sentiment-prelim-2026-11-06","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","jobs-2026-11-06","nbis-2026-11-12-print"],"screenStreak":0} -->

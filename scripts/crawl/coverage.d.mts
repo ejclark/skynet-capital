@@ -18,6 +18,10 @@ export interface Screen {
   path: string | null;
   section?: string;
   chapter?: string;
+  /** A landing window past Overview (`/ ?w=<window>`). */
+  window?: string;
+  /** One of the shell's every-route parts: judged and placed, never landed on. */
+  shell?: boolean;
 }
 
 export interface TriageRow {
@@ -48,9 +52,10 @@ export interface CoverageRow {
   mustBeSeenBy?: string;
   living: boolean;
   docked: boolean;
+  shell: boolean;
   phone: string[];
   desktop: string[];
-  status: "covered" | "gap" | "undecided" | "never a gap" | "unjudged" | "stale";
+  status: "covered" | "gap" | "undecided" | "never a gap" | "unjudged" | "stale" | "every route";
 }
 
 export interface CoverageResult {
@@ -72,7 +77,10 @@ export function buildScreens(input: {
   sections: Map<string, Section[]>;
   chapters: string[];
   serverPages: { screen: string }[];
+  windows?: string[];
+  shell?: { screen: string }[];
 }): Screen[];
+export function windowOf(goto: string, windows: string[]): string | undefined;
 export function matchRoute(pathname: string, routePaths: string[]): string | undefined;
 export function landingOf(
   goto: string,
@@ -81,6 +89,7 @@ export function landingOf(
     routePaths: string[];
     sections: Map<string, Section[]>;
     triage: Map<string, TriageRow>;
+    windows?: string[];
   },
 ): string[];
 export function indexTriage(rows: TriageRow[]): Map<string, TriageRow>;
@@ -90,5 +99,6 @@ export function coverage(input: {
   journeys: JourneyFile[];
   routePaths: string[];
   sections: Map<string, Section[]>;
+  windows?: string[];
 }): CoverageResult;
 export function renderMarkdown(result: CoverageResult): string;

@@ -7,11 +7,20 @@ export interface ChainRow {
   ask: number;
   delta: number;
   quotedAt: string;
+  closePrice: number;
+  quoteSource: "indicative";
 }
+
+/** A held contract's mark and yesterday's close, both the house model's; undefined if unquoted. */
+export function modelMarks(
+  symbols: Record<string, { spot: number; prevClose: number; iv: number }>,
+  occ: string,
+): { mark: number; lastday: number } | undefined;
 
 export function marketClient(market: {
   expirations: string[];
   symbols: Record<string, { spot: number; prevClose: number; iv: number }>;
+  barDays?: number;
 }): {
   getUnderlyingPrice(sym: string): Promise<number | undefined>;
   getExpirations(u: string, onOrAfter: string, limit?: number): Promise<string[]>;

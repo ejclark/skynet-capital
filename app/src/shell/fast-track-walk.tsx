@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { type FormEvent, type ReactElement, useId, useState } from "react";
+import { type ComponentProps, type FormEvent, type ReactElement, useId, useState } from "react";
 import {
   type Card,
   type CardOption,
@@ -16,6 +16,7 @@ import {
   nextStep,
   type Outcome,
   rankEvents,
+  researchSubject,
   startFastTrack,
   type Walk,
 } from "../../../src/domain/fast-track";
@@ -26,6 +27,7 @@ import {
   PLAN_TEXT_MAX,
   ticketSearch,
 } from "../live/fast-track";
+import { type AskReply, askForResearch, filedLine } from "../live/landing-ask";
 import { setWatching, watchlistKey } from "../live/watchlist";
 import { InlineResult } from "../ui";
 import { PlanLines } from "./fast-track-plan";
@@ -45,9 +47,11 @@ import { PlanLines } from "./fast-track-plan";
  * Every card carries "My own answer" and "Add context" (criterion 4). On the events card an own
  * answer names no field, so it rides along as a note (criterion 5), shown under the card.
  *
- * "Watch" adds the name to the member's watchlist on the tap. "Ask what we know" hands the question
- * to the chat, which reads the same ledgers (`get_upcoming_events`, slice 3a); the slow research
- * path with an honest wait is slice 3b.
+ * "Watch" adds the name to the member's watchlist on the tap. "Ask what we know" does both speeds
+ * (criterion 8): it hands the question to the chat, which reads the same ledgers
+ * (`get_upcoming_events`, slice 3a) and answers now, and it files the event's name on the research
+ * list the daily lane reads (slice 3c), showing the queue's own sentence for the wait. An event
+ * with no name has nothing the list could take, so it stays a chat question and says so.
  */
 
 /** A card's own words, two disclosures: the member's answer, and context that rides as a note. */
@@ -237,8 +241,14 @@ function Done({
   outcome,
   watched,
   asked,
+  filed,
 }: {
   readonly outcome: Outcome;
+  /** The research list's answer: no name to file, pending, its own sentence, or why it wasn't. */
+  readonly filed:
+    | { readonly state: "none" | "pending" }
+    | { readonly state: "ok"; readonly line: string }
+    | { readonly state: "err"; readonly why: string };
   /** Whether the chat took the question: pending, sent, or it didn't open. */
   readonly asked: "pending" | "sent" | "failed";
   /** The watchlist's answer to the tap: pending, kept, or the reason it wasn't. */
@@ -273,6 +283,18 @@ function Done({
             {asked === "sent" ? "Asked in the chat" : "Asking in the chat"}: "{outcome.question}"
           </p>
         )}
+        {filed.state === "pending" ? <p>Filing it on the research list…</p> : null}
+        {filed.state === "ok" ? (
+          <p>
+            <span className="story-mark">Research list</span> {filed.line}
+          </p>
+        ) : null}
+        {filed.state === "err" ? <InlineResult tone="err">{filed.why}</InlineResult> : null}
+        {filed.state === "none" ? (
+          <p className="ft-hint">
+            This event names no company, so there is nothing to put on the research list.
+          </p>
+        ) : null}
         <Notes notes={outcome.notes} />
       </div>
     );
@@ -313,6 +335,21 @@ function headingOf(card: Card, input: FastTrackInput): string {
  *  the exit, and the trade form. Fixed, so an added note never reads as a tap past the budget. */
 const PATH_TAP = { stop: 3, exit: 4 } as const;
 
+type Filed = ComponentProps<typeof Done>["filed"];
+
+/** The research list's answer to the tap, from the mutation that filed it. No name, nothing filed. */
+function filedState(
+  file: { readonly isError: boolean; readonly error: Error | null; readonly data?: AskReply },
+  subject: string | undefined,
+): Filed {
+  if (!subject) return { state: "none" };
+  if (file.isError) return { state: "err", why: file.error?.message ?? "" };
+  if (!file.data) return { state: "pending" };
+  return file.data.ok
+    ? { state: "ok", line: filedLine(file.data) }
+    : { state: "err", why: filedLine(file.data) };
+}
+
 /** The walk over one read of the fortnight. */
 function WalkOver({
   input,
@@ -324,6 +361,7 @@ function WalkOver({
   const [walk, setWalk] = useState<Walk>(startFastTrack);
   const [asked, setAsked] = useState<"pending" | "sent" | "failed">("pending");
   const client = useQueryClient();
+  const file = useMutation({ mutationFn: askForResearch });
   const watch = useMutation({
     mutationFn: (symbol: string) => setWatching(symbol, true),
     onSuccess: () => void client.invalidateQueries({ queryKey: [...watchlistKey] }),
@@ -337,6 +375,8 @@ function WalkOver({
     if (!("complete" in done)) return;
     if (done.complete.kind === "watchlist") watch.mutate(done.complete.symbol);
     if (done.complete.kind === "research-ask") {
+      const subject = researchSubject(input, done.complete.eventId);
+      if (subject) file.mutate({ subject, question: done.complete.question });
       setAsked("pending");
       void onAsk(done.complete.question).then(
         (sent) => setAsked(sent ? "sent" : "failed"),
@@ -349,6 +389,10 @@ function WalkOver({
     : watch.data && !watch.data.ok
       ? { state: "err" as const, why: watch.data.refusals.join(" ") }
       : { state: watch.isSuccess ? ("ok" as const) : ("pending" as const) };
+  const filed = filedState(
+    file,
+    walk.filled.eventId ? researchSubject(input, walk.filled.eventId) : undefined,
+  );
   const restart =
     walk.taps > 1 ? (
       <button type="button" className="ft-restart" onClick={() => setWalk(startFastTrack())}>
@@ -358,7 +402,7 @@ function WalkOver({
   if ("complete" in step) {
     return (
       <>
-        <Done outcome={step.complete} watched={watched} asked={asked} />
+        <Done outcome={step.complete} watched={watched} asked={asked} filed={filed} />
         {restart}
       </>
     );

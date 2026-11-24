@@ -6,7 +6,7 @@ import * as actualOptions from "../../src/live/options" with { rstest: "importAc
 import type { OptionDraft, OptionPreview } from "../../src/live/options";
 import * as actualTicket from "../../src/live/ticket" with { rstest: "importActual" };
 import type { TicketDraft, TicketPreview } from "../../src/live/ticket";
-import { ClosePanel } from "../../src/shell/close-panel";
+import { ClosePanel, sentWords } from "../../src/shell/close-panel";
 import { PositionRowOpen } from "../../src/shell/position-row-open";
 
 /**
@@ -160,6 +160,21 @@ describe("ClosePanel — a sold option", () => {
     expect(optionCalls[1]?.draft).toEqual(optionCalls[0]?.draft);
   });
 
+  it("hands the row's lock-in flag to the receipt with the sent order (#4609)", async () => {
+    const onDone = rstest.fn();
+    const lockIn = { fact: "up 30%", held: 130, buys: [{ qty: 130, unitCost: 223.98 }] };
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ClosePanel deskId="sauron" position={position({})} lockIn={lockIn} onDone={onDone} />
+      </QueryClientProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Close all" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Confirm" }));
+
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    expect(onDone.mock.calls[0]?.[0]).toMatchObject({ orderId: "stk-1", side: "sell", lockIn });
+  });
+
   it("confirms the contracts it reviewed, even when the holding refreshes underneath", async () => {
     shortOption = false;
     const client = new QueryClient();
@@ -252,6 +267,28 @@ describe("ClosePanel — shares", () => {
     await screen.findByRole("button", { name: "Confirm" });
     expect(ticketCalls[0]?.draft).toMatchObject({ quantity: 400, action: "sell" });
     expect(screen.getByText(/Sell 400 shares\b/)).toBeInTheDocument();
+  });
+});
+
+describe("ClosePanel — the way back from a review (change-scenarios census)", () => {
+  const big = position({ quantity: "1,200", value: "$278,520" });
+
+  it("returns to the quantity, kept, from a reviewed close", async () => {
+    renderPanel(big);
+    fireEvent.change(screen.getByRole("spinbutton"), { target: { value: "400" } });
+    fireEvent.click(screen.getByRole("button", { name: "Close 400" }));
+    await screen.findByRole("button", { name: "Confirm" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Change quantity" }));
+    expect(screen.getByRole("spinbutton")).toHaveValue(400);
+    expect(screen.queryByRole("button", { name: "Confirm" })).not.toBeInTheDocument();
+  });
+
+  it("names a sent close in words, never the broker's id", () => {
+    expect(sentWords("accepted")).toBe(
+      "Sent — waiting to fill; it shows under Working orders until it does.",
+    );
+    expect(sentWords("filled")).toBe("Sent and filled.");
   });
 });
 

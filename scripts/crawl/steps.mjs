@@ -49,6 +49,12 @@ export function locatorFor(page, e) {
   const root = e.within ? page.locator(e.within) : page;
   if (e.text) return root.getByText(e.text, { exact: e.exact === true });
   if (e.testid) return root.getByTestId(e.testid);
+  // A link with an `href` and no `name` means "some visible link goes there" — a hand-off whose
+  // wording is the fix's to choose (#8005 slice 3). By role alone, `.first()` would be whichever
+  // link comes first on the page, and only ITS href would be checked.
+  if (e.role === "link" && e.href && e.name === undefined) {
+    return root.locator(`a[href^=${JSON.stringify(e.href)}]:visible`);
+  }
   return root.getByRole(e.role, e.name === undefined ? {} : { name: e.name, exact: e.exact });
 }
 
@@ -91,13 +97,76 @@ function urlHolds(page, wanted) {
   };
 }
 
-/** Perform a step's `act` — today only `{click: <locator spec>}`; performed AFTER the expects. */
+/** How long one action, or one `after` entry, may wait. Longer than an `expect`'s 4s: what an act
+ *  starts (Moneypenny typing her answer, a route the click opens) is still arriving. */
+export const ACT_TIMEOUT_MS = 8000;
+
+/**
+ * A step's `act` as a list. One action (the original shape, `{click}`) or several in order, so a
+ * step can hold a hand-off a single click cannot: type to Moneypenny, wait for her line, follow
+ * the link she gives (#8005 slice 3). Each step is still its own fresh page, so a conversation that
+ * spans turns lives inside ONE step's actions, never across steps.
+ */
+export function actionsOf(act) {
+  if (act === undefined) return [];
+  return Array.isArray(act) ? act : [act];
+}
+
+/** One line a human reads in a failure: which action, aimed at what. */
+export function describeAction(a) {
+  if (a.click) return `click ${describeExpect(a.click)}`;
+  if (a.fill) return `fill ${describeExpect(a.fill)} with "${a.value}"`;
+  if (a.press) return `press ${a.key} in ${describeExpect(a.press)}`;
+  if (a.await) return `await ${describeExpect(a.await)}`;
+  return `unknown action ${JSON.stringify(a)}`;
+}
+
+/**
+ * Perform a step's `act`, AFTER its expects. Four actions, each aimed with the expect grammar:
+ * `{click}` · `{fill, value}` · `{press, key}` · `{await}` (wait until an expect entry holds — her
+ * reply, a link, a heading — so the next action never races what the last one started). Throws on
+ * the first action that cannot run, naming it; the spec fails the step, the crawl logs it.
+ */
 export async function performAct(page, act) {
-  if (!act) return;
-  if (act.click) {
-    await locatorFor(page, act.click).first().click();
-    await page.waitForLoadState("domcontentloaded");
+  for (const a of actionsOf(act)) {
+    try {
+      await performOne(page, a);
+    } catch (err) {
+      throw new Error(`${describeAction(a)} — ${err instanceof Error ? err.message : err}`);
+    }
   }
+}
+
+async function performOne(page, a) {
+  const timeout = ACT_TIMEOUT_MS;
+  if (a.click) {
+    await locatorFor(page, a.click).first().click({ timeout });
+    await page.waitForLoadState("domcontentloaded");
+  } else if (a.fill) {
+    await locatorFor(page, a.fill)
+      .first()
+      .fill(a.value ?? "", { timeout });
+  } else if (a.press) {
+    await locatorFor(page, a.press).first().press(a.key, { timeout });
+  } else if (a.await) {
+    const held = await expectHolds(page, a.await, timeout);
+    if (!held.ok) throw new Error(held.detail);
+  } else {
+    throw new Error("not one of click · fill · press · await");
+  }
+}
+
+/** A step's `after` entries — expects checked after its act, so a hand-off is judged where it
+ *  LANDS (the URL that kept its keys, the line she answered with), not only by the link before.
+ *  Named `after`, not `then`: an object with a `then` key reads as a promise (biome's
+ *  noThenProperty), and these steps are plain objects passed through async code. */
+export async function afterMisses(page, step) {
+  const misses = [];
+  for (const e of step.after ?? []) {
+    const r = await expectHolds(page, e, ACT_TIMEOUT_MS);
+    if (!r.ok) misses.push(`after ${r.detail}`);
+  }
+  return misses;
 }
 
 /** Enough to render a route; a page holding an SSE open never idles, so idle is best-effort.

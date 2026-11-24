@@ -95,3 +95,7 @@ export function censusArgs(argv: string[]): {
   routes: string[];
   clock?: string;
 };
+export function chatReason(
+  writes: { method: string; url: string }[] | null | undefined,
+  from: number,
+): string | null;

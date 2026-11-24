@@ -131,6 +131,8 @@ export function OptionGate({
   preset,
   onPresetHandled,
   onStage,
+  carriedContracts,
+  onContractsCarry,
 }: {
   readonly deskId: string;
   readonly play: PlayInfo;
@@ -188,6 +190,12 @@ export function OptionGate({
   /** Hands the route the price of a rung-switching cell pick before `onPreset` remounts this
    *  component, so it survives the remount as `preset`. */
   readonly onStage?: (preset: Omit<ChainPreset, "key">) => void;
+  /** The contract count the member typed before a Side or Put/Call flip remounted this ticket. Only
+   *  the count travels: the limit re-seeds from the new contract's own chain row, since a put's
+   *  premium says nothing about the call's. */
+  readonly carriedContracts?: string;
+  /** Reports the count on every edit; undefined once an order was sent. */
+  readonly onContractsCarry?: (contracts: string | undefined) => void;
 }): ReactElement {
   const [symbol, setSymbol] = useState(initialSymbol ?? "");
   const [chainSym, setChainSym] = useState(initialSymbol ?? "");
@@ -211,7 +219,7 @@ export function OptionGate({
    *  (re)commit, never derived from `strike` on every render (a hand-typed strike changes it on
    *  every keystroke). */
   const [chainOpen, setChainOpen] = useState(!initialStrike);
-  const [contracts, setContracts] = useState("1");
+  const [contracts, setContracts] = useState(carriedContracts ?? "1");
   const [orderType, setOrderType] = useState<"limit" | "market">("limit");
   const [limitPrice, setLimitPrice] = useState("");
   /** Day unless picked (#3407 P1 slice 4) — the server previews the default it will send. */
@@ -254,6 +262,7 @@ export function OptionGate({
    *  once, the first time the chain settles; never again, so a member's own later off-chain typed
    *  strike (a deliberate, valid choice) doesn't get yanked back open mid-edit. */
   const initialStrikeCheckedRef = useRef(false);
+  const panelRef = useRef<HTMLElement>(null);
   useEffect(() => {
     if (initialStrikeCheckedRef.current || !chainData || !initialStrike) return;
     initialStrikeCheckedRef.current = true;
@@ -402,6 +411,13 @@ export function OptionGate({
   useEffect(() => {
     if (!preset || preset.play !== play.code || preset.strike !== (initialStrike ?? "")) return;
     if (preset.limit !== undefined) setLimitPrice(String(preset.limit));
+    if (preset.contracts !== undefined) {
+      setContracts(String(preset.contracts));
+      // Only a suggestion link sets a count (#7547): the member came from her message to look at
+      // this ticket, so it comes to them rather than waiting below the page's fold.
+      const reduce = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+      panelRef.current?.scrollIntoView?.({ block: "start", behavior: reduce ? "auto" : "smooth" });
+    }
     setLockedPickNote(preset.note);
     onPresetHandled?.();
   }, [preset?.key, initialStrike, play.code]);
@@ -500,6 +516,9 @@ export function OptionGate({
     setState({ step: "draft" });
   };
   const sent = state.step === "done" && state.result.ok ? state.sent : undefined;
+  useEffect(() => {
+    onContractsCarry?.(sent ? undefined : contracts);
+  }, [onContractsCarry, sent, contracts]);
 
   if (play.locked) return <LockedPanel header={header} play={play} />;
 
@@ -576,6 +595,8 @@ export function OptionGate({
               step={1}
               inputMode="numeric"
               value={contracts}
+              // a seeded amount is replaced by typing, not appended to (change-scenarios round 1)
+              onFocus={(e) => e.currentTarget.select()}
               onChange={(e) => edit(setContracts)(e.target.value)}
             />
           </div>
@@ -601,6 +622,7 @@ export function OptionGate({
                 inputMode="decimal"
                 value={limitPrice}
                 placeholder="2.50"
+                onFocus={(e) => e.currentTarget.select()}
                 onChange={(e) => edit(setLimitPrice)(e.target.value)}
               />
             </div>
@@ -685,7 +707,7 @@ export function OptionGate({
   );
 
   return (
-    <section className="panel gate-panel" aria-label={play.name}>
+    <section ref={panelRef} className="panel gate-panel" aria-label={play.name}>
       {header}
       <h2 className="panel-title">{play.name}</h2>
       <p className="panel-sub">
@@ -717,6 +739,15 @@ export function OptionGate({
             maxLength={12}
             onChange={edit(setSymbol)}
             onCommit={(s) => {
+              // A commit naming the symbol already on the ticket changes nothing, so it must not
+              // reopen the chain or clear a locked-pick note (#7955). It arrives late on purpose:
+              // the field defers its blur commit until the tap that blurred it has clicked, so a
+              // chain tap made with Symbol still focused (typed + Enter) runs its pick FIRST, and
+              // this re-commit of the same symbol used to undo that pick's collapse and its note.
+              if (s === chainSym) {
+                setSymbol(s);
+                return;
+              }
               edit(setSymbol)(s);
               setChainSym(s);
               setChainOpen(true);

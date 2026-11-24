@@ -183,4 +183,16 @@ describe("/api/edition — the landing page's market news (#7077)", () => {
     expect(view.edition.stories.length).toBeGreaterThan(0);
     if (view.edition.campaign) expect(view.edition.campaignTitle).toEqual(expect.any(String));
   });
+
+  // #7901: the e2e boot pins this clock, so the calendar's coming dates never run out under the
+  // suite. Read against the real date, they did once the 2026-11-06 edition's last date passed.
+  it("reads today from the injected edition clock when one is wired", async () => {
+    const { res, out } = fakeRes();
+    const config = configWith({ editionNow: () => new Date("2026-11-09T14:00:00Z") });
+    await serveJsonApi(res, "/api/edition", "/api/edition", config, {} as never, undefined);
+    const view = JSON.parse(out.body ?? "{}");
+    expect(view.today).toBe("2026-11-09");
+    expect(view.edition.date).toBe("2026-11-06");
+    expect(view.edition.next.length).toBeGreaterThan(0);
+  });
 });

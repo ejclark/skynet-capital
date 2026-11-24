@@ -22,6 +22,12 @@ export interface RecentFiling {
   /** The server's one mapping (`statusFromIssue`); absent when the status fetch failed, so the
    *  row shows no badge rather than a wrong one. */
   readonly status?: FeedbackStatus;
+  /** Present once the known problem this filing was matched to is fixed (#8005 slice 7): what
+   *  was fixed, in the ledger's words, and the screen to try it on. */
+  readonly fixed?: {
+    readonly problem: string;
+    readonly tryAt?: { readonly name: string; readonly route: string };
+  };
 }
 
 /** One unclaimed community-track earn (#567), ready for its one-time fanfare — the fill-earned
@@ -76,6 +82,8 @@ export const submitFeedbackRequest = (input: {
   readonly area?: string;
   readonly spec?: unknown;
   readonly images?: readonly AttachedImage[];
+  /** The known problem a chat draft matched (#8005 slice 7); re-checked server-side. */
+  readonly match?: { readonly row?: string; readonly plan?: number };
 }): Promise<SubmitAnswer> =>
   postJson("/api/feedback", {
     ...input,
@@ -85,14 +93,31 @@ export const submitFeedbackRequest = (input: {
 /** Mirrors `FollowupOutcome` in src/server/feedback-followup.ts (the shell never imports the
  *  server tree). */
 export type FollowupOutcome =
-  | "restarted"
+  | "rechecking"
   | "backlog"
   | "held"
   | "building"
-  | "blocked"
   | "closed"
-  | "stranded"
   | "unchanged";
+
+/** What a sent follow-up did (#5848, #7548): on a filing queued to build and not yet started, the
+ *  server takes it out of the queue until the automatic check has read the follow-up, and names
+ *  what happened otherwise, so the line never promises a build that isn't coming.
+ *  An unknown or missing outcome gets the plain line — the comment posted, nothing more claimed.
+ *  One copy for both doors that follow up — the Feedback screen's box and Moneypenny's card
+ *  (#7286 slice 8) — so the two never tell a member different things about the same build. */
+const SENT = "Sent — it's on your issue.";
+const SENT_LINES: Readonly<Record<FollowupOutcome, string>> = {
+  rechecking:
+    "Sent — it's on your issue. It's checked again with your follow-up before it's built.",
+  backlog: "Sent — it's on your issue; it builds once it's picked from the queue.",
+  held: "Sent — it's on your issue; the build waits on a person first.",
+  building: "Sent — it's on your issue; it's being built right now.",
+  closed: "Sent — it's on your issue. This one is closed, so nothing rebuilds from it.",
+  unchanged: SENT,
+};
+export const followupSentLine = (outcome: FollowupOutcome | undefined): string =>
+  outcome && Object.hasOwn(SENT_LINES, outcome) ? SENT_LINES[outcome] : SENT;
 
 export const followupRequest = (input: {
   readonly issueNumber: number;

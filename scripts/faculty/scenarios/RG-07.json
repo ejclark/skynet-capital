@@ -1,0 +1,12 @@
+{
+  "id": "RG-07",
+  "member": "eric",
+  "viewport": "phone",
+  "start": "/app",
+  "optimal": 8,
+  "scenario": "It's evening, the exchange is shut, and you've heard bad news about Apple. You'd sell your Apple shares tonight \u2014 but only if the sale would really happen tonight. If it can't, you'd rather decide again in the morning.",
+  "end": {
+    "refusal": true
+  },
+  "note": "Depends on the clock: run while the market is closed. The form says a market order waits for the next open (order-ticket.ts:276); success is the member NOT queuing a sale."
+}

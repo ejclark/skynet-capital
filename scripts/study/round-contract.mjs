@@ -18,6 +18,8 @@
 //   checks.json?   [{finding, verdict: real|false|world-artifact, same_as?: <finding id>}]
 //   touches.json?  {<key id>: true | <count> | [<session dir>…]} — which key surfaces a trace touched
 //   struck.json?   [<key id>…] — key items parity proved cannot render
+//   roots.json?    {<finding id>: "U<n>" | "new: <the root>"} — the IA root of each counted
+//                  structural group, placed by the aware rooter after grading (root.mjs, #8005)
 // A CONTROL ROUND (round.mjs --frozen-from <main round> --control <kind> --expect <ids>) is a round
 // directory like any other — findings.jsonl, classes.json, the sessions — run on the MAIN round's
 // frozen tasks against another build, plus control.json (controlRecord below):
@@ -41,8 +43,13 @@
 //   words        the pass over the harvested words
 //   instruments  the recorder's and the census's own measurements — designed by someone who saw
 //                the key, so reported in their own column and NEVER counted as blind discovery
+//   chat         a filing Moneypenny drafted in a world from what a member told her (#8005,
+//                world-chat.mjs): friction a member voiced, harvested, and NEVER filed as an
+//                issue. Its own column and never blind — she answers from production's prompt,
+//                not a member card, and she is the app, not a member. `member` names whose session it
+//                came from, `detail.sent` whether the member sent the draft on.
 
-export const CLASSES = ["members", "experts", "words", "instruments"];
+export const CLASSES = ["members", "experts", "words", "instruments", "chat"];
 /** The classes that never saw the key. */
 export const BLIND = ["members", "experts", "words"];
 /** How a members-class finding reached the analyst. */
@@ -59,6 +66,7 @@ export const FILES = {
   checks: "checks.json",
   touches: "touches.json",
   struck: "struck.json",
+  roots: "roots.json",
   control: "control.json",
   grade: "grade.json",
   frozen: "frozen.json",
@@ -98,7 +106,8 @@ export function membersClass(voice) {
 /** Problems with one finding's class fields; [] when it keeps the contract. */
 export function classProblems(f, cls = f.class) {
   if (!CLASSES.includes(cls)) return [`finding ${f.id} has no class (${cls ?? "missing"})`];
-  if (cls === "members" && !f.member) return [`members finding ${f.id} names no member`];
+  if ((cls === "members" || cls === "chat") && !f.member)
+    return [`${cls} finding ${f.id} names no member`];
   if (cls === "members" && !VOICES.includes(f.voice))
     return [`members finding ${f.id} has no voice (${VOICES.join(" | ")})`];
   return [];

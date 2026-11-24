@@ -209,6 +209,71 @@ describe("the member-facing status", () => {
   });
 });
 
+describe("what an open issue waits on, and for how long", () => {
+  const NOW = Date.parse("2026-11-10T03:50:00Z");
+  const read = async (overrides: Record<string, unknown>, timeline: readonly unknown[] = []) => {
+    const { doFetch } = fakeGitHub({
+      42: {
+        issue: issue({ comments: 0, created_at: "2026-10-26T09:00:00Z", ...overrides }),
+        timeline,
+      },
+    });
+    const reader = createWorkStatusReader({ token: "t", repo: REPO }, doFetch, () => NOW);
+    return found((await reader([42]))[0]);
+  };
+
+  it("says nobody has picked a filing with no ready label, and why", async () => {
+    const s = await read({ labels: [{ name: "feedback" }] });
+    expect(s.waiting?.on).toBe("nobody has picked it");
+    expect(s.waiting?.why).toContain("not built automatically");
+    expect(s.openDays).toBe(14);
+  });
+
+  it("says a needs-eric issue waits on a decision from Eric", async () => {
+    expect((await read({ labels: [{ name: "needs-eric" }] })).waiting?.on).toBe(
+      "a decision from Eric",
+    );
+  });
+
+  it("says a ready issue with an open PR is with a build session", async () => {
+    const pr = {
+      event: "cross-referenced",
+      source: {
+        issue: {
+          number: 77,
+          state: "open",
+          pull_request: {},
+          author_association: "OWNER",
+          user: { login: "ejclark" },
+          repository: { full_name: REPO },
+        },
+      },
+    };
+    const s = await read({ labels: [{ name: "ready" }] }, [pr]);
+    expect(s.waiting?.on).toBe("nothing: a build session has it");
+  });
+
+  it("reads every label, not the trimmed list, so a 13th label still parks it", async () => {
+    const many = Array.from({ length: 12 }, (_, i) => ({ name: `area-${i}` }));
+    const s = await read({ labels: [...many, { name: "needs-eric" }] });
+    expect(s.labels).toHaveLength(12);
+    expect(s.waiting?.on).toBe("a decision from Eric");
+    expect(s.status).toBe("Needs Eric's call");
+  });
+
+  it("carries no waiting once closed, and 0 days when the open date is unreadable", async () => {
+    expect((await read({ state: "closed" })).waiting).toBeUndefined();
+    expect((await read({ created_at: undefined })).openDays).toBe(0);
+  });
+
+  it("never carries a ship date", async () => {
+    const s = await read({ labels: [{ name: "ready" }] });
+    expect(Object.keys(s)).not.toContain("eta");
+    expect(JSON.stringify(s.waiting)).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+    expect(JSON.stringify(s.waiting)).not.toMatch(/\bships?\b/i);
+  });
+});
+
 describe("failure is said, never guessed", () => {
   it("reports a missing issue as not found", async () => {
     const { doFetch } = fakeGitHub({});

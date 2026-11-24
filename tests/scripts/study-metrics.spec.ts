@@ -5,10 +5,12 @@ import {
   actionRefusal,
   changeKind,
   displacement,
+  keyboardRefusal,
   landingScreens,
   lateScroll,
   lostness,
   matchesTarget,
+  NO_KEYBOARD,
   noVisibleEffect,
   scrollPath,
   scrollSplit,
@@ -94,10 +96,46 @@ describe("actionRefusal — the member acts only inside its own frame", () => {
     expect(actionRefusal({ kind: "scroll", dir: "down", screens: 0.5 }, frame)).toBeNull();
     expect(actionRefusal({ kind: "scroll", dir: "left", screens: 1 }, frame)).toMatch(/dir/);
     expect(actionRefusal({ kind: "scroll", dir: "up", screens: 3 }, frame)).toMatch(/screens/);
-    expect(actionRefusal({ kind: "key", key: "Tab" }, frame)).toMatch(/Enter/);
+    // Backspace and Tab joined Enter and Escape (the change study's member could not clear a box).
+    expect(actionRefusal({ kind: "key", key: "Backspace" }, frame)).toBeNull();
+    expect(actionRefusal({ kind: "key", key: "Tab" }, frame)).toBeNull();
+    expect(actionRefusal({ kind: "key", key: "F5" }, frame)).toMatch(/Enter/);
     expect(actionRefusal({ kind: "type", text: "" }, frame)).toMatch(/text/);
     expect(actionRefusal({ kind: "zoom" }, frame)).toMatch(/unknown/);
     expect(actionRefusal({ kind: "give_up", why: "lost" }, frame)).toBeNull();
+  });
+});
+
+describe("keyboardRefusal — a phone types only into a focused field (#8126)", () => {
+  const phone = { hasTouch: true };
+  const desktop = { hasTouch: false };
+  const type = { kind: "type", text: "?" };
+  it("refuses phone typing with nothing editable focused, naming why", () => {
+    expect(keyboardRefusal(type, phone, { editable: false, what: "button#chip" })).toBe(
+      NO_KEYBOARD,
+    );
+    expect(keyboardRefusal(type, phone, null)).toBe(NO_KEYBOARD);
+  });
+  it("plays phone typing once a text field has focus", () => {
+    expect(keyboardRefusal(type, phone, { editable: true, what: "input#ask" })).toBeNull();
+  });
+  it("plays desktop typing whatever has focus, as a physical keyboard does", () => {
+    expect(keyboardRefusal(type, desktop, { editable: false, what: "body" })).toBeNull();
+  });
+  it("judges only typing: a key press or tap is not its business", () => {
+    expect(keyboardRefusal({ kind: "key", key: "Enter" }, phone, null)).toBeNull();
+    expect(keyboardRefusal({ kind: "tap", x: 1, y: 1 }, phone, null)).toBeNull();
+  });
+  it("counts the refusal on the trace as noKeyboard, and measures nothing else from it", () => {
+    const refused = {
+      refused: NO_KEYBOARD,
+      ms: 5,
+      action: type,
+      focused: "body",
+      findings: [] as [],
+    };
+    const m = taskMetrics([refused]);
+    expect([m.noKeyboard, m.steps, m.totalViews]).toEqual([1, 0, 0]);
   });
 });
 

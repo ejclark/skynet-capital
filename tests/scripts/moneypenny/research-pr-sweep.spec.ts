@@ -271,8 +271,13 @@ describe("researchSweepReport — the After for the issue's Before", () => {
 });
 
 describe("audit — the research deps feed the intent list", () => {
+  // A dial read at a working position: an unread one holds every act (#6887). A spec that sets its
+  // own `workMode` (the halt case) overrides it.
+  const normal = { trackingIssue: 1, title: null, mode: { position: "normal" } };
+  const withDial = (deps: Parameters<typeof audit>[0]) =>
+    ({ workMode: normal, ...deps }) as unknown as Parameters<typeof audit>[0];
   const kinds = (deps: Parameters<typeof audit>[0]) =>
-    audit(deps).map((i: { kind: string }) => i.kind);
+    audit(withDial(deps)).map((i: { kind: string }) => i.kind);
 
   it("emits the acts and the count from deps.researchPrs", () => {
     expect(kinds({ researchPrs: [candidate({ superseded })] })).toEqual(
@@ -293,7 +298,7 @@ describe("audit — the research deps feed the intent list", () => {
     const stranded = [
       { number: 5798, title: "t", hours: 9, headSha: SHA, armRunId: 1, rearmedSha: null },
     ];
-    const [report] = audit({ researchPrs: [candidate()], stranded }).filter(
+    const [report] = audit(withDial({ researchPrs: [candidate()], stranded })).filter(
       (i) => i.kind === "report-research-sweep",
     );
     expect(report).toMatchObject({ rearmed: 1, left: 0 });

@@ -110,9 +110,9 @@ describe("liveRole: a seat the board has no option for yet is left alone, never 
     const card = { status: "Backlog" as const, decisionCalloutMissing: false };
     const plan = issue(5, ["plan"]);
     const withOption = { options: [{ name: "Plan builds" }] };
-    expect(wantedLiveFields(plan, card, withOption, { horizons: {} }).role).toBe("Plan builds");
-    expect("role" in wantedLiveFields(plan, card, { options: [] }, { horizons: {} })).toBe(false);
-    expect("role" in wantedLiveFields(plan, card, undefined, { horizons: {} })).toBe(false);
+    expect(wantedLiveFields(plan, card, withOption).role).toBe("Plan builds");
+    expect("role" in wantedLiveFields(plan, card, { options: [] })).toBe(false);
+    expect("role" in wantedLiveFields(plan, card, undefined)).toBe(false);
   });
 
   it("wantedCardFields leaves Role out unless it is handed the registry", () => {
@@ -385,7 +385,6 @@ describe("the sweep fills Role beside Kind and Waiting on", () => {
       ensureColumns: () => ["Backlog", "Ready"],
       readMode: () => ({ position: "normal", caps: { inFlightCap: 3, startedPlanCap: 4 } }),
       buildContext: () => ({}),
-      horizons: {},
       sync: (n) => {
         synced.push(n);
         return { status: "Backlog" };

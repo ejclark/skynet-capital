@@ -113,7 +113,8 @@ genuine taste fork where guessing would be worse than asking. Nothing else.
    pasting a new literal. Atoms live in `src/observatory/render-atoms.ts`.
 4. **EARS criteria, then the spec.** One `shall` per line; each becomes a `describe("when …")` /
    `it(…)` in `tests/observatory/<name>-view.spec.ts`, asserting on emitted HTML. The spec-gap
-   budget is zero, so a new `src/` file without one fails the suite.
+   budget is zero (`spec-gap-budget.json`), and `tests/arch/spec-gap.spec.ts` reports a new `src/`
+   file without one (advisory: it never fails the suite).
 5. **Verify by exit status, never tailed output** — a pipeline exits with `tail`'s status, so
    `cmd | tail && …` will not halt on failure. `npm run typecheck`, `npm run lint`, `npm test`.
    **A screen you changed on purpose is re-baselined here, not left for CI to fail** (#5994). If

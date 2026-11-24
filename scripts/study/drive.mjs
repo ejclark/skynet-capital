@@ -9,7 +9,8 @@
 // THE LOOP: frame (the viewport JPEG) → the actor's turn → that action through the recorder →
 // append the turn and the trace record → repeat, until the member says `done` or `give_up`, or the
 // cap — min(2.5 × the task's optimal path, 15) actions — runs out. Then the ease question (1–7, a
-// reason at 5 or lower). A turn the recorder refuses (a tap outside the frame) is recorded with
+// reason at 5 or lower). A turn the recorder refuses (a tap outside the frame, or typing on a phone
+// with no text field focused, which has no keyboard: #8126) is recorded with
 // why, spends no recorder step, and still counts against the cap: a member who keeps trying the
 // impossible is a member running out of patience.
 //
@@ -30,6 +31,13 @@
 // docs/members/study/roles (a pinned run's tree may predate them; scripts/study/round.mjs passes
 // its own).
 //
+// MONEYPENNY (#8005): a world composed with its chat on (`chat: true` → the composed
+// `/api/companion` says enabled) gets her in the dock — production's route and engine over the
+// world's book (world-chat.mjs). `--chat live|off|stub:<dir>` picks the model behind her; the
+// default follows the actor: `--stub`'s dir for a stubbed actor, live for the sealed one, off for a
+// scripted (no-model) run. Every exchange and every draft sent lands in `<out>/chat.jsonl`, never
+// in a real issue; her calls are recorded under `<out>/requests/` beside the member's.
+//
 // THE CLOCK: the page runs in the member's zone and language (`--clock`, ./clock.mjs — default the
 // owner's; a round passes the members' own), recorded on summary.json.
 //
@@ -47,17 +55,19 @@ import { isMain } from "./compat.mjs";
 import { textTarget } from "./measure-text.mjs";
 import { taskMetrics } from "./metrics.mjs";
 import { grade } from "./oracle.mjs";
+import { answerFrom } from "./payloads.mjs";
 import { halfFrame, makeCaller, ROLES, readSchema, signedIn } from "./sealed.mjs";
 import { act, close, open, readTrace } from "./session.mjs";
 import { loadWorld, rerunUnderTsx } from "./session-world.mjs";
 import { actionCap, deviceLine, parseTask } from "./task-file.mjs";
+import { CHAT_LOG, startWorldChat } from "./world-chat.mjs";
 
 const sha256 = (text) => createHash("sha256").update(text).digest("hex");
 
 const USAGE =
   "usage: drive.mjs --run <dir> --world <name> --viewer <who> --viewport phone|desktop " +
   "--task <task.json> --card <card.md> --actor scripted:<actions.json>|sealed --out <dir> [--dry-run] " +
-  "[--stub <dir>] [--roles <dir>] [--clock <zone>,<locale>]";
+  "[--stub <dir>] [--roles <dir>] [--clock <zone>,<locale>] [--chat live|off|stub:<dir>]";
 
 /** The command line, checked; throws the usage line naming what is missing. */
 function driveArgs(argv) {
@@ -78,6 +88,7 @@ function driveArgs(argv) {
     stub: get("--stub"),
     roles: get("--roles") ?? ROLES,
     clock: parseClock(get("--clock")),
+    chat: get("--chat"),
   };
   const missing = ["run", "world", "viewer", "task", "card", "actor", "out"].filter(
     (k) => !opts[k],
@@ -88,11 +99,25 @@ function driveArgs(argv) {
     throw new Error(`--actor must be scripted:<actions.json> or sealed\n${USAGE}`);
   if (opts.dryRun && opts.actor !== "sealed") throw new Error("--dry-run is for --actor sealed");
   if (opts.stub && opts.actor !== "sealed") throw new Error("--stub is for --actor sealed");
+  opts.chat = chatMode(opts);
   return opts;
 }
 
-/** The scripted actor: the file's turns in order; a text tap resolved against the live frame. */
-function scriptedActor(file, session) {
+/**
+ * Who answers in the dock: `{mode, stub?}`. Asked for, or by the actor — a stubbed actor's chat is
+ * stubbed from the same dir, a sealed actor's is live, a scripted run spends no model.
+ */
+export function chatMode({ chat, stub, actor }) {
+  if (chat === "live" || chat === "off") return { mode: chat };
+  if (chat?.startsWith("stub:")) return { mode: "stub", stub: resolve(chat.slice(5)) };
+  if (chat) throw new Error(`--chat must be live, off or stub:<dir>\n${USAGE}`);
+  if (stub) return { mode: "stub", stub: resolve(stub) };
+  return { mode: actor === "sealed" ? "live" : "off" };
+}
+
+/** The scripted actor: the file's turns in order; a text tap resolved against the live frame.
+ *  Exported for the change study's driver (scripts/faculty/drive.mjs), which plays the same actors. */
+export function scriptedActor(file, session) {
   const { turns, ease } = parseScript(readFileSync(file, "utf8"));
   let next = 0;
   return {
@@ -110,7 +135,7 @@ function scriptedActor(file, session) {
 }
 
 /** The sealed actor: one blind call per turn, one for the ease question. */
-function sealedActor({ card, device, scenario, size, browser, call, rolePath }) {
+export function sealedActor({ card, device, scenario, size, browser, call, rolePath }) {
   const turnSchema = readSchema("actor-turn");
   return {
     async message({ turns, frame, prevFrame, remaining }) {
@@ -158,7 +183,7 @@ function sealedActor({ card, device, scenario, size, browser, call, rolePath }) 
 }
 
 /** Play the actor until done/give_up or the cap; returns the turns and how it ended. */
-async function play(session, actor, cap, turnsPath) {
+export async function play(session, actor, cap, turnsPath) {
   const turns = [];
   let frame = session.opening.frame;
   let prevFrame = null;
@@ -178,7 +203,7 @@ async function play(session, actor, cap, turnsPath) {
 }
 
 /** The run's summary: metrics, oracle, ease, world log, provenance. */
-function summarise({ opts, task, world, session, cap, turns, ease, texts }) {
+function summarise({ opts, task, world, session, cap, turns, ease, texts, chat }) {
   const tracePath = join(session.runDir, "trace.jsonl");
   const trace = existsSync(tracePath) ? readTrace(session.runDir) : [];
   const { findings, ...metrics } = taskMetrics(trace, {
@@ -209,6 +234,7 @@ function summarise({ opts, task, world, session, cap, turns, ease, texts }) {
       writes: log?.writes ?? [],
       blocked: trace.flatMap((r) => r.blocked ?? []),
     },
+    chat: chat ? { mode: opts.chat.mode, exchanges: chat.exchanges(), log: CHAT_LOG } : null,
     inputs: { task: sha256(texts.task), card: sha256(texts.card) },
     frames: session.frames,
   };
@@ -236,12 +262,17 @@ async function main(argv) {
     viewer: opts.viewer,
     clock: opts.clock,
   });
+  const chat = await chatFor(world, opts, out);
   const session = await open({
     world,
     viewport: opts.viewport,
     startPath: task.start,
     runDir: out,
     watch: task.answerRegion,
+    ...(chat ? { chat } : {}),
+  }).catch(async (e) => {
+    await chat?.close();
+    throw e;
   });
   const vp = VIEWPORTS[opts.viewport];
   const cap = actionCap(task.optimal);
@@ -267,8 +298,9 @@ async function main(argv) {
     played.ease = await actor.ease({ turns: played.turns });
   } finally {
     await close(session);
+    await chat?.close();
   }
-  const summary = summarise({ opts, task, world, session, cap, ...played, texts });
+  const summary = summarise({ opts, task, world, session, cap, ...played, texts, chat });
   writeFileSync(join(out, "summary.json"), `${JSON.stringify(summary, null, 2)}\n`);
   const o = summary.oracle;
   console.log(
@@ -277,6 +309,27 @@ async function main(argv) {
       ` · ease ${summary.ease.score} → ${join(out, "summary.json")}`,
   );
   return 0;
+}
+
+/** Moneypenny for this session, when the composed world switched her chat on; else null. */
+function chatFor(world, opts, out) {
+  if (!world.run) return Promise.resolve(null);
+  const index = answerFrom(
+    join(world.run, world.name),
+    world.viewer,
+  )({
+    method: "GET",
+    url: "/api/companion",
+  });
+  if (!index?.body?.enabled) return Promise.resolve(null);
+  return startWorldChat({
+    run: world.run,
+    world: world.name,
+    viewer: world.viewer,
+    log: join(out, CHAT_LOG),
+    record: join(out, "requests"),
+    ...opts.chat,
+  });
 }
 
 /** The first turn's sealed message and a half-scale frame, written for inspection; no call. */

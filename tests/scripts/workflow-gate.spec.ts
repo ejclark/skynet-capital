@@ -19,7 +19,8 @@ const CONDUCTORS: Record<
 > = {
   // The original gate, and the one that writes: a run's width is its item count (#6470).
   grind: { args: GRIND_ARGS, width: 3, firstWork: /^a\.ts/ },
-  "post-merge-audit": { args: { prs: [1, 2, 3] }, width: 3, firstWork: /^triage/ },
+  // One deepen of the shared clone comes first, so no per-PR agent races another for its lock (#6682).
+  "post-merge-audit": { args: { prs: [1, 2, 3] }, width: 3, firstWork: /^deepen/ },
   "clear-path-flip": { args: { issues: [1, 2, 3] }, width: 3, firstWork: /^judge/ },
   dream: {
     // Eight digests make two batches of seven at most, and a batch is what fans out.

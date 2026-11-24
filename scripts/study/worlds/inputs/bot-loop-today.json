@@ -1,0 +1,989 @@
+{
+  "$comment": "World 'bot-loop-today' (#8005, the bot's loop). Monday 2026-11-23 mid-session — after the pin's own commit (5dadb4923, 08:25 New York), whose tree is the world's corpus, so nothing the pin's code serves (a conviction's scored claims, the research shelf, the day's edition) is from the world's future; prices sit near what that research states (CRWV ~$46, NVDA ~$186). Two bots on one paper league, each with its own owner. Eric's Sauron is running and live and placed paper orders on its own (#6954): a tranche on Wednesday after NVDA's print, and today at 13:42 the house stop sold its CRWV (the stop's own words, book.mjs stopExit). Its CRWV wheel points at the AI-dip view (a conviction stated 2026-10-16); the pin's adoptions ledger holds that pair exits-only after the view's claim 2a failed, so the roll call says so. Jordan — the invited friend, who took over The Day Trader (docs/members/invited-friend.md) — finds its data-gap breaker tripped at the open: every pass since holds its opens (the MSFT momentum long it wants, refused breaker-halt) and still places its exits (an AAPL cut at 12:30). Casey, signed in and owning nothing, watches the league. Values are sanitized; persona order reasons are each persona's own templates or register (the stop's are the code's). Yesterday's closing equity is derived (book.mjs); the day's P/L on positions closed today is each bot's closedToday: 55 × (43.60 − 45.90) for Sauron's CRWV, 500 × (240.40 − 240.10) for the Day Trader's AAPL.",
+  "instant": "2026-11-23T15:00:00-05:00",
+  "corpus": {
+    "$comment": "The pin itself (5dadb4923, committed 08:25 New York on the instant's day): every tree-sourced fact a page serves — research, market events, the landing page's editions, campaigns, lessons and symbol facts — is the pin's, none later (compose.mjs → CORPUS_PATHS).",
+    "commit": "5dadb4923a7cbd97df9e03bda375e9967f58f693"
+  },
+  "members": [
+    {
+      "email": "eric@study.world",
+      "name": "Eric",
+      "owns": ["eric", "sauron"]
+    },
+    {
+      "email": "jordan@study.world",
+      "name": "Jordan",
+      "owns": ["jordan", "day-trader"]
+    },
+    {
+      "email": "casey@study.world",
+      "name": "Casey",
+      "owns": []
+    }
+  ],
+  "participants": [
+    {
+      "id": "eric",
+      "displayName": "Eric",
+      "kind": "human",
+      "cash": 61480,
+      "realizedPl": 1240,
+      "positions": [
+        {
+          "symbol": "MSFT",
+          "quantity": 45,
+          "avgPrice": 498.2,
+          "mark": 486.3,
+          "lastday": 488.0
+        },
+        {
+          "symbol": "AAPL",
+          "quantity": 60,
+          "avgPrice": 228.4,
+          "mark": 241.2,
+          "lastday": 240.1
+        }
+      ]
+    },
+    {
+      "id": "sauron",
+      "displayName": "Sauron",
+      "kind": "bot",
+      "personaId": "sauron",
+      "cash": 965901.5,
+      "realizedPl": -478.5,
+      "closedToday": -126.5,
+      "positions": [
+        {
+          "symbol": "NVDA",
+          "quantity": 130,
+          "avgPrice": 191.35,
+          "mark": 184.9,
+          "lastday": 186.6
+        },
+        {
+          "symbol": "AVGO",
+          "quantity": 25,
+          "avgPrice": 372.6,
+          "mark": 366.4,
+          "lastday": 368.9
+        }
+      ]
+    },
+    {
+      "id": "day-trader",
+      "displayName": "The Day Trader",
+      "kind": "bot",
+      "personaId": "day-trader",
+      "cash": 879540,
+      "realizedPl": -1740,
+      "closedToday": 150,
+      "positions": [
+        {
+          "symbol": "AVGO",
+          "quantity": 320,
+          "avgPrice": 371.0,
+          "mark": 366.4,
+          "lastday": 368.9
+        }
+      ]
+    },
+    {
+      "id": "jordan",
+      "displayName": "Jordan",
+      "kind": "human",
+      "cash": 20111,
+      "realizedPl": 0,
+      "positions": [
+        {
+          "symbol": "SPY",
+          "quantity": 7,
+          "avgPrice": 712.3,
+          "mark": 721.4,
+          "lastday": 719.9
+        }
+      ]
+    }
+  ],
+  "humanFills": {
+    "eric": [
+      {
+        "orderId": "eric-aapl-1",
+        "symbol": "AAPL",
+        "side": "buy",
+        "quantity": 60,
+        "price": 228.4,
+        "at": "@-17d 10:40"
+      },
+      {
+        "orderId": "eric-msft-1",
+        "symbol": "MSFT",
+        "side": "buy",
+        "quantity": 45,
+        "price": 498.2,
+        "at": "@-10d 13:15"
+      }
+    ],
+    "jordan": [
+      {
+        "orderId": "jordan-spy-1",
+        "symbol": "SPY",
+        "side": "buy",
+        "quantity": 7,
+        "price": 712.3,
+        "at": "@-12d 11:02"
+      }
+    ]
+  },
+  "bots": [
+    {
+      "id": "sauron",
+      "subscribedAt": "@-18d 09:00",
+      "cadenceSeconds": 15,
+      "subscribed": [
+        {
+          "playbookId": "SAURON",
+          "mode": "aggressive"
+        },
+        {
+          "playbookId": "S1-NVDA",
+          "mode": "standard"
+        },
+        {
+          "playbookId": "CRWV-WHEEL",
+          "mode": "aggressive",
+          "convictionId": "ai-dip-2026-10"
+        },
+        {
+          "playbookId": "G1-GOOG",
+          "mode": "standard"
+        }
+      ],
+      "passes": [
+        {
+          "at": "@-20s",
+          "verdicts": true
+        },
+        {
+          "at": "@0d 14:00",
+          "verdicts": true
+        },
+        {
+          "at": "@0d 13:42",
+          "verdicts": true,
+          "stopExit": {
+            "orderId": "sauron-crwv-2",
+            "symbol": "CRWV",
+            "filled": 43.6,
+            "bids": {
+              "CRWV": 43.6
+            },
+            "book": {
+              "cash": 963503.5,
+              "positions": [
+                {
+                  "symbol": "NVDA",
+                  "quantity": 130,
+                  "avgPrice": 191.35
+                },
+                {
+                  "symbol": "AVGO",
+                  "quantity": 25,
+                  "avgPrice": 372.6
+                },
+                {
+                  "symbol": "CRWV",
+                  "quantity": 55,
+                  "avgPrice": 52.3
+                }
+              ]
+            }
+          }
+        },
+        {
+          "at": "@0d 09:31",
+          "verdicts": true
+        },
+        {
+          "at": "@-3d 15:59",
+          "verdicts": true
+        },
+        {
+          "at": "@-5d 10:14",
+          "verdicts": true,
+          "placed": [
+            {
+              "orderId": "sauron-nvda-3",
+              "symbol": "NVDA",
+              "side": "buy",
+              "quantity": 40,
+              "price": 182.3,
+              "playbookId": "SAURON",
+              "mode": "aggressive",
+              "strategy": "sauron-panic-claim",
+              "reason": "NVDA panic −0.74 after its print has stopped falling and rebound momentum turned up; claiming a tranche."
+            }
+          ]
+        },
+        {
+          "at": "@-7d 11:20",
+          "placed": [
+            {
+              "orderId": "sauron-avgo-1",
+              "symbol": "AVGO",
+              "side": "buy",
+              "quantity": 25,
+              "price": 372.6,
+              "playbookId": "SAURON",
+              "mode": "aggressive",
+              "strategy": "hc-extreme-tranche",
+              "reason": "AVGO at a 20-day extreme with momentum −0.052; a small tranche to learn from the bounce."
+            }
+          ]
+        },
+        {
+          "at": "@-10d 14:05",
+          "placed": [
+            {
+              "orderId": "sauron-nvda-2",
+              "symbol": "NVDA",
+              "side": "buy",
+              "quantity": 40,
+              "price": 194.1,
+              "playbookId": "SAURON",
+              "mode": "aggressive",
+              "strategy": "hc-run-tranche",
+              "reason": "NVDA running into its print on rising volume; a small tranche on the run."
+            }
+          ]
+        },
+        {
+          "at": "@-12d 15:30",
+          "placed": [
+            {
+              "orderId": "sauron-meta-2",
+              "symbol": "META",
+              "side": "sell",
+              "quantity": 15,
+              "price": 761.0,
+              "playbookId": "SAURON",
+              "mode": "aggressive",
+              "strategy": "sauron-euphoria-sell",
+              "reason": "META euphoria +0.66 has rolled over; selling the tranche into strength."
+            }
+          ]
+        },
+        {
+          "at": "@-12d 10:12",
+          "placed": [
+            {
+              "orderId": "sauron-nvda-1",
+              "symbol": "NVDA",
+              "side": "buy",
+              "quantity": 50,
+              "price": 196.4,
+              "playbookId": "SAURON",
+              "mode": "aggressive",
+              "strategy": "sauron-panic-claim",
+              "reason": "NVDA panic −0.81 exhausting and rebound momentum turning; claiming a tranche."
+            }
+          ]
+        },
+        {
+          "at": "@-13d 10:45",
+          "placed": [
+            {
+              "orderId": "sauron-crwv-1",
+              "symbol": "CRWV",
+              "side": "buy",
+              "quantity": 55,
+              "price": 52.3,
+              "playbookId": "SAURON",
+              "mode": "aggressive",
+              "strategy": "hc-extreme-tranche",
+              "reason": "CRWV at a 20-day extreme after its print with momentum −0.071; a small tranche to learn from the bounce."
+            }
+          ]
+        },
+        {
+          "at": "@-14d 10:02",
+          "placed": [
+            {
+              "orderId": "sauron-tsla-2",
+              "symbol": "TSLA",
+              "side": "sell",
+              "quantity": 20,
+              "price": 429.5,
+              "playbookId": "SAURON",
+              "mode": "aggressive",
+              "strategy": "hc-stop",
+              "reason": "TSLA closed below the tranche's stop; out."
+            }
+          ]
+        },
+        {
+          "at": "@-18d 11:40",
+          "placed": [
+            {
+              "orderId": "sauron-amzn-2",
+              "symbol": "AMZN",
+              "side": "sell",
+              "quantity": 60,
+              "price": 226.9,
+              "playbookId": "SAURON",
+              "mode": "aggressive",
+              "strategy": "hc-target",
+              "reason": "AMZN reached the tranche's target; taking it."
+            }
+          ]
+        },
+        {
+          "at": "@-20d 14:10",
+          "placed": [
+            {
+              "orderId": "sauron-meta-1",
+              "symbol": "META",
+              "side": "buy",
+              "quantity": 15,
+              "price": 742.0,
+              "playbookId": "SAURON",
+              "mode": "aggressive",
+              "strategy": "sauron-panic-claim",
+              "reason": "META panic −0.58 has stopped falling; claiming a tranche."
+            }
+          ]
+        },
+        {
+          "at": "@-26d 13:20",
+          "placed": [
+            {
+              "orderId": "sauron-tsla-1",
+              "symbol": "TSLA",
+              "side": "buy",
+              "quantity": 20,
+              "price": 441.0,
+              "playbookId": "SAURON",
+              "mode": "aggressive",
+              "strategy": "hc-extreme-tranche",
+              "reason": "TSLA at a 20-day extreme; a small tranche to learn from the bounce."
+            }
+          ]
+        },
+        {
+          "at": "@-28d 10:05",
+          "placed": [
+            {
+              "orderId": "sauron-amzn-1",
+              "symbol": "AMZN",
+              "side": "buy",
+              "quantity": 60,
+              "price": 218.3,
+              "playbookId": "SAURON",
+              "mode": "aggressive",
+              "strategy": "hc-extreme-tranche",
+              "reason": "AMZN at a 20-day extreme; a small tranche to learn from the bounce."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "day-trader",
+      "subscribedAt": "@-18d 09:00",
+      "cadenceSeconds": 15,
+      "subscribed": [],
+      "passes": [
+        {
+          "at": "@-20s",
+          "verdicts": true,
+          "halted": "data-gap",
+          "refused": [
+            {
+              "symbol": "MSFT",
+              "side": "buy",
+              "quantity": 246,
+              "reason": "Momentum long: MSFT momentum 0.02 >= 0.015",
+              "rule": "breaker-halt"
+            }
+          ]
+        },
+        {
+          "at": "@0d 14:00",
+          "verdicts": true,
+          "halted": "data-gap",
+          "refused": [
+            {
+              "symbol": "MSFT",
+              "side": "buy",
+              "quantity": 246,
+              "reason": "Momentum long: MSFT momentum 0.02 >= 0.015",
+              "rule": "breaker-halt"
+            }
+          ]
+        },
+        {
+          "at": "@0d 12:30",
+          "verdicts": true,
+          "halted": "data-gap",
+          "refused": [
+            {
+              "symbol": "MSFT",
+              "side": "buy",
+              "quantity": 246,
+              "reason": "Momentum long: MSFT momentum 0.02 >= 0.015",
+              "rule": "breaker-halt"
+            }
+          ],
+          "placed": [
+            {
+              "orderId": "day-trader-aapl-2",
+              "symbol": "AAPL",
+              "side": "sell",
+              "quantity": 500,
+              "price": 240.4,
+              "reason": "Cutting weakness: AAPL momentum -0.01 <= -0.01"
+            }
+          ]
+        },
+        {
+          "at": "@0d 09:31",
+          "verdicts": true,
+          "halted": "data-gap",
+          "refused": [
+            {
+              "symbol": "MSFT",
+              "side": "buy",
+              "quantity": 246,
+              "reason": "Momentum long: MSFT momentum 0.02 >= 0.015",
+              "rule": "breaker-halt"
+            }
+          ]
+        },
+        {
+          "at": "@-3d 15:59",
+          "verdicts": true
+        },
+        {
+          "at": "@-3d 10:05",
+          "verdicts": true,
+          "placed": [
+            {
+              "orderId": "day-trader-aapl-1",
+              "symbol": "AAPL",
+              "side": "buy",
+              "quantity": 500,
+              "price": 238.6,
+              "reason": "Momentum long: AAPL momentum 0.02 >= 0.015"
+            }
+          ]
+        },
+        {
+          "at": "@-5d 13:10",
+          "placed": [
+            {
+              "orderId": "day-trader-meta-2",
+              "symbol": "META",
+              "side": "sell",
+              "quantity": 160,
+              "price": 731.5,
+              "reason": "Cutting weakness: META momentum -0.01 <= -0.01"
+            }
+          ]
+        },
+        {
+          "at": "@-7d 10:30",
+          "placed": [
+            {
+              "orderId": "day-trader-avgo-1",
+              "symbol": "AVGO",
+              "side": "buy",
+              "quantity": 320,
+              "price": 371.0,
+              "reason": "Momentum long: AVGO momentum 0.02 >= 0.015"
+            }
+          ]
+        },
+        {
+          "at": "@-12d 10:20",
+          "placed": [
+            {
+              "orderId": "day-trader-meta-1",
+              "symbol": "META",
+              "side": "buy",
+              "quantity": 160,
+              "price": 748.0,
+              "reason": "Momentum long: META momentum 0.03 >= 0.015"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "controls": {
+    "$comment": "The owners' controls file and change log as production keeps them (server-config.mjs → controlsSeam): Sauron runs its hardcore research build (the hc-* strategies on its ledger are that build's), no switch is thrown on either bot, and the one recorded change is the CRWV wheel's pointer at the AI-dip view, made by its owner.",
+    "bots": {
+      "sauron": {
+        "hardcore": true
+      },
+      "day-trader": {}
+    },
+    "changes": {
+      "sauron": [
+        {
+          "at": "@-18d 09:00",
+          "setting": "conviction:CRWV-WHEEL",
+          "before": null,
+          "after": "AI-dip view",
+          "proposedBy": "eric@study.world",
+          "approvedBy": "eric@study.world"
+        }
+      ]
+    }
+  },
+  "wired": ["takenQuests", "exitPlans"],
+  "vix": {
+    "$comment": "The quests read Cboe's VIX history for its last close (src/server/vix-feed.ts). The session before the instant, as this world's corpus records it: docs/research/events/aruoba-inflation-term-structure-2026-11-20.md, \"Tape 11-20: VIX 35.89 (Yahoo bar)\".",
+    "session": "2026-11-20",
+    "close": 35.89
+  },
+  "market": {
+    "$comment": "Implied vols per underlying; spot and previous close come from a held position's mark when one exists, else from here. Option prices are the house model's at these vols (market.mjs). QQQ is what the quests' conditions check reads beside SPY, sanitized at about the ratio to SPY the two keep; barDays 400: that check reads a year of each index (market.mjs).",
+    "expirations": [
+      "2026-11-27",
+      "2026-12-04",
+      "2026-12-11",
+      "2026-12-18",
+      "2027-01-15",
+      "2027-03-19"
+    ],
+    "symbols": {
+      "NVDA": {
+        "iv": 0.44
+      },
+      "CRWV": {
+        "spot": 43.8,
+        "prevClose": 45.9,
+        "iv": 0.82
+      },
+      "AVGO": {
+        "iv": 0.36
+      },
+      "AAPL": {
+        "iv": 0.25
+      },
+      "MSFT": {
+        "iv": 0.24
+      },
+      "SPY": {
+        "iv": 0.16
+      },
+      "GOOG": {
+        "spot": 281.4,
+        "prevClose": 280.2,
+        "iv": 0.29
+      },
+      "QQQ": {
+        "spot": 636.3,
+        "prevClose": 635.0,
+        "iv": 0.2
+      }
+    },
+    "barDays": 400
+  },
+  "edgar": {
+    "$comment": "What SEC EDGAR answers the guidance route in this world: each held company's public CIK and its last earnings 8-K. The composer refuses every other network request.",
+    "NVDA": {
+      "cik": 1045810,
+      "eightKs": [
+        {
+          "date": "2026-11-17",
+          "items": "2.02,9.01"
+        }
+      ]
+    },
+    "CRWV": {
+      "cik": 1769628,
+      "eightKs": [
+        {
+          "date": "2026-11-10",
+          "items": "2.02,9.01"
+        }
+      ]
+    },
+    "AVGO": {
+      "cik": 1730168,
+      "eightKs": [
+        {
+          "date": "2026-09-11",
+          "items": "2.02,9.01"
+        }
+      ]
+    },
+    "AAPL": {
+      "cik": 320193,
+      "eightKs": [
+        {
+          "date": "2026-10-29",
+          "items": "2.02,9.01"
+        }
+      ]
+    },
+    "MSFT": {
+      "cik": 789019,
+      "eightKs": [
+        {
+          "date": "2026-10-28",
+          "items": "2.02,9.01"
+        }
+      ]
+    }
+  },
+  "history": {
+    "$comment": "Daily closes, sanitized. Two points are derived by book.mjs and written 0 here: '@now' (today's equity) and '@-3d 16:00' (Friday's close, the last session before today and the header's day-change base). Each month's high sits above today's equity, so no page opens on a new-high celebration the world did not plan (#5052).",
+    "sauron": [
+      {
+        "at": "@-28d 16:00",
+        "equity": 1002595
+      },
+      {
+        "at": "@-27d 16:00",
+        "equity": 1003357
+      },
+      {
+        "at": "@-26d 16:00",
+        "equity": 1002497
+      },
+      {
+        "at": "@-25d 16:00",
+        "equity": 1003433
+      },
+      {
+        "at": "@-24d 16:00",
+        "equity": 1004695
+      },
+      {
+        "at": "@-21d 16:00",
+        "equity": 1003794
+      },
+      {
+        "at": "@-20d 16:00",
+        "equity": 1003790
+      },
+      {
+        "at": "@-19d 16:00",
+        "equity": 1005179
+      },
+      {
+        "at": "@-18d 16:00",
+        "equity": 1004569
+      },
+      {
+        "at": "@-17d 16:00",
+        "equity": 1003651
+      },
+      {
+        "at": "@-14d 16:00",
+        "equity": 1004722
+      },
+      {
+        "at": "@-13d 16:00",
+        "equity": 1004609
+      },
+      {
+        "at": "@-12d 16:00",
+        "equity": 1003074
+      },
+      {
+        "at": "@-11d 16:00",
+        "equity": 1003456
+      },
+      {
+        "at": "@-10d 16:00",
+        "equity": 1003850
+      },
+      {
+        "at": "@-7d 16:00",
+        "equity": 1002168
+      },
+      {
+        "at": "@-6d 16:00",
+        "equity": 1001689
+      },
+      {
+        "at": "@-5d 16:00",
+        "equity": 1002405
+      },
+      {
+        "at": "@-4d 16:00",
+        "equity": 1001073
+      },
+      {
+        "at": "@-3d 16:00",
+        "equity": 0
+      },
+      {
+        "at": "@now",
+        "equity": 0
+      }
+    ],
+    "day-trader": [
+      {
+        "at": "@-28d 16:00",
+        "equity": 1004981
+      },
+      {
+        "at": "@-27d 16:00",
+        "equity": 1004235
+      },
+      {
+        "at": "@-26d 16:00",
+        "equity": 1002983
+      },
+      {
+        "at": "@-25d 16:00",
+        "equity": 1004797
+      },
+      {
+        "at": "@-24d 16:00",
+        "equity": 1004980
+      },
+      {
+        "at": "@-21d 16:00",
+        "equity": 1002995
+      },
+      {
+        "at": "@-20d 16:00",
+        "equity": 1003887
+      },
+      {
+        "at": "@-19d 16:00",
+        "equity": 1004936
+      },
+      {
+        "at": "@-18d 16:00",
+        "equity": 1002863
+      },
+      {
+        "at": "@-17d 16:00",
+        "equity": 1002520
+      },
+      {
+        "at": "@-14d 16:00",
+        "equity": 1004062
+      },
+      {
+        "at": "@-13d 16:00",
+        "equity": 1002554
+      },
+      {
+        "at": "@-12d 16:00",
+        "equity": 1001051
+      },
+      {
+        "at": "@-11d 16:00",
+        "equity": 1002533
+      },
+      {
+        "at": "@-10d 16:00",
+        "equity": 1002040
+      },
+      {
+        "at": "@-7d 16:00",
+        "equity": 999822
+      },
+      {
+        "at": "@-6d 16:00",
+        "equity": 1000701
+      },
+      {
+        "at": "@-5d 16:00",
+        "equity": 1001332
+      },
+      {
+        "at": "@-4d 16:00",
+        "equity": 999079
+      },
+      {
+        "at": "@-3d 16:00",
+        "equity": 0
+      },
+      {
+        "at": "@now",
+        "equity": 0
+      }
+    ],
+    "eric": [
+      {
+        "at": "@-28d 16:00",
+        "equity": 99026
+      },
+      {
+        "at": "@-27d 16:00",
+        "equity": 98737
+      },
+      {
+        "at": "@-26d 16:00",
+        "equity": 98724
+      },
+      {
+        "at": "@-25d 16:00",
+        "equity": 98896
+      },
+      {
+        "at": "@-24d 16:00",
+        "equity": 98649
+      },
+      {
+        "at": "@-21d 16:00",
+        "equity": 98468
+      },
+      {
+        "at": "@-20d 16:00",
+        "equity": 98647
+      },
+      {
+        "at": "@-19d 16:00",
+        "equity": 98515
+      },
+      {
+        "at": "@-18d 16:00",
+        "equity": 98217
+      },
+      {
+        "at": "@-17d 16:00",
+        "equity": 98335
+      },
+      {
+        "at": "@-14d 16:00",
+        "equity": 98351
+      },
+      {
+        "at": "@-13d 16:00",
+        "equity": 98023
+      },
+      {
+        "at": "@-12d 16:00",
+        "equity": 98029
+      },
+      {
+        "at": "@-11d 16:00",
+        "equity": 98179
+      },
+      {
+        "at": "@-10d 16:00",
+        "equity": 97920
+      },
+      {
+        "at": "@-7d 16:00",
+        "equity": 97804
+      },
+      {
+        "at": "@-6d 16:00",
+        "equity": 98029
+      },
+      {
+        "at": "@-5d 16:00",
+        "equity": 97918
+      },
+      {
+        "at": "@-4d 16:00",
+        "equity": 97712
+      },
+      {
+        "at": "@-3d 16:00",
+        "equity": 0
+      },
+      {
+        "at": "@now",
+        "equity": 0
+      }
+    ],
+    "jordan": [
+      {
+        "at": "@-28d 16:00",
+        "equity": 25258
+      },
+      {
+        "at": "@-27d 16:00",
+        "equity": 25264
+      },
+      {
+        "at": "@-26d 16:00",
+        "equity": 25227
+      },
+      {
+        "at": "@-25d 16:00",
+        "equity": 25266
+      },
+      {
+        "at": "@-24d 16:00",
+        "equity": 25294
+      },
+      {
+        "at": "@-21d 16:00",
+        "equity": 25249
+      },
+      {
+        "at": "@-20d 16:00",
+        "equity": 25257
+      },
+      {
+        "at": "@-19d 16:00",
+        "equity": 25299
+      },
+      {
+        "at": "@-18d 16:00",
+        "equity": 25260
+      },
+      {
+        "at": "@-17d 16:00",
+        "equity": 25235
+      },
+      {
+        "at": "@-14d 16:00",
+        "equity": 25277
+      },
+      {
+        "at": "@-13d 16:00",
+        "equity": 25257
+      },
+      {
+        "at": "@-12d 16:00",
+        "equity": 25205
+      },
+      {
+        "at": "@-11d 16:00",
+        "equity": 25232
+      },
+      {
+        "at": "@-10d 16:00",
+        "equity": 25237
+      },
+      {
+        "at": "@-7d 16:00",
+        "equity": 25175
+      },
+      {
+        "at": "@-6d 16:00",
+        "equity": 25176
+      },
+      {
+        "at": "@-5d 16:00",
+        "equity": 25202
+      },
+      {
+        "at": "@-4d 16:00",
+        "equity": 25149
+      },
+      {
+        "at": "@-3d 16:00",
+        "equity": 0
+      },
+      {
+        "at": "@now",
+        "equity": 0
+      }
+    ]
+  }
+}

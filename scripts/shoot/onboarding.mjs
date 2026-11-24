@@ -2,8 +2,8 @@
 // (/app/accounts?section=milestones&chapter=onboarding, once /app/onboarding, #3807 slice 2b) — milestone M·01 from the REAL built shell (app/dist) over a
 // stub API, five frames: a brand-new member at 390 first (phone-first; steps lead, steps 2–3 held as
 // one line each, the milestones list folded below — #5256), the same at 1280, the member with step 5
-// opened (the connect form inside it), Moneypenny's rail open with her intro from step 2's held line
-// (the whole shell pushed left), and a connected member (step 1 done, steps 2–3 open in full).
+// opened (the connect form inside it), Moneypenny's History open over her dock with her intro from
+// step 2's held line (#7487 slice 2; the page stays put above it), and a connected member (step 1 done, steps 2–3 open in full).
 // JPEG ≤100KB (docs/PICTURES.md) — quality 55, not the harness default, because these
 // frames are 1100px tall and need it to clear the cap.
 // Usage: npm run build --prefix app && npm run shoot:onboarding [outdir]
@@ -138,14 +138,17 @@ await page
   .scrollIntoViewIfNeeded();
 await shoot("onboarding-step5-form");
 
-// Moneypenny's rail — step 2's held line still opens it with her intro (ordered, never locked)
+// Moneypenny's History — step 2's held line still opens it with her intro (ordered, never locked);
+// the answer is typed in the dock's box. Text waits are scoped to History: her latest line in the
+// dock repeats the same words.
 await page.goto(`${origin}/app/accounts?section=milestones&chapter=onboarding`);
 await page.getByRole("button", { name: "Say hello now ›" }).click();
-await page.getByText(/isn't connected yet/).waitFor();
-await page.getByLabel("Message Moneypenny").fill("yes");
+const history = page.locator(".mp-history");
+await history.getByText(/isn't connected yet/).waitFor();
+await page.locator(".mp-dock .mp-box-input").fill("yes");
 await page.keyboard.press("Enter");
-await page.getByText(/the short path: create a free account/).waitFor();
-await shoot("onboarding-moneypenny-rail");
+await history.getByText(/the short path: create a free account/).waitFor();
+await shoot("onboarding-moneypenny-history");
 
 state = connected;
 await page.goto(`${origin}/app/accounts?section=milestones&chapter=onboarding`);

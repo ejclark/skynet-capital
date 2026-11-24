@@ -464,6 +464,7 @@ Four predictions carry score-by dates and are registered in
 | 2026-10-27 | D-14 | **Material (band low:15+→low:0+; VIX +3.6pt; CBRS lockup/results newly strong-adjacent).** MOF (direct, HTTP 200): `2611e.htm` still lists 11-10 30-year with no size link; the 11-02 5-year climate bond was announced 10-26, 7 days ahead, so terms ~11-03 and `FT-4` timing hold. `2612e.htm` now live: 30-year 12-08 (D+28, past the horizon, not proposed). **`FT-1` first half met:** `auct20261001e` read maturity 2056-09-20, ¥600bn, no reopening footnote (issue 92); the 11-03 half is open. Curve (MOF par 10-26 vs 10-08): 30Y **3.884%** (−25.2bp), 10Y 2.824% (−26.5bp), 20s30s **+25.4bp**, 30s40s +1.6bp; US 30Y par 5.31% (−29bp vs 5.60%). VIX 18.39 (10-26 close; 19.99 on 10-16). NEWS (search snippet, CNBC fetch 403): JGB rally on safe-haven bid in an AI-stock selloff; BoJ 10-30 expected hold, hawkish, hike from December. Date still carries CPI, 10Y auction, tariff-truce expiry, BoJ Summary of Opinions (estimate). Stand aside holds. No new proposals. | — (stance holds) | 2026-11-03 |
 | 2026-11-03 | D-7 | **Terms out (MOF `auct20261102e`, dated 11-02, HTTP 200, direct):** 11-10, issue 11-11, maturity **2056-09-20**, **About 600 billion yen**, footnote *"a reopening issue of the October 2026 issue"* — **`FT-1` both halves met** (10-01 half met 10-27) and **`FT-4` met** (published D-8, inside 10-30..11-05); both stay `_open_` until their 11-10 score-by. Estimate label unchanged (no MOF confirmed prefix). `2611e.htm`: date unchanged. BoJ 10-30 (NEWS, search snippets; Bloomberg/Yahoo not fetched): hold at 1.25%, 8-1 (Takata for +25bp), Dec 17-18 hike signalled, ~80% priced. FOMC 10-28 (NEWS, secondary only, unverified): hold, 10-2 with two hike dissents, December hike priced, long yields >5%. Curve (MOF par 10-30 vs 10-26): 30Y **3.908%** (+2.4bp), 10Y 2.817%, 20s30s **+25.6bp**, 30s40s +2.6bp. VIX **20.69** (11-03; 18.39 on 10-27, +2.3pt). New in corridor: `nbis-2026-11-12-print` (critical, confirmed; a tracked name's print, not JGB-linked). Date still carries CPI, 10Y auction, tariff-truce expiry, BoJ Summary of Opinions (estimate). No proposals (12-08 30Y is past the horizon). No conviction proposal or declared intent names this event. Stand aside holds. | — (stance holds) | 2026-11-10 |
 | 2026-11-10 | D-0 | **Deterministic screen (no Claude session).** Readings — VIX 19.9 (-0.7pt since last), band unchanged (low:0+), 34 adjacent event(s) tracked, new in corridor since last pulse: `erock-q3-2026-results-2026-11-12`, `japan-balance-of-payments-2026-11-10`, `pbls-q3-2026-results-2026-11-12` (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-11-17 |
+| 2026-11-11 | D+1 | **Close-out — detail in `## Outcome`.** MOF result page (`eresul20261110.htm`, direct, HTTP 200): issue **92**, 4.2%, mat. **2056-09-20**; bids **¥1,512.6bn** / accepted **¥450.7bn** = **3.356x**; lowest accepted **3.871%** vs average **3.847%** = **2.4bp tail**; +¥148.8bn non-price-competitive I = **¥599.5bn**. **`FT-1` CONFIRMED**, **`FT-3` CONFIRMED** (US 30Y CMT 5.26 → **5.35**, +9bp), **`FT-4` CONFIRMED** (terms dated 11-02, ¥600bn). **`FT-2` stays open** (score-by 11-30; 11-10 is weak by tail, 1 of 3). Stance-note kill 6 (tail ≥1.69bp) **fired**; no position, so nothing to unwind. NVDA −5.5% on 11-10, no JGB/yen link found. | — (stance held: stand aside; closed) | none (event closed; `FT-2` re-opens it 2026-11-30) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -485,3 +486,90 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-11-10
 <!-- probe-ref: {"symbols":{},"vix":19.92,"daysBand":"low:0+","adjacentIds":["boe-decision-2026-11-05","boj-minutes-2026-11-05","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","erock-q3-2026-results-2026-11-12","existing-home-sales-2026-11-12","japan-balance-of-payments-2026-11-10","jgb-10y-auction-2026-11-05","jgb-5y-auction-2026-11-12","jobs-2026-11-06","mts-october-2026-11-12","nbis-2026-11-12-print","pbls-q3-2026-results-2026-11-12","ppi-2026-11-13","productivity-costs-q3-2026-11-05","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","sp-global-investment-manager-index-2026-11-10","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-3y-note-2026-11-09","treasury-buyback-1mo2y-2026-11-05","treasury-coupon-announcement-2026-11-12","uk-gdp-q3-first-2026-11-12","uk-gilt-auction-long-2026-11-10","umich-sentiment-prelim-2026-11-06","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","jobs-2026-11-06","nbis-2026-11-12-print"],"screenStreak":1} -->
+
+## Outcome
+
+**Close-out (2026-11-11, D+1 — inside `closeOutWithinDays`).** Rates mode runs no `earnings-cycle` /
+`intraday-edges` instrument (`symbols: []` by design), so "re-run instrument data" means every number
+below was re-fetched from a primary **this session**, after the mandated cache bust (`rm -rf
+node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`): MOF's result page, announcement
+page and November par-yield CSV, and Treasury's daily par-yield CSV. Yahoo readings (VIX, USD/JPY, the
+four tracked equities) are labelled secondary. **No fetch of a cited source failed; `probe-ref.blocked`
+is empty.** Nothing is scored from memory of the tape.
+
+**The verdict: the stand-aside was right and cost nothing; the issue-identity call was right; the
+auction itself printed a weak tail on this tenor's own calibration, on the most contaminated date the
+family has drawn — the reading the stance already told the reader to expect.**
+
+### What Japan sold — MOF's own result page
+
+`policy/jgbs/auction/calendar/eresul/eresul20261110.htm`, fetched direct 2026-11-11 (HTTP 200,
+18,551 bytes):
+
+| Field | Value |
+|---|---|
+| Security · issue · coupon · maturity | 30-Year · **92** · **4.2%** · **9/20/2056** |
+| Auction / issue date | **11/10/2026** / **11/11/2026** |
+| Competitive bids | **¥1,512.6bn** |
+| Competitive accepted | **¥450.7bn** |
+| **Bid-to-cover** | **3.356x** (1,512.6 / 450.7) |
+| Lowest accepted price · **yield** | 104.55 · **3.871%** |
+| Weighted average price · **yield** | 104.90 · **3.847%** |
+| **Tail** | **2.4bp** |
+| Allotment at the low | **15.1785%** |
+| Non-price-competitive Ⅰ | **¥148.8bn** (Ⅱ: none) |
+| **Total issued** | **¥599.5bn** — the announced "about ¥600bn" |
+
+Against the stance's own calibration (n=202): cover **3.356x** is above the p10 of **2.96x** (not weak
+on cover); the tail **2.4bp** is above the p90 of **1.69bp** (weak on tail); it is nowhere near the
+strong print (cover ≥ 4.23x with tail < 0.60bp). Neighbours, from MOF result pages fetched this
+session: 10-08 **3.877x / 1.2bp** (issue 92's opening), 09-03 **3.788x / 2.1bp** — so 11-10 has the
+lowest cover of the three, and a tail close to the 09-03 and 06-10 prints (2.1bp, 2.8bp). The average
+yield **3.847%** is **26.2bp** below the 10-08 average of 4.109%.
+
+The 30Y par yield (MOF CSV) went 3.911% → **3.935%** (+2.4bp) on the day; 20s30s **+30.6bp**, 30s40s
+**+6.1bp**. Kill switch 7 (20s30s below its +21.3bp median on 2026-12-31) is not decidable yet.
+
+### The forward tests
+
+- **`FT-1` — CONFIRMED.** MOF's announcement (`announcement/auct20261102e.htm`, dated November 2, direct)
+  reads maturity September 20, 2056 and *"30-year JGBs to be issued in November will be a reopening
+  issue of the October 2026 issue"*; the 10-01 half was met 10-27; the result pages print issue **92**
+  at both 10-08 and 11-10, same 9/20/2056 maturity and 4.2% coupon. Rotation intact.
+- **`FT-3` — CONFIRMED (kill switch did not fire).** US 30Y CMT (Treasury CSV, direct) **5.26 → 5.35,
+  +9bp** on 11-10 (10Y 4.88 → 4.98), far outside the 1bp quiet-session test: the date could not carry a
+  readable JGB signal, so no same-date JGB→US result is reported in either direction.
+- **`FT-4` — CONFIRMED.** Terms dated **2026-11-02** (inside 10-30..11-05), "About 600 billion yen",
+  auction date 11-10 unchanged; actually issued ¥599.5bn.
+- **`FT-2` — open on purpose** (score-by 2026-11-30, beyond `closeOutWithinDays`; the scanner re-dispatches
+  this lane when it arrives). Interim, not a score: **one of the three** November super-long auctions
+  has printed weak on its own tenor's threshold (30Y tail 2.4bp ≥ 1.69bp); the 20Y (11-18, tail ≥ 2.00bp)
+  and 40Y (11-25, cover < 2.5x) are still to come, and the kill needs two or more.
+
+### Kill switches
+
+- **1 (no price channel) — not fired, with a limit.** NVDA **−5.5%** on 11-10 (178.67 → 168.89, Yahoo,
+  secondary); AVGO +3.9%, MRVL −0.1%, CRWV −0.5%; USD/JPY 158.29 → 157.98. Searches found no reporting
+  linking any move to a JGB or yen headline (the 11-05 NVDA −9.3% is reported as AI-chip / midterm
+  data-center selling); an 11-10 NVDA attribution was not found either way.
+- **2 (issue rotation), 5 (MOF terms) — not fired** (`FT-1`, `FT-4`). **4 (contamination) — not fired**
+  (`FT-3`). **3 (congestion) — undecided** (`FT-2`).
+- **6 (calibration) — fired on the tail leg** (2.4bp ≥ 1.69bp). The stance named this as "uninterpretable
+  rather than informative" on a CPI / Summary-of-Opinions date and held no position, so nothing is
+  unwound; the print is banked as one data point for `FT-2`.
+
+### Honest limits
+
+- **The BoJ Summary of Opinions (08:50 JST) and the US CPI print were not read this session** — searches
+  returned nothing for 11-10 — so the contamination is established by the Treasury move (`FT-3`), not by
+  their content.
+- **Tail percentile rank was not recomputed:** the MOF workbook was last saved 2026-08-13, so the
+  thresholds are the ledger's own p10/p90 of 202, not a fresh ranking that includes 11-10.
+- **`status` stays `estimate`** — the confirmed-prefix taxonomy has no slot for MOF; the result page
+  now makes the date a matter of record. It widened caution throughout and licensed nothing.
+- **Beyond the research horizon, noted not filed** (#2946): `jgb-20y-auction-2026-11-18` and
+  `jgb-40y-auction-2026-11-25` are already canonical; the 30-year on 12-08 is past the horizon. A
+  close-out runs no adjacency sweep; nothing is proposed.
+
+**Last assessed:** 2026-11-11
+<!-- probe-ref: {"symbols":{},"vix":19.46,"daysBand":"low:0+","adjacentIds":["boe-decision-2026-11-05","boj-minutes-2026-11-05","boj-summary-of-opinions-2026-11-10","bund-30y-auction-2026-11-11","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","erock-q3-2026-results-2026-11-12","existing-home-sales-2026-11-12","japan-balance-of-payments-2026-11-10","jgb-10y-auction-2026-11-05","jgb-5y-auction-2026-11-12","jobs-2026-11-06","mts-october-2026-11-12","nbis-2026-11-12-print","pbls-q3-2026-results-2026-11-12","ppi-2026-11-13","productivity-costs-q3-2026-11-05","russell-recon-preliminary-2026-11-13","sifma-bond-market-closure-2026-11-11","sp-global-investment-manager-index-2026-11-10","treasury-10y-note-2026-11-10","treasury-30y-bond-2026-11-12","treasury-3y-note-2026-11-09","treasury-buyback-1mo2y-2026-11-05","treasury-coupon-announcement-2026-11-12","uk-gdp-q3-first-2026-11-12","uk-gilt-auction-long-2026-11-10","umich-sentiment-prelim-2026-11-06","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["cbrs-lockup-expiry-2026-11-09","cbrs-q3-2026-results-2026-11-11","cpi-2026-11-10","jobs-2026-11-06","nbis-2026-11-12-print"],"screenStreak":0} -->

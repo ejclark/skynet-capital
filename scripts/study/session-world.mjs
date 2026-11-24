@@ -22,6 +22,7 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DEFAULT_CLOCK } from "./clock.mjs";
 import { answerFrom } from "./payloads.mjs";
+import { worldInstant } from "./worlds/instant.mjs";
 
 const NAME = /^[a-z0-9-]+$/;
 
@@ -31,6 +32,13 @@ function viewersIn(dir) {
     .filter((f) => f.endsWith(".json") && f !== "compose.json")
     .map((f) => f.slice(0, -".json".length))
     .sort();
+}
+
+/** A world's research shelf as it stood at its instant: `<run>/<corpus>/docs/research`, or null for
+ *  a run composed before the manifest kept each world's corpus. */
+export function researchRootOf(run, manifest, name) {
+  const corpus = manifest.corpora?.[name];
+  return corpus ? join(run, corpus, "docs", "research") : null;
 }
 
 /** A composed world, read from its compose run directory, on a member's clock. */
@@ -47,7 +55,17 @@ function composedWorld(name, run, viewer, clock) {
   if (!viewers.includes(who)) {
     throw new Error(`world ${name} has no viewer ${who} in this run (it has: ${viewers})`);
   }
-  return { name, run: root, viewer: who, viewers, pinnedInstant: manifest.instant, clock };
+  const pinnedInstant = worldInstant(manifest, name);
+  const researchRoot = researchRootOf(root, manifest, name);
+  return {
+    name,
+    run: root,
+    viewer: who,
+    viewers,
+    pinnedInstant,
+    clock,
+    ...(researchRoot ? { researchRoot } : {}),
+  };
 }
 
 /**
@@ -71,10 +89,11 @@ export async function loadWorld(name, { run, viewer, clock = DEFAULT_CLOCK } = {
 
 /**
  * Open a composed world's page: world-route's server and router over the viewer's payloads, with
- * the page clock at the run's instant. Returns the shell-shaped handle `open` drives, plus `log` —
+ * the page clock at the run's instant, and Moneypenny's chat when the session started one
+ * (`chat`, world-chat.mjs). Returns the shell-shaped handle `open` drives, plus `log` —
  * the world's own record of unstubbed reads, recorded writes and refused off-origin requests.
  */
-export async function openComposed(world, frame, out) {
+export async function openComposed(world, frame, out, chat) {
   const { openWorld } = await import("./world-route.mjs");
   const handle = await openWorld({
     answer: answerFrom(join(world.run, world.name), world.viewer),
@@ -82,6 +101,8 @@ export async function openComposed(world, frame, out) {
     frame,
     out,
     clock: world.clock ?? DEFAULT_CLOCK,
+    ...(chat ? { chat } : {}),
+    ...(world.researchRoot ? { researchRoot: world.researchRoot } : {}),
   });
   // signIn rides along: a census fresh load clears cookies and must land the member signed in again.
   return {

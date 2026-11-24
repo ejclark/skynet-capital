@@ -6,6 +6,7 @@ import {
   optionLimitSeed,
   riskAfter,
   sharesLimitSeed,
+  signedMoney,
 } from "../../src/live/position-act";
 
 /**
@@ -126,5 +127,13 @@ describe("the recap's risk after", () => {
     expect(riskAfter(PUT, 0)).toBe("None from this position: it closes, so it can't be assigned.");
     expect(riskAfter(NVDA, 0)).toBe("None from this position: it closes.");
     expect(riskAfter(NVDA, 120)).toBe("120 shares stay open, at the risk they carry now.");
+  });
+});
+
+describe("a signed dollar figure (#5204: one sign rule, from the shared number shapes)", () => {
+  it("writes a loss with the real minus, a gain with a plus, and zero unsigned", () => {
+    expect(signedMoney(-295)).toBe("−$295");
+    expect(signedMoney(200)).toBe("+$200");
+    expect(signedMoney(0)).toBe("$0");
   });
 });

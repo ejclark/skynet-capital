@@ -85,10 +85,9 @@ import { useTowerColumn } from "./use-tower-column";
  * of CONSTANT GEOMETRY above: the stage's left edge and width stay identical across /accounts,
  * /activity, /research, /trade and /u/:id. It holds no navigation and no controls — the tower, and
  * only what a page stands under it (the league on the Profile page). Below the bench width the
- * frame is one column again. ON THE LEFT since #7216 (Eric's #7018 round 9 B pick, 2026-11-09:
- * "This feels like better placement which elevates what we can visually do with animations";
- * docs/IA.md §5.9): Moneypenny's rail opens on the right, so the page always sits between the Eye
- * and the chat, and the tower never moves when she opens — the stage narrows from the right. The
+ * frame is one column again. IN THE RIGHT MARGIN since #7487 slice 4a (Eric, 2026-11-12: "Move it
+ * right"; docs/IA.md §5.9): it stood on the left from #7216 (2026-11-09) only while Moneypenny's
+ * rail opened on the right, and that rail is now a dock under the stage (#7487 slice 2). The
  * DOM keeps `<main>` first for the skip link and reading order; `tower-column.css` places it.
  *
  * `docs/PATTERNS.md` keeps the ledger these words live in, one row per named pattern.

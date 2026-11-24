@@ -46,7 +46,6 @@ import { execFile } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { researchCapNow } from "../../scripts/moneypenny/events.mjs";
 import { bars } from "../../scripts/research/market-data.mjs";
@@ -63,7 +62,8 @@ import {
 import type { Conviction } from "../playbooks/conviction-record.js";
 import { CONVICTIONS } from "../playbooks/conviction-store.js";
 import { writeRefinement } from "./claim-proposals.js";
-import { laneScores, readsEvent, scoreConviction } from "./claim-scoring-run.js";
+import { fullPassScores, laneScores, readsEvent, scoreConviction } from "./claim-scoring-run.js";
+import { isMain } from "./cli-entry.js";
 
 const run = promisify(execFile);
 const ROOT = process.cwd();
@@ -278,8 +278,11 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
     console.log("  scores:");
     for (const line of scoring.lines) console.log(line);
     const onFile = scores[conviction.id] ?? [];
-    // A scores-only pass changes only the claims it newly decides (`laneScores`).
-    const written = scoreOnly ? laneScores(onFile, scoring.entries) : scoring.entries;
+    // A scores-only pass changes only the claims it newly decides (`laneScores`); a full pass keeps
+    // a decided score unless the study re-run may re-read it (`fullPassScores`).
+    const written = scoreOnly
+      ? laneScores(onFile, scoring.entries)
+      : fullPassScores(onFile, scoring.entries, conviction.claims);
     scores = { ...scores, [conviction.id]: written };
     // Only this pass's scores: a claim whose fresh entry is unreadable reads as unscored, exactly as
     // the store will serve it, never as the score it carried before the pass.
@@ -301,5 +304,4 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
   return 0;
 }
 
-const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
-if (isMain) process.exit(await main());
+if (isMain(import.meta.url)) process.exit(await main());

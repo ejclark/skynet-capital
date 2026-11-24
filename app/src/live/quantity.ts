@@ -1,3 +1,5 @@
+import type { DeskPosition } from "./desk";
+
 /**
  * A POSITION'S SIZE, READ ONCE (#5086). The server sends it as display text,
  * `toLocaleString("en-US")` of a SIGNED count: "-1" for a sold contract, "1,200" for twelve hundred
@@ -23,4 +25,11 @@ export function parseQuantity(text: string): number {
 export function held(quantity: string): { readonly count: number; readonly short: boolean } {
   const n = parseQuantity(quantity);
   return Number.isFinite(n) ? { count: Math.abs(n), short: n < 0 } : { count: 0, short: false };
+}
+
+/** Shares of `symbol` the book holds long; 0 for none, a short, or an unreadable count. */
+export function sharesHeld(book: readonly DeskPosition[], symbol: string): number {
+  const row = book.find((p) => !p.isOption && p.symbol === symbol);
+  const n = row ? parseQuantity(row.quantity) : 0;
+  return Number.isFinite(n) && n > 0 ? n : 0;
 }

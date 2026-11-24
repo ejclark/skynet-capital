@@ -4,9 +4,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "@rstest/core";
 import {
+  BASELINE,
+  CLOUD_DEFAULT,
   classify,
   flowOf,
   HAND_READ,
+  MIN_TYPED,
   readFlow,
   typedBy,
   // @ts-expect-error plain .mjs script, no declarations
@@ -523,5 +526,151 @@ describe("reading the transcripts", () => {
     const run = meter({ AGENT_TRANSCRIPTS_DIR: "", HOME: home });
     expect(run.status).toBe(0);
     expect(run.stdout).toContain("unknown");
+  });
+});
+
+// WHICH SESSIONS IT READ (#6702). The 2026-11-01 baseline was read on the laptop, from its checkout's
+// folders, over 2026-08-21 to 2026-11-02. Sessions moved to the cloud by default on 2026-10-13, and a
+// cloud session's transcripts stay on its own container. So a reading compares with that baseline only
+// when it is the same population: laptop sessions only, in a window that began before the move, with
+// enough typed messages to state a share. Anything else says which sessions it read, and reads unknown
+// against the baseline, never "not wrong".
+describe("which sessions it read, and whether they are the baseline's", () => {
+  const BEFORE = {
+    sinceMs: Date.parse("2026-08-21T00:00:00Z"),
+    untilMs: Date.parse("2026-11-02T00:00:00Z"),
+  };
+  const AFTER = {
+    sinceMs: Date.parse("2026-11-02T00:00:00Z"),
+    untilMs: Date.parse("2026-12-15T00:00:00Z"),
+  };
+  const many = (n: number, day: string) =>
+    Array.from({ length: n }, (_, i) => ({
+      at: `${day}T12:00:${String(i % 60).padStart(2, "0")}Z`,
+      text: `do thing ${i}`,
+    }));
+  const on = (kind: string, path: string, typed: { at: string; text: string }[]) => ({
+    kind,
+    path,
+    typed,
+  });
+
+  it("counts the sessions it read by where they ran, and names them laptop, cloud or both", () => {
+    const laptop = flowOf([on("laptop", "a", many(3, "2026-11-05"))], AFTER);
+    expect(laptop.read).toEqual({ laptop: 1, cloud: 0, sessions: "laptop" });
+    const cloud = flowOf([on("cloud", "b", many(3, "2026-11-05"))], AFTER);
+    expect(cloud.read).toEqual({ laptop: 0, cloud: 1, sessions: "cloud" });
+    const both = flowOf(
+      [on("laptop", "a", many(2, "2026-11-05")), on("cloud", "b", many(2, "2026-11-06"))],
+      AFTER,
+    );
+    expect(both.read).toEqual({ laptop: 1, cloud: 1, sessions: "both" });
+  });
+
+  it("calls a session with no place named a cloud one: only the laptop's folder is the baseline's", () => {
+    expect(flowOf([{ path: "a", typed: many(2, "2026-11-05") }], AFTER).read.cloud).toBe(1);
+  });
+
+  it("compares laptop sessions from a window that began before the move with the baseline", () => {
+    const reading = flowOf([on("laptop", "a", many(MIN_TYPED, "2026-09-10"))], BEFORE);
+    expect(reading.baseline).toMatchObject({ verdict: "comparable" });
+  });
+
+  it("reads unknown against the baseline when any session it read ran in the cloud", () => {
+    const reading = flowOf(
+      [on("laptop", "a", many(MIN_TYPED, "2026-09-10")), on("cloud", "b", many(2, "2026-09-11"))],
+      BEFORE,
+    );
+    expect(reading.verdict).toBe("read");
+    expect(reading.baseline.verdict).toBe("unknown");
+    expect(reading.baseline.line).toMatch(/cloud/);
+  });
+
+  it("reads unknown for laptop sessions after the move: they are the exception, not the baseline's sessions", () => {
+    const reading = flowOf([on("laptop", "a", many(MIN_TYPED + 10, "2026-11-20"))], AFTER);
+    expect(reading.verdict).toBe("read");
+    expect(reading.baseline.verdict).toBe("unknown");
+    expect(reading.baseline.line).toContain(CLOUD_DEFAULT);
+  });
+
+  it("reads unknown against the baseline below the minimum sample", () => {
+    const reading = flowOf([on("laptop", "a", many(MIN_TYPED - 1, "2026-09-10"))], BEFORE);
+    expect(reading.baseline.verdict).toBe("unknown");
+    expect(reading.baseline.line).toContain(`${MIN_TYPED - 1} typed`);
+  });
+
+  it("reads unknown against the baseline when nothing was read", () => {
+    expect(flowOf([], AFTER).baseline.verdict).toBe("unknown");
+  });
+
+  it("prints the sessions it read beside the share, and the baseline verdict under it", () => {
+    const reading = flowOf(
+      [on("laptop", "a", many(2, "2026-11-05")), on("cloud", "b", many(3, "2026-11-06"))],
+      AFTER,
+    );
+    const text = flowSection(reading).join("\n");
+    expect(text).toMatch(/over 2 sessions \(both: 1 laptop, 1 cloud\)/);
+    expect(text).toMatch(/against the 2026-11-01 baseline \(84 of 217, 39%\): unknown/);
+    expect(BASELINE).toMatchObject({ managing: 84, typed: 217 });
+  });
+
+  describe("on the command line, under a checkout's own folder", () => {
+    const home = mkdtempSync(join(tmpdir(), "flow-where-"));
+    const projects = join(home, "projects");
+    const laptopCheckout = "/Users/eric/Developer/skynet-capital";
+    const cloudCheckout = "/home/user/skynet-capital";
+    const folderOf = (checkout: string) => checkout.replace(/[^a-zA-Z0-9]/g, "-");
+    const line = (text: string) =>
+      JSON.stringify({
+        type: "user",
+        timestamp: "2026-11-05T12:00:00Z",
+        message: { content: text },
+      });
+    for (const checkout of [laptopCheckout, cloudCheckout]) {
+      mkdirSync(join(projects, folderOf(checkout)), { recursive: true });
+      writeFileSync(
+        join(projects, folderOf(checkout), "s.jsonl"),
+        `${[line("any updates?"), line("do it")].join("\n")}\n`,
+      );
+    }
+    afterAll(() => rmSync(home, { recursive: true, force: true }));
+    const meter = (checkout: string, ...args: string[]) => {
+      const env: Record<string, string | undefined> = {
+        ...process.env,
+        AGENT_PROJECTS_DIR: projects,
+        AGENT_CHECKOUT_DIR: checkout,
+      };
+      delete env.AGENT_TRANSCRIPTS_DIR;
+      return spawnSync(
+        "node",
+        [
+          "scripts/agent-meter.mjs",
+          "--flow",
+          "--since",
+          "2026-11-02T00:00:00Z",
+          "--until",
+          "2026-11-10T00:00:00Z",
+          ...args,
+        ],
+        { encoding: "utf8", env },
+      );
+    };
+
+    it("reads a cloud checkout's own folder, says the sessions were cloud ones, and compares nothing", () => {
+      const run = meter(cloudCheckout);
+      expect(run.status).toBe(0);
+      expect(run.stdout).toContain("1 of 2");
+      expect(run.stdout).toMatch(/over 1 session \(cloud: 0 laptop, 1 cloud\)/);
+      expect(run.stdout).toMatch(/baseline \(84 of 217, 39%\): unknown/);
+      const json = JSON.parse(meter(cloudCheckout, "--json").stdout);
+      expect(json.read).toEqual({ laptop: 0, cloud: 1, sessions: "cloud" });
+      expect(json.baseline.verdict).toBe("unknown");
+    });
+
+    it("names the laptop's folder laptop, and still reads unknown after the move", () => {
+      const json = JSON.parse(meter(laptopCheckout, "--json").stdout);
+      expect(json.read).toEqual({ laptop: 1, cloud: 0, sessions: "laptop" });
+      expect(json.baseline.verdict).toBe("unknown");
+    });
   });
 });

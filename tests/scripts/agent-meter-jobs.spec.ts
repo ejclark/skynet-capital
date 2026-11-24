@@ -388,6 +388,20 @@ describe("the communication row", () => {
     expect(row.notes.join(" ")).toMatch(/undercount/);
   });
 
+  it("names the sessions the share is of, and whether the baseline is comparable (#6702)", () => {
+    const row = flowJob({
+      verdict: "read",
+      typed: 40,
+      managing: 10,
+      share: 25,
+      read: { laptop: 0, cloud: 2, sessions: "cloud" },
+      baseline: { verdict: "unknown", line: "2 of the 2 sessions read ran in the cloud" },
+    });
+    const notes = row.notes.join(" ");
+    expect(notes).toContain("sessions read: cloud (0 laptop, 2 cloud)");
+    expect(notes).toContain("against the baseline: unknown");
+  });
+
   it("reads unknown when the flow meter does", () => {
     const row = flowJob({
       verdict: "unknown",
@@ -532,8 +546,14 @@ describe("npm run meter -- --jobs", () => {
     spawnSync("node", ["scripts/agent-meter.mjs", "--jobs", ...window, ...args], {
       cwd: process.cwd(),
       encoding: "utf8",
-      // A fake gh that records and refuses, so a spec can never spend the real shared bucket.
-      env: { ...process.env, PATH: `${join(dir, "bin")}:${process.env.PATH}`, ...env },
+      // A fake gh that records and refuses, so a spec can never spend the real shared bucket. The
+      // fixture folders are named for the laptop's checkout, so the meter is told that is the one.
+      env: {
+        ...process.env,
+        AGENT_CHECKOUT_DIR: "/Users/eric/Developer/skynet-capital",
+        PATH: `${join(dir, "bin")}:${process.env.PATH}`,
+        ...env,
+      },
       timeout: 60000,
     });
 

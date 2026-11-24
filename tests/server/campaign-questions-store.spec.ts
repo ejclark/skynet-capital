@@ -42,6 +42,12 @@ describe("parseQuestionLog", () => {
     expect(parseQuestionLog([onlyEmail])).toEqual([]);
   });
 
+  it("keeps a re-ask's lastAskedAt and drops one that is not a time (#7445)", () => {
+    const dated = entry("NVDA", { lastAskedAt: "2026-11-11T12:00:00.000Z" });
+    expect(parseQuestionLog([dated])).toEqual([dated]);
+    expect(parseQuestionLog([entry("AMD", { lastAskedAt: "soon" })])).toEqual([entry("AMD")]);
+  });
+
   it("refuses a campaign scope that is free text", () => {
     const bad = entry("NVDA", { campaign: "DROP TABLE", id: "DROP TABLE/name:NVDA" });
     expect(parseQuestionLog([bad])).toEqual([]);

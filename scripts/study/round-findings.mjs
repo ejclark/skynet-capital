@@ -131,6 +131,46 @@ export function fromInstruments(raw) {
 }
 
 /**
+ * The filings Moneypenny drafted in one member's session (#8005, world-chat.mjs → `chat.jsonl`):
+ * one finding each, class `chat`, never an issue. A follow-up on an earlier filing counts too; a
+ * drafted view or research question is the product in use, not friction, and is left out. The
+ * level is "surface" because no evaluator judged it — the readout keeps the class in its own column
+ * and the matchers decide what, if anything, on the key it names. `sent` is whether the member sent
+ * that draft on (a `sent` line after it carrying its title).
+ * @param {{member: string, viewport: string, records: object[]}} session
+ */
+export function fromChat({ member, viewport, records }) {
+  const sentTitles = new Set(
+    records.filter((r) => r.kind === "sent").map((r) => String(r.draft?.title ?? "")),
+  );
+  return records
+    .filter((r) => r.kind === "chat")
+    .flatMap((r) =>
+      (r.drafts ?? [])
+        .filter((d) => d.kind === "filing" || d.kind === "followup")
+        .map((d) => {
+          const title = String(d.draft?.title ?? "").trim();
+          const details = String(d.draft?.details ?? "").trim();
+          return {
+            class: "chat",
+            member,
+            level: "surface",
+            severityRaw: d.draft?.kind === "bug" ? "moderate" : "low",
+            surface: { route: r.page ?? null, viewport },
+            evidence: [],
+            what: [title, details].filter(Boolean).join(" — ") || "(an empty draft)",
+            detail: {
+              draft: d.kind,
+              kind: d.draft?.kind ?? null,
+              said: r.said,
+              sent: sentTitles.has(String(d.draft?.title ?? "")),
+            },
+          };
+        }),
+    );
+}
+
+/**
  * A finding's stable id: its surface and words, hashed — the same inputs, the same id. Never its
  * class: a matcher could hash the handful of classes against what + surface and read the source.
  */

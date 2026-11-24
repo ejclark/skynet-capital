@@ -53,6 +53,19 @@ const TRANSIENT_GH_ERROR =
 export const isTransientGhError = (text) => TRANSIENT_GH_ERROR.test(String(text ?? ""));
 
 /**
+ * Is this failure a spent hourly budget rather than a wrong answer? `RATE_LIMIT_EXHAUSTED` in
+ * GraphQL's extensions, or the message GitHub prints for either bucket. Matched on the message
+ * too because `gh` surfaces the latter and swallows the former; `ghRest` puts a curl 403's body
+ * in the message (`withResponseBody`), so a REST exhaustion reads the same way.
+ *
+ * Lives here, not in index.mjs, so a module index.mjs imports (capsule-stall.mjs, #6942) can
+ * apply the same skip without a circular import. index.mjs re-exports it.
+ */
+export function isRateLimited(err) {
+  return /rate limit|RATE_LIMITED|RATE_LIMIT_EXCEEDED/i.test(String(err?.message ?? ""));
+}
+
+/**
  * Block this thread for `ms`. Exported because `withRetry` is not the only thing in this router
  * that has to wait out GitHub: `resolveBoardItem` re-reads a Projects board that is briefly stale
  * (#3979), and a second sleep implementation next door would be one more thing to keep in step.

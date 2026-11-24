@@ -34,7 +34,7 @@
 // deduped by a hidden marker in the comment itself. Pure core (`capsuleIntents` and its helpers) +
 // a thin gather/act shell, so every branch is fixture-drivable.
 import { decisionLine } from "./assignments.mjs";
-import { ghRest, ghRestAll, sh, trustedComment } from "./gh.mjs";
+import { ghRest, ghRestAll, isRateLimited, sh, trustedComment } from "./gh.mjs";
 import { ensureLabel, FOOTER, LABELS } from "./labels.mjs";
 import { LOST_RUNNER, normalizeJobName, REOPEN_DAYS, REOPEN_MARKER } from "./repair.mjs";
 
@@ -425,12 +425,23 @@ export function gatherCapsules(nowMs, { rest = ghRest, restAll = ghRestAll } = {
  * The `--audit` entry: fixture capsules when a fixture carries them, the live read otherwise. A
  * read that fails turns the run red but never takes the rest of the audit down with it — the stall,
  * conflict and in-progress checks in the same run still act.
+ *
+ * A spent budget is the one failure that does NOT turn it red (#6942, run 44213063274): the
+ * installation's REST bucket hit 0/5000 mid-step, and this catch swallowed the 403 before
+ * `auditIntentsOrSkip` (index.mjs) could apply its skip — so `route` went red over a read the next
+ * push makes again. The check is level-based; a skipped tick loses nothing but a delay.
  */
 export function capsuleAudit(fixture, { gather = gatherCapsules, nowMs = Date.now() } = {}) {
   if (fixture) return capsuleIntents({ capsules: fixture.capsules ?? [] });
   try {
     return capsuleIntents({ capsules: gather(nowMs) });
   } catch (err) {
+    if (isRateLimited(err)) {
+      console.log(
+        `::warning::capsule stall check skipped — this token's API budget is spent (${String(err.message).slice(0, 200)}). The next push reads again.`,
+      );
+      return [];
+    }
     console.log(`::error::capsule stall check failed — ${String(err?.message).slice(0, 300)}`);
     process.exitCode = 1;
     return [];

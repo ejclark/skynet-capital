@@ -32,6 +32,7 @@ import {
   printVolModel,
 } from "../../scripts/research/long-call-fence-math.mjs";
 import { bars, earningsDates } from "../../scripts/research/market-data.mjs";
+import { mean } from "../domain/mean.js";
 import { AI_DIP_CHAIN, chainStart } from "../playbooks/chain.js";
 import {
   AI_DIP_MODELS,
@@ -105,8 +106,6 @@ const pathOf = (run: ChainRun): string => {
   if (run.path.some((p) => p.event === "expired")) return "expired → the long call";
   return "the put still open";
 };
-const mean = (xs: readonly number[]): number =>
-  xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : Number.NaN;
 const usd = (x: number | null): string =>
   x === null || Number.isNaN(x)
     ? "—"

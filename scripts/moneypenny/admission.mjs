@@ -2,7 +2,9 @@
 // build session starts on it". Both claim lanes (`claimFeedback`, `claimPlan` in index.mjs) ask it
 // AFTER their ready/parking checks and BEFORE they take a lease, so a refused issue holds no lease,
 // never gets `in-progress`, and keeps its `ready` label — a later tick (the retry sweep, wired in
-// the workflow) asks again via `nextAdmissible`.
+// the workflow) asks again via `nextAdmissible`. The ask and the mark are not atomic, so each lane
+// also counts again right after it marks (`recountAfterMark`, #7316): a claim that finds itself past
+// the cap takes the mark and the lease back off, and ends exactly as a refusal does.
 //
 // PURE HALF: `surfaceOf`, `admitBuild`, `nextAdmissible`, `queueNote`, `isDuplicateQueueNote` — no
 // network, no clock. IMPURE HALF: `readInFlight` and `gateAdmission`, every read injectable so a
@@ -52,7 +54,7 @@
 // for 38 minutes on 2026-10-27 and held the queue behind it the whole time.
 
 import { isMain } from "../is-main.mjs";
-import { classOf } from "../rank.mjs";
+import { blocksOf, classOf, kindIndex, kindOf } from "../rank.mjs";
 import { ensureGhToken, ghRest, ghRestAll, sh } from "./gh.mjs";
 import {
   boardedReason,
@@ -214,35 +216,33 @@ export function admitBuild({ issue, inFlight = [], mode, waiting }) {
   return { admit: true, reason: fastTrack ? `admitted (fast-track, ${position})` : "admitted" };
 }
 
-const createdMs = (i) => {
-  const t = Date.parse(i?.createdAt ?? i?.created_at ?? "");
-  return Number.isNaN(t) ? Number.POSITIVE_INFINITY : t;
-};
+/** The rank class (`P0`–`P3`) `npm run rank` gives an issue, from its labels and the count of open
+ *  issues it blocks (`issue_dependencies_summary.blocking`, which the REST row carries). */
+const rankOf = (i) => classOf({ labels: labelNames(i.labels), blocks: blocksOf(i) });
 
-/** The rank class (`P0`–`P3`) and bug-expedite flag `npm run rank` gives an issue, from its labels. */
-const rankOf = (i) => classOf({ labels: labelNames(i.labels) });
+/** Where an issue's Kind sits in the lane order (`KINDS`, rank.mjs): 0 pulls first inside a lane. */
+const kindRankOf = (i) => kindIndex(kindOf({ labels: labelNames(i.labels), blocks: blocksOf(i) }));
 
 /**
- * THE PULL ORDER: the pullable issues (`pullable`, labels.mjs) in the order a puller takes them.
- * `fast-track` goes first (it is urgent by definition), then the same order `npm run rank` shows —
- * class (a hand-set `P0`–`P3` wins), an expedited bug first inside its class (Eric, 2026-09-30:
- * bugs found mid-build are the next pull) — then oldest by `createdAt`, then lowest number.
+ * THE PULL ORDER: the pullable issues (`pullable`, labels.mjs) in the order a puller takes them —
+ * the order the board's lanes show (#6871 §4): class (a hand-set `P0`–`P3` wins; `fast-track` is
+ * P0), then Kind (fix first, bug, blocks other work, slows delivery, member asked, improvement,
+ * idea), then lowest issue number, which is oldest first. A bug is P1 and sorts first inside it, so
+ * it still pulls ahead of standard work and of blockers (Eric, 2026-09-30: bugs found mid-build are
+ * the next pull); a `fast-track` card set to a lower lane by hand waits in that lane.
  * Oldest-first alone picked a P3 idea (#784) over P0 work on the sweep's first live tick.
  */
 export function pullQueue(readyIssues = [], opts) {
-  return (readyIssues ?? [])
-    .filter((i) => i && pullable(i, opts))
-    .map((i) => ({ i, r: rankOf(i) }))
-    .sort(
-      (a, b) =>
-        Number(hasLabel(b.i, LABELS.fastTrack.name)) -
-          Number(hasLabel(a.i, LABELS.fastTrack.name)) ||
-        a.r.cls.localeCompare(b.r.cls) ||
-        Number(Boolean(b.r.expedite)) - Number(Boolean(a.r.expedite)) ||
-        createdMs(a.i) - createdMs(b.i) ||
-        (a.i.number ?? 0) - (b.i.number ?? 0),
-    )
-    .map(({ i }) => i);
+  return (readyIssues ?? []).filter((i) => i && pullable(i, opts)).sort(pullOrder);
+}
+
+/** `pullQueue`'s comparator alone, for a list that is not pullable: the recount's in-flight one. */
+export function pullOrder(a, b) {
+  return (
+    rankOf(a).cls.localeCompare(rankOf(b).cls) ||
+    kindRankOf(a) - kindRankOf(b) ||
+    (a.number ?? 0) - (b.number ?? 0)
+  );
 }
 
 /**
@@ -544,18 +544,183 @@ export function gateAdmission(issue, deps = {}) {
     return verdict;
   }
   log(`::notice::not building #${issue.number} — ${verdict.reason}`);
+  noteQueued(issue, verdict.reason, { comments, comment, log });
+  return verdict;
+}
+
+/** ONE queue note per reason: skipped when the newest one already says the same; best-effort. */
+function noteQueued(issue, reason, { comments, comment, log }) {
   try {
-    if (isDuplicateQueueNote(comments(issue.number), verdict.reason)) {
+    if (isDuplicateQueueNote(comments(issue.number), reason)) {
       log(`· #${issue.number} already carries this queue note — not repeating it`);
     } else {
-      comment(issue.number, queueNote(verdict.reason));
+      comment(issue.number, queueNote(reason));
     }
   } catch (err) {
     log(
       `::warning::could not post the queue note on #${issue.number}: ${String(err?.stderr || err?.message).slice(0, 200)}`,
     );
   }
-  return verdict;
+}
+
+// ── the recount after the mark (#7316) ───────────────────────────────────────────────────────────
+//
+// THE RACE IT CLOSES. `gateAdmission` reads the in-flight list, then the claim marks its issue: a
+// check, then an act, with nothing atomic between. On 2026-11-10 a clear-path pass made 22 issues
+// ready 2 s apart; each label event ran its own claim, each read the count before the others had
+// marked, and 9 builds started against a surge cap of 6. The cap is the spend dial, and raising it
+// is Eric's alone. GitHub offers no lock a claim could take, and putting label claims in the
+// workflow's `scan` concurrency group edits a protected file, so the fix lives here: MARK, RE-READ,
+// WITHDRAW. Every claim marks first, then counts again with itself in the list, and gives its seat
+// back if the count shows it past the cap.
+//
+// WHY SEATS GO BY WHEN EACH MARK LANDED, NOT BY THE PULL ORDER ALONE. A claim that re-read before a
+// rival marked saw room and stayed, and it cannot be told to leave later. A rival higher in the
+// pull order that ranked itself ahead of it would also stay, and the count would be one over — the
+// same check-then-act, moved one step later. So an earlier mark always holds its seat ahead of a
+// later one. The pull order decides between marks GitHub stamps in the same second, which is what
+// "two issues compete for the last seat" can mean safely: both marked before either could have
+// seen the other.
+//
+// WHY THE WAIT. Two marks in one second are only both visible after that second has ended, so a
+// claim that is not alone waits `SETTLE_MS` before the count that decides. A lone claim — nothing
+// else in flight on the first re-read — keeps its seat at once, so the common case pays one read
+// and no wait (a fresh issue started in 0.45 min before this; the issue's constraint). Its one
+// residual: `inFlightCap` same-second rivals all ranked above a claim that saw itself alone. Reading
+// each in-flight issue's mark time costs one events read apiece, paid only when the count is over.
+//
+// FAILS CLOSED, like the gate: an unreadable in-flight list withdraws; another issue's unreadable
+// mark time holds its seat ahead of this one; this issue's own unreadable mark time ranks it last.
+// A withdrawal is not a start the retry limit counts (`WITHDRAWN_MS`, retry-hold-outage.mjs).
+
+/** How long a claim that is not alone waits after marking, before the count that decides. */
+export const SETTLE_MS = 2000;
+
+const sleepMs = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+
+/** One issue's label events over REST through `gh` (`readComments`' shape), one object a line. */
+const readLabelEvents = (n) =>
+  sh("gh", [
+    "api",
+    "--paginate",
+    `repos/{owner}/{repo}/issues/${n}/events?per_page=100`,
+    "--jq",
+    '.[] | select(.event == "labeled" or .event == "unlabeled") | {event, label, created_at}',
+  ])
+    .split("\n")
+    .filter((l) => l.trim())
+    .map((l) => JSON.parse(l));
+
+/** When `in-progress` last went on, in ms, from an issue's events; null when it never did. */
+export function markedAtOf(events) {
+  const at = (events ?? [])
+    .filter((e) => e?.event === "labeled" && e.label?.name === LABELS.inProgress.name)
+    .map((e) => Date.parse(e?.created_at ?? ""))
+    .filter((ms) => !Number.isNaN(ms));
+  return at.length ? Math.max(...at) : null;
+}
+
+/**
+ * Does `issue` hold a seat among the in-flight issues? Pure. Seat order: the earlier mark first
+ * (by the second GitHub stamped it), the pull order between marks in the same second. The first
+ * `inFlightCap` are seated; past them, one `fast-track` card with no other `fast-track` ahead of
+ * it takes the one seat over the cap (#6871 call 6, `admitBuild`'s rule 3). `markedAt` maps an
+ * issue number to its mark in ms; a missing entry ranks first, except this issue's own, which
+ * ranks last — both fail closed.
+ *
+ * @returns {{ seated: boolean, count: number, cap: number, urgent?: number }}
+ */
+export function seatOf({ issue, inFlight = [], mode, markedAt = new Map() }) {
+  const cap = mode?.caps?.inFlightCap ?? 0;
+  const list = [issue, ...(inFlight ?? []).filter((i) => i && i.number !== issue.number)];
+  if (list.length <= cap) return { seated: true, count: list.length, cap };
+  const secondOf = (i) => {
+    const ms = markedAt.get(i.number);
+    if (ms == null) return i.number === issue.number ? Infinity : -Infinity;
+    return Math.floor(ms / 1000);
+  };
+  const order = [...list].sort((a, b) => secondOf(a) - secondOf(b) || pullOrder(a, b));
+  let urgent;
+  for (const [index, i] of order.entries()) {
+    const fastTrack = hasLabel(i, LABELS.fastTrack.name);
+    const seated = index < cap || (fastTrack && urgent === undefined);
+    if (i.number === issue.number) return { seated, count: list.length, cap, urgent };
+    if (fastTrack) urgent ??= i.number;
+  }
+  return { seated: false, count: list.length, cap, urgent }; // unreachable: `issue` is in `list`
+}
+
+/**
+ * The impure recount every claim lane runs right after it marks `issue` in progress, and before it
+ * hands the build its number. Same deps as `gateAdmission`, plus `readEvents` (an issue's events,
+ * for its mark time) and `settle` (the wait). On a withdrawal it posts the same deduped queue note
+ * a refusal gets; taking the mark and the lease back off is the caller's, since only it holds them.
+ *
+ * @returns {{ keep: boolean, reason: string }}
+ */
+export function recountAfterMark(issue, deps = {}) {
+  const {
+    readMode = () => readWorkMode(),
+    readInFlight: inFlightOf = () => readInFlight(),
+    readEvents = readLabelEvents,
+    settle = sleepMs,
+    comments = readComments,
+    comment = postComment,
+    log = console.log,
+  } = deps;
+  const withdraw = (reason) => {
+    log(`::notice::withdrawing #${issue.number} — ${reason}`);
+    noteQueued(issue, reason, { comments, comment, log });
+    return { keep: false, reason };
+  };
+  const recount = () => {
+    try {
+      return { inFlight: inFlightOf() };
+    } catch (err) {
+      log(
+        `::warning::#${issue.number} in-flight re-read failed — ${String(err?.message).slice(0, 200)}`,
+      );
+      return { failed: true };
+    }
+  };
+  const unread = "queued: the in-flight list could not be re-read";
+  const first = recount();
+  if (first.failed) return withdraw(unread);
+  if (!first.inFlight.some((i) => i && i.number !== issue.number)) {
+    return { keep: true, reason: "the only build in flight" };
+  }
+  settle(SETTLE_MS);
+  const second = recount();
+  if (second.failed) return withdraw(unread);
+  const mode = readMode();
+  const quick = seatOf({ issue, inFlight: second.inFlight, mode });
+  if (quick.count <= quick.cap) {
+    return { keep: true, reason: `${quick.count} of ${quick.cap} in flight` };
+  }
+  const markedAt = new Map();
+  for (const i of [issue, ...second.inFlight]) {
+    if (!i || markedAt.has(i.number)) continue;
+    try {
+      markedAt.set(i.number, markedAtOf(readEvents(i.number)));
+    } catch (err) {
+      log(
+        `::warning::#${i.number}'s mark time could not be read — ${String(err?.message).slice(0, 200)}`,
+      );
+      markedAt.set(i.number, null);
+    }
+  }
+  const seat = seatOf({ issue, inFlight: second.inFlight, mode, markedAt });
+  if (seat.seated) {
+    log(
+      `::notice::#${issue.number} keeps its seat — ${seat.count} marked against a cap of ${seat.cap}`,
+    );
+    return { keep: true, reason: `seated (${seat.count} marked, cap ${seat.cap})` };
+  }
+  const urgent =
+    hasLabel(issue, LABELS.fastTrack.name) && seat.urgent !== undefined
+      ? `, and fast-track #${seat.urgent} is already building`
+      : "";
+  return withdraw(`queued: ${seat.count - 1} of ${seat.cap} in flight${urgent}`);
 }
 
 /**

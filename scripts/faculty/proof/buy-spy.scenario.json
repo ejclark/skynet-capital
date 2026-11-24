@@ -1,0 +1,19 @@
+{
+  "id": "PROOF-01",
+  "member": "returning-trader",
+  "viewport": "desktop",
+  "start": "/app/trade",
+  "optimal": 6,
+  "scenario": "You want three shares of SPY at whatever the market pays when it next opens. Place it, then tell us what the app says will happen to it.",
+  "end": {
+    "orders": [
+      {
+        "symbol": "SPY",
+        "side": "buy",
+        "quantity": 3,
+        "orderType": "market",
+        "state": ["working", "filled"]
+      }
+    ]
+  }
+}

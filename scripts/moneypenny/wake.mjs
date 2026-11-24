@@ -32,7 +32,7 @@
 // the throttle on a do-nothing build being retried in a loop), never wakes a failed build's own
 // retry (`wakeNext`'s note), and never acts under `halt`: the peek it asks refuses everything
 // there, fast-track included.
-import { sh } from "./gh.mjs";
+import { isRateLimited, sh } from "./gh.mjs";
 import { issueNumberFromSlug, LABELS, setInProgress } from "./labels.mjs";
 
 /** The workflow the push pass re-dispatches, and so the one a wake re-dispatches. */
@@ -72,6 +72,11 @@ export function dispatchScan({ exec = sh, ref = process.env.GITHUB_REF_NAME || "
  * the merge-tick pace it always had. When a claim DOES hold it (a build that ended normally keeps
  * its lease for the TTL), the scan's own sweep steps past it — so the wake asks what is behind it.
  *
+ * A SPENT BUDGET SKIPS THE PEEK, NOT THE DISPATCH (#6942, 2026-11-24). Run 45304863363's wake died
+ * on the peek's read of the `ready` list with the App's REST budget at 0, and the red run reopened
+ * #6942 over a quota. The peek is a read, and the push pass re-peeks on the next merge, so it skips
+ * with a warning, as the router's other reads do (#6998). The dispatch is a write and still throws.
+ *
  * @param deps.peek  the retry sweep's dry run (`peekNext`) — the pick, or null; `peek(n)` leaves #n out
  * @param deps.isHeld  does a live claim lease hold #n? (`isClaimed` on either lane's slug)
  * @param deps.dispatch  the re-dispatch (`dispatchScan`)
@@ -85,18 +90,35 @@ export function wakeNext({
   freed,
 } = {}) {
   const why = freed ? `#${freed} freed a build slot` : "a build slot freed";
-  let pick = peek();
-  if (pick && freed && pick.number === freed) {
-    if (!isHeld(freed)) {
-      console.log(
-        `::notice::${why} — the next pick is #${freed} itself with no claim held; no dispatch`,
-      );
-      return {
-        dispatched: false,
-        line: `· ${why} — the next pick is #${freed} itself (a failed build's retry); it waits for the next merge`,
-      };
-    }
-    pick = peek(freed);
+  // The reads: the peek, and the lease check when the pick is the freed issue itself. `SELF` is
+  // "the pick is #freed and no claim holds it", a failed build's own retry.
+  const SELF = Symbol("self");
+  const choose = () => {
+    const first = peek();
+    if (!(first && freed && first.number === freed)) return first;
+    return isHeld(freed) ? peek(freed) : SELF;
+  };
+  let pick;
+  try {
+    pick = choose();
+  } catch (err) {
+    if (!isRateLimited(err)) throw err;
+    console.log(
+      `::warning::${why} — the peek's read hit a spent API budget (${String(err.message).slice(0, 160)}); no dispatch, the next push peeks again`,
+    );
+    return {
+      dispatched: false,
+      line: `· ${why} — API budget spent; the wake waits for the next push`,
+    };
+  }
+  if (pick === SELF) {
+    console.log(
+      `::notice::${why} — the next pick is #${freed} itself with no claim held; no dispatch`,
+    );
+    return {
+      dispatched: false,
+      line: `· ${why} — the next pick is #${freed} itself (a failed build's retry); it waits for the next merge`,
+    };
   }
   if (!pick) {
     console.log(`::notice::${why} — nothing admissible, no dispatch`);

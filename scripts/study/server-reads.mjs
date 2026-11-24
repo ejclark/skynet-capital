@@ -4,10 +4,14 @@
 //
 // The chain is `dashboard-server.ts`'s own dispatch order for the families that answer GETs
 // (`serveJsonApi`, then its `serveWriteApis` families), minus the auth gate — the session is handed in
-// directly, which is exactly what the gate would have handed each route. Streams and posts are
-// left out: a study world composes reads, and records writes without sending them. The admin
-// family answers its GETs (the owner's cards read `{owner:false}` for a member).
+// directly, which is exactly what the gate would have handed each route. Streams are left out: a
+// study world composes reads, and records a member's writes without sending them. The one POST is
+// a world's own history (`serverWrite`, #8005 R&D): what a member saved before the instant, put
+// through the same handlers into the world's member stores at compose time, so a saved view or a
+// drafted playbook is the code's own record, never one typed into a fixture. The admin family
+// answers its GETs (the owner's cards read `{owner:false}` for a member).
 
+import { Readable } from "node:stream";
 import { serveAdminApi } from "../../src/server/admin-api-routes.ts";
 import { serveAlertDeliveryApi } from "../../src/server/alert-delivery-route.ts";
 import { serveCompanionApi } from "../../src/server/companion-routes.ts";
@@ -53,20 +57,88 @@ function capture() {
   return { res, out };
 }
 
-/** The GET-answering families, in the server's own order. */
+/**
+ * A route family the pin may predate (#8005): the landing page's quests and fast track, the
+ * member's convictions, campaigns, chains and authored plays, the book-wait line and the target
+ * split all landed after the profile pin. Imported dynamically, so an older pin composes as before;
+ * where the module or the name is missing the family claims nothing, and a world that asks for its
+ * reads fails compose with them listed, never a silent hole. Each load is a thunk around a LITERAL
+ * path: a variable-path `import()` is invisible to the spec runner's bundler and resolved by plain
+ * Node, which cannot follow the route modules' `.js` specifiers to their `.ts` files, so under
+ * rstest every such family claimed nothing (#8025's repair brief; study-optional-families.spec.ts).
+ */
+async function optional(load, name) {
+  const mod = await load().catch(() => ({}));
+  const fn = mod[name];
+  return typeof fn === "function" ? fn : async () => false;
+}
+
+const serveQuestsApi = await optional(
+  () => import("../../src/server/quests-route.ts"),
+  "serveQuestsApi",
+);
+const serveQuestsTakenApi = await optional(
+  () => import("../../src/server/quests-taken-route.ts"),
+  "serveQuestsTakenApi",
+);
+const serveBookWaitApi = await optional(
+  () => import("../../src/server/book-wait-routes.ts"),
+  "serveBookWaitApi",
+);
+const serveFastTrackApi = await optional(
+  () => import("../../src/server/fast-track-route.ts"),
+  "serveFastTrackApi",
+);
+const serveDraftOrderApi = await optional(
+  () => import("../../src/server/draft-order-route.ts"),
+  "serveDraftOrderApi",
+);
+const serveMemberConvictionsApi = await optional(
+  () => import("../../src/server/member-convictions-api-routes.ts"),
+  "serveMemberConvictionsApi",
+);
+const serveMemberCampaignsApi = await optional(
+  () => import("../../src/server/member-campaigns-api-routes.ts"),
+  "serveMemberCampaignsApi",
+);
+const serveMemberChainsApi = await optional(
+  () => import("../../src/server/member-chains-api-routes.ts"),
+  "serveMemberChainsApi",
+);
+const serveAuthoredPlaysApi = await optional(
+  () => import("../../src/server/authored-plays-api-routes.ts"),
+  "serveAuthoredPlaysApi",
+);
+const serveTargetSplitApi = await optional(
+  () => import("../../src/server/target-split-api-routes.ts"),
+  "serveTargetSplitApi",
+);
+
+/** The GET-answering families, in the server's own order (`dashboard-server.ts` →
+ *  `serveWriteApis`, its playbook writes and reads inlined). */
 const FAMILIES = [
   serveTradeApi,
   serveTradeOrdersApi,
   serveOptionPositionsApi,
   serveOptionLifecycleApi,
   serveDeskAlertsApi,
+  serveQuestsApi,
+  serveQuestsTakenApi,
+  serveBookWaitApi,
+  serveFastTrackApi,
   serveAlertDeliveryApi,
   serveWatchlistApi,
   serveOptionApi,
+  serveDraftOrderApi,
   servePlaysApi,
   serveSettingsApi,
   serveSubscriptionsApi,
+  serveMemberConvictionsApi,
+  serveMemberCampaignsApi,
+  serveMemberChainsApi,
+  serveAuthoredPlaysApi,
   serveSavedPositionsApi,
+  serveTargetSplitApi,
   serveLearnApi,
   serveOnboardingApi,
   servePlaybooksApi,
@@ -82,15 +154,13 @@ const FAMILIES = [
   serveJoinApi,
 ];
 
-/**
- * Ask the real handlers for one GET as one session.
- * @returns {Promise<{status: number, body: unknown} | undefined>} undefined when nothing claims it
- */
-export async function serverRead(url, config, channel, session) {
+/** Ask the real handlers for one request as one session: the server's dispatch order, GETs first
+ *  through `serveJsonApi` (which answers no write), then the families. */
+async function dispatch(req, url, config, channel, session) {
   const path = url.split("?")[0];
   const { res, out } = capture();
-  const req = { method: "GET", url, headers: {} };
-  let claimed = await serveJsonApi(res, path, url, config, channel, session);
+  let claimed =
+    req.method === "GET" && (await serveJsonApi(res, path, url, config, channel, session));
   for (const family of FAMILIES) {
     if (claimed) break;
     claimed = await family(req, res, path, config, session);
@@ -103,4 +173,27 @@ export async function serverRead(url, config, channel, session) {
     body = { text: out.text };
   }
   return { status: out.status || 200, body };
+}
+
+/**
+ * Ask the real handlers for one GET as one session.
+ * @returns {Promise<{status: number, body: unknown} | undefined>} undefined when nothing claims it
+ */
+export function serverRead(url, config, channel, session) {
+  return dispatch({ method: "GET", url, headers: {} }, url, config, channel, session);
+}
+
+/**
+ * One POST a member made before the world's instant, through the same handlers (#8005): the body
+ * as the page sends it (JSON), the session the member's. Compose-time only — a world's browser
+ * never reaches this (world-route.mjs records its writes and answers a stub).
+ * @returns {Promise<{status: number, body: unknown} | undefined>} undefined when nothing claims it
+ */
+export function serverWrite(url, payload, config, channel, session) {
+  const req = Object.assign(Readable.from([Buffer.from(JSON.stringify(payload))]), {
+    method: "POST",
+    url,
+    headers: { "content-type": "application/json" },
+  });
+  return dispatch(req, url, config, channel, session);
 }

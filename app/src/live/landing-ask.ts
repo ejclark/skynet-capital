@@ -126,7 +126,7 @@ export interface PartyQuestion {
   /** Display names, first asker first. Never an email. */
   readonly askedBy: readonly string[];
   readonly askedAt: string;
-  readonly state: "found" | "waiting" | "no-finding-yet";
+  readonly state: "found" | "waiting" | "on-the-shelf" | "no-finding-yet";
   readonly ahead?: number;
   readonly found: readonly PartyFinding[];
 }
@@ -168,6 +168,7 @@ export function questionState(q: PartyQuestion, laneReads: boolean = LANE_READS_
   if (q.state === "waiting" && !laneReads) return "Kept; research doesn't read the list yet";
   if (q.state === "waiting")
     return q.ahead ? `In line, ${q.ahead} ahead` : "Next in line for research";
+  if (q.state === "on-the-shelf") return "Written up on the research shelf";
   return "No finding yet";
 }
 
@@ -183,6 +184,7 @@ export const HOLDER = "The research desk";
 
 export function holderLine(q: PartyQuestion): string {
   if (q.state === "found") return `${HOLDER} answered this question about ${q.subject}.`;
+  if (q.state === "on-the-shelf") return `${HOLDER} wrote up ${q.subject} on the research shelf.`;
   if (q.state === "no-finding-yet") return `${HOLDER} looked at ${q.subject} and has nothing yet.`;
   return `${HOLDER} holds this question about ${q.subject}.`;
 }
@@ -190,7 +192,13 @@ export function holderLine(q: PartyQuestion): string {
 // ── Asking in the campaign (POST /api/campaigns/ask) ────────────────────────────────────────────
 
 export type AskReply =
-  | { readonly ok: true; readonly status?: string; readonly tell?: string }
+  | {
+      readonly ok: true;
+      readonly status?: string;
+      readonly tell?: string;
+      /** On a `covered` reply, whose cover it is: the house's (shelf or campaign) or the party's. */
+      readonly cover?: "house" | "party";
+    }
   | { readonly ok: false; readonly error: string };
 
 export function askInCampaign(input: {
@@ -204,6 +212,28 @@ export function askInCampaign(input: {
     campaign: input.campaign,
     question: input.question.trim().slice(0, QUESTION_MAX),
   });
+}
+
+/**
+ * File one name on the research list with no campaign (a bare ask, #7034 slice 3c): "Ask what we
+ * know" on a calendar event. The walk's question rides with the name, as the chat's research card
+ * sends its own (#7300), so the desk reads what was asked. The server's reply carries the queue's
+ * own wait, so nothing here words a time.
+ */
+export function askForResearch(input: {
+  readonly subject: string;
+  readonly question: string;
+}): Promise<AskReply> {
+  return postJson<AskReply>("/api/campaigns/ask", {
+    kind: "name",
+    subject: input.subject,
+    question: input.question.trim().slice(0, QUESTION_MAX),
+  });
+}
+
+/** What a filed research ask tells the member: the queue's own sentence, never a guessed wait. */
+export function filedLine(reply: AskReply): string {
+  return reply.ok ? (reply.tell ?? "Kept on the research list.") : reply.error;
 }
 
 /** The sentence a reply leaves under the form: the server's own words when it sent some. */

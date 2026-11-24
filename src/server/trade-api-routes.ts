@@ -64,10 +64,18 @@ function parseTradeBody(raw: string): TradeApiBody | undefined {
   if (typeof symbol !== "string" || symbol.length === 0 || symbol.length > 12) return undefined;
   if (typeof quantity !== "number" || !Number.isFinite(quantity)) return undefined;
   if (action !== "buy" && action !== "sell") return undefined;
-  const orderType =
-    body.orderType === "limit" || body.orderType === "stop" || body.orderType === "market"
-      ? body.orderType
-      : undefined;
+  // An order type this route does not know is REFUSED, never dropped: dropping it left the
+  // default, so a client that sent a type the server had not learned yet (a stop-limit, a
+  // trailing stop) would have submitted an immediate MARKET order in its place — a protective
+  // exit turned into a sale at whatever the market paid (change-scenarios census, 2026-11-16).
+  if (
+    body.orderType !== undefined &&
+    body.orderType !== "limit" &&
+    body.orderType !== "stop" &&
+    body.orderType !== "market"
+  )
+    return undefined;
+  const orderType = body.orderType as TicketOrderType | undefined;
   const limitPrice = parsePositivePrice(body.limitPrice);
   const stopPrice = parsePositivePrice(body.stopPrice);
   // Anything but the two named values is dropped, never coerced — the preview then shows the
@@ -116,7 +124,7 @@ async function readTradeBody(
  *     be exempt from THIS lock, and wasn't in the domain rules (`unlockedCodes`) either — only the
  *     client and this route forgot to ask.
  */
-async function resolveStockRefusal(
+export async function resolveStockRefusal(
   action: "buy" | "sell",
   requesterId: string | undefined,
   config: DashboardServerConfig,

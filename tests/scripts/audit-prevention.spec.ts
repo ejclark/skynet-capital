@@ -68,6 +68,21 @@ describe("the questions every correctness reviewer is asked", () => {
       for (const question of REVIEWER_QUESTIONS) expect(text).toMatch(question);
     },
   );
+
+  // A done-or-in-flight marker with no re-open path and no age limit blocks its item forever while
+  // every run stays green: a shelved ask dropped on a re-ask, an open PR holding a slot unaged.
+  const STALE_MARKER =
+    /already done or in flight.*what re-opens it when the new request differs.*how long a stalled one can hold the slot.*neither a re-open path nor an age limit/i;
+
+  it("ask the audit's reviewer what re-opens an already-handled marker and when it ages out", async () => {
+    const { calls } = await audit([], { causes: [] });
+    const prompt = flat(calls.find((c) => c.opts.label?.startsWith("review"))?.prompt ?? "");
+    expect(prompt).toMatch(STALE_MARKER);
+  });
+
+  it("ask the reviewer agent the same", () => {
+    expect(flat(readFileSync(".claude/agents/reviewer.md", "utf8"))).toMatch(STALE_MARKER);
+  });
 });
 
 describe("the audit's prevention step", () => {

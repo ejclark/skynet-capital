@@ -89,6 +89,80 @@
           "judge": "can this reader tell how the bot's week went?"
         }
       ]
+    },
+    {
+      "id": "j2",
+      "name": "one of Sauron's fills, and the week it booked (cross-feature, #8005)",
+      "viewports": ["phone"],
+      "steps": [
+        {
+          "id": "s1",
+          "goto": "/app/activity",
+          "sees": "the league's fills, newest first; a Sauron fill names him as a way to his desk",
+          "ears": "WHEN a viewer reads a bot's fill on Activity, the app shall name the bot as a way to its desk.",
+          "expect": [
+            { "role": "heading", "name": "Activity" },
+            { "role": "link", "name": "Sauron", "href": "/app/u/sauron", "within": "main" }
+          ],
+          "act": { "click": { "role": "link", "name": "Sauron", "within": "main" } },
+          "after": [{ "url": "/app/u/sauron" }],
+          "judge": "can this reader tell who made this trade?"
+        },
+        {
+          "id": "s2",
+          "goto": "/app/activity",
+          "sees": "the same fill offers only the bot's desk: nothing opens THIS fill on its Ledger",
+          "ears": "WHEN a viewer opens a fill from Activity, the app shall land on that fill in its account's Ledger.",
+          "expect": [{ "role": "link", "href": "/app/u/sauron/ledger", "within": "main" }],
+          "known_gap": "a fill on the league's Activity opens the bot's desk, never that fill: the order key drops at the hand-off (the row links /u/<id> with no #act-<orderId>, and the client's WireTrade carries no orderId though the server's WireTradeRow does, src/observatory/wire-data.ts:42; docs/IA.md §3 order, U1)",
+          "where": "app/src/shell/wire-trade-row.tsx:103",
+          "severity": "medium",
+          "fix": "M",
+          "judge": "can this reader find the bot's reason for this exact trade?"
+        },
+        {
+          "id": "s3",
+          "goto": "/app/u/sauron",
+          "sees": "Sauron's desk; its Pulse tab opens how the account breathes week by week",
+          "ears": "WHEN a viewer opens a bot's Pulse from its desk, the app shall keep the same bot in view.",
+          "expect": [{ "role": "link", "name": "Pulse", "href": "/app/u/sauron/pulse" }],
+          "act": { "click": { "role": "link", "name": "Pulse", "exact": true } },
+          "after": [
+            { "url": "/app/u/sauron/pulse" },
+            { "role": "heading", "name": "Realized P/L by week" }
+          ],
+          "judge": "can this reader tell how the bot's week went?"
+        },
+        {
+          "id": "s4",
+          "goto": "/app/u/sauron/pulse",
+          "sees": "realized P/L by week as bars, one picture: no week opens the trades that made it",
+          "ears": "WHEN a viewer picks a week on a bot's Pulse, the app shall open that week's fills on its Ledger.",
+          "expect": [
+            {
+              "role": "link",
+              "href": "/app/u/sauron/ledger",
+              "within": "section.pulse-panel:has(h2:has-text('Realized P/L by week'))"
+            }
+          ],
+          "known_gap": "a week can't open its trades: the weekly bars are one image (role img) and the Ledger takes no date in its address (narrowingFromSearch reads symbol and playbook only, app/src/shell/account-ledger.tsx:40), so the date key has no carrier (docs/IA.md §10 U12)",
+          "where": "app/src/routes/u.$id.pulse.tsx:68",
+          "severity": "medium",
+          "fix": "M",
+          "judge": "can this reader see which trades made the week?"
+        },
+        {
+          "id": "s5",
+          "goto": "/app/u/sauron/ledger",
+          "sees": "Sauron's Ledger, every order newest first, with his Pulse one tap back",
+          "ears": "WHEN a viewer reads a bot's Ledger, the app shall list its orders and keep its Pulse one tap away.",
+          "expect": [
+            { "role": "heading", "name": "Ledger", "exact": true },
+            { "role": "link", "name": "Pulse", "href": "/app/u/sauron/pulse" }
+          ],
+          "judge": "can this reader find what the bot actually did?"
+        }
+      ]
     }
   ]
 }

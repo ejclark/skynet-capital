@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { COMPANION_SYSTEM_PROMPT } from "../../src/companion/companion-system-prompt.js";
 import {
   BOARD_RANKINGS,
@@ -107,6 +108,23 @@ describe("PLACES — the list itself", () => {
     }
   });
 
+  it("names a place the top bar has a tab for with the tab's own word (#8005: one place, one word)", () => {
+    const root = readFileSync("app/src/routes/__root.tsx", "utf8");
+    const tabs = [...root.matchAll(/<Link\s+to="([^"]+)"[^>]*>\s*([^<{]+?)\s*<\/Link>/g)].map(
+      (m) => ({
+        path: m[1],
+        label: (m[2] ?? "").replace(/&amp;/g, "&"),
+      }),
+    );
+    expect(tabs.map((t) => t.path)).toEqual(
+      expect.arrayContaining(["/", "/accounts", "/trade", "/research"]),
+    );
+    for (const tab of tabs) {
+      const place = PLACES.find((p) => p.path === tab.path);
+      if (place) expect(place.name).toBe(tab.label);
+    }
+  });
+
   it("includes the places the prompt's own examples send members to", () => {
     const paths = PLACES.map((p) => p.path);
     expect(paths).toEqual(expect.arrayContaining(["/trade", "/leaderboard", "/settings"]));
@@ -166,6 +184,14 @@ describe("positionRow — a position's address on Profile", () => {
   it("is the blotter row's own anchor on /accounts, and an allowed link", () => {
     expect(positionRow("NVDA")).toBe("/accounts#pos-NVDA");
     expect(placeHref(positionRow("NVDA261218P00100000"))).toBe("/accounts#pos-NVDA261218P00100000");
+  });
+
+  it("names the account when it is given, so Profile never opens a default account instead (#7305)", () => {
+    expect(positionRow("NVDA", "human-eric")).toBe("/accounts?account=human-eric#pos-NVDA");
+    expect(positionRow("NVDA", "a b&c")).toBe("/accounts?account=a%20b%26c#pos-NVDA");
+    expect(placeHref(positionRow("NVDA", "human-eric"))).toBe(
+      "/accounts?account=human-eric#pos-NVDA",
+    );
   });
 });
 

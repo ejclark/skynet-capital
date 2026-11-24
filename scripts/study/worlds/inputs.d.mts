@@ -6,6 +6,15 @@ export interface EdgarCompany {
 }
 
 export function loadInput(name: string): Record<string, unknown>;
+export function shiftDay(date: string, days: number): string;
+export function shiftCalendar<T>(value: T, days: number): T;
 export function edgarAnswer(input: {
   edgar?: Record<string, EdgarCompany>;
 }): (url: string) => unknown;
+export function vixAnswer(input: {
+  vix?: { session: string; close: number };
+}): (url: string) => { raw: string; contentType: string } | undefined;
+export function worldNetwork(input: Record<string, unknown>): (url: string) => unknown;
+export function githubAnswer(input: {
+  feedback?: { issues?: Record<string, Record<string, unknown>> };
+}): (url: string) => Record<string, unknown> | undefined;

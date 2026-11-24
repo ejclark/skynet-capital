@@ -17,8 +17,9 @@ import type { EquitySample } from "./history-record.js";
  *
  * A flow is inferred only when BOTH exceed the tolerance: unexplained cash alone is an assignment
  * or an unjournaled fill (equity holds), an equity move alone is the market (cash holds). The amount
- * is the equity change — a reset that also clears held positions moves cash by far more than the
- * capital that arrived — with the unexplained cash kept beside it for tuning.
+ * is the equity change — a reset that also clears held positions moves cash by that change plus the
+ * cleared book's net value, more or less than the capital that arrived and even the other way for
+ * a short book — with the unexplained cash and the book still held kept beside it for tuning.
  *
  * This is a deduction from our records, never a broker report, so every line says `inferred`.
  * The samples are the hub's book, so the hub must fold a fill the way the journal prices it — an
@@ -48,6 +49,16 @@ export interface CapitalFlow {
   readonly direction: "added" | "removed";
   /** The cash change our fill journal did not explain — the second witness, kept for tuning. */
   readonly unexplainedCash: number;
+  /**
+   * The net value of the book the later sample carried through the window: its equity minus its
+   * cash, less what journaled fills inside the window opened after a reset could have landed (their
+   * cash, added back) — the third witness (#7729, #8064). An Alpaca paper reset clears every
+   * position, so a genuine reset leaves this near zero whatever the cleared book was worth — even
+   * when a bot trades before the reset or again after it, inside the same window — while the cash it
+   * moves is the equity change plus that book's net value (either sign). Absent on lines recorded
+   * before #7729.
+   */
+  readonly heldAfter?: number;
   /** Always inferred: deduced from two of our own records, not reported by the broker. */
   readonly basis: "inferred";
 }
@@ -147,7 +158,8 @@ export function inferCapitalFlow(
   if (prev.participantId !== next.participantId) return undefined;
   const tolerance = flowTolerance(prev.equity);
   const equityMove = next.equity - prev.equity;
-  const unexplainedCash = next.cash - prev.cash - fillCashBetween(records, prev.at, next.at);
+  const fillCash = fillCashBetween(records, prev.at, next.at);
+  const unexplainedCash = next.cash - prev.cash - fillCash;
   if (Math.abs(equityMove) <= tolerance || Math.abs(unexplainedCash) <= tolerance) return undefined;
   if (spreadNear(records, prev.at, next.at)) return undefined;
   return {
@@ -157,8 +169,30 @@ export function inferCapitalFlow(
     amount: equityMove,
     direction: equityMove > 0 ? "added" : "removed",
     unexplainedCash,
+    heldAfter: heldAfter(next, records, prev.at),
     basis: "inferred",
   };
+}
+
+/**
+ * The third witness (#7729): the later book's net value, less what the window's fills opened. A fill
+ * swapped its cash for positions worth about as much, so its cash is added back — but only for fills
+ * AFTER a reset: the reset cleared what an earlier fill opened (#8064). The reset's instant is not
+ * on either sample, so every split the journal allows is tried (the window's start, then each fill
+ * line's time, that line falling before the split) and the book nearest flat is kept. A position
+ * carried in from before the window and still held is in the later book at every split, so it reads
+ * as held unless the window's own fills net it out — which the single split before #8064 allowed too.
+ */
+function heldAfter(
+  next: EquitySample,
+  records: readonly TradeActivityRecord[],
+  from: string,
+): number {
+  const book = next.equity - next.cash;
+  const fillTimes = records.map((record) => record.at).filter((at) => at > from && at <= next.at);
+  return [from, ...fillTimes]
+    .map((split) => book + fillCashBetween(records, split, next.at))
+    .reduce((nearest, held) => (Math.abs(held) < Math.abs(nearest) ? held : nearest));
 }
 
 /** Cheap pre-check: could this pair carry a flow at all? Equity must have moved beyond tolerance

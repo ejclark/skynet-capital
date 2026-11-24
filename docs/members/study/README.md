@@ -94,7 +94,7 @@ main's fixes. A study of the pin runs in a worktree **at the pin**, with only to
 (`scripts/study/**`) copied over it:
 
 ```sh
-node scripts/study/pin.mjs prepare --commit <sha> --dir <abs dir>   # worktree, harness, installs, build, compose, parity
+node scripts/study/pin.mjs prepare --commit <sha> --dir <abs dir> [--worlds <a,b>]   # worktree, harness, installs, build, compose, parity
 node scripts/study/pin.mjs remove  --dir <abs dir>                  # only a worktree prepare made
 ```
 
@@ -106,6 +106,8 @@ node scripts/study/pin.mjs remove  --dir <abs dir>                  # only a wor
 - **Reuse is strict:** a re-run reuses only a worktree `prepare` made, still at the commit, with no
   changes outside `scripts/study/`; the main and the running checkout are always refused.
 - **The parity table** lands in `<dir>/.study-run/parity.txt`; the run exits with parity's status.
+  `--worlds` composes and checks only an area's own worlds, so a world built for another pin (the
+  profile worlds keep the October shell, `worlds/shell-surfaces.mjs`) cannot fail this area's run.
 - **One tap away is part of the world.** Members and experts leave the area through the app nav and
   the header's icons, so each world also lists those destinations (`oneTap`,
   `worlds/shell-surfaces.mjs`) and parity proves them: a page stuck on a loading line, a service
@@ -144,7 +146,8 @@ npx tsx scripts/study/worlds/facts.mjs --run <compose dir> --world <world> [--vi
   that is on screen at some scroll position — in tree order, nothing hand-picked. Then each one is
   operated once from a fresh load (storage cleared): its screen, a frame before, one tap at the
   centre of its visible part through the recorder's own `act`, the recorder's frame after. A
-  control whose activation would leave the app is recorded as skipped, with why; past the cap
+  control whose activation would leave the app, or that sends Moneypenny a message (the census
+  never asks her; members do, live), is recorded as skipped, with why; past the cap
   (default 60 a route) controls are logged as dropped, never silently. A control the tree holds but
   no screen shows is scrolled into view — a sideways scroller's far end is then listed and operated
   (`reach: "scrolled-into-view"`); one a box a member cannot scroll keeps out of view is `clipped`, a
@@ -199,6 +202,14 @@ node scripts/study/readout.mjs --grade <round>/grade.json --round <round dir> --
   [--job-map <framer output>] [--reveal --sealed <key dir>]   # → docs/members/study/<name>/readout.md
 ```
 
+- **By IA root (#8005).** After grading, `node scripts/study/root.mjs --round <dir> [--ia
+  docs/IA.md]` asks a sealed rooter (`roles/rooter.md`, aware, never scoring) to place each counted
+  structural group under a row of `docs/IA.md` §10 (`U1`…) or a new root it names in plain words,
+  and writes `<round>/roots.json`. The readout then shows ROOTS, not rows: the top ten ranked by
+  their worst problem, then reports, then members reached, each with its problems under it and its
+  lead problem's frames; the rest folded; anything unplaced under "not yet placed", never hidden
+  (`ia-roots.mjs`, specced in `tests/scripts/study-readout-roots.spec.ts`). Without `roots.json`
+  the page is the flat top-ten list.
 - **The matchers** run from `node scripts/study/match.mjs --sealed <key dir> --round <dir>
   [--expect <file>]` (#5218) over `findings-unlabelled.jsonl`, in chunks of 40: matcher 1 and
   matcher 2 apart, then one tie-break over the findings they disagree on. Each is a sealed call on
@@ -227,7 +238,7 @@ node scripts/study/readout.mjs --grade <round>/grade.json --round <round dir> --
   - Written after it by the aware roles: `matches-1.json` + `matches-2.json` (+ `tiebreak.json`),
     `checks.json` (real · false · world-artifact, with `same_as` to merge one problem reported
     twice), `struck.json` (read when `--struck` is not given), `touches.json` (which key surfaces
-    any trace reached).
+    any trace reached), `roots.json` (each counted structural group's IA root, root.mjs).
   - A control round is a round directory too (`round.mjs --frozen-from`, below), plus the matcher
     files and `control.json` `{kind, source, frozen, pin, sourcePin, expect: [ids]}`. The grader
     holds it to the flag it is passed under (`--negative` takes only a negative control), to
@@ -290,6 +301,34 @@ node scripts/study/drive.mjs --run <run-dir> --world <world> --viewer <viewer> -
   and shift measurements never count it; a census operating a select frames it open. Proof:
   `scripts/study/tasks/proof/picker-*.json`. Date and time inputs get no stand-in yet: none sits on
   the profile's routes.
+
+## Moneypenny in a world (#8005)
+
+A world composed with `chat: true` puts Moneypenny's chat in a member's hands. Production's own
+route and engine answer it (`serveCompanionApi`, `createCompanionChat`) in a child process pinned to
+the world's instant, over the world's book (`world-chat-server.mjs`); only the wire to the model
+differs (`chat-transport.mjs`): a sealed call on the model production asks for, read as a stream
+and stopped at her first tool calls, exactly where the API would hand them back. The engine runs
+the tools over the world and asks again. Drafts are never filed: a sent filing is told it was
+"filed as #90001…" and recorded (`world-chat.mjs`), and each filing she drafts becomes a finding
+of class `chat` — its own column, never blind (round-contract.mjs).
+
+```sh
+node --import tsx scripts/study/world-chat.mjs --probe --run <compose dir> --world <name> \
+  --viewer <who> --out <fresh dir> [--page <path>] [--stub <dir>] --say "<message>" [--say …]
+```
+
+- **Live, recorded, replayable.** A session's chat calls land in its `requests/` beside the
+  member's (`moneypenny-NNN.json`), so `usage.json` counts them and a resumed session replays what
+  it paid for; a stubbed dry run answers from `<stub>/moneypenny/<n>.json`. `drive.mjs --chat
+  live|off|stub:<dir>` overrides the default (the actor's mode; a scripted run spends no model).
+- **What she cannot do in a world**, said rather than faked: the lookups production fills from
+  GitHub or its volume (work status, roadmap, similar filings, what members ask, research
+  questions, sized suggestions) answer "not available" (`worlds/shell-artifacts.mjs`).
+- **Proof, 2026-11-23** (cross-today, eric): she called `get_my_positions` and answered with the
+  world's book (MSFT 45, AAPL 60, $61,480 cash); asked why the bot sold its put, she read positions
+  and round trips, said she could not see the bot's account, and on "yes" drafted a filing that
+  landed in `chat.jsonl` as a `chat` finding.
 
 ## Running a round
 
@@ -385,18 +424,32 @@ node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answe
 ## Starting a new area — checklist
 
 1. Write the area's answer key (the owner's or members' own complaints), seal it outside the repo,
-   and post its hash and the pin on the owning issue. Every scored item gets its own id **at sealing**
+   and post its hash and the pin on the owning issue. Between cloud sessions the key travels as a
+   private artifact on the owner's account (#8005): `node scripts/study/seal.mjs pack --key <dir>
+   --name <study> --out <page.html>` prints the bundle hash to post; publish the page with the
+   Artifact tool; the grading session reads it back (Artifact `read`), saves it, and runs
+   `seal.mjs unpack --page <file> --expect <the posted hash> --out <dir outside any checkout>`. Only
+   the sealing and grading sessions open it; blind roles run with no tools and cannot. Every scored item gets its own id **at sealing**
    (a pointer like "the open gaps in the README" cannot be graded), and `primes.json` is written in
    the grader's shape, `{"<member>": ["<id>", …]}`. The controls' `--expect` files name the
    mechanism each fix removed (or each planted defect) beside its id, not only the item.
    Write the area config's `roles`: one plain line per member, never a quote from a card.
 2. `scripts/study/worlds/<area>-*.mjs`: compose payloads from the real builders at the pin, one pinned
-   instant, full-URL stubs. Run `scripts/study/parity.mjs` and strike anything that cannot render, out loud.
+   instant, full-URL stubs. A world stands on the instant its input names (`"instant"`, default
+   2026-10-08); a feature dated after it renders empty, so pick a day the area's features exist,
+   move a proven book there by whole weeks (`"shiftDays"`, `worlds/inputs.mjs`) and name a corpus
+   commit from that morning. A November pin's one-tap list is `worlds/nav-surfaces.mjs`. Run `scripts/study/parity.mjs` and strike anything that cannot render, out loud.
    Derive, never type, any figure the page shows two ways: yesterday's closing equity is cash plus
    each position at its `lastday` (`worlds/book.mjs` → `yesterdayEquity`), and compose refuses a
    world whose header day change is not the sum of its rows' (`worlds/day-change.mjs`, #5052). P/L
    booked today on a position already closed is the one honest gap: declare it as the
    participant's `closedToday` and say so in the input's comment.
+   A world may name its own instant (`instant`, #8010): put it after anything the pin's code
+   serves as already true (a scored claim, a stated view), and the pin's own commit can be its
+   corpus.
+   What a member wrote before the instant (a stated view, a drafted playbook) is the input's
+   `writes`, replayed through production's own handlers into production's own stores at each
+   write's time (`worlds/member-stores.mjs`, R&D); a write the handler refuses stops the compose.
 3. Run the framer, then the task author, then the lint. Freeze and hash the tasks.
 4. Thin slice: one member, one task, phone width.
 5. Full round, then grade, then the readout. Add what broke to *Lessons* below.
@@ -492,3 +545,58 @@ node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answe
   scrolled the page 563px". The matchers run from `match.mjs`, which asks each one again for the
   findings it skipped and lists any still left out. Whether this was enough shows in the next
   control's `match/coverage.json` (complete, or the ids left out) and in how its matchers read A12.
+- 2026-11-17 · **the actor could not delete.** Its keys were Enter and Escape, so a member facing a
+  pre-filled box typed "400405" where a person would backspace. The change study
+  (`scripts/faculty/`) found it; the actor now has Backspace and Tab, with a count (schema, role,
+  parser and recorder). A reading round run before this date never needed them. Its findings stand,
+  but a session that gave up at a pre-filled box may have been the instrument's fault.
+- 2026-11-23 · **every world stood on 2026-10-08, before the features a cross-feature round walks.**
+  At that instant the landing page had no edition, and the pinned build's campaign code failed on
+  a corpus with no campaigns folder. A world now names its own instant (#8005); the cross-feature
+  world is the profile book moved six weeks to Thursday 2026-11-19. Moving a book is not free:
+  on the shifted Tuesday CRWV sat inside its print blackout, so the real wheel sold nothing and its
+  sale moved one session; the quests read a VIX file and a year of SPY and QQQ the world did not
+  hold. Every gap showed up as a compose refusal or a parity "not judged", never as a finding.
+- 2026-11-23 · **a CLI call cannot hand a tool back.** Moneypenny's first world turn said "the
+  lookup failed twice": the model called `get_my_positions` natively, and `claude -p` refused a tool
+  it does not define. Asking for lookups inside the structured answer did not help — she never
+  used the field. The transport now reads the stream and stops at her first native tool calls, as
+  the API would, and the engine runs them (`chat-transport.mjs → toolCatchingCall`).
+- 2026-11-23 · **the harness had drifted from the app by the bot loop's pin.** The profile's
+  worlds, re-run there, missed 16 surfaces: the app nav lost Leaderboard and gained Campaign,
+  Moneypenny became a dock, and the profile's bot chip, calendar head and section tabs had moved.
+  The owner's switchboard and the per-member stores production always wires were unwired too. The
+  bot loop's worlds (#8005) wired those seams opt-in and prove the November shell
+  (`nav-surfaces.mjs`); the profile's worlds keep theirs, as their pin served them. Run parity at
+  the pin before writing a new area's surfaces.
+- 2026-11-23 · **the canary voided the cross-feature thin slice: the expert role quoted the owner.**
+  Its three standing checks carried Eric's own words about round pages (2026-10-14: controls that
+  "cover content I need to evaluate", feedback that "doubles the work", a design "free of
+  distraction"), added after the profile round, so no canary had read them. Asked what it knew,
+  the expert recited them: every expert would have started primed. The checks stay; the quotes
+  moved here. A role prompt carries method, never the owner's complaints.
+- 2026-11-23 · **the thin slice's two other catches.** After three lint rewrites the tasks step
+  crashed on a helper it never imported (that path had never run); and the oracle failed a right
+  "down $4 so far today" for a −$4 day, because a sign counted only as a touching minus. Both fixed;
+  rescored, the session passes. Before quoting task success, read one answer by hand.
+- 2026-11-24 · **the bot's loop round: the facts sheet holds the book, not the loop.** Its 768 facts
+  are balances, positions and orders; none says whether a bot is running, what holds it, when it
+  last checked or why it placed an order, and the order facts' regions no longer match the pin's
+  Ledger rows, so no order fact reached a task. All 21 tasks became book reads framed around the
+  bots; the loop reached members only through those scenarios, and the experts carried it (#8109).
+- 2026-11-24 · **the steered world listed one page for its watcher and two for its owner**, so no
+  fact of the watcher's sheet was on a census screen and the task step refused. A census entry now
+  names its `routes` where a viewer's surfaces list is thin; widening it means re-taking the harvest
+  too (`0-preflight/harvest` is kept while its `labels.txt` exists).
+- 2026-11-24 · **price the census before the round.** Seven viewer × world censuses at phone and
+  desktop measured toward three hours and ~570 expert calls; the round ran every census at phone
+  only (members still ran desktop), three at a time, beside the round rather than inside it, and
+  took the thin slice's identical census as its own. A control's census can narrow to the views its
+  fixed and planted mechanisms live on (`tasks/bot-loop-control.json`; logged as config drift).
+- 2026-11-24 · **a cloud session's background job stops at 30 minutes unless given the 2-hour
+  ceiling, and a container restart stops all of them.** A round resumes from its `done.json`
+  files, but a census restarts from its first route, so long censuses are worth running as their
+  own jobs.
+- 2026-11-24 · **the readout drew every frame a lead problem cited**: 24 in one row and 259 files
+  (9MB) for the bot's loop, where the profile round's page carried 11. It now shows at most four a
+  problem (`FRAMES_SHOWN`, readout.mjs), and every frame stays in the round directory.

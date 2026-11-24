@@ -22,6 +22,12 @@ export interface TradeSearch {
   section?: TradeSection;
 }
 
+/** Shares the member holds, opened on the Sell side of the share ticket (rung 102): the receipt's
+ *  "Sell these shares" and the phone's held-stock card both land here. */
+export function sellSharesSearch(desk: string, symbol: string) {
+  return { desk, symbol, play: "102" } satisfies TradeSearch;
+}
+
 /** The ticket a guidance strike presets: covered call → rung 202, put → 201, strike + expiry
  *  together, and the section back to the ticket so the member lands on the preset form. */
 export function guidanceSearch<T extends { section?: TradeSection }>(prev: T, row: LadderRow) {

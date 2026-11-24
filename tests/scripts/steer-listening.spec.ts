@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { afterEach, describe, expect, it, rstest } from "@rstest/core";
 import { answered, claudeWith, commentsWith, META, open, openWith } from "./steer-client-harness";
 
@@ -162,7 +164,7 @@ describe("Done says received once a session has read it (#6606)", () => {
     expect(v.told()).toBe(ACK);
   });
 
-  it("never says received for the press before, even with a clock ahead of this one", async () => {
+  it("never says received for the press before when that ack's clock sits behind this one", async () => {
     const docs = answered();
     const v = await openWith(docs);
     await v.press("done");
@@ -174,8 +176,36 @@ describe("Done says received once a session has read it (#6606)", () => {
     await v.press("done");
     expect(docs[META]?.doneAt).not.toBe(first);
     expect(v.told()).toBe(SENT);
-    await stamp(v, { ackAt: new Date(Date.now() + 11 * MIN).toISOString(), ackFor: first });
+    await stamp(v, { ackAt: ago(5 * MIN), ackFor: first });
     expect(v.told()).toBe(SENT);
+  });
+
+  // #6729: Reopen's merging save leaves the last `ackFor` on the doc, so a session that stamps only
+  // `ackAt` on the next Done lands beside a stale one. The doc then reads the same as a late ack of
+  // the press before (`acks`, status-client.js), and the times decide: at or after this Done answers it.
+  it("says received when a fresh ack lands beside the earlier Done's stale ackFor", async () => {
+    const docs = answered();
+    const v = await openWith(docs);
+    await v.press("done");
+    const first = docs[META]?.doneAt;
+    await stamp(v, { ackAt: ago(0), ackFor: first });
+    await v.press("reopen");
+    await new Promise((r) => setTimeout(r, 2));
+    await v.press("done");
+    expect(v.told()).toBe(SENT);
+    await stamp(v, { ackAt: new Date(Date.now() + MIN).toISOString() });
+    expect(docs[META]?.ackFor).toBe(first);
+    expect(v.told()).toBe(ACK);
+  });
+
+  // #7727: the relaxed rule is for a landed ack only. A page opened later can't see a landing, and
+  // the earlier press's own ack, its guessed clock minutes ahead, reads the same on the doc — so a
+  // reload must not turn an unread Done into Received; the not-received line stays.
+  it("says not received on a reload beside the press before's ack, its guessed clock ahead", async () => {
+    const doneAt = ago(10 * MIN);
+    const v = await openWith(answered({ doneAt, ackAt: ago(7 * MIN), ackFor: ago(12 * MIN) }));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(v.told()).toBe(UNHEARD);
   });
 
   it("stays quiet on a guessed clock ahead of the press once he reopens and presses again", async () => {
@@ -225,6 +255,56 @@ describe("Done says received once a session has read it (#6606)", () => {
   it("says no session has read it on a page opened over two minutes after an unread Done", async () => {
     const v = await openWith(answered({ doneAt: ago(10 * MIN) }));
     await new Promise((r) => setTimeout(r, 5));
+    expect(v.told()).toBe(UNHEARD);
+  });
+
+  // #6730: of 50 `readBackAt` guesses in the transcripts, 49 were a whole minute and 7 sat behind the
+  // real time. A page opened later can't see the read-back land, so one stamped behind the press
+  // must still read as this Done's — never "Not received yet" for a round a session read back.
+  it("shows the read-back on a page opened late, though its stamp sits behind the press", async () => {
+    const doneAt = ago(10 * MIN);
+    const v = await openWith(
+      answered({ doneAt, readBackAt: ago(10 * MIN + 20_000), readBackSummary: "1 pick posted" }),
+    );
+    await new Promise((r) => setTimeout(r, 20));
+    expect(v.told()).toMatch(/^Read back .+ · 1 pick posted$/);
+  });
+
+  it("shows it too when the session's ack names this press", async () => {
+    const doneAt = "2026-10-10T22:21:59Z";
+    const v = await openWith(
+      answered({
+        doneAt,
+        ackAt: "2026-10-10T22:21:00Z",
+        ackFor: doneAt,
+        readBackAt: "2026-10-10T22:21:00Z",
+        readBackSummary: "done",
+      }),
+    );
+    await new Promise((r) => setTimeout(r, 20));
+    expect(v.told()).toMatch(/^Read back .+ · done$/);
+  });
+
+  // Order still counts (#7119): a Done re-armed after an older read-back has no read-back of its own.
+  it("still says not received when the session's ack names the press before this one", async () => {
+    const v = await openWith(
+      answered({
+        doneAt: ago(10 * MIN),
+        ackAt: ago(14 * MIN),
+        ackFor: ago(14 * MIN),
+        readBackAt: ago(12 * MIN),
+        readBackSummary: "1 pick posted",
+      }),
+    );
+    await new Promise((r) => setTimeout(r, 20));
+    expect(v.told()).toBe(UNHEARD);
+  });
+
+  it("still says not received when the only read-back is from long before the press", async () => {
+    const v = await openWith(
+      answered({ doneAt: ago(10 * MIN), readBackAt: ago(HOUR), readBackSummary: "1 pick posted" }),
+    );
+    await new Promise((r) => setTimeout(r, 20));
     expect(v.told()).toBe(UNHEARD);
   });
 
@@ -289,5 +369,45 @@ describe("the page never writes or erases the session's stamps", () => {
     expect(docs[META]).toMatchObject({ listening: { lost: true } });
     expect(typeof (docs[META] as Record<string, unknown>).openedAt).toBe("string");
     expect(ear(v)).toBe(LOST);
+  });
+});
+
+// #6734: #6729 and #6730 had one cause. The writers disagreed about what a stamp carries, and the page
+// judged "received" from one field. The cases above pin the page; this one pins the writers. Every
+// passage that tells a session to stamp `ackAt` must also name `ackFor`, so no session learns the
+// ackAt-only stamp again. It reads whole paragraphs and list items, so a line wrap can't split the
+// pair. Process-change entries dated before 2026-11-01 are history: that day's entry (#6606)
+// introduced `ackFor` and supersedes them, and they keep their wording.
+describe("every instruction to stamp ackAt also names ackFor (#6734)", () => {
+  const ACKFOR_SINCE = "2026-11-01";
+  const STAMPS_ACKAT = /\bstamp\w*\s+`ackAt`|\{\s*ackAt\s*:/i;
+  const passages = (path: string) =>
+    readFileSync(join(process.cwd(), path), "utf8")
+      .split(/\n\s*\n|\n(?=\s*(?:[-*]|\d+\.)\s)/)
+      .filter((p) => {
+        const dated = p.match(/^\s*-\s+(\d{4}-\d{2}-\d{2})\s+·/);
+        return !dated || (dated[1] ?? "") >= ACKFOR_SINCE;
+      })
+      .map((p) => ({ path, text: p.replace(/\s+/g, " ").trim() }));
+
+  const all = [".claude/skills/steer/SKILL.md", "docs/process/REDESIGN.md"].flatMap(passages);
+  const told = all.filter((p) => STAMPS_ACKAT.test(p.text));
+
+  it("finds the instructions in both writers, so the check is never vacuous", () => {
+    expect(told.filter((p) => p.path.endsWith("SKILL.md")).length).toBeGreaterThanOrEqual(1);
+    expect(told.filter((p) => p.path.endsWith("REDESIGN.md")).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("names ackFor in each one", () => {
+    expect(told.filter((p) => !p.text.includes("ackFor"))).toEqual([]);
+  });
+
+  it("would catch an ackAt-only stamp, wrapped or not", () => {
+    const lone = [
+      "- Stamp `ackAt` on `tp/<id>`.",
+      "Woken by done, stamp\n  `ackAt` first.",
+      "{ ackAt: <now> }",
+    ];
+    for (const text of lone) expect(STAMPS_ACKAT.test(text.replace(/\s+/g, " "))).toBe(true);
   });
 });

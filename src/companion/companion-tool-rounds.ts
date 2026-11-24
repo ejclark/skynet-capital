@@ -106,6 +106,7 @@ export async function runToolRounds(
     ...deskDeps,
     ...(handlers.onHandoff ? { onDraft: handlers.onHandoff } : {}),
     ...(handlers.onConvictionDraft ? { onConvictionDraft: handlers.onConvictionDraft } : {}),
+    ...(handlers.onResearchAskDraft ? { onResearchAskDraft: handlers.onResearchAskDraft } : {}),
   };
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
     if (handlers.budget && !handlers.budget()) {

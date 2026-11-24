@@ -1,0 +1,43 @@
+{
+  "$comment": "World 'ladder-first-sale' (#8005, the ladder: docs/IA.md §5.5), layered over bot-loop-today: the same league on the same Monday, except that at 11:45 Eric sold 20 of his 60 AAPL at $241.00 — his first stock sale, the fill that earns rung 102 (Sell stock) today and finishes course 100, so the course of the wheel's two option legs (201, 202) opens. The figures the sale moves follow from that fill: cash +20 × $241.00 = $4,820 (61,480 → 66,300); booked P/L +20 × ($241.00 − $228.40) = $252 (1,240 → 1,492); and the day's P/L on the 20 shares already sold, which no row shows, is declared as closedToday: 20 × ($241.00 − $240.10) = $18 (day-change.mjs). His remaining 40 AAPL keep their cost.",
+  "base": "bot-loop-today",
+  "participants": {
+    "eric": {
+      "cash": 66300,
+      "realizedPl": 1492,
+      "closedToday": 18,
+      "positions": [
+        { "symbol": "MSFT", "quantity": 45, "avgPrice": 498.2, "mark": 486.3, "lastday": 488.0 },
+        { "symbol": "AAPL", "quantity": 40, "avgPrice": 228.4, "mark": 241.2, "lastday": 240.1 }
+      ]
+    }
+  },
+  "humanFills": {
+    "eric": [
+      {
+        "orderId": "eric-aapl-1",
+        "symbol": "AAPL",
+        "side": "buy",
+        "quantity": 60,
+        "price": 228.4,
+        "at": "@-17d 10:40"
+      },
+      {
+        "orderId": "eric-msft-1",
+        "symbol": "MSFT",
+        "side": "buy",
+        "quantity": 45,
+        "price": 498.2,
+        "at": "@-10d 13:15"
+      },
+      {
+        "orderId": "eric-aapl-2",
+        "symbol": "AAPL",
+        "side": "sell",
+        "quantity": 20,
+        "price": 241.0,
+        "at": "@0d 11:45"
+      }
+    ]
+  }
+}

@@ -30,6 +30,7 @@ import { buildOpsStatus } from "../../../src/server/ops-status-service.ts";
 import { createProgressionService } from "../../../src/server/progression-service.ts";
 import { isOccSymbol } from "../../../src/trading/option-symbols.ts";
 import { INSTANT } from "./instant.mjs";
+import { memberFilings } from "./member-filings.mjs";
 
 const AT = new Date(INSTANT);
 const REPO = "ejclark/skynet-capital";
@@ -125,9 +126,36 @@ function progression(book) {
   return createProgressionService({
     readEvidence: ladderOf(book),
     readMessages: async () => [],
-    readFeedback: async () => [],
+    readFeedback: memberFilings(book.feedback).readFeedback ?? (async () => []),
     now: () => new Date(AT),
   });
+}
+
+/**
+ * Per-member stores production wires on every boot (`serve-dashboard.ts`), served EMPTY — nobody in
+ * the world has taken a quest or carried an exit plan (#8005). Opt-in by name (`wired` in a world's
+ * input), so a world composed before these pages existed keeps the payloads it was frozen with.
+ * (Target splits, book waits, the watchlist and the alert stores are wired for every world in
+ * server-config.mjs, #8022 — one source per store.)
+ */
+const EMPTY_STORES = {
+  takenQuests: () => ({
+    taken: () => [],
+    record: refuse("taking a quest"),
+    replace: refuse("re-pointing a taken quest"),
+  }),
+  exitPlans: () => ({
+    carried: () => new Set(),
+    carry: refuse("carrying an exit plan"),
+    drop: refuse("dropping an exit plan"),
+  }),
+};
+
+/** The empty stores a world names (`wired`); an unknown name is refused. */
+function emptyStores(names = []) {
+  const unknown = names.filter((n) => !Object.hasOwn(EMPTY_STORES, n));
+  if (unknown.length > 0) throw new Error(`study world: no empty store ${unknown.join(", ")}`);
+  return Object.fromEntries(names.map((n) => [n, EMPTY_STORES[n]()]));
 }
 
 /** The seams to spread into a world's server config. */
@@ -147,10 +175,13 @@ export function leagueServices(book) {
     readAllLadderProgress: async () => [],
     readLadderEvidence: ladderOf(book),
     readMergedPullRequests: async () => [],
-    // Feedback is switched on (production has its token); this world's members have filed nothing.
+    // Feedback is switched on (production has its token). A world's members have filed nothing
+    // unless its input says what they filed (`feedback`, member-filings.mjs): then the log is theirs
+    // and each filing's status is production's own read of GitHub's answer.
     submitFeedback: refuse("submitting feedback"),
     submitFollowup: refuse("a feedback follow-up"),
     readFeedback: async () => [],
+    ...memberFilings(book.feedback),
     // The Council is on; nobody has spoken this week.
     council: {
       load: () => ({ weeks: {} }),
@@ -181,5 +212,6 @@ export function leagueServices(book) {
     },
     opsStatus: opsStatus(book),
     progression: progression(book),
+    ...emptyStores(book.wired),
   };
 }

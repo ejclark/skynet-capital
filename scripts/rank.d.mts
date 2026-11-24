@@ -5,8 +5,8 @@ export interface RankRow {
   cls: string;
   why: string;
   hand: boolean;
-  /** A derived-P0 bug: sorts first inside its class (Eric, 2026-09-30). */
-  expedite: boolean;
+  /** The board's Kind, the order inside a lane (#6871 §4). */
+  kind: string;
   ready: boolean;
   readyHours: number | null;
   splitFirst: boolean;
@@ -15,16 +15,17 @@ export interface RankRow {
 export const QUEUE_LABELS: string[];
 /** The board's Kind options, in lane-sort order (#6871 slice 3). */
 export const KINDS: string[];
-export function kindOf(input: {
-  labels?: string[];
-  blocks?: number[];
-  horizon?: string | null;
-}): string;
-export function classOf(input: { labels?: string[]; blocks?: number[]; horizon?: string | null }): {
+export function kindOf(input: { labels?: string[]; blocks?: number[] }): string;
+/** The `blocks` list of a REST issue, from `issue_dependencies_summary.blocking` (a count, not numbers). */
+export function blocksOf(
+  issue: { issue_dependencies_summary?: { blocking?: number } } | null | undefined,
+): number[];
+/** Where a Kind sits in the lane order: 0 first, -1 when unknown. */
+export function kindIndex(kind: string): number;
+export function classOf(input: { labels?: string[]; blocks?: number[] }): {
   cls: string;
   why: string;
   hand?: boolean;
-  expedite?: boolean;
 };
 export function rankRow(
   issue: {
@@ -34,7 +35,7 @@ export function rankRow(
     labels?: (string | { name: string })[];
     sub_issues_summary?: { total: number; completed: number };
   },
-  ctx: { readyAt?: number | null; blocks?: number[]; horizon?: string | null; now: number },
+  ctx: { readyAt?: number | null; blocks?: number[]; now: number },
 ): RankRow | null;
 export function rankOrder(rows: RankRow[]): RankRow[];
 export function renderRank(rows: RankRow[]): string;

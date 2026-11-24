@@ -11,6 +11,7 @@ import {
   decisionLine,
   executeAssignments,
   gather,
+  graduatedClass,
   lastAskedAt,
   markedByComments,
   OPEN_CAP,
@@ -187,6 +188,89 @@ describe("plan: assignments (criteria 1–4)", () => {
   });
 });
 
+// #7317: the four held PRs of 2026-11-10 sat a median 37.6 h green, then merged in 93 s once one
+// message listed them. Criterion 4 now starts its clock when the checks go green.
+describe("criterion 4 on the green clock (#7317)", () => {
+  const T = Date.parse("2026-09-30T12:00:00Z");
+  const pr = (over: Record<string, unknown> = {}) => ({
+    number: 7030,
+    title: "feat: held",
+    state: "open",
+    labels: [{ name: "hold-merge" }],
+    created_at: new Date(T - 5 * 36e5).toISOString(), // open 5h: the old 12h timer is silent
+    head: { ref: "feat/x" },
+    assignees: [],
+    ...over,
+  });
+  type Block = { number: number; title: string; plan: boolean };
+  const facts = (greenHoursAgo: number | null, blocks: Block[] = []) =>
+    new Map([
+      [7030, { greenAt: greenHoursAgo === null ? null : T - greenHoursAgo * 36e5, blocks }],
+    ]);
+  const plan6871 = [{ number: 6871, title: "plan", plan: true }];
+
+  it("asks 4h after both required checks went green, naming what it blocks", () => {
+    const { needsYou, actions } = plan({ prs: [pr()], held: facts(4, plan6871), now: T });
+    expect(needsYou).toEqual([
+      expect.objectContaining({
+        number: 7030,
+        criterion: 4,
+        green: true,
+        hours: 4,
+        blocks: plan6871,
+        why: "held PR green 4h",
+      }),
+    ]);
+    expect(actions[0]?.decision).toContain("green 4h and it blocks plan #6871");
+  });
+
+  it("does not ask before 4h green", () => {
+    expect(plan({ prs: [pr()], held: facts(3), now: T }).needsYou).toEqual([]);
+  });
+
+  it("never unassigns a held PR he holds because a push restarted its checks", () => {
+    const asIssue = issue({ number: 7030, labels: [], assignees: [{ login: "ejclark" }] });
+    const his = pr({ assignees: [{ login: "ejclark" }] });
+    expect(
+      plan({ issues: [asIssue], prs: [his], held: facts(null), markers: new Set([7030]), now: T })
+        .actions,
+    ).toEqual([]);
+  });
+
+  it("sends no per-PR card: held PRs reach him on the decisions page, one ask for all", () => {
+    const two = [pr(), pr({ number: 7211 })];
+    const held = new Map([
+      [7030, { greenAt: T - 26 * 36e5, blocks: [] }],
+      [7211, { greenAt: T - 5 * 36e5, blocks: [] }],
+    ]);
+    const assignments = { issues: [], prs: two, markers: new Set<number>(), held };
+    expect(plan({ ...assignments, now: T }).needsYou.map((r) => r.number)).toEqual([7030, 7211]);
+    expect(routeAssignments({ assignments, now: T })).toEqual([]);
+    expect(routeAssignments({ assignments, now: T, heldCards: true })).toHaveLength(2);
+  });
+
+  it("gather reads each held PR's check runs through the single-object read", () => {
+    const paths: string[] = [];
+    const rest = (path: string) =>
+      path === "pulls?state=open" ? [pr({ head: { ref: "feat/x", sha: "s1" } })] : [];
+    const read = (path: string) => {
+      paths.push(path);
+      return {
+        check_runs: ["verify", "integration tests"].map((name) => ({
+          name,
+          status: "completed",
+          conclusion: "success",
+          completed_at: new Date(T - 6 * 36e5).toISOString(),
+        })),
+      };
+    };
+    const deps = gather({ rest, read, now: T, graduated: () => [] });
+    expect(paths[0]).toBe("commits/s1/check-runs?per_page=100");
+    expect(deps.held.get(7030)?.greenAt).toBe(T - 6 * 36e5);
+    expect(plan({ ...deps, now: T }).needsYou[0]).toMatchObject({ number: 7030, green: true });
+  });
+});
+
 describe("assignmentComment", () => {
   it("quotes the decision and carries the marker criteria 2–3 key on", () => {
     const body = assignmentComment({ decision: "Pick A or B?" });
@@ -207,6 +291,7 @@ describe("routeAssignments: the sweep's intents", () => {
     const [intent, ...rest] = routeAssignments({
       assignments: { issues: [issue()], prs: [], markers: new Set() },
       now: NOW,
+      issueCards: true,
     });
     expect(rest).toEqual([]);
     if (!intent) throw new Error("one intent expected");
@@ -220,6 +305,7 @@ describe("routeAssignments: the sweep's intents", () => {
     const intents = routeAssignments({
       assignments: { issues: many, prs: [], markers: new Set() },
       now: NOW,
+      issueCards: true,
     });
     expect(intents).toHaveLength(ASSIGN_CAP);
     expect(intents.map((i) => i.number)).toEqual([1, 3, 5]);
@@ -236,6 +322,7 @@ describe("routeAssignments: the sweep's intents", () => {
         markers: new Set([20, 21, 22, 23]),
       },
       now: NOW,
+      issueCards: true,
     });
     expect(intents.map((i) => [i.kind, i.number])).toEqual([
       ["unassign-eric", 20],
@@ -246,8 +333,9 @@ describe("routeAssignments: the sweep's intents", () => {
     ]);
   });
 
-  it("gives a held PR a decision of its own — the merge click is the ask", () => {
+  it("gives a held PR a decision of its own when per-PR cards are on — the merge click is the ask", () => {
     const [intent] = routeAssignments({
+      heldCards: true,
       assignments: {
         issues: [],
         prs: [
@@ -267,8 +355,8 @@ describe("routeAssignments: the sweep's intents", () => {
     if (!intent) throw new Error("one intent expected");
     expect(intent).toMatchObject({ kind: "assign-eric", number: 10, criterion: 4 });
     expect(intent.body).toContain("Merge this held PR");
-    // …and claims nothing it never checked: `heldPrHours` reads state/draft/label/age only, and
-    // `hold-merge` also goes on a PR held for a taste fork.
+    // …and claims nothing it never checked: with no check runs read, the card says neither green
+    // nor protected (`hold-merge` also goes on a PR held for a taste fork).
     expect(intent.body).not.toMatch(/green|protected/i);
   });
 });
@@ -450,16 +538,27 @@ describe("routeSweep: a close beats an ask on the same issue", () => {
       shippedFeedback: [{ number: 42, title: "shipped but still labelled", pr: 99 }],
       assignments: { issues: [needsEricIssue], prs: [], markers: new Set() },
       now: NOW,
+      issueCards: true,
     }) as { kind: string; number?: number; issueNumber?: number }[];
     expect(intents.map((i) => i.kind)).toEqual(["close-shipped"]);
   });
 
-  it("still asks when nothing in the tick touches that issue", () => {
+  it("still asks when nothing in the tick touches that issue (with per-issue cards on)", () => {
+    const intents = routeSweep({
+      assignments: { issues: [needsEricIssue], prs: [], markers: new Set() },
+      now: NOW,
+      issueCards: true,
+    }) as { kind: string }[];
+    expect(intents.map((i) => i.kind)).toEqual(["assign-eric"]);
+  });
+
+  // #7939 slice 2: the decisions page carries criterion 1's asks, so no card goes out per issue.
+  it("sends no per-issue card for an issue ask by default", () => {
     const intents = routeSweep({
       assignments: { issues: [needsEricIssue], prs: [], markers: new Set() },
       now: NOW,
     }) as { kind: string }[];
-    expect(intents.map((i) => i.kind)).toEqual(["assign-eric"]);
+    expect(intents).toEqual([]);
   });
 });
 
@@ -623,6 +722,7 @@ describe("the batch rhythm", () => {
     routeAssignments({
       assignments: { issues: many, prs: [], markers: new Set(), ...assignments },
       now,
+      issueCards: true,
     });
 
   it("starts a batch at 14:00Z and 21:30Z", () => {
@@ -807,5 +907,101 @@ describe("a read-back and a stale unassign never double up", () => {
     });
     expect(actions.map((a) => a.kind)).toEqual(["readback"]);
     expect(holding).toBe(0);
+  });
+});
+
+// #7939 slice 3: an ask whose class has graduated (docs/process/ALIGNMENT.md rule 3) is decided by a
+// session at its predicted answer and reported in Headlines, never assigned. Rule 4's classes stay
+// his even when a hand-edited table lists them.
+describe("plan: a graduated class is decided, not asked", () => {
+  const ARCHIVE = [
+    "> [!IMPORTANT]",
+    "> **Needs from you**",
+    "> 1. Archive this session? — its PRs are closed",
+    ">    - A (predicted, high): archive",
+    ">    - B: keep it open",
+  ].join("\n");
+  const archiveAsk = issue({ number: 70, title: "archive check", body: ARCHIVE });
+
+  it("routes a fresh ask of a graduated class to a session, with no assignment and no needs-you line", () => {
+    const planned = plan({ issues: [archiveAsk], graduated: ["session housekeeping"], now: NOW });
+    expect(planned.actions).toEqual([]);
+    expect(planned.needsYou).toEqual([]);
+    expect(planned.needsSession).toEqual([
+      expect.objectContaining({
+        number: 70,
+        why: expect.stringContaining('graduated class "session housekeeping"'),
+      }),
+    ]);
+  });
+
+  it("asks as before when the class has not graduated, or the ask carries no prediction", () => {
+    expect(plan({ issues: [archiveAsk], now: NOW }).actions.map((a) => a.number)).toEqual([70]);
+    const unpredicted = issue({ number: 71, title: "archive check", body: CALLOUT });
+    const planned = plan({ issues: [unpredicted], graduated: ["session housekeeping"], now: NOW });
+    expect(planned.actions.map((a) => a.number)).toEqual([71]);
+  });
+
+  it("never lets rule 4's class past him, even listed as graduated", () => {
+    const breaker = issue({ number: 72, body: CALLOUT_WITH_OPTIONS });
+    const planned = plan({ issues: [breaker], graduated: ["bot safety rules"], now: NOW });
+    expect(planned.actions.map((a) => a.number)).toEqual([72]);
+    expect(planned.needsSession).toEqual([]);
+  });
+
+  it("reads the class the ask states, so an ask the keywords cannot place still graduates", () => {
+    const stated = ARCHIVE.replace(
+      ">    - A (predicted, high)",
+      ">    - Class: session housekeeping\n>    - A (predicted, high)",
+    ).replace("Archive this session?", "Close out the old branch?");
+    const planned = plan({
+      issues: [issue({ number: 74, title: "tidy", body: stated })],
+      graduated: ["session housekeeping"],
+      now: NOW,
+    });
+    expect(planned.needsSession.map((n) => n.number)).toEqual([74]);
+  });
+
+  it("lets the keywords veto a stated reversible class when they land on rule 4", () => {
+    const lie = ARCHIVE.replace(
+      ">    - A (predicted, high)",
+      ">    - Class: session housekeeping\n>    - A (predicted, high)",
+    ).replace("Archive this session?", "Raise the spend cap?");
+    const planned = plan({
+      issues: [issue({ number: 75, title: "tidy", body: lie })],
+      graduated: ["session housekeeping"],
+      now: NOW,
+    });
+    expect(planned.actions.map((a) => a.number)).toEqual([75]);
+    expect(planned.needsSession).toEqual([]);
+  });
+
+  // #7959: the keyword guess reaches only three of the seven rule-4 classes, so a merge ask guessed
+  // `unclassified` and its stated reversible class graduated it. The ask's own words now veto too.
+  it("lets rule 4's own words veto a stated reversible class the keyword guess cannot place", () => {
+    const merge = [
+      "> [!IMPORTANT]",
+      "> **Needs from you**",
+      "> 1. Merge the platter PR #8100 now?",
+      ">    - Class: screen design (taste)",
+      ">    - A (predicted, high): merge it",
+      ">    - B: hold it",
+    ].join("\n");
+    const ask = issue({ number: 76, title: "weekly tidy", body: merge });
+    expect(graduatedClass(ask, ["screen design (taste)"])).toBeNull();
+    const planned = plan({ issues: [ask], graduated: ["screen design (taste)"], now: NOW });
+    expect(planned.actions.map((a) => a.number)).toEqual([76]);
+    expect(planned.needsSession).toEqual([]);
+  });
+
+  it("leaves an ask he already holds with him", () => {
+    const held = issue({
+      number: 73,
+      title: "archive check",
+      body: ARCHIVE,
+      assignees: ["ejclark"],
+    });
+    const planned = plan({ issues: [held], graduated: ["session housekeeping"], now: NOW });
+    expect(planned.needsYou.map((n) => n.number)).toEqual([73]);
   });
 });

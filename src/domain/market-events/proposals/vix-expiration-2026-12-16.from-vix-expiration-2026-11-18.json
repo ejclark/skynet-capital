@@ -1,0 +1,11 @@
+{
+  "id": "vix-expiration-2026-12-16",
+  "kind": "opex",
+  "title": "VIX futures & options December 2026 expiration (SOQ settlement) — the 30-day strip it strikes is the January 2027 window",
+  "date": "2026-12-16",
+  "status": "estimate",
+  "source": "EST: Cboe's own settlement file, fetched direct by the vix-expiration-2026-11-18 lane on 2026-11-18. www-api.cboe.com/us/futures/market_statistics/settlement/csv returned HTTP 200 and the row `VX,VX/Z6,2026-12-16,22.6881` (the 2026-11-17 settlement; `?dt=2026-11-13` returned 19.4379). Deterministic cross-check: VIX futures and options expire on the Wednesday 30 days before the third Friday of the following month; January 2027's third Friday is 2027-01-15, and 2026-12-16 is a Wednesday exactly 30 days earlier with no holiday on either leg. Filed estimate because this lane found it in an adjacency sweep and may not self-confirm; its own initial research promotes it. Discovered during the vix-expiration-2026-11-18 D-0 pulse, checked 2026-11-18",
+  "impact": "low",
+  "symbols": [],
+  "notes": "DISCOVERED by the vix-expiration-2026-11-18 D-0 pulse (2026-11-18), now D+28 and so inside the 30-day all-impacts horizon; the 2026-11-04 pulse named it as past the horizon and did not propose it. The calendar tracks the 2026-09-16, 2026-10-21 and 2026-11-18 expirations and then jumps to 2027-01-20, so December 2026 is the one missing month. Same shape as its siblings: it settles to the SOQ of a single SPX/SPXW series struck in the 09:30 ET opening auction, so the opening auction is the execution guard and the settlement is never a trade. It shares the day with retail-sales-2026-12-16 (confirmed, high), and the January 2027 strip it prices opens after the 2026-12-09 FOMC decision and 2026-12-10 CPI. Impact low, matching every other vix-expiration entry. Proposed as an estimate: estimates widen caution only and nothing here licenses an entry."
+}

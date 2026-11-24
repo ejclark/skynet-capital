@@ -21,7 +21,10 @@ export interface LaneAskDetail {
   predicted?: string;
   onSilence?: string;
   unblocks?: string;
+  /** The ask's class, written as the `- Class:` sub-line. */
+  cls?: string;
 }
+export const LANE_RECOVERY: string;
 export function withLaneAsk(
   body: string | null | undefined,
   ask: string,

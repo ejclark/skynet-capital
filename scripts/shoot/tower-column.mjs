@@ -2,7 +2,8 @@
 // unboxed (Eric, 2026-09-30, picked by eye from a mock). Phone first — the page stays one column
 // and the Overview keeps the league in its flow, with no tower frame on a phone — then 1280 (the bench width, where the column
 // starts) and 1600, one Profile section other than the Overview, and R&D — the same frame, never
-// reloaded, on every page (`vantage.tsx`).
+// reloaded, on every page (`vantage.tsx`). The column is the frame's last track, right of the stage
+// (#7487 slice 4a; it sat on the left from #7216); `tower-right.mjs` shoots that move's pair.
 //
 //   npm run build --prefix app && npm run build:scene && node scripts/shoot/tower-column.mjs <outdir>
 

@@ -50,6 +50,12 @@ fails costs them more trust than a control that is greyed with a reason.
   is now a sentence under the buttons. "Past the guards" had no gloss and is now glossed in place
   (`app/src/shell/decisions-section.tsx`).
 
+**Found by the cross-feature journeys (#8005 slice 3, 2026-11-23)** — each pinned as a `known_gap`
+on its step; the line flips to fixed with the fix.
+
+- **Open — j2 s2** (medium): a fill on Activity opens the bot's desk, never that fill on its Ledger.
+- **Open — j2 s4** (medium): a week on Pulse can't open the trades that made it (IA U12).
+
 ## 6. Journeys
 
 ### j1 — what did Sauron do, and why
@@ -84,6 +90,35 @@ fails costs them more trust than a control that is greyed with a reason.
 8. `/app/u/sauron/pulse` — Sauron's Pulse: the equity curve, streaks, and realized P/L by week —
    how bad the bad week was. **WHEN a viewer asks how a bot's week went, the app shall show its
    realized P/L by week.** Judge: can this reader tell how the bot's week went?
+
+### j2 — one of Sauron's fills, and the week it booked (cross-feature, #8005)
+
+_Phone. Crosses the league's Activity → Sauron's desk → his Pulse → his Ledger. Signed out, like the
+rest of this member's walk._
+
+1. `/app/activity` — the league's fills, newest first; a Sauron fill names him as a way to his desk.
+   They tap "Sauron". **WHEN a viewer reads a bot's fill on Activity, the app shall name the bot as
+   a way to its desk.** Judge: can this reader tell who made this trade?
+2. `/app/activity` — the same fill offers only the bot's desk: nothing opens THIS fill on its
+   Ledger. **WHEN a viewer opens a fill from Activity, the app shall land on that fill in its
+   account's Ledger.** _Known gap (medium, fix M, `app/src/shell/wire-trade-row.tsx:103`) — a fill
+   on the league's Activity opens the bot's desk, never that fill: the order key drops at the
+   hand-off (the row links /u/<id> with no #act-<orderId>, and the client's WireTrade carries no
+   orderId though the server's WireTradeRow does, src/observatory/wire-data.ts:42; docs/IA.md §3
+   order, U1)._ Judge: can this reader find the bot's reason for this exact trade?
+3. `/app/u/sauron` — Sauron's desk; its Pulse tab opens how the account breathes week by week. They
+   tap "Pulse". **WHEN a viewer opens a bot's Pulse from its desk, the app shall keep the same bot
+   in view.** Judge: can this reader tell how the bot's week went?
+4. `/app/u/sauron/pulse` — realized P/L by week as bars, one picture: no week opens the trades that
+   made it. **WHEN a viewer picks a week on a bot's Pulse, the app shall open that week's fills on
+   its Ledger.** _Known gap (medium, fix M, `app/src/routes/u.$id.pulse.tsx:68`) — a week can't open
+   its trades: the weekly bars are one image (role img) and the Ledger takes no date in its address
+   (narrowingFromSearch reads symbol and playbook only, app/src/shell/account-ledger.tsx:40), so the
+   date key has no carrier (docs/IA.md §10 U12)._ Judge: can this reader see which trades made the
+   week?
+5. `/app/u/sauron/ledger` — Sauron's Ledger, every order newest first, with his Pulse one tap back.
+   **WHEN a viewer reads a bot's Ledger, the app shall list its orders and keep its Pulse one tap
+   away.** Judge: can this reader find what the bot actually did?
 
 Journey map: [`maps.md`](maps.md#bot-watcher). Findings: [`friction-ledger.md`](friction-ledger.md).
 

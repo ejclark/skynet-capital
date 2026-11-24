@@ -19,7 +19,7 @@ set -euo pipefail
 #       job arms it once verify AND integration tests pass (#4094). `ship automerge` is only the
 #       fallback for a PR that job can't reach, and it refuses until integration tests passed.
 #
-#   scripts/ship.sh platter {open|board|ledger|landed|revert} …
+#   scripts/ship.sh platter {open|board|ledger|landed|revert|rebuild|adopt} …
 #       batch every change that needs Eric's merge onto ONE held PR per cadence, one commit per
 #       item (#1343). Full doctrine at the section header near the bottom of this file.
 #
@@ -75,6 +75,20 @@ api() {
   else
     curl "${args[@]}" "$API/repos/$(repo)$2"
   fi
+}
+# GitHub refuses a PR body over 65,536 CHARACTERS with a 422 "body is too long" — a second, lower
+# wall behind the argv cap above. Moving the body to stdin (#6216) got #5852's ~122 KB ledger past
+# curl, only for GitHub to refuse it, so the ledger still never synced (#6879). Every PR-body write
+# measures first and refuses by name, before the request: dropping ledger rows to fit would post a
+# body that no longer lists every item a merge lands, and since #6252 a ledger holds only real items,
+# so ~200 of them is a platter overdue to land, not a body to trim.
+GH_BODY_MAX=65536
+# body_fits WHAT FIX < body → 0 when the body on stdin fits; else names the limit and FIX, returns 1.
+body_fits() {
+  local n; n="$(python3 -c 'import sys; print(len(sys.stdin.buffer.read().decode("utf-8", "replace")))')"
+  [ "$n" -le "$GH_BODY_MAX" ] && return 0
+  echo "ship: $1 is $n characters; GitHub refuses a PR body over $GH_BODY_MAX (HTTP 422, #6879) — $2" >&2
+  return 1
 }
 http_of() { printf '%s' "${1##*__SHIP_HTTP__}"; }              # code from an api() result
 body_of() { printf '%s' "${1%$'\n'__SHIP_HTTP__*}"; }         # body from an api() result
@@ -346,9 +360,11 @@ cmd_open() {
   # PR-title lint, locally: CI's verify job runs commitlint over the PR TITLE (it becomes the
   # squash subject), and the commit lint further down never sees it — #3774 went red on a 106-char
   # title after local verify passed (2026-09-26). Same check, before anything is pushed.
-  echo "$title" | npx commitlint >/dev/null 2>&1 || {
+  # Here-strings, never `echo | npx commitlint`: a commitlint that exits before reading SIGPIPEs the
+  # writer, and under pipefail a valid title then reads as a lint failure (see checkbody; #7555).
+  npx commitlint >/dev/null 2>&1 <<<"$title" || {
     echo "ship open: PR TITLE fails commitlint (Conventional Commit, lowercase-led, ≤100 chars):" >&2
-    echo "$title" | npx commitlint --verbose >&2 || true
+    npx commitlint --verbose >&2 <<<"$title" || true
     exit 1
   }
   local base="main" bodyfile="" verify=1 hold=0 catchup=1
@@ -387,6 +403,7 @@ cmd_open() {
 
   # The picture/format contract — fail fast, before spending verify or a push.
   cmd_checkbody "$bodyfile"
+  body_fits "the PR body" "shorten it, or move detail into a comment on the PR." < "$bodyfile" || exit 1
 
   # Screenshot weight is permanent git history (the one irreversible cost) — budget by construction.
   if git rev-parse --verify -q "origin/$base" >/dev/null; then
@@ -573,6 +590,11 @@ EOF_SHOTS
   # measured precision and the number that removes this line.
   node scripts/dupe-scan.mjs --diff "origin/$base" 2>/dev/null || true
 
+  # IA placement advisory (#8005 slice 2): every member-facing addition names the IA group it
+  # extends, or is flagged homeless while placing it is one triage line or one docs/IA.md cite.
+  # Silent past one line when the branch adds nothing a member sees; never blocks the push.
+  node scripts/crawl/placement.mjs --base "origin/$base" 2>/dev/null || true
+
   # Braces are load-bearing: stock macOS bash (3.2) reads the ellipsis bytes as identifier
   # characters, so a bare $branch… is the undefined variable "branch…" and set -u kills the run
   # right before the push. Brace any variable followed by a non-ASCII character in this file.
@@ -710,6 +732,13 @@ cmd_automerge() {
   node="$(printf '%s' "$body" | json_field node_id)"
   [ -n "$node" ] || { echo "ship automerge: no node_id on PR #$num" >&2; exit 2; }
   local base_ref; base_ref="$(printf '%s' "$body" | python3 -c 'import sys,json; print(json.load(sys.stdin)["base"]["ref"])')"
+  # NEVER ARM A STACKED CHILD (2026-11-12). A PR based on another PR's branch merges INTO that branch,
+  # and pipeline.yml runs CI only on PRs into main. When its parent squash-merges, GitHub retargets it
+  # to main, `node scripts/stack-sync.mjs <parent>` catches it up, and the pipeline arms it from there.
+  if [ "$base_ref" != "main" ]; then
+    echo "ship automerge: #$num is based on '$base_ref', not main — a stacked child is never armed. It arms itself once its parent merges and its base is main (see the ship skill's Stacked slices)." >&2
+    exit 7
+  fi
   git fetch origin "$base_ref" >/dev/null 2>&1 || true
 
   # Guard on the PR's OWN file list, not the local tree: this is the thing being armed, and a
@@ -864,6 +893,8 @@ cmd_merge() {
 #   scripts/ship.sh platter ledger [--base <ref>] [--body]
 #   scripts/ship.sh platter sync
 #   scripts/ship.sh platter revert <pr> <sha>   # one item out of a landed platter, squashed or not
+#   scripts/ship.sh platter rebuild <pr> [--name platter/<date>] [--no-verify] [--dry-run]
+#   scripts/ship.sh platter adopt <pr> [--no-verify]   # both #7939: see their section below
 #
 # `--closes` / `--part-of` name the issues the item finishes or advances; with neither, the item's
 # own PR's keywords are read, and a branch number alone is only ever `Part of` (#4562). They ride as
@@ -932,8 +963,9 @@ cmd_platter_ledger() {
 # a body is posted (platter_sync_body).
 # An optional argument names more trailer keys to keep: the Summary also reads `ship platter amend`'s
 # notes (Platter-Amends:), which add refs to a row and are never rows themselves.
+# PLATTER_HEAD names another tip than HEAD: `platter rebuild` reads the OLD platter's items this way.
 platter_items_log() {
-  git log --reverse --no-merges --format="%H%x00%s%x00%b%x1e" "$PLATTER_BASE..HEAD" |
+  git log --reverse --no-merges --format="%H%x00%s%x00%b%x1e" "$PLATTER_BASE..${PLATTER_HEAD:-HEAD}" |
     PLATTER_KEYS="Platter-Item: ${1-}" python3 -c '
 import os, sys
 keys = tuple(os.environ["PLATTER_KEYS"].split())
@@ -1007,6 +1039,23 @@ platter_summary_refs() {
   platter_items_log "Platter-Amends:" | node "$(dirname "$0")/platter-refs.mjs" summary
 }
 
+# The items a `platter rebuild` could not re-board (#7939). They are not on the branch, so the ledger
+# cannot show them; the rebuild records each as a `Platter-Dropped: <item> <sha12> <why>` trailer on
+# one empty commit, and every later body is rebuilt from git, so the list survives each board.
+# Prints nothing when no item was dropped.
+platter_dropped_section() {
+  local notes; notes="$(git log --no-merges --format=%b "$PLATTER_BASE..HEAD" | grep '^Platter-Dropped: ' || true)"
+  [ -n "$notes" ] || return 0
+  printf '\n**Dropped in the rebuild** — not on this platter. Each catches up to `main` on its own branch, then re-boards:\n\n'
+  python3 -c '
+import sys
+for line in sys.stdin.read().splitlines():
+    parts = line.split(" ", 3)[1:]
+    item, sha, why = (parts + ["", "", ""])[:3]
+    print("- `%s` (`%s`) — dropped: needs catch-up on its own branch (%s)." % (item, sha[:9], why or "did not apply"))
+' <<<"$notes"
+}
+
 platter_body() {
   cat <<EOF
 ## The picture
@@ -1020,6 +1069,7 @@ _Caption — the held PR at open time, drawn from the boarded commits: the butto
 $(platter_ledger_table)
 
 _Caption — the platter ledger, read from the boarded commits: each item, the evidence it was green, and the sha that reverts it alone._
+$(platter_dropped_section)
 
 > [!WARNING]
 > **Either button lands this.** "Create a merge commit" keeps every item in \`main\`'s history, so \`git revert <sha>\` from the table works at once;
@@ -1094,7 +1144,10 @@ platter_board_item() {
   # Default to the item's newest subject; --subject overrides, which is what a multi-commit item
   # branch wants (a squash has no subject of its own, and the newest one can under-describe it).
   [ -n "$subject" ] || subject="$(git log -1 --format=%s FETCH_HEAD)"
-  printf '%s\n' "$subject" | npx commitlint || {
+  # A here-string, not `printf | npx commitlint`: the pipe's writer could lose a SIGPIPE race to a
+  # commitlint that exits early, and pipefail then refused a valid subject with no lint output —
+  # the board specs' parallel-verify flake (#7555; the trap is the one at checkbody).
+  npx commitlint <<<"$subject" || {
     echo "ship platter: the item subject above is not a valid Conventional Commit — pass --subject." >&2
     exit 1; }
   # Resolved before the squash, so a bad --closes refuses with the platter untouched and unverified.
@@ -1271,6 +1324,8 @@ platter_sync_body() {
   fi
   platter_range_check "$branch" "$num" || return 1
   newbody="$(platter_body)"
+  printf '%s' "$newbody" | body_fits "#$num's platter body" \
+    "land this platter and board the rest onto a new one ('ship platter open <item> --name platter/<new>')." || return 1
   payload="$(printf '%s' "$newbody" | python3 -c "import json,sys; print(json.dumps({'body': sys.stdin.read()}))")"
   resp="$(api PATCH "/pulls/$num" "$payload")" || true
   http="$(http_of "$resp")"
@@ -1516,6 +1571,306 @@ cmd_platter_revert() {
   echo "ship platter revert: reverted ${full:0:7} (#$pr) onto $branch, cut from origin/main — ship it with: scripts/ship.sh open '$(git log -1 --format=%s)'"
 }
 
+# ── rebuild and adopt — keep the ONE platter mergeable, and put every protected hold on it (#7939) ──
+#
+# On 2026-11-22 Eric had 9 separate touches where the platter promised one: #7737 and #7711 were
+# protected, green and held as solo PRs; #7674 bumped workflow files on no platter; and platter
+# #7424 was `conflict-flagged`, so even the one tap could not be taken. Two commands close those
+# leaks without moving the boundary (envelope.json items still merge only by Eric's hand):
+#
+#   scripts/ship.sh platter rebuild <pr> [--name platter/<date>] [--no-verify] [--dry-run]
+#   scripts/ship.sh platter adopt <pr> [--no-verify]
+#
+# `rebuild` is rule 2's "if it conflicts, the platter is re-opened", as a command: a fresh
+# `platter/<today>` from origin/main, each item of the old platter re-boarded in order (the items
+# are its `Platter-Item:` commits, read by platter_items_log; an amendment rides along after its
+# item). An item that does not apply cleanly, adds nothing, or turns the union red is LEFT OFF —
+# never fixed here — and is listed in the new body as "dropped: needs catch-up on its own branch",
+# with a comment on each issue it named. Verify runs per item, through the queue, exactly as `board`
+# runs it. Then the old PR closes with a pointer to the new one. `--dry-run` only reports which
+# items would re-board (no verify, no push) and returns to the branch it started on.
+#
+# `adopt` boards a held PR whose only reason to wait is protection, and closes the solo PR (board's
+# platter_close_item). The judgment is scripts/platter-sweep.mjs's (`--pr`), pure and specced in
+# platter-sweep-decide.mjs, which also says how a taste hold is recognized: those never board.
+
+# Replay the old platter's items onto the checked-out branch. Writes one line per dropped item to
+# $4 (`item<TAB>sha12<TAB>why<TAB>issues`). Returns 75 when a verify had no result (the caller stops).
+platter_replay() {
+  local old="$1" verify="$2" src="$3" drops="$4" plan="/tmp/ship-platter-replay.$$.tsv"
+  local replay_base; replay_base="$(git rev-parse HEAD)"
+  : > "$drops"
+  PLATTER_HEAD="$old" platter_items_log "Platter-Amends:" | python3 -c '
+import sys
+for record in sys.stdin.read().split("\x1e"):
+    if not record.strip():
+        continue
+    sha, _subject, body = (record.strip("\n").split("\x00") + ["", ""])[:3]
+    item = amends = ""
+    issues = []
+    for line in body.splitlines():
+        key, _, value = line.partition(":")
+        key, value = key.strip(), value.strip()
+        if key == "Platter-Item": item = value
+        elif key == "Platter-Amends": amends = value
+        elif key in ("Platter-Closes", "Platter-Refs"): issues.append(value.lstrip("#"))
+    kind = "item" if item else "amend"
+    print("\t".join([sha, kind, item or amends, ",".join(issues)]))
+' > "$plan"
+  local sha kind item issues boarded=" " held_open=" " before why evidence msg touched p
+  # fd 3, not stdin: the hooks `git commit` runs and the verify inherit stdin, and must not eat the plan.
+  while IFS=$'\t' read -r sha kind item issues <&3; do
+    [ -n "$sha" ] || continue
+    if [ "$kind" = amend ]; then
+      # An amendment only means something beside its item; a dropped item's note drops with it.
+      case "$boarded" in *" $item "*) git commit --quiet --allow-empty -C "$sha" ;; esac
+      continue
+    fi
+    before="$(git rev-parse HEAD)"; why=""
+    if ! git cherry-pick --no-commit "$sha" >/dev/null 2>&1; then
+      why="did not apply on main"
+      [ -z "$(git diff --name-only --diff-filter=U)" ] || why="conflicts with main"
+      git cherry-pick --abort >/dev/null 2>&1 || true
+      git reset --hard --quiet "$before"
+    elif git diff --cached --quiet; then
+      git reset --hard --quiet "$before"
+      why="adds nothing on main"
+    elif [ "$verify" = 1 ]; then
+      echo "ship platter: verifying the rebuilt union with $item…"
+      local verify_log="/tmp/ship-platter-verify.$$.log" verify_rc=0
+      bash "$(dirname "$0")/verify-locked.sh" --log "$verify_log" || verify_rc=$?
+      if [ "$verify_rc" = 75 ]; then
+        git reset --hard --quiet "$before"
+        echo "ship platter: no verify result for $item (the verify: line above says why) — the rebuild stops here." >&2
+        return 75
+      fi
+      if [ "$verify_rc" != 0 ]; then
+        git reset --hard --quiet "$before"
+        tail -10 "$verify_log" >&2
+        why="verify red on the rebuilt union"
+      fi
+    fi
+    if [ -n "$why" ]; then
+      printf '%s\t%s\t%s\t%s\n' "$item" "${sha:0:12}" "$why" "$issues" >> "$drops"
+      echo "ship platter: left $item off — $why."
+      held_open="$held_open${issues//,/ } "
+      continue
+    fi
+    if [ "$verify" = 1 ]; then evidence="verify green $(date -u +%Y-%m-%dT%H:%MZ)"
+    else evidence="verify skipped (--no-verify)"; fi
+    touched="$(git diff --cached --name-only | platter_protected)"
+    msg="/tmp/ship-platter-msg.$$.txt"
+    # The item keeps its subject, its original Platter-Sha and its issue refs; the verify evidence
+    # and the protected paths are this union's, not the old one's.
+    {
+      git log -1 --format=%s "$sha"; echo
+      printf 'Platter-Item: %s\n' "$item"
+      git log -1 --format=%b "$sha" | grep '^Platter-Sha: ' | head -1 || true
+      printf 'Platter-Verify: %s\n' "$evidence"
+      if [ -n "$touched" ]; then for p in $touched; do printf 'Platter-Paths: %s\n' "$p"; done
+      else printf 'Platter-Paths: none\n'; fi
+      # Issue refs are copied as they stand; platter_hold_open demotes them once every drop is known.
+      git log -1 --format=%b "$sha" | python3 -c '
+import re, sys
+for line in sys.stdin.read().splitlines():
+    m = re.match(r"^Platter-(Closes|Refs):\s*#?(\d+)\s*$", line.strip())
+    if m:
+        print("Platter-%s: #%s" % (m.group(1), m.group(2)))
+'
+      printf 'Platter-Rebuilt-From: pr %s %s\n' "$src" "${sha:0:12}"
+    } > "$msg"
+    git commit --quiet -F "$msg"
+    boarded="$boarded$item "
+    echo "ship platter: re-boarded $item as $(git rev-parse --short HEAD)."
+  done 3< "$plan"
+  platter_hold_open "$replay_base" "$held_open"
+}
+
+# An issue a left-off item also worked on is only PART done on the rebuilt platter, so every
+# re-boarded `Platter-Closes` for it becomes `Platter-Refs` (the body then says `Part of`). This runs
+# after the whole replay, not per item: a drop can come after the item that closes the same issue
+# is already committed (#7958; #7106 on 2026-11-22 came out right only because its drop came first).
+# Each commit since $1 is re-made with the same tree, parents and author, only its message changed.
+platter_hold_open() {
+  local base="$1" held="$2" c tip msg="/tmp/ship-platter-hold.$$.txt"
+  [ -n "${held// /}" ] || return 0
+  tip="$base"
+  for c in $(git rev-list --reverse "$base..HEAD"); do
+    git log -1 --format=%B "$c" | HELD_OPEN="$held" python3 -c '
+import os, re, sys
+held = set(os.environ["HELD_OPEN"].split())
+for line in sys.stdin.read().rstrip("\n").split("\n"):
+    m = re.match(r"^Platter-Closes:\s*#?(\d+)\s*$", line.strip())
+    print("Platter-Refs: #%s" % m.group(1) if m and m.group(1) in held else line)
+' > "$msg"
+    tip="$(GIT_AUTHOR_NAME="$(git log -1 --format=%an "$c")" \
+      GIT_AUTHOR_EMAIL="$(git log -1 --format=%ae "$c")" \
+      GIT_AUTHOR_DATE="$(git log -1 --format=%aI "$c")" \
+      git commit-tree "$c^{tree}" -p "$tip" -F "$msg")"
+  done
+  git reset --quiet --soft "$tip"
+}
+
+# Comment on one issue or PR, with the Claude Code footer (claude.yml wakes on a member comment
+# without it). Best-effort: a failure is said, never fatal — the platter itself is already right.
+platter_comment() {
+  local num="$1" text="$2" payload resp
+  payload="$(printf '%s\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_' "$text" \
+    | python3 -c "import json,sys; print(json.dumps({'body': sys.stdin.read()}))")"
+  resp="$(api POST "/issues/$num/comments" "$payload")" || true
+  [ "$(http_of "$resp")" = 201 ] || echo "ship platter: the comment on #$num did not post (HTTP $(http_of "$resp")) — post it by hand." >&2
+}
+
+cmd_platter_rebuild() {
+  local src="${1:-}"; shift || true
+  case "$src" in ''|*[!0-9]*)
+    echo "usage: scripts/ship.sh platter rebuild <pr> [--name platter/<date>] [--no-verify] [--dry-run]" >&2; exit 1 ;;
+  esac
+  local name="" verify=1 dry=0
+  while [ $# -gt 0 ]; do case "$1" in
+    --name) name="$2"; shift 2 ;;
+    --no-verify) verify=0; shift ;;
+    --dry-run) dry=1; verify=0; shift ;;
+    *) echo "ship platter rebuild: unknown arg $1" >&2; exit 1 ;;
+  esac; done
+  git diff --quiet && git diff --cached --quiet || {
+    echo "ship platter rebuild: uncommitted changes — commit or drop them first" >&2; exit 1; }
+
+  local resp http old_ref state
+  resp="$(api GET "/pulls/$src")" || true
+  http="$(http_of "$resp")"
+  [ "$http" = 200 ] || { echo "ship platter rebuild: GET pulls/$src returned HTTP ${http:-none}" >&2; exit 1; }
+  read -r state old_ref < <(body_of "$resp" | python3 -c 'import sys,json; r=json.load(sys.stdin); print(r["state"], r["head"]["ref"])')
+  [ "$state" = open ] || { echo "ship platter rebuild: #$src is $state — only an open platter is rebuilt" >&2; exit 1; }
+  case "$old_ref" in platter/*) ;; *)
+    echo "ship platter rebuild: #$src's branch is '$old_ref', not a platter" >&2; exit 1 ;;
+  esac
+
+  git fetch --quiet origin main || { echo "ship platter rebuild: cannot fetch origin/main" >&2; exit 1; }
+  # A shallow clone cuts the history that tells main's own (trailer-carrying, landed) items from the
+  # old platter's, so they could read as items to replay — deepen it first, as platter sync does.
+  if [ "$(git rev-parse --is-shallow-repository)" = true ]; then
+    git fetch --quiet --unshallow origin main ||
+      echo "ship platter rebuild: could not unshallow this clone — items are still read from trailers." >&2
+  fi
+  git fetch --quiet origin "refs/pull/$src/head" || {
+    echo "ship platter rebuild: cannot fetch refs/pull/$src/head" >&2; exit 1; }
+  local old; old="$(git rev-parse FETCH_HEAD)"
+
+  if [ -z "$name" ]; then
+    name="platter/$(date -u +%Y-%m-%d)"; local n=2
+    while [ "$name" = "$old_ref" ] || git ls-remote --exit-code --heads origin "$name" >/dev/null 2>&1; do
+      name="platter/$(date -u +%Y-%m-%d)-$n"; n=$((n + 1))
+      [ "$n" -le 9 ] || { echo "ship platter rebuild: no free platter/<today> name — pass --name" >&2; exit 1; }
+    done
+  fi
+  case "$name" in platter/*) ;; *)
+    echo "ship platter rebuild: --name must start with 'platter/'" >&2; exit 1 ;;
+  esac
+  [ "$dry" = 1 ] || [ "$name" != "$old_ref" ] || {
+    echo "ship platter rebuild: --name must differ from the old platter's branch ($old_ref) — it is never force-pushed" >&2; exit 1; }
+
+  local start; start="$(git rev-parse --abbrev-ref HEAD)"
+  local work="$name"; [ "$dry" = 0 ] || work="platter-dry-run/$src"
+  git checkout -q -B "$work" origin/main
+  local drops="/tmp/ship-platter-drops.$$.tsv" rc=0
+  platter_replay "$old" "$verify" "$src" "$drops" || rc=$?
+  local kept; kept="$(platter_item_count)"
+  local dropped; dropped="$(grep -c . "$drops" || true)"
+  echo "ship platter rebuild: $kept item(s) re-boarded, $dropped left off."
+  if [ "$dry" = 1 ] || [ "$rc" != 0 ] || [ "$kept" = 0 ]; then
+    [ "$dry" = 1 ] && { cmd_platter_ledger; cat "$drops"; }
+    [ "$kept" = 0 ] && [ "$dry" = 0 ] && echo "ship platter rebuild: nothing re-boarded — no PR can open on an empty diff; #$src is untouched." >&2
+    git checkout -q "$start"; git branch -q -D "$work"
+    [ "$dry" = 1 ] && [ "$rc" = 0 ] && return 0
+    exit "$([ "$rc" != 0 ] && echo "$rc" || echo 1)"
+  fi
+
+  if [ "$dropped" -gt 0 ]; then
+    local msg="/tmp/ship-platter-dropped.$$.txt" item sha why issues
+    { printf 'chore(platter): record the items a rebuild left off\n\n'
+      printf 'Platter-Rebuilt-From: pr %s\n' "$src"
+      while IFS=$'\t' read -r item sha why issues; do
+        printf 'Platter-Dropped: %s %s %s\n' "$item" "$sha" "$why"
+      done < "$drops"; } > "$msg"
+    git commit --quiet --allow-empty -F "$msg"
+  fi
+
+  local bodyfile="/tmp/ship-platter-body.md"
+  platter_body > "$bodyfile"
+  # --no-verify, as in `platter open`: every item was verified on this exact union as it re-boarded.
+  cmd_open "chore(platter): protected-path changes — ${name#platter/}" \
+    --body-file "$bodyfile" --hold --no-verify
+  local owner new; owner="$(repo)"; owner="${owner%%/*}"
+  resp="$(api GET "/pulls?state=open&head=$owner:$name")" || true
+  new="$(body_of "$resp" | python3 -c 'import sys,json; r=json.load(sys.stdin); print(r[0]["number"] if r else "")' 2>/dev/null || true)"
+  local where="\`$name\`"; [ -z "$new" ] || where="#$new"
+
+  local list="" item sha why issues i
+  while IFS=$'\t' read -r item sha why issues; do
+    [ -n "$item" ] || continue
+    list="$list
+- \`$item\` (\`${sha:0:9}\`) — dropped: needs catch-up on its own branch ($why)."
+    for i in ${issues//,/ }; do
+      platter_comment "$i" "Platter #$src conflicted with \`main\` and was rebuilt from \`main\` as $where. Item \`$item\` (\`${sha:0:9}\`) did not re-board ($why), so it is **off the platter**: dropped: needs catch-up on its own branch.
+
+Catch \`$item\` up to \`main\` on its own branch (\`git merge origin/main --no-edit\`), verify, then \`scripts/ship.sh platter board $item\` from the platter. If the branch is gone, cut it from \`main\` and cherry-pick \`${sha:0:12}\` (fetchable from \`refs/pull/$src/head\`)."
+    done
+  done < "$drops"
+  platter_comment "$src" "Rebuilt from \`main\` as $where (\`scripts/ship.sh platter rebuild $src\`): $kept item(s) re-boarded and verified on the new union, $dropped left off.${list:+
+$list}
+
+Closing this one so the new platter is the one tap; its items' revert shas live on $where."
+  resp="$(api PATCH "/pulls/$src" '{"state":"closed"}')" || true
+  if [ "$(http_of "$resp")" = 200 ]; then
+    echo "ship platter rebuild: closed #$src — $where replaces it."
+  else
+    echo "ship platter rebuild: PATCH state returned HTTP $(http_of "$resp") — close #$src by hand; $where replaces it." >&2
+    exit 1
+  fi
+}
+
+cmd_platter_adopt() {
+  local pr="${1:-}"; shift || true
+  case "$pr" in ''|*[!0-9]*)
+    echo "usage: scripts/ship.sh platter adopt <pr> [--no-verify]" >&2; exit 1 ;;
+  esac
+  local flags=()
+  while [ $# -gt 0 ]; do case "$1" in
+    --no-verify) flags+=(--no-verify); shift ;;
+    *) echo "ship platter adopt: unknown arg $1" >&2; exit 1 ;;
+  esac; done
+  git diff --quiet && git diff --cached --quiet || {
+    echo "ship platter adopt: uncommitted changes — commit or drop them first" >&2; exit 1; }
+  # Judged BEFORE any checkout: the verdict is the sweep's, read from this checkout's scripts.
+  local verdict; verdict="$(node "$(dirname "$0")/platter-sweep.mjs" --pr "$pr")" || exit 1
+  local adopt reason branch pnum pbranch prebuild title
+  # \x1f, not a tab: a tab is whitespace to `read`, so an empty field (no open platter) would vanish.
+  IFS=$'\x1f' read -r adopt branch pnum pbranch prebuild title reason < <(python3 -c '
+import sys, json
+r = json.load(sys.stdin); v = r["verdict"]; p = r.get("platter") or {}
+print("\x1f".join(str(x) for x in [v["adopt"], v["branch"], p.get("number", ""), p.get("branch", ""),
+      p.get("rebuild", False), v.get("title", ""), v.get("reason", "") or "-"]))
+' <<<"$verdict")
+  if [ "$adopt" != True ]; then
+    echo "ship platter adopt: refused #$pr — $reason" >&2; exit 1
+  fi
+  # The PR's title is the item's subject: CI lints it, and a branch's newest commit can under-describe
+  # the PR (#7711's head commit was a docs census, not the work-mode fix it carries).
+  flags+=(--subject "$title")
+  if [ -z "$pnum" ]; then
+    echo "ship platter adopt: no platter is open — #$pr opens one."
+    cmd_platter_open "$branch" "${flags[@]}"
+    return
+  fi
+  [ "$prebuild" != True ] || {
+    echo "ship platter adopt: the open platter #$pnum needs a rebuild first: scripts/ship.sh platter rebuild $pnum" >&2; exit 1; }
+  git fetch --quiet origin "$pbranch" || { echo "ship platter adopt: cannot fetch $pbranch" >&2; exit 1; }
+  git checkout -q -B "$pbranch" FETCH_HEAD
+  echo "ship platter adopt: #$pr is held only for protection — boarding $branch onto #$pnum."
+  cmd_platter_board "$branch" "${flags[@]}"
+}
+
 cmd_platter() {
   local sub="${1:-}"; shift || true
   case "$sub" in
@@ -1530,7 +1885,11 @@ cmd_platter() {
     landed) node "$(dirname "$0")/platter-picture.mjs" landed "$@" ;;
     # one item out of a landed platter, whichever button landed it — pure git, no token.
     revert) cmd_platter_revert "$@" ;;
-    *) echo "usage: scripts/ship.sh platter {open <item-branch> [--name platter/<date>] [--subject S] [--no-verify] [--closes N,M] [--part-of N] | board <item-branch> [--subject S] [--no-verify] [--closes N,M] [--part-of N] [--no-merge] | amend <item-branch> [--closes N,M] [--part-of N] | ledger [--base <ref>] [--body] | sync | landed <pr> [--ref <ref>] | revert <pr> <sha>}" >&2; exit 1 ;;
+    # re-open a conflicted platter from main, items re-boarded in order (#7939).
+    rebuild) need_token; cmd_platter_rebuild "$@" ;;
+    # board a PR held only for protection, and close it (#7939; platter-sweep.mjs judges).
+    adopt) need_token; cmd_platter_adopt "$@" ;;
+    *) echo "usage: scripts/ship.sh platter {open <item-branch> [--name platter/<date>] [--subject S] [--no-verify] [--closes N,M] [--part-of N] | board <item-branch> [--subject S] [--no-verify] [--closes N,M] [--part-of N] [--no-merge] | amend <item-branch> [--closes N,M] [--part-of N] | ledger [--base <ref>] [--body] | sync | landed <pr> [--ref <ref>] | revert <pr> <sha> | rebuild <pr> [--name platter/<date>] [--no-verify] [--dry-run] | adopt <pr> [--no-verify]}" >&2; exit 1 ;;
   esac
 }
 
@@ -1547,6 +1906,8 @@ case "${1:-}" in
   checkverify) shift; cmd_checkverify "$@" ;;
   verifyrow) shift; verify_row_fields "$1"; echo ;;
   push) shift; cmd_push "$@" ;;
-  platter) shift; cmd_platter "$@" ;;
+  # `exit` inside the arm: rebuild and adopt check out another branch mid-run, which rewrites this
+  # file on disk, and bash must not read on past `esac` from a file that changed under it.
+  platter) shift; cmd_platter "$@"; exit ;;
   *) echo "usage: scripts/ship.sh {open \"<title>\" [--body-file F] [--base B] [--no-verify] | merge <n> [--method squash] | automerge <n> | checkbody <body-file> | pinshots <body-file> <sha> | checkarm <path...> | checkverify < check-runs.json | verifyrow <verify-log> | push <branch> | platter {open|board|ledger|landed|revert} ...}" >&2; exit 1 ;;
 esac

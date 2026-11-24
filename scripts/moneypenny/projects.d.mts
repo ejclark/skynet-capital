@@ -51,6 +51,15 @@ export function statusFieldUpdate(
   opts?: { keepExtras?: boolean; mode?: DialReading | null },
 ): (Omit<StatusFieldOption, "description"> & { id?: string; description: string })[] | null;
 
+/** The Priority options the board should carry, each described as its P label is (#6871 §12b). */
+export function priorityFieldOptions(): (Omit<StatusFieldOption, "description"> & {
+  description: string;
+})[];
+/** The Priority option list to write so every lane reads as its P label, ids kept — or null. */
+export function priorityFieldUpdate(
+  current?: { id?: string; name?: string; color?: string; description?: string }[],
+): (Omit<StatusFieldOption, "description"> & { id?: string; description: string })[] | null;
+
 export interface SubIssueCounts {
   total: number;
   completed: number;

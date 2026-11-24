@@ -18,6 +18,23 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **Reword `.claude/skills/steer/SKILL.md`'s "The bar says whether Claude is listening" bullet to
+  name `ackFor` beside `ackAt` and quote today's bar text ("✓ Received — Claude is reading your
+  answers back…").** It describes the page, not a stamp, so #6734's writer check passes it, but it
+  still teaches the old ackAt-only shape and the old wording. The feedback lane's harness refused the
+  write under `.claude/` twice (#7724, #6734) — needs an interactive session.
+  _(src: Claude · while: #6734 feedback build)_
+
+- **Count how many suggested tickets get placed, then decide the ticket's *Suggested* section.**
+  #7547 shipped Moneypenny's three sized options for all four strategies; its falsifier (by
+  2026-12-13, under 1 in 10 suggested tickets placed → revisit the tier thresholds before more
+  strategies) has no counter yet: `/trade` drops `?tier=` once the ticket is staged, so nothing ties
+  an order back to a suggestion. Carry the tier onto the staged order (or log open and place per
+  tier), read the rate on 2026-12-13, and only then decide whether the ticket gets its own
+  *Suggested* section (settled fork 1 parked it on this evidence). The long-option delta bands
+  (0.65–0.80 / 0.45–0.55 / 0.25–0.35) were the slice-4 session's call, not Eric's; check them in
+  the same read. _(src: Claude · while: #7547 slice 4)_
+
 - **A headless PR might start its checks with a body edit, not a commit.** `pipeline.yml` lists
   `edited` in its `pull_request` types, and an edit from the App token starts workflows, so writing
   the headless marker into the PR body (not a comment) could start `verify` with no new commit on
@@ -101,14 +118,9 @@ Eric-sourced.
   behavior; 3 of the 10 largest untested files sit there. The candidate is always the largest file,
   so the coach stays wedged until someone confirms that file's behavior or the eye skips carve-out
   paths for `--candidate` (still counting them in `debt`, listed apart as needing a human).
-  _(src: Claude · while: governor cycle 7, 2026-11-02)_
-- **The meter cannot see a cloud session's workflows.** `scripts/agent-meter.mjs` and
-  `scripts/dream-digest.mjs` hard-code the laptop's project folder
-  (`-Users-eric-Developer-skynet-capital`); a cloud session's transcripts live under
-  `-home-user-skynet-capital`, so `/governor` step 5's cost read returns nothing there, where
-  sessions now run by default. Cycle 7 got its number by calling the meter's own
-  `scanWorkflowAgents` and `agentSummary` with the container's folder. Matching every project
-  folder named for this repo would cover both. _(src: Claude · while: governor cycle 7, 2026-11-02)_
+  _(src: Claude · while: governor cycle 7, 2026-11-02)_ **Done** in governed cycle 14
+  (2026-11-23), after the same stall recurred: `--candidate` skips the carve-out and lists it under
+  `needsHuman`; `tests/scripts/spec-gap-carve-out.spec.ts` reads the skill's list so the two can't drift.
 - **IPO discovery runs only when someone types it.** `npm run research:lockups` now files a listing
   from its public S-1 (#5912 slice 3), but no schedule calls it, so "Anthropic's S-1 lands and
   discovery files it within one run" (the slice's falsifier) waits on a person remembering the run:
@@ -481,8 +493,8 @@ picks it up starts from the fork, not the wish.
 - **The vendored "Diagrams first" output-style line** (`docs/vendor/claude-code/output-styles.md`
   L66-81) into `.claude/output-styles/orient.md`: an in-session explanation of code or flow opens with a diagram. Eric
   put AI→human chat in scope (2026-09-25); judge on a week of replies. _(src: Claude · while: #3748)_
-- **Digest picture slot** — the revival condition (2–3 digests on cadence, IDEAS L296) is met with
-  13 shipped; a generated `kanban` of the ready queue is the candidate. _(src: Claude · while: #3748)_
+- **Digest picture slot** — shipped advisory (#3748 slice 7c: `digest-scan --pictures`); a generated
+  `kanban` of the ready queue stays the candidate for a second slot. _(src: Claude · while: #3748)_
 - **Prose-in-cells** — the table-as-media rule lets a paragraph in a cell pass as a picture (#3735,
   243 words above the fold); an advisory cell-length note in `checkbody`. _(src: Claude · while: the
   2026-09-25 PR census)_
@@ -759,10 +771,10 @@ gate + digest delivery prove out. Workflow-file carve-out. _(src: Claude · whil
 research, 2026-08-20)_
 
 ### Digest picture slot — ratchet in only after the digest loop is proven live
-Add `## The picture` to `docs/digests/TEMPLATE.md` + `digest-scan` REQUIRED_SECTIONS once 2–3 digests
-have actually shipped on cadence (the instrument has fired once ever; decorating a dead instrument
-decorates an empty room). The digest picture = `## The picture` blocks harvested from squash bodies
-via local git log. _(src: Claude · while: hat-team comms research, 2026-08-20)_
+**Shipped advisory (#3748 slice 7c):** the template slot and `digest-scan --pictures` exist; `--validate`
+prints "ratchet due" once 2 digests carry it, and that PR adds `## The picture` to `digest-scan`
+REQUIRED_SECTIONS. The digest picture = `## The picture` blocks harvested from squash bodies via
+local git log. _(src: Claude · while: hat-team comms research, 2026-08-20)_
 
 ### Long-session journey nudge from duel-log telemetry
 Teach `scripts/duel-log.mjs` (or the postmaster audit) a heuristic: a session with many turns and no
@@ -1921,3 +1933,39 @@ detailed in the backlog somewhere." Not scoped — no shape, no acceptance crite
 here per his own instruction rather than built or planned now. Needs its own interrogation pass
 (what "the feature we're building" changes about it, specifically) before it's a plan issue.
 _(src: Eric · while: #3818 point 3, answering open question 4, 2026-09-27)_
+
+## The faculty's next instruments — a scripted assistant, a nightly round, and variance
+
+Three gaps the change study (`scripts/faculty/`) found in itself, each cheap to try:
+
+- **A recorded assistant in the faculty world.** Offline, Moneypenny has no model, so every member
+  who asked her to act ("stop all bots", "cancel my MSFT order") got a canned reply that the round
+  cannot count. A small replay of real companion answers would let a round measure whether she
+  routes a member to the right control. It is the one surface members reached for in every
+  give-up.
+- **A nightly faculty round.** The `changes` project pins five optimal paths. A scheduled round over
+  the 30 scenarios on `main`, with `regrade.mjs` setting aside its own faults, would catch a member
+  surface regressing before a member does. It costs about 30 blind sessions a night.
+- **Variance per scenario.** One run per scenario cannot tell a 50% path from a 90% one. Rounds 3–4
+  ran twice each and agreed on every pair; three runs on the phone-heavy rows would put an interval
+  on "landed".
+_(src: Claude · while: running faculty rounds 1–4 on the change-scenarios PR, 2026-11-17)_
+
+### A hold that outlives its reason should surface in the digest, not wait for Eric to notice
+#7672 sat five days green under `hold-merge` with nothing protected in it (`docs/LESSONS.md`,
+2026-11-22), and the only signal was Eric asking why. `hold-merge` is already the label query for
+"what waits on Eric?". Joining it with `envelope-scan` and the PR's check state would give one line
+per PR that is held, unprotected, green and over a day old, for `/secretary`'s digest or the steer
+page: "held without a protected path; lift it?". That turns a five-day wait into a one-tap
+question the next morning.
+_(src: Claude · while: clearing #7672's mistaken hold)_
+
+### A close-out hold that one far-off forward test cancels buys a session that can only leave
+
+`closeOutHold` (`scripts/forward-test-pending.mjs`) holds a close-out only when *every* pending forward
+test scores inside `closeOutWithinDays`. An event with one in-window row and one row years out (here
+`jpx-market-closure-2026-11-23`: FT-1 due 2026-11-25, FT-2 due 2027-01-15) dispatches on D+1 anyway,
+before FT-1's own bar has closed, so the session can write the outcome but not the score. Holding to the
+latest *in-window* score-by, and leaving the beyond-window row to the `forward-test-due` door, would save
+that session. Falsifier: count close-outs dispatched with an in-window row still unscoreable.
+_(src: Claude · while: closing out jpx-market-closure-2026-11-23 at D+1)_

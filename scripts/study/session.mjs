@@ -53,11 +53,12 @@ import { parseClock } from "./clock.mjs";
 import { isMain } from "./compat.mjs";
 import { instrument, marks, since, snapshot } from "./measure.mjs";
 import { pickerInitScript } from "./measure-picker.mjs";
-import { landingTop, onScreenControl, probeTap, tapRect } from "./measure-tap.mjs";
+import { landingTop, onScreenControl, probeTap, tapRect, typingFocus } from "./measure-tap.mjs";
 import { seenText } from "./measure-text.mjs";
 import {
   actionFindings,
   actionRefusal,
+  keyboardRefusal,
   landingScreens,
   SCROLL_TOL,
   taskMetrics,
@@ -127,9 +128,11 @@ function view(snap) {
   return { ...rest, view: viewKey(snap) };
 }
 
-/** The scripted world's shell, or the composed world's routed page — one handle either way. */
-function openPage(world, vp, out) {
-  if (world.run) return openComposed(world, vp, out);
+/** The scripted world's shell, the composed world's routed page, or a live server (a world with
+ *  an `origin`: scripts/faculty/live-world.mjs, whose writes land) — one handle either way. */
+async function openPage(world, vp, out, chat) {
+  if (world.origin) return (await import("../faculty/live-world.mjs")).openLive(world, vp);
+  if (world.run) return openComposed(world, vp, out, chat);
   return openShell({
     name: `study-${world.name}`,
     stubs: world.stubs ?? {},
@@ -139,13 +142,22 @@ function openPage(world, vp, out) {
   });
 }
 
-/** Open a world at a viewport, pin the clock, instrument the page and land on the start path. */
-export async function open({ world, viewport = "phone", pinnedInstant, startPath, runDir, watch }) {
+/** Open a world at a viewport, pin the clock, instrument the page and land on the start path.
+ *  `chat`: Moneypenny in a composed world (world-chat.mjs → startWorldChat), or none. */
+export async function open({
+  world,
+  viewport = "phone",
+  pinnedInstant,
+  startPath,
+  runDir,
+  watch,
+  chat,
+}) {
   const vp = VIEWPORTS[viewport];
   if (!vp) throw new Error(`unknown viewport ${viewport} — one of ${Object.keys(VIEWPORTS)}`);
   const out = runDir ?? join(tmpdir(), `skynet-study-${world.name}-${Date.now()}`);
   mkdirSync(join(out, "frames"), { recursive: true });
-  const shell = await openPage(world, vp, out);
+  const shell = await openPage(world, vp, out, chat);
   const { page } = shell;
   // Frames and waits get twice Playwright's 30s: a study batch runs many sessions on one machine.
   page.setDefaultTimeout(60_000);
@@ -244,7 +256,7 @@ async function perform(session, action, before) {
       await page.keyboard.type(action.text);
       return null;
     case "key":
-      await page.keyboard.press(action.key);
+      for (let i = 0; i < (action.times ?? 1); i++) await page.keyboard.press(action.key);
       return null;
     case "back":
       await page.goBack({ waitUntil: "commit" }).catch(() => null);
@@ -258,8 +270,31 @@ async function perform(session, action, before) {
 }
 
 /**
+ * A phone `type` with no text field focused: there is no keyboard to type with (#8126). Refused
+ * like any other refusal — no step spent, the member reads why next turn — but it lands on the
+ * trace too, since the member DID act (a missed tap, then keys), and the analysts and
+ * `taskMetrics().noKeyboard` read it there. Null when the action may be played.
+ */
+async function keyboardCheck(session, action) {
+  if (action.kind !== "type" || !session.frameSize.hasTouch) return null;
+  const focused = await session.page.evaluate(typingFocus);
+  const refused = keyboardRefusal(action, session.frameSize, focused);
+  if (!refused) return null;
+  const record = {
+    refused,
+    ms: Date.now() - session.t0,
+    action,
+    focused: focused.what,
+    findings: [],
+  };
+  appendFileSync(session.trace, `${JSON.stringify(record)}\n`);
+  return { refused, action };
+}
+
+/**
  * Perform one member action and record what it did. Returns the trace record, or `{refused}` when
- * the action cannot be performed in this frame (nothing is recorded and no step is spent).
+ * the action cannot be performed in this frame (no step is spent; only a phone's missing keyboard
+ * is recorded, see `keyboardCheck`).
  */
 export async function act(session, action) {
   const { page } = session;
@@ -267,6 +302,8 @@ export async function act(session, action) {
     actionRefusal(action, session.frameSize) ||
     (action.kind === "back" && !(await page.evaluate(canGoBack)) && "back: no earlier page here");
   if (refused) return { refused, action };
+  const noKeys = await keyboardCheck(session, action);
+  if (noKeys) return noKeys;
   const terminal = action.kind === "done" || action.kind === "give_up";
   // What happened since the last action ended — a jump that missed its settle window lands here.
   const gap = await page.evaluate(since, session.mark);

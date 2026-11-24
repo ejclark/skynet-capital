@@ -1,0 +1,13 @@
+{
+  "id": "ST-01",
+  "member": "eric",
+  "viewport": "desktop",
+  "start": "/app",
+  "optimal": 12,
+  "scenario": "Your NVIDIA calls expire in December. Instead of selling them, push them out about a month later at the same $180 strike in one move.",
+  "end": {
+    "orders": [{}],
+    "noOtherWrites": false
+  },
+  "note": "A roll is one multi-leg order; rung 401 gates it and the member learns only after review (draft-order-route.ts:204-206). Any new order counts; the readout reads the order."
+}

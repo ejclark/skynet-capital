@@ -6,8 +6,13 @@
 // few seconds before INSTANT so every freshness check the routes run reads "fresh".
 //
 // Bars are a deterministic walk ending on the input's previous close: enough history for a
-// realized-vol and a beta, no claim to be a real tape.
+// realized-vol and a beta, no claim to be a real tape. 45 calendar days by default; a world that
+// needs a year of history (the quests' conditions check reads SPY and QQQ against their year high,
+// #8005) sets `market.barDays`, and then walks sessions only — market-calendar.ts's closures, which
+// it lists from 2026, so an earlier holiday is still a bar — and the default worlds compose
+// byte-identical.
 
+import { isMarketClosed } from "../../../src/domain/market-calendar.ts";
 import { priceOption } from "../../../src/options/pricing.ts";
 import { daysToExpiryFrom } from "../../../src/options/single-leg-odds.ts";
 import { buildOccSymbol, parseOccSymbol } from "../../../src/trading/option-symbols.ts";
@@ -38,6 +43,9 @@ function quoteOf(m, underlying, expiration, type, strike) {
     openInterest: 1800,
     volume: 240,
     quotedAt: STAMP,
+    // Every strike carries a quote from the feed production reads (`alpaca-options-client.ts`
+    // marks each snapshot-backed row "indicative"); without it the chain says nothing is live.
+    quoteSource: "indicative",
     delta: v.delta,
     gamma: v.gamma,
     theta: v.theta,
@@ -47,13 +55,14 @@ function quoteOf(m, underlying, expiration, type, strike) {
 }
 
 /** Daily bars ending on the previous session's close, newest last. */
-function barsFor(s) {
+function barsFor(s, barDays) {
   const out = [];
   let close = s.prevClose;
-  for (let i = 1; i <= 45; i++) {
+  for (let i = 1; i <= (barDays ?? 45); i++) {
     const day = dayFrom(-i);
     const weekday = new Date(`${day}T12:00:00Z`).getUTCDay();
     if (weekday === 0 || weekday === 6) continue;
+    if (barDays && isMarketClosed(day)) continue;
     const swing = Math.sin(i * 1.7) * s.iv * 0.025;
     out.push({
       t: `${day}T04:00:00Z`,
@@ -100,6 +109,27 @@ function snapshots(m, occs) {
   return out;
 }
 
+/**
+ * A held contract's mark and yesterday's close, both the house model's — so the position row, its
+ * day change and the chain's quote for the same contract are one price, never two typed figures.
+ * Today's is the chain's own close price at the instant (`quoteOf`); yesterday's is the model at the
+ * underlying's previous close, one session earlier (`@-1d 16:00`: the instant is mid-week, so the
+ * calendar day before is a session). Undefined for an underlying the world does not quote.
+ */
+export function modelMarks(symbols, occ) {
+  const p = parseOccSymbol(occ);
+  const s = p && symbols[p.underlying];
+  if (!s) return undefined;
+  const at = (when) => daysToExpiryFrom(p.expiration, when) ?? 1;
+  const price = (spot, when) =>
+    priceOption({ spot, strike: p.strike, daysToExpiry: at(when), volatility: s.iv, type: p.type });
+  const today = quoteOf(symbols, p.underlying, p.expiration, p.type, p.strike)?.closePrice;
+  const close = new Date(`${dayFrom(-1)}T16:00:00${INSTANT.slice(-6)}`);
+  const yesterday = price(s.prevClose, close)?.price;
+  if (today === undefined || yesterday === undefined) return undefined;
+  return { mark: today, lastday: Math.round(yesterday * 100) / 100 };
+}
+
 /** The options client a world hands every route that asks for one. */
 export function marketClient(market) {
   const m = market.symbols;
@@ -111,7 +141,7 @@ export function marketClient(market) {
       market.expirations.filter((e) => e >= onOrAfter).slice(0, limit ?? 50),
     getChain: async (u, expiration, type) => chainRows(m, u, expiration, type),
     getContractSnapshots: async (occs) => snapshots(m, occs),
-    getBars: async (sym) => (m[sym] ? barsFor(m[sym]) : undefined),
+    getBars: async (sym) => (m[sym] ? barsFor(m[sym], market.barDays) : undefined),
     // No contract in a world has expired, been assigned or exercised: a read that succeeded empty.
     readOptionLifecycleActivities: async () => ({ ok: true, rows: [] }),
   };

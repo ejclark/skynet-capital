@@ -12,7 +12,13 @@
 // ledger, the order audit log (so a human row's origin reads `unknown`), the bot
 // funnel/expectancy, the alert store, and the fund owner's stores (shell-artifacts.mjs says so).
 // The 3M and 1Y windows read the same month the world holds — its history is a month long.
+//
+// The owner's switchboard (`controls`, #8005): production wires it whenever sign-in is on, so a
+// world whose input declares a controls file serves it — each bot's stored switches, the last
+// breaker reset and the settings change log — read-only, as `controlsSeam` below. A world that
+// declares none (the profile's) leaves it unwired, as it was frozen.
 
+import { DELIVERY_OFF } from "../../../src/alerts/alert-delivery.ts";
 import {
   regularSessionOpen,
   sessionBounds,
@@ -26,6 +32,10 @@ import { leagueServices } from "./league-services.mjs";
 import { marketClient } from "./market.mjs";
 
 const AT = new Date(INSTANT);
+
+const refuseWrite = (what) => () => {
+  throw new Error(`study world: ${what} is a write — the world records writes, never applies them`);
+};
 
 /** Alpaca's history periods, newest point last; a window is the tail of the month we hold. */
 const PERIOD_POINTS = { "1W": 6, "1M": 23, "3M": 23, "1A": 23 };
@@ -43,17 +53,36 @@ function portfolioHistory(samples, n) {
   };
 }
 
+/** One working order from the input, in the broker's shape: accepted, nothing filled yet. */
+function workingOrder(o) {
+  return {
+    id: o.orderId,
+    symbol: o.symbol,
+    qty: String(o.quantity),
+    side: o.side,
+    status: "new",
+    type: o.type,
+    ...(o.limitPrice !== undefined ? { limit_price: String(o.limitPrice) } : {}),
+    ...(o.stopPrice !== undefined ? { stop_price: String(o.stopPrice) } : {}),
+    time_in_force: o.timeInForce,
+    filled_qty: "0",
+    filled_avg_price: null,
+    submitted_at: o.at,
+    filled_at: null,
+  };
+}
+
 /** The slice of the trading client the net-worth and equity-curve routes call. */
 function tradingClient(book, id) {
   const samples = book.history[id] ?? [];
   if (samples.length === 0) return undefined;
   return {
     isMarketOpen: async () => regularSessionOpen(AT),
-    // The broker's order list is the ledger's filled orders, newest first — none working.
+    // The broker's order list: the ledger's filled orders plus the input's working ones (a limit
+    // or stop that has not filled, #8005), newest first.
     listOrders: async () =>
-      [...(book.activity[id] ?? [])]
-        .sort((a, b) => (a.at < b.at ? 1 : -1))
-        .map((f) => ({
+      [
+        ...(book.activity[id] ?? []).map((f) => ({
           id: f.orderId,
           symbol: f.symbol,
           qty: String(f.quantity),
@@ -67,6 +96,8 @@ function tradingClient(book, id) {
           submitted_at: f.at,
           filled_at: f.at,
         })),
+        ...(book.working?.[id] ?? []).map(workingOrder),
+      ].sort((a, b) => (a.submitted_at < b.submitted_at ? 1 : -1)),
     getAccount: async () => ({ last_equity: String(book.lastEquity[id] ?? "") }),
     getPortfolioHistory: async (period) => portfolioHistory(samples, PERIOD_POINTS[period] ?? 23),
     getPortfolioHistoryByRange: async () => portfolioHistory(samples, samples.length),
@@ -160,6 +191,46 @@ function checkWeek(records, cadenceMs) {
   return { checks: asked.map((r) => r.at), verdicts: [...verdicts.values()], trades };
 }
 
+const refuseControls = (what) => () => {
+  throw new Error(`study world: ${what} is a write — the world records writes, never applies them`);
+};
+
+/**
+ * The controls file and the settings change log, as the book declares them (`controls`): the
+ * stored switches per bot (`ControlsState`), and each bot's change lines oldest first — the log's
+ * own order, read newest first as `SettingsChangeLog.list` reads it. Nobody here is the fund owner
+ * (shell-artifacts.mjs), so Mission Control still answers `{owner:false}`; the per-bot switches are
+ * ownership's, read by the real settings routes. Every write refuses: a world never applies one.
+ */
+function controlsSeam(book) {
+  const { changes = {}, ...state } = book.controls;
+  const stored = { bots: {}, ...state };
+  return {
+    store: {
+      load: () => stored,
+      loadIfReadable: () => stored,
+      seedBots: refuseControls("seeding the controls"),
+      setBot: refuseControls("a bot switch"),
+      replaceBot: refuseControls("a bot's settings"),
+      setAllSuspended: refuseControls("the fleet switch"),
+      stampBreakerReset: refuseControls("a breaker reset"),
+      restoreBreakerReset: refuseControls("restoring a breaker reset"),
+      setCompanionModel: refuseControls("Moneypenny's model"),
+    },
+    changes: {
+      readable: () => true,
+      list: (id, limit = 200) => [...(changes[id] ?? [])].slice(-limit).reverse(),
+      record: refuseControls("a settings change"),
+    },
+    isOwner: () => false,
+    bots: () =>
+      book.participants
+        .filter((p) => p.kind === "bot")
+        .map((p) => ({ id: p.id, displayName: p.displayName })),
+    now: () => new Date(AT),
+  };
+}
+
 /** The world's server config. `auth` is configured, so every ownership gate is live. */
 export function serverConfig(book) {
   const owners = new Map(book.members.map((m) => [m.email, m.owns]));
@@ -200,7 +271,41 @@ export function serverConfig(book) {
       loadAllocations: () => ({}),
     },
     tradingClientFor: (id) => tradingClient(book, id),
+    // Production always keeps a watchlist (`serve-dashboard.ts` → createWatchlist); without one
+    // the pane says watchlists "aren't stored on this deployment". Each member's list is the
+    // input's, empty unless it names one; a Watch tap is a write the world records, never applies.
+    watchlist: {
+      load: async (memberId) => book.watchlists?.[memberId] ?? [],
+      add: refuseWrite("adding to a watchlist"),
+      remove: refuseWrite("removing from a watchlist"),
+    },
+    // Two more stores production keeps behind sign-in (`dashboard-access.ts`), empty here: no
+    // member has saved a target split, no account is waiting out a question (#8005).
+    targetSplits: {
+      get: () => undefined,
+      set: refuseWrite("saving a target split"),
+      clear: refuseWrite("clearing a target split"),
+    },
+    bookWaits: {
+      wait: () => undefined,
+      set: refuseWrite("setting a book wait"),
+      clear: refuseWrite("clearing a book wait"),
+    },
+    // The alert strip's two stores, always kept (`serve-dashboard.ts`): nobody has dismissed an
+    // alert or chosen a delivery channel. The mail transport is env-gated in production, so the
+    // world leaves it off and says so (workbench-artifacts.mjs).
+    alertDismissals: {
+      loadDismissed: async () => [],
+      dismiss: refuseWrite("dismissing an alert"),
+    },
+    alertDeliveryStore: {
+      load: async () => ({ prefs: DELIVERY_OFF, sent: [] }),
+      savePrefs: refuseWrite("saving alert delivery"),
+      recordSent: refuseWrite("recording an alert sent"),
+      listMembers: async () => [],
+    },
     optionsClientFor: () => marketClient(book.market),
+    ...(book.controls ? { controls: controlsSeam(book) } : {}),
     ...leagueServices(book),
   };
 }

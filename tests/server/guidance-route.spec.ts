@@ -1,4 +1,6 @@
 import type { ServerResponse } from "node:http";
+import type { AlpacaOptionsClient } from "../../src/alpaca/alpaca-options-client.js";
+import type { AlpacaTradingClient } from "../../src/alpaca/alpaca-trading-client.js";
 import { positionGuidance } from "../../src/options/position-guidance.js";
 import type { GuidanceMarket } from "../../src/options/position-guidance-types.js";
 import { priceOption } from "../../src/options/pricing.js";
@@ -6,7 +8,8 @@ import { daysToExpiryFrom } from "../../src/options/single-leg-odds.js";
 import { InMemoryIvHistory } from "../../src/research/in-memory-iv-history.js";
 import type { SpotCheck } from "../../src/research/spot-checks.js";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
-import { serveGuidance } from "../../src/server/guidance-route.js";
+import { readGuidanceMarket } from "../../src/server/guidance-market-read.js";
+import { serveGuidance, withWindowChain } from "../../src/server/guidance-route.js";
 
 /**
  * GET /api/trade/guidance (#3729 slice 3): live reads through the member's own account, pulse-
@@ -85,11 +88,17 @@ function broker(spot = 80, chainShift = 0, open = true) {
       );
     },
   };
+  const trading = { isMarketOpen: () => Promise.resolve(open) };
   const config = {
     optionsClientFor: () => client,
-    tradingClientFor: () => ({ isMarketOpen: () => Promise.resolve(open) }),
+    tradingClientFor: () => trading,
   } as unknown as DashboardServerConfig;
-  return { config, chainCalls };
+  return {
+    config,
+    chainCalls,
+    options: client as unknown as AlpacaOptionsClient,
+    trading: trading as unknown as AlpacaTradingClient,
+  };
 }
 
 const deps = {
@@ -104,6 +113,30 @@ const STAKE = { shares: 400, costBasis: 70, cash: 40_000, goal: "income" as cons
 
 /** What the member's browser does with the answer: apply the stake it never sent. */
 const inBrowser = (market: GuidanceMarket) => positionGuidance({ ...market, stake: STAKE });
+
+describe("readGuidanceMarket — one market read for the member route and the bots (#3798 slice 1)", () => {
+  it("builds, from the route's own broker, the market the route answers with, byte for byte", async () => {
+    const { config, options, trading } = broker();
+    const r = fakeRes();
+    await serveGuidance(r.res, `${URL}&refresh=1`, config, "parity-a", deps);
+    const direct = await readGuidanceMarket({ options, trading, ...deps }, "CRWV", true);
+    expect(JSON.stringify({ market: direct })).toBe(r.out.body);
+  });
+
+  it("serves a caller with no member, no session and only its own keys — a bot's read", async () => {
+    const { options } = broker();
+    const market = await readGuidanceMarket({ options, ...deps }, "CRWV");
+    if ("reason" in market) throw new Error(market.note);
+    // No broker clock: the session is judged off the wall clock (18:00Z is 14:00 ET, a weekday).
+    expect(market.sessionOpen).toBe(true);
+    expect(market.ivRank).toBeUndefined();
+    expect(inBrowser(market).calls.map((c) => c.lever)).toEqual([
+      "shares",
+      "covered-calls",
+      "cash-secured-puts",
+    ]);
+  });
+});
 
 describe("serveGuidance — the spot cross-check count (#3729)", () => {
   it("records one line per fresh read, keyed by symbol, with no member id in it", async () => {
@@ -278,5 +311,55 @@ describe("serveGuidance", () => {
       deps,
     );
     expect(partial.json().market.ivRank).toBeUndefined();
+  });
+});
+
+describe("withWindowChain — the staging ask's own window (#7547)", () => {
+  const base = {
+    symbol: "NVDA",
+    now: "2026-11-13T18:00:00Z",
+    spot: 180,
+    sessionOpen: true,
+    chain: [],
+    expirations: [
+      "2026-11-14",
+      "2026-12-04",
+      "2026-12-11",
+      "2026-12-18",
+      "2026-12-24",
+      "2027-01-15",
+    ],
+  } as unknown as GuidanceMarket;
+  const calls: string[] = [];
+  const client = {
+    getChain: (_s: string, expiration: string, type: string) => {
+      calls.push(`${expiration}:${type}`);
+      return Promise.resolve([{ occSymbol: `NVDA-${expiration}`, strike: 175, bid: 4, ask: 4.2 }]);
+    },
+  } as never;
+
+  it("pages the three expiries nearest the window's target, one side, onto a copy", async () => {
+    calls.length = 0;
+    const out = await withWindowChain(client, base, { min: 21, max: 45, target: 30 }, "put");
+    // 28, 35 and 21 days out are nearest the 30-day target; 41 days out is the one left off.
+    expect(calls.sort()).toEqual(["2026-12-04:put", "2026-12-11:put", "2026-12-18:put"]);
+    expect(out.chain.map((q) => q.expiration).sort()).toEqual([
+      "2026-12-04",
+      "2026-12-11",
+      "2026-12-18",
+    ]);
+    expect(out.chain.every((q) => q.type === "put")).toBe(true);
+    expect(base.chain).toHaveLength(0);
+  });
+
+  it("pages nothing when the read already holds the window", async () => {
+    calls.length = 0;
+    const held = {
+      ...base,
+      expirations: ["2026-12-11"],
+      chain: [{ expiration: "2026-12-11", type: "put", strike: 175 }],
+    } as unknown as GuidanceMarket;
+    expect(await withWindowChain(client, held, { min: 21, max: 45, target: 30 }, "put")).toBe(held);
+    expect(calls).toEqual([]);
   });
 });

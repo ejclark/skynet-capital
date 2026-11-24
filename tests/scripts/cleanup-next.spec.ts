@@ -85,6 +85,16 @@ describe("cleanup-next: the order", () => {
     expect(hit.rows.at(-1)?.openPr).toBe(7);
   });
 
+  // src/scripts/ exists, so a root-scope clone there arrives as `scripts/…`; a first-folder guess
+  // kept that as a repo path that is not there, and the open PR went unseen (#6721).
+  it("resolves a root-scope clone under src/ whatever its first folder, on the b side too", () => {
+    const hit = report({ outputs, openPrFiles: { "src/scripts/e.ts": 8 } });
+    expect(hit.rows.at(-1)).toMatchObject({ script: "clone-scan", openPr: 8 });
+    // The app scope's paths already carry app/src/, so they stay as they are.
+    const app = report({ outputs, openPrFiles: { "app/src/g.tsx": 9 } });
+    expect(app.rows.at(-1)).toMatchObject({ target: "app/src/f.tsx:1-9", openPr: 9 });
+  });
+
   it("counts each scan's units, not one per row", () => {
     const moves = Object.fromEntries(r.rows.map((row) => [row.target, row.moves]));
     expect(moves).toMatchObject({

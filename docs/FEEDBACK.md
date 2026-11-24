@@ -63,6 +63,16 @@ in code — only as a host secret, exactly like the Alpaca keys.
    `src/server/feedback-attribution.ts`) — every issue here is filed by the same bot token, so
    GitHub's own `author:` search can't isolate one member's items; `label:member-<id>` (or clicking
    the label) can, the same way `author:` would on a normal repo.
+   A filing Moneypenny matched to a known problem (#8005 slice 7) also carries `ia-<row>`, the row
+   of the IA ledger (`docs/IA.md` §10) it is evidence on, and a **Known problem** line naming the
+   row and its plan in the ledger's own words. Ask her to file "one list for all my orders" and
+   the issue carries `ia-U1`. Such a filing is evidence, not a build (#8005 slice 2): it never
+   self-readies, even curated (`triageFeedbackDecision`; a person's `bug` + `fast-track` still
+   readies it), the daily flip never lists it, and it is never parked on the member, because the
+   row is fixed as a whole, never one filing at a time.
+   `npm run ia:ledger -- --evidence` counts members per row by those
+   two labels into `docs/members/ia-ledger-evidence.md`; regenerate `src/domain/ia-ledger.json`
+   with `npm run ia:ledger` whenever §10 changes.
 5. On the Profile page's Feedback section (`/app/accounts?section=feedback`), "Your recent feedback" shows a live status badge per filing (Filed — waiting to be
    picked · Up next · Being built · Waiting on your answer · Waiting on Eric's decision · First part shipped · Shipped · Closed, not
    built) once
@@ -73,15 +83,18 @@ in code — only as a host secret, exactly like the Alpaca keys.
    keep in sync across a deploy.
 6. Each row also offers a **Follow up** disclosure — a member can add more detail to something
    they already filed without leaving the app. It posts a GitHub comment (never edits the original
-   issue body, which the build lane parses). On a filing that is already `ready` it also restarts
-   the build by removing and re-adding `ready` — the label that starts the claim (#3912), the
-   claim lease making the re-label a safe retry. A filing still in Backlog gets the comment only,
-   and the member is told it builds once it's picked from the queue: a follow-up never adds `ready`,
-   which would skip the backlog gate below. Nor does it cycle `ready` on a filing the claim's pull
-   rule (`notPullableReason`) refuses — closed, parked on someone, already `in-progress`,
-   `needs-session`, or blocked — and the member's line names which (#5848). If `ready` comes off
-   and won't go back on after one retry, the server logs the issue number (`[feedback-followup]`)
-   so someone can re-add it by hand. Deliberately routed through
+   issue body, which the build lane parses). On a filing that is `ready` and not yet being built,
+   it first takes `ready` off and never puts it back itself: the filing check re-judges the filing
+   with the follow-up in it, exactly as a fresh filing, and re-applies `ready` only if it is still
+   clear (#7548). Before that, the follow-up re-added `ready` and the build read it unchecked, so a
+   small clear ask could carry a large one past every check. A hold that fails posts nothing; a
+   comment that fails after the hold puts `ready` back (one retry, then the server logs the issue
+   number, `[feedback-followup]`, for someone to re-add it by hand). A filing still in Backlog gets
+   the comment only, and the member is told it builds once it's picked from the queue: a follow-up
+   never adds `ready`, which would skip the backlog gate below. The one exception is a filing the
+   filing check parked on `needs-info` (below): the follow-up re-runs that check, which may ready
+   it (#7544). A filing a build already holds (`in-progress`) or one parked on someone keeps its
+   labels, and the member's line names which (#5848). Deliberately routed through
    this structured, envelope-bound lane rather than the free-form `claude.yml` comment-steering
    lane — see `src/server/feedback-followup.ts` for why. Ownership is checked against the member's
    own logged filings before anything posts.
@@ -100,6 +113,27 @@ including anything already `needs-eric`/`needs-info`/`needs-design`, sits in **B
 board (Status/Horizon populated the same way every other issue's is — `scripts/moneypenny/projects.mjs`)
 until something applies `ready`: Eric's own call, or a triage pass's clear-path flip
 ([`ISSUES.md`](ISSUES.md) → *Who may flip it*, 2026-10-19).
+
+**A member's freeform filing is checked the moment it lands (#7544).** `moneypenny-events.yml`'s
+`assess-*` jobs run that same clear-path flip on one filing — a judge, then two independent
+refuters on a clear call — and posts one of three outcomes on the issue
+(`scripts/moneypenny/triage-assess.mjs`):
+
+| Outcome | Labels | What the member sees in the app |
+| --- | --- | --- |
+| Clear, and neither refuter could refute it | `ready` | *Up next* (the admission gate still decides when it starts) |
+| Only the acceptance criteria or the size fell short | `needs-info` + plain questions | *Waiting on your answer*. Their **Follow up** re-runs the check automatically |
+| A fork only Eric settles, the protected class, a blocker, a new place no IA group holds, or a refuter said no | none, a plain note | *Filed — waiting to be picked*: nothing is asked of the member |
+| Never judged: it carries `ia-<row>`, a known problem fixed as a whole, never one filing at a time | none, and no note | *Filed — waiting to be picked*, then *Fixed — try it* if a fix for that problem ships (#8026) |
+
+The judge's fifth check, `placed`, records the IA home the filing extends (`docs/IA.md` §5) in the
+posted check table, so the build starts from a named home (#8005 slice 2).
+
+Each session runs on its own runner with a read-only token, reads only the thread's member and bot comments, and returns one JSON blob; the post script, on a fresh runner, is the one writer and builds every posted line itself. It runs
+for filings carrying a `member-` label, not `curated` ones (the coach path above), and only while the
+work dial is `normal` or `surge`. Under `conserve` or `halt` the filing waits for the daily flip. Its
+flips and refusals land in the same ledger as the daily flip's, so they count toward the falsifier in
+*Who may flip it*.
 
 Only once `ready` lands does `moneypenny-events.yml` pick the issue up and build it end to end in a
 fresh Claude session. What `ready` means, mechanically and for every puller — the pull conditions,

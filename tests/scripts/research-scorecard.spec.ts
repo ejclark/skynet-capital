@@ -5,6 +5,9 @@ import { describe, expect, it } from "@rstest/core";
 import {
   gradeOf,
   horizonOf,
+  isThin,
+  maturedCell,
+  openRange,
   parseCallLinks,
   parseForwardTests,
   passRate,
@@ -172,7 +175,11 @@ describe("confidence by horizon, matured calls only", () => {
     { id: "FT-w-3", horizon: "this week" as const, grade: "medium" as const },
     { id: "FT-w-4", horizon: "this week" as const, grade: "medium" as const },
     { id: "FT-q-1", horizon: "this quarter" as const, grade: "high" as const },
-    { id: "FT-q-2", horizon: "this quarter" as const, grade: "medium" as const },
+    {
+      id: "FT-q-2",
+      horizon: "this quarter" as const,
+      grade: "medium" as const,
+    },
   ];
   const card = scorecard({ tests, links, today });
 
@@ -190,9 +197,18 @@ describe("confidence by horizon, matured calls only", () => {
   });
 
   it("counts a call only once its score-by date has passed; a future or undated one waits", () => {
-    expect(card.matured.cells["this week"].high).toMatchObject({ pass: 1, kill: 1 });
-    expect(card.matured.cells["this week"].medium).toMatchObject({ pass: 1, open: 1 });
-    expect(card.matured.cells["this quarter"].high).toMatchObject({ pass: 0, kill: 0 });
+    expect(card.matured.cells["this week"].high).toMatchObject({
+      pass: 1,
+      kill: 1,
+    });
+    expect(card.matured.cells["this week"].medium).toMatchObject({
+      pass: 1,
+      open: 1,
+    });
+    expect(card.matured.cells["this quarter"].high).toMatchObject({
+      pass: 0,
+      kill: 0,
+    });
     expect(card.matured.notYet).toBe(1);
     expect(card.matured.undated).toBe(1);
     expect(card.matured.pastDueOpen).toBe(1);
@@ -201,7 +217,7 @@ describe("confidence by horizon, matured calls only", () => {
   it("renders high beside medium within each horizon, naming a thin cell as thin", () => {
     const md = renderMarkdown(card, today);
     expect(md).toContain("| Matured by 2026-11-03 | high | medium-high | medium | low |");
-    expect(md).toContain("| this week | thin: 1/2 | — | thin: 1/1 | — |");
+    expect(md).toContain("| this week | thin: 1/2 | — | thin: 1/1 · 1 open | — |");
     expect(md).toContain(`fewer than ${THIN_CELL} decided`);
     expect(md).toContain("1 matured call(s) still open past their date");
   });
@@ -219,6 +235,50 @@ describe("confidence by horizon, matured calls only", () => {
     }));
     const md = renderMarkdown(scorecard({ tests: many, links: manyLinks, today }), today);
     expect(md).toContain(`| this month | 80% (8/${THIN_CELL}) | — | — | — |`);
+  });
+});
+
+// #6732: a matured cell printed its rate over decided calls only and never said how many calls
+// were still open. "This month / medium" read 81% (34/42) while 11 more sat open — a true 64% to
+// 85%. WHEN a matured cell holds open calls, it SHALL show their count, and beside a rate the range
+// from all of them killing to all of them passing. The thin test SHALL weigh open calls too: a cell
+// is thin with fewer than THIN_CELL decided OR more open calls than decided ones.
+describe("a matured cell's open calls", () => {
+  const counts = (
+    c: Partial<Record<"pass" | "kill" | "void" | "unscoreable" | "open" | "unread", number>>,
+  ) => ({
+    pass: 0,
+    kill: 0,
+    void: 0,
+    unscoreable: 0,
+    open: 0,
+    unread: 0,
+    ...c,
+  });
+
+  it("pins the 2026-11-02 this month / medium cell: 81% over 34/42, 11 open, 64%–85%", () => {
+    const c = counts({ pass: 34, kill: 8, open: 11, unread: 1 });
+    expect(isThin(c)).toBe(false);
+    expect(openRange(c)).toEqual({ low: 34 / 53, high: 45 / 53 });
+    expect(maturedCell(c)).toBe("81% (34/42) · 11 open, 64%–85%");
+  });
+
+  it("leaves a cell with no open calls exactly as it read before", () => {
+    expect(maturedCell(counts({ pass: 8, kill: 2 }))).toBe("80% (8/10)");
+    expect(openRange(counts({}))).toBeNull();
+  });
+
+  it("names open calls on a thin cell and on a cell with none decided", () => {
+    expect(maturedCell(counts({ pass: 1, kill: 1, open: 2 }))).toBe("thin: 1/2 · 2 open");
+    expect(maturedCell(counts({ open: 3 }))).toBe("— · 3 open");
+    expect(maturedCell(counts({ void: 2 }))).toBe("—");
+  });
+
+  it("reads a cell as thin once its open calls outnumber its decided ones", () => {
+    expect(isThin(counts({ pass: 8, kill: 4, open: 12 }))).toBe(false);
+    expect(isThin(counts({ pass: 8, kill: 4, open: 13 }))).toBe(true);
+    expect(maturedCell(counts({ pass: 8, kill: 4, open: 13 }))).toBe("thin: 8/12 · 13 open");
+    expect(isThin(counts({ pass: 9 }))).toBe(true);
   });
 });
 

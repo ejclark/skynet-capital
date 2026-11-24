@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -12,12 +12,13 @@ import {
 
 // The write half of .claude/workflows/clear-path-flip.js (docs/ISSUES.md → Who may flip it): only a
 // survivor with four passing checks and two verifier lines is ever posted, and anything malformed
-// refuses the whole run before a write. Driven offline — the CLI path runs with --dry-run only.
+// refuses the whole run before a write. Driven offline — the CLI runs with no token, so the one
+// non-dry run (refusals only) can reach no network write.
 const PASS = { pass: true, evidence: "x" };
 const survivor = (over: Record<string, unknown> = {}) => ({
   issue: 6001,
   title: "add a thing",
-  checks: { criteria: PASS, size: PASS, noFork: PASS, notBlocked: PASS },
+  checks: { criteria: PASS, size: PASS, noFork: PASS, notBlocked: PASS, placed: PASS },
   addFeedback: true,
   comment: "**Clear path — session flip**\n&lt;details&gt;why&lt;/details&gt;",
   verifiers: ["envelope — traced 2 paths, none protected", "thread — read 3 comments; clear"],
@@ -59,6 +60,10 @@ describe("malformed", () => {
   it("refuses a failing or missing check", () => {
     const checks = { criteria: PASS, size: { pass: false }, noFork: PASS };
     expect(malformed(survivor({ checks }))).toMatch(/size, notBlocked/);
+  });
+  it("refuses a survivor whose IA home was never named (#8005 slice 2)", () => {
+    const checks = { criteria: PASS, size: PASS, noFork: PASS, notBlocked: PASS };
+    expect(malformed(survivor({ checks }))).toMatch(/placed/);
   });
   it("refuses an empty comment or a bad issue number", () => {
     expect(malformed(survivor({ comment: " " }))).toMatch(/comment/);
@@ -106,10 +111,28 @@ describe("the CLI", () => {
     const dir = mkdtempSync(join(tmpdir(), "clear-path-"));
     const file = join(dir, "result.json");
     writeFileSync(file, JSON.stringify(result));
+    // No credentials reach the CLI: a real run records refusals on the ledger branch, and a spec
+    // must never write there. Emptying the token vars is not enough on a laptop signed in to `gh`:
+    // ensureGhToken (scripts/moneypenny/gh.mjs) falls back to `gh auth token`, and an empty
+    // GH_CONFIG_DIR (#7311) did not stop that login reaching the CLI on Eric's machine (#8052). So
+    // a fake `gh` that refuses sits first on PATH: the fallback finds no login on any machine,
+    // the way CI, which has no keyring, always did.
+    const bin = join(dir, "bin");
+    mkdirSync(bin);
+    writeFileSync(join(bin, "gh"), "#!/bin/sh\necho 'gh: not logged in (spec stub)' >&2\nexit 1\n");
+    chmodSync(join(bin, "gh"), 0o755);
     try {
+      const env = {
+        ...process.env,
+        GH_TOKEN: "",
+        GITHUB_TOKEN: "",
+        GH_CONFIG_DIR: dir,
+        PATH: `${bin}:${process.env.PATH}`,
+      };
       const out = execFileSync("node", ["scripts/clear-path-post.mjs", file, ...flags], {
         encoding: "utf8",
         stdio: "pipe",
+        env,
       });
       return { out, code: 0 };
     } catch (error) {
@@ -135,5 +158,20 @@ describe("the CLI", () => {
     const { out, code } = run({ survivors: [], refuted: [{ issue: 1 }] });
     expect(code).toBe(0);
     expect(out).toMatch(/nothing to post/);
+  });
+  it("a refusal it cannot record (no token) is a warning, never a failed run", () => {
+    const { out, code } = run({ survivors: [], refuted: [{ issue: 1 }], notClear: [{ issue: 2 }] });
+    expect(code).toBe(0);
+    // The warning names the token lookup, so a login that leaked past the stub (a write that then
+    // failed on the network) cannot pass for "no token" (#8052).
+    expect(out).toMatch(
+      /could not record 2 flip refusal\(s\): no GH_TOKEN, GITHUB_TOKEN or `gh auth token`/,
+    );
+  });
+  it("a dry run says how many refusals it would record, and records none", () => {
+    const { out, code } = run({ survivors: [survivor()], refuted: [{ issue: 1 }] }, "--dry-run");
+    expect(code).toBe(0);
+    expect(out).toContain("1 would post, 1 refusal(s) would be recorded");
+    expect(out).not.toMatch(/recorded 1 refusal/);
   });
 });

@@ -40,10 +40,11 @@ import {
   worstExit,
 } from "./parity-judge.mjs";
 import { answerFrom } from "./payloads.mjs";
+import { researchRootOf } from "./session-world.mjs";
 import { worldArtifacts } from "./world-artifacts.mjs";
 import { openWorld } from "./world-route.mjs";
 import { WORLDS } from "./worlds/index.mjs";
-import { INSTANT } from "./worlds/instant.mjs";
+import { worldInstant } from "./worlds/instant.mjs";
 
 /** After `settle`: long enough for a chart's first paint and a lazy section's second read. */
 const SETTLE_MS = 1200;
@@ -290,7 +291,7 @@ async function frameAt(open, surfaces, frameName, results, framesDir) {
 
 /** Every surface of one world (its own, then one tap away), phone then desktop, one browser per
  *  viewer. */
-async function checkWorld(world, runDir) {
+async function checkWorld(world, runDir, at, researchRoot) {
   const rows = [];
   const unstubbed = [];
   const offsite = [];
@@ -302,8 +303,9 @@ async function checkWorld(world, runDir) {
     const mine = surfaces.filter((s) => s.viewer === viewer).map((s) => strikeFor(s, bodyOf));
     const open = await openWorld({
       answer,
-      at: INSTANT,
+      at,
       frame: VIEWPORTS.phone,
+      ...(researchRoot ? { researchRoot } : {}),
     });
     const results = new Map(mine.map((s) => [s.id, {}]));
     const framesDir = join(runDir, "frames", world.name);
@@ -339,9 +341,15 @@ async function main() {
   const unstubbed = [];
   const offsite = [];
   const writes = [];
-  const { payloads } = JSON.parse(readFileSync(join(runDir, "manifest.json"), "utf8"));
+  const manifest = JSON.parse(readFileSync(join(runDir, "manifest.json"), "utf8"));
+  const { payloads } = manifest;
   for (const world of chosen) {
-    const result = await checkWorld(world, runDir);
+    const result = await checkWorld(
+      world,
+      runDir,
+      worldInstant(manifest, world.name),
+      researchRootOf(runDir, manifest, world.name),
+    );
     const known = worldArtifacts({
       declared: world.artifacts,
       payloads: payloads.filter((p) => p.world === world.name),

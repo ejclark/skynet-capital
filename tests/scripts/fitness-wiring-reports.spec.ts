@@ -249,6 +249,37 @@ describe("fitness wiring", () => {
     );
   });
 
+  // #6701: he took himself off the thread a bot assigned him two hours ago, which is his documented
+  // answer, and nothing he still holds carries a fresh bot assignment. The read of threads he holds
+  // alone failed here and mailed him a second time, saying no bot had assigned him in 30 days.
+  it("passes when he left the thread a bot assigned him, and files nothing", () => {
+    const left = {
+      number: 7001,
+      title: "[fitness] bots-running",
+      state: "OPEN",
+      timelineItems: {
+        nodes: [
+          {
+            createdAt: iso(Date.now() - 120 * MIN),
+            actor: { __typename: "Bot", login: "skynet-envoy" },
+            assignee: { login: "ejclark" },
+          },
+        ],
+      },
+    };
+    const stub = fixture({ assignedAgoMs: 31 * 24 * 60 * MIN, fitnessThreads: [left] });
+    const res = run(stub, ["--json", "--report"]);
+    expect(results(res)("owner-assignment-path")).toMatchObject({
+      status: "pass",
+      detail: "a bot assigned the owner 0 days ago",
+    });
+    const gh = calls(stub, "gh");
+    expect(gh).toContain("is:issue label:bug in:title fitness updated:>=");
+    expect(gh).not.toContain("[fitness] owner-assignment-path");
+    // His answer stands: the thread he left is not touched.
+    expect(gh).not.toContain("issues/7001/assignees");
+  });
+
   it("re-assigns a person-made assignment through gh: off, then on, then one line", () => {
     const stub = fixture();
     const self = {
@@ -401,6 +432,99 @@ describe("fitness wiring", () => {
       writeFileSync(join(stub, "machines"), up);
       expect(tick()).toBe(0);
       expect(onlyThread().state).toBe("CLOSED");
+    },
+  );
+
+  // #6700: on 11-02 a tick ran while a bots deploy was replacing the machine. The start script left
+  // it alone, as it does any state but stopped, and the report opened #6686 promising a start that
+  // script never makes. The real clock order again, against a thread closed three days earlier.
+  (existsSync(START) ? it : it.skip)(
+    "gives a machine mid-deploy the deploy grace, then fails it naming a fix that acts on that state",
+    () => {
+      const replacing = (agoMs: number) =>
+        JSON.stringify([
+          { id: "standby1", state: "stopped", config: { standbys: ["m1"] } },
+          {
+            id: "m1",
+            state: "replacing",
+            config: {},
+            events: [
+              { type: "start", status: "started", timestamp: Date.now() - 3 * 60 * MIN },
+              { type: "update", status: "replacing", timestamp: Date.now() - agoMs },
+            ],
+          },
+        ]);
+      const world = (agoMs: number) => {
+        const stub = fixture({ machines: replacing(agoMs) });
+        writeFileSync(join(stub, "gh-plain"), readFileSync(join(stub, "gh"), "utf8"));
+        chmodSync(join(stub, "gh-plain"), 0o755);
+        writeFileSync(join(stub, "gh"), STATEFUL_GH);
+        chmodSync(join(stub, "gh"), 0o755);
+        return stub;
+      };
+      const seedClosed = (stub: string) =>
+        writeFileSync(
+          join(stub, "threads.json"),
+          JSON.stringify({
+            issues: [
+              {
+                number: 1,
+                title: "[fitness] bots-running",
+                body: "**What failed:** machine is stopped.",
+                state: "CLOSED",
+                closedAt: iso(Date.now() - 3 * 24 * 60 * MIN),
+                createdAt: iso(Date.now() - 3 * 24 * 60 * MIN - 30 * MIN),
+                assignees: [],
+                assigned: 0,
+                comments: [],
+              },
+            ],
+          }),
+        );
+      const db = (stub: string) =>
+        JSON.parse(readFileSync(join(stub, "threads.json"), "utf8")) as {
+          issues: { title: string; state: string; body: string; comments: { body: string }[] }[];
+        };
+      const tick = (stub: string) => {
+        const started = spawnSync("bash", [START, "skynet-capital-bots", "--report"], {
+          encoding: "utf8",
+          env: { ...process.env, STUB: stub, FLY_BIN: join(stub, "fly"), GH_BIN: join(stub, "gh") },
+        });
+        expect(started.status).toBe(0);
+        const res = run(stub, ["--json", "--report"]);
+        expect(res.status).toBe(0);
+        return results(res)("bots-running");
+      };
+
+      // Mid-deploy: nothing starts it, nothing opens, the closed thread stays closed.
+      const young = world(2 * MIN);
+      seedClosed(young);
+      const quietRead = tick(young);
+      expect(quietRead.status).toBe("quiet");
+      expect(quietRead.detail).toBe("machine is replacing, inside the 20 min deploy grace");
+      expect(calls(young, "fly")).not.toContain("machine start");
+      expect(db(young).issues).toHaveLength(1);
+      expect(db(young).issues[0]?.state).toBe("CLOSED");
+      expect(db(young).issues[0]?.comments).toEqual([]);
+
+      // Wedged past the grace: the thread reopens, and the failure is a real one.
+      const wedged = world(25 * MIN);
+      seedClosed(wedged);
+      const failed = tick(wedged);
+      expect(failed.status).toBe("fail");
+      expect(failed.detail).toBe("machine is replacing past the 20 min deploy grace");
+      expect(db(wedged).issues[0]?.state).toBe("OPEN");
+      expect(db(wedged).issues[0]?.comments.at(-1)?.body).toContain(
+        "What failed: machine is replacing past the 20 min deploy grace.",
+      );
+
+      // A first failure files a body that names a fix for this state, not the start script's.
+      const fresh = world(25 * MIN);
+      tick(fresh);
+      const [filed] = db(fresh).issues;
+      expect(filed?.body).toContain("**What fixes it:** nothing automatic: stopping the machine");
+      expect(filed?.body).not.toContain("scripts/bots-start-stopped.sh acts first");
+      expect(filed?.body).toContain("The owner is assigned if this still fails after 2 hours.");
     },
   );
 

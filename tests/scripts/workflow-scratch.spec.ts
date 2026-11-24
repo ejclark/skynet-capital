@@ -234,10 +234,13 @@ describe("grind's scratch folders", () => {
 
 describe("post-merge-audit's scratch folders", () => {
   const finding = { severity: "high", file: "x.ts", summary: "s", failure_scenario: "f" };
+  // The audit's one fetch before the fan-out (#6682): a few git commands, so no notes and no folder.
+  const DEEPEN = "deepen";
   const reply =
     (dead: string): Reply =>
     (prompt, { label }) => {
       if (label === DIAL) return CLEARED;
+      if (label === DEEPEN) return { fetched: true, shallow: false };
       if (label === READER) return readerReply(prompt);
       if (label?.startsWith(dead)) return null;
       if (label?.startsWith("triage")) return { merged: true, files: ["x.ts"], protected: false };
@@ -247,9 +250,11 @@ describe("post-merge-audit's scratch folders", () => {
 
   it("gives every agent its own folder", async () => {
     const { calls } = await run("post-merge-audit", { prs: [6501] }, reply("nobody"));
-    const dial = calls.filter((c) => c.label === DIAL);
-    expect(dial.map((c) => scratchOf(c.prompt))).toEqual([undefined]);
-    const folders = calls.filter((c) => c.label !== DIAL).map((c) => scratchOf(c.prompt));
+    const oneCommand = calls.filter((c) => c.label === DIAL || c.label === DEEPEN);
+    expect(oneCommand.map((c) => scratchOf(c.prompt))).toEqual([undefined, undefined]);
+    const folders = calls
+      .filter((c) => c.label !== DIAL && c.label !== DEEPEN)
+      .map((c) => scratchOf(c.prompt));
     expect(folders).toHaveLength(4);
     expect(folders.every(Boolean)).toBe(true);
     expect(new Set(folders).size).toBe(4);

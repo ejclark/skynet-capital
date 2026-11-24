@@ -5,12 +5,24 @@ import {
   type CompanionDraft,
   CompanionStreamError,
   fetchCompanionIndex,
+  type ResearchAskDraft,
   streamCompanionTurn,
 } from "./companion";
 import { marketIsOpen } from "./market-hours";
 import { answerFor, convictionCardText, createConvictionLane } from "./moneypenny-conviction";
-import { createFilingLane, NEVER_MIND, SEND_AS_IS } from "./moneypenny-filing";
+import { createFilingLane, NEVER_MIND, SUBMIT } from "./moneypenny-filing";
+import {
+  createFollowupLane,
+  type FollowupDraft,
+  followupAnswerFor,
+  followupCardText,
+} from "./moneypenny-followup";
 import { plainReply } from "./moneypenny-markdown";
+import {
+  createResearchAskLane,
+  researchAnswerFor,
+  researchAskCardText,
+} from "./moneypenny-research";
 import {
   answerFailed,
   DRAFT_DROPPED,
@@ -22,6 +34,7 @@ import {
 } from "./moneypenny-script";
 import { EMPTY, forgetOthers, keyFor, load, type Persisted, persist } from "./moneypenny-storage";
 import { linesOf, type MpThread, withThread } from "./moneypenny-threads";
+import { isScreenshotId, SCREENSHOTS_STAY_LINE } from "./mp-screenshots";
 import { fetchOnboarding, type Onboarding } from "./onboarding";
 
 /**
@@ -31,7 +44,7 @@ import { fetchOnboarding, type Onboarding } from "./onboarding";
  *
  * Three rules this file enforces: the thread belongs to the MEMBER, not the browser (persistence
  * keyed by their opaque id, bound on every open — `moneypenny-storage.ts`); a drafted filing is
- * SHOWN, parked in memory only, and files on "send" alone ("never mind" drops it, anything else
+ * SHOWN, parked in memory only, and files on "submit" alone ("never mind" drops it, anything else
  * is a normal message); and a scripted beat never swallows a real question (the setup offer
  * catches only a clear yes or no). General questions go to Moneypenny herself — the companion
  * chat on the coach's key, streamed in (`companion.ts`); the scripted lines are the fallback
@@ -50,6 +63,9 @@ const ON_SCREEN: Conversation = "on-screen";
 /** The onboarding read did not answer inside `bindWaitMs`. */
 const LATE: unique symbol = Symbol("late");
 
+/** The onboarding read could not answer (a non-2xx, a dropped connection) — never a sign-out. */
+const READ_FAILED: unique symbol = Symbol("read-failed");
+
 export type MpRole = "user" | "mp" | "sys" | "draft";
 
 export interface MpMessage {
@@ -59,6 +75,9 @@ export interface MpMessage {
   readonly at?: number;
   /** The side thread it belongs to, by its row's key (#7167 criterion 11); none = the main one. */
   readonly thread?: string;
+  /** Ids of the screenshots a member attached to this line (#6007) — ids only, never bytes, so the
+   *  saved conversation stays small; the picture is read back by id (`mp-screenshots.ts`). */
+  readonly screenshots?: readonly string[];
 }
 
 /** Plain-text rendering of the thread — the copy-to-clipboard affordance the rail offers before a
@@ -69,14 +88,29 @@ export interface MpMessage {
  *  words she linked (`[open Trade](/trade)` → "open Trade"), the way the rail shows them. */
 export function formatTranscript(messages: readonly MpMessage[]): string {
   return messages
-    .map((m) => (m.role === "user" ? `You: ${m.text}` : plainReply(m.text)))
+    .map((m) =>
+      m.role === "user"
+        ? `You: ${m.text}${m.screenshots?.length ? ` [${m.screenshots.length} screenshot${m.screenshots.length === 1 ? "" : "s"} attached]` : ""}`
+        : plainReply(m.text),
+    )
     .join("\n\n");
 }
 
 const sleep = (ms: number) => new Promise<void>((ok) => setTimeout(ok, ms));
 
 export interface MoneypennyState extends Persisted {
-  readonly open: boolean;
+  /** The conversation pane's size (Eric, 2026-11-13: "Consolidate the chat and history windows. The
+   *  ability to expand/collapse window size is enough"): the conversation is always in the dock,
+   *  compact by default, expanded on the member's ask. A taste setting, so it survives navigation
+   *  and reloads (`localStorage`, best-effort); a link of hers collapses it so her page shows. */
+  readonly expanded: boolean;
+  /** The pane folded away to its header, so a phone shows the page (#7933, Eric: "the chat window
+   *  occupies ~50% of the viewport… no way to dismiss or minimize it without leaving the page").
+   *  Only the header and the box stay; never true while `expanded`. Remembered like `expanded`; the
+   *  member's own send or ask, a ✎ tag, or "Talk to Moneypenny" shows the pane again. */
+  readonly minimized: boolean;
+  /** Bumps when something outside the dock asks for its box (`meetMoneypenny`) — the dock focuses it. */
+  readonly focusSeq: number;
   /** Her typing beat — the indicator before a line lands. */
   readonly typing: boolean;
   /** A live answer is arriving — the composer waits (a send now would collide with the stream). */
@@ -93,11 +127,17 @@ export interface MoneypennyState extends Persisted {
   /** Whether the ladder gate is already lifted — refreshed on every open, never persisted (same
    *  as `connected`/`firstTradeDone`), so a fresh device still shows the celebration once. */
   readonly messaged?: boolean;
-  /** A filing she drafted, parked until the member says send — in memory only, never persisted. */
+  /** A filing she drafted, parked until the member says submit — in memory only, never persisted. */
   readonly draft?: CompanionDraft;
   /** A view she drafted (#5482 criterion 9), parked until the member taps one of its three exits —
    *  in memory only, never persisted, like `draft`. */
   readonly conviction?: ChatConvictionDraft;
+  /** A follow-up she drafted on the member's own filing (#7286 slice 8), parked until the member
+   *  taps "Post the follow-up" or "Not now" — in memory only, never persisted, like `draft`. */
+  readonly followup?: FollowupDraft;
+  /** A research question she drafted, parked until the member taps "Ask the research desk" or
+   *  "Not now" — in memory only, never persisted, like `draft` and `conviction`. */
+  readonly researchAsk?: ResearchAskDraft;
   /** Bumps on every saved view — the rail refreshes the Playbooks screen's list on it. */
   readonly convictionSeq: number;
   /** A question asked from outside the rail (`ask`), shown at once with her typing line while the
@@ -108,30 +148,74 @@ export interface MoneypennyState extends Persisted {
   /** The side thread the rail is showing (`moneypenny-threads.ts`); undefined = the main
    *  conversation. In memory only: the rail always reopens on the main one after a reload. */
   readonly thread?: MpThread;
-  /** The conversation a parked card (`draft`, `conviction`) was drafted in — its thread's key, or
-   *  undefined for the main one. Its exits answer only there, so a "send" typed elsewhere never
+  /** The conversation a parked card (`draft`, `conviction`, `researchAsk`) was drafted in — its thread's key, or
+   *  undefined for the main one. Its exits answer only there, so a "submit" typed elsewhere never
    *  files a card the member cannot see. */
   readonly parkedIn?: string;
-  /** Show `thread` in the rail, opening it — the row's "Continue in the chat". */
+  /** Show `thread` in the dock and its History — the row's "Continue in the chat". */
   readonly openThread: (thread: MpThread) => void;
   /** Back to the main conversation. */
   readonly closeThread: () => void;
-  /** Open the rail; with `intro`, play her intro script once per member (the `introDone` flag). */
-  readonly openRail: (opts?: { readonly intro?: boolean }) => Promise<void>;
-  readonly closeRail: () => void;
-  readonly toggleRail: () => void;
+  /** Wake the dock: switch the chat on and bind the member, so her moves read the member's own
+   *  facts; with `intro`, play her intro script once per member (the `introDone` flag). */
+  readonly wake: (opts?: { readonly intro?: boolean }) => Promise<void>;
+  /** Back to the compact pane (Escape, a link of hers). */
+  readonly collapse: () => void;
+  /** The member moved to another page or window: leave a side thread for the main conversation
+   *  when no answer is under way. The pane keeps its size: that is the member's taste. */
+  readonly leavePage: () => void;
+  /** Compact ↔ expanded, remembered for this browser. Expanding also un-minimizes. */
+  readonly toggleExpanded: () => void;
+  /** Fold the pane to its header (from either size), remembered for this browser. */
+  readonly minimize: () => void;
+  /** Back from minimized to the compact pane; a no-op when it is not minimized. */
+  readonly restore: () => void;
+  /** Load the member's saved conversation, so a row's thread shows on page load (#7308) and the
+   *  dock's moves read the member's facts; also checks the chat is switched on. Binds only a store nothing else has touched yet, and only to a member the
+   *  read named: a failed read must never bind "anon", which would forget the member's own blob. */
+  readonly hydrate: () => Promise<void>;
   /** Forget this thread and start over — she introduces herself again. */
   readonly newConversation: () => Promise<void>;
   /** The member's turn — a typed message or a chip's canned one. False when not accepted (a
    *  reply is still arriving), so the composer keeps the text. */
-  readonly send: (text: string) => Promise<boolean>;
-  /** A question from outside the rail (the landing page's ask box): open the rail and show it at
-   *  once, then send it once the thread is bound — or after `bindWaitMs`, whichever comes first.
+  readonly send: (text: string, screenshots?: readonly string[]) => Promise<boolean>;
+  /** A question from outside the dock (a quick question, a row's ask): show it at once in the
+   *  dock, then send it once the thread is bound — or after `bindWaitMs`, whichever comes first.
    *  True when accepted, false when a turn is still under way (the caller keeps the text). With
    *  `thread`, the question opens (or continues) that row's side thread instead of the main one. */
   readonly ask: (text: string, thread?: MpThread) => boolean;
   /** Forget everything for this member — for specs and the new-conversation control. */
   readonly reset: () => void;
+}
+
+/** Where the pane's size is remembered: a per-browser convenience, never state that must persist. */
+export const EXPANDED_KEY = "mp-dock-expanded";
+function readExpanded(): boolean {
+  try {
+    return globalThis.localStorage?.getItem(EXPANDED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+function writeExpanded(on: boolean): void {
+  writeFlag(EXPANDED_KEY, on);
+}
+/** Where "minimized" is remembered (#7933) — the same per-browser convenience as the size. */
+export const MINIMIZED_KEY = "mp-dock-minimized";
+function readMinimized(): boolean {
+  try {
+    // never both: a remembered expanded pane wins over a stale minimized flag
+    return !readExpanded() && globalThis.localStorage?.getItem(MINIMIZED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+function writeFlag(key: string, on: boolean): void {
+  try {
+    globalThis.localStorage?.setItem(key, on ? "1" : "0");
+  } catch {
+    // a private window or blocked storage: the size simply is not remembered
+  }
 }
 
 export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
@@ -151,14 +235,25 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
   /** Lines land in the conversation on screen: the side thread the rail shows, else the main one.
    *  A thread is remembered by name the first time a line lands in it, whoever's thread it was
    *  bound under (a question asked before the member was known keeps its row). */
-  const append = (role: MpRole, texts: readonly string[], to: Conversation = ON_SCREEN) => {
+  const append = (
+    role: MpRole,
+    texts: readonly string[],
+    to: Conversation = ON_SCREEN,
+    screenshots: readonly string[] = [],
+  ) => {
     const { threads } = get();
     const thread = to === ON_SCREEN ? get().thread : undefined;
     const key = thread?.key;
     save({
       messages: [
         ...get().messages,
-        ...texts.map((text) => ({ role, text, at: Date.now(), ...(key ? { thread: key } : {}) })),
+        ...texts.map((text) => ({
+          role,
+          text,
+          at: Date.now(),
+          ...(key ? { thread: key } : {}),
+          ...(screenshots.length > 0 ? { screenshots } : {}),
+        })),
       ],
       ...(thread && !threads.some((t) => t.key === thread.key)
         ? { threads: withThread(threads, thread) }
@@ -181,12 +276,23 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
 
   /** Bind the thread to `ob`'s member and refresh the facts the intro and chips read. `carry` is
    *  the lines a question added before its member was known (an `ask` that stopped waiting): on a
-   *  member switch they move into that member's thread instead of staying behind in `anon`'s. */
+   *  member switch they move into that member's thread instead of staying behind in `anon`'s.
+   *
+   *  A read that could not answer (`READ_FAILED`: a 5xx, a dropped connection) is not a sign-out —
+   *  the server answers a signed-out session 200 without `viewerId` — so it changes nothing: the
+   *  member, their open thread and their saved blob all stay (#7307, where one 503 deleted a
+   *  member's chat for good). A store not yet bound shows `anon`'s thread meanwhile, as before,
+   *  but forgets no one: the next read that answers decides whose chat this device keeps. */
   const applyBind = (
-    ob: Onboarding | undefined,
+    read: Onboarding | typeof READ_FAILED,
     carry: readonly MpMessage[] = [],
   ): Onboarding | undefined => {
-    const member = ob?.viewerId ?? "anon";
+    if (read === READ_FAILED) {
+      if (get().member === undefined) set({ ...load("anon"), member: "anon" });
+      return undefined;
+    }
+    const ob = read;
+    const member = ob.viewerId ?? "anon";
     const was = get().member;
     if (was !== member) {
       // A thread open under another member is not this one's (no row of theirs to show it on);
@@ -194,7 +300,14 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
       if (was !== undefined && was !== "anon") set({ thread: undefined });
       forgetOthers(member);
       const thread = load(member);
-      set({ ...thread, member, draft: undefined, conviction: undefined });
+      set({
+        ...thread,
+        member,
+        draft: undefined,
+        conviction: undefined,
+        followup: undefined,
+        researchAsk: undefined,
+      });
       // An unbound store saves under "anon", so loading "anon" already holds the carried lines.
       if (carry.length > 0 && (was ?? "anon") !== member) {
         // A side thread the carried question was asked in moves with it, by name.
@@ -206,14 +319,29 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
       }
     }
     set({
-      connected: ob?.account !== undefined,
-      firstTradeDone: ob?.steps.some((s) => s.id === "first-trade" && s.done) ?? false,
-      messaged: ob?.steps.some((s) => s.id === "first-message" && s.done) ?? false,
+      connected: ob.account !== undefined,
+      firstTradeDone: ob.steps.some((s) => s.id === "first-trade" && s.done),
+      messaged: ob.steps.some((s) => s.id === "first-message" && s.done),
     });
     return ob;
   };
-  const bind = async (): Promise<Onboarding | undefined> =>
-    applyBind(await fetchOnboarding().catch(() => undefined));
+  const readOnboarding = () => fetchOnboarding().catch((): typeof READ_FAILED => READ_FAILED);
+  const bind = async (): Promise<Onboarding | undefined> => applyBind(await readOnboarding());
+
+  /** `hydrate`'s one read in flight, shared by every row that mounts while it is out. */
+  let hydrating: Promise<void> | undefined;
+  /** Untouched: never bound, and no turn started — a question asked meanwhile binds on its own
+   *  path (`sendPending`), carrying its lines, which a bare load here would overwrite. */
+  const untouched = () => {
+    const s = get();
+    return (
+      s.member === undefined &&
+      s.pending === undefined &&
+      !s.typing &&
+      !s.streaming &&
+      s.messages.length === 0
+    );
+  };
 
   /** A known thread's title and place follow its row (a story re-cut under the same id); one never
    *  asked about stays unknown until its first line lands (`append`). */
@@ -239,7 +367,7 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
    *  If the read was late, the question goes out under the member already known, and the read's
    *  answer is applied after the turn — carrying the question and her reply with it. */
   const sendPending = async (note: string) => {
-    const reading = fetchOnboarding().catch(() => undefined);
+    const reading = readOnboarding();
     const first = await Promise.race([
       reading,
       sleep(timing.bindWaitMs).then((): typeof LATE => LATE),
@@ -281,7 +409,14 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
       .slice(-10)
       .map((m) =>
         m.role === "user"
-          ? { role: "user" as const, content: m.text }
+          ? {
+              role: "user" as const,
+              content: m.text,
+              // Ids only; the saved line is checked again, since browser storage is the member's own.
+              ...(m.screenshots?.some(isScreenshotId)
+                ? { screenshots: m.screenshots.filter(isScreenshotId) }
+                : {}),
+            }
           : { role: "assistant" as const, content: m.text.replace(/^Moneypenny · /, "") },
       );
 
@@ -320,12 +455,49 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
           show();
         },
         (draft) => {
-          set({ draft, kind: draft.kind, conviction: undefined, parkedIn: key });
+          set({
+            draft,
+            kind: draft.kind,
+            conviction: undefined,
+            followup: undefined,
+            researchAsk: undefined,
+            parkedIn: key,
+          });
           append("draft", [draftCard(draft)]);
+          // A filing lands on the public repo, outside the invite gate: it carries words only
+          // (#6007 criterion 10), and a member who attached a picture is told so.
+          if (linesOf(get().messages, key).some((m) => m.screenshots?.length))
+            append("sys", [SCREENSHOTS_STAY_LINE]);
         },
         (conviction) => {
-          set({ conviction, draft: undefined, parkedIn: key });
+          set({
+            conviction,
+            draft: undefined,
+            followup: undefined,
+            researchAsk: undefined,
+            parkedIn: key,
+          });
           append("draft", [convictionCardText(conviction)]);
+        },
+        (followup) => {
+          set({
+            followup,
+            draft: undefined,
+            conviction: undefined,
+            researchAsk: undefined,
+            parkedIn: key,
+          });
+          append("draft", [followupCardText(followup)]);
+        },
+        (researchAsk) => {
+          set({
+            researchAsk,
+            draft: undefined,
+            conviction: undefined,
+            followup: undefined,
+            parkedIn: key,
+          });
+          append("draft", [researchAskCardText(researchAsk)]);
         },
       );
     } catch (err) {
@@ -366,8 +538,48 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
     saved: () => set({ convictionSeq: get().convictionSeq + 1 }),
   });
 
-  /** A parked card's exits. A view: one of its three exact answers acts on it. A filing draft:
-   *  "send" files it, "never mind" drops it. Anything else leaves either parked and is a normal
+  /** The follow-up lane — the only thing here that posts a follow-up (`moneypenny-followup.ts`). */
+  const followups = createFollowupLane({ say });
+
+  /** A parked follow-up's exits: "Post the follow-up" or "Not now", exactly. Busy while the post
+   *  runs, like a view's tap; a failed or refused post parks the card again for another tap. */
+  const answeredFollowup = async (note: string): Promise<boolean> => {
+    const { followup, parkedIn } = get();
+    const answer = followup ? followupAnswerFor(note) : undefined;
+    if (!(followup && answer)) return false;
+    set({ followup: undefined, streaming: true });
+    try {
+      if (!(await followups.act(answer, followup))) set({ followup, parkedIn });
+    } finally {
+      set({ streaming: false });
+    }
+    return true;
+  };
+
+  /** The research lane — the only thing here that puts a question on the research list
+   *  (`moneypenny-research.ts`). */
+  const research = createResearchAskLane({ say });
+
+  /** A parked research question's exits: "Ask the research desk" or "Not now", exactly. Busy while
+   *  the post runs, like a view's tap; a failed post parks the card again for another tap. */
+  const answeredResearch = async (note: string): Promise<boolean> => {
+    const { researchAsk, parkedIn } = get();
+    const asked = researchAsk ? researchAnswerFor(note) : undefined;
+    if (!(researchAsk && asked)) return false;
+    set({ researchAsk: undefined, streaming: true });
+    try {
+      const done = await research.act(asked, researchAsk);
+      if (!done) set({ researchAsk, parkedIn });
+    } finally {
+      set({ streaming: false });
+    }
+    return true;
+  };
+
+  /** A parked card's exits. A view: one of its three exact answers acts on it. A follow-up:
+   *  "Post the follow-up" or "Not now", exactly. A research question: "Ask the research desk" or
+   *  "Not now", exactly; a failed post parks either again. A filing draft:
+   *  "submit" files it, "never mind" drops it. Anything else leaves either parked and is a normal
    *  message (false). */
   const answeredParked = async (note: string): Promise<boolean> => {
     const { conviction, draft, parkedIn, thread } = get();
@@ -384,8 +596,23 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
       }
       return true;
     }
-    if (draft && SEND_AS_IS.test(note)) {
-      await lane.sendDraft(draft);
+    // After the view's branch, never before it: a parked view's tap marks the rail busy in the same
+    // tick it lands (the cards are exclusive — drafting one clears the others). So only the parked
+    // card's handler is awaited: an extra await ahead of it would push its busy mark a tick late.
+    if (await (get().followup ? answeredFollowup(note) : answeredResearch(note))) return true;
+    if (draft && SUBMIT.test(note)) {
+      // Unpark and go busy in the same tick, BEFORE the filing's awaits (the coach's shaping pass
+      // and the GitHub call take seconds): a second "submit" in that window used to find the draft
+      // still parked and file it again — one tap filed #7494–#7497, four copies in one second
+      // (2026-11-12). A failed filing parks the same draft again, so "submit" still retries it.
+      const before = get().filedSeq;
+      set({ draft: undefined, streaming: true });
+      try {
+        await lane.sendDraft(draft);
+      } finally {
+        set({ streaming: false });
+        if (get().filedSeq === before) set({ draft });
+      }
       return true;
     }
     if (draft && NEVER_MIND.test(note)) {
@@ -399,23 +626,34 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
 
   return {
     ...EMPTY,
-    open: false,
+    expanded: readExpanded(),
+    minimized: readMinimized(),
+    focusSeq: 0,
     typing: false,
     streaming: false,
     filedSeq: 0,
     convictionSeq: 0,
 
-    openRail: async (opts) => {
-      set({ open: true });
+    wake: async (opts) => {
       void companionOn();
       const ob = await bind();
       if (opts?.intro && !get().introDone) await playIntro(ob);
     },
-    closeRail: () => set({ open: false }),
+    collapse: () => {
+      set({ expanded: false });
+      writeExpanded(false);
+    },
+    leavePage: () => {
+      // A new page or window: a side thread hands the dock back to the main conversation — unless
+      // an answer is still landing in it, which it is left to finish.
+      const s = get();
+      const busy = s.typing || s.streaming || s.pending !== undefined;
+      if (!busy) set({ thread: undefined });
+    },
     openThread: (thread) => {
       // Never mid-answer: her reply lands in the thread it was asked in, so the view waits for it.
       if (get().typing || get().streaming || get().pending !== undefined) return;
-      set({ thread, open: true });
+      set({ thread });
       renamed(thread);
       void companionOn();
       void bind();
@@ -424,15 +662,36 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
       if (get().typing || get().streaming || get().pending !== undefined) return;
       set({ thread: undefined });
     },
-    toggleRail: () => {
-      if (get().open) set({ open: false });
-      else {
-        // ✦ is Moneypenny herself: it opens on the main conversation, its threads indexed atop it.
-        // Mid-answer the view stays put, so her reply is seen landing where it was asked.
-        if (!(get().typing || get().streaming || get().pending !== undefined))
-          set({ thread: undefined });
-        void get().openRail({ intro: true });
-      }
+    toggleExpanded: () => {
+      const expanded = !get().expanded;
+      set({ expanded, minimized: false });
+      writeExpanded(expanded);
+      writeFlag(MINIMIZED_KEY, false);
+      if (expanded) void get().wake({ intro: true });
+    },
+    minimize: () => {
+      set({ expanded: false, minimized: true });
+      writeExpanded(false);
+      writeFlag(MINIMIZED_KEY, true);
+    },
+    restore: () => {
+      if (!get().minimized) return;
+      set({ minimized: false });
+      writeFlag(MINIMIZED_KEY, false);
+    },
+    hydrate: () => {
+      // The dock mounts on every page and reads whether the chat is switched on for its box.
+      void companionOn();
+      if (!untouched()) return Promise.resolve();
+      hydrating ??= fetchOnboarding()
+        .then((ob) => {
+          if (ob.viewerId !== undefined && untouched()) applyBind(ob);
+        })
+        .catch(() => undefined)
+        .finally(() => {
+          hydrating = undefined;
+        });
+      return hydrating;
     },
     newConversation: async () => {
       get().reset();
@@ -444,17 +703,19 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
       const note = text.trim();
       const s = get();
       if (!note || s.typing || s.streaming || s.pending !== undefined) return false;
-      set({ open: true, pending: note, thread });
+      // The dock is always on screen, so asking shows the question there and opens nothing. A row's
+      // ask names its thread; an ask without one (a quick question) is the main conversation's.
+      set({ pending: note, thread });
       if (thread) renamed(thread);
       void companionOn();
       void sendPending(note);
       return true;
     },
 
-    send: async (text) => {
+    send: async (text, screenshots = []) => {
       const note = text.trim();
       if (!note || get().typing || get().streaming || get().pending !== undefined) return false;
-      append("user", [note]);
+      append("user", [note], ON_SCREEN, screenshots);
       // The ladder gate's whole bar: a real message, said once, regardless of how it routes —
       // ack the server (it records the evidence) and celebrate locally the first time this
       // member's own onboarding hasn't already marked it done.
@@ -493,6 +754,8 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
         ...EMPTY,
         draft: undefined,
         conviction: undefined,
+        followup: undefined,
+        researchAsk: undefined,
         pending: undefined,
         thread: undefined,
         parkedIn: undefined,
@@ -506,5 +769,10 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
 });
 
 /** Open the rail with her intro — the entry points other than the ✦ toggle all use this. */
-export const meetMoneypenny = (): Promise<void> =>
-  useMoneypenny.getState().openRail({ intro: true });
+export const meetMoneypenny = (): Promise<void> => {
+  // "Talk to Moneypenny" from a page (onboarding, the ladder, feedback): her conversation opens over
+  // the dock and the box takes focus, so the member can answer her at once.
+  const mp = useMoneypenny.getState();
+  useMoneypenny.setState({ focusSeq: mp.focusSeq + 1 });
+  return mp.wake({ intro: true });
+};

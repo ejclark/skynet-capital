@@ -14,7 +14,8 @@ import {
 
 // DOES THE DIAL MOVE BURN? (#6470) The sum is simple; the wiring is what could lie. These specs pin
 // that a leg lands in the position its START fell in, that an unpriced or unread leg is never
-// counted as zero spend, and that the REST budget stops the read and says so.
+// passed off as zero spend (it adds nothing to the dollars, so its row reads "at least" and the
+// notes under the table count it), and that the REST budget stops the read and says so.
 
 const EVENTS = [
   { event: "labeled", label: "work-mode:normal", at: "2026-09-30T04:19:34Z" },
@@ -136,16 +137,8 @@ describe("the table: dollars and legs per hour, by position and lane", () => {
     expect(hours).toBeCloseTo(expected);
   });
 
-  it("counts an unpriced leg as a leg and never as zero dollars", () => {
-    const rows = summarize(
-      [leg("2026-10-16T01:00:00Z", 2), leg("2026-10-16T02:00:00Z", null)],
-      windows,
-    );
-    const row = rows.find((r) => r.position === "conserve");
-    expect(row?.legs).toBe(2);
-    expect(row?.unpriced).toBe(1);
-    expect(row?.usd).toBe(2);
-  });
+  // An unpriced leg, and a day whose listing went unread, are pinned in meter-partial-input.spec.ts
+  // (#6694) with every meter row that reads part of its input.
 
   it("gives every position a row for every lane, so a lane that spent nothing reads $0.00", () => {
     const rows = summarize([leg("2026-10-16T01:00:00Z", 2)], windows);

@@ -315,7 +315,10 @@ describe("updateStuckBranch — the act", () => {
 
 describe("the audit carries it", () => {
   it("audit() emits the intent from deps.stuckBranches", () => {
-    const intents = audit({ stuckBranches: [branch()] });
+    const workMode = { trackingIssue: 1, title: null, mode: { position: "normal" } };
+    const intents = audit({ stuckBranches: [branch()], workMode } as unknown as Parameters<
+      typeof audit
+    >[0]);
     expect(intents.map((i: { kind: string }) => i.kind)).toEqual(["update-stuck-branch"]);
   });
 

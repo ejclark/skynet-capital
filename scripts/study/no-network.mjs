@@ -9,7 +9,8 @@
 // so the manifest says exactly which reads ran on a refusal.
 
 /**
- * @param {(url: string) => unknown} answer  JSON for a URL the world holds, or undefined
+ * @param {(url: string) => unknown} answer  JSON for a URL the world holds (or `{raw, contentType}`
+ *   for a document that is not JSON), or undefined
  * @returns {{refused: string[], answered: string[]}} what was asked, for the manifest
  */
 export function guardNetwork(answer) {
@@ -22,6 +23,11 @@ export function guardNetwork(answer) {
       return Promise.reject(new TypeError(`study world: no network (${url})`));
     }
     log.answered.push(url);
+    // A document that is not JSON (the VIX history is CSV) comes as `{raw, contentType}`.
+    if (typeof body?.raw === "string") {
+      const headers = { "content-type": body.contentType ?? "text/plain" };
+      return Promise.resolve(new Response(body.raw, { status: 200, headers }));
+    }
     const headers = { "content-type": "application/json" };
     return Promise.resolve(new Response(JSON.stringify(body), { status: 200, headers }));
   };

@@ -12,10 +12,7 @@ export type CardIssue = Labelled & {
   pull_request?: unknown;
 };
 
-export function wantedKindOf(
-  issue: CardIssue,
-  opts?: { horizons?: Record<string, string> },
-): string;
+export function wantedKindOf(issue: CardIssue): string;
 
 export function waitingOnFor(issue: CardIssue, card?: Partial<WantedCard>): string;
 
@@ -29,7 +26,7 @@ export interface WantedCardFields {
 export function wantedCardFields(
   issue: CardIssue,
   card: Partial<WantedCard>,
-  opts?: { horizons?: Record<string, string>; seats?: SeatRegistry },
+  opts?: { seats?: SeatRegistry },
 ): { kind: string; waitingOn: string; role?: string };
 
 export interface CardFieldWrite {

@@ -9,6 +9,13 @@ import {
   scoreTakenQuests,
   type TakenQuest,
 } from "../../src/domain/quest-score.js";
+import { deskLedger } from "../../src/observatory/desk-data.js";
+import { lifecycleLedgerRecord } from "../../src/observatory/option-lifecycle-activity.js";
+import type {
+  ActivityView,
+  ParticipantSnapshot,
+} from "../../src/observatory/participant-snapshot.js";
+import { parseLifecycleActivity } from "../../src/trading/option-lifecycle.js";
 
 /**
  * #7028 slice 6: a taken quest is scored from the member's OWN trades for its order, never a model
@@ -167,6 +174,7 @@ describe("questScoreboard", () => {
         closed: 1,
         unseen: 1,
         paid: 1,
+        assigned: 0,
         rated: 0,
         ratedPaid: 0,
         expectedPaid: 0,
@@ -180,6 +188,7 @@ describe("questScoreboard", () => {
         closed: 0,
         unseen: 0,
         paid: 0,
+        assigned: 0,
         rated: 0,
         ratedPaid: 0,
         expectedPaid: 0,
@@ -226,5 +235,94 @@ describe("questScoreboard", () => {
       source: "docs/research/x.md",
     };
     expect(questScoreboard([closed(true, tested)])[0]?.note).toBeUndefined();
+  });
+});
+
+describe("an assigned cash-secured put (#7306)", () => {
+  // Sell 1 QQQ 400 put for $4.20; QQQ ends at 360 and the put is assigned. The ledger closes the
+  // option at $0 (the premium kept), and drops the share purchase at the strike (OPTRD, #837).
+  const occ = "QQQ261218P00400000";
+  const put = (orderId: string) =>
+    taken({
+      questId: "conditions:QQQ:sell-cash-secured-put",
+      moveKind: "sell-cash-secured-put",
+      orderId,
+      baseRate: measured(0.895),
+    });
+  const lifecycle = (raw: Record<string, string>): ActivityView => {
+    const event = parseLifecycleActivity(raw);
+    if (!event) throw new Error("fixture did not parse");
+    return lifecycleLedgerRecord(event, "ann-1");
+  };
+  const assignedPut = (n: number): ActivityView[] => [
+    {
+      orderId: `o-${n}`,
+      symbol: occ,
+      side: "sell",
+      quantity: 1,
+      filledQuantity: 1,
+      price: 4.2,
+      status: "filled",
+      at: `2026-11-${String(n + 1).padStart(2, "0")}T15:00:00.000Z`,
+    },
+    lifecycle({
+      id: `asn-${n}`,
+      activity_type: "OPASN",
+      symbol: occ,
+      qty: "1",
+      transaction_time: `2026-11-${String(n + 1).padStart(2, "0")}T21:00:00.000Z`,
+    }),
+    lifecycle({
+      id: `trd-${n}`,
+      activity_type: "OPTRD",
+      symbol: "QQQ",
+      qty: "100",
+      price: "400",
+      side: "buy",
+      transaction_time: `2026-11-${String(n + 1).padStart(2, "0")}T21:00:00.000Z`,
+    }),
+  ];
+  const ledgerOf = (activity: ActivityView[]) =>
+    deskLedger({ id: "ann-1", activity } as unknown as ParticipantSnapshot);
+
+  it("is open and assigned, never closed and paid on the premium it kept", () => {
+    const ledger = ledgerOf(assignedPut(1));
+    expect(ledger.trips[0]).toMatchObject({ short: true, assigned: true, realized: 420 });
+    expect(scoreTakenQuest(put("o-1"), ledger)).toEqual({
+      taken: put("o-1"),
+      state: "open",
+      assigned: true,
+    });
+  });
+
+  it("still scores a put that expired worthless as closed and paid", () => {
+    const ledger = ledgerOf([
+      assignedPut(1)[0] as ActivityView,
+      lifecycle({ id: "exp", activity_type: "OPEXP", symbol: occ, qty: "1", date: "2026-12-18" }),
+    ]);
+    expect(scoreTakenQuest(put("o-1"), ledger)).toMatchObject({ state: "closed", paid: true });
+  });
+
+  it("counts ten assigned puts in the comparison as not paid, so the row reads below its rate", () => {
+    const activity = Array.from({ length: 10 }, (_, i) => assignedPut(i + 1)).flat();
+    const puts = Array.from({ length: 10 }, (_, i) => put(`o-${i + 1}`));
+    const [row] = questScoreboard(scoreTakenQuests(puts, ledgerOf(activity)));
+    expect(row?.ratedPaid).not.toBe(10);
+    expect(row).toMatchObject({
+      closed: 0,
+      open: 10,
+      assigned: 10,
+      paid: 0,
+      rated: 10,
+      ratedPaid: 0,
+      expectedPaid: 8.95,
+      verdict: "below",
+    });
+  });
+
+  it("leaves an assigned covered call out of the comparison: there assignment is not a loss", () => {
+    const call = taken({ moveKind: "sell-covered-call", baseRate: measured(0.5) });
+    const [row] = questScoreboard([{ taken: call, state: "open", assigned: true }]);
+    expect(row).toMatchObject({ open: 1, assigned: 1, rated: 0, verdict: "untested" });
   });
 });

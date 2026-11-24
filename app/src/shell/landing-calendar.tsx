@@ -1,5 +1,10 @@
 import type { ReactElement, ReactNode } from "react";
-import { CALENDAR_ANCHOR, editionEventKey, eventAnchor } from "../../../src/domain/edition-keys";
+import {
+  CALENDAR_ANCHOR,
+  editionEventKey,
+  eventAnchor,
+  storyAnchor,
+} from "../../../src/domain/edition-keys";
 import { MARKET_CLOSURES } from "../../../src/domain/market-calendar";
 import { dayLabel } from "../live/book-events";
 import {
@@ -48,6 +53,11 @@ import { usePhoneWidth } from "./use-media";
  * `calendar`, and the story rows' `story-<id>` (in `edition-story.tsx`). Only events in the selected
  * range have a row, so the landing page publishes only those keys (`calendarShows`, shared with
  * `routes/index.tsx`). `app/tests/shell/edition-anchor.spec.tsx` fails if the page drops them.
+ *
+ * The page pivots to her answer (#7167 slice 3): with `?show=` naming rows, the calendar draws only
+ * those, under a bar that says they are her answer and offers ✕ back to the whole calendar. The
+ * month grid and the range head step aside while it does, since the pivot is not a range.
+ * `app/tests/shell/landing-pivot.spec.tsx` pins it.
  */
 
 const LANDING_LENSES: readonly Lens[] = ["day", "week", "month"];
@@ -141,12 +151,15 @@ function Day({
 function Week({
   week,
   edition,
+  shown,
   today,
   storyAsk,
   eventAsk,
 }: {
   readonly week: CalendarWeek;
   readonly edition: Edition;
+  /** A pivot's stories (slice 3); absent draws every story, as before. ◆ reads the whole edition. */
+  readonly shown?: readonly EditionStory[];
   readonly today: string;
   readonly storyAsk: (story: EditionStory) => ReactNode;
   readonly eventAsk?: EventAsk;
@@ -165,14 +178,14 @@ function Week({
         </ul>
       ) : null}
       <ol className="ecal-days" aria-labelledby={id}>
-        {week.stories ? (
+        {week.stories && (shown === undefined || shown.length > 0) ? (
           <li className="ecal-day">
             <h4 id="ecal-stories" className="ecal-day-title">
               The stories, to the {dayLabel(edition.date)} close
             </h4>
             <ul className="ecal-lines" aria-labelledby="ecal-stories">
-              {edition.stories.map((s, i) => (
-                <EditionStoryLine key={s.id} story={s} lead={i === 0}>
+              {(shown ?? edition.stories).map((s) => (
+                <EditionStoryLine key={s.id} story={s} lead={s.id === edition.stories[0]?.id}>
                   {storyAsk(s)}
                 </EditionStoryLine>
               ))}
@@ -211,22 +224,77 @@ function scrollToDay(date: string): void {
 }
 
 /**
- * The range the calendar shows and the coming dates inside it. One function, so the rows drawn and
- * the keys the page publishes to Moneypenny (`routes/index.tsx`) can't disagree.
+ * The range the calendar shows, the coming dates inside it, and the stories it draws. One function,
+ * so the rows drawn and the keys the page publishes to Moneypenny (`routes/index.tsx`) can't
+ * disagree. A pivot (#7167 slice 3, `?show=`) overrides the range: it shows exactly the rows it
+ * names, whatever their date, in the calendar's own order, and nothing else.
  */
 export function calendarShows(
   edition: Edition,
   today: string,
   horizon: Pick<ReturnType<typeof useHorizonRange>, "lens" | "pinned" | "anchor">,
+  pivot: readonly string[] = [],
 ): {
   readonly anchor: string;
   readonly range: DayRange;
   readonly inside: readonly EditionDate[];
   readonly after: EditionDate | undefined;
+  readonly stories: readonly EditionStory[];
 } {
   const anchor = horizon.pinned ? horizon.anchor : planningDay(today);
   const range = rangeFor(anchor, horizon.lens);
-  return { anchor, range, ...datesIn(edition.next, range) };
+  if (pivot.length > 0) {
+    const named = new Set(pivot);
+    return {
+      anchor,
+      range,
+      inside: edition.next.filter((e) => named.has(eventAnchor(editionEventKey(e)))),
+      after: undefined,
+      stories: edition.stories.filter((s) => named.has(storyAnchor(s.id))),
+    };
+  }
+  return { anchor, range, ...datesIn(edition.next, range), stories: edition.stories };
+}
+
+/**
+ * THE PIVOT'S BAR (#7167 slice 3; #7018 round 4 B: "✕ or Back returns"). It stands where the range
+ * head stood, says in words that these rows are her answer and how many, and carries the one way
+ * out. ✦ and the words carry it, never a hue (docs/BRAND.md → Accessibility). A pivot whose rows
+ * left the edition says so instead of drawing an empty calendar.
+ */
+function PivotBar({
+  heading,
+  count,
+  named,
+  onClear,
+}: {
+  readonly heading: ReactNode;
+  /** The rows found in this edition. */
+  readonly count: number;
+  /** The rows the pivot named. */
+  readonly named: number;
+  readonly onClear?: () => void;
+}): ReactElement {
+  const gone = named - count;
+  return (
+    <div className="ecal-pivot">
+      {heading}
+      <p className="ecal-pivot-line">
+        <span aria-hidden="true">✦</span>{" "}
+        {count > 0
+          ? `Moneypenny's answer: ${String(count)} ${count === 1 ? "row" : "rows"} of the calendar`
+          : "The rows Moneypenny named aren't in this edition any more"}
+        {count > 0 && gone > 0
+          ? ` · ${String(gone)} more she named ${gone === 1 ? "isn't" : "aren't"} in this edition any more`
+          : ""}
+      </p>
+      {onClear ? (
+        <button type="button" className="ecal-jump ecal-pivot-clear" onClick={onClear}>
+          <span aria-hidden="true">✕</span> Show the whole calendar
+        </button>
+      ) : null}
+    </div>
+  );
 }
 
 export function LandingCalendar({
@@ -234,6 +302,8 @@ export function LandingCalendar({
   today,
   storyAsk,
   eventAsk,
+  pivot,
+  onClearPivot,
 }: {
   readonly edition: Edition;
   /** The exchange's today, as the server cut the edition's passed dates against it. */
@@ -242,12 +312,22 @@ export function LandingCalendar({
   readonly storyAsk: (story: EditionStory) => ReactNode;
   /** An event's ask and side thread, drawn under its details once opened (#7167 criterion 11). */
   readonly eventAsk?: EventAsk;
+  /** The rows a pivot names (`?show=`, #7167 slice 3); empty or absent is the whole calendar. */
+  readonly pivot?: readonly string[];
+  /** ✕ on the pivot's bar: the route drops `?show=`, and the whole calendar is back. */
+  readonly onClearPivot?: () => void;
 }): ReactElement {
   const phone = usePhoneWidth();
   const horizon = useHorizonRange();
   const lens = horizon.lens;
-  const { anchor, range, inside, after } = calendarShows(edition, today, horizon);
-  const weeks = calendarWeeks(edition.date, calendarDays(inside), today);
+  const pivoted = (pivot?.length ?? 0) > 0;
+  const { anchor, range, inside, after, stories } = calendarShows(edition, today, horizon, pivot);
+  const allWeeks = calendarWeeks(edition.date, calendarDays(inside), today);
+  // A pivot draws only the weeks holding a row it names; the whole calendar keeps every week.
+  const weeks = pivoted
+    ? allWeeks.filter((w) => w.days.length > 0 || (w.stories && stories.length > 0))
+    : allWeeks;
+  const pivotCount = pivoted ? inside.length + stories.length : 0;
   // No lens pressed is the all lens (`calendar-head.tsx`): every coming date, counted.
   const all = { name: "Every coming date", count: `${String(edition.next.length)} dated` };
   const words = (date: string): string =>
@@ -267,18 +347,27 @@ export function LandingCalendar({
 
   return (
     <section id={CALENDAR_ANCHOR} className="ecal" aria-labelledby="ecal-title">
-      <div className="cal-head ecal-cal-head">
-        <CalendarHead
-          lens={lens}
-          range={range}
-          closures={MARKET_CLOSURES}
-          all={all}
-          lenses={LANDING_LENSES}
+      {pivoted ? (
+        <PivotBar
           heading={heading}
-          onStep={(direction) => horizon.setOn(stepAnchor(anchor, lens, direction))}
-          onLens={(next) => horizon.setLens(next)}
+          count={pivotCount}
+          named={pivot?.length ?? 0}
+          onClear={onClearPivot}
         />
-      </div>
+      ) : (
+        <div className="cal-head ecal-cal-head">
+          <CalendarHead
+            lens={lens}
+            range={range}
+            closures={MARKET_CLOSURES}
+            all={all}
+            lenses={LANDING_LENSES}
+            heading={heading}
+            onStep={(direction) => horizon.setOn(stepAnchor(anchor, lens, direction))}
+            onLens={(next) => horizon.setLens(next)}
+          />
+        </div>
+      )}
       <div className="ecal-body">
         <div className="ecal-agenda">
           <ol className="ecal-weeks">
@@ -287,13 +376,14 @@ export function LandingCalendar({
                 key={w.monday}
                 week={w}
                 edition={edition}
+                shown={pivoted ? stories : undefined}
                 today={today}
                 storyAsk={storyAsk}
                 eventAsk={eventAsk}
               />
             ))}
           </ol>
-          {inside.length === 0 ? (
+          {inside.length === 0 && !pivoted ? (
             <div className="ecal-empty">
               <p className="note">
                 Nothing on the edition's calendar{lens === "all" ? "" : ` in ${words(anchor)}`}.
@@ -310,7 +400,7 @@ export function LandingCalendar({
             </div>
           ) : null}
         </div>
-        {phone ? null : (
+        {phone || pivoted ? null : (
           <div className="ecal-grid">
             <CalendarGrid
               month={anchor.slice(0, 7)}

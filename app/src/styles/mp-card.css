@@ -1,0 +1,37 @@
+/* A parked card and its own buttons, one object (#7614, shell/mp-card.tsx). The card's border and
+   fill run round both, and a divider line, not a gap, separates words from choices, so which card a
+   button acts on is read by proximity and enclosure, never by colour alone (BRAND.md →
+   Accessibility). After `moneypenny.css`, whose `.mp-draft` this extends. */
+.mp-card[data-live] {
+  --card-edge: color-mix(in oklab, var(--accent) 45%, var(--border));
+  --card-fill: color-mix(in oklab, var(--accent) 6%, var(--surface));
+}
+.mp-card[data-live] .mp-draft {
+  border-bottom: 0;
+  border-radius: 11px 11px 0 0;
+}
+.mp-card-moves {
+  /* the buttons ride the pane's bottom edge while any of the card is in view, so a card taller
+     than the compact pane still shows its choices */
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px 12px;
+  list-style: none;
+  border: 1px solid var(--card-edge);
+  border-top: 1px dashed var(--card-edge);
+  border-radius: 0 0 11px 11px;
+  background: var(--card-fill);
+}
+.mp-card-moves > li {
+  flex: none;
+}
+/* the moves row's button, sized for a thumb; inside the card it wraps rather than scrolling */
+.mp-card-moves .mp-move {
+  white-space: normal;
+  text-align: left;
+}

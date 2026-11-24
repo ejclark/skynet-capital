@@ -485,6 +485,80 @@ describe("audit() — syncing the work spigot's title", () => {
   });
 });
 
+// #6887 — every act the audit gates on the work dial lands work (a re-armed PR, a new head, a closed
+// lane PR whose issue the sweep may restart). `halt` stops them, so a dial the audit did not actually
+// read must stop them too: `null` (the config would not load), `unreadable` (readWorkMode's conserve
+// fallback when the tracking issue could not be fetched) or `ambiguous` (two dial labels mid-flip,
+// which may include `halt`). Fail closed, as work-gate, admission and the spend brake already do.
+describe("audit() — acts gated on the dial fail closed when it was not read (#6887)", () => {
+  const acting = {
+    stranded: [
+      { number: 6093, title: "t", hours: 9, headSha: "6fb021f5", armRunId: 1, rearmedSha: null },
+    ],
+    stuckBranches: [
+      {
+        number: 6325,
+        title: "t",
+        hours: 119,
+        headSha: "abc1234",
+        headRef: "feedback/6316",
+        dependabot: false,
+        triedShas: [],
+      },
+    ],
+    headless: [
+      {
+        number: 7089,
+        title: "t",
+        hours: 16,
+        why: "no check suite",
+        headSha: "a1b2c3d",
+        headRef: "feedback/7077",
+        triedShas: [],
+      },
+    ],
+    redLanePrs: [
+      {
+        number: 6440,
+        title: "t",
+        issue: 5482,
+        branch: "plan/5482",
+        hours: 37,
+        failed: "verify",
+        failedUrl: "https://github.com/x/actions/runs/1/job/verify",
+        priorCloses: 0,
+      },
+    ],
+  };
+  const ACTS = ["rearm-stranded", "update-stuck-branch", "nudge-headless", "close-red-lane-pr"];
+  type Deps = NonNullable<Parameters<typeof audit>[0]>;
+  const dial = (mode: Record<string, unknown>) =>
+    ({ trackingIssue: 4153, title: null, mode, now: NOW }) as unknown as Deps["workMode"];
+  const kinds = (workMode: Deps["workMode"] | undefined) =>
+    audit({ ...acting, workMode } as unknown as Deps).map((i) => i.kind);
+
+  it("acts on a dial read at a working position", () => {
+    for (const position of ["normal", "conserve", "surge"])
+      expect(kinds(dial({ position }))).toEqual(expect.arrayContaining(ACTS));
+  });
+
+  for (const [label, workMode] of [
+    ["null (the dial config would not load)", null],
+    ["missing", undefined],
+    ["halt", dial({ position: "halt" })],
+    [
+      "unreadable (the tracking issue read failed)",
+      dial({ position: "conserve", unreadable: true }),
+    ],
+    ["ambiguous (two dial labels)", dial({ position: "conserve", ambiguous: true })],
+  ] as const) {
+    it(`WHEN the dial is ${label}, emits none of the acts`, () => {
+      const out = kinds(workMode);
+      for (const act of ACTS) expect(out).not.toContain(act);
+    });
+  }
+});
+
 describe("untruncated() — a list read at its --limit fails loudly instead of auditing a partial list", () => {
   it("passes a list shorter than the limit through unchanged", () => {
     const rows = [{ number: 1 }, { number: 2 }];

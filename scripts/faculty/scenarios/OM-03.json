@@ -1,0 +1,18 @@
+{
+  "id": "OM-03",
+  "member": "phone-only",
+  "viewport": "phone",
+  "start": "/app",
+  "optimal": 6,
+  "scenario": "Your unfilled offer to buy 10 Microsoft shares at $400 is still out there. Make it 15 shares at the same price, from your phone.",
+  "end": {
+    "replaced": [
+      {
+        "id": "faculty-msft-limit",
+        "quantity": 15,
+        "limitPrice": [400, 400]
+      }
+    ]
+  },
+  "note": "Working orders live in Trade's Orders section; the row's change control is small at 390px."
+}

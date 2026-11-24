@@ -1,6 +1,6 @@
 // PINNED RUNS (#4943) — run a study world against an arbitrary commit with TODAY's harness.
 //
-//   node scripts/study/pin.mjs prepare --commit <sha> --dir <abs dir>   # npm run study:pin -- …
+//   node scripts/study/pin.mjs prepare --commit <sha> --dir <abs dir> [--worlds <a,b>]   # npm run study:pin -- …
 //   node scripts/study/pin.mjs remove  --dir <abs dir>
 //
 // WHY: a study measures a build that existed before its fixes landed (the pin), and the fixed
@@ -166,7 +166,7 @@ function step(label, cmd, args, dir) {
   return spawnSync(cmd, args, { cwd: dir, stdio: "inherit" }).status;
 }
 
-function prepare({ commit: given, dir: asked }) {
+function prepare({ commit: given, dir: asked, worlds = [] }) {
   const commit = git(["rev-parse", "--verify", `${given}^{commit}`], SELF);
   const dir = canonical(asked);
   const seen = worktrees().get(dir);
@@ -218,7 +218,7 @@ function prepare({ commit: given, dir: asked }) {
   const steps = [
     ["build", "npm", ["run", "build", "--prefix", "app"]],
     ...(scripts["build:scene"] ? [["scene", "npm", ["run", "build:scene"]]] : []),
-    ["compose", "npx", ["tsx", "scripts/study/worlds/compose.mjs", join(dir, RUN)]],
+    ["compose", "npx", ["tsx", "scripts/study/worlds/compose.mjs", join(dir, RUN), ...worlds]],
   ];
   record.steps = {};
   for (const [label, cmd, args] of steps) {
@@ -229,12 +229,16 @@ function prepare({ commit: given, dir: asked }) {
   // Through tsx, as `npm run study:parity` does: the pin's src/ imports `.js` names for `.ts`
   // files, which Node's own type stripping does not resolve.
   console.log("\npin: parity — npx tsx scripts/study/parity.mjs --run .study-run");
-  const parity = spawnSync("npx", ["tsx", "scripts/study/parity.mjs", "--run", join(dir, RUN)], {
-    cwd: dir,
-    encoding: "utf8",
-    maxBuffer: 1 << 26,
-    stdio: ["ignore", "pipe", "inherit"],
-  });
+  const parity = spawnSync(
+    "npx",
+    ["tsx", "scripts/study/parity.mjs", "--run", join(dir, RUN), ...worlds],
+    {
+      cwd: dir,
+      encoding: "utf8",
+      maxBuffer: 1 << 26,
+      stdio: ["ignore", "pipe", "inherit"],
+    },
+  );
   process.stdout.write(parity.stdout ?? "");
   writeFileSync(join(dir, RUN, "parity.txt"), parity.stdout ?? "");
   record.steps.parity = parity.status;

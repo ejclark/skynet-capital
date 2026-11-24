@@ -29,7 +29,6 @@
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
 import {
   describeNarrowing,
   fencesBackedBy,
@@ -42,6 +41,7 @@ import {
   type AdoptionLedger,
   claimOf,
   rulesIn,
+  splitKey,
   staleAdoptions,
 } from "../playbooks/conviction-adoptions.js";
 import type { Conviction } from "../playbooks/conviction-record.js";
@@ -56,6 +56,7 @@ import {
 } from "../playbooks/fence-studies.js";
 import { findPlaybook } from "../playbooks/registry.js";
 import { isCalendarDay } from "../subscriptions/subscription-state.js";
+import { isMain } from "./cli-entry.js";
 
 export const ADOPTIONS_PATH = join(process.cwd(), "src/playbooks/conviction-adoptions.json");
 
@@ -250,6 +251,7 @@ export function prFor(
   found: Found,
   adoption: Adoption,
   calls: readonly FenceCall[] = FENCE_CALLS,
+  ledger: AdoptionLedger = {},
 ): {
   readonly title: string;
   readonly body: string;
@@ -260,20 +262,48 @@ export function prFor(
     body:
       adoption.change === "pair-rule"
         ? ruleBody(found, adoption, readCalls(found, calls))
-        : holdBody(found, adoption.adoptedOn),
+        : holdBody(found, adoption.adoptedOn, heldBy(found, ledger)),
   };
 }
 
-function holdBody({ conviction, proposal, key }: Found, adoptedOn: string): string {
+/**
+ * The other lines already holding this view's pair shut, earliest first. A second failed claim on
+ * a held pair changes no trade today, and the body must say so: the 11-24 body for claim 7 read
+ * "inside the view's fence → none" of CRWV-WHEEL, shut since 2a's line on 11-09 (#5482).
+ */
+function heldBy({ conviction, proposal, key }: Found, ledger: AdoptionLedger): readonly string[] {
+  return Object.entries(ledger)
+    .filter(([k, a]) => {
+      const parts = splitKey(k);
+      return (
+        k !== key &&
+        a.change === "stop-new-entries" &&
+        parts?.conviction === conviction.id &&
+        parts.pair === proposal.pair
+      );
+    })
+    .sort(([, a], [, b]) => a.adoptedOn.localeCompare(b.adoptedOn))
+    .map(([k, a]) => `\`${k}\` (${a.adoptedOn})`);
+}
+
+function holdBody(
+  { conviction, proposal, key }: Found,
+  adoptedOn: string,
+  already: readonly string[] = [],
+): string {
   const view = conviction.title ?? conviction.id;
   const claim = claimOf(conviction, proposal.claim);
   const fence = proposal.narrowings.join("; ");
+  const held = already.length > 0;
+  const before = held
+    ? `none: already held by ${already.join(", ")}`
+    : `inside the view's fence (${fence})`;
   return [
     "## The picture",
     "",
     `| ${proposal.pair} under ${view} | Before | After |`,
     "|---|---|---|",
-    `| New entries | inside the view's fence (${fence}) | none |`,
+    `| New entries | ${before} | none |`,
     "| Exits | run | run |",
     "| The view's pointer and check day | kept | kept |",
     "",
@@ -282,12 +312,16 @@ function holdBody({ conviction, proposal, key }: Found, adoptedOn: string): stri
     "## Summary",
     "",
     `- Adopts \`${key}\`: claim ${proposal.claim} of ${view} failed, so ${proposal.pair} opens nothing new under it.`,
-    "- Exits keep running. Deleting the ledger line undoes it. Paper only, SIM.",
+    held
+      ? `- No trade change today: ${proposal.pair} is already shut to new entries; this line keeps it so if that one is reverted.`
+      : "- Exits keep running. Deleting the ledger line undoes it. Paper only, SIM.",
     "- Part of #5482",
     "",
     "> [!IMPORTANT]",
     "> **Needs from you**",
-    `> 1. Merge to stop new entries on ${proposal.pair}, or close to keep it running — claim ${proposal.claim} failed.`,
+    held
+      ? `> 1. Merge to record claim ${proposal.claim}'s failure as a second hold on ${proposal.pair}, or close — no trade changes either way while the first line stands.`
+      : `> 1. Merge to stop new entries on ${proposal.pair}, or close to keep it running — claim ${proposal.claim} failed.`,
     "",
     "<details>",
     "<summary><strong>Why, acceptance &amp; the weeds</strong></summary>",
@@ -418,7 +452,7 @@ export function main(
   }
   if (result.changed) writeFileSync(path, `${JSON.stringify(result.ledger, null, 2)}\n`);
   console.log(result.changed ? `adopted ${key}` : `${key} is already adopted; nothing changed`);
-  const pr = prFor(result.found, result.ledger[key] as Adoption, calls);
+  const pr = prFor(result.found, result.ledger[key] as Adoption, calls, result.ledger);
   if (bodyFile) {
     writeFileSync(bodyFile, pr.body);
     console.log(`wrote ${bodyFile}`);
@@ -429,5 +463,4 @@ export function main(
   return 0;
 }
 
-const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
-if (isMain) process.exit(main());
+if (isMain(import.meta.url)) process.exit(main());

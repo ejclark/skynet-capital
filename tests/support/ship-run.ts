@@ -5,11 +5,15 @@ import { execFileSync } from "node:child_process";
 // one without a real body. The refusal fires before verify/push, so exercising it here has no
 // side effects. If someone re-introduces a silent body default, this goes red the same day.
 export const run = (args: string[], env: NodeJS.ProcessEnv = {}) => {
+  // A live `ship.sh platter board` exports SHIP_PLATTER_RERUN=1 into the verify it runs; never let
+  // that marker reach the ship.sh under test (#7551). A spec that means it passes it in `env`.
+  const inherited: NodeJS.ProcessEnv = { ...process.env };
+  delete inherited.SHIP_PLATTER_RERUN;
   try {
     const out = execFileSync("bash", ["scripts/ship.sh", ...args], {
       cwd: process.cwd(),
       stdio: "pipe",
-      env: { ...process.env, GH_TOKEN: "test-token-never-used", ...env },
+      env: { ...inherited, GH_TOKEN: "test-token-never-used", ...env },
     });
     return { code: 0, stderr: "", stdout: out.toString() };
   } catch (error) {

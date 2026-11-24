@@ -21,6 +21,13 @@
 .stage-controls {
   margin: 0 0 14px;
 }
+/* A folded switch (Priority+, `section-switch.tsx`) fits the row by construction, so the row has
+   nothing to scroll — and a scrolling row clips its "More ▾" list to a thin strip (overflow-x: auto
+   clips vertically too). Round 2 of the change study found it: members opened More on Trade and
+   saw "nothing", so a working order stayed unreachable on a phone (OM-01, OM-03, AC-02). */
+.stage-controls:has(.cockpit-nav[data-folds]) {
+  overflow: visible;
+}
 
 /* the group labels ("On this page", "Side", "Desks") hide in a row — the dividers do their job */
 .rail-label {

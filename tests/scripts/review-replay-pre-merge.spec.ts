@@ -85,6 +85,10 @@ describe("what the pre-merge reviewer is told", () => {
     expect(prompt).toContain(rules.trim());
   });
 
+  it("asks for the file repo-relative with no :line, the form the set is scored in (#6719)", () => {
+    expect(prompt).toMatch(/repo-relative path.*never absolute, never with :line/);
+  });
+
   it("swaps a diff too long to print for its stat, so the rules are never cut off", () => {
     const long = preMergePrompt({
       base: "b1",

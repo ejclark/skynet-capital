@@ -40,14 +40,63 @@ export function editionEventKey(event: KeyedDate): string {
   return words ? `${event.date}-${words}` : event.date;
 }
 
+/** The prefixes a row's anchor starts with, so building an anchor and reading one back agree. */
+const STORY_PREFIX = "story-";
+const EVENT_PREFIX = "event-";
+
 /** The element id a story's row carries on the landing page. */
-export const storyAnchor = (id: string): string => `story-${id}`;
+export const storyAnchor = (id: string): string => `${STORY_PREFIX}${id}`;
 
 /** The element id a calendar event's row carries on the landing page. */
-export const eventAnchor = (key: string): string => `event-${key}`;
+export const eventAnchor = (key: string): string => `${EVENT_PREFIX}${key}`;
 
 /** The calendar section's own anchor, for "N more on the calendar". */
 export const CALENDAR_ANCHOR = "calendar";
 
 /** The link that lands on an anchor of the landing page, in the router's path shape (no `/app`). */
 export const landingRow = (anchor: string): string => `/#${anchor}`;
+
+/**
+ * THE PAGE PIVOTS TO HER ANSWER (#7167 slice 3; #7018 round 4, Eric's "More of B"; docs/PATTERNS.md
+ * → *The page pivots as you explore*). When her answer links two or more of the landing page's rows,
+ * the member can narrow the calendar to just those rows. The narrowed view is a page address,
+ * `/?show=<anchor>,<anchor>#calendar`, built from the same keys her links use, so:
+ *   - Back retraces each pivot and ✕ drops the param: the browser history is the map;
+ *   - the chat never changes the view on its own, only the member's tap on the address does;
+ *   - the page owns the effect (`landing-calendar.tsx`), and the chat only names keys.
+ * A pivot only picks which of the page's own rows show; it never changes a figure or a date.
+ */
+export const PIVOT_PARAM = "show";
+
+/** The most rows one pivot holds: her three, with room to spare, and a bounded URL either way. */
+export const PIVOT_MAX = 6;
+
+/** A row anchor a pivot may name: a story or a calendar event, never the calendar section. */
+export function isRowAnchor(anchor: string): boolean {
+  const prefix = [STORY_PREFIX, EVENT_PREFIX].find((p) => anchor.startsWith(p));
+  return prefix !== undefined && KEY_RE.test(anchor.slice(prefix.length));
+}
+
+/** The rows a `?show=` value names, in order, de-duplicated; anything else drops, never strands. */
+export function parsePivot(raw: unknown): readonly string[] {
+  if (typeof raw !== "string") return [];
+  const anchors = raw.split(",").filter(isRowAnchor);
+  return [...new Set(anchors)].slice(0, PIVOT_MAX);
+}
+
+/** The address that pivots the landing page to `anchors`, landing on the calendar section. */
+export function pivotHref(anchors: readonly string[]): string {
+  return `/?${PIVOT_PARAM}=${anchors.join(",")}#${CALENDAR_ANCHOR}`;
+}
+
+/** The row anchor a landing-row link names (`/#story-x` → `story-x`), or undefined. */
+export function landingRowAnchor(path: string): string | undefined {
+  if (!path.startsWith("/#")) return undefined;
+  let anchor = path.slice(2);
+  try {
+    anchor = decodeURIComponent(anchor);
+  } catch {
+    // A malformed escape is still an anchor; match it as written.
+  }
+  return isRowAnchor(anchor) ? anchor : undefined;
+}

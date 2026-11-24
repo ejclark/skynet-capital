@@ -46,6 +46,11 @@
     animation: none;
   }
 }
+/* The member's own "Tower motion" = Still (`takeover.tsx`): every celebration draws at rest — the
+   rain, and each one's entrance (the level-up's stamp and rise, the locked-in figure's rise). */
+.nh-overlay--still :is(.nh-rain span, .lu-check, .lu-rung--now .lu-mark, .lk-value) {
+  animation: none;
+}
 .nh-body {
   position: relative;
   display: flex;

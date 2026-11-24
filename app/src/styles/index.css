@@ -65,11 +65,13 @@
 @import "./milestones.css";
 @import "./money-strip.css";
 @import "./moneypenny.css";
+@import "./mp-card.css";
 @import "./motion.css";
 @import "./networth.css";
 @import "./networth-card.css";
 @import "./new-high.css";
 @import "./level-up.css";
+@import "./lock-in.css";
 @import "./onboarding.css";
 @import "./overview-grid.css";
 @import "./saved-positions.css";
@@ -98,6 +100,7 @@
 @import "./vantage.css";
 @import "./eye-light.css";
 @import "./events-section.css";
+@import "./book-wait.css";
 @import "./book-calendar.css";
 @import "./route-error.css";
 @import "./session-status.css";
@@ -131,5 +134,6 @@
 @import "./edition.css";
 @import "./edition-market.css";
 @import "./landing-quests.css";
+@import "./mission.css";
 /* last on purpose: its hover and focus ring wins over the landing page's and R&D calendar's own (#7212) */
 @import "./click-target.css";

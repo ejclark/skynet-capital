@@ -14,7 +14,13 @@
      Each item = a numbered, PRE-VERIFIED procedure (commands run, links checked) — and only
      items that could not be automated away belong here at all. Step anatomy:
      "N. <the do> — <the why, trailing, optional read>", then a 1-2 line gist closing the
-     procedure (what the steps accomplish together). -->
+     procedure (what the steps accomplish together).
+     The item set is `digest-scan.mjs --needs-you` and nothing else. An ask it does not print is
+     never carried as a prose item, yesterday's included (#7939 follow-up e: "land it" on #7487
+     rode ten digests that way). Route it first: only he can decide → a Needs-from-you callout
+     on its issue (options, prediction, Class:, On silence) + needs-eric, so the Decisions page
+     takes it on the next push; a session can do it → needs-session or a feedback issue, and it
+     prints on the needs-a-session line. -->
 
 1.
 
@@ -24,6 +30,14 @@
 
 -
 - This week so far (<YYYY-Www>, partial): <the line from `node scripts/newsletter.mjs --week "$(date -u +%G-W%V)"`, in the form .claude/skills/secretary section 1 gives; on a Monday, a link to the edition that closed the week>
+
+## The picture
+
+<!-- `node scripts/digest-scan.mjs --pictures`, pasted as printed: the `## The picture` blocks of
+     the PRs merged after the last digest's date, newest first, waived ones skipped, the 5 newest
+     at most (table rows a squash body wrapped are re-joined). Advisory: `digest-scan --validate`
+     names a digest without it, and prints "ratchet due" once 2 digests carry it — then the slot
+     moves into REQUIRED_SECTIONS (#3748 slice 7c). A window with no picture prints one line saying so. -->
 
 ## Noise absorbed
 

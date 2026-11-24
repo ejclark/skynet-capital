@@ -1,0 +1,2 @@
+if (hasPlanLabel(issue)) return "unchanged";
+await doFetch("POST", `${issueUrl}/labels`, headers, { labels: ["ready"] });

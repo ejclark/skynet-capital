@@ -71,6 +71,90 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"The 2Y auction-day front-end rally is a live regime: the 2026-11-23 2Y CMT closes at or below -3.0bp (FT-treasury-2y-note-2026-11-23-1)"** — added 2026-11-24 from the
+  [treasury-2y-note-2026-11-23 close-out](events/treasury-2y-note-2026-11-23.md). The 2Y closed **4.63 → 4.63 (0bp)** on a far-from-FOMC sale at $69B, with the prior-session VIX at **35.89** and the 2Y already **-13bp** on the sale-eve session.
+  Do not use the -6.07bp 2023+ auction-day prior flat for the next 2Y sale; condition it on prior-session VIX under 20 (FT-3 passed the same day), and do not read one 0bp print as proof the regime is gone.
+
+- **"Microsoft Ignite week carries no MSFT alpha: MSFT minus QQQ stays at or below 0.0pp from the 2026-11-13 to the 2026-11-20 close, the post-print lag holds (FT-msft-ignite-2026-11-17-1)"** — added 2026-11-23 from the
+  [msft-ignite-2026-11-17 close-out](events/msft-ignite-2026-11-17.md). MSFT **−7.33%** vs QQQ **−10.51%**, **+3.17pp**, past the +2.0pp kill bar, in a week the Nasdaq-wide AI selloff took VIX from 19.30 to 35.89.
+  Do not re-propose a conference-week lag off three Ignite weeks plus a drift cell; the 2026 margin was a single rout day (11/20: +2.99pp) and reads as lower beta, not a conference effect.
+
+- **"A loaded exclusive back half makes the November UMich final revise by 1.0 point or more: the prices-not-ballot revision call (FT-umich-sentiment-final-2026-11-20-2)"** — added 2026-11-21 from the
+  [umich-sentiment-final-2026-11-20 close-out](events/umich-sentiment-final-2026-11-20.md). The 11-06 prelim printed **51.0** and the publisher's final **51.5**: |Δ| = **0.5**, through a window holding the midterms, a hot CPI and a collapsing pump price. Year-ahead inflation expectations fell **4.3% to 3.7%** in the same window.
+  Do not call a bigger revision off a count of dated events inside a collection window; five of seven 2026 finals revised inside ±1.0, and the two that did not (March, October) were shocks, not event counts.
+
+- **"The 10-year breakeven holds at or above 2.30% into the 2026-11-19 TIPS reopening: the five-week inflation leg is durable (FT-treasury-10y-tips-2026-11-19-2)"** — added 2026-11-20 from the
+  [treasury-10y-tips-2026-11-19 close-out](events/treasury-10y-tips-2026-11-19.md). Par 5.04 minus real 2.88 gave **2.16%**, the lowest of 222 paired 2026 sessions; 12 of 13 sessions since 11-02 closed under 2.30% as Brent unwound.
+  Do not extrapolate a 24-session breakeven decomposition into a regime call; the quarter-scale read (real-rate-led) was the one that held, and a registration anchored on a five-week leg was a window artefact.
+
+- **"A minutes-collision VIX settlement opens at or above -0.5%: the 2026-11-18 open gap is not the decision-collision signature (FT-vix-expiration-2026-11-18-1)"** — added 2026-11-19 from the
+  [vix-expiration-2026-11-18 close-out](events/vix-expiration-2026-11-18.md). The VIX opened **24.22** against a **25.46** close (**-4.87%**; VRO 24.25), on a day the minutes released on their slot.
+  Do not register a fixed open-gap line on a VIX day without conditioning on the prior day's VIX move; after a +8% day the open gap averages -0.14% (n=602, sd 5.52), so a -0.5% line is a coin flip there, and n=1.
+
+- **"The scheduled 1 October electricity VAT cut pulls UK October 2026 headline CPI to 3.4% or lower (FT-uk-cpi-2026-09-16-3)"** — added 2026-11-19 from the
+  [uk-cpi-2026-09-16 ledger](events/uk-cpi-2026-09-16.md). ONS printed **3.6%** (3.5% in September): electricity fell 0.8% m/m, but motor fuels (+33.2% y/y) and gas (+6.3%) outweighed it.
+  Do not size a pre-announced tax cut against a headline print without netting the energy and fuel base moves first; the 0.10pp government estimate is a counterfactual, not a forecast of the annual rate.
+
+- **"The stacked-morning SPY pre-open lift is live on 2026-11-17: the overnight gap exceeds the 0.3275% clean-baseline median (FT-nahb-hmi-2026-11-17-2)"** — added 2026-11-19 from the
+  [nahb-hmi-2026-11-17 close-out](events/nahb-hmi-2026-11-17.md). The gap was **0.2108%** (739.95 to 738.39) on the quarter's most stacked morning (G.17 09:15, retail sales 08:30, MTIS 10:00 all published), a ~70/30 registration built on a post-hoc n=34 split, after a 1.91% SPY drop and VIX 19.30 to 22.91 the session before.
+  Do not use the HMI+G.17 stacked class as a pre-open predictor without conditioning on the prior session's move and VIX; one observation, and the split was chosen after seeing the headline.
+
+- **"A shut cash bond market does not defer price discovery: TLT's next-session |move| stays at or below 1.5x its trailing-20 median (FT-sifma-bond-market-closure-2026-11-11-3)"** — added 2026-11-19 from the
+  [sifma-bond-market-closure-2026-11-11 ledger](events/sifma-bond-market-closure-2026-11-11.md). TLT's 11-12 |move| was **1.483%** against a **0.459%** median, **3.23x** (2.68x with the closure day dropped from the window).
+  Do not carry the 42-session "the day after a closure is ordinary" base rate (28.6% above 1.5x) into a closure that follows a confirmed high-impact CPI and precedes a refunding auction; the 11-12 session also held the 30Y auction and an NBIS print, so size of the closure's own share is not established.
+
+- **"The 20-Year new-issue slot tops out at a bid-to-cover of 2.58: the 2026-11-18 sale prints at or below it (FT-treasury-20y-bond-2026-11-18-1)"** — added 2026-11-19 from the
+  [treasury-20y-bond-2026-11-18 close-out](events/treasury-20y-bond-2026-11-18.md). It printed **2.63** (high yield 5.459%, 70.87% at the high, direct 26.74%), above all 15 prior new issues (2.34-2.58).
+  Do not carry a ceiling set at a sample's own maximum into the next sale of the slot as a pass-prone bar; n=16 and the registered base rate was 15/15, so the test was weak by design.
+
+- **"The 10-year inflation-indexed JGB keeps its post-2022 demand floor: cover stays at or above 2.73x at the 2026-11-16 auction (FT-jgb-10y-inflation-indexed-auction-2026-11-16-2)"** — added 2026-11-18 from the
+  [jgb-10y-inflation-indexed-auction-2026-11-16 close-out](events/jgb-10y-inflation-indexed-auction-2026-11-16.md). Printed **2.696x** (bids ¥673.5bn, accepted ¥249.8bn) as the lowest-accepted yield jumped **+21.2bp** to 1.072%; allotment at the low rose to 44.7% from 21.4%.
+  Do not register a floor set at the sample's own minimum without a second, independent reason it holds; one print, and the floor was the range's edge by construction (n=18).
+
+- **"The GDPNow vintage on an existing-home-sales release day is solo: its Data Releases text names existing-home sales alone (FT-existing-home-sales-2026-11-12-1)"** — added 2026-11-18 from the
+  [existing-home-sales-2026-11-12 close-out](events/existing-home-sales-2026-11-12.md). The 11-12 vintage posted on a date the Fed never scheduled, but read "Monthly Treasury Statement, Existing-home sales"; the MTS, scheduled the same day, rode along. Q4 residential moved −0.121pp (3x the solo median), inventories −0.0001pp.
+  Do not call an unscheduled vintage solo before reading its own Data Releases cell for same-day co-releases (the MTS, PPI and retail stack all share EHS-week dates); one observation, and posting itself held (8 of 8 in 2026).
+
+- **"The 2026-11-17 MTIS session is an ordinary Tuesday: SPY's range lands under 1.417% (FT-mtis-2026-11-17-2)"** — added 2026-11-18 from the
+  [mtis-2026-11-17 close-out](events/mtis-2026-11-17.md). SPY ranged **1.742%** (739.76 / 727.00, close 732.44) with prior-close VIX **22.91** (25.46 at the close), the 22+ regime the ledger's own 10-18 row put at 30.8% under the line.
+  Do not register a fixed-threshold SPY range test on a macro-print day without conditioning on prior-close VIX; one observation, cause of the day not established.
+
+- **"The base-setting, industrial-production-co-release MTIS vintage is loud: the Q4 inventory contribution moves 0.10pp or more (FT-mtis-2026-11-17-1)"** — added 2026-11-18 from the
+  [mtis-2026-11-17 close-out](events/mtis-2026-11-17.md). It moved **+0.0785pp** (0.5337 to 0.6122) while PCE moved −0.0528pp, a miss by 0.0215pp on a registered 45.5% post-2021 coin flip.
+  Do not re-register the 0.10pp line for this class without new vintages; n=1, and the 10-15 edition also sat under its line (0.0974pp).
+
+- **"A JGB 30-year tail of 2bp or more does not transmit to the next US session: the US 30Y CMT does not rise 5bp (FT-jgb-30y-auction-2026-10-08-5)"** — added 2026-11-13 from the
+  [jgb-30y-auction-2026-10-08 ledger](events/jgb-30y-auction-2026-10-08.md). The 2026-11-10 tail was **2.4bp** and the US 30Y CMT rose **+8bp** (5.35 to 5.43) on 11-12, on a CPI day plus a US 30-year auction.
+  Do not register a same-tenor JGB-to-US D+1 threshold on a date that shares a US CPI print or auction; one observation, and the JGB 30Y par yield moved +5.5bp on 11-11 too.
+
+- **"The first MTS of FY2027 is forecastable to ±$42B from ten-month growth rates alone: the October 2026 deficit lands in $280–365B (FT-mts-october-2026-11-12-1)"** — added 2026-11-13 from the
+  [mts-october-2026-11-12 close-out](events/mts-october-2026-11-12.md). Printed **$404.06B**: receipts $368.94B (ex-customs −6.2% y/y against a +0.24% to +3% build) and outlays $773.00B (+12.2% against +5.17%).
+  Do not forecast a Monthly Treasury Statement deficit from trailing growth rates; use the DTS mapping, and register it alone with its own standard error.
+
+- **"The DTS-to-MTS mapping, averaged across four bias variants, brackets the October 2026 deficit in $345–395B (FT-mts-october-2026-11-12-4)"** — added 2026-11-13 from the
+  [mts-october-2026-11-12 close-out](events/mts-october-2026-11-12.md). Printed **$404.06B**, $9.1B over the ceiling; the interest-corrected fit alone said $387.5B (+$16.6B, +0.78 SE), while the three constant-bias variants blended into the $370B central missed by $34–62B.
+  Do not register a blend that includes a model the previous close-out refuted; one observation, and the fit is extrapolated at the floor of its range (n=11).
+
+- **"A single meeting-month cohort of Summary-of-Opinions Nikkei moves is sampling noise, so the 2026-11-10 bar lands at or below the cohort median of 1.264% (FT-boj-summary-of-opinions-2026-11-10-1)"** — added 2026-11-12 from the
+  [boj-summary-of-opinions-2026-11-10 close-out](events/boj-summary-of-opinions-2026-11-10.md). The Nikkei 225 closed **+2.865%** (58,775.50 to 60,459.58; gap +1.02%) in a tape whose five prior sessions averaged 2.37%, after a +2.35% S&P session overnight. Do not register a fixed-threshold Tokyo bar against a BoJ document in a VIX-17+ regime without a vol-conditioned base rate; this is one kill on a median-threshold row, not evidence the Summary moves the index.
+
+- **"The release-day US session is indifferent to a BoJ Minutes release, so the clean-subset base rate (0.35x) is operative" (FT-boj-minutes-2026-11-05-4)** — added 2026-11-11 from the
+  [boj-minutes-2026-11-05 close-out](events/boj-minutes-2026-11-05.md). The S&P 500 fell **4.355%** on 11-05 (7,688.62 to 7,353.73; VIX 16.61 to 28.18), a post-midterm AI/chip rout the press
+  does not tie to Tokyo. Do not register a US-session threshold against a BoJ document that lands in the Nov 2-7 corridor; the calendar, not the document, sets the day.
+
+- **"The Tokyo open is a null on a Japan Balance of Payments release day: the Nikkei |opening gap| lands below 1.0% (FT-japan-balance-of-payments-2026-11-10-3)"** — added 2026-11-11 from the
+  [japan-balance-of-payments-2026-11-10 close-out](events/japan-balance-of-payments-2026-11-10.md). Nikkei opened **59,372.28** against a 58,775.50 prior close (**+1.02%**, a 0.015-point miss), the first 1-hour bar standing in for a null daily bar. One print after a −5.96% / +2.3% two-session swing and with the BoJ Summary of Opinions in the same minute. Do not register a below-1.0% open prediction for this series in a VIX-20+ regime without a vol-conditioned base rate; this is one marginal kill, not a refutation of the 12-08 ledger's null.
+
+- **"A crude spike carries retail gasoline higher into the next month's collection window, so the pump's October level holds at or above September's" (FT-cpi-2026-11-10-1)** — added 2026-11-11 from the
+  [cpi-2026-11-10 close-out](events/cpi-2026-11-10.md). EIA weekly US regular averaged **$4.3095** over the four October Mondays against **$4.3548** over September's (**−1.04%**) while Brent settled at $117.64 on 10-30:
+  retail stepped up in September, then fell four Mondays running. Do not register a pump-level hold off a crude run-up without a lag measurement; retail follows crude on a delay that the run's own peak can outlast.
+
+- **"November revises the winter natural-gas bill up and the heating degree days colder" (FT-eia-steo-2026-11-10-4)** — added 2026-11-11 from the
+  [eia-steo-2026-11-10 close-out](events/eia-steo-2026-11-10.md). Registered at **n=2** (2024-25 and 2025-26 both revised gas up +2.7% / +2.6% and degree days colder +2.5% / +1.3%) and **failed
+  on its first out-of-sample winter**: US total heating degree days went **3,155 → 3,103.6 (−1.6%)**, warmer, in all four regions; gas expenditure moved **+0.04%** ($640 → $640.28), inside the
+  October table's dollar rounding. Do not cite a "November revises colder" direction off two winters; weather revisions follow the month's own forecast, not the calendar. The magnitude claim
+  (FT-3: no fuel moves more than 5%, no year-on-year sign flips) **passed** on the same edition (largest move heating oil **+3.0%**).
+
 - **"An M3-2 update the Atlanta Fed lists as internal-only leaves no observable GDPNow vintage" (FT-m3-full-report-2026-11-03-1)** — added 2026-11-09 from the
   [m3-full-report-2026-11-03 close-out](events/m3-full-report-2026-11-03.md). The workbook's current-quarter tabs carry an **11-03** column ("M3-2 Manufacturing (Full report)", GDPNow 3.7383 to 3.7213),
   and `ContribArchives` already holds vintages on the 2026-06-03, 07-02, 09-02 and 10-02 internal dates. Do not infer "no vintage" from `InternalUpdates`; read the vintage tabs. The registered cell,
@@ -212,6 +296,12 @@ robust, alpha fragile — is the finding.
   directional drift test on this model off the trailing-residual average: it described the past and missed the one month built
   to measure it. The one-factor model itself passed its band test (FT-1) and is not retired.
 
+- **"September 2026's foreign long-term Treasury valuation change prints *below* the two-window midpoint (−0.0064 − 0.043045 × Δ), because the last-18 intercept (−0.096%) beats the full-sample one" (FT-tic-monthly-2026-11-18-2)** — added 2026-11-24 from the
+  [tic-monthly-2026-11-18 close-out](events/tic-monthly-2026-11-18.md). Registered 2026-09-08 on a September Δ10Y that fixed at +54.0bp.
+  September printed **−2.281%** (−$180.2bn), above the −2.331% midpoint by 0.05pp. The second consecutive month the trailing-window
+  drift lost to the full-sample fit; with the sibling entry above, do not re-register a directional intercept test on this model.
+  Its band test (FT-1) passed and the model is not retired.
+
 - **"A hot ISM Services Prices print does not produce a hawkish yield day — `^TNX` is not up by more than its own median
   |move|" (FT-ism-services-2026-11-04-1)** — added 2026-10-16 from the
   [ism-services-2026-11-04 pulse](events/ism-services-2026-11-04.md). Registered 2026-09-08 at n=9 as the narrow successor to a
@@ -237,6 +327,15 @@ robust, alpha fragile — is the finding.
   moves). The window compares two months that straddle a swing, so it scores a coincidence of landing
   spot, not the volatility. Do not re-register a "differs from t−2 by more than N" test for a diffusion
   index; condition on the one-month move (e.g. |Δ| above the 11.2 median) instead.
+
+- **"Prices paid is persistent enough to forecast a next print at or above 50" (FT-empire-state-mfg-2026-11-16-1)** — added
+  2026-11-17 from the [empire-state-mfg-2026-11-16 close-out](events/empire-state-mfg-2026-11-16.md). Registered
+  2026-11-05 at 84% off a lag-1 ρ of 0.931 and a 32-of-38 base rate after a print at or above 55. It printed
+  **45.9** (Oct 59.5, −13.6, the 4th percentile of monthly moves), z = −1.56 against the fit's own residual sd.
+  The re-fit through November barely moves ρ (0.925), so the fit is not what broke — a 16% tail landed. Do not
+  re-register an at-or-above-the-line test for a diffusion index from a level alone; condition on the
+  one-month move or the six-month-ahead reading, and size the registered probability to the model-free
+  count (7 of 39 below 50 after a print at or above 55), not the AR(1) alone.
 
 - **"A WPSR sign-match test (commercial-crude draw/build vs WTI close-to-close) generalizes as `print ignored` on a dense macro morning" (FT-eia-weekly-petroleum-status-2026-10-15-2)** — added 2026-10-16 from the [eia-weekly-petroleum-status-2026-10-15 close-out](events/eia-weekly-petroleum-status-2026-10-15.md). Registered 2026-09-30; the 10-15 print was an -8.557 mb draw and WTI closed +3.0%, a matched pair. WTI's rally was already in by 11:55 ET (about +0.3% across the 12:00 release), so the sign rule misattributes a session move to the print. Do not re-register a daily-close sign test for a mid-day release; use the bars either side of the release time.
 
@@ -1142,6 +1241,9 @@ robust, alpha fragile — is the finding.
   "removed political overhang" lift off a result whose own winners campaigned on the overhang: Democrats took both chambers and the Texas governor's race on a pledge to halt new data centers,
   and the power sleeve fell −10.65% on 11-04 alone while the S&P rose 1.58%.
 
+- **"The $42B-era indirect-share floor of 61.7% holds on the November 10-Year new issue (FT-treasury-10y-note-2026-11-10-5)"** — added 2026-11-12 from the
+  [treasury-10y-note-2026-11-10 close-out](events/treasury-10y-note-2026-11-10.md). The 11-10 auction printed indirect **61.23%** of competitive awards, 0.47pp under a floor that was simply the minimum of 11 prior prints (2024-11-05). Direct bidders took 29.0% and dealers 9.77%, so end-investor demand held. Do not register a floor equal to a small sample's own minimum; the next print is a coin flip against it.
+
 ## Portfolio-level critique — what no single-symbol view sees
 
 1. **Multiple testing.** ~40–70 statistical looks across eight tickers; the family-corrected bar
@@ -1193,3 +1295,10 @@ filings break the template, per the pipeline finding); estimated print dates are
 red-team layer caught two corrupted event lists and several researcher overstatements — treat any
 number in this doc that lacks a control clause with suspicion, and prefer the per-symbol journals
 for the full attack transcripts.
+
+- **"A low-impact G.17 morning ranges under the unconditional 2014-05+ p75 (1.332%) of SPY's close" (FT-industrial-production-2026-11-17-2)** — added 2026-11-18 from the [industrial-production-2026-11-17 close-out](events/industrial-production-2026-11-17.md). Registered 2026-09-06 on 11 of 11 November G.17 sessions under 1.30%; 11-17 ranged **1.742%** (gap −0.21%) with VIX 19.30 → 22.91 the day before and 25.46 at the close. Second same-shape kill in a month, after the 10-16 entry above. Do not register an unconditional range bar for a G.17 print; condition on the prior-day VIX or skip the test.
+
+- **"ITB's session range on an FOMC-minutes day stays under the unconditional 2014+ p75 (2.504%) with no regime condition (FT-pending-home-sales-2026-11-18-2)"** — added 2026-11-20 from the [pending-home-sales-2026-11-18 close-out](events/pending-home-sales-2026-11-18.md). ITB ranged **3.407%** on 11-18 (O 91.28 / H 93.62 / L 90.51) after a 25.46 VIX close the day before. Do not register an unconditional ITB range line on a day whose prior VIX close is ≥ 24: that cohort breaches 2.504% on 66.3% of sessions (n=469), so the line fires on regime alone. The regime-conditional sibling (< 4.062%, FT-…-4) passed. n=1 on the minutes-day claim itself, which the 104-session baseline (p=0.965) does not lose.
+
+- **"The SPF's 10-year headline CPI projection stays inside a ±0.15pp band of the prior edition: 2.15-2.45% on 2026-11-16 (FT-survey-of-professional-forecasters-q4-2026-11-16-3)"** — added 2026-11-20 from the [survey-of-professional-forecasters-q4-2026-11-16 close-out](events/survey-of-professional-forecasters-q4-2026-11-16.md). The Q4 2026 edition printed **2.49%** (previous 2.30%, **+0.19pp**) after a hot October CPI that landed before the panel's 11-11 deadline, against a 24-year mean quarterly move of 0.062pp; 89 of 94 historical moves sat inside the band, so 92% was reasonable and one observation killed it.
+  Do not treat the survey's 10-year line as a frozen anchor in a quarter that follows a headline CPI step; the 10-year breakeven moved 4bp (T10YIE 2.24 to 2.20) on the same release day, so this kills the "anchor" call and not the "tape is unmoved" one.

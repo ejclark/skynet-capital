@@ -464,6 +464,8 @@ Four predictions carry score-by dates and are registered in
 | 2026-10-19 | D-30 | **Pulse (VIX +4.3pt made it material); stance holds, stand aside.** *MOF `2611e.htm` re-fetched direct (HTTP 200, 25,342 B vs 25,188):* the 11-18 20-year row is still on the calendar and no November row links an announcement, so terms are unpublished (due ~11-11, est). Kills 3/4/6 unfired. *Sibling:* 10-20 terms (MOF `auct20261013e`, per its ledger) = maturity 2046-09-20, ~¥700bn, which is indirect support for `FT-1`, not a test. *Curve (secondary, tradingeconomics 10-19):* 30Y **3.98%**, 20Y **3.78%** (MOF par 3.786 on 10-15; MOF CSV blocked from this runner). BoJ next hike priced for December, not 10-30 (Standard HK 10-02, dated). *Vol:* VIX **19.99** (10-16 close) vs 15.72; siblings attribute the jump to an AI-financing scare, not JGB/yen, so kill 1 is unfired. *Macro:* hot Sep CPI/PPI, Fed hiked 09-16 (sibling ledgers, unverified here). *Adjacency:* 35 ids ±5d, 1 strong (`retail-sales-2026-11-17`); new vs 09-09: `jgb-10y-inflation-indexed-auction-2026-11-16`, `jpx-market-closure-2026-11-23`, `aruoba-inflation-term-structure-2026-11-20`, `nvda-2026-11-18-print` (all tracked); `--on-date` sweep of 10-30 and 11-11..19 found nothing untracked. | — (stand aside holds) | 2026-11-18 (event day; close-out follows) |
 | 2026-11-04 | D-14 | **Pulse (band low:15+→low:0+, `nvda-2026-11-18-print` newly strong-adjacent); stance holds, stand aside.** *Sibling print, MOF result page direct:* 10-20 = issue **198**, mat. 2046-09-20, bids ¥3,139.0bn / accepted ¥537.1bn = **5.84x cover** (record of the series per the sibling), 0.6bp tail. That is the first out-of-sample draw since the "cover persistence is dead from 2023" read: it predicts 11-18 reverts, so **`FT-5` registered** (cover <5.0x). *Terms:* `2611e.htm` re-fetched (25,987 B vs 25,342) — 11-18 row still no announcement link (due ~11-11, est); 30-year announcement `auct20261102e` (direct, 11-02) = 11-10, mat. 2056-09-20, ~¥600bn, "reopening of the October 2026 issue" — **`FT-4`'s trigger is met**, left `_open_` to its 11-13 score-by. *Curve (MOF par 11-02, primary):* 20Y **3.669%** (3.776 on 10-19; 3.946 peak 10-06), 25Y 3.972, 30Y 3.940, 40Y 3.960; 20s25s **+30.3bp**, 25s30s **−3.2bp** (25Y>30Y persists). *Macro:* BoJ held 1.25% 10-30, 8-1 (Takata dissent), underlying-inflation target met, Dec hike expected (NEWS: CNBC/Yahoo snippets via search, unfetched); FOMC 10-28 per sibling ledgers (unverified here). *Vol/FX (Yahoo, secondary):* VIX **20.83** (11-03 close; 19.99 prior, 21.15 on 11-02) — no JGB/yen attribution found, kill 1 unfired; USD/JPY 157.69 vs 158.52. *Adjacency:* 39 ids ±5d, strong = `nvda-2026-11-18-print` (critical, after the US 1:00pm stop) + `retail-sales-2026-11-17`; new vs 10-19: `asean-summit-manila-2026-11-16`, `eurostat-hicp-final-2026-11-18`, `uk-consumer-confidence-2026-11-20`, `sp-global-flash-us-pmi-2026-11-23`, `treasury-2y-note-2026-11-23`, all tracked; `--on-date` 11-13..11-23 found nothing untracked, nothing proposed (12-17 20Y is past the horizon). Path note: MOF's current-month curve is now `interest_rate/jgbcme.csv`, history `historical/jgbcme_all.csv`; `jgbcm.csv` 404s. No conviction proposal or declared intent names this event. Kills 2/3/5/6 unfired. | — (stance holds: stand aside) | 2026-11-11 (MOF terms day, est) |
 | 2026-11-04 | D-14 | **Pulse (interval; stance holds, stand aside).** *MOF `2611e.htm` re-fetched direct (HTTP 200, 25,988 B vs 25,342):* the 11-18 20-year row is unchanged and still carries no announcement href (terms due ~11-11, est). **`FT-4` evidence in hand, left open until its 11-13 score-by:** MOF's 11-02 notice (`auct20261102e`, direct) puts the 11-10 30-year at ~¥600bn, maturing 2056-09-20, "a reopening issue of the October 2026 issue" — a first reopening, so kill 4 is unfired. `2612e.htm` is now live (was 404): its 20-year is 12-17 (43d, past the low-impact 30d horizon, so named not filed). *Curve (MOF `jgbcme.csv`, direct, 11-02):* 20Y **3.669%** (3.786 on 10-15), 30Y 3.94, 25s30s **-3.2bp**, 20s25s **+30.3bp**. *Sibling 10-20 close-out:* 5.84x cover, 0.6bp tail; kills 3 and 6 unfired. *BoJ held 1.25% 10-30* (sibling ledgers; not re-verified, search found no coverage). *Vol:* VIX **20.83** (Yahoo, direct) vs 19.99, +0.8pt, no regime shift; USD/JPY 157.58 (sibling, 10-26). Tracked names fell hard 10-29/30 on the AI tape with no JGB/yen tie found, so kill 1 is unfired. *Macro (siblings):* FOMC 10-28 held 3.75-4.00%, US 10Y 4.89% (11-02). *Adjacency:* `--on-date` for 11-11, 11-17 and 11-19 found nothing untracked; new vs 10-19: asean-summit-manila, eurostat-hicp-final, sp-global-flash-us-pmi (all tracked, none strong); nothing proposed. No conviction proposals or declared intents name this event. | — (stand aside holds) | 2026-11-11 (low, 0+ band: every 7d) |
+| 2026-11-11 | D-7 | **Deterministic screen (no Claude session).** Readings — VIX 19.5 (-1.4pt since last), band unchanged (low:0+), 41 adjacent event(s) tracked, new in corridor since last pulse: `empire-state-mfg-2026-11-16`, `japan-gdp-q3-prelim-2026-11-16`, `uk-consumer-confidence-2026-11-20` (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-11-18 |
+| 2026-11-18 | D-0 | **Pulse (VIX +6.0pt made it material); stance holds, stand aside.** *Terms, MOF `auct20261111e` direct:* auction 11-18, mat. 2046-09-20, ~¥700bn, "reopening of the October 2026 issue" — `FT-1` met (kill 3, 6 unfired), scored at close-out. *Result:* `eresul20261118.htm` 404s at 00:58 UTC (09:58 JST); `FT-2/3/5` unscored. *Control leg, MOF result direct:* 11-10 30Y = issue 92, mat. 2056-09-20, accepted ¥450.7bn + ¥148.8bn non-price = ¥599.5bn, cover 3.36x, tail 2.4bp (3.871% vs 3.847%, my arithmetic) — `FT-4` met (159th matched pair, kill 4 unfired). *Curve (MOF `jgbcme.csv` 11-17):* 20Y **3.787%** (3.669 on 11-02), 25Y 4.088, 30Y 4.069; 20s25s **+30.1bp**, 25s30s **-1.9bp** (25Y>30Y; sign corrected from +1.9, 4.069-4.088). *Vol/FX (Yahoo, secondary):* VIX **25.46** vs 19.46 (17.49→25.46 over 5 sessions), USD/JPY 159.58 vs 157.58; the 11-05 spike was an AI-trade selloff (Kitco, snippet), no JGB/yen tie found, kill 1 unfired (tracked names not re-priced). Search found no reliable 11-17 tape or macro coverage. *Adjacency:* 41 ids ±5d, strong = `nvda-2026-11-18-print`, `retail-sales-2026-11-17`; `--on-date` 11-19/11-20 found nothing untracked. **Proposed** `jgb-20y-auction-2026-12-17` (D+29, inside the 30d horizon, 2nd reopening of 198). No conviction proposals or declared intents name this event. | — (stand aside holds) | 2026-11-19 (close-out) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -482,3 +484,113 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-11-04
 <!-- probe-ref: {"symbols":{},"vix":20.83,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","eurostat-hicp-final-2026-11-18","fomc-minutes-2026-11-18","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-cpi-2026-11-20","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-liquidity-enhancement-1-5y-2026-11-20","jpx-market-closure-2026-11-23","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","nvda-2026-11-18-print","opex-2026-11-20","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","ppi-2026-11-13","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","russell-recon-preliminary-2026-11-13","sp-global-flash-us-pmi-2026-11-23","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-note-2026-11-23","treasury-coupon-announcement-2026-11-19","uk-cpi-2026-11-18","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["retail-sales-2026-11-17","nvda-2026-11-18-print"],"screenStreak":0,"blocked":[]} -->
+
+**Last assessed:** 2026-11-11
+<!-- probe-ref: {"symbols":{},"vix":19.46,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","empire-state-mfg-2026-11-16","eurostat-hicp-final-2026-11-18","fomc-minutes-2026-11-18","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-liquidity-enhancement-1-5y-2026-11-20","jpx-market-closure-2026-11-23","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","nvda-2026-11-18-print","opex-2026-11-20","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","ppi-2026-11-13","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","russell-recon-preliminary-2026-11-13","sp-global-flash-us-pmi-2026-11-23","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-note-2026-11-23","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["nvda-2026-11-18-print","retail-sales-2026-11-17"],"screenStreak":1} -->
+
+**Last assessed:** 2026-11-18
+<!-- probe-ref: {"symbols":{},"vix":25.46,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","empire-state-mfg-2026-11-16","eurostat-hicp-final-2026-11-18","fomc-minutes-2026-11-18","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-liquidity-enhancement-1-5y-2026-11-20","jpx-market-closure-2026-11-23","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","nvda-2026-11-18-print","opex-2026-11-20","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","ppi-2026-11-13","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","russell-recon-preliminary-2026-11-13","sp-global-flash-us-pmi-2026-11-23","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-note-2026-11-23","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["nvda-2026-11-18-print","retail-sales-2026-11-17"],"screenStreak":0,"blocked":[]} -->
+
+## Outcome
+
+**Close-out (2026-11-19, D+1 — inside `closeOutWithinDays`).** Rates mode runs no `earnings-cycle` /
+`intraday-edges` instrument (`symbols: []` by design), so "re-run instrument data" means every number
+below was re-fetched from a primary **this session**, after the mandated cache bust (`rm -rf
+node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`): MOF's result pages, MOF's
+Auction Results workbook (494,080 B, re-downloaded), MOF's November par-yield CSV and Treasury's daily
+par curve. Yahoo readings (VIX, USD/JPY) are labelled secondary. **No fetch of a cited source failed
+(`probe-ref.blocked` is empty); the MOF CSV timed out once and succeeded on retry.** Date and size
+stay `estimate` on this lane's no-self-confirm limit; nothing is scored from memory of the tape.
+
+**The verdict: stand-aside was right and cost nothing; all five forward tests pass and no kill switch
+fired.** The auction cleared on the weak side of the tenor's own scale — a **2.6bp tail**, at the
+94th percentile of 346 prior prints — and the cover fell back from the record to a middling **3.64x**.
+Nothing transmitted to the US 20-year, which *rallied* 6bp.
+
+### What Japan sold — MOF's own result page
+
+`policy/jgbs/auction/calendar/eresul/eresul20261118.htm`, fetched direct 2026-11-19 (HTTP 200,
+18,553 bytes):
+
+| Field | Value |
+|---|---|
+| Security · issue · coupon · maturity | 20-Year · **198** · **3.8%** · **9/20/2046** |
+| Auction / issue date | **11/18/2026** / **11/19/2026** |
+| Competitive bids · accepted | **¥1,914.0bn** · **¥525.8bn** |
+| **Bid-to-cover** | **3.640x** (1,914.0 / 525.8) — 68th percentile of 346 prior prints |
+| Lowest accepted price · **yield** | 100.20 · **3.782%** |
+| Weighted average price · **yield** | 100.49 · **3.756%** |
+| **Tail** | **2.6bp** (3.782 − 3.756; my arithmetic, MOF prints the two yields) |
+| Allotment at the low | **64.9193%** |
+| Non-price-competitive Ⅰ | **¥173.8bn** (Ⅱ: none) |
+| **Total issued** | **¥699.6bn** — the announced "about ¥700bn" |
+
+**Weak-print test, stated exactly.** The stance defined a weak print as cover **< 3.0x** *or* a tail
+**≥ 2.00bp**. Cover missed that line (3.64x); the tail crossed it by 0.6bp, so by the letter this is a
+**weak print on the tail leg only**. The tail was **21 of 346** prior prints or worse (94th percentile),
+against the 10-20 print's 0.6bp median. The strong-print test (cover ≥ 4.2x with a tail under 0.6bp)
+failed on both legs. Against the Oct and Nov 30-year (tail 1.2bp, then 2.4bp), the 20Y-minus-30Y tail
+gap for this pair is **+0.2bp** — no tapered-bucket break either way.
+
+### The forward tests
+
+Every cell below is also filled in
+[`forward-tests/jgb-20y-auction-2026-11-18.md`](../forward-tests/jgb-20y-auction-2026-11-18.md).
+
+- **`FT-1` — pass.** MOF's `auct20261111e.htm` names a reopening of the October 2026 issue at about
+  ¥700bn; the result page prints issue 198, maturity 2046-09-20, ¥699.6bn issued. Kills 3 and 6
+  unfired: the date held and the size was ¥700bn.
+- **`FT-2` — pass (the power refutation held in practice).** The DiD **replicated exactly** from the
+  re-downloaded workbook through 2026-08 (−0.412bp, t = −0.77, SE 0.535bp, MDE 1.50bp) before
+  anything was added. With the Sep, Oct and Nov pairs in period B (n = 20): **DiD −0.478bp, t =
+  −0.99**, SE 0.481bp, MDE **1.35bp**. \|t\| stayed well under 1.96. One correction to the
+  initial research's table: it priced "+3 pairs" at 1.42bp, assuming period B's pooled variance
+  held; the three real pairs (−0.8, −0.6, +0.2bp) sat tighter than that, so the MDE fell to 1.35bp,
+  a **10% gain for three pairs** against the 5% the table promised. The floor is still **0.81bp**,
+  and the call stands that adding 20-year
+  auctions does not settle the bucket question.
+- **`FT-3` — pass (condition fired, kill did not).** Tail 2.6bp ≥ 2.0bp, so the test fired. The
+  US 20Y CMT went **5.50% → 5.44% (−6bp)**, not +5bp or more; the 30Y fell 5bp (5.46 → 5.41) and the
+  10Y 3bp (5.10 → 5.07), per Treasury's daily par curve. The JGB 20Y par yield moved **+1.0bp**
+  (3.787% → 3.797%, MOF `jgbcme.csv`; 25Y +0.8bp, 30Y +1.3bp). **Recorded as suggestive, not
+  conclusive,** exactly as registered: that session's US close is jointly set by
+  `fomc-minutes-2026-11-18` (2:00pm ET) and `tic-monthly-2026-11-18` (4:00pm), and
+  `nvda-2026-11-18-print` landed after the close. One fired observation adds one row to a 279-auction
+  null; it does not prove it.
+- **`FT-4` — pass.** MOF's `auct20261102e.htm` names the 11-10 30-year "a reopening issue of the
+  October 2026 issue"; the result page prints issue 92 maturing 2056-09-20. The 20Y/30Y lockstep
+  extends to **159 consecutive position-matched pairs**.
+- **`FT-5` — pass.** Cover **3.640x < 5.0x**, down from 5.844x on 10-20. The first out-of-sample
+  draw after an extreme print reverted, as the dead-persistence read said it would. One draw does
+  not revive or kill anything; leg 6 stays closed.
+
+### Kill switches, each checked against data
+
+1. **No-price-channel premise — unfired.** USD/JPY barely moved on 11-18 (159.52 → 159.50, Yahoo,
+   secondary) and VIX *eased* 25.46 → 24.56 on the day; no JGB or yen attribution was found for any
+   tracked name's move. I did **not** re-price NVDA/AVGO/MRVL/CRWV this session, so this is absence of
+   an attributed move, not a measured null.
+2. **Power refutation breaks in practice — unfired** (`FT-2`, t = −0.99).
+3. **Issuance rhythm breaks — unfired** (`FT-1`).
+4. **Lockstep breaks — unfired** (`FT-4`).
+5. **Spillover null breaks — unfired** (`FT-3`: tail ≥ 2.0bp, US 20Y fell).
+6. **MOF changes the terms — unfired.** The date held at 11-18 and the size was ¥700bn.
+
+No scored kill, so nothing moves to the sweep doc's kill list. No conviction proposal or declared
+intent names this event (`conviction-proposals.mjs` and `intents.mjs` both print `[]`).
+
+### Honest limits of this close-out
+
+- **The weak tail is one print.** Against 346 priors a 2.6bp tail is rare (6%) but not a regime
+  signal; the 12-17 reopening of issue 198 (proposed in the 11-18 pulse) is the next draw.
+- **No same-day US auction scoring here.** The US 20-year (`treasury-20y-bond-2026-11-18`) carries its
+  own ledger; this one reads only the US *CMT* close for `FT-3`.
+- **Secondary sources:** VIX and USD/JPY (Yahoo), plus the date of every Yahoo bar being New York's
+  rather than Tokyo's. Neither bears on a score; both feed kill switch 1 only.
+- **Loop stage still done by hand.** The DiD re-run, the tail/cover percentile and the result-page parse
+  are ad-hoc scripts this session (and each sibling session) rewrote; no committed script does them.
+  Sense and verify are manual for the JGB family, and a committed one (workbook + result pages → tail,
+  cover, month-matched DiD) is the cheapest automation on offer. Captured here, not built.
+
+**Last assessed:** 2026-11-19
+<!-- probe-ref: {"symbols":{},"vix":24.56,"daysBand":"low:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","empire-state-mfg-2026-11-16","eurostat-hicp-final-2026-11-18","fomc-minutes-2026-11-18","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-liquidity-enhancement-1-5y-2026-11-20","jpx-market-closure-2026-11-23","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","nvda-2026-11-18-print","opex-2026-11-20","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","ppi-2026-11-13","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","russell-recon-preliminary-2026-11-13","sp-global-flash-us-pmi-2026-11-23","survey-of-professional-forecasters-q4-2026-11-16","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-note-2026-11-23","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["nvda-2026-11-18-print","retail-sales-2026-11-17"],"screenStreak":0,"blocked":[]} -->

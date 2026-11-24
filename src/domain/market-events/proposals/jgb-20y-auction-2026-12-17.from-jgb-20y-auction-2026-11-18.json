@@ -1,0 +1,11 @@
+{
+  "id": "jgb-20y-auction-2026-12-17",
+  "kind": "rates",
+  "title": "Japan 20-Year JGB auction (issue 198 second reopening expected, ¥700bn anticipated) — the last 20-year sale of 2026, the day before the BoJ decision",
+  "date": "2026-12-17",
+  "status": "estimate",
+  "source": "EST: mof.go.jp English December 2026 auction calendar (policy/jgbs/auction/calendar/2612e.htm), fetched direct 2026-11-18 (HTTP 200); its table row reads 'Dec. 17, 2026 | 20-year'. The DATE is MOF's own. No size is asserted: the row carries no announcement link on 2026-11-18 and MOF's own note says each issue amount is announced about one week prior, putting terms around 2026-12-10. The 20-year has been offered at ¥700bn every month since 2026-04-14 (MOF Auction Results workbook, parsed 2026-09-09; the 11-11 announcement auct20261111e.htm names 'About 700 billion yen' for 11-18), so ¥700bn is the base case, not a claim. Filed `estimate` on the two counts every JGB entry on this calendar records: the size is anticipated rather than announced, and market-events-data.ts's confirmed-prefix taxonomy has no slot for a non-US sovereign debt office. Checked 2026-11-18",
+  "impact": "low",
+  "symbols": [],
+  "notes": "Discovered during the jgb-20y-auction-2026-11-18 pulse of 2026-11-18, which had put this date in prose on 2026-11-04 because it was then 43 days out; at 29 days it sits inside the allImpactsWithinDays horizon (30) of assessment-cadence.json, so it is proposed now. On the 20-year's three-auction issue rhythm (new in Jan/Apr/Jul/Oct, reopened twice) the sale would be the SECOND reopening of issue 198, maturity 2046-09-20, following the 2026-10-20 new issue (5.84x cover) and the 2026-11-18 first reopening. It falls one day before boj-decision-2026-12-18 (MPM Dec 17-18) and on the same day as boe-decision-2026-12-17 and ecb-decision-2026-12-17. NO PRICE CHANNEL IS CLAIMED and impact is `low`: no tracked symbol carries yen-rates exposure and no house playbook is rates-keyed. Estimate widens caution only; it licenses no date-keyed action."
+}

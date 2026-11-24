@@ -86,8 +86,8 @@ means one number. Each is where the CSS already broke most often; JS reads them 
 
 The widening side of an edge is its complement (`min-width: 701px` · `861px`, `max-width:
 1279px`). `npm run breakpoints:scan` lists every width outside the set (advisory). The top bar's view row is
-not a window edge: Moneypenny's rail narrows the bar without narrowing the window, so the bar asks
-its own width (`@container topbar`, `shell.css`, #4046) whether the views still fit beside its marks.
+not a window edge: Moneypenny's rail used to narrow the bar without narrowing the window (she is a
+dock under the page since #7487 slice 2), and the bar still asks its own width (`@container topbar`, `shell.css`, #4046) whether the views still fit beside its marks.
 
 ## Voice & tone
 

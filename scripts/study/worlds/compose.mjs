@@ -34,6 +34,14 @@
 // research commit, confounding the before/after comparison it exists for. So each world names a
 // `corpus` commit (dated at or before INSTANT, refused otherwise); its child runs with those paths
 // extracted from that commit as its working directory, and reads nothing of them from the tree.
+// The app's own dated content is tree facts too — the campaigns, their lessons, the news, the
+// landing page's editions and the symbol facts are read from the working directory — so they come
+// from the corpus as well; a folder the corpus commit predates is made empty (that world's honest
+// "none yet"), never borrowed from a later tree.
+//
+// EACH WORLD ITS OWN INSTANT (#8005): a world whose input names an `instant` is composed on it —
+// its child runs with STUDY_INSTANT set (instant.mjs) — and its corpus must predate it. The
+// manifest keeps every world's (`instants`); readers take it with `worldInstant`.
 //
 // ENDPOINTS WITH NO PURE BUILDER: none today — every read the profile pages make is claimed by a
 // real handler. A world's `fixtures` hook (fixtures.mjs) is where one would go, recorded in the
@@ -48,13 +56,20 @@ process.env.TZ = "UTC";
 
 import { spawnSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { guardNetwork } from "../no-network.mjs";
 import { canonicalUrl, writeViewer } from "../payloads.mjs";
 import { worldArtifacts } from "../world-artifacts.mjs";
-import { edgarAnswer, loadInput } from "./inputs.mjs";
-import { INSTANT, pinProcessClock } from "./instant.mjs";
+import { loadInput, worldNetwork } from "./inputs.mjs";
+import { checkInstant, DEFAULT_INSTANT, pinProcessClock } from "./instant.mjs";
+
+/** The companion a chat world composes with: on, but never called — the composer only reads. */
+const chatAnsweredElsewhere = () => {
+  throw new Error(
+    "compose: a chat turn is a write — world-chat.mjs answers it, never the composer",
+  );
+};
 
 /** Compose one world into `<runDir>/<world>/`; returns its manifest rows and any missing reads. */
 async function composeWorld(world, runDir, server) {
@@ -73,9 +88,17 @@ async function composeWorld(world, runDir, server) {
       `compose: ${world.name} fills outside a New York session:\n  ${offSession.map(server.describeFill).join("\n  ")}`,
     );
   }
-  const config = server.serverConfig(book);
+  // A world with Moneypenny's chat in members' hands (`chat: true`, #8005) composes her index as
+  // production's with the companion on; a member's turns are answered by world-chat.mjs, never here.
+  const config = {
+    ...server.serverConfig(book),
+    ...(world.chat ? { companion: chatAnsweredElsewhere } : {}),
+    ...(await server.memberStores(book.stores)),
+  };
   // A pinned boot id: the payloads are hashed, and a random one would make every compose differ.
   const channel = server.createBoardChannel("study");
+  // What the world's members saved before the instant, through the real handlers (#8005).
+  await server.replayWrites(book.writes ?? [], { config, channel, ...server });
   const fixtures = world.fixtures(book);
   const manifest = [];
   const missing = [];
@@ -98,7 +121,15 @@ async function composeWorld(world, runDir, server) {
 }
 
 /** The tree-sourced paths a world reads from its pinned corpus commit, never from the tree. */
-const CORPUS_PATHS = ["docs/research", "src/domain/market-events"];
+const CORPUS_PATHS = [
+  "docs/research",
+  "src/domain/market-events",
+  "src/domain/campaigns",
+  "src/domain/campaign-lessons",
+  "src/domain/news",
+  "src/domain/editions",
+  "src/domain/symbols",
+];
 
 function run(cmd, args) {
   const out = spawnSync(cmd, args, { encoding: "utf8", maxBuffer: 1 << 26 });
@@ -106,22 +137,31 @@ function run(cmd, args) {
   return out.stdout.trim();
 }
 
-/** `<run-dir>/.corpus/<sha>/` — CORPUS_PATHS as they stood at `commit`, plus the tree's
- *  package.json (the app version is the code's, not the corpus's). */
-function corpusAt(runDir, commit) {
+/** `<run-dir>/.corpus/<sha>/` — CORPUS_PATHS as they stood at `commit` (one it predates: an empty
+ *  folder), plus the tree's package.json (the app version is the code's, not the corpus's). */
+function corpusAt(runDir, commit, instant) {
   if (!commit) throw new Error("compose: a world must pin its `corpus` commit (inputs/*.json)");
   const committed = run("git", ["show", "-s", "--format=%cI", commit]);
-  if (Date.parse(committed) > Date.parse(INSTANT)) {
-    throw new Error(`compose: corpus ${commit} was committed ${committed}, after ${INSTANT}`);
+  if (Date.parse(committed) > Date.parse(instant)) {
+    throw new Error(`compose: corpus ${commit} was committed ${committed}, after ${instant}`);
   }
   const dir = join(runDir, ".corpus", commit.slice(0, 12));
-  if (existsSync(join(dir, "package.json"))) return dir;
+  const stamp = join(dir, ".corpus-paths");
+  if (existsSync(stamp) && readFileSync(stamp, "utf8") === CORPUS_PATHS.join("\n")) return dir;
+  rmSync(dir, { recursive: true, force: true });
   mkdirSync(dir, { recursive: true });
-  const tar = join(dir, "corpus.tar");
-  run("git", ["archive", "--format=tar", "-o", tar, commit, ...CORPUS_PATHS]);
-  run("tar", ["-xf", tar, "-C", dir]);
-  rmSync(tar);
+  const present = run("git", ["ls-tree", "-d", "--name-only", commit, ...CORPUS_PATHS])
+    .split("\n")
+    .filter(Boolean);
+  if (present.length > 0) {
+    const tar = join(dir, "corpus.tar");
+    run("git", ["archive", "--format=tar", "-o", tar, commit, ...present]);
+    run("tar", ["-xf", tar, "-C", dir]);
+    rmSync(tar);
+  }
+  for (const p of CORPUS_PATHS) mkdirSync(join(dir, p), { recursive: true });
   copyFileSync("package.json", join(dir, "package.json"));
+  writeFileSync(stamp, CORPUS_PATHS.join("\n"));
   return dir;
 }
 
@@ -131,8 +171,8 @@ async function composeOne(runDir, name) {
   const corpus = process.env.STUDY_CORPUS;
   if (!corpus) throw new Error("compose: --one runs only as a child of compose.mjs");
   process.chdir(corpus);
-  let edgar = () => undefined;
-  const network = guardNetwork((url) => edgar(url));
+  let answer = () => undefined;
+  const network = guardNetwork((url) => answer(url));
   const { WORLDS } = await import("./index.mjs");
   const world = WORLDS.find((w) => w.name === name);
   if (!world) throw new Error(`compose: no world named ${name}`);
@@ -141,10 +181,11 @@ async function composeOne(runDir, name) {
     ...(await import("./day-change.mjs")),
     ...(await import("./fill-sessions.mjs")),
     ...(await import("./server-config.mjs")),
+    ...(await import("./member-stores.mjs")),
     ...(await import("../server-reads.mjs")),
     ...(await import("../../../src/server/board-patch-routes.ts")),
   };
-  edgar = edgarAnswer(loadInput(world.input));
+  answer = worldNetwork(loadInput(world.input));
   const result = await composeWorld(world, runDir, server);
   mkdirSync(join(runDir, name), { recursive: true });
   const part = {
@@ -165,11 +206,18 @@ async function composeAll(runDir, names) {
   const payloads = [];
   const missing = [];
   const network = {};
+  const instants = {};
+  const corpora = {};
   for (const world of chosen) {
-    const corpus = corpusAt(runDir, loadInput(world.input).corpus?.commit);
+    const input = loadInput(world.input);
+    const instant = checkInstant(input.instant ?? DEFAULT_INSTANT);
+    instants[world.name] = instant;
+    const corpus = corpusAt(runDir, input.corpus?.commit, instant);
+    corpora[world.name] = relative(runDir, corpus);
     const env = {
       ...process.env,
       TZ: "UTC",
+      STUDY_INSTANT: instant,
       STUDY_CORPUS: corpus,
       SKYNET_RESEARCH_DIR: join(corpus, "docs", "research"),
     };
@@ -189,7 +237,12 @@ async function composeAll(runDir, names) {
   const checkout = fileURLToPath(new URL("../../../", import.meta.url)).replace(/\/$/, "");
   const commit = run("git", ["-C", checkout, "rev-parse", "HEAD"]);
   const manifest = {
-    instant: INSTANT,
+    // The first world's, for a reader that predates `instants`; read either with `worldInstant`.
+    instant: instants[chosen[0]?.name] ?? DEFAULT_INSTANT,
+    instants,
+    // Each world's tree facts (relative to the run): a session serves the research write-ups from
+    // here, as they stood at the world's instant (world-route.mjs).
+    corpora,
     checkout,
     commit,
     worlds: chosen.map((w) => w.name),

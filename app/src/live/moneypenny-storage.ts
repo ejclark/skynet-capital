@@ -8,7 +8,7 @@ import { isThread, type MpThread } from "./moneypenny-threads";
  * (the opaque id `/api/onboarding` hands the rail), so a shared device never shows one member
  * another's conversation; binding to a member forgets every other member's blob on that device.
  * A parked draft is deliberately not part of this shape: it lives in memory only, so nothing a
- * member never said "send" to can survive a reload or a sign-out.
+ * member never said "submit" to can survive a reload or a sign-out.
  */
 
 export const STORAGE_PREFIX = "sc.moneypenny.v1";

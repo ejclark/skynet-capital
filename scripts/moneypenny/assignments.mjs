@@ -29,7 +29,9 @@
 //   3. never a second assignment comment on one issue — the marker is the memory — unless this
 //      lane's own unassign came after it; his unassign leaves no marker and stays his answer.
 //      `askOnce` is what holds this when two sweeps overlap.
-//   4. a held or platter PR unmerged ≥12h → assign ejclark.
+//   4. a held or platter PR whose required checks have been green ≥4h (or, not known green, open
+//      ≥12h — the old timer, kept as a backstop) → his click. Since #7317 it reaches him on the
+//      decisions page, every held PR as one line naming what it blocks, not one card per PR.
 //   And never an ask his answer cannot complete yet (#6953 slice 2, `artifactGap`): a merge of a
 //   branch with no PR, or of a PR that carries only a patch. Those go to `needsSession` — the
 //   digest's "needs a session" line, with every `needs-session` issue — because the missing actor is
@@ -42,8 +44,25 @@
 // writes land — and `digest-scan.mjs --needs-you` prints exactly that list. One selector, two
 // readers; tests/scripts/moneypenny/needs-you.spec.ts fails if they ever disagree.
 
+import { readFileSync } from "node:fs";
+import { activeGraduated, ruleFour } from "../alignment-graduation.mjs";
+import {
+  blocksPhrase,
+  HELD_GREEN_HOURS,
+  HELD_OPEN_HOURS,
+  HOLD_MERGE,
+  heldDue,
+  isHeldPr,
+  readHeldFacts,
+} from "../held-pr.mjs";
 import { isMain } from "../is-main.mjs";
-import { executeReadback, ledgerRows, readbackComment, readbackFor } from "./answer-readback.mjs";
+import {
+  classOf,
+  executeReadback,
+  ledgerRows,
+  readbackComment,
+  readbackFor,
+} from "./answer-readback.mjs";
 import {
   ASSIGN_MARKER,
   askRank,
@@ -59,9 +78,16 @@ import { ghRest, ghRestAll, sh, trustedComment, withRetry } from "./gh.mjs";
 import { FOOTER, LABELS } from "./labels.mjs";
 
 // The card and its markers moved to ask-card.mjs (#6953 slice 3); callers keep importing them here.
-export { ASSIGN_MARKER, assignmentComment, decisionLine, UNASSIGN_MARKER };
-export const HOLD_MERGE = "hold-merge";
-export const HELD_PR_HOURS = 12;
+export {
+  ASSIGN_MARKER,
+  assignmentComment,
+  decisionLine,
+  HELD_GREEN_HOURS,
+  HOLD_MERGE,
+  UNASSIGN_MARKER,
+};
+/** Criterion 4's backstop: a held PR not known green is asked about after this long open. */
+export const HELD_PR_HOURS = HELD_OPEN_HOURS;
 /** New assignments one sweep tick may make. See the header: the bound on a wrong read. */
 export const ASSIGN_CAP = 3;
 /** Asks he may hold at once (#6953 section 3); the rest wait in rank order and the card says how many. */
@@ -172,6 +198,8 @@ export function plan({
   patchOnly = new Set(),
   sessionIssues = [],
   replies = [],
+  graduated = [],
+  held = new Map(),
   now = Date.now(),
 } = {}) {
   const queue = [];
@@ -191,9 +219,9 @@ export function plan({
   // clear it". The first live run (2026-10-02, #4436) assigned the held PR and the next tick wanted
   // to unassign it: an assign/unassign loop pushing at Eric twice per cycle. Computed before either
   // loop, because the issue pass runs first (its results are what dedupes criterion 4's own ask).
-  const stillHeld = new Set(
-    prs.filter((pr) => heldPrHours(pr, now) !== null).map((pr) => pr.number),
-  );
+  // Held at all, not held-and-due: since #7317 a new push can take a PR off the green clock for a
+  // while, and an assignment he holds must not be cleared and re-made each time it does.
+  const stillHeld = new Set(prs.filter(isHeldPr).map((pr) => pr.number));
   const reading = new Set(replies.filter((r) => markers.has(r.number)).map((r) => r.number));
   for (const issue of issues) {
     planIssue(issue, {
@@ -208,6 +236,7 @@ export function plan({
       stillHeld,
       holding,
       incomplete,
+      graduated,
     });
   }
   // His reply under an ask the lane stands behind: read it back, clear the ask (answer-readback.mjs).
@@ -224,26 +253,44 @@ export function plan({
       readback: r,
     });
   }
-  for (const pr of prs) planHeldPr(pr, { markers, now, actions, ask, session, gaps, holding });
+  for (const pr of prs)
+    planHeldPr(pr, { held, markers, now, actions, ask, session, gaps, holding });
   for (const i of sessionIssues) sessionRow(i, now, session);
   return { queue, actions, needsYou, needsSession, incomplete, holding: holding.size };
 }
 
-/** Criterion 4 for one PR: a held PR unmerged past the window is his click, or a session's. */
-function planHeldPr(pr, { markers, now, actions, ask, session, gaps, holding }) {
-  const hours = heldPrHours(pr, now);
-  if (hours === null) return;
+/**
+ * Criterion 4 for one PR: a held PR green past the window (or open past the backstop) is his click,
+ * or a session's. `held` is `readHeldFacts`'s map: when the head went green and what the PR blocks.
+ */
+function planHeldPr(pr, { held = new Map(), markers, now, actions, ask, session, gaps, holding }) {
+  const facts = held.get(pr.number) ?? {};
+  const due = heldDue(pr, { greenAt: facts.greenAt, now });
+  if (!due) return;
   if (logins(pr.assignees).some(isEric)) holding.add(pr.number);
-  const why = `held PR unmerged ${Math.floor(hours)}h (≥${HELD_PR_HOURS}h)`;
+  const hours = due.hours;
+  const blocks = due.green ? (facts.blocks ?? []) : [];
+  const why = due.green
+    ? `held PR green ${Math.floor(hours)}h`
+    : `held PR unmerged ${Math.floor(hours)}h, checks not known green`;
+  // The decisions page reads `green`, `hours` and `blocks` off this row to write the PR's line.
+  const row = {
+    number: pr.number,
+    title: pr.title,
+    criterion: 4,
+    why,
+    green: due.green,
+    hours,
+    blocks,
+  };
   const gap = artifactGap(pr, gaps);
   if (gap) {
     session({ number: pr.number, title: pr.title, why: gap });
     // Already his (by hand, or asked before this rule): he holds it, so the digest says so.
-    if (logins(pr.assignees).some(isEric))
-      ask({ number: pr.number, title: pr.title, criterion: 4, why });
+    if (logins(pr.assignees).some(isEric)) ask(row);
     return;
   }
-  ask({ number: pr.number, title: pr.title, criterion: 4, why });
+  ask(row);
   if (actions.some((a) => a.kind === "assign" && a.number === pr.number)) return; // one ask each
   // `!markers.has` is criterion 3 applied to criterion 4, and it is load-bearing, not symmetry.
   // Without it: Eric unassigns himself from a still-held PR, which drops it out of `gather()`'s
@@ -258,12 +305,10 @@ function planHeldPr(pr, { markers, now, actions, ask, session, gaps, holding }) 
       number: pr.number,
       title: pr.title,
       why,
-      // A held PR carries no callout, so name the one thing that IS known: it is held, and a held
-      // PR only moves on his click. Deliberately does NOT claim green or protected — `heldPrHours`
-      // reads state, draft, label and age and nothing else, and `hold-merge` also goes on a PR
-      // held for a taste fork, so either word would be the app telling him something it never
-      // checked.
-      decision: `Merge this held PR, or say what it's waiting on — it has been open and held ${Math.floor(hours)}h, and a held PR moves only on your click.`,
+      // A held PR carries no callout, so name what IS known. "Green" only when the check runs said
+      // so (`due.green`, #7317); never "protected" — `hold-merge` also goes on a PR held for a taste
+      // fork, so that word would be the app telling him something it never checked.
+      decision: heldDecision({ due, blocks }),
       heldPr: true,
       rank: askRank({ labels: pr.labels, title: pr.title }),
     });
@@ -287,6 +332,15 @@ function sessionRow(i, now, session) {
     why: open ? "labelled needs-session" : "closed with its ask handed to a session",
     decision: decisionLine(i.body) ?? undefined,
   });
+}
+
+/** The one line a held PR's ask puts to him: the merge, how long it has waited, what it blocks. */
+function heldDecision({ due, blocks }) {
+  const h = Math.floor(due.hours);
+  if (!due.green)
+    return `Merge this held PR, or say what it's waiting on — it has been open and held ${h}h, and a held PR moves only on your click.`;
+  const what = blocksPhrase(blocks);
+  return `Merge this held PR — both required checks have been green ${h}h${what ? ` and it blocks ${what}` : ""}, and a held PR moves only on your click.`;
 }
 
 /** Criterion 1's assign action for an issue whose callout states a decision, ranked and carded. */
@@ -319,6 +373,7 @@ function planIssue(
     holding = new Set(),
     incomplete = [],
     reading = new Set(),
+    graduated = [],
   },
 ) {
   const assigned = logins(issue.assignees).some(isEric);
@@ -353,6 +408,7 @@ function planIssue(
     if (assigned) ask({ number: issue.number, title: issue.title, criterion: 1, why, decision });
     return;
   }
+  if (decidedForHim(issue, { decision, fresh: !(marked || assigned), graduated, session })) return;
   if (decision && assigned) holding.add(issue.number);
   if (decision && !marked && !assigned) queueAsk(issue, { decision, why, actions });
   // Needs-you = what he holds after this run: stated, and either his already or about to be. A
@@ -365,13 +421,61 @@ function planIssue(
   }
 }
 
-/** Criterion 4's test for one PR: held (`hold-merge` or `platter/`), open, ready, ≥12h → hours. */
-function heldPrHours(pr, now) {
-  if ((pr.state ?? "open") !== "open" || pr.draft) return null;
-  const held = names(pr.labels).includes(HOLD_MERGE) || /^platter\//.test(pr.head?.ref ?? "");
-  if (!held) return null;
-  const hours = (now - Date.parse(pr.created_at ?? now)) / 36e5;
-  return hours < HELD_PR_HOURS ? null : hours;
+/**
+ * The graduated class an ask belongs to, else `null`. Every question must carry a prediction (there
+ * is nothing to decide at otherwise) and every question's class must be graduated and pass rule 4
+ * here as well, so a hand-edited table can never route a spend or credential ask past him. The
+ * class is the one the ask states (`- Class:`), else `classOf`'s guess — its ledger row's class.
+ * A class (stated or guessed) is a claim about the ask, so the ask's own words hold a veto: when
+ * the guess lands on a rule-4 class, or the words name rule 4 (merge, arm, access, deploy…), no
+ * class graduates it. The guess alone reaches only three of CLASS_MAP's seven rule-4 classes, so
+ * a merge ask guessed `unclassified` and rode its stated reversible class past him (#7959). Pure.
+ */
+export function graduatedClass(issue, graduated = []) {
+  if (!graduated.length) return null;
+  const live = new Set(graduated.map((c) => String(c).trim().toLowerCase()));
+  const items = parseAsk(issue.body);
+  if (!items.length || items.some((it) => !it.forecast)) return null;
+  const classes = new Set();
+  for (const it of items) {
+    const words = `${it.question} ${issue.title ?? ""}`;
+    const guess = classOf(words);
+    if (ruleFour(guess).verdict === "irreversible") return null;
+    if (ruleFour(words).verdict === "irreversible") return null;
+    classes.add(it.cls || guess);
+  }
+  for (const c of classes) {
+    if (!live.has(c.toLowerCase()) || ruleFour(c).verdict !== "reversible") return null;
+  }
+  return [...classes].join(", ");
+}
+
+/**
+ * A graduated class is decided, not asked (ALIGNMENT.md → Graduation, #7939 slice 3): a fresh ask
+ * of one goes to the digest's "needs a session" line, where a session takes the predicted answer
+ * and reports it in Headlines. Only a `fresh` ask: one he already holds or was asked stays his.
+ */
+function decidedForHim(issue, { decision, fresh, graduated, session }) {
+  const grad = decision && fresh ? graduatedClass(issue, graduated) : null;
+  if (!grad) return false;
+  session({
+    number: issue.number,
+    title: issue.title,
+    why: `graduated class "${grad}": decide at the predicted answer and report it in Headlines`,
+    decision,
+  });
+  return true;
+}
+
+/** Live graduated classes from the ledger file, `[]` when it cannot be read (never a failed sweep). */
+function readGraduated() {
+  try {
+    return activeGraduated(
+      readFileSync(new URL("../../docs/process/ALIGNMENT.md", import.meta.url), "utf8"),
+    );
+  } catch {
+    return [];
+  }
 }
 
 /** The dry run's report, as markdown — what Eric reads before anything is switched on. Pure. */
@@ -429,17 +533,34 @@ export function batchStart(now = Date.now()) {
  * bots or production (rank 1) goes between batches and past the open cap. `lastAskAt` is the newest
  * ask the lane posted; without it nothing is known to have gone out this window.
  *
- * @param deps { assignments: { issues, prs, markers, replies, lastAskAt }, now }
+ * NO PER-ISSUE CARD FOR AN ISSUE ASK (#7939 slice 2). Criterion 1's asks now reach him as numbered
+ * entries on the one decisions page (decisions-page.mjs), answered in one reply, so this lane no
+ * longer assigns him issue by issue: four cards on four issues the same night (#7669–#7673) was
+ * four taps for four letters. `issueCards: true` brings the old card back — the rollback switch,
+ * and what the batch-rhythm specs drive.
+ *
+ * NO PER-PR CARD FOR A HELD PR EITHER (#7317). Three held PRs green the same night were three
+ * cards, and the measured wait was not him but the ask: the four held PRs of 2026-11-10 sat a
+ * median 37.6 h green, then merged in 93 s once one message listed them. They now go on the same
+ * page, one line each (green age, what each blocks, what silence does), so one touch per window
+ * covers every merge. The merge stays a click on the PR; nothing on the page reads text as one.
+ * `heldCards: true` brings the per-PR card back — the same rollback switch.
+ *
+ * @param deps { assignments: { issues, prs, markers, replies, lastAskAt, held }, now, issueCards?, heldCards? }
  * @returns Intent[] — `[]` on most pushes, which is the correct answer.
  */
 export function routeAssignments(deps = {}) {
-  const { assignments, now = Date.now() } = deps;
+  const { assignments, now = Date.now(), issueCards = false, heldCards = false } = deps;
   if (!assignments) return [];
   const { actions, holding } = plan({ ...assignments, now });
   const removals = actions.filter((a) => a.kind === "unassign");
   const readbacks = actions.filter((a) => a.kind === "readback");
   const asks = actions
-    .filter((a) => a.kind === "assign")
+    .filter(
+      (a) =>
+        a.kind === "assign" &&
+        (a.criterion === 1 ? issueCards : a.criterion === 4 ? heldCards : true),
+    )
     .sort((a, b) => (a.rank ?? 4) - (b.rank ?? 4) || a.number - b.number);
   const windowOpen = !((assignments.lastAskAt ?? 0) >= batchStart(now));
   const room = Math.max(0, OPEN_CAP - holding);
@@ -602,8 +723,15 @@ export function askOnce(
 }
 
 /** The live REST read both the dry run and the digest plan from — one gather, one `plan()`.
- *  `rest` and `now` are injectable so a spec can drive the marker read without GitHub or a clock. */
-export function gather({ rest = ghRestAll, now = Date.now() } = {}) {
+ *  `rest` and `now` are injectable so a spec can drive the marker read without GitHub or a clock.
+ *  `read` is the single-object read the held PRs' check runs need (#7317); a spec that injects only
+ *  `rest` reads none, so its held PRs fall to the 12 h backstop exactly as they timed before. */
+export function gather({
+  rest = ghRestAll,
+  read = rest === ghRestAll ? ghRest : null,
+  now = Date.now(),
+  graduated = readGraduated,
+} = {}) {
   // PRs stay in: a held PR can carry `needs-eric` too (#4361), and GitHub lists it as an issue.
   const issues = rest(`issues?state=open&labels=${NEEDS_ERIC}`);
   // Criterion 2's candidates: things Eric holds that may have lost the label or closed since.
@@ -613,12 +741,15 @@ export function gather({ rest = ghRestAll, now = Date.now() } = {}) {
     if (!seen.has(i.number)) issues.push(i);
   }
   const prs = rest("pulls?state=open");
+  // When each held PR went green and what it blocks: one check-runs read per held PR (#7317).
+  const held = readHeldFacts(prs, { read, now });
   // Marker candidates: every issue above, PLUS the held PRs criterion 4 targets. The PRs matter —
   // without their markers, a PR Eric unassigned himself from is invisible to every other read here
   // and gets re-asked on every push (see `plan`'s `!markers.has(pr.number)`). Only the ones already
-  // past the hold window, so this is normally one or two extra reads, not one per open PR.
+  // due an ask, so this is normally one or two extra reads, not one per open PR.
   const candidates = new Set(issues.map((i) => i.number));
-  for (const pr of prs) if (heldPrHours(pr, now) !== null) candidates.add(pr.number);
+  for (const pr of prs)
+    if (heldDue(pr, { greenAt: held.get(pr.number)?.greenAt, now })) candidates.add(pr.number);
   const markers = new Set();
   const replies = [];
   let lastAskAt = 0;
@@ -651,7 +782,17 @@ export function gather({ rest = ghRestAll, now = Date.now() } = {}) {
     ...rest(`issues?state=open&labels=${label}`),
     ...rest(`issues?state=closed&labels=${label},${LABELS.ciFailure.name}&since=${closedSince}`),
   ];
-  return { issues, prs, markers, patchOnly, sessionIssues, replies, lastAskAt };
+  return {
+    issues,
+    prs,
+    markers,
+    patchOnly,
+    sessionIssues,
+    replies,
+    lastAskAt,
+    graduated: graduated(),
+    held,
+  };
 }
 
 function main(argv) {

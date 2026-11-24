@@ -35,6 +35,46 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### `route` red on main: skip route, peek and wake reads on a spent api budget, not fail route (#6942)
+- **SHA:** 454741f   **DATE:** 2026-11-24   **STATUS:** closed
+- **COVERS:** 26bd132 866a7ae d0211ed 619e2d8 bf3b0b6 a37c46e cc6e9fe 02ac1d5 5659e49 ba57c50 5244473 14c0624 53c7cdc 24d6233 bef1015 0ed233c a5d384a 7d4ed05 48e15e8
+- **SIGNAL:** 30 failed run(s) of `Moneypenny Events (event-research automation)` → `route` on `main`, the first [42185658675](https://github.com/ejclark/skynet-capital/actions/runs/42185658675) at 2026-11-06T08:09:22Z. Repair capsule #6942 filed 2026-11-06T08:13:44Z, closed 426h later by #8159.
+- **ROOT CAUSE:** `route` no longer goes red when the App's hourly REST budget is spent during a read; it warns and skips the tick Same rule the audit already follows (#6998, #7773); writes still fail loudly
+- **PREVENTION:** spec — `tests/scripts/moneypenny/budget.spec.ts`, `tests/scripts/moneypenny/night-chain.spec.ts` (#8159).
+- **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
+
+---
+
+### `integration tests` red on main: pin the edition's today on the e2e server so the calendar keeps its event rows
+- **SHA:** 8189e8b   **DATE:** 2026-11-21   **STATUS:** closed
+- **COVERS:** b77edda
+- **SIGNAL:** 1 failed run(s) of `Pipeline` → `integration tests` on `main`, the first [44908502439](https://github.com/ejclark/skynet-capital/actions/runs/44908502439) at 2026-11-21T13:22:04Z. Repair capsule #7901 filed 2026-11-21T13:26:29Z, closed 21m later by #7902.
+- **ROOT CAUSE:** `integration tests` went red on `main` with a docs-only commit (#7900): two `campaign mission control` tests in `e2e/landing.spec.ts` look for an event row in the Calendar window. The e2e server pins the Council's clock (`SKYNET_FIXED_NOW`, #4683), but `/api/edition` still read `new Date()`. The one checked-in edition (`src/domain/editions/2026-11-06.json`) lists coming dates up to 2026-11-20. From Saturday 2026-11-21 the server cut every one of them, the calendar showed the empty week, and the tests found nothing. Reproduced locally before the fix: 2 failed, the same two. Not a flake: it would stay red until someone wrote a new edition, and go red again whenever an edition's dates run out.
+- **PREVENTION:** spec — `tests/scripts/offline-clocks.spec.ts`, `tests/server/content-api-routes.spec.ts` (#7902).
+- **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
+
+---
+
+### `PR #7319 is red` red on main: pin the desk-ideas spec's clock inside the nvda earnings window
+- **SHA:** 9282f4a   **DATE:** 2026-11-10   **STATUS:** closed
+- **COVERS:** 6d9560e
+- **SIGNAL:** 1 failed run(s) of `Pipeline` → `PR #7319 is red` on `main`, the first [42760727025](https://github.com/ejclark/skynet-capital/actions/runs/42760727025) at 2026-11-10T05:13:07Z. Repair capsule #7326 filed 2026-11-10T05:17:51Z, closed 19m later by #7329.
+- **ROOT CAUSE:** `/api/desk/:id` folds house playbooks matching a held symbol into the desk's idea cards, but only while the playbook's earnings window is open (`windowClosedAt(now)`, #5719). The two specs in `tests/server/desk-json-routes-subscriptions.spec.ts` built their config without `now`, so `deskView` used `new Date()`. Both NVDA earnings windows shut on 2026-11-10, so today the desk pitched no NVDA idea and both cases failed on `expect(...length).toBeGreaterThan(0)`. It reproduced identically on `main` (64c503cc3) with no change, so #7319 (the PR whose `verify` it reddened, issue #7326) was a bystander: every branch cut today is red on the same two cases.
+- **PREVENTION:** spec — `tests/server/desk-json-routes-subscriptions.spec.ts` (#7329).
+- **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
+
+---
+
+### `release · deploy` red on main: a third flyctl download failure, so the Fly jobs retry it once after a pause
+- **SHA:** 35c754d   **DATE:** 2026-11-08   **STATUS:** closed
+- **RECURS:** Three one-off infra failures in the Claude-lane window: a lost runner and two flyctl downloads
+- **SIGNAL:** run 42464350852 failed in `Set up flyctl` with "Unexpected HTTP response: 504" three times in 35 seconds (08:47:14–08:47:49Z), before flyctl ran; capsule #7106 within minutes. `35c754d` adds a `docs/research/**` page, a runtime change for the dashboard, so production stayed one research page behind `main` until the next push, and `deploy-bots` was skipped behind it.
+- **ROOT CAUSE:** GitHub's release-asset host returned 5xx for longer than the action's own three tries cover. The version was already pinned, so this is the asset download, as on 10-12 and 10-26. The earlier entry chose ledger-only because catch-up re-runs every 15 minutes; `release · deploy` has no tick, so each failure there leaves production behind until the next push and costs a red `main`, a capsule and a repair session.
+- **PREVENTION:** script, held for Eric (workflow file, boards the platter). Both Fly jobs in `pipeline.yml` keep the first `Set up flyctl` on `continue-on-error` under `id: flyctl`, pause 60 seconds, and run one more attempt that alone can fail the job. `tests/arch/workflows.spec.ts` pins the shape: id, the conditional, the pause, the same pinned action and version (10 assertions, all red against the old file).
+- **SIDE QUESTS:** `bots-catchup.yml`, `autonomy-ops.yml`, `fly-logs.yml` and `companion-eval.yml` set up flyctl once each. Catch-up re-ticks; the rest can take the same shape if a download failure turns up there.
+
+---
+
 ### A PR with no checks at all sat 16 hours: the watcher looked only for a ghost suite
 - **SHA:** n/a   **DATE:** 2026-11-08   **STATUS:** closed
 - **RECURS:** The same severance, one hop over — a PR opened by `GITHUB_TOKEN` gets no checks at all
@@ -164,7 +204,7 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 - **SHA:** n/a   **DATE:** 2026-11-01   **STATUS:** closed
 - **SIGNAL:** the script's own last line said "removed 115 worktrees". Its subagents' transcripts name 64 worktrees for that session, so at least 51 belonged to others. Noticed on reading that line, about seven minutes after it ran. Nothing failed: the run exited 0.
 - **ROOT CAUSE:** a session hand-rolled a loop over `.claude/worktrees/*` instead of using `npm run worktree:sweep`, which already exists and prints keep or remove and why. Its keep-list was built with an unquoted pipe (`ours=$(...)a|b|c`), so the assignment ran in a pipeline and the list stayed empty, and `grep -E "^()"` matches everything. Then it did not look at the target first: no dry run printed what would go. `git worktree remove` saved most of the work by refusing dirty folders, and branches survive it. What was lost: gitignored files in those folders (installed packages, logs, local data, any `.env` copies), and no local snapshot exists to restore them. One open session's worktree was among them, and it was put back on its branch at the same commit. Nothing running was hit. The 156 commits no ref pointed at are pinned under `refs/recovered/2026-11-01/`.
-- **PREVENTION:** gate. `scripts/hooks/guard-bash.mjs` refuses `git worktree remove` on a computed path or through `xargs`, and points at the sweep. It reads the command text, so a loop inside a script file still escapes it, and that is said here rather than implied away. The general rule stays a doctrine in the harness: before deleting, look at the target.
+- **PREVENTION:** gate. `scripts/hooks/guard-bash.mjs` refuses `git worktree remove` on a computed path or through `xargs`, and points at the sweep. It reads the command text, so a loop inside a script file still escapes it, and that is said here rather than implied away. Since #6698 it reads that text the way a shell runs it: an indented loop line, an env, `sudo`, `time` or `eval` prefix, `sh -c`, a brace group, a function body and `find -exec` are refused, and text that only names the command (a heredoc body, a commit message) is allowed. The general rule stays a doctrine in the harness: before deleting, look at the target.
 - **SIDE QUESTS:** none.
 
 ### The verify queue was off on the one machine that runs the fan-outs, and its spec was skipped for saying so
@@ -3258,3 +3298,17 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
 - **ROOT CAUSE:** none new — every line above maps to an existing entry, a closed repair issue, or a designed net (rollback). They were unlearned only because the scan never listed them (see the `allowed_bots` entry's blindness half) or because their entry carried `SHA: n/a` and no `COVERS`.
 - **PREVENTION:** ledger-only, by design: each cause's prevention is already banked where its line points, and the paged scan (this PR) is what stops a fortnight of runs going unlisted again. A lesson per run would be ceremony with no new mechanism behind it.
 - **SIDE QUESTS:** an entry with `SHA: n/a` and no `COVERS` closes nothing in the scan, so its own failing runs stay "unlearned" forever (here: the backfill-sweep entry). A lint warning in `auditLedger()` for that shape is cheap → docs/IDEAS.md.
+
+### A simulated-member round measured its own harness: a mid-round rebuild, a mid-round role edit, and a click a person could never make
+- **SHA:** d3b310a   **DATE:** 2026-11-17   **STATUS:** closed
+- **SIGNAL:** faculty round 1 (`scripts/faculty/`, the change study) reported members refused a Backspace "my instructions list" (EQ-03, PM-01) and a member who "never saw the app load" (OP-06); round 2 repeated the stale page for AC-01 and RG-02. Caught the same hour, by the members' own words in `summary.json`.
+- **ROOT CAUSE:** three faults in the instrument, not the app. (1) The actor's role prompt was edited while the round ran; each blind call reads it fresh, but the recorder's key list was already loaded, so later members were offered a key and then refused it. (2) `app/dist` was rebuilt mid-round to run CI, so open pages asked for chunk hashes that no longer existed. (3) The CI playthrough meant to pin the phone "More ▾" fix passed on the broken build: Playwright scrolled inside the row that clipped the list, which a member cannot do.
+- **PREVENTION:** script. A round copies its role prompt at start (`round.mjs`); a session records the build it ran on and marks itself confounded on a change or a stale chunk (`drive.mjs`); `regrade.mjs` re-detects both faults and a refused offered key from each session's own files, and the round table counts a confounded session neither way. The playthrough asserts `toBeInViewport({ ratio: 1 })` and an `elementFromPoint` hit before clicking (`e2e/changes.spec.ts`). Doctrine in `scripts/faculty/README.md`: never rebuild the app or edit a role while a round runs.
+- **SIDE QUESTS:** none
+
+### A green PR waited five days on a hold nobody needed: "I'll merge it" read as "hold it"
+- **SHA:** 25a6673   **DATE:** 2026-11-22   **STATUS:** closed
+- **SIGNAL:** Eric, the night it was held: "Why is it waiting on me"; five days later: "Waiting on a rubber stamp? Ffs". In between, `main` moved and the conflict lane repaired the PR twice (#7672).
+- **ROOT CAUSE:** the session added `hold-merge` to #7672 after Eric wrote "If it makes sense to eliminate a restricted process, submit the pr, i will merge it". It read an offer to merge as an ask to hold. The PR that shipped removed no restricted step, and none of its 112 files was protected, so the default (auto-merge on green) applied. Once on, the hold could not be undone cheaply: the auto-mode classifier refused the session's own unhold as merging without his say-so, so clearing the mistake also took his word.
+- **PREVENTION:** doctrine. The ship skill's hold rules now name the three reasons a hold may carry (a protected diff, his explicit ask to hold that PR, a design call named on the PR) and say an offer to merge is none of them (`.claude/skills/ship/SKILL.md`). Not a gate: the slip was reading intent, which a script cannot parse. The mechanical net for the cost, a hold that outlives its reason, is the side quest below.
+- **SIDE QUESTS:** list held, unprotected, green PRs older than a day in the digest, so a needless hold costs a day, not five → docs/IDEAS.md.

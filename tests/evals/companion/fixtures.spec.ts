@@ -20,8 +20,8 @@ const countIn = (category: CompanionFixtureCategory) =>
 
 describe("COMPANION_FIXTURES", () => {
   describe("when read as a suite", () => {
-    it("holds the seventeen scripted conversations", () => {
-      expect(COMPANION_FIXTURES).toHaveLength(17);
+    it("holds the twenty-one scripted conversations", () => {
+      expect(COMPANION_FIXTURES).toHaveLength(21);
     });
 
     it("gives every fixture a unique id", () => {
@@ -29,14 +29,28 @@ describe("COMPANION_FIXTURES", () => {
       expect(new Set(ids).size).toBe(ids.length);
     });
 
-    it("spreads them across grounding, pushback, unknown, size and filing", () => {
+    it("spreads them across grounding, pushback, unknown, size, filing, assess, research, delegate and evolve", () => {
       expect({
         grounding: countIn("grounding"),
         pushback: countIn("pushback"),
         unknown: countIn("unknown"),
         size: countIn("size"),
         filing: countIn("filing"),
-      }).toEqual({ grounding: 7, pushback: 3, unknown: 3, size: 2, filing: 2 });
+        assess: countIn("assess"),
+        research: countIn("research"),
+        delegate: countIn("delegate"),
+        evolve: countIn("evolve"),
+      }).toEqual({
+        grounding: 7,
+        pushback: 3,
+        unknown: 3,
+        size: 2,
+        filing: 2,
+        assess: 1,
+        research: 1,
+        delegate: 1,
+        evolve: 1,
+      });
     });
 
     it("prefixes each id with its own category so a report line names what failed", () => {
@@ -168,6 +182,48 @@ describe("COMPANION_FIXTURES", () => {
       const vague = byId("filing-clarify-when-vague");
       expect(concrete.rounds[0]?.length).toBeGreaterThan(vague.rounds[0]?.length ?? 0);
       expect(vague.rubric).toMatch(/clarifying question/);
+    });
+  });
+
+  describe("when a fixture covers one of her four jobs (the Moneypenny operator plan)", () => {
+    const jobs = [
+      "assess-size-up-my-situation",
+      "research-open-question-offers-handoff",
+      "delegate-build-request-brief",
+      "evolve-outgrown-goal-proposal",
+    ];
+
+    it("scripts one single-message fixture per job", () => {
+      for (const id of jobs) expect(byId(id).rounds).toHaveLength(1);
+    });
+
+    it("never requires a tool call, since the eval runs with no tools", () => {
+      for (const id of jobs) expect(byId(id).rubric).not.toMatch(/must call/i);
+    });
+
+    it("fails a reply that claims a hand-off already happened", () => {
+      for (const id of jobs.slice(1)) expect(byId(id).rubric).toMatch(/Fails if it claims/);
+    });
+
+    it("asks a change proposal for the four labelled lines", () => {
+      const { rubric } = byId("evolve-outgrown-goal-proposal");
+      expect(rubric).toContain("the outcome members are after");
+      expect(rubric).toContain("what the app does today");
+      expect(rubric).toContain("the proposed change");
+      expect(rubric).toContain("how we would know it worked");
+    });
+
+    it("forbids a recommendation when she sizes up where a member stands", () => {
+      expect(byId("assess-size-up-my-situation").rubric).toMatch(/no recommendation/i);
+    });
+  });
+
+  describe("when the question is a real-world fact she does not hold", () => {
+    it("still forbids a rate stated as fact, and accepts only an offer to hand it on", () => {
+      const { rubric } = byId("unknown-outside-app-fact");
+      expect(rubric).toMatch(/must not state a specific rate as fact/i);
+      expect(rubric).toContain("offer to hand the question on as a draft");
+      expect(rubric).toContain("must not claim anything was asked or queued");
     });
   });
 });

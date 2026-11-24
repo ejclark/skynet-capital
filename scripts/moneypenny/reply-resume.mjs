@@ -56,6 +56,35 @@ const asResumed = (issue, answered) => ({
 const no = (reason) => ({ resume: false, reason });
 
 /**
+ * A FOLLOW-UP THE APP RELAYED (#7286 slice 8). The app's feedback token comments under the owner's
+ * login, so GitHub reports a member's relayed follow-up as OWNER and the workflow's gate cannot tell
+ * it from Eric. `src/server/feedback-followup.ts` appends a trailer that opens with this text to
+ * every follow-up it posts, and that trailer is the tell. A relayed reply may answer the question
+ * the build lane asked the member (`needs-info`) on a filing already through the backlog gate; it
+ * never answers `needs-eric` (that decision is Eric's own) and never adds `ready` to a filing that
+ * was never readied (a member cannot skip the backlog gate by replying). Matching anywhere in the
+ * body fails closed: a member who types the words themselves only stops their own reply resuming.
+ */
+export const RELAY_TRAILER_OPENER = "_Follow-up from ";
+export const isRelayedFollowup = (body) => String(body ?? "").includes(RELAY_TRAILER_OPENER);
+
+/**
+ * HELD FOR THE FILING CHECK (#7548). On a `ready` filing no build has claimed yet, the app takes
+ * `ready` off BEFORE it posts the follow-up and ends the trailer with this sentence, so the filing
+ * check (`assessIntent` in triage-assess.mjs) re-judges the filing with the follow-up in it and
+ * puts `ready` back only if it is still clear. Without the hold, a small ask that readied itself
+ * could carry a large one past every check in a follow-up the build then read unchecked.
+ * Checked at the END of the body: the app writes the trailer last, so a member's own words can
+ * never end with it, and a follow-up on a Backlog filing (never held) never re-runs the check.
+ */
+export const RECHECK_MARK = "Held from the build for the filing check.";
+export const isHeldForRecheck = (body) =>
+  isRelayedFollowup(body) &&
+  String(body ?? "")
+    .trimEnd()
+    .endsWith(`${RECHECK_MARK}_`);
+
+/**
  * The pure decision: given an `issue_comment: created` payload the workflow's authorization gate has
  * already let through, does this reply resume the lane that is blocked on it?
  *
@@ -97,6 +126,18 @@ export function replyResumeIntent(ctx) {
   }
   if (!String(comment.body ?? "").trim()) {
     return no(`#${issue.number} — an empty reply answers nothing`);
+  }
+  if (isRelayedFollowup(comment.body)) {
+    if (answered === LABELS.needsEric.name) {
+      return no(
+        `#${issue.number} — a follow-up the app relayed never answers \`needs-eric\`; that decision is Eric's own`,
+      );
+    }
+    if (!names.includes(LABELS.ready.name)) {
+      return no(
+        `#${issue.number} — a follow-up the app relayed never readies a filing; it resumes only one already \`ready\``,
+      );
+    }
   }
   const notPullable = notPullableReason(asResumed(issue, answered));
   if (notPullable) return no(notPullable);

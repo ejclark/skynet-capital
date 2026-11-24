@@ -85,6 +85,7 @@ export function fillsFrom(
         ...(row.price !== undefined ? { price: row.price * scale } : {}),
         at: row.at,
         ...(LIFECYCLE_SYNTHETIC_CLOSE.has(row.status) ? { synthetic: true } : {}),
+        ...(row.status === LIFECYCLE_STATUS.OPASN ? { assigned: true } : {}),
         ...(tag?.playbookId ? { playbookId: tag.playbookId } : {}),
         ...(tag?.playbookMode ? { playbookMode: tag.playbookMode } : {}),
         ...(tag?.initiator ? { initiator: tag.initiator } : {}),
@@ -186,6 +187,9 @@ export function ticketContext(
 ): TicketContext {
   return {
     cash: snapshot.cash,
+    ...(snapshot.optionsBuyingPower !== undefined
+      ? { optionsBuyingPower: snapshot.optionsBuyingPower }
+      : {}),
     positions: snapshot.positions,
     tradingEnabled: options.tradingEnabled,
     isSelf: options.isSelf,

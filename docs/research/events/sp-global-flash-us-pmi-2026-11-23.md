@@ -76,7 +76,91 @@ Forward tests registered in [`forward-tests/sp-global-flash-us-pmi-2026-11-23.md
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-11-08 | D-15 | Initial research banked (above); canonical `sp-global-flash-us-pmi-2026-11-23.json` written this PR from the one proposal (`…from-sp-global-manufacturing-pmi-2026-11-02.json`, now inert). **Date/slot** re-read direct (HTTP 200, browser UA): `14:45 UTC S&P Global Flash US PMI`; stays `estimate`. **Adjacency sweep:** *peer prints* — Oct flash services 57.9 vs 58.0, manufacturing 56.0 vs 55.5, composite 57.6 (secondary); Oct final mfg 54.9 (−1.1 vs flash). *Macro* — 11-06 jobs and 11-10 CPI not yet scored in their own ledgers; December hike odds about two-thirds after the shock (secondary relay). *Vol regime* — VIX 16.61 → 28.18 (11-05) → 25.64 (11-06), Cboe direct; 10Y 4.84 (11-05, FRED). *Geopolitics* — none touching a PMI. *Tape* — no consensus yet. **Proposals filed: none** — the same-day Eurozone/Germany/France/UK/India/Australia flashes are non-US, absent from the October calendar too, and named in leg 1 rather than filed; everything else in the corridor is already tracked. Conviction proposals and declared intents: none for this event. Yahoo 429, no window re-run. | Initial: stand aside, impact stays `low` with a rule to raise it on FT-1. | 2026-11-16 (D-7, low band 0+ every 7 days) |
+| 2026-11-15 | D-8 | **Date/slot** re-read direct (HTTP 200, browser UA, 24,452 bytes): `November 23 ... 14:45 UTC S&P Global Flash US PMI`; stays `estimate`. **Vol regime (Cboe, direct):** VIX 25.64 (11-06) → 19.92 (11-09) → 17.49 (11-11) → 19.30 (11-13); **kill switch 5 fired (under 20)**: the shock had faded before the panel opened, so FT-2's premise (a shock the panel answers) is weaker, not void; the bar is unchanged. **Rates (Yahoo ^TNX / FRED):** 10Y 4.84 (11-05) → 5.15 (11-13); CPI Oct core +0.30%, PPI +0.3% (both per their ledgers). **Window baseline re-run** (Yahoo 5m, 11-13, floor 0.02%): median share SPY 38.1%, QQQ 38.5%, TLT 34.2%, IWM 44.6%, ^TNX 52.7% (44-57 sessions each); informational only, FT-1's medians are still fixed at 11-20 by the scorer. **Peers:** none new; no consensus yet. **Geopolitics:** none touching a PMI. **Adjacency:** `--on-date` 11-22/23/24 all tracked; 11-23 gains the Japan flash (11-24 00:30 UTC) and UK sentiment on S&P's listing, non-US, named not filed. New tracked adjacent id: `china-ga-ge-sb-suspension-expiry-2026-11-27` (not strong). Proposals filed: none. Conviction proposals and declared intents: both `[]`. | **None — stand aside holds** | 2026-11-22 (low, 0+ every 7d) |
+| 2026-11-22 | D-1 | **Date/slot** re-read direct (HTTP 200, browser UA, 26,052 bytes): `November 23 ... 14:45 UTC S&P Global Flash US PMI`, same listing as 11-08/11-15; stays `estimate`. **Vol regime (Cboe, direct, 11-20 close):** VIX 19.30 (11-13) → 22.91 → 25.46 → 24.56 → 28.44 → **35.89** (11-20, intraday 40.03); **kill switch 5 fired, above 30 this time**: the regime is deepening, not fading, and the panel (about 11-10 to 11-19) straddles the slide. Sibling ledgers (Treasury par, primary): 2y 4.76 → 4.63, 10y 5.04 → 4.92 on 11-20; SPX 7,561.67 (11-13) → 6,910.39 (−8.6%); cause press-grade only (AI-led selloff), not verified here. **Peer print (secondary, Newsquawk 11-04):** Oct *final* composite **55.9** vs 57.6 expected, prior 58.4, i.e. **1.7 under the flash** (the manufacturing −1.1 was only part). **FT-2 note:** its bar stays the first-print 57.6 as registered, but with the revised October already at 55.9 a sub-57.6 November is now the likely outcome, so a pass is weak evidence the shock reached the panel; read it against 55.9 at scoring. No November consensus found (one search); Yahoo 429, no window re-run, FT-1 medians still fixed by rule at 11-20. Nothing tracked inside 09:30-10:30 ET 11-23 (2y note is afternoon). **Proposals:** none; `--on-date` 11-23 lists 3 tracked, the non-US flashes stay named in leg 1. Conviction proposals and declared intents: none. | None — stand aside holds; impact stays `low` | 2026-11-23 (low, 0+ every 7d; scoring due 2026-11-24) |
+| 2026-11-22 | D-1 | **Date/slot** re-read direct (HTTP 200, browser UA, 26,052 bytes): `November 23 ... 14:45 UTC S&P Global Flash US PMI`, same listing; stays `estimate`. **Vol regime (Cboe VIX_History, direct):** VIX 19.30 (11-13) → 22.91 → 25.46 → 24.56 → 28.44 (11-19) → **35.89 (11-20, intraday high 40.03)**; **kill switch 5 fired (above 30)**, and it fired after the panel (roughly 11-10 to 11-19) was mostly collected, so FT-2 now asks whether a survey answered mostly at VIX 17-28 reads the shock; bar unchanged at 57.6. At VIX 36 raw window moves widen, FT-1's share statistic is regime-robust and its medians stay fixed at 11-20. **Rates/tape:** 10Y 5.07% (11-18, relay); Oct-minutes 10-2 hike dissent, December hike odds quoted ~94% (11-18, relay); 11-20 equity close not read (Yahoo 429 on all five symbols; FRED timed out), so no fresh window re-run. **Consensus:** none found by search (no 2026 preview indexed); the print is a first read with no surprise bar. **Peers/geopolitics:** none touching a PMI. **Adjacency:** `--on-date=2026-11-23` shows only the Tokyo closure and 2Y note auction (afternoon), both tracked; Eurozone/Germany/France/UK/India/Japan/Australia flashes on S&P's listing are non-US, named not filed. Proposals filed: none. Conviction proposals and declared intents: both `[]`. | **None — stand aside holds** (regime read in leg 4 is stale; vol 36 makes any options play dearer still) | 2026-11-24 (close-out) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
 *change* earns its sentence in the Stance section with the row as its receipt.
+
+**Last assessed:** 2026-11-15
+<!-- probe-ref: {"symbols":{},"vix":19.3,"daysBand":"low:0+","adjacentIds":["advance-economic-indicators-2026-11-27","advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","china-ga-ge-sb-suspension-expiry-2026-11-27","consumer-confidence-2026-11-24","durable-goods-2026-11-25","eurostat-hicp-final-2026-11-18","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","fomc-minutes-2026-11-18","gdp-q3-2026-second-2026-11-25","housing-starts-2026-11-18","industrial-production-annual-revision-2026-11-24","japan-cpi-2026-11-20","japan-cpi-tokyo-flash-2026-11-27","jgb-20y-auction-2026-11-18","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-1-5y-2026-11-20","jgb-liquidity-enhancement-5-11y-2026-11-27","jpx-market-closure-2026-11-23","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","opex-2026-11-20","pce-2026-11-25","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","retail-ecommerce-q3-2026-11-19","sifma-bond-early-close-2026-11-27","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25"],"screenStreak":0} -->
+
+**Last assessed:** 2026-11-22
+<!-- probe-ref: {"symbols":{},"vix":35.89,"daysBand":"low:0+","adjacentIds":["advance-economic-indicators-2026-11-27","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","china-ga-ge-sb-suspension-expiry-2026-11-27","consumer-confidence-2026-11-24","durable-goods-2026-11-25","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","gdp-q3-2026-second-2026-11-25","industrial-production-annual-revision-2026-11-24","japan-cpi-tokyo-flash-2026-11-27","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-5-11y-2026-11-27","jpx-market-closure-2026-11-23","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","pce-2026-11-25","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","sifma-bond-early-close-2026-11-27","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","tic-monthly-2026-11-18","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25"],"screenStreak":0} -->
+
+**Last assessed:** 2026-11-22
+<!-- probe-ref: {"symbols":{},"vix":35.89,"daysBand":"low:0+","adjacentIds":["advance-economic-indicators-2026-11-27","advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","china-ga-ge-sb-suspension-expiry-2026-11-27","consumer-confidence-2026-11-24","durable-goods-2026-11-25","eurostat-hicp-final-2026-11-18","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","fomc-minutes-2026-11-18","gdp-q3-2026-second-2026-11-25","housing-starts-2026-11-18","industrial-production-annual-revision-2026-11-24","japan-cpi-2026-11-20","japan-cpi-tokyo-flash-2026-11-27","jgb-20y-auction-2026-11-18","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-1-5y-2026-11-20","jgb-liquidity-enhancement-5-11y-2026-11-27","jpx-market-closure-2026-11-23","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","opex-2026-11-20","pce-2026-11-25","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","retail-ecommerce-q3-2026-11-19","sifma-bond-early-close-2026-11-27","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out, 2026-11-24 (D+1).** Instrument cache busted first (`rm -rf node_modules/.cache/earnings-cycle
+node_modules/.cache/intraday-edges`). Every figure below is a fresh pull on 2026-11-24: the release PDF
+fetched direct from S&P Global's own release page (browser User-Agent, HTTP 200, text-extracted; its
+embargo line did not extract, so the 09:45 ET release time rests on the calendar listing, re-read
+direct 11-22), and Yahoo **5-minute** bars through the repo's `intraday-bars.mjs` (`range=60d`, 60
+sessions, 51 for `^TNX`; window = open of the bar starting at A to close of the bar starting at B-5m,
+ET). The entry stays `estimate` (schema gap, unchanged; this lane may not self-confirm).
+
+**What printed (primary: S&P Global).** Flash US Composite Output Index **54.6** (October: 55.9),
+a 4-month low. Services business activity **54.7** (56.1), 4-month low. Manufacturing PMI **54.5**
+(54.9), 3-month low; manufacturing output **53.7** (54.5). Growth slowed on both output and new orders
+(new orders at the weakest since July, exports fell for the first time in four months), employment
+still rose, and price pressures cooled ("only slightly below" the year-to-date average, selling prices
+in manufacturing still rising especially sharply). Chief economist's read: GDP still tracking about 3%
+annualised in Q4. No consensus was found before or after (searches turned up no 2026 coverage), so
+there is no surprise measured here.
+
+**FT-sp-global-flash-us-pmi-2026-11-23-2: PASS.** 54.6 is below the registered bar of 57.6 (the October
+flash as first printed), by 3.0 points. The 11-22 row already said a pass was weak evidence: the
+October *final* composite had been revised to 55.9, so the like-for-like move is **-1.3**, not -3.0,
+and most of the gap to 57.6 was a revision that predates the November panel. The registered bar is
+scored as registered; what it shows is that the survey cooled, not that the 11-05 shock "reached" it
+(the panel was collected about 11-10 to 11-19, mostly at VIX 17 to 28).
+
+**FT-sp-global-flash-us-pmi-2026-11-23-1: PASS on the letter, attribution compromised.** Trailing
+medians = each instrument's share over its sessions ending 2026-11-20 with a counted hour (57, 57, 56,
+58, 45), the same feed. All five hours cleared the 0.02% degeneracy floor.
+
+| Instrument | 09:45-10:00 move | 09:30-10:30 move | Share | Trailing median | Above? |
+|---|---|---|---|---|---|
+| SPY | +0.5341% | +0.2513% | 212.5% | 31.9% | **yes** |
+| QQQ | +0.6275% | -0.0549% | 1143.5% | 34.7% | **yes** |
+| TLT | +0.1108% | +0.3576% | 31.0% | 39.4% | no |
+| IWM | +0.2623% | -0.2387% | 109.9% | 39.3% | **yes** |
+| `^TNX` | -0.1211% | -0.4421% | 27.4% | 44.3% | no |
+
+**3 of 5 above median**, the registered pass line, so FT-1 passes on its letter. Two things make it a
+thin pass, and both are recorded rather than argued away. **First**, the three "yes" rows are shares
+over 100%: the window moved more than the whole hour, i.e. it was reversed afterwards, and QQQ's hour
+net (-0.055%) sits near the degeneracy floor, so its share is an artefact of a flat hour (the 10-23
+SPY row had the same fault). The two rates instruments, where this survey's information should land
+first, were *below* median. **Second**, the session itself was not an ordinary one: SPY opened
+**+4.8%** over the 11-20 close (724.32 vs 690.91), closed +4.6%, QQQ +6.7%, IWM +3.4%, VIX 35.89 to
+**26.62** (Yahoo, last), 10Y about 4.92 (11-20) with `^TNX` flat on the day. I looked for the cause and
+found none (one search, no 2026 coverage indexed), so it is **unnamed**. It sits before the open, not
+inside 09:30-10:30 ET, so the registered VOID rule (a named non-PMI catalyst inside the hour) does not
+fire, but the equity window moves are a gap-open session's, not a PMI's.
+
+**What this does to the tier.** FT-1's text says a pass *licenses* raising this entry's impact `low`
+to `medium`. **Not taken**: a pass on a day carrying an unexplained 4.8% gap, with the rates window
+below median, is not the clean evidence the licence was written for, so
+`sp-global-flash-us-pmi-2026-11-23.json` is unchanged and the tier question moves to the December
+flash (n=3 flash days on the share measure: Sep loud on ranks, Oct mixed, Nov 3 of 5 on a gap day).
+Falsifier: the December flash window above median in 3+ of 5 on an ordinary (gap under 1%) session
+would justify the raise; below it, the slot reads as quiet-to-mixed and `low` stands. **Kill switches
+fired:** none new (5 was already recorded 11-22; 4 did not fire on the calendar). Nothing here is a
+trade; research is not action.
+
+**Conviction claims and kill list.** No conviction reads this event (`grep` of
+`docs/research/convictions/` and `src/playbooks/`), `conviction-proposals` and `intents` both `[]`;
+neither forward test is a kill, so the sweep doc's kill list is untouched. The tracking issue was
+not found open.
+
+**Loop stage a person still did.** *Act*: S&P Global's PDF has no text extractor in this runner (no
+`pdftotext`, no `node_modules`), so the print was read with a hand-rolled stream decoder; a
+committed release-PDF reader would remove it.
+
+**Last assessed:** 2026-11-24
+<!-- probe-ref: {"symbols":{},"vix":26.62,"daysBand":"low:0+","adjacentIds":["advance-economic-indicators-2026-11-27","advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","china-ga-ge-sb-suspension-expiry-2026-11-27","consumer-confidence-2026-11-24","durable-goods-2026-11-25","eurostat-hicp-final-2026-11-18","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","fomc-minutes-2026-11-18","gdp-q3-2026-second-2026-11-25","housing-starts-2026-11-18","industrial-production-annual-revision-2026-11-24","japan-cpi-2026-11-20","japan-cpi-tokyo-flash-2026-11-27","jgb-20y-auction-2026-11-18","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-1-5y-2026-11-20","jgb-liquidity-enhancement-5-11y-2026-11-27","jpx-market-closure-2026-11-23","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","opex-2026-11-20","pce-2026-11-25","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","retail-ecommerce-q3-2026-11-19","sifma-bond-early-close-2026-11-27","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25"],"screenStreak":0} -->

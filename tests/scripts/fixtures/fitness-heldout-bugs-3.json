@@ -2,7 +2,7 @@
   {
     "id": "silent-bot-never-fails",
     "contract": "live-bots-place",
-    "file": "scripts/fitness.mjs",
+    "file": "scripts/fitness-judges.mjs",
     "find": "sum(bot, \"placed\") === 0",
     "replace": "sum(bot, \"placed\") < 0",
     "why": "a live bot that proposed across five sessions, placed nothing and recorded no reason must fail; with this it can never fail"
@@ -10,7 +10,7 @@
   {
     "id": "unreadable-tally-passes",
     "contract": "live-bots-place",
-    "file": "scripts/fitness.mjs",
+    "file": "scripts/fitness-judges.mjs",
     "find": "if (!tally) return unknown(\"the journal tally is unreadable\");",
     "replace": "if (!tally) return pass(\"the journal tally is unreadable\");",
     "why": "a tally the probe cannot read must be unknown, never a pass that closes an open issue"
@@ -18,7 +18,7 @@
   {
     "id": "window-six-sessions-never-judged",
     "contract": "live-bots-place",
-    "file": "scripts/fitness.mjs",
+    "file": "scripts/fitness-judges.mjs",
     "find": "const SILENT_SESSIONS = 5;",
     "replace": "const SILENT_SESSIONS = 6;",
     "why": "the tally prints at most five sessions, so a window of six judges no bot and every silent bot reads quiet"
@@ -26,7 +26,7 @@
   {
     "id": "recency-window-inverted",
     "contract": "live-bots-place",
-    "file": "scripts/fitness.mjs",
+    "file": "scripts/fitness-judges.mjs",
     "find": "<= SILENT_RECENT_MS,",
     "replace": "> SILENT_RECENT_MS,",
     "why": "a bot whose newest live session is this week must be judged; only a bot idle for over ten days is skipped"
