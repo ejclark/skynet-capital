@@ -241,13 +241,24 @@ describe("paper checks: each body's shape", () => {
     const record = await run.execute();
     expect(broker.posted()).toEqual([
       expect.objectContaining({
-        symbol: "AMD261124C00600000",
+        symbol: "AMD261207C00600000",
         limit_price: 0.01,
         extended_hours: true,
         position_intent: "buy_to_open",
       }),
     ]);
     expect(record.rows[0]?.answer).toMatch(/NVDA false, AMD true, MSFT false/);
+  });
+
+  it("check 6 on an expiry day bids on a later expiry, never one expiring that day (#8374)", async () => {
+    // Friday 2026-12-04 16:05 ET is in check 6's post-close window, and an opening order on a
+    // contract expiring that day is refused for the broker's expiry-day cutoff, not extended hours.
+    const { broker, run } = harness(et("2026-12-04", 16, 5), { only: "options-extended-hours" });
+    broker.extendedFlag = new Set(["NVDA"]);
+    await run.execute();
+    const asked = broker.calls.find((c) => c.path.startsWith("/v1beta1/options/snapshots/NVDA"));
+    expect(asked?.path).toContain("expiration_date_gte=2026-12-05");
+    expect(broker.posted().map((b) => b.symbol)).toEqual(["NVDA261207C00600000"]);
   });
 
   it("check 7 buys 1 same-day contract then --same-day-qty, and records each message", async () => {
@@ -275,7 +286,7 @@ describe("paper checks: each body's shape", () => {
         legs: [
           { symbol: "SPY", ratio_qty: "100", side: "buy", position_intent: "buy_to_open" },
           {
-            symbol: "SPY261124C00600000",
+            symbol: "SPY261201C00600000",
             ratio_qty: "1",
             side: "sell",
             position_intent: "sell_to_open",
