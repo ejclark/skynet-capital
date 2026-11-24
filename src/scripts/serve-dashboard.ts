@@ -67,6 +67,7 @@ import { ParticipantService } from "../server/participant-service.js";
 import { recordPasses } from "../server/play-milestone-sync.js";
 import { publicOriginFrom } from "../server/public-url.js";
 import { resolvePort } from "../server/resolve-port.js";
+import { exitAtEntrySetting } from "../trading/exit-at-entry-flag.js";
 import { setupAccess } from "./dashboard-access.js";
 import { buildAccountAdmin } from "./dashboard-account-admin.js";
 import { wireAlertDelivery } from "./dashboard-alert-delivery.js";
@@ -600,6 +601,9 @@ async function main(): Promise<void> {
     readHouseRoster: insightsBridge.readHouseRoster,
     signalWindows: signalWindows(process.env),
     tradingEnabled: desk.enabled,
+    // The stop-limit and exit-at-entry setting (#8249): the committed value, which only the offline
+    // writes boot may override (`exitAtEntrySetting` ignores the variable on a live boot).
+    exitAtEntry: exitAtEntrySetting(process.env, dataSource.mode),
     submitTrade: desk.submit,
     submitOptionTrade: desk.submitOption,
     submitDraftOrder: desk.submitDraft,
