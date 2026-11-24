@@ -38,6 +38,7 @@ import { serveLegacyRedirect } from "./legacy-redirects.js";
 import { serveMemberCampaignsApi } from "./member-campaigns-api-routes.js";
 import { serveMemberChainsApi } from "./member-chains-api-routes.js";
 import { serveMemberConvictionsApi } from "./member-convictions-api-routes.js";
+import { noteAppVisit } from "./member-visits.js";
 import { serveOnboardingApi } from "./onboarding-api-routes.js";
 import { serveOptionApi } from "./option-api-routes.js";
 import { serveOptionLifecycleApi } from "./option-lifecycle-route.js";
@@ -288,6 +289,7 @@ async function serveAuthorizedRoute(
   }
   // The React shell — static app/dist behind the same gate as the board.
   if (isAppShellPath(path)) {
+    noteAppVisit(config.memberVisits, session, path, config.now?.());
     serveAppShell(res, path);
     return;
   }
