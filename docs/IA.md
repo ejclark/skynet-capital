@@ -810,6 +810,23 @@ answer, fast").
 the council lines in the key, entities, home and evidence below are the wargame's record, and
 `council-lines.tsx` / `council-replies.tsx` are mounted by no route (the cohesion census lists both).
 
+**Moved 2026-11-24 (#8253, #8161 shape 5 step 9): the Scoreboard opens on the party's table.** The
+league's home is the Scoreboard, at `/leaderboard` this slice (heading "Scoreboard"; the route
+becomes `/scoreboard` in slice 2 with a forward for every link). Its opening is no longer a Humans
+vs Bots race: the match bar, the cohort cards and the versus line are deleted, server blocks
+included. In their place one table: the members together against the house bot, compared on the
+average 1M return per seated account (the count it averages said beside it) against the house
+bot's own, seats A to Z with no rank, the viewer's own row marked with a glyph and "you". **The
+party has one home: the `party` block on `/api/board`** (`src/observatory/standings-party.ts`);
+Campaign's Party window and its waypoint and the home's Scoreboard tile are views of it and keep no
+copy, so the browser sums no party figure. **A first filled paper order seats a member**
+(`src/server/party-seats.ts`, our own journal's `hasFill`); the page stays open to everyone, open
+seats are a count and never names, and the seat lights the home tile. Placed by the fog-of-war tree
+(`docs/FOG-OF-WAR.md:19`: a scoreboard costs no capital, so the page is never fogged; the seat is
+the earned rung) and reported, not asked. The Field, its chips and Compare stay below the table
+until slice 2. Falsifier: by 2027-01-15, fewer than 2 members open the Scoreboard in the week after
+their first fill (`member-visits` landings).
+
 **The evidence.** 20 steps in 18 scenarios inside (Leaderboard × Wire 11/10; Council × Leaderboard
 6/6; Council × Wire 5/5) and 99 steps of joints to the book (Leaderboard × Net worth 11/10;
 Activity × Wire 11/10; Pulse × Wire 7/7; Council × Net worth 7/5; Landmark × Leaderboard 6/6) and

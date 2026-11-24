@@ -9,6 +9,8 @@ import { fetchQuests } from "../live/quests";
 import { fetchSettings } from "../live/settings";
 import { isCampaignAddress } from "../shell/campaign-forward";
 import { PageFrame } from "../shell/frame";
+import { useParty } from "../shell/mission-windows";
+import { scoreboardTileLine } from "../shell/party-table";
 import { usePhoneWidth } from "../shell/use-media";
 import { TowerSlot } from "../shell/vantage";
 
@@ -20,7 +22,7 @@ import { TowerSlot } from "../shell/vantage";
  *
  * At 390, in order: the tower as a committed still (≤200px tall, no WebGL on a phone until #3977's
  * real-device recheck) · "Needs you", at most three rows · the tiles, two to a row. Desktop adds
- * room — a taller tower box, the five tiles in one row — never a new concept. From 861px the
+ * room — a taller tower box, the six tiles in one row — never a new concept. From 861px the
  * session's one moving tower frame (`shell/vantage.tsx`) lays over the box; the scene's card
  * framing re-fits any box, so the scene needs no change. Reduced motion and Settings → Display →
  * "Tower motion: Still" reach this frame exactly as they reach the column on other pages.
@@ -193,6 +195,37 @@ function NeedsYou(): ReactElement {
   );
 }
 
+/**
+ * The Scoreboard's tile (#8253 criterion 10): a glyph, its name and one plain line — the seat line
+ * before the viewer's first fill, the lead line after it, when the tile lights. It opens the
+ * Scoreboard either way: the page is open to every member, only the seat is earned. It reads the
+ * Party window's own query (`useParty`), so the home adds no request the app did not already make.
+ */
+function ScoreboardTile(): ReactElement {
+  const settings = useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
+  const party = useParty();
+  const ownedIds = (settings.data?.accounts ?? []).map((a) => a.id);
+  const { line, lit } = scoreboardTileLine(party.data?.party, ownedIds);
+  return (
+    <li>
+      <Link
+        className={`home-app${lit ? " home-app-lit" : ""}`}
+        to="/leaderboard"
+        search={{ by: "equity" }}
+      >
+        <span className="home-app-glyph" aria-hidden="true">
+          {lit ? "◆" : "◇"}
+        </span>
+        <span className="home-app-name">
+          Scoreboard
+          {lit ? <span className="home-app-seat">◆ your seat</span> : null}
+        </span>
+        <span className="home-app-line">{line}</span>
+      </Link>
+    </li>
+  );
+}
+
 function Home(): ReactElement {
   return (
     <PageFrame towerless>
@@ -213,6 +246,7 @@ function Home(): ReactElement {
                 </Link>
               </li>
             ))}
+            <ScoreboardTile />
           </ul>
         </nav>
       </div>
