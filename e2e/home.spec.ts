@@ -24,14 +24,14 @@ test.describe("the home screen", () => {
     await expect(apps).toHaveCount(7);
     // By position, so the order holds too, and a word in another tile's line can't match.
     for (const [i, [, href]] of [
-      // #8253: the Scoreboard's tile opens the board whether or not the viewer has a seat yet.
-      ["Scoreboard", "/app/leaderboard?by=equity"],
       ["Campaign", "/app/campaign"],
       ["Profile", "/app/accounts"],
       ["Trade", "/app/trade"],
       ["Activity", "/app/activity"],
       ["R&D", "/app/research"],
       ["Bots", "/app/bots"],
+      // #8253: the Scoreboard's tile opens the board whether or not the viewer has a seat yet.
+      ["Scoreboard", "/app/leaderboard?by=equity"],
     ].entries())
       await expect(apps.nth(i)).toHaveAttribute("href", href);
     // In order, and "Needs you" plus the first row of tiles clear the dock's top edge.
