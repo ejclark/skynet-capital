@@ -12,8 +12,8 @@ import {
   parseEdition,
 } from "../../src/domain/edition.js";
 
-// The day's edition (#7077): the landing page's market news. The record is hand-written until
-// #6949 slice 5 writes it, so its honesty rules live in the loader and are proved here.
+// The day's edition (#7077): the landing page's market news. The writer (#8252) and a hand both write
+// the record, so its honesty rules live in the loader and are proved here.
 
 /** A minimal valid edition, as plain data a spec can bend one field of. */
 function valid(): Record<string, unknown> {
@@ -169,6 +169,25 @@ describe("the edition record", () => {
     expect(() => parse(withStory({ more: [line, line] }))).toThrow(/twice/);
     const d = { date: "2026-11-10", what: "CPI", status: "confirmed" };
     expect(() => parse({ ...valid(), next: [d, d] })).toThrow(/next lists "2026-11-10 CPI" twice/);
+  });
+
+  it("refuses a number in the words that none of the story's cards carry (#8252 criterion 4)", () => {
+    expect(() => parse(withStory({ headline: "Chip stocks fell 12.4%." }))).toThrow(
+      /story "lead": its headline says "12.4"/,
+    );
+    expect(() => parse(withStory({ line: "Chips fell 9%" }))).toThrow(/its line says "9"/);
+    expect(() => parse(withStory({ narrator: "Sensors logged 40 hits." }))).toThrow(
+      /its narrator says "40"/,
+    );
+  });
+
+  it("lets the words repeat a number a fact, a report or a more line carries", () => {
+    expect(() => parse(withStory({ headline: "Chip stocks fell 11.2%." }))).not.toThrow();
+    expect(() => parse(withStory({ line: "CRWV reports Nov 10" }))).not.toThrow();
+    const more = [{ text: "Voters rejected 40 of 41 measures.", mark: "reported", source: "CNBC" }];
+    expect(() =>
+      parse(withStory({ more, narrator: "Voters said no 40 times out of 41." })),
+    ).not.toThrow();
   });
 
   it("keeps key facts to one to four", () => {

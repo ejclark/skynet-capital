@@ -7,7 +7,8 @@
  *   - move an estimate to a company date off it (still an estimate, window over both days,
  *     `ledgerId` kept) and report it — with every other company date it did not confirm — as
  *     NEEDS IR;
- *   - add a cadence estimate for a playbook symbol (S1-NVDA, G1-GOOG) with no print in ~100 days.
+ *   - add a cadence estimate for a playbook symbol (S1-NVDA, G1-GOOG) or a house campaign's name with
+ *     no print in ~100 days, dated on a session (#8252).
  *
  * It only ever edits a checked-in, reviewed table — never credentials, never an order — and its
  * output ships as an ordinary auto-merge-on-green PR, like any other plumbing change.
@@ -28,6 +29,7 @@
 import { execFileSync } from "node:child_process";
 import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { CAMPAIGNS, castSymbols } from "../domain/campaigns.js";
 import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
 import { G1_GOOG, S1_NVDA } from "../playbooks/registry.js";
 import {
@@ -41,6 +43,10 @@ import {
 
 const CALENDAR_FILE = join(process.cwd(), "src", "domain", "earnings-calendar.ts");
 const PLAYBOOK_SYMBOLS = [...S1_NVDA.symbols, ...G1_GOOG.symbols];
+/** Every name a house campaign follows also gets a cadence estimate (#8252), so the edition and the
+ *  safety windows see its next report. Exit 3 stays for the playbook symbols alone: an unanswered
+ *  fetch for a campaign-only name is a warning, not a red run. Funds have no row and are skipped. */
+const FILL_SYMBOLS = [...new Set([...PLAYBOOK_SYMBOLS, ...CAMPAIGNS.flatMap(castSymbols)])];
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -78,7 +84,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  const fills = cadenceFills(UPCOMING_PRINTS, PLAYBOOK_SYMBOLS, today);
+  const fills = cadenceFills(UPCOMING_PRINTS, FILL_SYMBOLS, today);
   for (const f of fills)
     log(`${f.symbol}: no print in ~100 days — ESTIMATED ${f.date} from cadence.`);
 
