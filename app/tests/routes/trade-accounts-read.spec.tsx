@@ -6,7 +6,7 @@ import {
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
-import { cleanup, configure, render, screen } from "@testing-library/react";
+import { cleanup, configure, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import * as actualResearch from "../../src/live/research" with { rstest: "importActual" };
 import { Route } from "../../src/routes/trade";
@@ -17,6 +17,12 @@ import { Route } from "../../src/routes/trade";
  * "No accounts are linked to your session yet" (which sends a linked member to re-link an account
  * they already have). WHEN the read succeeds and lists none, it SHALL still say none are linked.
  * The class is `tests/arch/failed-read-not-empty.spec.ts`; the harness is `trade-section.spec.tsx`'s.
+ *
+ * #8400: a failed RE-read is not a failed read. TanStack Query v5 keeps the cached `data` when a
+ * background refetch fails (window focus, reconnect, another observer of `["settings"]` mounting),
+ * so `isError` turns true while the accounts are still in hand. WHEN that happens, the ticket SHALL
+ * stay mounted on those accounts — a half-filled or reviewed order is never thrown away for a
+ * failure note about a read the page does not need.
  */
 
 const NO_ACCOUNTS = /No accounts are linked to your session yet/;
@@ -82,6 +88,7 @@ function mountTrade(initialPath: string) {
       <RouterProvider router={router} />
     </QueryClientProvider>,
   );
+  return client;
 }
 
 // Same budget as trade-section.spec.tsx (#5498): mounting the route tree is genuine work.
@@ -118,5 +125,17 @@ describe("/trade when the accounts read fails (#8337)", () => {
     mountTrade("/trade");
     expect(await screen.findByText(NO_ACCOUNTS)).toBeInTheDocument();
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("keeps the ticket open on the accounts it has when a later re-read fails (#8400)", async () => {
+    const client = mountTrade("/trade");
+    expect(await screen.findByRole("region", { name: "Ticket" })).toBeInTheDocument();
+    settingsAnswer = () => Promise.reject(new Error("/api/settings 503"));
+    await client.refetchQueries({ queryKey: ["settings"] });
+    // The precondition the bug needs: the query failed AND still holds the cached accounts.
+    await waitFor(() => expect(client.getQueryState(["settings"])?.status).toBe("error"));
+    expect(client.getQueryData<{ accounts: unknown[] }>(["settings"])?.accounts).toHaveLength(1);
+    expect(screen.queryByText(/Your accounts couldn't be read just now/)).toBeNull();
+    expect(screen.getByRole("region", { name: "Ticket" })).toBeInTheDocument();
   });
 });

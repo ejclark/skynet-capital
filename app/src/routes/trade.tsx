@@ -474,8 +474,11 @@ function TradePage(): ReactElement {
       {plan ? <FastTrackPlan plan={plan} /> : null}
       {/* A failed settings read has no `data`, so `accounts` is `[]`: ask "did it fail?" before
           "is it empty?", or a linked member is told no accounts are linked and sent to re-link
-          one they already have (#8337; the class is tests/arch/failed-read-not-empty.spec.ts). */}
-      {settings.isError ? (
+          one they already have (#8337; the class is tests/arch/failed-read-not-empty.spec.ts).
+          Only a read with NO data is a failed one here: TanStack v5 keeps the cached accounts when a
+          background refetch fails, and swapping a live ticket for this note would unmount the Bench
+          and throw away a filled-in or reviewed order (#8400). */}
+      {settings.isError && !settings.data ? (
         <p className="note" role="alert">
           Your accounts couldn't be read just now, so the ticket can't open yet.{" "}
           <button
