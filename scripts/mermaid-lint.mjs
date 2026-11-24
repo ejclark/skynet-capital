@@ -40,6 +40,8 @@
 //   node scripts/mermaid-lint.mjs <file.md>...   # lint the mermaid blocks in files (exit 1 on problems)
 //   node scripts/mermaid-lint.mjs --stdin        # lint a body on stdin (ship.sh checkbody, issue-lint)
 //   node scripts/mermaid-lint.mjs --json ...     # findings as JSON {problems, notes, diagrams}
+//   node scripts/mermaid-lint.mjs --json --ast … # + each parsed diagram's model (type, nodes, edges)
+//                                                #   from scripts/mermaid-model.mjs (plan #3748 7a)
 //   node scripts/mermaid-lint.mjs                # scan the docs corpus (docs/, .github/, .claude/, root *.md)
 //
 // Enforced in CI via tests/arch/mermaid-lint.spec.ts (the corpus scan) and locally by
@@ -50,6 +52,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isMain } from "./is-main.mjs";
+import { diagramModel } from "./mermaid-model.mjs";
 
 /** The repo this script lives in — the registry is read from here, not from the caller's cwd, so
  *  ship.sh and the specs see the same page wherever they run. */
@@ -178,9 +181,11 @@ function parseErrorText(error) {
 
 /**
  * Lint every mermaid block in a markdown string.
- * @returns {Promise<{problems: string[], notes: string[], diagrams: {line:number,type:string,ok:boolean}[]}>}
+ * With `ast`, a diagram that parses also carries `model` — what Mermaid parsed, as data
+ * (scripts/mermaid-model.mjs). A block that does not parse has no model: there is nothing to read.
+ * @returns {Promise<{problems: string[], notes: string[], diagrams: {line:number,type:string,ok:boolean,model?:object}[]}>}
  */
-export async function lintMermaid(markdown, { where = "" } = {}) {
+export async function lintMermaid(markdown, { where = "", ast = false } = {}) {
   const problems = [];
   const notes = [];
   const diagrams = [];
@@ -218,7 +223,11 @@ export async function lintMermaid(markdown, { where = "" } = {}) {
     }
 
     const type = result?.diagramType ?? head;
-    diagrams.push({ line, type, ok: true });
+    diagrams.push(
+      ast
+        ? { line, type, ok: true, model: await diagramModel(mermaid, source) }
+        : { line, type, ok: true },
+    );
     const policy = policyFindings(source, result?.config ?? {}, head, at, registry);
     problems.push(...policy.problems);
     notes.push(...policy.notes);
@@ -389,6 +398,11 @@ async function main() {
   const argv = process.argv.slice(2);
   const json = argv.includes("--json");
   const stdin = argv.includes("--stdin");
+  const ast = argv.includes("--ast");
+  if (ast && !json) {
+    console.error("mermaid-lint: --ast prints the parsed model as JSON — pass it with --json");
+    process.exit(1);
+  }
   const files = argv.filter((a) => !a.startsWith("--"));
 
   const inputs = [];
@@ -399,7 +413,7 @@ async function main() {
 
   const all = { problems: [], notes: [], diagrams: [] };
   for (const { where, text } of inputs) {
-    const r = await lintMermaid(text, { where });
+    const r = await lintMermaid(text, { where, ast });
     all.problems.push(...r.problems);
     all.notes.push(...r.notes);
     all.diagrams.push(...r.diagrams.map((d) => ({ where, ...d })));
