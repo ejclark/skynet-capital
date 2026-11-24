@@ -214,6 +214,67 @@ describe("writeEdition", () => {
   });
 });
 
+// #8353: a closed story row draws `facts[0].move`, `story.line` and `facts[0]`'s figure side by
+// side (app/src/shell/edition-story.tsx). The audit of PR #8302 found 11 of 28 live 'ahead'/'news'
+// rows naming one ticker beside another's move ("Next: GOOG quarterly results ▲ +1.5%", MSFT's).
+describe("a closed story row: the figure is the move of the name it shows (#8353)", () => {
+  const row = (s: { line: string; facts: readonly { label: string; value: string }[] }) =>
+    `${s.line} | ${s.facts[0]?.label} ${s.facts[0]?.value}`;
+  const story = (e: ReturnType<typeof writeEdition>, id: string) =>
+    e.stories.find((s) => s.id === id);
+
+  it("leads 'ahead' with the named report's own move, not the biggest mover's", () => {
+    // MRVL (+1.3%) reports first; NVDA (−10.0%) reports later the same week and moved most.
+    const e = writeEdition(
+      input({
+        prints: [
+          print("MRVL", "2026-11-27", "confirmed"),
+          print("NVDA", "2026-11-30", "confirmed"),
+        ],
+        events: [],
+      }),
+    );
+    const ahead = story(e, "ahead");
+    expect(ahead && row(ahead)).toBe("Next: MRVL quarterly results | MRVL +1.3%");
+    expect(ahead?.facts.map((f) => f.label)).toEqual(["MRVL", "NVDA"]);
+    expect(() => judge(e)).not.toThrow();
+  });
+
+  it("leads 'news' with the named ticker's own move, not the biggest mover's", () => {
+    const items = [
+      news("sec-msft", "Microsoft files an 8-K (MSFT)", "2026-11-24T20:00:00Z", "SEC: EDGAR 8-K"),
+      news("gdelt-nvda", "Chip stocks slide as NVIDIA leads (NVDA)", "2026-11-24T19:00:00Z"),
+    ];
+    const e = writeEdition(input({ news: items }));
+    const n = story(e, "news");
+    expect(n?.symbols).toEqual(["MSFT", "NVDA"]);
+    expect(n && row(n)).toBe("MSFT in the news | MSFT +1.0%");
+    expect(() => judge(e)).not.toThrow();
+  });
+
+  it("names the ticker when an event's title does not, so a figure never sits unattributed", () => {
+    // The live 11-23 row: "Reports and events ahead ▲ +3.5%", AMZN's move with no name beside it.
+    const reinvent = event("aws-reinvent", "2026-11-30", {
+      kind: "product-launch",
+      title: "AWS re:Invent 2026 (Las Vegas) — keynote week",
+      symbols: ["AMZN"],
+    });
+    const only = writeEdition(input({ prints: [], events: [reinvent] }));
+    const ahead = story(only, "ahead");
+    expect(ahead?.line).toMatch(/\bAMZN\b/);
+    expect(ahead?.facts[0]?.label).toBe("AMZN");
+    expect(ahead?.line.length).toBeLessThanOrEqual(34);
+    expect(() => judge(only)).not.toThrow();
+  });
+
+  it("keeps the campaign's average as the figure when the line names no ticker", () => {
+    const e = writeEdition(input({ prints: [], events: [event("cpi-2026-11", "2026-11-25")] }));
+    const ahead = story(e, "ahead");
+    expect(ahead?.line).toBe("Next: cpi-2026-11");
+    expect(ahead?.facts[0]?.label).toMatch(/average/);
+  });
+});
+
 describe("the formatting the cards use", () => {
   it("signs every change with the house minus, and never prints a negative zero", () => {
     expect(signedPct(3.14)).toBe("+3.1%");

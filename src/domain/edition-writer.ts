@@ -191,6 +191,30 @@ function factsFor(symbols: readonly string[], input: WriterInput): EditionFact[]
   ];
 }
 
+/**
+ * The facts for a story whose one line names `lead`: that name's own move first, then the story's
+ * other movers. The closed row draws the line beside `facts[0]`'s move and figure
+ * (`app/src/shell/edition-story.tsx`), so the first fact must be the named ticker's, never the
+ * biggest mover's (#8353: 11 of 28 live rows read "Next: GOOG quarterly results ▲ +1.5%", MSFT's).
+ * A named ticker with no close (the CLI refuses that run, so a hand-built input) leads with the
+ * campaign's average, whose label says what it is, rather than another ticker's move.
+ */
+function factsLedBy(
+  lead: string | undefined,
+  symbols: readonly string[],
+  input: WriterInput,
+): EditionFact[] {
+  if (lead === undefined) return factsFor(symbols, input);
+  const [own] = movesOf([lead], input.closes);
+  if (!own) return factsFor([], input);
+  const rest = factsFor(symbols, input).filter((f) => f.label !== lead);
+  return [factOf(own, input.date), ...rest].slice(0, MAX_MOVERS);
+}
+
+/** Whether `text` carries `symbol` as a whole token ("GOOG quarterly results" names GOOG). */
+const names = (text: string, symbol: string): boolean =>
+  text.split(/[^A-Za-z0-9.]+/).some((t) => t.replace(/\.$/, "") === symbol);
+
 /** A dated item on the calendar, as an edition lists it, with the record's source beside it. */
 interface Dated {
   readonly item: EditionDate;
@@ -303,12 +327,24 @@ function aheadStory(input: WriterInput, ahead: readonly Dated[]): EditionStory |
   if (!first) return undefined;
   const symbols = [...new Set(shown.flatMap((d) => d.symbols))];
   const estimate = first.item.status === "estimate" ? ", our estimate" : "";
+  const day = dayLabel(first.item.date).slice(0, 3);
+  // The row's figure is the lead's move, so the line names the lead even when the event's title
+  // does not ("AWS re:Invent" is AMZN's): a figure never sits beside no name, or another's (#8353).
+  const lead = first.symbols[0];
+  const line =
+    lead === undefined
+      ? fit(`Next: ${first.item.what}`, "Reports and events ahead")
+      : fit(
+          ...(names(first.item.what, lead) ? [`Next: ${first.item.what}`] : []),
+          `Next for ${lead}: ${first.item.what}`,
+          `Next for ${lead} on ${day}`,
+        );
   return {
     id: "ahead",
-    headline: `Dated next for ${inText(input.campaign.title)}: ${first.item.what} on ${dayLabel(first.item.date).slice(0, 3)}${estimate}.`,
-    line: fit(`Next: ${first.item.what}`, "Reports and events ahead"),
+    headline: `Dated next for ${inText(input.campaign.title)}: ${first.item.what} on ${day}${estimate}.`,
+    line,
     symbols,
-    facts: factsFor(symbols, input),
+    facts: factsLedBy(lead, symbols, input),
     reports: shown.map((d) => d.item),
     more: shown.map((d) => ({
       text: `${d.item.what}, ${d.item.date}: ${d.item.status === "confirmed" ? "a confirmed date" : "our estimate, not yet confirmed by the company or publisher"}.`,
@@ -350,7 +386,7 @@ function newsStory(input: WriterInput, ahead: readonly Dated[]): EditionStory | 
         : `Filings and press on ${inText(input.campaign.title)}'s forces.`,
     line: fit(named.length > 0 ? `${named[0]} in the news` : "In the news"),
     symbols,
-    facts: factsFor(symbols, input),
+    facts: factsLedBy(named[0], symbols, input),
     reports: ahead
       .filter((d) => d.symbols.some((s) => symbols.includes(s)))
       .slice(0, MAX_REPORTS)
