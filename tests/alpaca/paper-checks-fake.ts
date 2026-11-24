@@ -3,6 +3,7 @@
 // recorded, so a spec can say "no POST was sent" or "this body went out".
 
 import type { AlpacaTradingTransport } from "../../src/alpaca/trading-transport.js";
+import { newYorkDate, shiftDate } from "../../src/domain/market-clock.js";
 import { newYorkInstant } from "../../src/domain/market-session.js";
 import type { JsonResponse } from "../../src/http/fetch-json.js";
 
@@ -150,20 +151,35 @@ export class FakeAlpaca {
         }
         if (path.startsWith("/v1beta1/options/snapshots/")) {
           const underlying = path.split("/")[4]?.split("?")[0] ?? "";
-          return {
-            status: 200,
-            body: {
-              snapshots: {
-                [`${underlying}261124C00600000`]: { latestQuote: { ap: 1.25, bp: 1.2 } },
-              },
-            },
-          };
+          return { status: 200, body: { snapshots: this.chain(underlying, path) } };
         }
         return { status: 404, body: { message: `fake: no route ${path}` } };
       }),
     post: () => Promise.resolve({ status: 405, body: null }),
     delete: () => Promise.resolve({ status: 405, body: null }),
   };
+
+  /**
+   * One $600 call per weekday expiry from today (ET) through four weeks out, filtered the way the
+   * snapshot endpoint filters by `expiration_date` / `expiration_date_gte` — so a spec sees which
+   * expiry a check asked for, not one fixed contract whatever the query (#8374).
+   */
+  private chain(underlying: string, path: string): Record<string, unknown> {
+    const query = new URLSearchParams(path.split("?")[1]);
+    const exact = query.get("expiration_date");
+    const from = query.get("expiration_date_gte") ?? "";
+    const today = newYorkDate(new Date(this.clock.now));
+    const snapshots: Record<string, unknown> = {};
+    for (let day = today; day <= shiftDate(today, 28); day = shiftDate(day, 1)) {
+      const weekday = new Date(`${day}T12:00:00Z`).getUTCDay();
+      if (weekday === 0 || weekday === 6) continue;
+      if (exact !== null && day !== exact) continue;
+      if (day < from) continue;
+      const occ = day.slice(2).replaceAll("-", "");
+      snapshots[`${underlying}${occ}C00600000`] = { latestQuote: { ap: 1.25, bp: 1.2 } };
+    }
+    return snapshots;
+  }
 
   /** Weekday sessions 09:30-16:00 across the asked range (no holidays: the specs pick their days). */
   private calendar(path: string): unknown[] {
