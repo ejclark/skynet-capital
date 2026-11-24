@@ -34,6 +34,13 @@ import { forecastFor } from "./pair-forecast.js";
  * dedupeKey) so a re-derived alert with a fresh id stays dismissed and an escalated one re-shows.
  * Identity is the session's, exactly as the positions route checks it. Without a dismissals
  * port the list still answers and says dismissals are off — never a silent no-op.
+ *
+ * UNREAD IS NOT EMPTY (#8334). A hub row whose broker read failed (`degraded()` in
+ * participant-snapshot.ts) carries `positions: []` beside its `error`, so the position and held-name
+ * window alerts can't be derived. The list still carries what doesn't need the positions (orders,
+ * a bot's loop, windows on watched names: an outage must not hide a rejected order or a watched
+ * fill's mail) and answers `positionsUnread: true`, which the strip says in words; with no other
+ * source it answers `read-failed`. It never reads as "nothing to flag".
  */
 
 export const DESK_ALERTS_PATH = "/api/trade/alerts";
@@ -95,6 +102,8 @@ export async function deskAlertsFor(
       readonly asOf: Date;
       readonly alerts: readonly DeskAlert[];
       readonly dismissable: boolean;
+      /** Only when the account's broker read failed: alerts built on its positions are missing. */
+      readonly positionsUnread?: true;
     }
 > {
   const positions = await loadOptionPositions(id, config);
@@ -105,8 +114,13 @@ export async function deskAlertsFor(
   const log = config.activityLog;
   const desk = config.hub.getState().participants.find((p) => p.id === id);
   const bot = desk?.kind === "bot" && config.readDecisions ? desk : undefined;
-  if (positions.kind === "unlinked" && !log && !bot) {
-    return { kind: "unavailable", reason: "unlinked" };
+  // An unlinked account's row can be error-tagged too: either way its held names are unknown.
+  const positionsUnread = desk?.error !== undefined;
+  if (positions.kind !== "ok" && !log && !bot) {
+    return {
+      kind: "unavailable",
+      reason: positions.kind === "unlinked" ? "unlinked" : positions.reason,
+    };
   }
   const now = config.now?.() ?? new Date();
   const rows = positions.kind === "ok" ? positions.view.rows : [];
@@ -114,7 +128,9 @@ export async function deskAlertsFor(
   const bots = bot
     ? [{ botId: id, name: bot.displayName, records: await botRecords(id, config) }]
     : [];
-  const held = new Set((desk?.positions ?? []).map((p) => underlyingOf(p.symbol)));
+  const held = new Set(
+    (positionsUnread ? [] : (desk?.positions ?? [])).map((p) => underlyingOf(p.symbol)),
+  );
   const asOfIso = now.toISOString();
   const windows = windowAlerts(
     {
@@ -134,7 +150,13 @@ export async function deskAlertsFor(
   ])
     .map((alert) => ({ ...alert, fingerprint: alertFingerprint(alert) }))
     .filter((alert) => !dismissed.has(alert.fingerprint));
-  return { kind: "ok", asOf: now, alerts, dismissable: config.alertDismissals !== undefined };
+  return {
+    kind: "ok",
+    asOf: now,
+    alerts,
+    dismissable: config.alertDismissals !== undefined,
+    ...(positionsUnread ? { positionsUnread: true as const } : {}),
+  };
 }
 
 function owned(id: string, config: DashboardServerConfig, session: Session | undefined): boolean {
@@ -172,6 +194,7 @@ async function serveList(
     asOf: derived.asOf.toISOString(),
     alerts: derived.alerts,
     dismissable: derived.dismissable,
+    ...(derived.positionsUnread ? { positionsUnread: true } : {}),
   });
 }
 
