@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccountsRouteImport } from './routes/accounts'
 import { Route as ActivityRouteImport } from './routes/activity'
+import { Route as BotsRouteImport } from './routes/bots'
 import { Route as CampaignRouteImport } from './routes/campaign'
 import { Route as FeedbackRouteImport } from './routes/feedback'
 import { Route as JoinRouteImport } from './routes/join'
@@ -46,6 +47,11 @@ const AccountsRoute = AccountsRouteImport.update({
 const ActivityRoute = ActivityRouteImport.update({
   id: '/activity',
   path: '/activity',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BotsRoute = BotsRouteImport.update({
+  id: '/bots',
+  path: '/bots',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CampaignRoute = CampaignRouteImport.update({
@@ -153,6 +159,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/accounts': typeof AccountsRoute
   '/activity': typeof ActivityRoute
+  '/bots': typeof BotsRoute
   '/campaign': typeof CampaignRoute
   '/feedback': typeof FeedbackRoute
   '/join': typeof JoinRoute
@@ -178,6 +185,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/accounts': typeof AccountsRoute
   '/activity': typeof ActivityRoute
+  '/bots': typeof BotsRoute
   '/campaign': typeof CampaignRoute
   '/feedback': typeof FeedbackRoute
   '/join': typeof JoinRoute
@@ -203,6 +211,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/accounts': typeof AccountsRoute
   '/activity': typeof ActivityRoute
+  '/bots': typeof BotsRoute
   '/campaign': typeof CampaignRoute
   '/feedback': typeof FeedbackRoute
   '/join': typeof JoinRoute
@@ -230,6 +239,7 @@ export interface FileRouteTypes {
     | '/'
     | '/accounts'
     | '/activity'
+    | '/bots'
     | '/campaign'
     | '/feedback'
     | '/join'
@@ -255,6 +265,7 @@ export interface FileRouteTypes {
     | '/'
     | '/accounts'
     | '/activity'
+    | '/bots'
     | '/campaign'
     | '/feedback'
     | '/join'
@@ -279,6 +290,7 @@ export interface FileRouteTypes {
     | '/'
     | '/accounts'
     | '/activity'
+    | '/bots'
     | '/campaign'
     | '/feedback'
     | '/join'
@@ -305,6 +317,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccountsRoute: typeof AccountsRoute
   ActivityRoute: typeof ActivityRoute
+  BotsRoute: typeof BotsRoute
   CampaignRoute: typeof CampaignRoute
   FeedbackRoute: typeof FeedbackRoute
   JoinRoute: typeof JoinRoute
@@ -341,6 +354,13 @@ declare module '@tanstack/react-router' {
       path: '/activity'
       fullPath: '/activity'
       preLoaderRoute: typeof ActivityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bots': {
+      id: '/bots'
+      path: '/bots'
+      fullPath: '/bots'
+      preLoaderRoute: typeof BotsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/campaign': {
@@ -512,6 +532,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountsRoute: AccountsRoute,
   ActivityRoute: ActivityRoute,
+  BotsRoute: BotsRoute,
   CampaignRoute: CampaignRoute,
   FeedbackRoute: FeedbackRoute,
   JoinRoute: JoinRoute,

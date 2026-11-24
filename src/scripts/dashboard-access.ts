@@ -23,6 +23,7 @@ import { createFilingCommentsStore } from "../server/filing-comments-store.js";
 import { createMemberCampaignStore } from "../server/member-campaign-store.js";
 import { createMemberChainStore } from "../server/member-chain-store.js";
 import { createMemberConvictionStore } from "../server/member-conviction-store.js";
+import { createMemberFollowStore } from "../server/member-follow-store.js";
 import {
   createOwnerLinkStore,
   ownerEmailFor,
@@ -51,6 +52,7 @@ export interface AccessSetup {
   authoredPlays: ReturnType<typeof createAuthoredPlayStore>;
   memberCampaigns: ReturnType<typeof createMemberCampaignStore>;
   memberChains: ReturnType<typeof createMemberChainStore>;
+  memberFollows: ReturnType<typeof createMemberFollowStore>;
   discoveryQueue: ReturnType<typeof createDiscoveryQueueStore>;
   campaignQuestions: ReturnType<typeof createCampaignQuestionsStore>;
   memberConvictions: ReturnType<typeof createMemberConvictionStore>;
@@ -127,6 +129,8 @@ export function setupAccess(
   const memberCampaigns = createMemberCampaignStore(env, (m) => console.error(m));
   // Members' own chains (#6959 slice 3b) — shadow only, a sibling of the same file.
   const memberChains = createMemberChainStore(env, (m) => console.error(m));
+  // The bots a member follows on the Bots screen (#8254) — a pin, a sibling of the same file.
+  const memberFollows = createMemberFollowStore(env, (m) => console.error(m));
   // Questions waiting for the research lane (#6952 slice 2b), another sibling file; appending starts nothing.
   const discoveryQueue = createDiscoveryQueueStore(env, (m) => console.error(m));
   const campaignQuestions = createCampaignQuestionsStore(env, (m) => console.error(m));
@@ -182,6 +186,7 @@ export function setupAccess(
     authoredPlays,
     memberCampaigns,
     memberChains,
+    memberFollows,
     discoveryQueue,
     campaignQuestions,
     memberConvictions,

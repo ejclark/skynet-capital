@@ -49,7 +49,8 @@ type HomeSearch = {
   readonly b?: string;
 };
 
-/** The five apps, in the topbar's order. Each says what its place does, never a coined name. */
+/** The apps: the topbar's five in its order, then Bots (#8254). Each says what its place does,
+ *  never a coined name. */
 export const APPS = [
   {
     to: "/campaign",
@@ -61,6 +62,7 @@ export const APPS = [
   { to: "/trade", glyph: "⇄", name: "Trade", line: "Place a paper trade" },
   { to: "/activity", glyph: "≡", name: "Activity", line: "Every order, yours and the bots'" },
   { to: "/research", glyph: "⌕", name: "R&D", line: "Research the market and its playbooks" },
+  { to: "/bots", glyph: "◈", name: "Bots", line: "Watch the house bots and why they skipped" },
 ] as const;
 
 export interface NeedsRow {

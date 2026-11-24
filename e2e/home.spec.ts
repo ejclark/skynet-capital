@@ -21,17 +21,19 @@ test.describe("the home screen", () => {
     const needs = page.getByRole("region", { name: "Needs you" });
     await expect(needs).toBeVisible();
     const apps = page.getByRole("navigation", { name: "Apps" }).getByRole("link");
-    await expect(apps).toHaveCount(6);
-    for (const [name, href] of [
-      // #8253: the Scoreboard's tile opens the board whether or not the viewer has a seat yet.
-      ["Scoreboard", "/app/leaderboard?by=equity"],
+    await expect(apps).toHaveCount(7);
+    // By position, so the order holds too, and a word in another tile's line can't match.
+    for (const [i, [, href]] of [
       ["Campaign", "/app/campaign"],
       ["Profile", "/app/accounts"],
       ["Trade", "/app/trade"],
       ["Activity", "/app/activity"],
       ["R&D", "/app/research"],
-    ] as const)
-      await expect(apps.filter({ hasText: name }).first()).toHaveAttribute("href", href);
+      ["Bots", "/app/bots"],
+      // #8253: the Scoreboard's tile opens the board whether or not the viewer has a seat yet.
+      ["Scoreboard", "/app/leaderboard?by=equity"],
+    ].entries())
+      await expect(apps.nth(i)).toHaveAttribute("href", href);
     // In order, and "Needs you" plus the first row of tiles clear the dock's top edge.
     const towerBox = await tower.boundingBox();
     const needsBox = await needs.boundingBox();
