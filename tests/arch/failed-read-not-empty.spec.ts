@@ -44,8 +44,6 @@ const MENTIONS_QUERY_ERROR = (text: string): boolean =>
 const SERVER_OFFENDERS: Readonly<Record<string, string>> = {
   "src/server/fast-track-route.ts":
     "ranking key only: a failed read loses the held-first ordering and states nothing as fact",
-  "src/server/option-exit-plan.ts":
-    "bug #8336: a failed read counts 0 contracts held, so a stored exit plan can be dropped",
 };
 
 const ROUTE_OFFENDERS: Readonly<Record<string, string>> = {};
