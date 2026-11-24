@@ -383,20 +383,20 @@ function entrySpans(source: string): { entries: EntrySpan[]; close: number } {
   throw new Error(`unterminated "${ARRAY_MARKER}"`);
 }
 
-const quote = (s: string): string => JSON.stringify(s);
+const jsonLiteral = (s: string): string => JSON.stringify(s);
 
 /** One row in the file's multi-line style, keeping any `//` comment the row it replaces carried. */
 function serialize(p: EarningsPrint, comments: readonly string[] = []): string {
   const lines = [
     ...comments,
-    `symbol: ${quote(p.symbol)},`,
-    `date: ${quote(p.date)},`,
-    `status: ${quote(p.status)},`,
-    `source: ${quote(p.source)},`,
+    `symbol: ${jsonLiteral(p.symbol)},`,
+    `date: ${jsonLiteral(p.date)},`,
+    `status: ${jsonLiteral(p.status)},`,
+    `source: ${jsonLiteral(p.source)},`,
     ...(p.window
-      ? [`window: { start: ${quote(p.window.start)}, end: ${quote(p.window.end)} },`]
+      ? [`window: { start: ${jsonLiteral(p.window.start)}, end: ${jsonLiteral(p.window.end)} },`]
       : []),
-    ...(p.ledgerId ? [`ledgerId: ${quote(p.ledgerId)},`] : []),
+    ...(p.ledgerId ? [`ledgerId: ${jsonLiteral(p.ledgerId)},`] : []),
   ];
   return `{\n${lines.map((l) => `    ${l}`).join("\n")}\n  }`;
 }
