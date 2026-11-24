@@ -334,9 +334,18 @@ export function releaseBuild(slug) {
  * after `in-progress` goes on and before the build gets its `number=`: a claim that finds itself
  * past the cap takes the mark and the lease back off and leaves `ready` on, so the retry sweep
  * starts it once a seat frees. `admission` carries the gate's injected reads, for specs.
+ *
+ * `recountInFlight`, when set, is the reader the recount uses in place of `readInFlight` (#8213).
+ * The retry sweep hands its claims a `readInFlight` that returns the list it read at sweep start,
+ * so its pick and the claim's gate agree; a recount on that list never sees its own mark or a
+ * rival's, and kept every sweep claim (7 builds against a cap of 6). The recount must read fresh.
  */
 function keepSeat(issue, slug, admission = {}) {
-  const seat = recountAfterMark(issue, admission);
+  const { recountInFlight, ...rest } = admission;
+  const seat = recountAfterMark(
+    issue,
+    recountInFlight ? { ...rest, readInFlight: recountInFlight } : rest,
+  );
   if (seat.keep) return seat;
   setInProgress(issue.number, false);
   releaseClaim(slug);
@@ -884,6 +893,9 @@ export function claimNext(nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? ""
   const gateDeps = {
     readMode: () => mode,
     readInFlight: () => inFlight,
+    // #8213: the gate counts the stored list above; the post-mark recount reads it fresh, or it
+    // never sees its own mark nor a label-event claim that marked mid-sweep (`keepSeat`).
+    recountInFlight: inFlightOf,
     ...(openPlans ? { readPlans: () => openPlans } : { readPlans }),
     ...admission,
   };
