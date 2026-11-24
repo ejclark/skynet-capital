@@ -47,19 +47,18 @@ export function JournalSection(): ReactElement {
   const journalRead = useQuery({ queryKey: ["journal"], queryFn: fetchJournal });
   const refresh = () => void queryClient.invalidateQueries({ queryKey: ["feedback"] });
 
-  // A FAILED READ NEVER TAKES A DRAFT WITH IT (#8355). The composer sits at one place in one tree
-  // whatever the feedback read is doing, so a refetch that fails (a tab return during a deploy's
-  // restart, a dropped network, the refetch a sent wish triggers) can neither unmount it nor
-  // remount it empty when the read recovers. TanStack keeps the last good `data` on a failed
-  // refetch; it is shown with one honest line that it could not refresh. Only a first load that
-  // failed, with nothing to show, says the filings are unreachable. The first paint waits for the
-  // first answer: nothing is mounted yet, so no words can be lost, and a query that has failed
-  // stays `error` (never `pending`) while it retries.
   if (index.isPending) return <p className="note">Opening your journal…</p>;
+  // Unreachable only when no read ever landed. A failed background refresh (a tab return during a
+  // deploy's restart) keeps the last good read on screen and says so beside it, never in place of
+  // it: swapping the section out unmounts the composer and loses an unsent draft, and hides a
+  // just-sent wish's issue number (#8355; TanStack keeps `data` with `isError` on a failed refetch).
+  // A first read that never landed says the filings are unreachable in their own slot and keeps
+  // the composer and the notes: a read failing never takes away the place to write (#8355).
   const data = index.data;
+  const refreshFailed = index.isError && data !== undefined;
   const journal = journalRead.data ?? (journalRead.isError ? JOURNAL_DOWN : JOURNAL_OPENING);
-  // With no feedback read, the notes read's own flag (the same token decides both) says whether
-  // a wish can still be sent from here.
+  // With no feedback read, the notes read's own flag (the same token decides both) says whether a
+  // wish can still be sent from here.
   const wishesEnabled = (data?.enabled ?? true) && journal.wishesEnabled;
   return (
     <div className="feedback-section journal-section">
@@ -82,6 +81,12 @@ export function JournalSection(): ReactElement {
         >
           ✦ Talk to Moneypenny
         </button>
+        {refreshFailed ? (
+          <p className="note" role="status">
+            Couldn't refresh your wishes and filings. What's below is the last good read; it updates
+            on its own once the connection is back.
+          </p>
+        ) : null}
       </header>
       <JournalComposer
         wishesEnabled={wishesEnabled}
@@ -96,11 +101,6 @@ export function JournalSection(): ReactElement {
         <p className="note">Your wishes and filings show here once filing is switched on.</p>
       ) : (
         <>
-          {index.isError ? (
-            <p className="note" role="status">
-              Your wishes and filings couldn't refresh just now; this is the last list we had.
-            </p>
-          ) : null}
           {data.celebrating.length > 0 ? (
             <CommunityUnlockBanner celebrations={data.celebrating} onClaimed={refresh} />
           ) : null}

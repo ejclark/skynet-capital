@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { FeedbackIndex } from "../../src/live/feedback";
 import type { JournalAnswer, JournalIndex, JournalPost } from "../../src/live/journal";
 import { JournalSection } from "../../src/shell/journal-section";
@@ -8,11 +8,11 @@ import { JournalSection } from "../../src/shell/journal-section";
 // Journal section over stubbed reads, look, type, click, and read what was posted.
 
 let feedback: FeedbackIndex;
+// When set, the feedback read fails — a deploy's restart or a network drop (#8355).
+let feedbackDown = false;
 let journal: JournalIndex;
 let answer: JournalAnswer;
 let posted: JournalPost[] = [];
-/** When true, the feedback read rejects (a deploy restart, a dropped network). */
-let feedbackDown = false;
 
 rstest.mock("../../src/live/feedback", () => ({
   fetchFeedbackIndex: () =>
@@ -79,7 +79,10 @@ beforeEach(() => {
   answer = { ok: true, kind: "wish", url: "https://github.com/x/y/issues/42", number: 42 };
 });
 
-function mount(client = new QueryClient({ defaultOptions: { queries: { retry: false } } })) {
+let client: QueryClient;
+
+function mount() {
+  client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
       <JournalSection />
@@ -189,50 +192,87 @@ describe("JournalSection — the screen (#8190)", () => {
     await waitFor(() => expect(screen.getAllByText(/unreachable/).length).toBeGreaterThan(0));
     expect(screen.getByText(/Chart glitch/)).toBeInTheDocument();
   });
+});
 
-  // #8355: a failed READ must never take a member's unsent words with it.
-  it("keeps the draft, the composer and the last list when a background refetch fails", async () => {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    mount(client);
-    fireEvent.click(await screen.findByRole("button", { name: /Trade note/ }));
-    fireEvent.change(screen.getByLabelText("Symbol (optional)"), { target: { value: "QQQ" } });
-    fireEvent.change(screen.getByLabelText("What I learned"), { target: { value: "Size down." } });
+// #8355: a background refresh that fails after the journal has loaded (a tab return during a
+// deploy's restart) must keep what is on screen — the composer, an unsent draft, a sent wish's
+// issue number, the notes — and say the refresh failed beside it, never in place of it.
+describe("JournalSection — a failed refresh after it loaded (#8355)", () => {
+  const STALE = /Couldn't refresh your wishes and filings/;
+
+  /** The member returns to the tab while the feedback read is down. */
+  async function failARefresh() {
     feedbackDown = true;
-    await client.refetchQueries({ queryKey: ["feedback"] });
-    await screen.findByText(/couldn't refresh/);
+    act(() => {
+      window.dispatchEvent(new Event("visibilitychange"));
+    });
+    await screen.findByText(STALE);
+  }
+
+  it("keeps an unsent trade note and the notes, saying the refresh failed", async () => {
+    mount();
+    fireEvent.click(await screen.findByRole("button", { name: /Trade note/ }));
+    fireEvent.change(screen.getByLabelText("Symbol (optional)"), { target: { value: "qqq" } });
+    fireEvent.change(screen.getByLabelText("What I learned"), { target: { value: "Size down." } });
+    await failARefresh();
+    expect(client.getQueryState(["feedback"])?.status).toBe("error");
     expect(screen.queryByText("Your journal is unreachable.")).toBeNull();
-    expect(screen.getByLabelText("What I learned")).toHaveValue("Size down.");
-    expect(screen.getByText(/Chart glitch/)).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Your notes" })).toBeInTheDocument();
-    // The read recovers: the same composer, the same draft, the stale line gone.
-    feedbackDown = false;
-    await client.refetchQueries({ queryKey: ["feedback"] });
-    await waitFor(() => expect(screen.queryByText(/couldn't refresh/)).toBeNull());
     expect(screen.getByRole("button", { name: /Trade note/ })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
-    expect(screen.getByLabelText("Symbol (optional)")).toHaveValue("QQQ");
+    expect(screen.getByLabelText("What I learned")).toHaveValue("Size down.");
+    expect(screen.getByText("Bounce off the 200-day.")).toBeInTheDocument();
+    // The filings it already had stay, as the last good read.
+    expect(screen.getByText(/Chart glitch/)).toBeInTheDocument();
+  });
+
+  it("drops the line once a refresh lands, with the draft still there", async () => {
+    mount();
+    fireEvent.click(await screen.findByRole("button", { name: /Trade note/ }));
+    fireEvent.change(screen.getByLabelText("What I learned"), { target: { value: "Size down." } });
+    await failARefresh();
+    feedbackDown = false;
+    await act(async () => {
+      await client.refetchQueries({ queryKey: ["feedback"] });
+    });
+    await waitFor(() => expect(screen.queryByText(STALE)).toBeNull());
     expect(screen.getByLabelText("What I learned")).toHaveValue("Size down.");
   });
 
-  it("keeps a sent wish's issue number when the refetch its send triggers fails", async () => {
+  it("keeps a sent wish's issue number when the refresh its send starts fails", async () => {
     mount();
     const box = await screen.findByPlaceholderText("I wish it…");
-    fireEvent.change(box, { target: { value: "I wish for a calmer chart." } });
+    fireEvent.change(box, { target: { value: "I wish it showed my week in one line." } });
     feedbackDown = true;
     fireEvent.click(sendWish());
-    await screen.findByText(/Sent to the builders as issue #42/);
-    await screen.findByText(/couldn't refresh/);
+    await screen.findByText(STALE);
     expect(screen.getByText(/Sent to the builders as issue #42/)).toBeInTheDocument();
+    expect(screen.queryByText("Your journal is unreachable.")).toBeNull();
   });
 
-  it("on a failed first load says the filings are unreachable but still lets a note be written", async () => {
+  it("when the first read never lands, says the filings are unreachable and still saves a note", async () => {
     feedbackDown = true;
+    answer = {
+      ok: true,
+      kind: "experience",
+      note: {
+        kind: "experience",
+        uuid: "n3",
+        savedAt: "2026-11-24T00:00:00Z",
+        text: "Filled fast.",
+      },
+    };
     mount();
     await screen.findByText(/wishes and filings are unreachable/);
-    fireEvent.click(screen.getByRole("button", { name: /What happened/ }));
-    expect(screen.getByRole("heading", { name: "Your notes" })).toBeInTheDocument();
+    expect(screen.queryByText(STALE)).toBeNull();
+    // A read failing never takes away the place to write, or the notes it could still read.
     expect(screen.getByRole("heading", { name: "Write a wish or a note" })).toBeInTheDocument();
+    expect(screen.getByText("Bounce off the 200-day.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /What happened/ }));
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "Filled fast." } });
+    fireEvent.click(screen.getByRole("button", { name: "Save note" }));
+    await screen.findByText(/Saved to your journal/);
+    expect(posted).toEqual([{ kind: "experience", text: "Filled fast." }]);
   });
 });
