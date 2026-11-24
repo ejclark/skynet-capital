@@ -14,7 +14,7 @@ import { type DeskAlertsDeps, deskAlertsFor } from "../server/desk-alerts-route.
  *    what is new. A fill or a rejection therefore reaches them within a second of the broker's own
  *    echo, with no polling added anywhere.
  * 2. **The sweep.** Expiry reminders and assignment risk are standing conditions, not events —
- *    nothing fires them. A timer re-derives them for MEMBERS WHO OPTED IN ONLY — the account-wide
+ *    nothing fires them. A timer, plus one pass at boot (#8398), re-derives them for MEMBERS WHO OPTED IN ONLY — the account-wide
  *    channel on, or one order watched (#8352: the sweep is a watch's only retry) — so a deployment
  *    where nobody has asked for delivery does no broker reads at all and the cost of this feature
  *    is exactly zero until someone asks for it.
@@ -57,6 +57,9 @@ export function wireAlertDelivery(options: {
    *  so an account that changed hands stops mailing its previous owner. */
   readonly ownerEmailFor: (participantId: string) => string | undefined;
   readonly sweepMinutes?: number;
+  /** Settles when boot has banked the broker window (the reconcile); the boot sweep waits for it.
+   *  A rejection still lets the pass run. */
+  readonly ready?: Promise<unknown>;
 }): AlertDeliveryWiring {
   const store = createAlertDeliveryStore(options.env);
   const built = createAlertDelivery(options.env);
@@ -118,6 +121,18 @@ export function wireAlertDelivery(options: {
   const minutes = Number(options.env.SKYNET_ALERT_SWEEP_MINUTES ?? "") || DEFAULT_SWEEP_MINUTES;
   const timer = setInterval(() => void sweep(), minutes * 60_000);
   timer.unref?.();
+  // One pass at boot (#8398). Every release restarts the process and this timer, and releases land
+  // far more often than once an hour, so without it a failed watch send waits for an hour of
+  // unbroken uptime that may never come, and its fill ages out of the 24 h window unsent. It waits
+  // for `ready` (the boot reconcile) so it reads the broker window's fills; the sent-ledger keeps a
+  // pass that finds nothing new from mailing anything twice.
+  let stopped = false;
+  void Promise.resolve(options.ready)
+    .catch(() => undefined)
+    .then(() => {
+      if (!stopped) return sweep();
+    })
+    .catch((error) => console.warn(`Alert delivery boot sweep failed: ${String(error)}`));
   console.log(`Alert delivery: on (${transport.channel} as ${transport.from}, sweep ${minutes}m)`);
 
   return {
@@ -125,6 +140,7 @@ export function wireAlertDelivery(options: {
     transport,
     nudge: queue,
     stop: () => {
+      stopped = true;
       clearInterval(timer);
       subscription.unsubscribe();
     },
