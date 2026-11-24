@@ -1957,3 +1957,13 @@ per PR that is held, unprotected, green and over a day old, for `/secretary`'s d
 page: "held without a protected path; lift it?". That turns a five-day wait into a one-tap
 question the next morning.
 _(src: Claude · while: clearing #7672's mistaken hold)_
+
+### A close-out hold that one far-off forward test cancels buys a session that can only leave
+
+`closeOutHold` (`scripts/forward-test-pending.mjs`) holds a close-out only when *every* pending forward
+test scores inside `closeOutWithinDays`. An event with one in-window row and one row years out (here
+`jpx-market-closure-2026-11-23`: FT-1 due 2026-11-25, FT-2 due 2027-01-15) dispatches on D+1 anyway,
+before FT-1's own bar has closed, so the session can write the outcome but not the score. Holding to the
+latest *in-window* score-by, and leaving the beyond-window row to the `forward-test-due` door, would save
+that session. Falsifier: count close-outs dispatched with an in-window row still unscoreable.
+_(src: Claude · while: closing out jpx-market-closure-2026-11-23 at D+1)_
