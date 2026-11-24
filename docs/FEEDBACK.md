@@ -167,6 +167,13 @@ one queue — and the third would be buried under the first two.
 | Needs the member to clarify | `needs-info` | **the member** |
 | A decision only Eric can make | `needs-eric` | **Eric — and only this one** |
 
+**A member wish that would cost money is the fourth row, filed as a pitch** (#8201): the build
+session files a `pitch` + `needs-eric` issue in the five lines of [`docs/ISSUES.md`](ISSUES.md) →
+*Pitch issues* (who wants it, $ per month, what it buys, the free try first, the number that undoes
+it) and points the member's issue at it, instead of a bare `needs-eric` with a per-use delta. Spend
+is a change to how much a lane consumes per use or how often it runs; a model pick on a lane
+already paid for is not.
+
 ### Replying to `needs-info` / `needs-eric` restarts the build (#3959 slices 1–2)
 
 Without a trigger, `needs-info` would be a one-way door: the lane would ask a question, and the
