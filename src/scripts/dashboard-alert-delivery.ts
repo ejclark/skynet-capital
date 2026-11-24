@@ -40,6 +40,9 @@ export interface AlertDeliveryWiring {
   readonly store: AlertDeliveryStorePort;
   /** Absent when no credential is configured — the route reports that in words. */
   readonly transport?: AlertDeliveryPort;
+  /** Run one delivery pass for this account now (the fill-watch route's tap, #8251). Absent with
+   *  no transport. */
+  readonly nudge?: (participantId: string) => void;
   /** Stop the sweep and unsubscribe from the bus. */
   readonly stop: () => void;
 }
@@ -79,12 +82,22 @@ export function wireAlertDelivery(options: {
   };
 
   // One pass per member at a time: a burst of fills on one account would otherwise race the
-  // sent-ledger and mail the same alert twice.
+  // sent-ledger and mail the same alert twice. An event that lands mid-pass is not dropped: it
+  // earns ONE more pass after this one (#8251 — a watched order's fill can arrive while the pass
+  // for its acceptance is still reading, and dropping it would lose the one email the tap asked for).
   const inFlight = new Set<string>();
+  const again = new Set<string>();
   const queue = (participantId: string): void => {
-    if (participantId === "" || inFlight.has(participantId)) return;
+    if (participantId === "") return;
+    if (inFlight.has(participantId)) {
+      again.add(participantId);
+      return;
+    }
     inFlight.add(participantId);
-    void deliverFor(participantId).finally(() => inFlight.delete(participantId));
+    void deliverFor(participantId).finally(() => {
+      inFlight.delete(participantId);
+      if (again.delete(participantId)) queue(participantId);
+    });
   };
 
   const subscription = options.activityEvents.subscribe((event) => {
@@ -106,6 +119,7 @@ export function wireAlertDelivery(options: {
   return {
     store,
     transport,
+    nudge: queue,
     stop: () => {
       clearInterval(timer);
       subscription.unsubscribe();
