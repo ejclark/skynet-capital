@@ -27,9 +27,11 @@ rstest.mock("../../src/live/ticket", () => ({
     return Promise.resolve(result);
   },
 }));
+/** No book by default (no mid, so no seed); a spec sets one to see the limit seeded at the mid. */
+let book: { bid: number; ask: number; mid: number } | undefined;
 rstest.mock("../../src/live/quote", () => ({
   fetchQuote: () =>
-    Promise.resolve({ symbol: "XLE", last: 91, change: 0, changePct: 0, tone: "flat" }),
+    Promise.resolve({ symbol: "XLE", last: 91, change: 0, changePct: 0, tone: "flat", ...book }),
 }));
 rstest.mock("../../src/live/desk", () => ({
   fetchDeskActivity: () => Promise.resolve({ available: true, activity: [] }),
@@ -58,6 +60,7 @@ const optionLabels = (): string[] =>
 
 function mount(exitAtEntry?: boolean): void {
   drafts.length = 0;
+  book = undefined;
   renderOnTrade(
     <TradeGate deskId="desk-1" initialSymbol="XLE" showSide={false} exitAtEntry={exitAtEntry} />,
   );
@@ -142,7 +145,7 @@ describe("the stock form for an admitted session (#8249)", () => {
       screen.getByText(/^Take-profit \$95\.00 · \+\$12\.00 against your limit/),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/^Stop \$85\.00 · about -\$18\.00 against your limit/),
+      screen.getByText(/^Stop \$85\.00 · about −\$18\.00 against your limit/),
     ).toBeInTheDocument();
 
     // The broker's echo, a cent off the draft on purpose: the receipt states what the broker holds.
@@ -156,7 +159,17 @@ describe("the stock form for an admitted session (#8249)", () => {
     };
     fireEvent.click(screen.getByRole("button", { name: /^Submit order/ }));
     expect(
-      await screen.findByText(/Exits held by the broker: Take-profit \$95\.01 · Stop \$84\.99\./),
+      await screen.findByText(/Sent with its exits: Take-profit \$95\.01 · Stop \$84\.99\./),
     ).toBeInTheDocument();
+  });
+});
+
+describe("Stop-Limit after a limit seeded at the mid (#8249)", () => {
+  it("clears the seeded mid, so the stop-limit's limit is never a number the member didn't type", async () => {
+    mount(true);
+    book = { bid: 90.98, ask: 91.02, mid: 91 };
+    expect(await screen.findByLabelText("Limit price")).toHaveValue(91);
+    fireEvent.change(screen.getByLabelText("Order type"), { target: { value: "stop_limit" } });
+    expect(screen.getByLabelText("Limit price")).toHaveValue(null);
   });
 });

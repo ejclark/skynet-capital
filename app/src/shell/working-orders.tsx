@@ -57,13 +57,18 @@ const STATE_WORD: Record<DeskOrderState, string> = {
   expired: "Expired",
 };
 
-/** The row's type and price. A bracket's exit is named by its job and its one price — "Take-profit
+/** The row's type and price. A bracket's exit is named by its job and its price — "Take-profit
  *  $95.00", "Stop $85.00" (#8249) — and a stop-limit names both prices. */
 function typeWords(row: DeskOrderRow): string {
   if (row.exitRole) {
     const price = row.exitRole === "stop" ? row.stopPrice : row.limitPrice;
     const label = EXIT_ROLE_LABELS[row.exitRole];
-    return price === undefined ? label : `${label} ${money(price)}`;
+    // A stop leg that carries a limit won't sell below it — say so, as a stop-limit row does.
+    const limit =
+      row.exitRole === "stop" && row.limitPrice !== undefined
+        ? ` · limit ${money(row.limitPrice)}`
+        : "";
+    return price === undefined ? label : `${label} ${money(price)}${limit}`;
   }
   return `${orderTypeLabel(row.orderType)} · ${priceLabel(row)}`;
 }

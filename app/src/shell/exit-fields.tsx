@@ -1,6 +1,7 @@
-import type { FocusEvent, ReactElement } from "react";
+import type { ReactElement } from "react";
 import { useId } from "react";
 import type { TicketFields } from "../live/ticket";
+import { PriceInput } from "./price-input";
 
 /**
  * "ADD AN EXIT" (#8249 PR 2) — the stock form's take-profit and stop, held by the broker with a
@@ -13,8 +14,6 @@ import type { TicketFields } from "../live/ticket";
  */
 
 type Exit = NonNullable<TicketFields["exit"]>;
-
-const selectAll = (e: FocusEvent<HTMLInputElement>): void => e.currentTarget.select();
 
 /** @category trading */
 export function ExitFields({
@@ -43,32 +42,18 @@ export function ExitFields({
     <fieldset className="gate-exit">
       <legend className="gate-exit-legend">Exit — held by the broker</legend>
       <div className="gate-fields">
-        <div className="field">
-          <label htmlFor={tpId}>Take-profit</label>
-          <input
-            id={tpId}
-            type="number"
-            min={0}
-            step={0.01}
-            inputMode="decimal"
-            value={exit.takeProfit}
-            onFocus={selectAll}
-            onChange={(e) => onChange({ ...exit, takeProfit: e.target.value })}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor={stopId}>Stop</label>
-          <input
-            id={stopId}
-            type="number"
-            min={0}
-            step={0.01}
-            inputMode="decimal"
-            value={exit.stop}
-            onFocus={selectAll}
-            onChange={(e) => onChange({ ...exit, stop: e.target.value })}
-          />
-        </div>
+        <PriceInput
+          id={tpId}
+          label="Take-profit"
+          value={exit.takeProfit}
+          onChange={(takeProfit) => onChange({ ...exit, takeProfit })}
+        />
+        <PriceInput
+          id={stopId}
+          label="Stop"
+          value={exit.stop}
+          onChange={(stop) => onChange({ ...exit, stop })}
+        />
       </div>
       <button type="button" className="btn gate-exit-remove" onClick={() => onChange(undefined)}>
         Remove the exit

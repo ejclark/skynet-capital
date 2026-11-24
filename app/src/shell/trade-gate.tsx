@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { FocusEvent, ReactElement } from "react";
+import type { ReactElement } from "react";
 import { useEffect, useId, useState } from "react";
 import { marketSession } from "../live/market-session";
 import type { PlayInfo } from "../live/options";
@@ -38,6 +38,7 @@ import { DisarmNote, GateHead, keepFocus } from "./gate-frame";
 import { LockedPanel } from "./locked-panel";
 import { useNow } from "./market-session";
 import { OrderReceipt } from "./order-receipt";
+import { PriceInput, selectAll } from "./price-input";
 import { QuoteHeader } from "./quote-header";
 import { RecentOrdersStrip } from "./recent-orders-strip";
 import { HeldShares, reviewMissing } from "./share-ticket-hints";
@@ -61,13 +62,7 @@ type GateState =
   | { readonly step: "reviewed"; readonly preview: TicketPreview }
   | { readonly step: "submitting"; readonly preview: TicketPreview }
   /** `sent` rides with an accepted order — what the receipt states (`order-receipt.tsx`). */
-  | {
-      readonly step: "done";
-      readonly result: TicketResult;
-      readonly sent?: SentOrder;
-      /** A bracket's exits as the broker echoed them (#8249) — the receipt's extra line. */
-      readonly exits?: { readonly takeProfit: number; readonly stop: number };
-    }
+  | { readonly step: "done"; readonly result: TicketResult; readonly sent?: SentOrder }
   | { readonly step: "error"; readonly message: string };
 
 /** What the member asked for, echoed back in the review — the order class by its unambiguous name
@@ -207,43 +202,6 @@ function WhenItWorks({
   );
 }
 
-/**
- * Focusing an amount the form already holds selects it, so typing REPLACES it. The change study's
- * blind members typed into seeded amounts and got "510.00505", "90.0085" and a 950-share sell they
- * could not trim (EQ-03, OM-04, EQ-04, 2026-11-16) — the same append that cost OM-02 its change.
- */
-const selectAll = (e: FocusEvent<HTMLInputElement>): void => e.currentTarget.select();
-
-/** One price box — a limit or a stop; a stop-limit renders two (`priceFieldsFor`). */
-function PriceInput({
-  id,
-  label,
-  value,
-  onChange,
-}: {
-  readonly id: string;
-  readonly label: string;
-  readonly value: string;
-  readonly onChange: (value: string) => void;
-}): ReactElement {
-  return (
-    <div className="field">
-      <label htmlFor={id}>{label}</label>
-      <input
-        id={id}
-        type="number"
-        min={0}
-        step={0.01}
-        inputMode="decimal"
-        value={value}
-        placeholder="40.00"
-        onFocus={selectAll}
-        onChange={(e) => onChange(e.target.value)}
-      />
-    </div>
-  );
-}
-
 /** @category trading */
 export function TradeGate({
   deskId,
@@ -357,14 +315,17 @@ export function TradeGate({
 
   const priceFields = priceFieldsFor(fields.orderType);
   /** A hand on the type or the price ends the seeding for this ticket (see `priced`). */
+  const seeded =
+    seed !== undefined && fields.orderType === "limit" && fields.limitPrice === seed.mid.toFixed(2);
   const price =
     <K extends "orderType" | "limitPrice" | "stopPrice">(key: K) =>
     (value: TicketFields[K]) => {
       setPriced(true);
       edit(key)(value);
+      // A stop-limit's limit is set against its stop (#8249): the mid seeded for a plain limit is
+      // not the member's number there, so switching to Stop-Limit clears it rather than keep it.
+      if (key === "orderType" && value === "stop_limit" && seeded) edit("limitPrice")("");
     };
-  const seeded =
-    seed !== undefined && fields.orderType === "limit" && fields.limitPrice === seed.mid.toFixed(2);
 
   const review = async () => {
     // The Review button keeps focus (`keepFocus`), so a symbol typed and never blurred commits
@@ -404,12 +365,7 @@ export function TradeGate({
         ...(preview.stopPrice === undefined ? {} : { stopPrice: preview.stopPrice }),
         timeInForce: result.timeInForce ?? preview.timeInForce,
       };
-      setState({
-        step: "done",
-        result,
-        sent,
-        ...(result.exits ? { exits: result.exits } : {}),
-      });
+      setState({ step: "done", result, sent });
       // The order list (#3407 P1 slice 2) reads the broker; the receipt finds the order there at
       // once, and the Orders pane shows it on the same visit.
       await queryClient.invalidateQueries({ queryKey: ["desk-orders", deskId] });
@@ -441,7 +397,8 @@ export function TradeGate({
   const busy = state.step === "reviewing" || state.step === "submitting";
   const missing = busy ? undefined : reviewMissing(fields);
   const sent = state.step === "done" && state.result.ok ? state.sent : undefined;
-  const sentExits = state.step === "done" ? state.exits : undefined;
+  /** A bracket's exits as the broker echoed them (#8249) — the receipt's extra line. */
+  const sentExits = state.step === "done" && state.result.ok ? state.result.exits : undefined;
   const form = (
     <>
       <div className="gate-fields">
@@ -492,7 +449,9 @@ export function TradeGate({
             value={fields.orderType}
             onChange={(e) => price("orderType")(e.target.value as TicketOrderType)}
           >
-            {orderTypesFor(exitAtEntry).map((type: TicketOrderType) => (
+            {/* A stop-limit the ticket already holds (a setting turned off mid-visit) stays
+                listed, so the picker never shows a type other than the one that would be sent. */}
+            {orderTypesFor(exitAtEntry || fields.orderType === "stop_limit").map((type) => (
               <option key={type} value={type}>
                 {ORDER_TYPE_LABELS[type]}
               </option>
@@ -506,6 +465,7 @@ export function TradeGate({
             label={priceField === "stopPrice" ? "Stop price" : "Limit price"}
             value={fields[priceField]}
             onChange={price(priceField)}
+            placeholder="40.00"
           />
         ))}
       </div>

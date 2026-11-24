@@ -420,11 +420,11 @@ test.describe("Exits at entry: the form at 390×844", () => {
     await expect(page.getByText(/^Guards regular hours only/)).toBeVisible();
     await page.getByRole("button", { name: "Review order" }).click();
     await expect(page.getByText(`Take-profit ${dollars(takeProfit)} · +`)).toBeVisible();
-    await expect(page.getByText(`Stop ${dollars(stop)} · about -`)).toBeVisible();
+    await expect(page.getByText(`Stop ${dollars(stop)} · about −`)).toBeVisible();
     await page.getByRole("button", { name: /^Submit order/ }).click();
     await expect(
       page.getByText(
-        `Exits held by the broker: Take-profit ${dollars(takeProfit)} · Stop ${dollars(stop)}.`,
+        `Sent with its exits: Take-profit ${dollars(takeProfit)} · Stop ${dollars(stop)}.`,
       ),
     ).toBeVisible();
 

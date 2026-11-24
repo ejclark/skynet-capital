@@ -2,6 +2,7 @@ import { marketSession } from "../../app/src/live/market-session";
 import {
   buildDraft,
   carriesExit,
+  carryAcrossSide,
   exitFits,
   orderTypeLabel,
   orderTypeNote,
@@ -9,12 +10,7 @@ import {
   priceFieldsFor,
   type TicketFields,
 } from "../../app/src/live/ticket";
-import {
-  EXIT_HOURS_NOTE,
-  exitPreviewLines,
-  exitReceiptLine,
-  signedMoney,
-} from "../../app/src/live/ticket-exit";
+import { EXIT_HOURS_NOTE, exitPreviewLines, exitReceiptLine } from "../../app/src/live/ticket-exit";
 
 /** The stock form's model for stop-limit and an exit at entry (#8249 PR 2). With the setting off
  *  every draft is what it was before; admitted, a limit buy can carry its take-profit and stop. */
@@ -113,13 +109,11 @@ describe("buildDraft with an exit (#8249)", () => {
 
 describe("the exit in words (#8249)", () => {
   it("signs each leg's dollars, so the direction never rides on a colour", () => {
-    expect(signedMoney(12)).toBe("+$12.00");
-    expect(signedMoney(-18)).toBe("-$18.00");
     expect(
       exitPreviewLines({ takeProfit: 95, stop: 85, takeProfitDollars: 12, stopDollars: -18 }),
     ).toEqual([
       "Take-profit $95.00 · +$12.00 against your limit if it fills",
-      "Stop $85.00 · about -$18.00 against your limit (a triggered stop sells at the market)",
+      "Stop $85.00 · about −$18.00 against your limit (a triggered stop sells at the market)",
     ]);
   });
 
@@ -132,10 +126,21 @@ describe("the exit in words (#8249)", () => {
 
   it("names the broker's exits on the receipt and the hours they guard", () => {
     expect(exitReceiptLine({ takeProfit: 95.01, stop: 84.99 })).toMatch(
-      /^Exits held by the broker: Take-profit \$95\.01 · Stop \$84\.99\./,
+      /^Sent with its exits: Take-profit \$95\.01 · Stop \$84\.99\..*cancelling the entry cancels both\.$/,
     );
     expect(EXIT_HOURS_NOTE).toBe(
       "Guards regular hours only: the take-profit and stop don't act between 4pm and 9:30am ET.",
     );
+  });
+});
+
+describe("a stop-limit across Buy ⇄ Sell (#8249)", () => {
+  it("carries the count but neither price, since its limit was set against a stop that never goes", () => {
+    const carry = carryAcrossSide(
+      fields({ orderType: "stop_limit", stopPrice: "50", limitPrice: "51" }),
+      true,
+    );
+    expect(carry.quantity).toBe("3");
+    expect(carry.priced).toBeUndefined();
   });
 });

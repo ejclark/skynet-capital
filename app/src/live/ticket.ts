@@ -174,10 +174,15 @@ export interface TicketCarry {
 }
 
 export function carryAcrossSide(fields: TicketFields, priced: boolean): TicketCarry {
+  // A stop-limit's limit is set against its stop, which never goes (#8249): neither half carries,
+  // and the other side re-seeds as a fresh ticket does.
+  const carriesPrice = priced && fields.orderType !== "stop_limit";
   return {
     symbol: fields.symbol.trim().toUpperCase(),
     quantity: fields.quantity,
-    ...(priced ? { priced: { orderType: fields.orderType, limitPrice: fields.limitPrice } } : {}),
+    ...(carriesPrice
+      ? { priced: { orderType: fields.orderType, limitPrice: fields.limitPrice } }
+      : {}),
     ...(fields.timeInForce ? { timeInForce: fields.timeInForce } : {}),
   };
 }
