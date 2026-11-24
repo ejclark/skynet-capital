@@ -90,6 +90,7 @@
     { "world": "league-today", "viewer": "eric", "for": ["experts", "labels"] },
     { "world": "league-today", "viewer": "jordan", "for": ["experts", "labels"] },
     { "world": "league-today", "viewer": "casey", "for": ["experts", "labels"] },
+    { "world": "league-read-failed", "viewer": "eric", "for": ["experts", "labels"] },
     { "world": "league-read-failed", "viewer": "jordan", "for": ["experts", "labels"] },
     {
       "world": "league-today",

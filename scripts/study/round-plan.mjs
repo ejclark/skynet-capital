@@ -163,8 +163,27 @@ export function modeChanges(recorded, now) {
 const isText = (v) => typeof v === "string" && v.trim().length > 0;
 const VIEWPORTS = ["phone", "desktop"];
 
-/** The area config's problems, or [] when a round can run from it. */
-export function profileProblems(p) {
+/**
+ * The harvest judges a fact only where a labels census walked its world/viewer, so a matrix pair
+ * without one keeps no gradable fact and the tasks step refuses, after the canary and the framer
+ * have spent their calls (#8204: one area config missed a pair its thin cut never reached).
+ */
+function unlabelledPairs(p) {
+  const labelled = (r) =>
+    (p?.census ?? []).some(
+      (c) => c.world === r.world && c.viewer === r.viewer && c.for?.includes?.("labels"),
+    );
+  const bare = [
+    ...new Set((p?.matrix ?? []).filter((r) => !labelled(r)).map((r) => `${r.world}/${r.viewer}`)),
+  ];
+  return bare.length > 0 ? [`census must label every matrix world/viewer: ${bare.join(", ")}`] : [];
+}
+
+/**
+ * The area config's problems, or [] when a round can run from it. `control`: a control round
+ * adopts the main round's tasks, so its census may narrow to the views its mechanisms live on.
+ */
+export function profileProblems(p, { control = false } = {}) {
   const out = [];
   if (!/^\d{4}-\d{2}-\d{2}$/.test(p?.cutoff ?? "")) out.push("cutoff must be YYYY-MM-DD");
   for (const k of ["tasksPer", "runs", "censusCap", "concurrency", "experts"]) {
@@ -194,6 +213,7 @@ export function profileProblems(p) {
     if (!(isText(c.world) && isText(c.viewer))) out.push(`census[${i}] needs world and viewer`);
     if (!(Array.isArray(c.for) && c.for.length > 0)) out.push(`census[${i}].for is required`);
   }
+  if (!control) out.push(...unlabelledPairs(p));
   const t = p?.thin;
   if (!(t && p.matrix?.some((r) => r.member === t.member && r.world === t.world))) {
     out.push("thin must name a member and world from the matrix");
