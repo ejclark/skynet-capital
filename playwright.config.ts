@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 import { EDITION_CLOCK, FIXED_CLOCK } from "./e2e/determinism";
-import { facultyProject } from "./e2e/playwright.faculty";
+import { facultyProject, ORDERS_PORTS } from "./e2e/playwright.faculty";
 import { journeysMode } from "./e2e/playwright.journeys";
 import { SHARED_CONFIG } from "./e2e/playwright.shared";
 
@@ -22,6 +22,14 @@ const session = journeysMode("session", { build: false });
 // And the change playthroughs (e2e/changes.spec.ts): a boot whose paper account applies writes, so
 // a spec can press Submit and read the order back (e2e/playwright.faculty.ts).
 const faculty = facultyProject();
+// And the order guard (#8188): a stock and an option order placed end to end and found on the book,
+// on its own faculty boot pinned inside a session so a market order fills at any hour CI runs.
+const orders = facultyProject({
+  name: "orders",
+  spec: "order-journey.spec.ts",
+  ...ORDERS_PORTS,
+  fixedNow: FIXED_CLOCK,
+});
 
 export default defineConfig({
   ...SHARED_CONFIG,
@@ -34,11 +42,18 @@ export default defineConfig({
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
-      testIgnore: ["**/login.spec.ts", "**/ct/**", "**/journeys.spec.ts", "**/changes.spec.ts"],
+      testIgnore: [
+        "**/login.spec.ts",
+        "**/ct/**",
+        "**/journeys.spec.ts",
+        "**/changes.spec.ts",
+        "**/order-journey.spec.ts",
+      ],
     },
     open.project,
     session.project,
     faculty.project,
+    orders.project,
   ],
   // Launched one after another, in this order: the first boot builds the React shell (app/dist)
   // and the two playthrough boots, which skip the build, serve the same app/dist.
@@ -66,5 +81,6 @@ export default defineConfig({
     open.webServer,
     session.webServer,
     faculty.webServer,
+    orders.webServer,
   ],
 });
