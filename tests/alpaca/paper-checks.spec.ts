@@ -492,6 +492,50 @@ describe("paper checks: review fixes", () => {
     expect(record.exitCode).toBe(130);
   });
 
+  it("a signal during check 1's watch through the open ends the watch and cleans up at once (#8372)", async () => {
+    const clock = { now: et("2026-11-25", 9, 15) };
+    const signalAt = et("2026-11-25", 9, 16);
+    const broker = new FakeAlpaca(clock);
+    let signalled = false;
+    let readsAtSignal = 0;
+    const orderReads = () =>
+      broker.calls.filter(
+        (c) => c.method === "GET" && /^\/v2\/orders\/[^/?]+\?nested=true$/.test(c.path),
+      ).length;
+    const run = createRun({
+      trading: broker.trading,
+      data: broker.data,
+      only: parseOnly("bracket-after-close"),
+      runId: "run1",
+      dryRun: false,
+      sameDayQty: 25,
+      campaignSymbols: [],
+      now: () => clock.now,
+      // scripts/paper-checks.mjs's sleep: once a signal has landed every wait resolves at once. A
+      // second of clock per wait stands in for the broker read in between, so the unfixed loop ends.
+      sleep: (ms) => {
+        if (signalled) {
+          clock.now += 1000;
+          return Promise.resolve();
+        }
+        clock.now += ms;
+        if (clock.now >= signalAt) {
+          signalled = true;
+          readsAtSignal = orderReads();
+          run.interrupt();
+        }
+        return Promise.resolve();
+      },
+    });
+    const record = await run.execute();
+    expect(signalled).toBe(true);
+    expect(orderReads() - readsAtSignal).toBe(0);
+    expect(clock.now).toBeLessThan(et("2026-11-25", 9, 17));
+    expect(broker.writes().some((c) => c.method === "DELETE")).toBe(true);
+    expect(broker.open.size).toBe(0);
+    expect(record.exitCode).toBe(130);
+  });
+
   it("cancels a paperchk- order an earlier run left behind", async () => {
     const { broker, run } = harness(et(TUE, 16, 30), { only: "account-cap" });
     broker.open.set("old-1", {

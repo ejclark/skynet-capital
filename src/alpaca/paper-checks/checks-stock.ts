@@ -46,13 +46,16 @@ export async function bracketAfterClose(desk: Desk): Promise<CheckAnswer> {
   };
   const reads = await readAll("read back");
   // Started 15 minutes or less before the open: watch both through 09:31 ET, 20 minutes at most.
+  // A signal ends the watch (#8372): the script's sleep returns at once after one, so a loop bounded
+  // only by the clock would spin broker reads until 09:31 instead of letting cleanup start.
   const started = desk.now();
   const openAt = openingToday({ ...desk.facts, now: started });
   let afterOpen: Attempt[] = [];
   if (openAt !== undefined && openAt - started <= 15 * MINUTE) {
     const until = Math.min(openAt + MINUTE, started + 20 * MINUTE);
-    while (desk.now() < until) {
+    while (desk.now() < until && !desk.ledger.interrupted) {
       await desk.sleep(Math.min(MINUTE, until - desk.now()));
+      if (desk.ledger.interrupted) break;
       afterOpen = await readAll("after the open");
     }
   }
