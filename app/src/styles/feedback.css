@@ -297,3 +297,137 @@
   gap: 8px;
   margin-top: 6px;
 }
+
+/* THE JOURNAL (#8190) — the composer and the private notes, beside the filings above. The picked
+ * choice reads by a check mark, weight and an inset ring, never by colour alone (BRAND →
+ * Accessibility); member words keep their line breaks and wrap inside a 390px column. */
+.jr-composer,
+.jr-notes {
+  max-width: var(--col-read);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--elev-base);
+  padding: var(--panel-p);
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-sizing: border-box;
+}
+.jr-composer {
+  margin-top: 16px;
+}
+.jr-composer .fb-h,
+.jr-notes .fb-h {
+  margin: 0;
+}
+.jr-composer > .btn {
+  align-self: flex-start;
+}
+.jr-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.jr-choice {
+  display: inline-flex;
+  white-space: nowrap;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 8px 9px;
+  min-height: 40px;
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--text);
+  background: var(--surface-2);
+  cursor: pointer;
+}
+.jr-choice[aria-pressed="true"] {
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1.5px var(--text);
+}
+/* The mark rides only on the picked chip: an empty slot on the other two cost the row its fit at
+ * 390. Picking already changes the weight, so the chip's width moves either way. */
+.jr-check {
+  display: inline-block;
+}
+.jr-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.jr-field textarea,
+.jr-field input {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: var(--sans);
+}
+.jr-symbol input {
+  max-width: 10ch;
+  text-transform: uppercase;
+}
+.jr-trade {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.jr-label {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.jr-hint {
+  font-size: 12px;
+  color: var(--muted);
+}
+.jr-off {
+  margin: 0;
+}
+.fb-wish,
+.jr-kind {
+  font-weight: 700;
+  color: var(--text);
+}
+.jr-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.jr-note {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.jr-note:last-child {
+  border-bottom: none;
+}
+.jr-text {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.jr-trade-lines {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.jr-trade-lines dt {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.jr-trade-lines dd {
+  margin: 0;
+}
