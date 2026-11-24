@@ -1,0 +1,114 @@
+{
+  "area": "research",
+  "about": "The area config for one study round over R&D (#8005 slice 5; docs/IA.md §5.4: the market calendar, the house's calls and their write-ups, the closures, Coverage across the sectors, and the playbook catalog with a member's own playbooks, chains and stated views — /app/research and its Board, Coverage and Playbooks sections). Read by scripts/study/round.mjs; everything area-specific lives here or in scripts/study/worlds/rd-*. Worlds, all on the pin's Monday of Thanksgiving week with the pin as corpus: rd-today (the league as it stands; the owner's bot's CRWV wheel steered by the house's AI-dip view), rd-own-views (the same day after the owner stated a view of his own on that pair and drafted a playbook of his own: the two meanings of 'conviction' on one page) and rd-first-day (a member who linked a paper account this morning: no bot, nothing written). Phone first: the profile readout put every give-up on a phone, so 7 of the 10 frames are phones. Members start where the app nav's R&D link lands. Census routes are links the app builds (a call's write-up, a playbook's study), never composed. `roles` is who each member is here, in plain words, read by the experts and the words pass instead of the cards (#5099), so it never quotes a card. No sealed key, framer or tasks yet: those come when the cross-feature round clears (#8005).",
+  "cutoff": "2026-11-23",
+  "tasksPer": 3,
+  "runs": 3,
+  "runsByWorld": { "rd-own-views": 2 },
+  "censusCap": 100,
+  "concurrency": 3,
+  "experts": 3,
+  "matrix": [
+    {
+      "member": "eric",
+      "world": "rd-today",
+      "viewer": "eric",
+      "viewports": ["phone", "desktop"],
+      "start": "/app/research"
+    },
+    {
+      "member": "eric",
+      "world": "rd-own-views",
+      "viewer": "eric",
+      "viewports": ["phone"],
+      "start": "/app/research",
+      "note": "his own stated view and his own draft playbook sit beside the house's view that steers the same pair"
+    },
+    {
+      "member": "returning-trader",
+      "world": "rd-today",
+      "viewer": "eric",
+      "viewports": ["phone", "desktop"],
+      "start": "/app/research"
+    },
+    {
+      "member": "phone-only",
+      "world": "rd-today",
+      "viewer": "eric",
+      "viewports": ["phone"],
+      "start": "/app/research"
+    },
+    {
+      "member": "phone-only",
+      "world": "rd-own-views",
+      "viewer": "eric",
+      "viewports": ["phone"],
+      "start": "/app/research"
+    },
+    {
+      "member": "invited-friend",
+      "world": "rd-today",
+      "viewer": "jordan",
+      "viewports": ["phone"],
+      "start": "/app/research",
+      "note": "owns a small account and a bot of their own; the catalog's + subscribes only their bot"
+    },
+    {
+      "member": "bot-watcher",
+      "world": "rd-today",
+      "viewer": "casey",
+      "viewports": ["phone"],
+      "start": "/app/research",
+      "note": "owns nothing: Coverage has no account to price from and Playbooks has no bot to subscribe"
+    },
+    {
+      "member": "first-timer",
+      "world": "rd-first-day",
+      "viewer": "casey",
+      "viewports": ["desktop"],
+      "start": "/app/research"
+    }
+  ],
+  "roles": {
+    "eric": "Runs the league and owns one of its two bots; reads the house's research to decide what his bot should run and what he believes about the market. On a phone when away, at a desk at home.",
+    "returning-trader": "Has one paper account and some options vocabulary, and is back after some weeks away; wants to know what is coming up in the market this week and what the house thinks of it. Uses a phone and a desk.",
+    "phone-only": "Uses the app only on a phone, one-handed, a minute or two at a time.",
+    "invited-friend": "A friend the owner invited, with one small account and a bot of their own; reads the research to pick what their own bot should run. On a phone.",
+    "bot-watcher": "Owns no account at all; follows what the league's bots run and why, and reads the research behind it. On a phone.",
+    "first-timer": "Invited last week and linked a paper account this morning; owns no bot and has written nothing yet. On a laptop."
+  },
+  "pages": [
+    "a calendar of the market's days, with a lens from one day to a quarter, the closed days and early closes marked, steering everything below it",
+    "the house's calls for the days in view, each opening its own write-up, with filters by kind of event, impact and call",
+    "the names the research covers, each with its next dated event, and one name picked to narrow everything to it",
+    "the event write-ups and longer studies, each on its own page with a way back",
+    "where the research reaches across the market's eleven sectors, with each sector's month against the market and a tap to see its research",
+    "a catalog of strategies a bot can run, each with its evidence, how it trades, and a way to subscribe one's own bots",
+    "a member's own playbooks, drafted, tested without trading, then switched on",
+    "a member's own stated views of the market, as claims that can each be proved wrong, which can be handed to their bots to steer what they run",
+    "where these pages send the member next: each write-up and study on its own page, and the way back to the board"
+  ],
+  "census": [
+    { "world": "rd-today", "viewer": "eric", "for": ["experts", "labels"] },
+    { "world": "rd-today", "viewer": "jordan", "for": ["experts", "labels"] },
+    { "world": "rd-today", "viewer": "casey", "for": ["experts", "labels"] },
+    { "world": "rd-own-views", "viewer": "eric", "for": ["experts", "labels"] },
+    {
+      "world": "rd-today",
+      "viewer": "eric",
+      "routes": [
+        "/research/events/thanksgiving-market-closure-2026-11-26",
+        "/research/multi-symbol-sweep"
+      ],
+      "for": ["handoff", "labels"]
+    },
+    { "world": "rd-first-day", "viewer": "casey", "for": ["labels"] }
+  ],
+  "thin": {
+    "member": "eric",
+    "world": "rd-own-views",
+    "viewport": "phone",
+    "task": 1,
+    "expertRoute": "/app/research?section=playbooks"
+  }
+}
