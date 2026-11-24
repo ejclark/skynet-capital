@@ -98,14 +98,16 @@ Sources, in pull order (`npm run rank`):
 - **Triage backlogs** — Backlog `feedback` issues that might be clear: batch their numbers into
   **`.claude/workflows/clear-path-flip.js`** (`{issues: [...]}`), save the result as JSON, run
   `node scripts/clear-path-post.mjs <file> --dry-run`, then without `--dry-run`. Gate on its exit
-  status, never through `| tail`. Survivors become the next wave's Ready work.
+  status, never through `| tail`. Survivors become the next wave's Ready work, for a child only
+  once still unclaimed after a tick (§4).
   **Send at most 6 issues per run.** For more, launch runs of 6 or fewer together and post each one
   as it lands. Why: a run caps how many agents it runs at once (2 in a 4-CPU cloud container), and
   its refuters queue behind every judge, so one long list posts nothing until the whole list is
   judged, and a usage stop strands every judged issue (#6711: 0 flips 50 minutes into a run of 33).
   A run of 6 took 5.5 minutes on a laptop (2026-11-10).
 - **Debt** — `/governor` cycles (surge allows 8 dispatches a cycle).
-- **Fan-out from findings** — a bug found mid-wave is filed `bug` + `fast-track` and pulled next.
+- **Fan-out from findings** — a bug found mid-wave is filed `bug` + `fast-track`; the lane
+  self-readies it and pulls it next, never a child (§4).
 
 After each wave merges, run **`.claude/workflows/post-merge-audit.js`** (`{prs: [...]}`) over its
 PRs; it routes money/state/auth PRs to the deep tier and skips docs-only ones by itself. Ration
@@ -139,12 +141,12 @@ reverts.
 - **A ready issue nothing builds.** The lane takes every ready non-plan issue (#6219); if one
   still sits Ready past a tick, check `pullable()` before re-flipping it.
 - **A fresh `fast-track` bug belongs to the lane, not to a child.** The lane self-readies and
-  claims an audit's `fast-track` filings within about a minute. A child dispatched in that
-  minute builds the same fix a second time: on 2026-11-24, #8352, #8353 and #8355 were each
-  built twice, and three PRs were closed as superseded. Give children only what the lane
-  will not take: `needs-session` issues, plans, protected work boarding the platter, a slice
-  of a multi-PR issue the session already holds, and a ready issue still unclaimed after a
-  tick (`index.mjs --check-claim feedback-<n>` reads `no lease found`).
+  claims an audit's `fast-track` filings within about a minute, and a child dispatched in that
+  minute builds the same fix a second time (#8352, #8353, #8355). Give children only what no
+  lane will take: `needs-session` issues, protected work boarding the platter, a slice of a
+  multi-PR issue the session already holds, and a ready issue still unclaimed after a tick:
+  `node scripts/moneypenny/index.mjs --check-claim feedback-<n>` prints `claimed: false` and
+  the issue carries no `in-progress`. A plan is the plan lane's as soon as it reads `ready`.
 - **Subagent text arrives HTML-escaped** (`&lt;`) — unescape before posting
   (`clear-path-post.mjs` does).
 
