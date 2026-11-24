@@ -197,7 +197,7 @@ export function PositionsBlotter({
   }
   // The decision engine's cards, each on the row it speaks about: its lesson opens there (#5083).
   const said = useMemo(() => decisionsByRow(positions, decisions), [positions, decisions]);
-  // The playbook that opened each position, on a bot's own book (#5073 slice 4b).
+  // The playbook that opened each position (#5073 slice 4b); its card landing is the owner's (#8396).
   const cardOf = usePlaybookCards(deskId, positions);
   // A question about a holding opens its side thread with Moneypenny (#7167), on the account her
   // positions tool reads — the member's own — and no other.
@@ -223,7 +223,14 @@ export function PositionsBlotter({
             bookRead={statement.isSuccess}
           />
         }
-        playbook={<PositionPlaybookTag deskId={deskId} position={p} {...(card ? { card } : {})} />}
+        playbook={
+          <PositionPlaybookTag
+            deskId={deskId}
+            position={p}
+            owned={canTrade}
+            {...(card ? { card } : {})}
+          />
+        }
         initialOpen={openRow === p.symbol}
         {...(onFullPage ? { onFullPage: () => onFullPage(p.symbol) } : {})}
         onAside={(watch) => marks.setAside(p.symbol, watch)}

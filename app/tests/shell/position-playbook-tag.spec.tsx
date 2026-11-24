@@ -12,17 +12,20 @@ rstest.mock("@tanstack/react-router", () => ({
   Link: ({
     children,
     to,
+    params,
     search,
     ...rest
   }: {
     children: ReactNode;
     to: string;
+    params?: Record<string, string>;
     search?: Record<string, string>;
     "aria-label"?: string;
   }) => {
+    const path = to.replace(/\$(\w+)/g, (_, key: string) => params?.[key] ?? `$${key}`);
     const query = new URLSearchParams(search ?? {}).toString();
     return (
-      <a href={`${to}${query ? `?${query}` : ""}`} aria-label={rest["aria-label"]}>
+      <a href={`${path}${query ? `?${query}` : ""}`} aria-label={rest["aria-label"]}>
         {children}
       </a>
     );
@@ -92,7 +95,13 @@ function withClient(node: ReactElement) {
 }
 
 /** The blotter's wiring, small: every row's tag with its card's state. */
-function Rows({ positions }: { readonly positions: readonly DeskPosition[] }): ReactElement {
+function Rows({
+  positions,
+  owned = true,
+}: {
+  readonly positions: readonly DeskPosition[];
+  readonly owned?: boolean;
+}): ReactElement {
   const cardOf = usePlaybookCards("sauron", positions);
   return (
     <div>
@@ -103,6 +112,7 @@ function Rows({ positions }: { readonly positions: readonly DeskPosition[] }): R
             key={p.symbol}
             deskId="sauron"
             position={p}
+            owned={owned}
             {...(card ? { card } : {})}
           />
         );
@@ -127,6 +137,25 @@ describe("PositionPlaybookTag", () => {
       `/accounts?account=sauron&section=playbooks&card=CRWV-WHEEL&mode=aggressive&pos=${PUT}`,
     );
     expect(screen.getByText("Opened by")).toBeInTheDocument();
+  });
+
+  // #8396: since #8254 the server tags a bot's positions for every signed-in member, but the card
+  // landing on /accounts resolves only accounts the viewer owns — a non-owner's tap landed on their
+  // own Overview. Their tag goes to the bot's own Playbooks page, which any member can read.
+  it("sends a member who does not own the bot to its Playbooks page, never to /accounts", async () => {
+    render(
+      withClient(
+        <Rows
+          owned={false}
+          positions={[position({ playbookId: "CRWV-WHEEL", playbookMode: "aggressive" })]}
+        />,
+      ),
+    );
+    const tag = await screen.findByRole("link", {
+      name: "Opened by the wheel on CRWV, waiting for its window — open this bot's Playbooks",
+    });
+    expect(tag.textContent).toBe("◷ the wheel on CRWV · waiting ›");
+    expect(tag).toHaveAttribute("href", "/u/sauron/playbooks");
   });
 
   it("names a playbook with no card on this bot now without a state it cannot vouch for", async () => {

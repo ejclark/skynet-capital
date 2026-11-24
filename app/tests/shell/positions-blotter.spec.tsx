@@ -18,13 +18,20 @@ rstest.mock("@tanstack/react-router", () => ({
   Link: ({
     children,
     className,
+    to,
     search,
   }: {
     children: ReactElement;
     className?: string;
+    to?: string;
     search?: unknown;
   }) => (
-    <a href="/app/trade" className={className} data-search={JSON.stringify(search ?? {})}>
+    <a
+      href="/app/trade"
+      className={className}
+      data-to={to}
+      data-search={JSON.stringify(search ?? {})}
+    >
       {children}
     </a>
   ),
@@ -203,6 +210,27 @@ describe("PositionsBlotter", () => {
     );
     const card = container.querySelector<HTMLElement>("a.pos-card");
     expect(JSON.parse(card?.dataset.search ?? "null")).toEqual(search);
+  });
+
+  // #8396: a bot's position names its playbook for every signed-in member, but only the owner's
+  // tag may land on the card on /accounts, which resolves owned accounts alone.
+  it.each([
+    [true, "/accounts"],
+    [false, "/u/$id/playbooks"],
+  ])("hands the playbook tag canTrade=%s as ownership, so it links to %s", (canTrade, to) => {
+    const { container } = render(
+      withClient(
+        <PositionsBlotter
+          deskId="sauron"
+          positions={[position({ playbookId: "CRWV-WHEEL", playbookMode: "aggressive" })]}
+          query=""
+          onFilterChange={() => undefined}
+          canTrade={canTrade}
+        />,
+      ),
+    );
+    const tag = container.querySelector<HTMLElement>("a.pos-pb-tag");
+    expect(tag?.dataset.to).toBe(to);
   });
 
   it("renders the one New trade card", () => {

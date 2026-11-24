@@ -12,8 +12,12 @@ import { useHeartbeat } from "./heartbeat";
  * row's footer, under the guidance line: "Opened by ◷ the wheel on CRWV · waiting ›". The name and one
  * state word, nothing more (Eric's 0e71d5f8: progressive reveal) — the card it opens says the rest.
  *
- * The server sends the playbook only on the bot owner's copy, and only when one playbook's orders
- * account for the whole position (`position-opened-by.ts`). The state word is the card's own,
+ * The server sends the playbook only when one playbook's orders account for the whole position
+ * (`position-opened-by.ts`), and since #8254 on every signed-in member's copy of a bot, not just the
+ * owner's. The card landing is the owner's alone: `/accounts` resolves only accounts the viewer
+ * owns, so anyone else's tap there landed on their own Overview (#8396). A member who does not own
+ * the bot follows the tag to its Playbooks page instead (`/u/$id/playbooks`), which any member can
+ * read, each card named by its strategy, its landing still the owner's. The state word is the card's own,
  * read from the same heartbeat query the head line already keeps warm; a playbook with no card on
  * this bot now (switched off, or gone) is named without one, and its card's landing says why.
  */
@@ -36,32 +40,53 @@ export function PositionPlaybookTag({
   deskId,
   position,
   card,
+  owned,
 }: {
   readonly deskId: string;
   readonly position: DeskPosition;
   /** The playbook's card on this bot now, for its state word; absent when it has none. */
   readonly card?: PlaybookCard;
+  /** Does the viewer own this bot? Only the owner's tag lands on the card on `/accounts` (#8396). */
+  readonly owned: boolean;
 }): ReactElement | null {
   const landing = landingForPosition(position);
   if (!landing) return null;
   const words = card ? CARD_WORDS[card.state] : undefined;
+  const said = `Opened by ${playbookName(landing.card)}${words ? `, ${words.word.toLowerCase()}` : ""}`;
+  const face = (
+    <>
+      {words ? <span aria-hidden="true">{words.glyph} </span> : null}
+      <span className="pos-pb-name">{playbookName(landing.card)}</span>
+      {words ? <span className="pos-pb-word"> · {words.tag}</span> : null}
+      <span className="pos-pb-chev" aria-hidden="true">
+        {" ›"}
+      </span>
+    </>
+  );
   return (
     <p className="pos-pb">
       <span className="pos-pb-label">Opened by</span>{" "}
-      <Link
-        className="pos-pb-tag"
-        data-state={card?.state}
-        to="/accounts"
-        search={{ account: deskId, section: "playbooks", ...landing }}
-        aria-label={`Opened by ${playbookName(landing.card)}${words ? `, ${words.word.toLowerCase()}` : ""} — open its card on Playbooks`}
-      >
-        {words ? <span aria-hidden="true">{words.glyph} </span> : null}
-        <span className="pos-pb-name">{playbookName(landing.card)}</span>
-        {words ? <span className="pos-pb-word"> · {words.tag}</span> : null}
-        <span className="pos-pb-chev" aria-hidden="true">
-          {" ›"}
-        </span>
-      </Link>
+      {owned ? (
+        <Link
+          className="pos-pb-tag"
+          data-state={card?.state}
+          to="/accounts"
+          search={{ account: deskId, section: "playbooks", ...landing }}
+          aria-label={`${said} — open its card on Playbooks`}
+        >
+          {face}
+        </Link>
+      ) : (
+        <Link
+          className="pos-pb-tag"
+          data-state={card?.state}
+          to="/u/$id/playbooks"
+          params={{ id: deskId }}
+          aria-label={`${said} — open this bot's Playbooks`}
+        >
+          {face}
+        </Link>
+      )}
     </p>
   );
 }
