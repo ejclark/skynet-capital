@@ -5,7 +5,7 @@ import { useRef, useState } from "react";
 import { parseOccSymbol } from "../../../src/trading/option-symbols";
 import { useOrderFill } from "../live/desk-events";
 import { manageSearch } from "../live/manage-handoff";
-import { marketSession } from "../live/market-session";
+import { marketSession, viewerTimeZone } from "../live/market-session";
 import {
   exitWords,
   followRow,
@@ -19,6 +19,7 @@ import {
 } from "../live/order-receipt";
 import type { DeskOrderRow, OrderChange } from "../live/orders";
 import { useFillFlare } from "./fill-flare";
+import { FillWatch } from "./fill-watch";
 import { GateHead } from "./gate-frame";
 import { useNow } from "./market-session";
 import { sellSharesSearch } from "./trade-search";
@@ -127,13 +128,15 @@ export function OrderReceipt({
           <p className="receipt-what">{words.instrument}</p>
           <p className="receipt-terms">{words.terms}</p>
           {order.exits ? <p className="receipt-terms">{exitWords(order.exits)}</p> : null}
-          <p className="gate-note">{receiptNote(read, market)}</p>
+          <p className="gate-note">{receiptNote(read, market, viewerTimeZone())}</p>
           {children}
           <p className="receipt-ref">
             Order ref <span className="num">{now.orderId.slice(0, 8)}</span>
           </p>
         </div>
       </div>
+      {/* At 390, in order: state · the order in words · the note · this · Modify / Cancel (#8251). */}
+      {isLive(read.state) ? <FillWatch deskId={deskId} orderId={now.orderId} /> : null}
       {isLive(read.state) ? (
         row?.cancelable ? (
           <div className="receipt-act">

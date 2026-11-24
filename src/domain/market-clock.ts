@@ -224,10 +224,13 @@ export function marketClockView(
   // A clock whose phase has already ended (cached across the close, or kept through an outage)
   // says nothing about now: drop it and let the days answer, so a stale "core" never reads OPEN.
   const live = clock && clock.phaseUntil > t ? clock : undefined;
-  const listed = days.filter((d) => d.closeAt > t);
+  // Today's session stays listed after its close, so a reader can tell "closed for the day" (a
+  // row, closed) from "no session today" (no row) — the shell's clock relies on it (#8248).
+  const today = newYorkDate(now);
+  const listed = days.filter((d) => d.date >= today);
   const inside = listed.find((d) => d.openAt <= t && t < d.closeAt);
   const nextOpen = listed.find((d) => d.openAt > t)?.openAt;
-  const nextClose = (inside ?? listed[0])?.closeAt;
+  const nextClose = (inside ?? listed.find((d) => d.closeAt > t))?.closeAt;
   const iso = (ms: number | undefined): string | undefined =>
     ms === undefined ? undefined : new Date(ms).toISOString();
   const nextOpenAt = iso(live?.nextOpenAt ?? nextOpen);

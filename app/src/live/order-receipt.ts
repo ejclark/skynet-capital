@@ -1,7 +1,7 @@
 import { brokerStatusState } from "../../../src/server/desk-orders-view";
 import { humanizeOptionSymbol } from "../../../src/trading/option-symbols";
 import type { DeskOrderEvent } from "./desk-events";
-import { type MarketSessionView, waitsForOpen } from "./market-session";
+import { type MarketSessionView, opensIn, waitsForOpen } from "./market-session";
 import type { DeskOrderRow, DeskOrderState, DeskOrders } from "./orders";
 import { money, orderTypeLabel, tifLabel } from "./ticket";
 
@@ -241,7 +241,11 @@ export function receiptHeadline(
 }
 
 /** The receipt's note: what happens next, with the open a closed market waits for (#6257). */
-export function receiptNote(read: ReceiptRead, market: MarketSessionView): string {
+export function receiptNote(
+  read: ReceiptRead,
+  market: MarketSessionView,
+  timeZone?: string,
+): string {
   const some = read.filled !== undefined && read.filled > 0;
   switch (read.state) {
     case "filled":
@@ -259,9 +263,12 @@ export function receiptNote(read: ReceiptRead, market: MarketSessionView): strin
     case "replaced":
       return "The broker cancels the old order and answers with the changed one — this updates when it does.";
     default: {
-      const open = waitsForOpen(market);
+      // The broker's next open in ET, the viewer's own time beside it, and the time left, which
+      // the receipt's 30-second tick keeps current (#8248 criterion 11).
+      const open = waitsForOpen(market, timeZone);
+      const left = opensIn(market);
       return open
-        ? `Queued — nothing fills before ${open}.`
+        ? `Queued — nothing fills before ${open}${left ? `, ${left}` : ""}.`
         : "Working at the paper broker — this updates the moment it fills.";
     }
   }

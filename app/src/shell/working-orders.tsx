@@ -2,6 +2,7 @@ import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useState } from "react";
 import { useDeskEvents } from "../live/desk-events";
+import { followFillWatch } from "../live/fill-watch";
 import {
   type CancelResult,
   cancelOrder,
@@ -253,7 +254,16 @@ export function useOrderActions(deskId: string) {
   const replace = (id: string, change: OrderChange): Promise<ReplaceResult | undefined> =>
     run(
       id,
-      () => replaceOrder(deskId, id, change),
+      async () => {
+        const answer = await replaceOrder(deskId, id, change);
+        // A watched order's email follows the modify to its new order id (#8251) — from the
+        // receipt or the Orders pane alike. Best effort: a miss leaves the old watch unsent.
+        if (answer.ok) {
+          await followFillWatch(deskId, answer.orderId, id).catch(() => undefined);
+          await queryClient.invalidateQueries({ queryKey: ["fill-watch", deskId] });
+        }
+        return answer;
+      },
       (r) =>
         r.ok
           ? `Change sent — the broker replaced the order (${r.status.replace(/_/g, " ")}).`

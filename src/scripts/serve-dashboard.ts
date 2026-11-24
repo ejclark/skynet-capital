@@ -649,6 +649,7 @@ async function main(): Promise<void> {
     alertDismissals,
     alertDeliveryStore: alertDelivery.store,
     ...(alertDelivery.transport ? { alertDelivery: alertDelivery.transport } : {}),
+    ...(alertDelivery.nudge ? { alertDeliveryNudge: alertDelivery.nudge } : {}),
     // The names a member chose to watch — member-authored truth nothing re-derives, so it is
     // durable on the same volume (#4332).
     watchlist,
