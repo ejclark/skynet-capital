@@ -114,6 +114,21 @@ describe("the questions every correctness reviewer is asked", () => {
   it("ask the reviewer agent the same comparison", () => {
     expect(flat(readFileSync(".claude/agents/reviewer.md", "utf8"))).toMatch(DECLARED_SET);
   });
+
+  // A parser of real repo history checked against one hand-made sample ships with the shapes it
+  // drops, and a window started from a date rather than the commit's instant leaves PRs in no window.
+  const HISTORY_REPLAY =
+    /parses or windows real repo history.*replay it over the last 20 to 50 real merged PRs or commits on `?origin\/main`?.*drops, splits or leaves out of every window.*one hand-made shape.*window start given as a date where a commit instant exists/i;
+
+  it("ask the audit's reviewer to replay history-parsing code over real recent merges", async () => {
+    const { calls } = await audit([], { causes: [] });
+    const prompt = flat(calls.find((c) => c.opts.label?.startsWith("review"))?.prompt ?? "");
+    expect(prompt).toMatch(HISTORY_REPLAY);
+  });
+
+  it("ask the reviewer agent for the same replay", () => {
+    expect(flat(readFileSync(".claude/agents/reviewer.md", "utf8"))).toMatch(HISTORY_REPLAY);
+  });
 });
 
 describe("the audit's prevention step", () => {

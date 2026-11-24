@@ -374,10 +374,10 @@
         {
           "id": "s5",
           "goto": "/app/accounts?section=feedback",
-          "sees": "Profile → Feedback: the member's filings with where each stands, and 'Talk to Moneypenny' back to the conversation that files them",
+          "sees": "Profile → Journal: the member's wishes and filings with where each stands, and 'Talk to Moneypenny' back to the conversation that files them",
           "ears": "WHEN a member opens their filings, the app shall show where each filing stands and a way back to the conversation that files them.",
           "expect": [
-            { "role": "heading", "name": "Your feedback" },
+            { "role": "heading", "name": "Your journal" },
             { "role": "button", "name": "Talk to Moneypenny", "within": "main" }
           ],
           "judge": "can this reader tell where their filing stands?"

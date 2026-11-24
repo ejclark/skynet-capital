@@ -17,7 +17,7 @@ import { createWatchlist } from "../adapters/jsonl-watchlist-store.js";
 import { JsonlAuditStore } from "../autonomous/jsonl-audit-store.js";
 import { signalWindows } from "../autonomous/signal-windows.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
-import { reconcileBrokerActivity } from "../observatory/activity-backfill.js";
+import { reconcileBrokerActivity, recoverStreamGap } from "../observatory/activity-backfill.js";
 import {
   bootPublishingActivityStore,
   publishingFeedback,
@@ -29,6 +29,7 @@ import { createBootCapitalFlowStore } from "../observatory/capital-flow-store.js
 import { CapitalFlowWatch, restartBaseline } from "../observatory/capital-flow-watch.js";
 import { CeremonyChannel } from "../observatory/ceremony-channel.js";
 import { buildDashboardData } from "../observatory/dashboard-data.js";
+import { gapRecovery } from "../observatory/gap-recovery.js";
 import {
   createBootHistoryStore,
   rehydrateHistory,
@@ -219,7 +220,33 @@ async function main(): Promise<void> {
   // SKYNET_AUDIT_DIR is set. When present, bot profiles show the live "what it decided and why."
   const auditDir = process.env.SKYNET_AUDIT_DIR;
 
-  dataSource.startStreams({ participants: roster, sink, onActivity, onStatus });
+  // The stream-gap net (#8251): a fill stream that reopens after a drop re-reads that account's
+  // recent orders into the ledger, so a fill in the gap still reaches the ledger, its bus and a
+  // watched order's email — once. Re-reads wait for the boot reconcile and run one at a time per
+  // account; resumes that arrive while one runs coalesce into a single follow-up from the earliest
+  // drop, so a flapping socket can't stack broker reads or race two stale dedupe snapshots.
+  const onResume = gapRecovery({
+    after: reconciled,
+    recover: (participant, droppedAt) => {
+      const client = dataSource.clientFactory(participant);
+      return recoverStreamGap({
+        participantId: participant.id,
+        store: activity,
+        listOrders: (params) => client.listOrders(params),
+        droppedAt,
+      }).then(
+        (r) => {
+          if (r.appended === 0) return;
+          console.log(
+            `[activity] banked ${r.appended} order update(s) from ${participant.id}'s gap`,
+          );
+        },
+        (e) => console.error(`[activity] gap re-read failed for ${participant.id}:`, e),
+      );
+    },
+  });
+
+  dataSource.startStreams({ participants: roster, sink, onActivity, onStatus, onResume });
 
   const owners = ownerEmails(process.env);
   const service = new ParticipantService({
@@ -227,7 +254,7 @@ async function main(): Promise<void> {
     store,
     clientFactory: dataSource.clientFactory,
     startStream: (participant) =>
-      dataSource.startParticipantStream(participant, sink, onStatus, onActivity),
+      dataSource.startParticipantStream(participant, sink, onStatus, onActivity, onResume),
     // Founding record: capture the seed baseline the moment an account joins (fire-and-forget, and
     // idempotent — a re-onboarding member keeps the history they already have).
     recordSeedSample: seedSampleRecorder(history),
