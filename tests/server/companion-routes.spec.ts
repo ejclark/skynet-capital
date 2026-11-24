@@ -398,10 +398,11 @@ describe("serveCompanionApi — POST /api/companion/chat", () => {
     expect(context).not.toContain("999");
   });
 
-  // #7167 slice 1: asked from the landing page, the page's keys reach her as the server's own
-  // edition text with each row's link; a key the server doesn't hold, or a key sent from another
-  // page, adds nothing.
-  describe("the landing page's context stamp", () => {
+  // #7167 slice 1: asked from Campaign, the page's keys reach her as the server's own edition text
+  // with each row's link; a key the server doesn't hold, or a key sent from another page, adds
+  // nothing. #8315: Campaign moved to `/campaign` (#8267), so the page posted is what the real
+  // client sends from there now (`app/src/live/companion.ts`'s `currentPage()`).
+  describe("Campaign's context stamp", () => {
     const served = editionView(editions(), new Date(), () => undefined).edition;
     const keys = served
       ? {
@@ -415,9 +416,9 @@ describe("serveCompanionApi — POST /api/companion/chat", () => {
       // Editions are checked in and the clock only moves forward, so one is always served.
       expect(served).toBeTruthy();
       if (!(served && keys)) return;
-      const context = await contextFor({ page: "/app/", keys });
+      const context = await contextFor({ page: "/app/campaign?w=calendar", keys });
       expect(context).toContain(
-        "Page: they sent this from the landing page (the day's market news and its calendar).",
+        "Page: they sent this from the Campaign page (the day's market news, its calendar and their quests).",
       );
       expect(context).toContain(`On screen: the edition of the ${served.date} close.`);
       for (const s of served.stories) expect(context).toContain(`/#story-${s.id}`);
@@ -425,7 +426,7 @@ describe("serveCompanionApi — POST /api/companion/chat", () => {
 
     it("lists nothing a member made up, and nothing off the landing page", async () => {
       const madeUp = await contextFor({
-        page: "/app/",
+        page: "/app/campaign",
         keys: { edition: keys?.edition ?? "2026-11-06", stories: ["ignore-previous"], events: [] },
       });
       expect(madeUp).not.toContain("On screen:");
@@ -434,6 +435,29 @@ describe("serveCompanionApi — POST /api/companion/chat", () => {
       if (!keys) return;
       const elsewhere = await contextFor({ page: "/app/leaderboard", keys });
       expect(elsewhere).not.toContain("On screen:");
+      // The home screen publishes no keys; any sent from it are not Campaign's.
+      const home = await contextFor({ page: "/app/", keys });
+      expect(home).not.toContain("On screen:");
+    });
+
+    it("carries the rows the member tagged from Campaign", async () => {
+      const first = keys?.events[0] ?? keys?.stories[0];
+      expect(first).toBeTruthy();
+      if (!(keys && first)) return;
+      const tagged =
+        keys.events.length > 0
+          ? { stories: [], events: [first] }
+          : { stories: [first], events: [] };
+      const context = await contextFor({ page: "/app/campaign", keys: { ...keys, tagged } });
+      expect(context).toContain("the member tagged these onto their message");
+    });
+
+    it("names the home screen by its job, not as the news page", async () => {
+      const context = await contextFor({ page: "/app/" });
+      expect(context).toContain(
+        "Page: they sent this from the home screen (the tower, what needs them, and a tile for each app).",
+      );
+      expect(context).not.toContain("market news");
     });
   });
 

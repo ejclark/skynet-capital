@@ -234,10 +234,11 @@ async function ownerQueueWithin(read: ReadOwnerQueue): Promise<OwnerQueue | unde
   }
 }
 
-/** The landing page's items, by key (#7167 slice 1): only asked from `/`, and only the keys the
+/** Campaign's items, by key (#7167 slice 1): only asked from `/campaign`, where the news and the
+ *  calendar have lived since #8267 made `/` the home screen (#8315), and only the keys the
  *  server's own edition holds (`companion-on-screen.ts`). A failed edition read adds nothing. */
 function landingOnScreen(page: unknown, keys: unknown): string | undefined {
-  if (pagePath(page) !== "/") return undefined;
+  if (pagePath(page) !== "/campaign") return undefined;
   const parsed = parsePageKeys(keys);
   if (!parsed) return undefined;
   try {
