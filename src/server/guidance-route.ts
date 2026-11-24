@@ -1,40 +1,18 @@
 import type { ServerResponse } from "node:http";
 import { EdgarFilings } from "../adapters/edgar-filings.js";
-import type { AlpacaOptionsClient, OptionChainRow } from "../alpaca/alpaca-options-client.js";
-import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
-import { allEvents } from "../domain/market-events.js";
-import {
-  atmIv,
-  daysBetween,
-  etDateOf,
-  MIN_DTE,
-  optionsCutoff,
-  richnessExpiry,
-} from "../options/position-guidance-rules.js";
-import type { GuidanceMarket, GuidanceQuote } from "../options/position-guidance-types.js";
+import type { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
+import { daysBetween, etDateOf } from "../options/position-guidance-rules.js";
+import type { GuidanceMarket } from "../options/position-guidance-types.js";
 import { daysToExpiryFrom } from "../options/single-leg-odds.js";
-import { printEvidenceFor } from "../research/print-evidence.js";
-import { outlookLedger, symbolOutlook } from "../research/symbol-outlook.js";
 import { UNDERLYING_PATTERN } from "../trading/option-symbols.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
-import { marketOpen } from "./desk-gate.js";
+import { toGuidanceQuote } from "./guidance-market.js";
 import {
-  activePrint,
-  ivRankOf,
-  parityImpliedSpot,
-  realizedVolatility,
-  toGuidanceQuote,
-} from "./guidance-market.js";
-import {
-  chainPulse,
-  clockSessionOpen,
-  earningsPulse,
-  filingsPulse,
-  researchPulse,
-  sessionPulse,
-  spotCheckOf,
-  spotPulse,
-} from "./guidance-pulse.js";
+  chainFor,
+  type GuidanceMarketClients,
+  type GuidanceMarketMiss,
+  readGuidanceMarket,
+} from "./guidance-market-read.js";
 import { sendJson } from "./page-shell.js";
 
 /**
@@ -48,17 +26,13 @@ import { sendJson } from "./page-shell.js";
  * stake, which is what makes the coalesce below safe to share.
  *
  * Every market input is fetched LIVE per request through the member's own connected account, then
- * pulse-checked against its source's own timestamps. The one sharing is a 15-second coalesce of
- * identical in-flight reads (a double-tap costs one Alpaca pull, not two); `refresh=1` bypasses it.
- *
- * Cost posture (Eric, 2026-09-25: "cost efficient", never cheap): quotes are fetched only for the
- * expiries the guidance may actually price (≥ 7 DTE and before the earnings window) and only for
- * both sides; every listed expiry is still shown on the strip.
+ * pulse-checked against its source's own timestamps — the read itself is `guidance-market-read.ts`,
+ * which takes its clients as inputs so a bot can build the same market on its own keys (#3798
+ * slice 1). The one sharing is a 15-second coalesce of identical in-flight reads (a double-tap costs
+ * one Alpaca pull, not two); `refresh=1` bypasses it.
  */
 
 const COALESCE_MS = 15_000;
-const MAX_EXPIRATIONS = 12;
-const BARS_LOOKBACK_DAYS = 45;
 
 /** What the route reads besides the member's broker — injectable so specs run offline and on a fixed clock. */
 export interface GuidanceDeps {
@@ -69,181 +43,10 @@ const LIVE: GuidanceDeps = { edgar: new EdgarFilings(), now: () => new Date().to
 
 interface MarketRead {
   readonly at: number;
-  readonly inputs: Promise<GuidanceMarket | { readonly reason: string; readonly note: string }>;
+  readonly inputs: Promise<GuidanceMarket | GuidanceMarketMiss>;
 }
 const inflight = new Map<string, MarketRead>();
 
-async function chainFor(
-  client: AlpacaOptionsClient,
-  symbol: string,
-  expiration: string,
-  type: "call" | "put",
-): Promise<readonly OptionChainRow[]> {
-  try {
-    return await client.getChain(symbol, expiration, type);
-  } catch {
-    return [];
-  }
-}
-
-/** Read every market input live, pulse-check it, and hand back the engine's inputs minus the stake. */
-async function readMarket(
-  client: AlpacaOptionsClient,
-  config: DashboardServerConfig,
-  requesterId: string,
-  symbol: string,
-  deps: GuidanceDeps,
-  refresh: boolean,
-): Promise<GuidanceMarket | { readonly reason: string; readonly note: string }> {
-  const now = deps.now();
-  const today = etDateOf(now);
-  const trading = config.tradingClientFor?.(requesterId);
-  const barsFrom = new Date(Date.parse(now) - BARS_LOOKBACK_DAYS * 86_400_000)
-    .toISOString()
-    .slice(0, 10);
-  const [quote, expirations, bars, open, filings, ivSamples] = await Promise.all([
-    client.getUnderlyingQuote(symbol),
-    client.getExpirations(symbol, today, MAX_EXPIRATIONS).catch(() => [] as string[]),
-    client.getBars(symbol, barsFrom, today),
-    trading ? marketOpen(trading) : Promise.resolve(undefined),
-    deps.edgar.eightKs(symbol, { fresh: refresh }),
-    // The IV clock's history (local disk): a failed read degrades to "no rank yet", never a 500.
-    config.ivHistory?.list(symbol).catch(() => []) ?? Promise.resolve([]),
-  ]);
-  // After the filings are in: an earnings 8-K inside the window means the print already happened
-  // (`reportedIn`), so it no longer blocks an expiry — the next print on file becomes the active one.
-  const active = activePrint(UPCOMING_PRINTS, symbol, today, filings?.filings);
-  const print = active?.print;
-  const earnings = active?.window;
-  if (!quote)
-    return { reason: "failed", note: `No live quote for ${symbol} — nothing to advise on.` };
-  if (expirations.length === 0)
-    return { reason: "no-options", note: `No listed options for ${symbol}.` };
-  const spot = quote.last;
-  const sessionOpen = open ?? clockSessionOpen(now);
-  const priceable = expirations.filter(
-    (e) => daysBetween(today, e) >= MIN_DTE && !(earnings && e >= earnings.start),
-  );
-  // Parity reads spot off the nearest expiry at least a day out, both sides: the least time for a
-  // dividend (which parity cannot see) to fall inside it, without 0-DTE's wide, gamma-driven marks.
-  const parityExp =
-    expirations.find((e) => daysBetween(today, e) >= 1) ?? (expirations[0] as string);
-  const pages = await Promise.all(
-    [...new Set([parityExp, ...priceable])].flatMap((expiration) =>
-      (["call", "put"] as const).map(async (type) => ({
-        expiration,
-        type,
-        rows: await chainFor(client, symbol, expiration, type),
-      })),
-    ),
-  );
-  const days = (e: string) =>
-    daysToExpiryFrom(e, new Date(now)) ?? Math.max(1, daysBetween(today, e));
-  const chain: GuidanceQuote[] = pages.flatMap(({ expiration, type, rows }) =>
-    rows.map((row) => toGuidanceQuote(row, expiration, type, spot, days(expiration))),
-  );
-  const parityRows = (t: "call" | "put") =>
-    pages.find((p) => p.expiration === parityExp && p.type === t)?.rows ?? [];
-  const parity = parityImpliedSpot(parityRows("call"), parityRows("put"), spot, days(parityExp));
-  const stamps = pages.flatMap((p) => p.rows.flatMap((r) => (r.quotedAt ? [r.quotedAt] : [])));
-  const total = pages.reduce((n, p) => n + p.rows.length, 0);
-  // One summary per symbol (#4807): its nearest ledger — a print's or any other event's — feeds the
-  // levers below, and the summary itself rides along for the recap card.
-  const outlook = symbolOutlook(symbol, now);
-  const ledger = outlookLedger(outlook);
-  const evidence = printEvidenceFor(symbol);
-  // In session today's bar is a partial day; counting it would understate realized vol and flatter
-  // the implied ÷ realized ratio.
-  const closes = (bars ?? [])
-    .filter((b) => !(sessionOpen && etDateOf(b.t) === today))
-    .map((b) => b.c);
-  const realizedVol = realizedVolatility(closes);
-  const atm = atmIv(
-    chain,
-    spot,
-    richnessExpiry(
-      priceable
-        .filter((e) => {
-          const cutoff = optionsCutoff(earnings, undefined);
-          return !(cutoff && e > cutoff.date);
-        })
-        .map((e) => ({ expiration: e, dte: daysBetween(today, e) })),
-    ),
-  );
-  const mid =
-    quote.bid !== undefined && quote.ask !== undefined ? (quote.bid + quote.ask) / 2 : undefined;
-  const ivRank = ivRankOf(ivSamples, symbol, now);
-  const observed = {
-    last: spot,
-    ...(quote.lastAt ? { lastAt: quote.lastAt } : {}),
-    ...(parity !== undefined ? { parity } : {}),
-    ...(mid !== undefined ? { mid } : {}),
-  };
-  // Counted, never gating: a failed write must not cost the member their read.
-  void config.spotChecks
-    ?.save(spotCheckOf(symbol, observed, now, sessionOpen))
-    .catch(() => undefined);
-  return {
-    symbol,
-    now,
-    spot,
-    sessionOpen,
-    chain,
-    expirations,
-    ...(realizedVol !== undefined ? { realizedVol } : {}),
-    ...(ivRank !== undefined ? { ivRank } : {}),
-    ...(earnings ? { earnings } : {}),
-    ...(evidence ? { printEvidence: evidence.text } : {}),
-    catalysts: allEvents(now)
-      .filter((e) => e.symbols.includes(symbol) && !e.id.endsWith("-print") && e.date >= today)
-      .map((e) => ({ date: e.date, label: e.title, source: e.source })),
-    outlook,
-    ...(ledger
-      ? {
-          ledger: {
-            buySignal: ledger.read.buySignal,
-            buyConfidence: ledger.read.buySignal ? (ledger.read.confidence ?? "low") : "none",
-            stance: ledger.read.stance ?? "no call on record",
-            ...(ledger.read.provesWrong
-              ? {
-                  provesWrong: {
-                    quote: ledger.read.provesWrong,
-                    ...(ledger.read.assessed ? { asOf: ledger.read.assessed } : {}),
-                  },
-                }
-              : {}),
-            source: ledger.source,
-          },
-        }
-      : {}),
-    pulse: [
-      spotPulse(observed, now, sessionOpen),
-      chainPulse(stamps, total, now, sessionOpen),
-      researchPulse(
-        ledger
-          ? {
-              ...ledger.read,
-              source: ledger.source,
-              ...(outlook.basis?.callFrom === "ledger" ? { callUntil: outlook.until } : {}),
-            }
-          : undefined,
-        spot,
-        atm,
-        today,
-      ),
-      earningsPulse(print),
-      filingsPulse(filings, ledger?.read.assessed, now),
-      sessionPulse(open, now),
-    ],
-  };
-}
-
-/**
- * One symbol's market read through `requesterId`'s own account, coalesced: identical reads inside
- * 15 seconds share one pull, and `refresh` forces a new one. The guidance route and the quests route
- * (#7028) both read through here, so a member opening both pays for one read. A read that throws is
- * forgotten at once, so the next ask tries again.
- */
 /** At most this many extra expiries a staging read pages: the ones nearest the window's target. */
 const WINDOW_PAGES = 3;
 
@@ -289,6 +92,36 @@ export async function withWindowChain(
   return { ...market, chain: [...market.chain, ...added] };
 }
 
+/**
+ * The member's clients, handed to the shared read. Async on purpose: a `tradingClientFor` that
+ * throws becomes a rejected read (forgotten, then "failed" in words), never a synchronous throw past
+ * a caller's `.catch` — the quests route and the staging path both lean on that.
+ */
+async function memberRead(
+  client: AlpacaOptionsClient,
+  config: DashboardServerConfig,
+  requesterId: string,
+  symbol: string,
+  deps: GuidanceDeps,
+  refresh: boolean,
+): Promise<GuidanceMarket | GuidanceMarketMiss> {
+  const clients: GuidanceMarketClients = {
+    options: client,
+    edgar: deps.edgar,
+    now: () => deps.now(),
+    ...(config.ivHistory ? { ivHistory: config.ivHistory } : {}),
+    ...(config.spotChecks ? { spotChecks: config.spotChecks } : {}),
+  };
+  const trading = config.tradingClientFor?.(requesterId);
+  return await readGuidanceMarket(trading ? { ...clients, trading } : clients, symbol, refresh);
+}
+
+/**
+ * One symbol's market read through `requesterId`'s own account, coalesced: identical reads inside
+ * 15 seconds share one pull, and `refresh` forces a new one. The guidance route and the quests route
+ * (#7028) both read through here, so a member opening both pays for one read. A read that throws is
+ * forgotten at once, so the next ask tries again.
+ */
 export function guidanceMarketFor(
   client: AlpacaOptionsClient,
   config: DashboardServerConfig,
@@ -301,7 +134,7 @@ export function guidanceMarketFor(
   const cached = inflight.get(key);
   if (cached && Date.now() - cached.at < COALESCE_MS && !refresh) return cached.inputs;
   for (const [k, v] of inflight) if (Date.now() - v.at >= COALESCE_MS) inflight.delete(k);
-  const inputs = readMarket(client, config, requesterId, symbol, deps, refresh);
+  const inputs = memberRead(client, config, requesterId, symbol, deps, refresh);
   const read: MarketRead = { at: Date.now(), inputs };
   inflight.set(key, read);
   inputs.catch(() => {
