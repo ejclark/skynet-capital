@@ -24,7 +24,8 @@ const EMPTY: MemberFollowsState = {};
 
 /** The most bots one member pins; a bound on stored ids, not a game rule. */
 export const MAX_FOLLOWS_PER_MEMBER = 25;
-const MAX_ID = 100;
+/** The longest bot id a follow stores; the bots API bounds its body by the same number. */
+export const MAX_FOLLOW_ID = 100;
 
 export function parseMemberFollowsState(raw: unknown): MemberFollowsState | undefined {
   if (!isRecord(raw)) return undefined;
@@ -34,7 +35,8 @@ export function parseMemberFollowsState(raw: unknown): MemberFollowsState | unde
     const ids = [
       ...new Set(
         list.filter(
-          (id): id is string => typeof id === "string" && id.length > 0 && id.length <= MAX_ID,
+          (id): id is string =>
+            typeof id === "string" && id.length > 0 && id.length <= MAX_FOLLOW_ID,
         ),
       ),
     ].slice(0, MAX_FOLLOWS_PER_MEMBER);

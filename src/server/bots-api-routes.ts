@@ -4,6 +4,7 @@ import { botsRosterView } from "../observatory/bots-roster-view.js";
 import type { Session } from "./auth/session.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { opaqueMemberId } from "./feedback-issue.js";
+import { MAX_FOLLOW_ID } from "./member-follow-store.js";
 import { botStandingUnder } from "./ops-status-service.js";
 import {
   boundedString,
@@ -31,7 +32,6 @@ import {
  */
 
 const FOLLOW_BODY_CAP_BYTES = 512;
-const MAX_ID = 100;
 
 function botIds(config: DashboardServerConfig): Set<string> {
   return new Set(
@@ -93,7 +93,7 @@ export async function serveBotsApi(
   const memberKey = opaqueMemberId(session.email);
   const raw = await readJsonPost(req, res, FOLLOW_BODY_CAP_BYTES);
   if (raw === undefined) return true;
-  const id = boundedString(parseJsonRecord(raw)?.id, MAX_ID);
+  const id = boundedString(parseJsonRecord(raw)?.id, MAX_FOLLOW_ID);
   if (!(id && botIds(config).has(id))) {
     sendJson(res, 400, { error: "not a bot account" });
     return true;
