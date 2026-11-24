@@ -14,6 +14,7 @@ import { FetchAlpacaTradingTransport } from "../alpaca/trading-transport.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
 import { isSession } from "../domain/market-calendar.js";
 import { regularSessionOpen, sessionBounds } from "../domain/market-session.js";
+import { AlpacaNewsClient } from "../news/alpaca-news-client.js";
 import type { TradeActivityRecord } from "../observatory/activity-store.js";
 import type { TradingClientFactory } from "../observatory/dashboard-data.js";
 import type { ObservatoryEvent } from "../observatory/events.js";
@@ -52,6 +53,12 @@ export interface DataSource {
    * the same fixtures, where the options endpoints simply 404 — callers degrade honestly.
    */
   readonly optionsClientFactory: (participant: Participant) => AlpacaOptionsClient;
+  /**
+   * Builds the news client per participant, on that participant's own market-data credential
+   * (#8203: held news is never read on the bots' shared key). Offline has no news endpoint, so the
+   * read fails and the route says so in words.
+   */
+  readonly newsClientFactory: (participant: Participant) => AlpacaNewsClient;
   /** The roster (live: env; offline: fixture file). */
   loadParticipants(): Participant[];
   /** Start the realtime streams, pushing into `sink` — live: fills only, no price socket (#4864). */
@@ -107,6 +114,11 @@ function liveDataSource(env: Env): DataSource {
       transportFor(participant, env.ALPACA_DATA_BASE_URL ?? ALPACA_DATA_BASE_URL),
     );
 
+  const newsClientFactory = (participant: Participant): AlpacaNewsClient =>
+    new AlpacaNewsClient(
+      transportFor(participant, env.ALPACA_DATA_BASE_URL ?? ALPACA_DATA_BASE_URL),
+    );
+
   // One tracked socket per participant, so a rotation replaces its stream (instead of leaking
   // the old socket alongside the new one) and a removal can actually close it.
   const fillStreams = new Map<string, AlpacaTradeUpdatesStream>();
@@ -140,6 +152,7 @@ function liveDataSource(env: Env): DataSource {
     mode: "live",
     clientFactory,
     optionsClientFactory,
+    newsClientFactory,
     loadParticipants: () => loadParticipants(createDefaultPersonas(), env),
     startParticipantStream,
     stopParticipantStream,
@@ -206,6 +219,8 @@ function offlineDataSource(env: Env): DataSource {
     // The writable world's simulated market is also the data host (quotes, chains, snapshots).
     optionsClientFactory: (participant) =>
       new AlpacaOptionsClient(transportFor(participant.id), transportFor.market),
+    newsClientFactory: (participant) =>
+      new AlpacaNewsClient(transportFor.market ?? transportFor(participant.id)),
     loadParticipants: () => specs.map(toParticipant),
     // Offline replay emits every account's fills already; nothing to open per-account.
     startParticipantStream: () => {
