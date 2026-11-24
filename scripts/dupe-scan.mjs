@@ -48,7 +48,12 @@ const SCOPES = {
     dir: join(ROOT, "src"),
     ext: /\.ts$/,
     key: "duplicateDefs",
-    ignore: new Set(["main"]), // each script's own entrypoint, not shared code
+    ignore: new Set([
+      "main", // each script's own entrypoint, not shared code
+      // `parseRecord` is each store's private (unexported) validator for its own record shape
+      // (authored play, campaign, chain, conviction) — same name, four different jobs; no shared body.
+      "parseRecord",
+    ]),
   },
   app: {
     dir: join(ROOT, "app/src"),

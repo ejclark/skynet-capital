@@ -55,6 +55,7 @@ import {
   requireGet,
   sendJson,
 } from "./page-shell.js";
+import { type FormSaveBody, formWithReplaceId } from "./save-body.js";
 
 /**
  * A MEMBER'S OWN CAMPAIGNS API (#6949 slices 3a, 3b, 6) — the campaigns a member crafts. Keyed by
@@ -221,20 +222,15 @@ function share(
   });
 }
 
-function parseSaveBody(
+function parseCampaignSaveBody(
   raw: string,
-):
-  | { readonly form: CampaignForm; readonly replaceId?: string; readonly draft?: boolean }
-  | undefined {
+): (FormSaveBody<CampaignForm> & { readonly draft?: boolean }) | undefined {
   const body = parseJsonRecord(raw);
   if (!body) return undefined;
-  const form = parseCampaignForm(body.form);
-  if (!form) return undefined;
   if (body.draft !== undefined && typeof body.draft !== "boolean") return undefined;
-  const draft = body.draft === undefined ? {} : { draft: body.draft };
-  if (body.replaceId === undefined) return { form, ...draft };
-  const replaceId = boundedString(body.replaceId, CAMPAIGN_MAX_ID);
-  return replaceId ? { form, replaceId, ...draft } : undefined;
+  const saved = formWithReplaceId(body, parseCampaignForm, CAMPAIGN_MAX_ID);
+  if (!saved) return undefined;
+  return body.draft === undefined ? saved : { ...saved, draft: body.draft };
 }
 
 /** Put each subject on the discovery queue and say, in the member's words, where it stands. */
@@ -381,7 +377,7 @@ function save(
   asker: { readonly key: string; readonly name: string },
 ): void {
   const memberKey = asker.key;
-  const body = parseSaveBody(raw);
+  const body = parseCampaignSaveBody(raw);
   if (!body) {
     sendJson(res, 400, { error: "malformed save body" });
     return;
