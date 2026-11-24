@@ -83,6 +83,21 @@ describe("the questions every correctness reviewer is asked", () => {
   it("ask the reviewer agent the same", () => {
     expect(flat(readFileSync(".claude/agents/reviewer.md", "utf8"))).toMatch(STALE_MARKER);
   });
+
+  // A hash link checked only by reading its own line ships a jump to nothing (the target never renders
+  // under the link's query params) or under the sticky head (the target has no scroll-margin-top).
+  const HASH_JUMP =
+    /link or router call that jumps to an in-app hash.*hashScrollIntoView: false.*view it lands on with the link's own query params.*no element with that id renders there.*scroll-margin-top`? clearing the sticky head.*--landing-clear/i;
+
+  it("ask the audit's reviewer where a hash link lands and whether its target clears the sticky head", async () => {
+    const { calls } = await audit([], { causes: [] });
+    const prompt = flat(calls.find((c) => c.opts.label?.startsWith("review"))?.prompt ?? "");
+    expect(prompt).toMatch(HASH_JUMP);
+  });
+
+  it("ask the reviewer agent where a hash link lands too", () => {
+    expect(flat(readFileSync(".claude/agents/reviewer.md", "utf8"))).toMatch(HASH_JUMP);
+  });
 });
 
 describe("the audit's prevention step", () => {

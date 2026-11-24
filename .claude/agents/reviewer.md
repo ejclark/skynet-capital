@@ -53,6 +53,11 @@ whether it's ready.
      seen, an open PR holds the branch), say what re-opens it when the new request differs from the old
      and how long a stalled one can hold the slot, and report any marker with neither a re-open path
      nor an age limit.
+   - For every link or router call that jumps to an in-app hash (any call without
+     `hashScrollIntoView: false`), name the view it lands on with the link's own query params, and
+     report it when no element with that id renders there or the target has no `scroll-margin-top`
+     clearing the sticky head (under the cockpit head, the measured `--landing-clear` that
+     `publishClearance` writes in `app/src/shell/landing.ts`).
    - Any new comment that narrates history instead of stating a non-obvious WHY — a bare issue/PR
      number, "used by X", "added for the Y flow" (docs/ENGINEERING.md's WHY-vs-narration split)? Flag
      it for deletion; git blame and the PR already carry that history.
