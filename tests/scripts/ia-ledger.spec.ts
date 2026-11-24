@@ -85,6 +85,21 @@ describe("the IA ledger generator", () => {
       expect(stateOf("**done in #8101**")).toBe("fixed");
     });
 
+    it("reads a cell that opens **resolved** as fixed, with the first PR after it as the fix (#8080)", () => {
+      // U17's real cell: it shipped as "waiting, no plan", so Moneypenny called a fixed row open.
+      const cell =
+        "**resolved** by #6952 slice 2b and #7034 — an uncovered question joins the queue";
+      expect(stateOf(cell)).toBe("fixed");
+      expect(rowOf(["U17", "**t**", "", "", "", cell], REGISTRY).fixedBy).toBe(6952);
+      expect(stateOf("waiting (1 screen; not resolved by #5448)")).toBe("waiting");
+    });
+
+    it("ships every §10 row the doc marks resolved as fixed (#8080)", () => {
+      const { ia, registry } = readLedgerInputs();
+      const u17 = buildLedger(ia, registry).rows.find((r) => r.id === "U17");
+      expect(u17?.state).toBe("fixed");
+    });
+
     it("writes the JSON the way biome formats it, so a regenerate never trips lint", () => {
       const text = ledgerText({
         source: "s",
