@@ -285,6 +285,23 @@ export class AlpacaTradingClient {
     };
   }
 
+  /**
+   * The exchange calendar `[start, end]` (`YYYY-MM-DD`): one row per session with its real open and
+   * close on New York's wall clock — holidays absent, a half day closing "13:00" (#8248). Returned
+   * raw: `calendarDays` in `src/domain/market-clock.ts` is the one parser, and it refuses a body
+   * that isn't the shape rather than half-reading it.
+   */
+  async getCalendar(start: string, end: string): Promise<unknown> {
+    const query = new URLSearchParams({ start, end });
+    return ensureOk<unknown>(await this.transport.get(`/v2/calendar?${query.toString()}`));
+  }
+
+  /** NYSE's multi-market clock (`/v3/clock`): today's phase, when it ends, and the next open and
+   *  close. Raw, for `brokerClock` in `src/domain/market-clock.ts` to parse (#8248). */
+  async getMarketClock(): Promise<unknown> {
+    return ensureOk<unknown>(await this.transport.get("/v3/clock?markets=NYSE"));
+  }
+
   async placeOrder(params: PlaceOrderParams): Promise<AlpacaOrder> {
     const type = params.type ?? "market";
     const response = await this.transport.post("/v2/orders", {

@@ -3,7 +3,9 @@
  * minus the exchange holidays and 1:00 PM early closes in `market-calendar.ts`. Used where a
  * sentence or a liveness check needs to know whether the market is open without a broker round
  * trip. The desk's own gate (`src/server/desk-gate.ts`) still asks Alpaca before any order.
- * Mirrors the shell's `app/src/live/market-hours.ts` (which does not yet read the calendar).
+ * Mirrors the shell's `app/src/live/market-hours.ts` (which does not yet read the calendar). The
+ * broker-read clock members see is `market-clock.ts` (#8248); this table copy stays for the
+ * internal callers that #8248 left as they were.
  */
 import { formatDateTime } from "./intl-format.js";
 import { isSession, MARKET_CLOSURES, sessionsBefore } from "./market-calendar.js";
@@ -65,7 +67,7 @@ export function lastClosedSessionOpen(now: Date = new Date()): Date {
 /** `minutes` past midnight on New York's wall clock on `date`, as epoch ms. The wall time is read
  *  as UTC, then moved by New York's offset at that guess — session hours sit hours clear of a
  *  2:00 AM clock change, so the offset at the guess is the offset at the instant. */
-function newYorkInstant(date: string, minutes: number): number {
+export function newYorkInstant(date: string, minutes: number): number {
   const hh = String(Math.floor(minutes / 60)).padStart(2, "0");
   const mm = String(minutes % 60).padStart(2, "0");
   const guess = Date.parse(`${date}T${hh}:${mm}:00Z`);

@@ -60,6 +60,7 @@ import { installGracefulShutdown } from "../server/graceful-shutdown.js";
 import { guidanceMarketFor, withWindowChain } from "../server/guidance-route.js";
 import { heldActivity, heldOrderOrigins } from "../server/held-activity.js";
 import { ladderEvidenceReader } from "../server/ladder-evidence.js";
+import { marketClockReader } from "../server/market-clock.js";
 import { createMemberVisitStore } from "../server/member-visits.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
 import { ownerQueueWiring } from "../server/owner-queue.js";
@@ -617,6 +618,15 @@ async function main(): Promise<void> {
     newsClientFor: (id) => clientFor(id, dataSource.newsClientFactory),
     quoteStream,
     tradingClientFor: (id) => clientFor(id, dataSource.clientFactory),
+    // Market hours from Alpaca's calendar and clock (#8248), read on a house bot's credential —
+    // never a member's — and shared by every member; the table answers, labelled, when none can.
+    readMarketClock: marketClockReader({
+      client: () => {
+        const bot = hub.getState().participants.find((p) => p.kind === "bot" && !p.error);
+        return bot ? clientFor(bot.id, dataSource.clientFactory) : undefined;
+      },
+      ...(fixedNow ? { now: fixedNow } : {}),
+    }),
     ...("store" in ivHistory ? { ivHistory: ivHistory.store } : {}),
     // Beside the IV history on the same volume, and off whenever it is (research/spot-checks.ts).
     ...(spotChecks ? { spotChecks } : {}),
