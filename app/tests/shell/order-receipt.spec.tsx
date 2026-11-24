@@ -1,4 +1,4 @@
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, queryOptions } from "@tanstack/react-query";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import type { SentOrder } from "../../src/live/order-receipt";
 import type { DeskOrderRow, DeskOrders, OrderChange } from "../../src/live/orders";
@@ -34,6 +34,28 @@ rstest.mock("../../src/live/orders", () => ({
   },
 }));
 rstest.mock("../../src/live/desk-events", () => ({ useOrderFill: () => undefined }));
+
+// "Email me when it fills" (#8251): the route's answer, set per spec.
+let watchState: Record<string, unknown> = { available: true, watching: false };
+const armed: string[] = [];
+const followed: { orderId: string; replaces: string }[] = [];
+rstest.mock("../../src/live/fill-watch", () => {
+  return {
+    fillWatchQuery: (desk: string, orderId: string) =>
+      queryOptions({
+        queryKey: ["fill-watch", desk, orderId],
+        queryFn: () => Promise.resolve(watchState),
+      }),
+    armFillWatch: (_desk: string, orderId: string) => {
+      armed.push(orderId);
+      return Promise.resolve({ ok: true, watching: true, destination: "owner@x.com" });
+    },
+    followFillWatch: (_desk: string, orderId: string, replaces: string) => {
+      followed.push({ orderId, replaces });
+      return Promise.resolve({ ok: true, watching: false });
+    },
+  };
+});
 
 const UUID = "2ebcf855-387c-4d9f-9017-9d71571de193";
 const put: SentOrder = {
@@ -78,6 +100,9 @@ beforeEach(() => {
   orders = { available: true, asOf: "t", working: [row()], recent: [] };
   cancels.length = 0;
   changes.length = 0;
+  watchState = { available: true, watching: false };
+  armed.length = 0;
+  followed.length = 0;
 });
 
 describe("a sent order, still working", () => {
@@ -179,4 +204,56 @@ it("New ticket hands the form back", async () => {
   mount(put, onNewTicket);
   fireEvent.click(await screen.findByRole("button", { name: "New ticket" }));
   expect(onNewTicket).toHaveBeenCalledOnce();
+});
+
+describe("Email me when it fills (#8251)", () => {
+  it("SHALL offer one button on a live order, below the note and above Modify and Cancel", async () => {
+    mount(put);
+    const button = await screen.findByRole("button", { name: "Email me when it fills" });
+    const cancel = await screen.findByRole("button", { name: "Cancel order" });
+    // eslint-disable-next-line no-bitwise
+    expect(button.compareDocumentPosition(cancel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("SHALL arm the watch on a tap and then say where the email goes, with a check glyph", async () => {
+    mount(put);
+    fireEvent.click(await screen.findByRole("button", { name: "Email me when it fills" }));
+    const armedLine = await screen.findByRole("status");
+    expect(armedLine).toHaveTextContent("✓ We'll email owner@x.com when it fills");
+    expect(armed).toEqual([UUID]);
+    expect(screen.queryByRole("button", { name: "Email me when it fills" })).toBeNull();
+  });
+
+  it("SHALL show the route's own sentence instead of the button when email is unavailable", async () => {
+    watchState = {
+      available: false,
+      reason: "Email isn't set up on this deployment yet, so watch the Orders list for the fill.",
+      watching: false,
+    };
+    mount(put);
+    expect(await screen.findByText(/Email isn't set up on this deployment yet/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Email me when it fills" })).toBeNull();
+  });
+
+  it("SHALL NOT offer it once the order has filled", async () => {
+    orders = {
+      available: true,
+      asOf: "t",
+      working: [],
+      recent: [row({ state: "filled", filledQuantity: 20, cancelable: false })],
+    };
+    mount({ ...put, status: "filled" });
+    await screen.findByRole("region", { name: "Order receipt" });
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "Email me when it fills" })).toBeNull(),
+    );
+  });
+
+  it("SHALL move the watch to a modify's new order id", async () => {
+    mount(put);
+    fireEvent.click(await screen.findByRole("button", { name: "Modify" }));
+    fireEvent.change(screen.getByLabelText(/Limit/i), { target: { value: "19" } });
+    fireEvent.click(screen.getByRole("button", { name: /Send change/ }));
+    await waitFor(() => expect(followed).toEqual([{ orderId: "o-9", replaces: UUID }]));
+  });
 });
