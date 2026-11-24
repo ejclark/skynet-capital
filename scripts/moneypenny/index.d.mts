@@ -22,7 +22,13 @@ export function triageFeedbackDecision(issue?: { labels?: string[] }): {
 };
 export type ClaimCtx = {
   payload?: {
-    issue?: { number?: number; state?: string; body?: string; labels?: Array<{ name?: string }> };
+    issue?: {
+      number?: number;
+      state?: string;
+      body?: string;
+      labels?: Array<{ name?: string }>;
+      updated_at?: string;
+    };
     /** `id`/`created_at` are read only by `claimFeedbackReply` — the reply pointer it hands the
      *  build, and the baseline the stall guard measures that run's silence from. */
     comment?: { body?: string; id?: number; created_at?: string };
@@ -64,8 +70,34 @@ export function claimFeedback(
   ctx: ClaimCtx,
   nowMs?: number,
   sha?: string,
-  admission?: AdmissionDeps & { readIssue?: (n: number) => AdmissionIssue },
+  admission?: AdmissionDeps & {
+    readIssue?: (n: number) => AdmissionIssue;
+    /** The lease read (#8314): a live session's hold refuses the claim. */
+    readLease?: (slug: string) => { takenMs: number; holder: string } | null;
+  },
 ): ClaimResult;
+/** #6065/#8314: a live session takes the lease, and the `session-held` label; the label alone when
+ *  the ref write is refused (a cloud session's proxy). */
+export function holdForSession(
+  slug: string,
+  nowMs?: number,
+  deps?: {
+    claim?: (
+      slug: string,
+      sha: string,
+      nowMs: number,
+      ttlMs: number,
+      holder: string,
+    ) => { claimed: boolean; reason: string };
+    label?: (n: number | null, add: boolean) => boolean;
+  },
+): { claimed: boolean; reason: string; label?: boolean };
+/** #8314: the refusal reason when a live session holds the issue by the activity rule, else null. */
+export function sessionHoldRefusal(
+  issue: { updated_at?: string; labels?: Array<{ name?: string }> } | null | undefined,
+  lease: { takenMs: number; holder: string } | null | undefined,
+  nowMs: number,
+): string | null;
 /** #3959 slices 1–2: an authorized reply on a blocked issue resumes the lane that owns it. A
  *  `feedback` issue takes the same lease, sets `in-progress`, clears the answered label, and reports
  *  the reply's comment id; a `plan` issue is only unparked (`unparked: true`) and the plan gate's

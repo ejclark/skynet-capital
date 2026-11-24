@@ -176,6 +176,17 @@ export const LABELS = {
     description: "Being built right now — cleared when the build ends or after 6h with no activity",
     managed: true,
   },
+  // #8314 — A LIVE SESSION HOLDS THIS ISSUE THROUGH ITS OWN MERGES. The cloud-safe half of the
+  // session hold (session-hold.mjs): a cloud session's proxy refuses the claim-ref write (HTTP 403),
+  // but an issue-label write over REST goes through. `--hold` takes the ref where it can and this
+  // label where it cannot; `--release` and the stall audit's 6h sweep take it off.
+  sessionHeld: {
+    name: "session-held",
+    color: "fbe5b6",
+    description:
+      "A live session is building this across several PRs — keeps in-progress on at its merges",
+    managed: true,
+  },
 
   // ── registered, not owned ───────────────────────────────────────────────────
   // Real labels this repo runs on that no lane here applies. They are named so `feedback-scan`,
@@ -434,6 +445,28 @@ export function setInProgress(number, add) {
     const verb = add ? "apply" : "remove";
     console.log(
       `::warning::could not ${verb} \`${LABELS.inProgress.name}\` on #${number}: ${String(err?.stderr || err?.message).slice(0, 200)}`,
+    );
+    return false;
+  }
+}
+
+/**
+ * Put `session-held` on or take it off an issue (#8314). Over REST, never `gh issue edit`: that is
+ * GraphQL, which a cloud session's proxy refuses, and a cloud session is who needs this label.
+ * Best-effort like `setInProgress`: returns false on a failed write. Removing an absent label 404s,
+ * which is the harmless no-op it reads as.
+ */
+export function setSessionHeld(number, add, exec = sh) {
+  if (!number) return false;
+  const path = `repos/{owner}/{repo}/issues/${number}/labels`;
+  try {
+    if (add) exec("gh", ["api", "-X", "POST", path, "-f", `labels[]=${LABELS.sessionHeld.name}`]);
+    else exec("gh", ["api", "-X", "DELETE", `${path}/${LABELS.sessionHeld.name}`]);
+    return true;
+  } catch (err) {
+    if (!add) return false;
+    console.log(
+      `::warning::could not apply \`${LABELS.sessionHeld.name}\` on #${number}: ${String(err?.stderr || err?.message).slice(0, 200)}`,
     );
     return false;
   }
