@@ -31,6 +31,13 @@
 -
 - This week so far (<YYYY-Www>, partial): <the line from `node scripts/newsletter.mjs --week "$(date -u +%G-W%V)"`, in the form .claude/skills/secretary section 1 gives; on a Monday, a link to the edition that closed the week>
 
+## The picture
+
+<!-- `node scripts/digest-scan.mjs --pictures`, verbatim: the `## The picture` blocks of the PRs
+     merged since the last digest, newest first, waived ones skipped, the 5 newest at most. Advisory
+     until two digests carry it (#3748 slice 7c); `digest-scan --validate` names a digest without it
+     but does not fail. A window with no picture prints one line saying so. -->
+
 ## Noise absorbed
 
 <!-- Counts only — the tier that proves the machine eats its own noise.

@@ -44,3 +44,8 @@ export function learningLine(count: {
 export function memberFilingsLine(
   unseen: readonly { number: number; title?: string; ageHours: number }[],
 ): string;
+/** Digests dated from the advisory day on that lack the `## The picture` slot (#3748 slice 7c). */
+export function missingPictureSlot(
+  files: readonly string[],
+  readText: (file: string) => string,
+): string[];

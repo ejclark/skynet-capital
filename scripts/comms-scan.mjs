@@ -12,6 +12,9 @@
 //   ... --since=YYYY-MM-DD                   # window override (default: the last digest's date)
 //   ... --since=2026-10-10T16:00:00-05:00    # …or an exact instant: the decisions page (#5056)
 //                                            #    starts its reel at the previous page's Done
+//   node scripts/comms-scan.mjs --pictures   # the digest's picture slot: each PR's `## The picture`
+//                                            #    block, newest first, waived ones skipped (#3748 7c)
+//   ... --limit=N                            # cap --pictures at the N newest (default 5)
 //   ... --offline                           # skip every GitHub call, even with a token set
 //   ... --fixture=<path.json>                # read commits from a file instead of git (specs)
 //
@@ -60,8 +63,13 @@ const has = (name) => process.argv.includes(`--${name}`);
  * a lane reaches for is the interesting question ("do screenshots draw more reactions than
  * mermaid?"), and a yes/no column cannot answer it.
  */
+/** The text under a squash body's `## The picture` heading, up to the next `## `. Pure. */
+export function pictureSection(body) {
+  return body.split(/^## The picture$/m)[1]?.split(/^## /m)[0] ?? "";
+}
+
 export function pictureState(body) {
-  const section = body.split(/^## The picture$/m)[1]?.split(/^## /m)[0] ?? "";
+  const section = pictureSection(body);
   if (!section.trim()) return { picture: "missing", waiver: null };
   const waiver = section.match(/^Picture: waived — (.+)$/m);
   if (waiver) return { picture: "waived", waiver: (waiver[1] ?? "").trim() };
@@ -106,6 +114,7 @@ export function parseLog(raw) {
         ericComments: null,
         reactions: null,
         ...pictureState(body),
+        block: pictureSection(body).trim(),
       };
     })
     .filter((r) => r.number !== null);
@@ -157,6 +166,26 @@ function readLog(since) {
     { cwd: ROOT, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 },
   );
   return parseLog(raw);
+}
+
+/** How many pictures the digest slot carries unless `--limit` says otherwise — the cap that keeps a
+ *  busy week's harvest from overflowing the digest's fold (#3748 slice 7c's falsifier). */
+export const PICTURE_LIMIT = 5;
+
+/**
+ * The digest's picture slot, from parsed rows (git log order: newest first). Waived and missing
+ * pictures are skipped — a waiver has nothing to look at — and at most `limit` of the newest are
+ * kept, each under a `### #N subject` line so a reader can tell whose picture it is. Pure.
+ * `null` when the window held no picture, so the caller can say that instead of printing nothing.
+ */
+export function harvestPictures(rows, limit = PICTURE_LIMIT) {
+  const shown = rows.filter((r) => r.picture !== "waived" && r.picture !== "missing" && r.block);
+  if (!shown.length) return null;
+  const kept = shown.slice(0, limit);
+  const parts = kept.map((r) => `### #${r.number} ${r.subject}\n\n${r.block}`);
+  const more = shown.length - kept.length;
+  if (more > 0) parts.push(`_${more} older picture(s) not shown — the ${limit} newest only._`);
+  return parts.join("\n\n");
 }
 
 const hoursBetween = (fromIso, toIso) =>
@@ -255,12 +284,25 @@ async function main() {
   const rows = fixture ? readFixture(fixture) : readLog(since);
   // --offline forces the free tier even where a token exists: the picture columns are the ones
   // the digest reads most, and they should never cost a round trip to look at.
-  const token = has("offline") ? null : process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+  const token =
+    has("offline") || has("pictures") ? null : process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
   if (token && rows.length) await enrich(rows, token);
 
-  if (has("json")) {
+  if (has("pictures")) {
+    const limit = Number(arg("limit") ?? PICTURE_LIMIT);
+    if (!Number.isInteger(limit) || limit < 1) {
+      throw new Error("comms-scan: --limit must be a positive integer.");
+    }
     process.stdout.write(
-      `${JSON.stringify({ since: window, enriched: Boolean(token), ...summarize(rows), rows }, null, 2)}\n`,
+      `${harvestPictures(rows, limit) ?? `_No PR picture merged since ${window}: every change was waived or had none._`}\n`,
+    );
+    return;
+  }
+  if (has("json")) {
+    // The meter's shape: the harvested block is the digest slot's, not a column of the meter.
+    const meter = rows.map(({ block: _block, ...row }) => row);
+    process.stdout.write(
+      `${JSON.stringify({ since: window, enriched: Boolean(token), ...summarize(rows), rows: meter }, null, 2)}\n`,
     );
     return;
   }

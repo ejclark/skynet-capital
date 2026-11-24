@@ -167,3 +167,40 @@ describe("the landing meter — a window that starts at an exact moment (#5056)"
     ).toThrow();
   });
 });
+
+// The digest's picture slot (#3748 slice 7c): the harvest of each merged PR's `## The picture`
+// block. Driven through the same fixture, so the cases pin what a digest would print.
+describe("the digest picture slot — what it harvests", () => {
+  it("prints each PR's picture block newest first and skips the waived and the missing", () => {
+    const out = run("--pictures");
+    const heads = out.split("\n").filter((l) => l.startsWith("### "));
+    expect(heads.map((h) => h.split(" ")[1])).toEqual(["#601", "#602", "#605"]);
+    expect(out).toContain("```mermaid");
+    expect(out).not.toContain("#603"); // waived: nothing to look at
+    expect(out).not.toContain("#604"); // no picture section at all
+  });
+
+  it("caps at the newest N and says how many it left out, never silently truncating", () => {
+    const out = run("--pictures", "--limit=2");
+    expect(out.split("\n").filter((l) => l.startsWith("### "))).toHaveLength(2);
+    expect(out).toContain("1 older picture(s) not shown");
+  });
+
+  it("refuses a --limit that is not a positive integer", () => {
+    expect(() => run("--pictures", "--limit=0")).toThrow();
+  });
+
+  it("emits a block the mermaid gate accepts", () => {
+    const out = run("--pictures");
+    const lint = execFileSync("node", ["scripts/mermaid-lint.mjs", "--stdin"], {
+      cwd: process.cwd(),
+      input: out,
+      encoding: "utf8",
+    });
+    expect(lint).not.toMatch(/✗|error/i);
+  });
+
+  it("keeps the harvested block out of the meter's own JSON rows", () => {
+    expect(Object.keys(report().rows[0] ?? {})).not.toContain("block");
+  });
+});
