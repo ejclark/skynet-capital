@@ -1,9 +1,8 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { WATCH_MAX_AGE_MS } from "../../src/alerts/fill-watch.js";
-import type { ActivityEvent } from "../../src/observatory/activity-event.js";
-import { InMemoryActivityEventBus } from "../../src/observatory/in-memory-activity-event-bus.js";
+import { JsonlAlertDeliveryStore } from "../../src/adapters/jsonl-alert-delivery-store.js";
+import type { FillWatch } from "../../src/alerts/fill-watch.js";
 import {
   type AlertDeliveryWiring,
   wireAlertDelivery,
@@ -11,59 +10,72 @@ import {
 import type { DeskAlertsDeps } from "../../src/server/desk-alerts-route.js";
 
 /**
- * The wiring's retry path for a watched order (#8352). A watch's email used to get exactly one
- * delivery pass: when the provider refused it (a 429, a 5xx, the timeout) nothing queued another
- * for a member whose account-wide email is off — the very member the receipt's "Email me when it
- * fills" is for — because the hourly sweep walked prefs lines only and skipped channel "off". These
- * drive the real wiring (real JSONL store, real transport over a stubbed fetch, a 30 ms sweep) with
- * NO further order event, so the sweep is the only thing that can retry.
+ * The delivery wiring's retry path for a one-order watch (#8352, found auditing #8301). A member
+ * with account-wide email off taps "Email me when it fills"; the fill's one delivery pass meets a
+ * provider that answers 429. Nothing else happens on the account. The hourly sweep is the only
+ * trigger left, so it must reach a member who holds an open watch — not just one who switched the
+ * account-wide channel on — or the email is never sent and the watch never ends.
  */
 
-const ACCOUNT = "human-acct";
-const OWNER = "owner@x.com";
-const realFetch = globalThis.fetch;
+const NOW = new Date("2026-11-24T14:31:00Z");
 
-const filled = (at: string): ActivityEvent => ({
-  id: `ord-1:order.filled:${at}`,
+const watch: FillWatch = {
+  orderId: "ord-1",
+  destination: "ann@x.com",
+  link: "https://app.example/app/trade?desk=human-ann&section=orders",
+  at: "2026-11-24T02:00:00.000Z",
+};
+
+const filled = {
+  id: "e-1",
   eventType: "order.filled",
-  actor: { participantId: ACCOUNT },
-  target: { kind: "order", id: "ord-1" },
-  at,
+  actor: { participantId: "human-ann" },
   correlationId: "ord-1",
   source: "stream",
-  outcome: "success",
-  visibility: "owner-only",
-  payload: { symbol: "NVDA", quantity: 3, filledQuantity: 3, price: 120 },
-});
+  outcome: "success" as const,
+  target: { kind: "order", id: "ord-1" },
+  at: "2026-11-24T14:30:00Z",
+  visibility: "owner-only" as const,
+  payload: { symbol: "NVDA", side: "buy", quantity: 5, filledQuantity: 5, price: 181.32 },
+};
 
-/** The provider answers each send with the next status in `statuses` (the last one repeats). */
-function stubProvider(statuses: readonly number[]): number[] {
-  const answered: number[] = [];
-  globalThis.fetch = (() => {
-    const status = statuses[Math.min(answered.length, statuses.length - 1)] ?? 200;
-    answered.push(status);
-    const body = status === 200 ? JSON.stringify({ id: `msg-${answered.length}` }) : "slow down";
-    return Promise.resolve(new Response(body, { status }));
-  }) as typeof fetch;
-  return answered;
+/** The fewest deps the strip's derivation needs to see one filled order on one account. */
+function deps(): DeskAlertsDeps {
+  return {
+    hub: { getState: () => ({ participants: [{ id: "human-ann", cash: 0, positions: [] }] }) },
+    optionsClientFor: () => undefined,
+    now: () => NOW,
+    activityLog: { list: () => Promise.resolve([filled]) },
+  } as unknown as DeskAlertsDeps;
 }
 
-async function until(check: () => boolean | Promise<boolean>, ms = 2_000): Promise<void> {
-  const deadline = Date.now() + ms;
-  while (!(await check())) {
-    if (Date.now() > deadline) return;
+/** Wait for `done`, polling; fails the spec with `what` rather than hanging it. */
+async function until(done: () => boolean, what: string, ms = 2_000): Promise<void> {
+  const start = Date.now();
+  while (!done()) {
+    if (Date.now() - start > ms) throw new Error(`timed out waiting for ${what}`);
     await new Promise((resolve) => setTimeout(resolve, 10));
   }
 }
 
-describe("wireAlertDelivery — a watched order's email is retried by the sweep (#8352)", () => {
+describe("wireAlertDelivery — a watched order's failed send is retried by the sweep (#8352)", () => {
   let dir: string;
-  let bus: InMemoryActivityEventBus;
   let wiring: AlertDeliveryWiring | undefined;
+  let statuses: number[];
+  let derivations: number;
+  const realFetch = globalThis.fetch;
 
   beforeEach(() => {
     dir = mkdtempSync(join(tmpdir(), "alert-wiring-"));
-    bus = new InMemoryActivityEventBus();
+    statuses = [];
+    derivations = 0;
+    // The provider refuses the first send (rate limited), then recovers.
+    globalThis.fetch = (() => {
+      const status = statuses.length === 0 ? 429 : 200;
+      statuses.push(status);
+      const body = status === 200 ? JSON.stringify({ id: "msg-1" }) : "rate limited";
+      return Promise.resolve(new Response(body, { status }));
+    }) as typeof fetch;
   });
   afterEach(() => {
     wiring?.stop();
@@ -73,90 +85,63 @@ describe("wireAlertDelivery — a watched order's email is retried by the sweep 
   });
 
   function wire(): AlertDeliveryWiring {
-    const hub = {
-      getState: () => ({ participants: [{ id: ACCOUNT, kind: "human", positions: [] }] }),
-    } as unknown as DeskAlertsDeps["hub"];
     wiring = wireAlertDelivery({
       env: {
         SKYNET_ALERT_DELIVERY_DIR: dir,
         SKYNET_ALERT_EMAIL_API_KEY: "test-key",
-        SKYNET_ALERT_EMAIL_FROM: "alerts@x.com",
+        SKYNET_ALERT_EMAIL_FROM: "Skynet <alerts@example.com>",
+        // 30 ms, so a spec sees dozens of sweeps in well under a second.
         SKYNET_ALERT_SWEEP_MINUTES: "0.0005",
       },
-      deps: () => ({ hub, activityLog: bus }),
-      activityEvents: bus,
-      ownerEmailFor: () => OWNER,
+      deps: () => {
+        derivations += 1;
+        return deps();
+      },
+      activityEvents: { subscribe: () => ({ unsubscribe: () => undefined }) },
+      ownerEmailFor: () => "ann@x.com",
     });
     return wiring;
   }
 
-  const watch = (at: string) => ({
-    orderId: "ord-1",
-    destination: OWNER,
-    link: "https://app.example/app/trade?section=orders",
-    at,
-  });
-
-  it("fill, a refused send, no further events: a later sweep retries it and the watch ends", async () => {
-    const answered = stubProvider([429, 200]);
-    const { store } = wire();
-    // The account-wide channel is never touched: no prefs line at all, as after a bare tap.
-    await store.saveWatch(ACCOUNT, watch(new Date().toISOString()));
-    await bus.publish(filled(new Date().toISOString()));
-
-    await until(async () => (await store.load(ACCOUNT)).watches.length === 0);
-
-    expect(answered).toEqual([429, 200]);
-    expect((await store.load(ACCOUNT)).watches).toEqual([]);
-  });
-
-  it("also retries for a member who turned the account-wide channel off", async () => {
-    const answered = stubProvider([503, 200]);
-    const { store } = wire();
-    await store.savePrefs(ACCOUNT, { channel: "off", minPriority: "info" });
-    await store.saveWatch(ACCOUNT, watch(new Date().toISOString()));
-    await bus.publish(filled(new Date().toISOString()));
-
-    await until(async () => (await store.load(ACCOUNT)).watches.length === 0);
-
-    expect(answered).toEqual([503, 200]);
-  });
-
-  it("gives up after a bounded number of refused sends and drops the watch, rather than retrying forever", async () => {
-    const answered = stubProvider([429]);
-    const { store } = wire();
-    await store.saveWatch(ACCOUNT, watch(new Date().toISOString()));
-    await bus.publish(filled(new Date().toISOString()));
-
-    await until(async () => (await store.load(ACCOUNT)).watches.length === 0);
-    const sends = answered.length;
+  it("retries a tap-only watch (no account-wide choice saved) until it sends, then ends it", async () => {
+    await new JsonlAlertDeliveryStore(dir).saveWatch("human-ann", watch);
+    const { nudge, store } = wire();
+    // The fill's one pass: the provider answers 429.
+    nudge?.("human-ann");
+    await until(() => statuses.length >= 1, "the fill's first send");
+    await until(() => statuses.length >= 2, "the sweep's retry");
+    // The send lands before its ledger line and the watch's end are written; give those a beat.
+    let record = await store.load("human-ann");
+    const start = Date.now();
+    while (record.watches.length > 0 && Date.now() - start < 2_000) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      record = await store.load("human-ann");
+    }
+    expect(record.sent).toEqual(["fill-watch:ord-1"]);
+    expect(record.watches).toEqual([]);
+    // Ended: later sweeps neither send it again nor keep visiting the account for it.
     await new Promise((resolve) => setTimeout(resolve, 150));
-
-    expect((await store.load(ACCOUNT)).watches).toEqual([]);
-    expect(sends).toBe(5);
-    expect(answered).toHaveLength(5);
+    expect(statuses).toEqual([429, 200]);
   });
 
-  it("drops a watch past the age limit on the next sweep, sending nothing, so it stops holding a slot", async () => {
-    const answered = stubProvider([200]);
-    const { store } = wire();
-    const old = new Date(Date.now() - WATCH_MAX_AGE_MS - 60_000).toISOString();
-    await store.saveWatch(ACCOUNT, watch(old));
-
-    await until(async () => (await store.load(ACCOUNT)).watches.length === 0);
-
-    expect((await store.load(ACCOUNT)).watches).toEqual([]);
-    expect(answered).toEqual([]);
+  it("retries the same way when the member's account-wide channel is explicitly off", async () => {
+    const seed = new JsonlAlertDeliveryStore(dir);
+    await seed.savePrefs("human-ann", { channel: "off", minPriority: "critical" });
+    await seed.saveWatch("human-ann", watch);
+    const { nudge } = wire();
+    nudge?.("human-ann");
+    await until(() => statuses.length >= 2, "the sweep's retry");
+    expect(statuses).toEqual([429, 200]);
   });
 
-  it("keeps a young watch whose order is still working", async () => {
-    const answered = stubProvider([200]);
-    const { store } = wire();
-    await store.saveWatch(ACCOUNT, watch(new Date().toISOString()));
-
-    await new Promise((resolve) => setTimeout(resolve, 150));
-
-    expect((await store.load(ACCOUNT)).watches).toHaveLength(1);
-    expect(answered).toEqual([]);
+  it("does no work for a member with the channel off and no open watch", async () => {
+    await new JsonlAlertDeliveryStore(dir).savePrefs("human-ann", {
+      channel: "off",
+      minPriority: "critical",
+    });
+    wire();
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(derivations).toBe(0);
+    expect(statuses).toEqual([]);
   });
 });

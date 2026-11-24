@@ -163,9 +163,12 @@ const THIS_REPO = "skynet-capital";
  * Whether the word before a `#N` names another repo (#8231): an `owner/repo` or a hyphenated name,
  * as repos are and plain prose before an issue number rarely is. A false hit (`follow-up #N`) costs a
  * claim left unchecked; a miss read another repo's issue state as ours, a wrong verdict with no marker.
+ * A word with no letter or digit is punctuation, not a name: `- #5850` is a list bullet (#8343).
  */
 function isOtherRepo(word) {
-  return Boolean(word && /[-/]/.test(word) && word.split("/").at(-1) !== THIS_REPO);
+  return Boolean(
+    word && /\w/.test(word) && /[-/]/.test(word) && word.split("/").at(-1) !== THIS_REPO,
+  );
 }
 
 /** What a memory cites that a stale check can test mechanically, at no model tokens. */

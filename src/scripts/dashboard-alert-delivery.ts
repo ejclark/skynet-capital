@@ -1,7 +1,7 @@
 import { createAlertDelivery } from "../adapters/email-alert-delivery.js";
 import { createAlertDeliveryStore } from "../adapters/jsonl-alert-delivery-store.js";
 import { AlertDeliveryDispatcher } from "../alerts/alert-delivery-dispatcher.js";
-import { WATCH_MAX_AGE_MS } from "../alerts/fill-watch.js";
+import { type FillWatch, WATCH_MAX_AGE_MS } from "../alerts/fill-watch.js";
 import type { ActivityEventBus } from "../observatory/activity-event.js";
 import type { AlertDeliveryPort, AlertDeliveryStorePort } from "../ports/alert-delivery.js";
 import { type DeskAlertsDeps, deskAlertsFor } from "../server/desk-alerts-route.js";
@@ -15,12 +15,10 @@ import { type DeskAlertsDeps, deskAlertsFor } from "../server/desk-alerts-route.
  *    what is new. A fill or a rejection therefore reaches them within a second of the broker's own
  *    echo, with no polling added anywhere.
  * 2. **The sweep.** Expiry reminders and assignment risk are standing conditions, not events —
- *    nothing fires them. A timer re-derives them for MEMBERS WHO OPTED IN ONLY, so a deployment
- *    where nobody has turned delivery on does no broker reads at all and the cost of this feature
- *    is exactly zero until someone asks for it. A member with an open one-order watch counts as
- *    asking (#8352): the sweep is what retries a watched fill whose one send was refused or lost
- *    to a restart, whatever the account-wide channel says, and it drops a watch past
- *    `WATCH_MAX_AGE_MS` with a logged note so a lost email cannot hold a watch slot forever.
+ *    nothing fires them. A timer re-derives them for MEMBERS WHO OPTED IN ONLY — the account-wide
+ *    channel on, or one order watched (#8352: the sweep is a watch's only retry) — so a deployment
+ *    where nobody has asked for delivery does no broker reads at all and the cost of this feature
+ *    is exactly zero until someone asks for it.
  *
  * Both paths share `deskAlertsFor`, the strip's own derivation, so a delivered alert is by
  * construction the same alert the page would have shown — dismissals already subtracted, no second
@@ -108,6 +106,9 @@ export function wireAlertDelivery(options: {
     if (event.target.kind === "order") queue(event.actor.participantId);
   });
 
+  // An open watch earns the sweep too, channel off or not (#8352): a watch's send that failed (a
+  // 429, the 10 s timeout) or whose pass was lost (a throw, a restart) has no other retry unless
+  // the account happens to place another order — and its fill leaves the 24 h window regardless.
   const sweep = async (): Promise<void> => {
     const members = await store.listMembers().catch(() => []);
     for (const id of members) {
@@ -116,12 +117,10 @@ export function wireAlertDelivery(options: {
       if (prefs.channel !== "off" || open > 0) queue(id);
     }
   };
-  // A watch past its age limit can never be worded (its order's ending has left the alert window),
-  // so it is ended here rather than re-derived hourly forever. Returns how many stay open.
-  const dropStaleWatches = async (
-    id: string,
-    watches: readonly { readonly orderId: string; readonly at: string }[],
-  ): Promise<number> => {
+  // The retry is bounded by age: a watch past `WATCH_MAX_AGE_MS` can never be worded (its order's
+  // ending has left the 24 h alert window), so it ends here with a logged note rather than being
+  // re-derived hourly forever and holding one of the 50 watch slots. Returns how many stay open.
+  const dropStaleWatches = async (id: string, watches: readonly FillWatch[]): Promise<number> => {
     let open = 0;
     for (const watch of watches) {
       if (Date.now() - Date.parse(watch.at) <= WATCH_MAX_AGE_MS) {

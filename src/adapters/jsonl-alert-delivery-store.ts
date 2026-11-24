@@ -138,13 +138,10 @@ export class JsonlAlertDeliveryStore implements AlertDeliveryStorePort {
 
   async listMembers(): Promise<readonly string[]> {
     const lines = await this.store.list();
-    return [
-      ...new Set(
-        lines
-          .filter((line) => line.kind === "prefs" || line.kind === "watch")
-          .map((l) => l.consumerId),
-      ),
-    ];
+    // A watch line counts (#8352): a member who only ever tapped "Email me when it fills" has no
+    // prefs line, and the sweep is the one retry a failed watch send gets.
+    const asked = lines.filter((line) => line.kind === "prefs" || line.kind === "watch");
+    return [...new Set(asked.map((line) => line.consumerId))];
   }
 }
 
