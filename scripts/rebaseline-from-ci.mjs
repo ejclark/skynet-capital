@@ -6,6 +6,7 @@
 //   node scripts/rebaseline-from-ci.mjs <pr> --run <id> --apply           # copy actuals over baselines
 //   node scripts/rebaseline-from-ci.mjs <pr> --run <id> --apply --commit  # …and one commit
 //   ... --out <dir>                                             # where images land (default: temp)
+//   ... --from-git                                  # read the run's report from git, not the artifact
 //
 // The dry run never touches the repo: it saves each failing screenshot's expected, actual and diff
 // side by side under a temp dir and prints where. Exit 0 = listed, or applied. Exit 1 = refused and
@@ -29,7 +30,24 @@
 // a pixel mismatch on a snapshot that already has a baseline is ever copied. A new snapshot, and
 // every failure that is not a mismatch — a logic assertion, an unstable page, a server that never
 // booted — is printed and refused, so this can never turn a red logic test green.
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync } from "node:fs";
+//
+// --from-git (#8295, 2026-11-24). The artifact lives on an Azure blob host whose name changes per
+// run (`productionresultssa<N>.blob.core.windows.net`), and a cloud session's proxy refuses every
+// one, so #8044 and #8288 sat red on their own intended page changes waiting for a person. When
+// `integration tests` fails on a PR, pipeline.yml's `ci shots` job pushes the report's index.html
+// and its PNG attachments to `refs/ci-shots/pr-<n>/run-<id>` (pruned after 14 days). --from-git
+// fetches that ref over git, which every session reaches, and lays it out exactly as the download
+// would, so everything after it — the mapping, the refusals, the dry-run default — is the same code.
+// It is the report, not only the actual PNGs, on purpose: the refusals read the report's errors.
+import { execFileSync } from "node:child_process";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, posix } from "node:path";
 import { crc32, inflateRawSync } from "node:zlib";
@@ -288,10 +306,11 @@ export function renderRows(rows) {
 
 // ---- the CLI: everything below reads GitHub or the disk ----
 
-const USAGE = "usage: node scripts/rebaseline-from-ci.mjs <pr> [--run <id>] [--apply [--commit]]";
+const USAGE =
+  "usage: node scripts/rebaseline-from-ci.mjs <pr> [--run <id>] [--from-git] [--apply [--commit]]";
 
 function parseArgs(argv) {
-  const args = { pr: null, run: null, apply: false, commit: false, out: null };
+  const args = { pr: null, run: null, apply: false, commit: false, out: null, fromGit: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     const value = () => {
@@ -303,6 +322,7 @@ function parseArgs(argv) {
     else if (a === "--out") args.out = value();
     else if (a === "--apply") args.apply = true;
     else if (a === "--commit") args.commit = true;
+    else if (a === "--from-git") args.fromGit = true;
     else if (/^\d+$/.test(a) && !args.pr) args.pr = a;
     else throw new Error(`unknown argument ${a}\n${USAGE}`);
   }
@@ -390,6 +410,46 @@ function download(run, reportDir) {
   return readFileSync(join(reportDir, "index.html"), "utf8");
 }
 
+/** Where pipeline.yml's `ci shots` job leaves a failed PR run's report (#8295). */
+export const shotsRef = (pr, runId) => `refs/ci-shots/pr-${pr}/run-${runId}`;
+
+/** The only files the job pushes: the report page and its PNG attachments, nothing executable. */
+const SHOT_FILE = /^(?:index\.html|data\/[0-9a-f]+\.png)$/;
+
+/**
+ * Fetch the run's ref and write its files into reportDir — the layout `gh run download` leaves, so
+ * the caller cannot tell the two apart. The ref is data from CI: every name is checked against the
+ * two shapes the job writes before anything is written, and a stray name refuses the whole ref.
+ */
+export function fetchShots({ pr, runId, reportDir, cwd, remote = "origin" }) {
+  const ref = shotsRef(pr, runId);
+  const git = (args, opts = {}) =>
+    execFileSync("git", args, { cwd, stdio: "pipe", maxBuffer: 256 << 20, ...opts });
+  try {
+    git(["fetch", "--quiet", "--no-tags", remote, `+${ref}:${ref}`]);
+  } catch (err) {
+    throw new Exit(
+      2,
+      `rebaseline: no ${ref} on ${remote} — the \`ci shots\` job pushes it only for a failed PR` +
+        ` run, and prunes it after 14 days\n  ${String(err.stderr ?? err.message).trim()}`,
+    );
+  }
+  const names = git(["ls-tree", "-r", "--name-only", "-z", ref])
+    .toString("utf8")
+    .split("\0")
+    .filter(Boolean);
+  const stray = names.find((n) => !SHOT_FILE.test(n));
+  if (stray !== undefined)
+    throw new Exit(2, `rebaseline: ${ref} holds ${stray}, not a report file`);
+  if (!names.includes("index.html")) throw new Exit(2, `rebaseline: ${ref} has no index.html`);
+  for (const name of names) {
+    const to = join(reportDir, name);
+    mkdirSync(dirname(to), { recursive: true });
+    writeFileSync(to, git(["cat-file", "blob", `${ref}:${name}`]));
+  }
+  return readFileSync(join(reportDir, "index.html"), "utf8");
+}
+
 function printFindings({ screenshots, others, refusals, imagesDir }) {
   console.log(`  ${screenshots.length} screenshot mismatch(es), ${others.length} other failure(s)`);
   if (screenshots.length) {
@@ -445,12 +505,13 @@ function main(argv) {
   const out = args.out ?? mkdtempSync(join(tmpdir(), `rebaseline-${args.pr}-`));
   const reportDir = join(out, "report");
   const imagesDir = join(out, "images");
-  const { screenshots, others } = classify(
-    readReport(unzip(reportZipFrom(download(run, reportDir)))),
-  );
+  const root = sh("git", ["rev-parse", "--show-toplevel"]);
+  const html = args.fromGit
+    ? fetchShots({ pr: args.pr, runId: run.id, reportDir, cwd: root })
+    : download(run, reportDir);
+  const { screenshots, others } = classify(readReport(unzip(reportZipFrom(html))));
   saveImages(screenshots, reportDir, imagesDir);
 
-  const root = sh("git", ["rev-parse", "--show-toplevel"]);
   const { copies, refusals } = plan(screenshots, (p) => existsSync(join(root, p)));
   console.log(`rebaseline: PR #${args.pr} · ${run.html_url ?? `run ${run.id}`}`);
   printFindings({ screenshots, others, refusals, imagesDir });
@@ -460,7 +521,10 @@ function main(argv) {
   const stale = staleForApply(run, pr.head.sha);
   if (stale) return console.log(`\nRead only: ${stale}.`);
   for (const line of READ_FIRST) console.log(line);
-  console.log(`  node scripts/rebaseline-from-ci.mjs ${args.pr} --run ${run.id} --apply --commit`);
+  const via = args.fromGit ? " --from-git" : "";
+  console.log(
+    `  node scripts/rebaseline-from-ci.mjs ${args.pr} --run ${run.id}${via} --apply --commit`,
+  );
 }
 
 if (isMain(import.meta.url)) {
