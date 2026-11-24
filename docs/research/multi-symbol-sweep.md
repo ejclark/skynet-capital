@@ -292,6 +292,12 @@ robust, alpha fragile — is the finding.
   directional drift test on this model off the trailing-residual average: it described the past and missed the one month built
   to measure it. The one-factor model itself passed its band test (FT-1) and is not retired.
 
+- **"September 2026's foreign long-term Treasury valuation change prints *below* the two-window midpoint (−0.0064 − 0.043045 × Δ), because the last-18 intercept (−0.096%) beats the full-sample one" (FT-tic-monthly-2026-11-18-2)** — added 2026-11-24 from the
+  [tic-monthly-2026-11-18 close-out](events/tic-monthly-2026-11-18.md). Registered 2026-09-08 on a September Δ10Y that fixed at +54.0bp.
+  September printed **−2.281%** (−$180.2bn), above the −2.331% midpoint by 0.05pp. The second consecutive month the trailing-window
+  drift lost to the full-sample fit; with the sibling entry above, do not re-register a directional intercept test on this model.
+  Its band test (FT-1) passed and the model is not retired.
+
 - **"A hot ISM Services Prices print does not produce a hawkish yield day — `^TNX` is not up by more than its own median
   |move|" (FT-ism-services-2026-11-04-1)** — added 2026-10-16 from the
   [ism-services-2026-11-04 pulse](events/ism-services-2026-11-04.md). Registered 2026-09-08 at n=9 as the narrow successor to a
