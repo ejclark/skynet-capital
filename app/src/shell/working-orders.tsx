@@ -16,6 +16,8 @@ import {
 import { money, orderTypeLabel, tifLabel } from "../live/ticket";
 import { EXIT_ROLE_LABELS } from "../live/ticket-exit";
 import { ConnectLink } from "./connect-link";
+import { lockInOfRow, rememberedCloses } from "./lock-in-memory";
+import type { LockedIn } from "./locked-in";
 import { ModifyForm } from "./working-order-modify";
 
 /**
@@ -154,8 +156,11 @@ function OrderRow({
   onCancel,
   onReplace,
   pending,
+  kept,
 }: {
   readonly row: DeskOrderRow;
+  /** A close sent while the position was marked Consider that settled at a gain (#7383). */
+  readonly kept?: LockedIn;
   readonly onCancel?: (id: string) => Promise<void>;
   readonly onReplace?: (id: string, change: OrderChange) => Promise<ReplaceResult | undefined>;
   readonly pending: boolean;
@@ -182,6 +187,9 @@ function OrderRow({
         {row.replaces ? ` · changed from ${row.replaces}` : ""}
         {row.state === "replaced" && row.replacedBy ? ` · now ${row.replacedBy}` : ""}
       </span>
+      {/* Said plainly first (#7383): the receipt's own words, no celebration here — the moment
+          itself comes on the next Overview load (`lock-in-late.tsx`). */}
+      {kept ? <p className="wo-kept">{kept.headline}.</p> : null}
       {row.cancelable && onCancel ? (
         <RowActions
           row={row}
@@ -296,6 +304,7 @@ export function WorkingOrders({ deskId }: { readonly deskId: string }): ReactEle
   };
 
   const data = query.data;
+  const remembered = rememberedCloses(deskId);
   return (
     <section className="wr-panel wo-panel" aria-label="Working orders">
       <h3 className="wr-h">Working orders</h3>
@@ -333,9 +342,12 @@ export function WorkingOrders({ deskId }: { readonly deskId: string }): ReactEle
             <>
               <h4 className="wo-sub">Settled today</h4>
               <ul className="wr-list wo-recent">
-                {data.recent.map((row) => (
-                  <OrderRow key={row.id} row={row} pending={false} />
-                ))}
+                {data.recent.map((row) => {
+                  const kept = lockInOfRow(remembered, row);
+                  return (
+                    <OrderRow key={row.id} row={row} pending={false} {...(kept ? { kept } : {})} />
+                  );
+                })}
               </ul>
             </>
           ) : null}
