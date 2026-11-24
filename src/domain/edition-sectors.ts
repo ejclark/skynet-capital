@@ -171,7 +171,8 @@ export interface SectorsView {
   readonly rows: readonly SectorRow[];
 }
 
-const pct = (now: number, then: number): number => Math.round((now / then - 1) * 10_000) / 100;
+const periodMovePct = (now: number, then: number): number =>
+  Math.round((now / then - 1) * 10_000) / 100;
 
 /** Work the moves out of the closes. Assumes `checkSectors` passed. */
 export function sectorsView(sectors: EditionSectors, date: string): SectorsView {
@@ -185,7 +186,7 @@ export function sectorsView(sectors: EditionSectors, date: string): SectorsView 
       const c = sectors.closes[f.fund] as Readonly<Record<string, number>>;
       const close = c[date] as number;
       const moves = Object.fromEntries(
-        SECTOR_PERIODS.map((p) => [p, pct(close, c[from[p]] as number)]),
+        SECTOR_PERIODS.map((p) => [p, periodMovePct(close, c[from[p]] as number)]),
       ) as Record<SectorPeriod, number>;
       const trail = span.map((d) => c[d] as number);
       return {

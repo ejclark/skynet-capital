@@ -82,7 +82,7 @@ function nextSession(session: string): string {
   return d.toISOString().slice(0, 10);
 }
 
-const pct = (x: number): string => `${Math.round(Math.abs(x) * 100)}%`;
+const absWholePct = (x: number): string => `${Math.round(Math.abs(x) * 100)}%`;
 const size = (x: number, digits: number): string => `${(Math.abs(x) * 100).toFixed(digits)}%`;
 const signed = (x: number, digits: number): string => `${x >= 0 ? "+" : "−"}${size(x, digits)}`;
 
@@ -152,21 +152,21 @@ function build(args: {
       {
         rule: "drawdown-quest:condition",
         text:
-          `${symbol} closed ${pct(under)} under its year high on ${reading.session} and VIX closed at ${market.vix.toFixed(2)}. ` +
+          `${symbol} closed ${absWholePct(under)} under its year high on ${reading.session} and VIX closed at ${market.vix.toFixed(2)}. ` +
           `The study's condition is 10% under with VIX at 25 or more; in its results VIX did the work, and a drawdown with calm VIX did not.`,
       },
       {
         rule: "drawdown-quest:base-rate",
         text:
           `Across ${n.sample} past entries (${n.episodes} separate sell-offs), ${hold} averaged ${signed(n.mean, digits)} ${unit} ` +
-          `and came out ahead ${pct(n.rate)} of the time. Its worst tenth ` +
+          `and came out ahead ${absWholePct(n.rate)} of the time. Its worst tenth ` +
           (n.worstDecile >= 0
             ? `still gained ${size(n.worstDecile, digits)} or more.`
             : `lost ${size(n.worstDecile, digits)} or more.`),
       },
       {
         rule: "drawdown-quest:worst-case",
-        text: `${shares ? `The worst entry lost ${pct(n.worstSingle)}. ` : ""}${row.worstCase}`,
+        text: `${shares ? `The worst entry lost ${absWholePct(n.worstSingle)}. ` : ""}${row.worstCase}`,
       },
     ],
     baseRate: conditionsBaseRate(symbol, kind),
