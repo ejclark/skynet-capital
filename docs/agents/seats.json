@@ -1,6 +1,6 @@
 {
-  "$comment": "THE SEAT REGISTRY (#6886 slice 1) and the org chart's source (Eric, 2026-11-07: an outline of our agentic systems as a company org chart, humans included, that also compacts context for agent workflows). One row per seat: a role that does work, filled by a lane, skill, agent, workflow, routine, gate, service, hook or person. `invoker` names what starts it (event · schedule · lane · session · member · eric · self · none); `none` means nothing calls it, which the page lists. A seat that pulls cards off the Orchestration board also carries `role` (the board's Role option, named by the job) and `pulls` (the labels whose cards sit in its queue); `roleOrder` lists those seats, first match wins (#6886 slice 1b, scripts/moneypenny/projects-role.mjs). `links` draw the picture between departments and people; `friction` records measured breakdowns on a communication edge (reverse Conway). Edit this file, then run `node scripts/org-chart.mjs` to rewrite docs/architecture/org-chart.md; tests/arch/org-chart.spec.ts fails on drift, a missing code root, or a roster file no seat covers.",
-  "asOf": "2026-11-07 · main caf8770cc",
+  "$comment": "THE SEAT REGISTRY (#6886 slice 1) and the org chart's source (Eric, 2026-11-07: an outline of our agentic systems as a company org chart, humans included, that also compacts context for agent workflows). One row per seat: a role that does work, filled by a lane, skill, agent, workflow, routine, gate, service, hook or person. `invoker` names what starts it (event · schedule · lane · session · member · eric · self · none); `none` means nothing calls it, which the page lists. A seat that pulls cards off the Orchestration board also carries `role` (the board's Role option, named by the job) and `pulls` (the labels whose cards sit in its queue); `roleOrder` lists those seats, first match wins (#6886 slice 1b, scripts/moneypenny/projects-role.mjs). A seat a member deals with carries `character`: `job`, one plain line naming what it does as a member meets it, and `name`, its lore name, null until the brand pick (#6616). Only seats in People, Front desk, Trading floor and Research desk may carry one, so the build org stays out of the game (#8161); `cast(reg)` in scripts/org-chart.mjs reads them. `links` draw the picture between departments and people; `friction` records measured breakdowns on a communication edge (reverse Conway). Edit this file, then run `node scripts/org-chart.mjs` to rewrite docs/architecture/org-chart.md; tests/arch/org-chart.spec.ts fails on drift, a missing code root, or a roster file no seat covers.",
+  "asOf": "2026-11-24 · main 0be1f7682",
   "roleOrder": [
     "live-sessions",
     "design-build",
@@ -18,7 +18,7 @@
     {
       "id": "front-desk",
       "name": "Front desk (in the app)",
-      "job": "Every surface a member touches: chat, filings, the trade desk, the landing page"
+      "job": "Every surface a member touches: chat, filings, the trade desk, the landing page, the story the game tells and where each thing lives"
     },
     {
       "id": "trading",
@@ -253,6 +253,15 @@
       "cite": "docs/LESSONS.md:200-205",
       "change": "Re-run the loop census for the other tracker-comment outputs",
       "tracked": "docs/LESSONS.md side quest"
+    },
+    {
+      "edge": "Plans → the story and the screens",
+      "channel": "plan issues (#8161, #8005) and the sessions that work them",
+      "what": "Game premises and screen placements are argued in plans, but no seat owns the story, any screen, docs/IA.md or the member studies, so each plan re-derives them.",
+      "number": "5 game premises; 0 hired owners",
+      "cite": "#8161 Stage 0 census 2 of 4 (\"no hired seat owns the story, any screen, docs/IA.md or the member studies\") and 4 of 4 (names these two seats)",
+      "change": "one owner seat each",
+      "tracked": "#8161"
     }
   ],
   "target": [
@@ -282,7 +291,10 @@
         "src/server/dashboard-auth-gate.ts"
       ],
       "cite": "scripts/moneypenny/assignments.mjs:1-5 ('send Eric only decisions, as GitHub assignments'); scripts/moneypenny/work-mode.mjs:365-371 (surge 'eric-only', conserve 'after-eric-phrase'); .github/workflows/autonomy-ops.yml:71 (environment: autonomy-ops); src/server/auth/allowlist-store.ts:17-19 \"env-listed identities are the owners who may invite; file-listed identities are members who may not\"; docs/architecture/README.md:22; CLAUDE.md hard boundaries",
-      "station": "The owner's office: who joins, and whether the bots run"
+      "character": {
+        "job": "The owner's office: who joins, and whether the bots run",
+        "name": null
+      }
     },
     {
       "id": "members",
@@ -330,7 +342,10 @@
       "status": "planned",
       "codeRoots": [],
       "cite": "#6948 \"AI narrator, GMs has the ability to steer/step in.\"; #7018 \"steer (a GM's post, marked as the GM's)\"",
-      "station": "The game master's chair: steers the story, posts marked as the GM's"
+      "character": {
+        "job": "The game master's chair: steers the story, posts marked as the GM's",
+        "name": null
+      }
     },
     {
       "id": "companion",
@@ -353,7 +368,10 @@
         "app/src/live/moneypenny-script.ts"
       ],
       "cite": "src/companion/companion-tools.ts:23-28 \"a CLOSED allow-list of nine read-only lookups plus two hand-offs\"; src/server/companion-routes.ts:28-34; docs/MONEYPENNY.md:17-31 ('She cannot place an order (no such tool exists'; draft_feedback 'files nothing'); app/src/live/moneypenny.ts:26-38 \"General questions go to Moneypenny herself — the companion chat... the scripted lines are the fallback without a key\"",
-      "station": "The front desk: quick answers in chat; drafts, never acts"
+      "character": {
+        "job": "The front desk: quick answers in chat; drafts, never acts",
+        "name": null
+      }
     },
     {
       "id": "feedback-intake",
@@ -417,7 +435,10 @@
       "status": "hired",
       "codeRoots": ["src/server/desk-owner-gate.ts", "src/server/trade-orders-routes.ts"],
       "cite": "src/server/desk-owner-gate.ts:12-21 \"WHICH PLAYBOOKS A BOT RUNS IS ITS OWNER'S TO SEE\"; src/server/trade-orders-routes.ts:171",
-      "station": "Your trade desk: only you place orders on your own account"
+      "character": {
+        "job": "Your trade desk: only you place orders on your own account",
+        "name": null
+      }
     },
     {
       "id": "invites",
@@ -450,7 +471,52 @@
       "status": "planned",
       "codeRoots": [],
       "cite": "#7018 \"Members land on a briefing of market conditions, like Skynet Chronicles\"; \"today sign-in lands on Profile → Overview, /app/accounts\"; #6948 \"An AI narrator turns collected events into encounters; members and bots answer async; a GM can steer.\" and caption \"proposed end-state, nothing built\"",
-      "station": "The briefing desk: the day's market conditions, and what you make of them"
+      "character": {
+        "job": "The briefing desk: the day's market conditions, and what you make of them",
+        "name": null
+      }
+    },
+    {
+      "id": "game-design",
+      "department": "front-desk",
+      "name": "Game design and story",
+      "kind": "other",
+      "job": "Owns what the game is: docs/THE-GAME.md, the job track and the chapter writer (whatever form stage 1 gives them)",
+      "wakesOn": "a #8161 or #8005 session working the game's premise or its story",
+      "speaksOn": "edits to docs/THE-GAME.md; plan issues for the job track and the chapter writer",
+      "cadence": "per session",
+      "invoker": "session",
+      "status": "on trial",
+      "codeRoots": ["docs/THE-GAME.md"],
+      "cite": "#8161 Stage 0 census 2 of 4 (\"no hired seat owns the story, any screen, docs/IA.md or the member studies\") and 4 of 4 (names these two seats)",
+      "character": {
+        "job": "The game designer: the rules of the game and the story it tells",
+        "name": null
+      }
+    },
+    {
+      "id": "member-screens",
+      "department": "front-desk",
+      "name": "Member screens and IA",
+      "kind": "other",
+      "job": "Owns where each thing lives for a member: docs/IA.md, the cohesion census and the member studies; sponsors the IA reviewer lens through its trial",
+      "wakesOn": "a session or build that adds or moves a member screen, part or route; a member study run",
+      "speaksOn": "docs/IA.md placements; the cohesion and placement census; member study reports",
+      "cadence": "per session",
+      "invoker": "session",
+      "status": "on trial",
+      "codeRoots": [
+        "docs/IA.md",
+        "docs/members/",
+        "scripts/crawl/cohesion.mjs",
+        "scripts/crawl/placement.mjs",
+        "scripts/study/"
+      ],
+      "cite": "#8161 Stage 0 census 2 of 4 (\"no hired seat owns the story, any screen, docs/IA.md or the member studies\") and 4 of 4 (names these two seats)",
+      "character": {
+        "job": "The layout desk: where each thing lives in the app, and why",
+        "name": null
+      }
     },
     {
       "id": "bot-runtime",
@@ -465,7 +531,10 @@
       "status": "hired",
       "codeRoots": ["src/scripts/run-autonomous.ts", "src/autonomous", "src/bots"],
       "cite": "docs/architecture/runtime-bots.md:5; fly.bots.toml:48 SKYNET_AUTONOMOUS_MODE = \"observe\"; fly.bots.toml:52 SKYNET_AUTONOMOUS_BOTS = \"sauron\"; docs/architecture/source/maps.json:1025; docs/architecture/README.md (runtime C4Container, Bot runtime)",
-      "station": "The trading floor: your bots, each a character with a strategy"
+      "character": {
+        "job": "The trading floor: your bots, each a character with a strategy",
+        "name": null
+      }
     },
     {
       "id": "personas",
@@ -567,7 +636,10 @@
         "src/domain/market-events/"
       ],
       "cite": "src/domain/market-events.ts:1-15 \"an estimate may only WIDEN caution; date-keyed action requires confirmed\"",
-      "station": "The research desk: what is coming up, and what the house has written about it"
+      "character": {
+        "job": "The research desk: what is coming up, and what the house has written about it",
+        "name": null
+      }
     },
     {
       "id": "event-research",
