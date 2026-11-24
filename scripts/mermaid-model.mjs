@@ -34,7 +34,7 @@ const COMMIT_KIND = ["commit", "reverse", "highlight", "merge", "cherry-pick"];
 
 /** The diagram title from YAML frontmatter, which getDiagramFromText does not apply (render does). */
 function frontmatterTitle(source) {
-  const fm = /^\s*---\n([\s\S]*?)\n---\n/.exec(source)?.[1] ?? "";
+  const fm = /^\s*---\n([\s\S]*?)\n---\n/.exec(source.replace(/\r\n?/g, "\n"))?.[1] ?? "";
   const raw = /^title:\s*(.*)$/m.exec(fm)?.[1]?.trim() ?? "";
   return raw.replace(/^(["'])(.*)\1$/, "$2");
 }
