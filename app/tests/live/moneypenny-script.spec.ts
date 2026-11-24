@@ -1,3 +1,5 @@
+import { linkPieces } from "../../src/live/moneypenny-links";
+import { readMarkdown } from "../../src/live/moneypenny-markdown";
 import {
   answerFailed,
   CHAT_DOWN,
@@ -182,6 +184,45 @@ describe("failure and draft lines", () => {
     expect(card).toContain("Adds to a known problem: One history, three homes · plan #5206");
     expect(card.indexOf("Adds to a known problem")).toBeLessThan(card.indexOf('"submit"'));
     expect(draftCard({ kind: "idea", title: "t", details: "d" })).not.toContain("known problem");
+  });
+  // #4286: similar open reports, listed before "submit", apart from the "Adds to" line.
+  it("a draft with similar open issues lists them, linked, before the exits", () => {
+    const card = draftCard({
+      kind: "bug",
+      title: "Chain hangs",
+      details: "d",
+      match: { words: "a known problem: slow chain" },
+      similar: [
+        { number: 101, title: "Chain spinner hangs", url: "https://github.com/x/y/issues/101" },
+        { number: 202, title: "Chain [mobile] stuck" },
+      ],
+    });
+    expect(card).toContain(
+      "\n\nMight already be filed:\n- [#101](https://github.com/x/y/issues/101) Chain spinner hangs\n- #202 Chain (mobile) stuck",
+    );
+    expect(card.indexOf("Adds to")).toBeLessThan(card.indexOf("Might already be filed"));
+    expect(card.indexOf("Might already be filed")).toBeLessThan(card.indexOf('"submit"'));
+    // the card's text is read as markdown: the matches are one list, each number a link out
+    const list = readMarkdown(card).find((b) => b.kind === "list");
+    expect(list?.kind === "list" ? list.items.length : 0).toBe(2);
+    expect(linkPieces(card).filter((p) => p.kind === "url")).toEqual([
+      { kind: "url", text: "#101", href: "https://github.com/x/y/issues/101" },
+    ]);
+  });
+  it("a link that is not https stays plain text, never a link", () => {
+    const card = draftCard({
+      kind: "bug",
+      title: "t",
+      details: "d",
+      similar: [{ number: 7, title: "x", url: "javascript:alert(1)" }],
+    });
+    expect(card).toContain("- #7 x");
+    expect(card).not.toContain("javascript");
+  });
+  it("a draft with no similar issues reads exactly as before", () => {
+    const plain = { kind: "bug", title: "t", details: "d" };
+    expect(draftCard({ ...plain, similar: [] })).toBe(draftCard(plain));
+    expect(draftCard(plain)).not.toContain("Might already be filed");
   });
 });
 
