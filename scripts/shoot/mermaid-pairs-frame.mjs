@@ -117,7 +117,45 @@ code{font:12px/1.45 var(--mono);background:var(--code-bg);padding:.1em .35em;bor
 .fail-head{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px;color:var(--danger)}
 .fail-glyph{font-size:15px}
 .fail-why{margin-top:6px;font:12px/1.5 var(--mono);color:var(--fg);overflow-wrap:anywhere}
-</style></head><body><div id="root"></div><script>window.failPanel=${failPanel.toString()}</script></body></html>`;
+</style></head><body><div id="root"></div><script>window.failPanel=${failPanel.toString()};window.drawSlot=${drawSlot.toString()}</script></body></html>`;
+}
+
+/**
+ * Runs IN THE PAGE (serialised into the shell, like `failPanel`): draw one diagram slot, or put the
+ * failure panel in its place and return why. An ink slot (`data-look="ink"`,
+ * ./mermaid-pairs-ink.mjs) is drawn under the ink settings with an `ink-` id (the face CSS keys on
+ * it), sits on its paper sheet, and fails by name if a label holds a character the embedded face
+ * has no glyph for; the live settings are restored after it.
+ */
+export async function drawSlot(slot, sources, key, ink) {
+  const side = slot.dataset.side;
+  const inked = slot.dataset.look === "ink";
+  try {
+    if (inked) window.mermaid.initialize(ink.config);
+    const id = `${inked ? "ink" : "m"}-${key}-${side}`;
+    const { svg } = await window.mermaid.render(id, sources[side]);
+    slot.innerHTML = inked ? `<div class="sheet">${svg}</div>` : svg;
+    const outside = inked ? new RegExp(`[^${ink.coverage}\\s]`, "gu") : null;
+    const missing = outside ? [...new Set(slot.textContent.match(outside) ?? [])] : [];
+    if (missing.length)
+      throw Object.assign(
+        new Error(
+          `the face has no glyph for ${missing.map((c) => `"${c}"`).join(" ")}, and a borrowed one would misstate the look`,
+        ),
+        { glyph: true },
+      );
+    return null;
+  } catch (error) {
+    const why = String(error?.message ?? error).split("\n")[0];
+    slot.outerHTML = window.failPanel(
+      error?.glyph
+        ? `drawn, but not in its own face — ${why}`
+        : `parsed, but Mermaid could not draw it — ${why}`,
+    );
+    return why;
+  } finally {
+    if (inked) window.mermaid.initialize(ink.live);
+  }
 }
 
 /**
@@ -141,27 +179,31 @@ export function frameHtml({ title, captionHtml, mode, mermaidVersion, before, af
  * Mermaid, replace a slot that throws with the failure panel, measure the natural widths, then
  * settle the layout and size the frame. Returns what the pipeline needs for the sidecar.
  */
-export async function layoutInPage({ html, sources, layout, widths, key }) {
+export async function layoutInPage({ html, sources, layout, widths, key, ink }) {
   const root = document.getElementById("root");
   root.innerHTML = html;
   const frame = document.getElementById("frame");
   const renderErrors = {};
   for (const slot of [...frame.querySelectorAll(".diagram")]) {
-    const side = slot.dataset.side;
-    try {
-      const { svg } = await window.mermaid.render(`m-${key}-${side}`, sources[side]);
-      slot.innerHTML = svg;
-    } catch (error) {
-      renderErrors[side] = String(error?.message ?? error).split("\n")[0];
-      slot.outerHTML = window.failPanel(
-        `parsed, but Mermaid could not draw it — ${renderErrors[side]}`,
-      );
-    }
+    const why = await window.drawSlot(slot, sources, key, ink);
+    if (why) renderErrors[slot.dataset.side] = why;
   }
+  // An ink side's image is the sheet, padding included: that is the width a phone scales down.
+  const sheetPad = (svg, axis) => {
+    const sheet = svg.closest(".sheet");
+    if (!sheet) return 0;
+    const cs = getComputedStyle(sheet);
+    return axis === "x"
+      ? Number.parseFloat(cs.paddingLeft) + Number.parseFloat(cs.paddingRight)
+      : Number.parseFloat(cs.paddingTop) + Number.parseFloat(cs.paddingBottom);
+  };
   const natural = (side) => {
     const col = frame.querySelector(`.col.${side}`);
     const svg = col.querySelector(".diagram svg");
-    if (svg) return Math.ceil(svg.viewBox.baseVal?.width || svg.getBoundingClientRect().width);
+    if (svg)
+      return Math.ceil(
+        (svg.viewBox.baseVal?.width || svg.getBoundingClientRect().width) + sheetPad(svg, "x"),
+      );
     const md = col.querySelector(".md");
     if (!md) return 0; // a failure panel is fluid — it takes whatever the other side needs
     // A table's natural width is its max-content width, measured on an unconstrained clone.
@@ -178,7 +220,9 @@ export async function layoutInPage({ html, sources, layout, widths, key }) {
   // worth measuring: they reflow on a phone instead of scaling down.
   const naturalHeight = (side) => {
     const svg = frame.querySelector(`.col.${side} .diagram svg`);
-    return svg ? Math.ceil(svg.viewBox.baseVal?.height || svg.getBoundingClientRect().height) : 0;
+    if (!svg) return 0;
+    const h = svg.viewBox.baseVal?.height || svg.getBoundingClientRect().height;
+    return Math.ceil(h + sheetPad(svg, "y"));
   };
   const natH = { before: naturalHeight("before"), after: naturalHeight("after") };
   const widest = Math.max(nat.before, nat.after);
