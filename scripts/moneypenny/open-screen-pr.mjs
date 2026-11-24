@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { isMain } from "../is-main.mjs";
 // Open a PR for the deterministic screen's ledger commit, and try to arm auto-merge — the
 // PR-based replacement for a direct `git push origin HEAD:main` (issue #915, Eric: "some merge to
 // main, open PRs for research; non-negotiable").
@@ -18,6 +17,8 @@ import { isMain } from "../is-main.mjs";
 // not a shortcut.
 //
 // Degrades to a clean, loud no-op with no GH_TOKEN/GITHUB_TOKEN or no network.
+import { readMainLog, screenLandedOn } from "../event-screen-widen.mjs";
+import { isMain } from "../is-main.mjs";
 import { reexecWithProxy } from "../proxy-reexec.mjs";
 import { LABELS } from "./labels.mjs";
 
@@ -162,24 +163,44 @@ async function closeSuperseded(parked, newNumber) {
   }
 }
 
+// Advisory pre-flight the caller runs BEFORE creating a new screen branch — see hasOpenScreenPr's
+// doc comment for why. Prints exactly "open" or "closed" and always exits 0: a failed check must
+// never block a screen from shipping, only skip the redundant-PR guard for this run.
+// The daily hold comes first (#8202): one screen PR per UTC day, because that day's first pass
+// already screened every due interval pulse (scripts/event-screen-widen.mjs). It reads git
+// history, so a held tick spends no REST read; a failed read falls through to the PR check.
+async function checkOpen(args) {
+  const flag = (name) => args.find((a) => a.startsWith(`--${name}=`))?.slice(name.length + 3);
+  const today = flag("today") ?? new Date().toISOString().slice(0, 10);
+  try {
+    if (screenLandedOn(readMainLog(today, flag("main-log-file")), today)) {
+      console.error(
+        `::notice::open-screen-pr --check-open: a screen already landed on main today (${today}, UTC) — holding this one for tomorrow.`,
+      );
+      console.log("open");
+      return;
+    }
+  } catch (err) {
+    console.error(`::warning::open-screen-pr --check-open: history read failed (${err.message}).`);
+  }
+  if (!(token && repo)) {
+    console.log("closed");
+    return;
+  }
+  try {
+    console.log(hasOpenScreenPr(await listOpenPrs()) ? "open" : "closed");
+  } catch (err) {
+    console.error(`::warning::open-screen-pr --check-open: list failed (${err.message}).`);
+    console.log("closed");
+  }
+}
+
 async function main() {
   reexecWithProxy();
   const args = process.argv.slice(2);
 
-  // Advisory pre-flight the caller runs BEFORE creating a new screen branch — see hasOpenScreenPr's
-  // doc comment for why. Prints exactly "open" or "closed" and always exits 0: a failed check must
-  // never block a screen from shipping, only skip the redundant-PR guard for this run.
   if (args[0] === "--check-open") {
-    if (!(token && repo)) {
-      console.log("closed");
-      return;
-    }
-    try {
-      console.log(hasOpenScreenPr(await listOpenPrs()) ? "open" : "closed");
-    } catch (err) {
-      console.error(`::warning::open-screen-pr --check-open: list failed (${err.message}).`);
-      console.log("closed");
-    }
+    await checkOpen(args);
     return;
   }
 

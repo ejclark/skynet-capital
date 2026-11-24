@@ -309,7 +309,9 @@ decides **whether it needs a Claude session at all**, for `interval-elapsed` pul
 both always dispatch). It runs between the two in
 `.github/workflows/moneypenny-events.yml`'s `route` job: a screen writes its own ledger row and lands
 it via a PR, never a direct push to `main`, without spending a session; anything else falls through
-to the full pulse-check protocol above.
+to the full pulse-check protocol above. One pass screens every due `interval-elapsed` pulse, not
+only the few the dispatch cap handed it, and at most one screen PR lands per UTC day (#8202,
+`scripts/event-screen-widen.mjs`); a widened pulse that reads material stays due for a later tick.
 
 **The reference block.** Every ledger's header carries a machine-readable line right after
 `**Last assessed:**`:
