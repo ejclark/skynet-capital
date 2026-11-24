@@ -59,15 +59,20 @@ function setup(positions: ReturnType<typeof pos>[] = [pos("NVDA", 5000), pos("SP
         participants: [
           { id: "acct-1", kind: "human", cash: 0, positions },
           { id: "acct-2", kind: "human", cash: 0, positions: [] },
+          // A degraded row (participant-snapshot.ts `degraded()`): the broker read failed, so
+          // `positions: []` means "unknown", never "holds nothing" (#8318).
+          { id: "acct-3", kind: "human", cash: 0, positions: [], error: "alpaca 503" },
         ],
       }),
     },
     auth: {},
     resolveOwnerId: (email: string) =>
-      ({ "one@example.com": "acct-1", "two@example.com": "acct-2" })[email],
+      ({ "one@example.com": "acct-1", "two@example.com": "acct-2", "three@example.com": "acct-3" })[
+        email
+      ],
     newsClientFor: (id: string) => {
       asked.push(id);
-      return id === "acct-1" || id === "acct-2" ? news : undefined;
+      return id.startsWith("acct-") ? news : undefined;
     },
     now: () => now,
   } as unknown as DashboardServerConfig;
@@ -204,6 +209,37 @@ describe("GET /api/news/held", () => {
     expect(news.calls).toHaveLength(0);
   });
 
+  // #8318: a failed positions read is not an empty account.
+  it("says the positions read failed, not that nothing is held, on an error-tagged row", async () => {
+    const { config, news } = setup();
+    const { status, body } = await call(config, { email: "three@example.com" });
+    expect(status).toBe(200);
+    expect(body).toMatchObject({
+      items: [],
+      held: [],
+      note: HELD_NEWS_NOTES.positionsUnread,
+      positionsUnread: true,
+    });
+    expect(body.note).not.toBe(HELD_NEWS_NOTES.empty);
+    expect(body.note).not.toBe(HELD_NEWS_NOTES.failed);
+    expect(news.calls).toHaveLength(0);
+  });
+
+  it("keeps the empty note, with no failure flag, for an account that read fine and holds nothing", async () => {
+    const { config } = setup();
+    const { body } = await call(config, { email: "two@example.com" });
+    expect(body.note).toBe(HELD_NEWS_NOTES.empty);
+    expect(body).not.toHaveProperty("positionsUnread");
+  });
+
+  it("carries no failure flag on a held account's news", async () => {
+    const { config, news } = setup();
+    news.answers.push([story("2", ["NVDA"])]);
+    const { body } = await call(config, { email: "one@example.com" });
+    expect(body.items).toHaveLength(1);
+    expect(body).not.toHaveProperty("positionsUnread");
+  });
+
   // Criterion 11: without auth wired there is no session to trust, so no read.
   it("makes no feed read without a session", async () => {
     const { config, news } = setup();
@@ -309,6 +345,28 @@ describe("heldNewsFor's cache and failures", () => {
     const answer = await heldNewsFor(config, "acct-1", { sleep });
     expect(answer).toMatchObject({ items: [], note: HELD_NEWS_NOTES.failed });
     expect(answer).not.toHaveProperty("stale");
+  });
+
+  // #8318: once the row goes error-tagged, the last good answer is still true as of its own time.
+  it("serves the last good answer, stale and flagged, when the positions read later fails", async () => {
+    let failed = false;
+    const positions = [pos("NVDA", 5000)];
+    const { config, news, advance } = setup(positions);
+    const base = config.hub.getState();
+    (config as { hub: unknown }).hub = {
+      getState: () => ({
+        participants: base.participants.map((p) =>
+          p.id === "acct-1" && failed ? { ...p, positions: [], error: "timed out" } : p,
+        ),
+      }),
+    };
+    news.answers.push([story("2", ["NVDA"])]);
+    const good = await heldNewsFor(config, "acct-1", { sleep });
+    failed = true;
+    advance(6 * 60_000);
+    const after = await heldNewsFor(config, "acct-1", { sleep });
+    expect(after).toEqual({ ...good, stale: true, positionsUnread: true });
+    expect(news.calls).toHaveLength(1);
   });
 
   // Criterion 13.
