@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useState } from "react";
 import { fetchJoin } from "../live/join";
-import { type MarketSessionView, sessionWindowWords } from "../live/market-session";
+import { sessionWindowWords } from "../live/market-session";
 import { meetMoneypenny } from "../live/moneypenny";
 import {
   fetchOnboarding,
@@ -71,11 +71,11 @@ function StepAction({ step }: { readonly step: OnboardingStep }): ReactElement |
 const REGULAR_HOURS = "9:30 AM to 4:00 PM ET, Monday through Friday";
 
 /** Step 3's note carries the session window from the broker's calendar (#8248): the viewer's own
- *  zone after the ET hours, and today's real close on a half day — never 4:00 PM. */
-function stepDetail(step: OnboardingStep, market: MarketSessionView): string {
-  return step.id === "first-trade"
-    ? step.detail.replace(REGULAR_HOURS, sessionWindowWords(market, viewerZone()))
-    : step.detail;
+ *  zone after the ET hours, and today's real close on a half day — never 4:00 PM. Its own
+ *  component, so only this step reads the market clock and ticks. */
+function FirstTradeDetail({ step }: { readonly step: OnboardingStep }): ReactElement {
+  const market = useMarketSession();
+  return <>{step.detail.replace(REGULAR_HOURS, sessionWindowWords(market, viewerZone()))}</>;
 }
 
 /**
@@ -217,14 +217,15 @@ function Step({
   readonly step: OnboardingStep;
   readonly active: boolean;
 }): ReactElement {
-  const market = useMarketSession();
   return (
     <li className={`ob-step${step.done ? " ob-step-done" : ""}`}>
       <div className="ob-step-head">
         <StepGlyph done={step.done} active={active} />
         <div className="ob-step-body">
           <div className="ob-step-title">{step.title}</div>
-          <div className="ob-step-detail">{stepDetail(step, market)}</div>
+          <div className="ob-step-detail">
+            {step.id === "first-trade" ? <FirstTradeDetail step={step} /> : step.detail}
+          </div>
         </div>
         <StepAction step={step} />
       </div>

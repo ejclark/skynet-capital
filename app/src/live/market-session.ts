@@ -142,27 +142,28 @@ function etClock(ms: number): string {
     .replace(/\s?[AP]M$/, "");
 }
 
-const isNewYork = (zone: string, short: string) =>
-  zone === ET || short === "EST" || short === "EDT";
-
 /** An instant on the viewer's clock — "6:30 AM PST", with the weekday when it falls on another
- *  calendar day than New York's — or undefined for a New York viewer or an unreadable zone. */
+ *  calendar day than New York's — or undefined when their wall clock reads New York's at that
+ *  instant (compared by the time itself, never by a zone's short name: Cancún says "EST" all year
+ *  and sits an hour behind New York all summer) or the zone can't be read. */
 function localClock(ms: number, timeZone: string): string | undefined {
   try {
-    const parts = cachedDateTimeFormat("en-US", {
-      timeZone,
-      weekday: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      timeZoneName: "short",
-    }).formatToParts(ms);
-    const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
-    const zone = get("timeZoneName");
-    if (!zone || isNewYork(timeZone, zone)) return undefined;
-    const time = `${get("hour")}:${get("minute")} ${get("dayPeriod")} ${zone}`;
-    const etDay = cachedDateTimeFormat("en-US", { timeZone: ET, day: "numeric" }).format(ms);
-    return get("day") === etDay ? time : `${get("weekday")} ${time}`;
+    const wall = (zone: string) =>
+      cachedDateTimeFormat("en-US", {
+        timeZone: zone,
+        weekday: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        timeZoneName: "short",
+      }).formatToParts(ms);
+    const parts = wall(timeZone);
+    const get = (type: string, from = parts) => from.find((p) => p.type === type)?.value ?? "";
+    const et = wall(ET);
+    const same = ["day", "hour", "minute", "dayPeriod"].every((k) => get(k) === get(k, et));
+    if (same) return undefined;
+    const time = `${get("hour")}:${get("minute")} ${get("dayPeriod")} ${get("timeZoneName")}`;
+    return get("day") === get("day", et) ? time : `${get("weekday")} ${time}`;
   } catch {
     return undefined;
   }
@@ -359,32 +360,41 @@ export function sourceLine(view: MarketSessionView): string | undefined {
 
 /**
  * The first-trade note's session window (#8248 criterion 12): "9:30 AM to 4:00 PM ET (6:30 AM–1:00
- * PM PST), Monday through Friday" on a full day — the viewer's own hours after the ET ones when
- * they are not on New York's clock — and today's real hours on a half day, never 4:00 PM.
+ * PM PST), Monday through Friday" — the viewer's own hours after the ET ones when they are not on
+ * New York's clock — and, while today's session is a half day not yet over, today's real hours
+ * instead, never 4:00 PM. Once it closes, the note is back to the regular hours, as the panel's
+ * half-day line moves on to the next session.
  */
 export function sessionWindowWords(view: MarketSessionView, timeZone?: string): string {
-  const day = view.today ?? view.next;
-  const local = day && timeZone ? localSessionSuffix(day, timeZone) : "";
-  if (view.today && isHalfDay(view.today)) {
-    const close = etTime(new Date(view.today.closeAt).toISOString());
-    return `${etTime(new Date(view.today.openAt).toISOString()).replace(" ET", "")} to ${close}${local} today, a half day`;
+  const running = view.today && view.state !== "closed" ? view.today : undefined;
+  if (running && isHalfDay(running)) {
+    const local = timeZone ? localSessionSuffix(running, timeZone) : "";
+    const open = etTime(new Date(running.openAt).toISOString()).replace(" ET", "");
+    return `${open} to ${etTime(new Date(running.closeAt).toISOString())}${local} today, a half day`;
   }
+  // The regular window on the next session's date (its zone offset), whatever that day's close.
+  const day = running ?? view.next;
+  const regular = day && { ...day, closeAt: day.openAt + (CLOSE - OPEN) * MINUTE };
+  const local = regular && timeZone ? localSessionSuffix(regular, timeZone) : "";
   return `9:30 AM to 4:00 PM ET${local}, Monday through Friday`;
 }
 
 /**
- * " (6:30 AM–1:00 PM PDT)" — `day`'s session on the viewer's clock, or "" for a viewer on New
- * York's (or when the zone can't be read).
+ * " (6:30 AM–1:00 PM PDT)" — `day`'s session on the viewer's clock, or "" when their wall clock
+ * reads New York's at the open (compared by the time itself, not a zone's short name) or the zone
+ * can't be read.
  */
 export function localSessionSuffix(day: SessionDay, timeZone: string): string {
   try {
-    const opts: Intl.DateTimeFormatOptions = { timeZone, hour: "numeric", minute: "2-digit" };
+    const at = (ms: number, zone: string) =>
+      cachedDateTimeFormat("en-US", { timeZone: zone, hour: "numeric", minute: "2-digit" }).format(
+        ms,
+      );
+    if (at(day.openAt, timeZone) === at(day.openAt, ET)) return "";
     const zone = cachedDateTimeFormat("en-US", { timeZone, timeZoneName: "short" })
       .formatToParts(day.openAt)
       .find((p) => p.type === "timeZoneName")?.value;
-    if (!zone || isNewYork(timeZone, zone)) return "";
-    const at = (ms: number) => cachedDateTimeFormat("en-US", opts).format(ms);
-    return ` (${at(day.openAt)}–${at(day.closeAt)} ${zone})`;
+    return zone ? ` (${at(day.openAt, timeZone)}–${at(day.closeAt, timeZone)} ${zone})` : "";
   } catch {
     return "";
   }

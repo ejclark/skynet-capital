@@ -45,6 +45,17 @@ import { linesOf, type MpThread, withThread } from "./moneypenny-threads";
 import { isScreenshotId, SCREENSHOTS_STAY_LINE } from "./mp-screenshots";
 import { fetchOnboarding, type Onboarding } from "./onboarding";
 
+/** Whether the regular session is running, on the shell's one read of the broker's hours
+ *  (#8248). An Intl failure reads as closed: her intro then says an order waits for the open,
+ *  which is never a false promise of a fill. */
+function marketOpenNow(): boolean {
+  try {
+    return isTrading(marketSession(new Date(), currentMarketClock()));
+  } catch {
+    return false;
+  }
+}
+
 /**
  * MONEYPENNY'S STORE — the rail's state and the one place that acts (design handoff 2026-09-03
  * §6; P0–P2 of `docs/research/moneypenny-chat-ux.md`, where the reasoning lives). Client state,
@@ -420,7 +431,7 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
       connected: ob?.account !== undefined,
       firstTradeDone: ob?.steps.some((s) => s.id === "first-trade" && s.done) ?? false,
       // The onboarding read's answer, else the shell's one read of the broker's hours (#8248).
-      marketOpen: ob?.marketOpen ?? isTrading(marketSession(new Date(), currentMarketClock())),
+      marketOpen: ob?.marketOpen ?? marketOpenNow(),
       returning: get().messages.length > 0,
     });
     save({ introDone: true, flow: intro.flow });

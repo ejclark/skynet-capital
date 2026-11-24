@@ -25,6 +25,8 @@ let snapshot: MarketClockView | undefined;
 let fetchedAt = 0;
 let failedAt = Number.NEGATIVE_INFINITY;
 let inFlight = false;
+/** Bumped by `resetMarketClock`, so a read started before a reset never lands after it. */
+let generation = 0;
 const listeners = new Set<() => void>();
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -64,19 +66,28 @@ async function read(): Promise<MarketClockView | undefined> {
   }
 }
 
-/** When the held answer stops being current: its phase's end or 15 minutes, whichever is first. */
+/**
+ * When the held answer stops being current: its phase's end or 15 minutes, whichever is first.
+ * The phase's end is measured on the SERVER's clock (`phaseUntil − asOf`) and laid onto ours from
+ * when the read landed, so a browser clock running fast never sees a phase as already over and
+ * re-reads on every tick; a minute is the floor either way.
+ */
 function dueAt(): number {
   const retry = failedAt + RETRY_MS;
   if (!snapshot) return retry;
-  const phaseEnd = snapshot.phaseUntil ? Date.parse(snapshot.phaseUntil) : Number.POSITIVE_INFINITY;
-  return Math.max(Math.min(fetchedAt + REFRESH_MS, phaseEnd), retry);
+  const phaseLeft = snapshot.phaseUntil
+    ? Math.max(RETRY_MS, Date.parse(snapshot.phaseUntil) - Date.parse(snapshot.asOf))
+    : Number.POSITIVE_INFINITY;
+  return Math.max(fetchedAt + Math.min(REFRESH_MS, phaseLeft), retry);
 }
 
 /** Read the route again if the held answer is due — a no-op while one read is in flight. */
 export function refreshMarketClock(now: number = Date.now()): void {
   if (inFlight || now < dueAt()) return;
   inFlight = true;
+  const mine = generation;
   void read().then((view) => {
+    if (mine !== generation) return;
     if (view) {
       snapshot = view;
       fetchedAt = now;
@@ -112,4 +123,5 @@ export function resetMarketClock(): void {
   fetchedAt = 0;
   failedAt = Number.NEGATIVE_INFINITY;
   inFlight = false;
+  generation += 1;
 }

@@ -92,3 +92,29 @@ describe("refreshMarketClock", () => {
     expect(calls).toBe(3);
   });
 });
+
+describe("refreshMarketClock under clock skew", () => {
+  const realFetch = globalThis.fetch;
+  afterEach(() => {
+    globalThis.fetch = realFetch;
+  });
+
+  it("measures the phase on the server's clock, so a fast browser never re-reads every tick", async () => {
+    resetMarketClock();
+    let calls = 0;
+    const t = NOW.getTime();
+    // The server says the phase ends 1s after its own now; the browser is 2 minutes ahead.
+    const body = view(new Date(t + 1_000).toISOString());
+    globalThis.fetch = (() => {
+      calls += 1;
+      return Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
+    }) as typeof fetch;
+    const fast = t + 2 * 60_000;
+    refreshMarketClock(fast);
+    await new Promise((done) => setTimeout(done, 0));
+    refreshMarketClock(fast + 30_000);
+    expect(calls).toBe(1); // a minute is the floor
+    refreshMarketClock(fast + 61_000);
+    expect(calls).toBe(2);
+  });
+});

@@ -291,3 +291,30 @@ describe("the first-trade note's session window", () => {
     expect(localSessionSuffix(day, "America/New_York")).toBe("");
   });
 });
+
+// /code-review on #8248 PR 2: a zone's short name is not its clock, and a half day ends.
+describe("the review's edge cases", () => {
+  const clock = broker(MON_8PM, THANKSGIVING);
+
+  it("gives Cancún its own time in summer, though it calls itself EST", () => {
+    const v = marketSession(new Date("2026-09-25T21:00:00Z"), undefined, "America/Cancun");
+    expect(waitsForOpen(v)).toBe("the Mon 9:30 ET open (8:30 AM EST)");
+    expect(waitsForOpen(marketSession(THU_10, clock, "America/Cancun"))).toBe(
+      "the Fri 9:30 ET open",
+    );
+  });
+
+  it("drops the half day from the first-trade note once that session has closed", () => {
+    const evening = marketSession(new Date("2026-11-28T00:00:00Z"), clock, "America/Los_Angeles");
+    expect(sessionWindowWords(evening, "America/Los_Angeles")).toBe(
+      "9:30 AM to 4:00 PM ET (6:30 AM–1:00 PM PST), Monday through Friday",
+    );
+  });
+
+  it("never prints a half day's 1:00 PM as the regular close the morning before it", () => {
+    const thursday = marketSession(THU_10, clock, "America/Los_Angeles");
+    expect(sessionWindowWords(thursday, "America/Los_Angeles")).toBe(
+      "9:30 AM to 4:00 PM ET (6:30 AM–1:00 PM PST), Monday through Friday",
+    );
+  });
+});
