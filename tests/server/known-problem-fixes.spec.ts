@@ -8,10 +8,15 @@
  *   - WHILE no filing carries a match, nothing extra SHALL be read.
  *   - WHEN a matched filing's fix has shipped, the member context SHALL tell Moneypenny, with the
  *     screen, and SHALL quote the member's own title.
+ *   - WHEN that screen is offered, its path SHALL be one her link grammar links (`placeHref`):
+ *     app-relative, never the ledger's `/app/…` form (#8079); a screen off the allow-list SHALL be
+ *     named without a path, so no raw path reaches her reply as text.
  */
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { memberContext } from "../../src/companion/companion-context.js";
+import { placeHref } from "../../src/companion/places.js";
 import type { FeedbackStatus } from "../../src/domain/feedback-status.js";
+import { KNOWN_PROBLEMS } from "../../src/domain/known-problems.js";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
 import { serveFeedbackApi } from "../../src/server/feedback-api-routes.js";
 import { opaqueMemberId } from "../../src/server/feedback-issue.js";
@@ -126,9 +131,55 @@ describe("Moneypenny's member context", () => {
       ],
     });
     expect(text).toContain(
-      'Fixed since they asked: #9001 "Put \\"every\\" order in one list" counted toward a known problem ("One history, three homes"), and its fix has shipped: they can try it on Profile: Activity (/app/accounts?section=ledger).',
+      'Fixed since they asked: #9001 "Put \\"every\\" order in one list" counted toward a known problem ("One history, three homes"), and its fix has shipped: they can try it on Profile: Activity (/accounts?section=ledger).',
     );
     expect(text).toContain("If you have not said so in this conversation");
+  });
+
+  /** The path the context line offers for the screen, or undefined when it names the screen bare. */
+  const offered = (route: string): string | undefined => {
+    const text = memberContext({
+      onboarding,
+      filings: [],
+      marketOpen: false,
+      fixed: [{ issueNumber: 1, title: "t", problem: "p", tryAt: { name: "A screen", route } }],
+    });
+    return /they can try it on A screen \(([^)\s]+)\)/.exec(text)?.[1];
+  };
+
+  it("offers the screen by a path her links accept, never the ledger's /app form (#8079)", () => {
+    expect(offered("/app/accounts?section=ledger")).toBe("/accounts?section=ledger");
+    expect(placeHref(offered("/app/accounts?section=ledger") ?? "")).toBe(
+      "/accounts?section=ledger",
+    );
+  });
+
+  it("names a screen off her allow-list without a path, so no raw path shows as text", () => {
+    const text = memberContext({
+      onboarding,
+      filings: [],
+      marketOpen: false,
+      fixed: [
+        {
+          issueNumber: 1,
+          title: "t",
+          problem: "p",
+          tryAt: { name: "Pulse", route: "/app/u/sauron/pulse" },
+        },
+      ],
+    });
+    expect(text).toContain("they can try it on Pulse.");
+    expect(text).not.toContain("/u/sauron/pulse");
+  });
+
+  it("every ledger row's try-it screen is offered linkable or not offered as a path at all", () => {
+    const unlinkable = KNOWN_PROBLEMS.flatMap((row) => {
+      const tryAt = row.screens[0];
+      if (!tryAt) return [];
+      const path = offered(tryAt.route);
+      return path === undefined || placeHref(path) === path ? [] : [`${row.id} ${path}`];
+    });
+    expect(unlinkable).toEqual([]);
   });
 
   it("says nothing about fixes when none shipped", () => {
