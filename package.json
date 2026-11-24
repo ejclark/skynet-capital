@@ -133,6 +133,7 @@
     "shoot:research-board": "tsx scripts/shoot/research-board.mjs",
     "dev:tower": "node scripts/dev-tower.mjs",
     "smoke:trade": "tsx src/scripts/smoke-trade.ts",
+    "paper:checks": "tsx scripts/paper-checks.mjs",
     "scan:flow": "tsx src/scripts/scan-unusual-flow.ts",
     "backfill:activity": "tsx src/scripts/backfill-trade-activity.ts",
     "backfill:activity-events": "tsx src/scripts/backfill-activity-events.ts",
