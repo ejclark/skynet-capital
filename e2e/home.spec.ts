@@ -78,3 +78,69 @@ test.describe("the home screen", () => {
     await expect(page).toHaveURL(/\/app\/leaderboard\?/);
   });
 });
+
+// #8189 slice 2: the tower leaves every other page, and a fresh load at `/app/` reopens the last app.
+test.describe("the tower only on the home (criterion 2)", () => {
+  const PAGES = [
+    "/app/campaign",
+    "/app/accounts",
+    "/app/accounts?section=milestones",
+    "/app/trade",
+    "/app/activity",
+    "/app/research",
+    "/app/leaderboard",
+    "/app/u/sauron",
+    "/app/saved-positions",
+    "/app/settings",
+  ];
+  for (const width of [390, 1024, 1600]) {
+    test(`draws no tower on any other page at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      for (const path of PAGES) {
+        await page.goto(path);
+        await expect(page.locator("#main")).toBeVisible();
+        await expect(page.locator("[data-tower-slot]"), path).toHaveCount(0);
+        await expect(page.locator(".tower-column"), path).toHaveCount(0);
+        await expect(page.locator(".char-card iframe"), path).toHaveCount(0);
+        await expect(page.locator('iframe.vantage[data-shown="true"]'), path).toHaveCount(0);
+      }
+    });
+  }
+});
+
+test("keeps the stage's left edge and width identical across pages at 1280 (criterion 12)", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const boxes: { path: string; x: number; width: number }[] = [];
+  for (const path of [
+    "/app/accounts",
+    "/app/activity",
+    "/app/research",
+    "/app/trade",
+    "/app/u/sauron",
+  ]) {
+    await page.goto(path);
+    await expect(page.locator("main.stage")).toBeVisible();
+    const box = await page.locator("main.stage").boundingBox();
+    boxes.push({ path, x: Math.round(box?.x ?? -1), width: Math.round(box?.width ?? -1) });
+  }
+  for (const b of boxes)
+    expect({ x: b.x, width: b.width }, b.path).toEqual({ x: boxes[0]?.x, width: boxes[0]?.width });
+});
+
+test("a fresh load at /app/ reopens the last app's root; a Home tap shows the home (criterion 7)", async ({
+  page,
+}) => {
+  await page.goto("/app/research");
+  await expect(page.locator("#main")).toBeVisible();
+  await page.goto("/app/");
+  await expect(page).toHaveURL(/\/app\/research$/);
+  await page.getByRole("link", { name: "Home", exact: true }).click();
+  await expect(page).toHaveURL(/\/app\/$/);
+  await expect(page.getByRole("navigation", { name: "Apps" })).toBeVisible();
+  // The home is now the last place used, so a reload stays on it.
+  await page.reload();
+  await expect(page).toHaveURL(/\/app\/$/);
+  await expect(page.getByRole("navigation", { name: "Apps" })).toBeVisible();
+});

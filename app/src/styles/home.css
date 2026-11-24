@@ -27,9 +27,6 @@
   /* The Eye sits ~60% across in the card framing: keep it in the crop at any phone width. */
   object-position: 60% 30%;
 }
-.home-tower .tower-slot {
-  height: 100%;
-}
 /* Taller from the tablet width, but short enough that "Needs you" and the whole tile row stay above
  * the dock in a 900px-tall window. */
 @media (min-width: 861px) {

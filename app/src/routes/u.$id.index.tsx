@@ -10,7 +10,6 @@ import { DeskTilesGrid } from "../shell/desk-tiles-grid";
 import { PositionPage, PositionPageGone } from "../shell/position-page";
 import { NewTradeCard, PositionsBlotter } from "../shell/positions-blotter";
 import { positionPageFromSearch, usePositionPage } from "../shell/use-position-page";
-import { useTowerColumn } from "../shell/use-tower-column";
 
 /**
  * THE ANY-ACCOUNT PAGE'S OVERVIEW (#738 phase 2c; #3807 slice 2d) — `/u/:id` for any account, bot
@@ -25,8 +24,8 @@ import { useTowerColumn } from "../shell/use-tower-column";
  * one component on two pages, with this account's own landmark dials when it is a persona-mapped
  * bot and the scene's defaults otherwise (the old 21:9 strip retired with this slice). A phone
  * reads it in DOM order: tiles → book → card, so what this account holds comes before the art.
- * From the bench width the card gives up its art to the page frame's tower column (#3977) and its
- * league stands under the tower there (`SauronCard` `under`), so the page draws one tower.
+ * The card is the league alone at every width since #8189: the tower stands on the home screen
+ * only, so no page draws one.
  * A position's "Full page ›" (#5070 slice 6) takes the whole Overview's place, `?position=`, and
  * its "← Positions" returns to the row, still open (`use-position-page.ts`).
  * Ownership decides the writes (dead end 4): off an account the viewer owns, the rows offer no
@@ -43,7 +42,6 @@ function DeskPage(): ReactElement {
     refetchOnWindowFocus: true,
   });
   const canTrade = useOwnsAccount(id);
-  const towerColumn = useTowerColumn();
   // A position's full page (#5070 slice 6): `?position=` puts it in the Overview's place.
   const fullPage = usePositionPage();
   // The filter is URL state (Eric, live review): typing stays immediate locally, the URL follows
@@ -85,7 +83,7 @@ function DeskPage(): ReactElement {
       {d.error ? (
         <p className="note-stop">Account unreachable — positions can't be read right now.</p>
       ) : (
-        <div className={`overview-grid${towerColumn ? " overview-grid--solo" : ""}`}>
+        <div className="overview-grid">
           <div className="overview-worth">
             <DeskTilesGrid tiles={d.tiles} />
           </div>
@@ -106,11 +104,9 @@ function DeskPage(): ReactElement {
               {canTrade ? <NewTradeCard deskId={d.id} /> : null}
             </PositionsBlotter>
           </div>
-          {towerColumn ? null : (
-            <div className="overview-card">
-              <AccountLeague landmark={landmark} under={false} />
-            </div>
-          )}
+          <div className="overview-card">
+            <AccountLeague landmark={landmark} />
+          </div>
         </div>
       )}
       <footer className="obs-foot num">as of {generatedAt}</footer>

@@ -77,7 +77,6 @@
 @import "./overview-grid.css";
 @import "./saved-positions.css";
 @import "./sauron-card.css";
-@import "./tower-column.css";
 @import "./playbook-store.css";
 /* after playbook-store.css: the list, the + panel, the evidence and the wide layout build on its
    cards; the wide layout (in playbook-evidence.css) comes last so it overrides the phone rules. */

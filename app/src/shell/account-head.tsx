@@ -123,16 +123,13 @@ export function AccountHead({
  *  reads, and the five sections read identically (`.acct-page` scopes the card's glance). */
 export function AccountPage({
   desk,
-  tower,
   children,
 }: {
   readonly desk: { readonly id: string; readonly name: string; readonly kind: "human" | "bot" };
-  /** What the page stands under the tower in the frame's column (#3977) — the account's league. */
-  readonly tower?: ReactNode;
   readonly children: ReactNode;
 }): ReactElement {
   return (
-    <PageFrame tower={tower}>
+    <PageFrame>
       <div className="cockpit acct-page">
         <AccountHead id={desk.id} name={desk.name} kind={desk.kind} />
         {children}
@@ -141,16 +138,13 @@ export function AccountPage({
   );
 }
 
-/** The account's league card on its Overview: under the frame's tower from the bench width (the
- *  layout stands it there, `under`), boxed in the page's own flow below it. One component for both
- *  places so the two never disagree on whose league it is. */
+/** The account's league card on its Overview, in the page's own flow at every width (#8189: the
+ *  tower left every page but the home, so nothing stands over it). */
 export function AccountLeague({
   landmark,
-  under,
 }: {
   /** The account's landmark dials, when it has one (persona-mapped bots). */
   readonly landmark?: { readonly power: number; readonly health: number } | undefined;
-  readonly under: boolean;
 }): ReactElement {
   const settings = useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
   const owned = settings.data?.accounts ?? [];
@@ -159,8 +153,6 @@ export function AccountLeague({
       {...(landmark ? { landmark } : {})}
       ownedIds={owned.map((a) => a.id)}
       meId={owned.find((a) => a.kind === "human")?.id}
-      scope=".acct-page"
-      under={under}
     />
   );
 }

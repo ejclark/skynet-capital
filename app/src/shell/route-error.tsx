@@ -188,8 +188,8 @@ function FaultPanel({
 }
 
 /** The route area a failure renders into — the same frame and `<main>` a page would have had. This
- *  is `PageFrame towerless` (`frame.tsx`) written out on purpose: the fallback must not depend on
- *  the tower-column hook or anything else that could be the thing that just threw. */
+ *  is `PageFrame` (`frame.tsx`) written out on purpose: the fallback must not depend on anything
+ *  that could be the thing that just threw. */
 function RouteArea({ children }: { readonly children: ReactElement }): ReactElement {
   return (
     <div className="frame">
