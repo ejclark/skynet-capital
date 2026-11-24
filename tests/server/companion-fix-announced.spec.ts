@@ -80,6 +80,9 @@ function harness(filings: readonly FeedbackLogEntry[]) {
     companion,
     readFeedback: () => Promise.resolve(filings),
     fetchFeedbackStatus: shipped,
+    // "Try it" reads built plans, not badge statuses (#8077): plan 5206 was built.
+    fetchBuiltPlans: (plans: readonly number[]) =>
+      Promise.resolve(new Set(plans.filter((n) => n === 5206))),
     fixAnnouncements: store,
   } as never;
   const turn = async (content = "hi") => {

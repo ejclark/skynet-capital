@@ -3,7 +3,7 @@
  * problem's plan closes as built, on the Feedback section and in Moneypenny's member context.
  *
  * EARS lines this spec pins:
- *   - WHEN a matched filing's plan reads shipped, the Feedback index SHALL mark that filing fixed,
+ *   - WHEN a matched filing's plan was built, the Feedback index SHALL mark that filing fixed,
  *     with the screen to try it on.
  *   - WHILE no filing carries a match, nothing extra SHALL be read.
  *   - WHEN a matched filing's fix has shipped, the member context SHALL tell Moneypenny, with the
@@ -15,7 +15,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { memberContext } from "../../src/companion/companion-context.js";
 import { placeHref } from "../../src/companion/places.js";
-import type { FeedbackStatus } from "../../src/domain/feedback-status.js";
 import { KNOWN_PROBLEMS } from "../../src/domain/known-problems.js";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
 import { serveFeedbackApi } from "../../src/server/feedback-api-routes.js";
@@ -38,13 +37,13 @@ const entry = (issueNumber: number, over: Partial<FeedbackLogEntry> = {}): Feedb
   ...over,
 });
 
-const statuses =
-  (known: Record<number, FeedbackStatus>, asked: number[][] = []) =>
-  (numbers: readonly number[]) => {
-    asked.push([...numbers]);
-    return Promise.resolve(
-      new Map(numbers.flatMap((n) => (known[n] ? [[n, known[n]] as const] : []))),
-    );
+/** A fake `FetchBuiltPlans`: the plans in `built` were built (plan-fix-built.spec.ts covers what
+ *  "built" reads from GitHub, #8077). */
+const builtPlans =
+  (built: readonly number[], asked: number[][] = []) =>
+  (plans: readonly number[]) => {
+    asked.push([...plans]);
+    return Promise.resolve(new Set(plans.filter((n) => built.includes(n))));
   };
 
 function fakeRes() {
@@ -59,11 +58,11 @@ function fakeRes() {
 }
 
 describe("knownProblemFixes", () => {
-  it("marks a matched filing fixed when its row's plan shipped, and leaves the rest", async () => {
+  it("marks a matched filing fixed when its row's plan was built, and leaves the rest", async () => {
     const asked: number[][] = [];
     const fixes = await knownProblemFixes(
       [entry(1, { match: { row: "U3" } }), entry(2, { match: { row: "U6" } }), entry(3)],
-      statuses({ 5206: "shipped", 5207: "building" }, asked),
+      builtPlans([5206], asked),
     );
     expect(asked).toEqual([[5206, 5207]]); // only the plans the matched filings point at
     expect(fixes.get(1)?.tryAt?.id).toBe("trade-ticket");
@@ -73,11 +72,11 @@ describe("knownProblemFixes", () => {
 
   it("reads nothing when no filing carries a match", async () => {
     const asked: number[][] = [];
-    expect((await knownProblemFixes([entry(3)], statuses({}, asked))).size).toBe(0);
+    expect((await knownProblemFixes([entry(3)], builtPlans([], asked))).size).toBe(0);
     expect(asked).toEqual([]);
   });
 
-  it("reads nothing as fixed when the status read fails", async () => {
+  it("reads nothing as fixed when the plan read fails", async () => {
     const fixes = await knownProblemFixes([entry(1, { match: { row: "U3" } })], () =>
       Promise.reject(new Error("github down")),
     );
@@ -91,7 +90,8 @@ describe("the Feedback index", () => {
       hub: { getState: () => ({ participants: [] }) },
       submitFeedback: () => undefined,
       readFeedback: () => Promise.resolve([entry(9001, { match: { row: "U3" } })]),
-      fetchFeedbackStatus: statuses({ 9001: "open", 5206: "shipped" }),
+      fetchFeedbackStatus: () => Promise.resolve(new Map([[9001, "open" as const]])),
+      fetchBuiltPlans: builtPlans([5206]),
     } as unknown as DashboardServerConfig;
     const { res, out } = fakeRes();
     const get = { method: "GET", headers: {} } as unknown as IncomingMessage;

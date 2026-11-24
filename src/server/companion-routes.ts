@@ -144,7 +144,7 @@ async function memberContextFor(
       owner && config.readOwnerQueue ? ownerQueueWithin(config.readOwnerQueue) : undefined,
     ]);
     // "Try it" (#8005 slice 7): a matched filing whose known problem was fixed since they asked.
-    const fixes = await knownProblemFixes(filings, config.fetchFeedbackStatus);
+    const fixes = await knownProblemFixes(filings, config.fetchBuiltPlans);
     const allFixed = filings.flatMap((f) => {
       const fix = fixes.get(f.issueNumber);
       return fix ? [{ issueNumber: f.issueNumber, title: f.title, ...fix }] : [];

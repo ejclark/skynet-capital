@@ -178,9 +178,10 @@ export function fixPlansFor(match: ProblemMatch): readonly number[] {
 /**
  * THE "TRY IT" TRIGGER (#8005 slice 7; #7031's "the member who asked plays it"): a matched
  * filing's fix has shipped when its ledger row reads fixed, or when a plan `fixPlansFor` names
- * closed as built (`planShipped`, the Feedback badge's own "shipped" reading of that issue). A
- * closed plan that shipped only its first slice is not a fix, and neither is one closed as not
- * planned: the caller's status mapping already reads those apart from "shipped".
+ * was built (`planShipped`). That is NOT the Feedback badge's "shipped" reading of the plan: a plan
+ * closed as a duplicate, as not planned, with a remainder label, or with its remainder relayed to a
+ * new issue fixed nothing, and the caller's reader (`src/server/plan-fix-built.ts`, #8077) reads
+ * every one of those apart.
  */
 export function fixFor(
   match: ProblemMatch | undefined,
