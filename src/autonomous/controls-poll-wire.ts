@@ -30,7 +30,7 @@
  * either field reads as "not reported" — never as watching or placing.
  */
 
-import { type BotsVitals, parseControlsPollVitals } from "./bots-vitals-wire.js";
+import { type BotsVitals, parseControlsPollVitals, SHA } from "./bots-vitals-wire.js";
 import { type HouseRosterReport, parseControlsPollRoster } from "./house-roster-wire.js";
 
 /** The bots process's running commit, as its deploy stamped `GIT_SHA` into the machine env. */
@@ -84,11 +84,6 @@ export interface ControlsPollReport {
    *  parsed, which the dashboard reads as "no vitals", never as health. */
   readonly vitals?: BotsVitals;
 }
-
-/** A full or abbreviated git sha and nothing else. Strict on purpose: this value is rendered into
- *  owner-facing copy AND interpolated into a GitHub `compare/<base>...<head>` URL, so anything
- *  that isn't a sha is dropped rather than passed along. */
-const SHA = /^[0-9a-f]{7,40}$/;
 
 /** Bots side: the headers to add to the poll. Empty when this process has no sha to report — an
  *  absent header is the honest signal; an empty one would be a claim. */

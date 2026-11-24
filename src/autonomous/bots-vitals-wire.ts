@@ -63,7 +63,11 @@ const MAX_ID_LENGTH = 64;
 export const MAX_VITALS_HEADER_BYTES = 4 * 1024;
 /** What `toISOString` writes, and nothing looser: `Date.parse` alone would take "2026" or "1". */
 const ISO_INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/;
-const SHA = /^[0-9a-f]{7,40}$/;
+/** A full or abbreviated git sha and nothing else. Strict on purpose: the sha header's value
+ *  (`controls-poll-wire.ts`) is rendered into owner-facing copy AND interpolated into a GitHub
+ *  `compare/<base>...<head>` URL, so anything that isn't a sha is dropped rather than passed along.
+ *  One pattern for both reports of one commit, so they never disagree on what a sha is. */
+export const SHA = /^[0-9a-f]{7,40}$/;
 const BRIDGE_STATUSES: readonly BridgeStatus[] = ["armed", "unreachable", "unset"];
 
 const encode = (vitals: BotsVitals): string =>
