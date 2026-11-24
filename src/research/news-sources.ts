@@ -171,10 +171,12 @@ export function fedItems(xml: string, sinceIso: string): NewsItem[] {
 export const queryWord = (name: ForceName): string | undefined =>
   typeof name === "string" ? name : name.find((w) => w.length >= 3);
 
-const quote = (w: string): string => (/[^A-Za-z0-9]/.test(w) ? `"${w}"` : w);
+const searchTerm = (w: string): string => (/[^A-Za-z0-9]/.test(w) ? `"${w}"` : w);
 const anyOf = (words: readonly (string | undefined)[]): string | undefined => {
   const list = [...new Set(words.filter((w): w is string => w !== undefined && w.length >= 3))];
-  return list.length === 0 ? undefined : `(${list.map(quote).join(" OR ")}) sourcelang:english`;
+  return list.length === 0
+    ? undefined
+    : `(${list.map(searchTerm).join(" OR ")}) sourcelang:english`;
 };
 
 /** GDELT refuses a search that is too long; the cast's names go in groups of this many. */
