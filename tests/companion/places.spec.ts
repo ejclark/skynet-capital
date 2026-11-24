@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { describePage } from "../../src/companion/companion-page.js";
 import { COMPANION_SYSTEM_PROMPT } from "../../src/companion/companion-system-prompt.js";
 import {
   BOARD_RANKINGS,
@@ -95,7 +96,7 @@ describe("PLACES — the list itself", () => {
 
   it("holds router paths: rooted, with no basepath, query or fragment", () => {
     for (const { path } of PLACES) {
-      // The landing page is the root, `/` (#7167); every other place is a named segment.
+      // Home is the root, `/` (#8189); every other place is a named segment.
       expect(path).toMatch(/^\/([a-z-]+(\/[a-z-]+)*)?$/);
       expect(path.startsWith("/app")).toBe(false);
     }
@@ -128,6 +129,34 @@ describe("PLACES — the list itself", () => {
   it("includes the places the prompt's own examples send members to", () => {
     const paths = PLACES.map((p) => p.path);
     expect(paths).toEqual(expect.arrayContaining(["/trade", "/leaderboard", "/settings"]));
+  });
+});
+
+// #8369: `/` became the home screen and Campaign moved to `/campaign` (#8189), but her list still
+// named `/` as Campaign, so a Campaign link she wrote opened the home screen and `/campaign` was
+// plain text. Her list and the Page line (`companion-page.ts`) must name the same page per path.
+describe("PLACES — Campaign and the home screen after the move to /campaign (#8369)", () => {
+  const named = (name: string) => PLACES.find((p) => p.name === name);
+
+  it("sends Campaign to /campaign, a link she may write", () => {
+    expect(named("Campaign")?.path).toBe("/campaign");
+    expect(placeHref("/campaign")).toBe("/campaign");
+  });
+
+  it("names `/` as Home, the brand's own word for it, and never as Campaign", () => {
+    expect(named("Home")?.path).toBe("/");
+    expect(PLACE_LINK_RULE).not.toContain("/ (Campaign");
+    expect(PLACE_LINK_RULE).toContain("/campaign (Campaign — ");
+  });
+
+  it("agrees with the Page line: each path names the page the server says the member is on", () => {
+    expect(describePage(`/app${named("Campaign")?.path}`)).toContain("Campaign");
+    expect(describePage(`/app${named("Home")?.path}`)).toContain("home screen");
+  });
+
+  it("keeps her landing-row links live, since those forward to Campaign on their own", () => {
+    expect(placeHref("/#story-ai-capex")).toBe("/#story-ai-capex");
+    expect(placeHref("/#calendar")).toBe("/#calendar");
   });
 });
 
