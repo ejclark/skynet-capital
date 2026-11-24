@@ -10,6 +10,7 @@ import {
   median,
   planScorecard,
   planScorecardLines,
+  withLostness,
 } from "../../scripts/study/plan-scorecard.mjs";
 import { buildReadout, copySmall, FRAME_CAP, readoutArgs } from "../../scripts/study/readout.mjs";
 
@@ -88,6 +89,32 @@ describe("planScorecard — success, lostness and backtracks by viewport, phone 
   });
 });
 
+describe("withLostness — R from the fewest views a member needed to succeed at the task", () => {
+  const base = { viewport: "phone", backtracks: 0, chat: [], lostness: null };
+  it("fills a missing lostness from the task's best successful path, and keeps a computed one", () => {
+    const out = withLostness([
+      { ...base, rel: "a", task: "t1", success: true, uniqueViews: 2, totalViews: 2 },
+      { ...base, rel: "b", task: "t1", success: false, uniqueViews: 4, totalViews: 6 },
+      {
+        ...base,
+        rel: "c",
+        task: "t1",
+        success: true,
+        uniqueViews: 3,
+        totalViews: 3,
+        lostness: 0.9,
+      },
+    ]);
+    expect(out.map((s) => s.lostness)).toEqual([0, 0.601, 0.9]);
+  });
+  it("leaves a task no member succeeded at without one", () => {
+    const out = withLostness([
+      { ...base, rel: "a", task: "t2", success: false, uniqueViews: 3, totalViews: 5 },
+    ]);
+    expect(out[0]?.lostness).toBeNull();
+  });
+});
+
 describe("chatRecall — friction a member voiced to Moneypenny that became a draft", () => {
   it("says the messages were not labelled when no labels were written, never guesses", () => {
     expect(chatRecall(SESSIONS, null)).toEqual({ messages: 3, labelled: false });
@@ -126,7 +153,9 @@ describe("planScorecardLines — the rows as the readout prints them", () => {
     expect(text).toContain(
       "| Answered right, from the page or the chat (the place unseen is allowed) | 2 of 2 | 0 of 1 |",
     );
-    expect(text).toContain("| Lostness, middle session (0 is a straight path) | 0.4 | 0 |");
+    expect(text).toContain(
+      "| Lostness, middle session (0 is a straight path; R = fewest views a member needed to succeed) | 0.4 | 0 |",
+    );
     expect(text).toContain("Chat sensor recall: not labelled yet (3 member messages");
   });
 });

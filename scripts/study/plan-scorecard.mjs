@@ -16,6 +16,7 @@
 // tests/scripts/study-plan-scorecard.spec.ts.
 
 import { wilson } from "./grade-core.mjs";
+import { lostness } from "./metrics.mjs";
 
 /** The draft kinds that are friction turned into a request (world-chat.mjs → draftsOf). */
 const FRICTION_DRAFTS = new Set(["filing", "followup"]);
@@ -97,11 +98,39 @@ export function chatRecall(sessions, labels) {
 }
 
 /**
+ * Each session's lostness (Smith 1996). The recorder computes it only when the task names its
+ * fewest views (`optimalViews`), and the blind task author never does, so it was null on every
+ * session of the cross-feature round. Where it is missing, R is the fewest views any member needed
+ * to SUCCEED at that same task (the empirical stand-in for a hand-drawn optimal path); a task no
+ * member succeeded at keeps no lostness.
+ */
+export function withLostness(sessions) {
+  const best = new Map();
+  for (const s of sessions) {
+    if (!(s.success && s.task && s.uniqueViews > 0)) continue;
+    best.set(s.task, Math.min(best.get(s.task) ?? Number.POSITIVE_INFINITY, s.uniqueViews));
+  }
+  return sessions.map((s) =>
+    typeof s.lostness === "number" || !best.has(s.task)
+      ? s
+      : {
+          ...s,
+          lostness: lostness({
+            unique: s.uniqueViews,
+            total: s.totalViews,
+            optimal: best.get(s.task),
+          }),
+        },
+  );
+}
+
+/**
  * The plan's rows from a round's sessions: `[{rel, viewport, success, answered, lostness, backtracks,
  * chat}]`
  * (chat = the session's chat.jsonl lines) and the chat labels (null when not written).
  */
-export function planScorecard({ sessions, labels = null }) {
+export function planScorecard({ sessions: raw, labels = null }) {
+  const sessions = withLostness(raw);
   const viewports = [...new Set(sessions.map((s) => s.viewport))].sort((a, b) =>
     a === "phone" ? -1 : b === "phone" ? 1 : a < b ? -1 : 1,
   );
@@ -131,7 +160,10 @@ export function planScorecardLines(card) {
       "Answered right, from the page or the chat (the place unseen is allowed)",
       (r) => `${r.answered ?? "n/a"} of ${r.sessions}`,
     ),
-    row("Lostness, middle session (0 is a straight path)", (r) => r.lostness ?? "n/a"),
+    row(
+      "Lostness, middle session (0 is a straight path; R = fewest views a member needed to succeed)",
+      (r) => r.lostness ?? "n/a",
+    ),
     row("Backtracks, middle session", (r) => r.backtracks ?? "n/a"),
     "",
   ];

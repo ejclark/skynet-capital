@@ -12,6 +12,10 @@ export interface PlanSession {
   answered?: boolean;
   lostness: number | null;
   backtracks: number | null;
+  /** The task id and the recorder's view counts, for a lostness the recorder could not compute. */
+  task?: string;
+  uniqueViews?: number;
+  totalViews?: number;
   chat: { kind: string; n: number; said?: string; drafts?: { kind: string }[] }[];
 }
 export interface ChatLabel {
@@ -45,6 +49,7 @@ export interface PlanScorecard {
   chat: ChatRecall;
 }
 
+export function withLostness(sessions: PlanSession[]): PlanSession[];
 export function median(values: (number | null | undefined)[]): number | null;
 export function chatRecall(sessions: PlanSession[], labels: ChatLabel[] | null): ChatRecall;
 export function planScorecard(input: {
