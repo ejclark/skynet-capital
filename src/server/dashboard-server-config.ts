@@ -42,6 +42,7 @@ import type { SubmitDraftOrder } from "./draft-trade-service.js";
 import type { ExitPlanStore } from "./exit-plan-store.js";
 import type { FeedbackRouteDeps } from "./feedback-routes.js";
 import type { FilingCommentsDeps } from "./filing-comments-form.js";
+import type { FixAnnouncementStore } from "./fix-announcement-store.js";
 import type { GithubTokenDeps } from "./github-token.js";
 import type { InviteDeps } from "./invite-form.js";
 import type { MemberCampaignStore } from "./member-campaign-store.js";
@@ -365,6 +366,10 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    *  signed-in member may open one by id, never a visitor. Omit and `/api/companion/screenshots*`
    *  does not exist (offline wiring). */
   readonly companionScreenshots?: CompanionScreenshotStore;
+  /** Which shipped fixes Moneypenny has already announced to each member (#8078,
+   *  `fix-announcement-store.ts`), so "told once" holds across threads, devices and long chats.
+   *  Omit (offline wiring) and she falls back to the transcript, which forgets within ten lines. */
+  readonly fixAnnouncements?: FixAnnouncementStore;
   /**
    * The Playbook Store (issue #885) — an account's own playbook subscriptions and capital
    * sub-allocations. Omit to disable (offline mode) — the catalog still browses, just with no
