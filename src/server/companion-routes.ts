@@ -10,6 +10,7 @@ import {
 import { describeOnScreen, parsePageKeys } from "../companion/companion-on-screen.js";
 import { describePage, pagePath, pageSymbol } from "../companion/companion-page.js";
 import { COMPANION_DISCLOSURE, FIRST_TRADE_TOUR } from "../companion/companion-system-prompt.js";
+import { GAME_MASTER_PILOT, gameMasterAdmits } from "../companion/game-master-flag.js";
 import { editions, editionView } from "../domain/edition.js";
 import { regularSessionOpen } from "../domain/market-session.js";
 import type { Session } from "./auth/session.js";
@@ -33,8 +34,9 @@ import { openSseStream, sseFrame } from "./sse.js";
  * other member-only route checks upstream (`gateRequest` in `dashboard-auth-gate.ts`, wired by
  * the caller before this file ever runs):
  *
- *   GET  /api/companion       → { enabled } — whether `ANTHROPIC_API_KEY` is set, so the client
- *                                can render "not switched on yet" instead of a dead input box.
+ *   GET  /api/companion       → { enabled, gameMaster } — whether `ANTHROPIC_API_KEY` is set, so
+ *                                the client can render "not switched on yet" instead of a dead
+ *                                input box, and whether this session may play a scene (#8191).
  *   POST /api/companion/chat  → the turn, streamed back over SSE (`delta`/`done`/`error` events).
  *   POST /api/companion/ack   → records the ladder gate's own evidence: a real message reached
  *                                the rail. Deliberately independent of `/chat` — a message can be
@@ -111,13 +113,26 @@ function parseMessages(body: Record<string, unknown> | undefined): CompanionMess
   return parsed;
 }
 
+/** Whether this session may play a game-master scene (#8191): the committed pilot setting and the
+ *  server's own owner check, never anything in the request. */
+function gameMasterFor(config: DashboardServerConfig, session: Session): boolean {
+  const owner = config.isOwnerEmail?.(session.email) === true;
+  return gameMasterAdmits(config.gameMasterPilot ?? GAME_MASTER_PILOT, { owner });
+}
+
 /** `{ enabled }` plus the two client-facing constants a chat UI needs verbatim rather than
- *  duplicating: the standing disclosure footer, and the guided first-trade tour's steps. */
-function serveCompanionIndex(res: ServerResponse, config: DashboardServerConfig): void {
+ *  duplicating: the standing disclosure footer, and the guided first-trade tour's steps; and
+ *  `gameMaster`, whether the dock offers this session a scene (#8191). */
+function serveCompanionIndex(
+  res: ServerResponse,
+  config: DashboardServerConfig,
+  session: Session,
+): void {
   sendJson(res, 200, {
     enabled: Boolean(config.companion),
     disclosure: COMPANION_DISCLOSURE,
     firstTradeTour: FIRST_TRADE_TOUR,
+    gameMaster: Boolean(config.companion) && gameMasterFor(config, session),
   });
 }
 
@@ -271,6 +286,10 @@ async function serveChat(
     onScreen,
   );
 
+  // A scene turn (#8191) only when the pilot setting admits this session; an unadmitted `mode`
+  // is ignored, never an error, so the turn runs as an ordinary one.
+  const gameMaster = body?.mode === "game-master" && gameMasterFor(config, session);
+
   const screenshotStore = config.companionScreenshots;
   openSseStream(res);
   let seq = 0;
@@ -279,6 +298,7 @@ async function serveChat(
       messages,
       ...(participantId ? { participantId } : {}),
       ...(member ? { context: member.text } : {}),
+      ...(gameMaster ? { gameMaster: true } : {}),
       convictions: companionConvictionsFor(config, session),
       // Any signed-in member's screenshot loads by id, whoever attached it (Eric, 2026-11-10).
       ...(screenshotStore ? { loadScreenshot: (id: string) => screenshotStore.load(id) } : {}),
@@ -356,7 +376,7 @@ export async function serveCompanionApi(
     return serveCompanionScreenshots(req, res, path, store, member, config.logLine);
   }
   if (path === "/api/companion" && (req.method ?? "GET") === "GET") {
-    serveCompanionIndex(res, config);
+    serveCompanionIndex(res, config, session);
     return true;
   }
   if (path === "/api/companion/chat") {
