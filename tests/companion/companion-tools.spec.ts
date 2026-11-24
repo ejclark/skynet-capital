@@ -4,6 +4,7 @@ import {
   type CompanionDeskDeps,
   type CompanionToolName,
   declaredToolNames,
+  type FeedbackDraft,
   runCompanionTool,
 } from "../../src/companion/companion-tools.js";
 import type { TradeActivityRecord } from "../../src/observatory/activity-store.js";
@@ -449,13 +450,53 @@ describe("draft_feedback — advisory dedup against open feedback issues (#1867 
     });
   });
 
+  // #4286: the dock's card lists the matches, so they ride the hand-off, links and all; the
+  // model's result keeps slice 1's number-and-title shape.
+  it("hands the card the matches with their links, and the model only number and title", async () => {
+    const drafts: FeedbackDraft[] = [];
+    const deps = depsFor({
+      onDraft: (d) => drafts.push(d),
+      findSimilarFeedback: () =>
+        Promise.resolve([
+          {
+            number: 101,
+            title: "Chain spinner hangs on mobile",
+            url: "https://github.com/x/y/issues/101",
+          },
+        ]),
+    });
+
+    const result = await runCompanionTool("draft_feedback", deps, undefined, draftInput);
+
+    expect(drafts).toEqual([
+      {
+        ...draftInput,
+        similar: [
+          {
+            number: 101,
+            title: "Chain spinner hangs on mobile",
+            url: "https://github.com/x/y/issues/101",
+          },
+        ],
+      },
+    ]);
+    expect((result as { ok: true; result: { similar: unknown } }).result.similar).toEqual([
+      { number: 101, title: "Chain spinner hangs on mobile" },
+    ]);
+  });
+
   it("renders exactly as today (no `similar` key at all) when nothing matches", async () => {
-    const deps = depsFor({ findSimilarFeedback: () => Promise.resolve([]) });
+    const drafts: FeedbackDraft[] = [];
+    const deps = depsFor({
+      onDraft: (d) => drafts.push(d),
+      findSimilarFeedback: () => Promise.resolve([]),
+    });
 
     const result = await runCompanionTool("draft_feedback", deps, undefined, draftInput);
 
     expect(result.ok).toBe(true);
     expect((result as { ok: true; result: unknown }).result).not.toHaveProperty("similar");
+    expect(drafts).toEqual([draftInput]);
   });
 
   it("renders exactly as today with no search wired at all (the default deployment)", async () => {

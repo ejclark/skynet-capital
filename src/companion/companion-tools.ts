@@ -9,7 +9,7 @@ import {
 } from "../observatory/participant-snapshot.js";
 import type { Outlook } from "../options/outlook.js";
 import type { Recommendation } from "../options/recommend.js";
-import type { FindSimilarFeedback } from "../server/feedback-similar.js";
+import type { FindSimilarFeedback, SimilarIssue } from "../server/feedback-similar.js";
 import type { ReadResearchOn } from "../server/house-research.js";
 import type { ParticipantProgression, ProgressionService } from "../server/progression-service.js";
 import {
@@ -130,6 +130,9 @@ export interface FeedbackDraft {
   /** The known problem she matched it to (#8005 slice 7), checked by `checkDraftMatch`: the rail
    *  shows its words on the card and the filing POST carries its row and plan. */
   readonly match?: DraftMatch;
+  /** Open feedback issues that read like this one (#1867), up to 3 — the card lists them before
+   *  "submit" (#4286). Advisory: the filing never reads it. Absent when nothing clears the bar. */
+  readonly similar?: readonly SimilarIssue[];
 }
 
 const FEEDBACK_DRAFT_KINDS = new Set(["bug", "feature", "idea"]);
@@ -589,6 +592,38 @@ function upcomingEventsResult(
   return { ok: true, result: read(held, parsed.underlying) };
 }
 
+/** `draft_feedback`: the card the member sees, and the model's word that it is held, not sent. */
+async function draftFeedbackResult(
+  deps: CompanionDeskDeps,
+  input: unknown,
+): Promise<CompanionToolResult> {
+  const parsed = parseFeedbackDraft(input);
+  if (!parsed) return { ok: false, error: "a draft needs a title and details" };
+  // A named match is checked before the card goes out (#8005 slice 7): what fails is dropped
+  // and named in the result, and the draft still goes.
+  const { match, dropped } = await checkDraftMatch(input, deps.readRoadmap);
+  const matched: FeedbackDraft = match ? { ...parsed, match } : parsed;
+  // Advisory only (#1867) — a search failure or empty match list never blocks or reshapes the
+  // draft; `send` still always files it unmodified. The search runs BEFORE the hand-off so the
+  // card can list the matches (#4286), and `similar` is left OFF both the draft and the result
+  // when nothing clears the threshold, so that card reads exactly as it did before.
+  const similar = (await deps.findSimilarFeedback?.(matched).catch(() => [])) ?? [];
+  const draft: FeedbackDraft = similar.length > 0 ? { ...matched, similar } : matched;
+  deps.onDraft?.(draft);
+  // The model needs only number and title; the page link is the card's.
+  const forModel = similar.map(({ number, title }) => ({ number, title }));
+  return {
+    ok: true,
+    result: {
+      captured: true,
+      status: "held in the chat, not sent — the member's own reply 'submit' files it",
+      ...(match ? { knownProblem: match.words } : {}),
+      ...(dropped ? { matchDropped: dropped } : {}),
+      ...(forModel.length > 0 ? { similar: forModel } : {}),
+    },
+  };
+}
+
 /**
  * Run ONE of the allow-listed tools. Any other name — including anything a compromised or
  * confused model might invent, like `place_order` or `submit_trade` — falls through to the
@@ -606,30 +641,8 @@ export async function runCompanionTool(
 ): Promise<CompanionToolResult> {
   const snapshot = participantId ? deps.snapshotFor(participantId) : undefined;
   switch (name as CompanionToolName) {
-    case "draft_feedback": {
-      const parsed = parseFeedbackDraft(input);
-      if (!parsed) return { ok: false, error: "a draft needs a title and details" };
-      // A named match is checked before the card goes out (#8005 slice 7): what fails is dropped
-      // and named in the result, and the draft still goes.
-      const { match, dropped } = await checkDraftMatch(input, deps.readRoadmap);
-      const draft: FeedbackDraft = match ? { ...parsed, match } : parsed;
-      deps.onDraft?.(draft);
-      // Advisory only (#1867 slice 1) — a search failure or empty match list never blocks or
-      // reshapes the draft; `send` still always files it unmodified. `similar` is left OFF the
-      // result entirely when nothing clears the threshold, rather than an empty array, so a
-      // deployment without the rail wired for it (slice 2) sees exactly today's shape.
-      const similar = (await deps.findSimilarFeedback?.(draft).catch(() => [])) ?? [];
-      return {
-        ok: true,
-        result: {
-          captured: true,
-          status: "held in the chat, not sent — the member's own reply 'submit' files it",
-          ...(match ? { knownProblem: match.words } : {}),
-          ...(dropped ? { matchDropped: dropped } : {}),
-          ...(similar.length > 0 ? { similar } : {}),
-        },
-      };
-    }
+    case "draft_feedback":
+      return draftFeedbackResult(deps, input);
     case "get_my_positions":
       return positionsResult(snapshot);
     case "get_my_research_questions":
