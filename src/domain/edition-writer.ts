@@ -175,20 +175,38 @@ function closeLine(m: Move, source: string): EditionLine {
   };
 }
 
-/** The facts for a story about `symbols`: their moves, or the campaign's average when none closed. */
-function factsFor(symbols: readonly string[], input: WriterInput): EditionFact[] {
-  const moves = movesOf(symbols, input.closes).slice(0, MAX_MOVERS);
-  if (moves.length > 0) return moves.map((m) => factOf(m, input.date));
+/** The campaign's average move, the lead fact of a story whose line names no ticker. */
+function averageFact(input: WriterInput): EditionFact {
   const all = movesOf(castSymbols(input.campaign), input.closes);
   const avg = all.reduce((sum, m) => sum + m.change, 0) / all.length;
-  return [
-    {
-      label: `${input.campaign.title}: its ${all.length} names, average`,
-      value: signedPct(avg),
-      move: moveOf(avg),
-      note: dayLabel(input.date),
-    },
-  ];
+  return {
+    label: `${input.campaign.title}: its ${all.length} names, average`,
+    value: signedPct(avg),
+    move: moveOf(avg),
+    note: dayLabel(input.date),
+  };
+}
+
+/**
+ * The facts for a story about `symbols` whose line reads `line` and was written about `lead`. The
+ * landing page's closed row draws the line beside facts[0]'s figure, so facts[0] is `lead`'s own move
+ * when the line shows it, else the campaign's average, never another name's (#8353). The other
+ * names' moves follow, biggest first.
+ */
+function factsFor(
+  symbols: readonly string[],
+  input: WriterInput,
+  line: string,
+  lead: string | undefined,
+): EditionFact[] {
+  const shown = lead !== undefined && line.split(/[^A-Z0-9.]+/).includes(lead) ? lead : undefined;
+  const [own] = shown ? movesOf([shown], input.closes) : [];
+  const rest = movesOf(
+    symbols.filter((s) => s !== shown),
+    input.closes,
+  ).map((m) => factOf(m, input.date));
+  const first = own ? factOf(own, input.date) : averageFact(input);
+  return [first, ...rest].slice(0, MAX_MOVERS);
 }
 
 /** A dated item on the calendar, as an edition lists it, with the record's source beside it. */
@@ -303,12 +321,13 @@ function aheadStory(input: WriterInput, ahead: readonly Dated[]): EditionStory |
   if (!first) return undefined;
   const symbols = [...new Set(shown.flatMap((d) => d.symbols))];
   const estimate = first.item.status === "estimate" ? ", our estimate" : "";
+  const line = fit(`Next: ${first.item.what}`, "Reports and events ahead");
   return {
     id: "ahead",
     headline: `Dated next for ${inText(input.campaign.title)}: ${first.item.what} on ${dayLabel(first.item.date).slice(0, 3)}${estimate}.`,
-    line: fit(`Next: ${first.item.what}`, "Reports and events ahead"),
+    line,
     symbols,
-    facts: factsFor(symbols, input),
+    facts: factsFor(symbols, input, line, first.symbols[0]),
     reports: shown.map((d) => d.item),
     more: shown.map((d) => ({
       text: `${d.item.what}, ${d.item.date}: ${d.item.status === "confirmed" ? "a confirmed date" : "our estimate, not yet confirmed by the company or publisher"}.`,
@@ -342,15 +361,16 @@ function newsStory(input: WriterInput, ahead: readonly Dated[]): EditionStory | 
     ),
   ];
   const named = symbols.slice(0, 3);
+  const line = fit(named.length > 0 ? `${named[0]} in the news` : "In the news");
   return {
     id: "news",
     headline:
       named.length > 0
         ? `Filings and press that named ${named.join(", ")} on ${dayLabel(input.date).slice(0, 3)}.`
         : `Filings and press on ${inText(input.campaign.title)}'s forces.`,
-    line: fit(named.length > 0 ? `${named[0]} in the news` : "In the news"),
+    line,
     symbols,
-    facts: factsFor(symbols, input),
+    facts: factsFor(symbols, input, line, named[0]),
     reports: ahead
       .filter((d) => d.symbols.some((s) => symbols.includes(s)))
       .slice(0, MAX_REPORTS)
