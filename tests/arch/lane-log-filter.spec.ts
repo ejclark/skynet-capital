@@ -72,7 +72,7 @@ describe("the swallowed-result step prints the envelope, never the transcript", 
   });
 
   // The result envelope carries `result`, the session's last words, whenever the CLI writes it
-  // (repair.spec.ts holds a real one). Passing the object through put that text in a public log, so
+  // (repair-limits.spec.ts holds a real one). Passing the object through put that text in a public log, so
   // the program lists the fields it prints, and a field added later stays out until someone lists it.
   it("prints only the fields it lists, so no string a session wrote can reach a public log", () => {
     const out = print([

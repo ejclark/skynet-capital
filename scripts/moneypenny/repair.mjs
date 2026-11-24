@@ -349,7 +349,7 @@ const apiStatuses = (log) =>
  * WHICH LANES CAN SHOW IT: both shapes live in `claude-execution-output.json`, which reaches the log
  * only if a workflow step prints it. `build-events` does. `build-feedback` and `build-plan` print the
  * action's short result, so a limit death there files or comments like any failure until their step
- * lands (#6579; repair.spec.ts pins that no new lane joins them). A bare assistant-message
+ * lands (#6579; repair-limits.spec.ts pins that no new lane joins them). A bare assistant-message
  * `"error": "rate_limit"` is not a signal either — a transient 429 the CLI retried leaves the same
  * line. The lane's own script text names these fields in prose; only the quoted JSON keys count.
  */
@@ -363,7 +363,7 @@ export function limitRejected(logTail) {
 /**
  * Did this failure die in a step that runs a Claude session? GitHub names the unnamed `uses:` step
  * `Run anthropics/claude-code-action@<pin>`. Only there can a log's limit or result fields be about
- * a session: any other job's log can quote them, and a failing repair.spec.ts prints them in its
+ * a session: any other job's log can quote them, and a failing repair-limits.spec.ts prints them in its
  * code frame. An unknown step is not one, so it stays a fault.
  */
 function ranClaude(failure) {
