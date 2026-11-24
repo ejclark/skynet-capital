@@ -34,12 +34,19 @@ export function median(values) {
   return Math.round(m * 100) / 100;
 }
 
-/** One viewport's sessions → success (with its range), middle lostness and middle backtracks. */
+/**
+ * One viewport's sessions → success (with its range), the right answers wherever they came from,
+ * middle lostness and middle backtracks. Success is the oracle's: the fact AND the place it lives
+ * seen on screen. With the chat in hand a member can get the fact right from Moneypenny without
+ * ever seeing its place (the cross-feature round, 11 of 24 failures), so `answered` counts the
+ * oracle's answer match alone, beside it, never in its place.
+ */
 function viewportRow(sessions) {
   const succeeded = sessions.filter((s) => s.success).length;
   return {
     sessions: sessions.length,
     succeeded,
+    answered: sessions.filter((s) => s.answered).length,
     rate: sessions.length ? Math.round((succeeded / sessions.length) * 1000) / 1000 : null,
     wilson: sessions.length ? wilson(succeeded, sessions.length) : null,
     lostness: median(sessions.map((s) => s.lostness)),
@@ -90,7 +97,8 @@ export function chatRecall(sessions, labels) {
 }
 
 /**
- * The plan's rows from a round's sessions: `[{rel, viewport, success, lostness, backtracks, chat}]`
+ * The plan's rows from a round's sessions: `[{rel, viewport, success, answered, lostness, backtracks,
+ * chat}]`
  * (chat = the session's chat.jsonl lines) and the chat labels (null when not written).
  */
 export function planScorecard({ sessions, labels = null }) {
@@ -118,6 +126,10 @@ export function planScorecardLines(card) {
     row(
       "Task success (the answer graded, not the member's word)",
       (r) => `${r.succeeded} of ${r.sessions} (${pct(r.rate)}, ${range(r.wilson)})`,
+    ),
+    row(
+      "Answered right, from the page or the chat (the place unseen is allowed)",
+      (r) => `${r.answered ?? "n/a"} of ${r.sessions}`,
     ),
     row("Lostness, middle session (0 is a straight path)", (r) => r.lostness ?? "n/a"),
     row("Backtracks, middle session", (r) => r.backtracks ?? "n/a"),

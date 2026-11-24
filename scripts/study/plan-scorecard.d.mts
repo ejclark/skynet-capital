@@ -8,6 +8,8 @@ export interface PlanSession {
   rel: string;
   viewport: string;
   success: boolean;
+  /** The oracle's answer match alone (the fact right, its place seen or not). */
+  answered?: boolean;
   lostness: number | null;
   backtracks: number | null;
   chat: { kind: string; n: number; said?: string; drafts?: { kind: string }[] }[];
@@ -21,6 +23,7 @@ export interface ChatLabel {
 export interface ViewportRow {
   sessions: number;
   succeeded: number;
+  answered: number;
   rate: number | null;
   wilson: Range | null;
   lostness: number | null;

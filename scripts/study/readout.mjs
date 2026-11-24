@@ -322,6 +322,7 @@ export function buildReadout(opts) {
       rel: s.rel,
       viewport: s.summary.viewport,
       success: Boolean(s.summary.oracle?.success),
+      answered: Boolean(s.summary.oracle?.answer?.matched),
       lostness: s.summary.metrics?.lostness ?? null,
       backtracks: s.summary.metrics?.backtracks ?? null,
       chat: existsSync(join(s.dir, CHAT_LOG)) ? readJsonl(join(s.dir, CHAT_LOG)) : [],

@@ -27,6 +27,7 @@ const SESSIONS = [
     rel: "5-sessions/a/w/phone/t1/run-1",
     viewport: "phone",
     success: true,
+    answered: true,
     lostness: 0.2,
     backtracks: 1,
     chat: [chat(0, "where is my history?"), chat(1, "this page keeps losing my place", ["filing"])],
@@ -35,6 +36,7 @@ const SESSIONS = [
     rel: "5-sessions/a/w/phone/t2/run-1",
     viewport: "phone",
     success: false,
+    answered: true,
     lostness: 0.6,
     backtracks: 4,
     chat: [chat(0, "nothing here works the way I expect"), { kind: "sent", n: 1 }],
@@ -64,7 +66,12 @@ describe("planScorecard — success, lostness and backtracks by viewport, phone 
   const card = planScorecard({ sessions: SESSIONS });
   it("counts the oracle's verdicts per viewport with a Wilson range", () => {
     expect(Object.keys(card.byViewport)).toEqual(["phone", "desktop"]);
-    expect(card.byViewport.phone).toMatchObject({ sessions: 2, succeeded: 1, rate: 0.5 });
+    expect(card.byViewport.phone).toMatchObject({
+      sessions: 2,
+      succeeded: 1,
+      answered: 2,
+      rate: 0.5,
+    });
     expect(card.byViewport.phone.wilson?.lo).toBeGreaterThan(0);
     expect(card.byViewport.desktop).toMatchObject({ sessions: 1, succeeded: 1, rate: 1 });
   });
@@ -109,6 +116,9 @@ describe("planScorecardLines — the rows as the readout prints them", () => {
     const text = planScorecardLines(planScorecard({ sessions: SESSIONS })).join("\n");
     expect(text).toContain("| Row | phone | desktop |");
     expect(text).toContain("1 of 2 (50%,");
+    expect(text).toContain(
+      "| Answered right, from the page or the chat (the place unseen is allowed) | 2 of 2 | 0 of 1 |",
+    );
     expect(text).toContain("| Lostness, middle session (0 is a straight path) | 0.4 | 0 |");
     expect(text).toContain("Chat sensor recall: not labelled yet (3 member messages");
   });
