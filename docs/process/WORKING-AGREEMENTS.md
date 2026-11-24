@@ -70,7 +70,7 @@ work to proceed' remains consistent; now, always now"). Once a plan is `ready`, 
 PR merges, the next slice starts without a fresh nod — re-asking "should I continue?" on work already
 inside the envelope is the same scaling failure as a recurring blessing-ask (`CLAUDE.md` → *Hard boundaries*).
 This answers *when*, not *what*: the hard boundaries in `CLAUDE.md` (irreversible/governance/spend, a genuine
-taste fork, a load-bearing decision only he can settle) still always stop for him — "always now" means
+taste fork in a class that has not graduated, a load-bearing decision only he can settle) still always stop for him — "always now" means
 never idle on ready, in-envelope work, not never ask at all. Label semantics
 (2026-08-22): **`needs-eric` means exactly one thing — a decision only he can make.** Everything else
 not yet shippable has its own marker: `needs-info` (the member) · `next-slice` (nobody) · `plan` (a
@@ -135,11 +135,13 @@ step waits on a blessing it does not need.
   approve each step. A game mechanic that would ask a member to bless a step the system could take
   and report is the same defect as a recurring blessing-ask in the build (`CLAUDE.md` → *Hard
   boundaries*). Paper only, and no fog ever withholds what a member needs to stay safe.
-- **The boundary is `envelope.json`, unchanged.** The irreversible class is the safety boundary, not
-  a blessing: it stays Eric's, one touch per batch on the platter (`CLAUDE.md` → *Merge posture*).
-  Every class outside it is decide-and-report.
+- **The boundary is the irreversible class, unchanged.** `envelope.json` lists its paths, and
+  [`ALIGNMENT.md`](ALIGNMENT.md) rule 4 (`CLASS_MAP` in `scripts/alignment-graduation.mjs`) lists its
+  decision classes, such as bot safety rules, member data sharing and arming a schedule. It is the
+  safety boundary, not a blessing: it stays Eric's, and its protected paths board the platter, one
+  touch per batch (`CLAUDE.md` → *Merge posture*). Every other class is decide-and-report.
 - **Reversals are the meter.** Each decided call that would otherwise be a question to him leaves
-  a row on the alignment ledger, and a class he reverses more than 1 in 4 times returns to asking
+  a row on the alignment ledger, and his reversals return a class to asking
   ([`ALIGNMENT.md`](ALIGNMENT.md) rule 5).
 
 **The six rules this decision sets.** Each comes from the stage 0 census's rules audit on #8161 and
@@ -152,34 +154,42 @@ the reading.
   a class that has not graduated still reaches him as rendered options with a predicted pick
   ([`ALIGNMENT.md`](ALIGNMENT.md) rules 1 and 3). *Wrong if:* by 2026-12-21 he reverses more than 1
   in 4 shipped taste picks, or the class logs a miss.
-- **Call 2 — research the deciding question, then decide once two refuters fail.** No front-loaded
-  questions: the rule is *A piling backlog is a defect; evidence is enough to move* above, and a
-  question goes to Eric only for the irreversible class or a fork the research could not settle.
+- **Call 2 — research the deciding question, then decide once two refuters fail.** The rule is *A
+  piling backlog is a defect; evidence is enough to move* above, and a question goes to Eric only
+  for the irreversible class or a fork the research could not settle.
   *Wrong if:* by 2026-12-21 the weekly newsletter's rework meter (#8037) reads above 15%, or he
   reverses more than 1 in 4 calls decided on evidence.
-- **Call 4 — every seat names an event or a schedule that starts it.** A seat whose `invoker` in
-  `docs/agents/seats.json` is `eric` gets one, and plain intent stays a second way in (the list is
-  [`org-chart.md`](../architecture/org-chart.md) → *Seats with no reporting line*). A seat stays with a person only when its act is a person's by nature: the quota surge
-  (raising a cap is spend), invites (the invite gate) and the owner's own bot controls (his account,
-  as a member's bots are theirs). A schedule or event that needs a workflow file touches
-  `.github/workflows/**`, which `envelope.json` protects, so it boards the platter as a held item.
-  *Wrong if:* by 2026-12-21, or 30 days after the first seat moves if that is later, a seat started
-  by an event or a schedule has more than 1 in 4 of its PRs reverted, or spends more than the work
-  dial allows.
+- **Call 4 — a seat only Eric's phrase starts also gets an event or a schedule.** A seat whose
+  `invoker` in `docs/agents/seats.json` is `eric` gains an event or a schedule that starts it, and
+  plain intent stays a second way in (the list is [`org-chart.md`](../architecture/org-chart.md) →
+  *Seats with no reporting line*). Two kinds stay with him. A seat whose act is his by nature: the
+  quota surge (raising a cap is spend), invites (the invite gate) and his own bot controls (his
+  account, as a member's bots are theirs). And a seat whose input is his own act, such as a link,
+  screenshots, a reaction to a frame, an `@claude` comment or a design tap: that act is the steer.
+  Arming the new schedule or event stays his too. A workflow file is `envelope.json`'s class and
+  boards the platter; a claude.ai Routine arms when he creates it, with its row in
+  [`ROUTINES.md`](../ROUTINES.md) (*Arming is Eric's, always*). *Wrong if:* by 2026-12-21, or 30
+  days after the first seat moves if that is later, a seat started that way has more than 1 in 4 of
+  its PRs reverted, or Eric has to stop one.
 - **Call 5 — an unready plan has an age limit of 30 days.** A `plan` issue with no `ready` 30 days
   after filing is merged into a parent plan as a sub-issue, flipped `ready` on evidence
   (`/clear-path-flip`, two refuters), or closed `not_planned` with its reason in one line. A plan
   carrying `needs-eric` stays on the decisions page instead. 30 days is a first guess: on
-  2026-11-24, 84 of 95 open plans had no `ready`, at a median age of 46 days. The first sweep is
-  #8161's stage 1 close-out, after Eric picks the direction. *Wrong if:* by 2026-12-21 the open plan
-  count has not fallen below 95, or he reopens more than 2 age-closed plans.
+  2026-11-24, 84 of 95 open plans had no `ready`, at a median age of 46 days. While #8161 is open,
+  its stage 1 close-out runs the sweep, after Eric picks the direction; after that, a session
+  working the backlog runs it. *Wrong if:* by 2026-12-21, or 30 days after the first sweep if that
+  is later, more than 10 open plans are past the limit with no verdict, or he reopens more than 2
+  age-closed plans.
 - **Call 9 — a fan-out prints a price line and launches.** Before a workflow or a batch of agents
   starts, the session prints one line: the agents, their models, and the share of the weekly quota
   it expects to spend (`npm run pace` for what is already used; the estimate from the nearest
   measured run, labelled an estimate). It waits for Eric's go only above 15% of the weekly quota, or
-  above 4 Fable agents in one run. The work dial still refuses what it refuses (`npm run work-gate`),
-  and conservation still follows only his phrase ([`COMPUTE.md`](../COMPUTE.md)). Both thresholds
-  are first guesses, and this file is their home until the dial carries them: `work-mode.json` is
+  above 4 Fable agents in one run, since Fable's cost per agent is the least measured, so its
+  estimate is the least trustworthy. His own request for the run, in his words, is that go, and at
+  `surge` nothing waits. The models still come from the floor table in [`COMPUTE.md`](../COMPUTE.md):
+  a tier is never lowered to stay under a threshold, and conservation still follows only his
+  phrase. The work dial still refuses what it refuses (`npm run work-gate`). Both thresholds are
+  first guesses, and this file is their home until the dial carries them: `work-mode.json` is
   protected, so moving them there is a platter item. *Wrong if:* by 2026-12-21 he stops a run, or
   turns the dial to `conserve`, because a fan-out spent more than he expected.
 - **Call 10 — a pattern that locks a capability behind a rung is placed by the decision tree plus a
@@ -233,6 +243,19 @@ archives at the end of the turn that settles it.
 
 `archive_session` releases the container the call runs in, so its spinner can sit for a minute with
 no result — that wait is teardown, not thinking. Nothing goes after it.
+
+## Sessions run in the cloud by default
+
+**Sessions run in the cloud by default; the laptop is the exception** (Eric, 2026-10-13, after a
+Remote Control session on his laptop went `computer_unreachable` and his phone could not wake it:
+cloud sessions "organically convert the issue… a none problem, solved OOTB"). A cloud session keeps
+working with the lid closed, is steerable from the phone, and bills against the same plan with no VM
+charge; review already rides screenshots and messages, so nothing in the loop needs his machine.
+Any session Claude starts or hands him (`create_session`, a "start a session" link, a `/redesign`
+round) is a cloud one; a laptop session is for files that exist only there or a real GPU for 3D feel.
+The environment is code — `mise.toml` pins the toolchain, `.claude/hooks/session-start.sh` installs
+it — so a gap a cloud session hits is fixed there, never routed around by going local. Wrong if, by
+2026-11-13, three sessions had to move to the laptop for a reason the environment could not absorb.
 
 ## Pictures first
 
