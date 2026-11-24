@@ -134,6 +134,36 @@ describe("wireAlertDelivery — a watched order's failed send is retried by the 
     expect(statuses).toEqual([429, 200]);
   });
 
+  it("runs one pass at boot, so a restart retries an open watch instead of resetting the hour (#8398)", async () => {
+    // Production's config: no sweep interval set, so the timer is an hour. Releases restart the
+    // dashboard far more often than that, so the boot pass is the retry that actually lands.
+    await new JsonlAlertDeliveryStore(dir).saveWatch("human-ann", watch);
+    let releaseReconcile: () => void = () => undefined;
+    const reconciled = new Promise<void>((resolve) => {
+      releaseReconcile = resolve;
+    });
+    wiring = wireAlertDelivery({
+      env: {
+        SKYNET_ALERT_DELIVERY_DIR: dir,
+        SKYNET_ALERT_EMAIL_API_KEY: "test-key",
+        SKYNET_ALERT_EMAIL_FROM: "Skynet <alerts@example.com>",
+      },
+      deps: () => {
+        derivations += 1;
+        return deps();
+      },
+      activityEvents: { subscribe: () => ({ unsubscribe: () => undefined }) },
+      ownerEmailFor: () => "ann@x.com",
+      ready: reconciled,
+    });
+    // The boot pass waits for the boot reconcile, so it reads the broker window's fills.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(derivations).toBe(0);
+    releaseReconcile();
+    await until(() => statuses.length >= 1, "the boot pass's send");
+    expect(statuses).toEqual([429]);
+  });
+
   it("does no work for a member with the channel off and no open watch", async () => {
     await new JsonlAlertDeliveryStore(dir).savePrefs("human-ann", {
       channel: "off",

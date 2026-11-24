@@ -434,6 +434,8 @@ async function main(): Promise<void> {
     env: process.env,
     activityEvents: activityEventBus,
     ownerEmailFor,
+    // Its boot sweep waits for the broker window to be banked (#8398).
+    ready: reconciled,
     deps: () => ({
       hub,
       optionsClientFor: (id) => clientFor(id, dataSource.optionsClientFactory),
