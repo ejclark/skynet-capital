@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { audit } from "../../../scripts/moneypenny/audit.mjs";
 import { pickupHoldReason } from "../../../scripts/moneypenny/pickup-hold.mjs";
 import {
+  blockerHold,
   closeRedLanePr,
   gatherRedLanePrs,
   RED_CLOSE_CAP,
@@ -54,6 +55,7 @@ const fakeRest = (
     issue = readyIssue as unknown,
     files = ["src/playbooks/claim-proposals.ts"],
     comments = [] as unknown[],
+    blockers = [] as unknown[],
   } = {},
 ) => {
   const calls: string[] = [];
@@ -64,6 +66,7 @@ const fakeRest = (
     if (path === "issues/5482") return issue;
     if (path.startsWith("pulls/6440/files")) return files.map((filename) => ({ filename }));
     if (path.startsWith("issues/5482/comments")) return comments;
+    if (path.startsWith("issues/5482/dependencies/blocked_by")) return blockers;
     throw new Error(`unexpected read: ${path}`);
   };
   return { rest, calls };
@@ -168,6 +171,55 @@ describe("gatherRedLanePrs — which PR has nobody left to own it", () => {
     }
   });
 
+  describe("a PR parked on its issue's blocked-by link (#8484)", () => {
+    // #8044 (feedback/8014) sat red 43h until #8295 could land; the sweep closed it 3 minutes after.
+    const linked = (open: number) => ({
+      ...readyIssue,
+      issue_dependencies_summary: { blocked_by: open, total_blocked_by: 1 },
+    });
+    const blocker = (state: string, closedHoursAgo?: number) => ({
+      number: 8295,
+      state,
+      closed_at: closedHoursAgo === undefined ? null : hoursAgo(closedHoursAgo),
+    });
+    const sweep = (issue: unknown, blockers: unknown[]) => {
+      const lines: string[] = [];
+      const { rest, calls } = fakeRest(listed(), { issue, blockers });
+      const out = gatherRedLanePrs(NOW, { rest, log: (l: string) => lines.push(l) });
+      return { out, lines, calls };
+    };
+
+    it("never closes a PR whose issue has an open blocker, and logs the blocker's number", () => {
+      const { out, lines } = sweep(linked(1), [blocker("open")]);
+      expect(out).toEqual([]);
+      expect(lines.join("\n")).toContain("#6440");
+      expect(lines.join("\n")).toContain("#8295");
+    });
+
+    it("an open blocker holds even when the summary is stale and counts it closed", () => {
+      expect(sweep(linked(0), [blocker("open")]).out).toEqual([]);
+    });
+
+    it("counts the age limit from the last blocker's close, not the check's: #8044's replay", () => {
+      const { out, lines } = sweep(linked(0), [blocker("closed", 0.05)]);
+      expect(out).toEqual([]);
+      expect(lines.join("\n")).toMatch(/#8295, closed 0\.1h ago/);
+    });
+
+    it("applies the usual limit once the last blocker has been closed that long", () => {
+      expect(sweep(linked(0), [blocker("closed", 25)]).out).toHaveLength(1);
+      const two = [blocker("closed", 30), { ...blocker("closed", 2), number: 8300 }];
+      const { out, lines } = sweep(linked(0), two);
+      expect(out).toEqual([]);
+      expect(lines.join("\n")).toContain("#8300");
+    });
+
+    it("reads no blocker list for an issue with no links: a normal tick pays nothing extra", () => {
+      const { calls } = sweep(readyIssue, []);
+      expect(calls.some((c) => c.includes("dependencies"))).toBe(false);
+    });
+  });
+
   it("leaves a protected diff: that class waits for Eric's merge by design", () => {
     expect(gather(listed(), { files: [".github/workflows/pipeline.yml"] })).toEqual([]);
   });
@@ -199,6 +251,23 @@ describe("redLaneOrNone — soft on failure", () => {
     });
     expect(out).toEqual([]);
     expect(warned.join("\n")).toContain("red lane PR pass skipped");
+  });
+});
+
+describe("blockerHold — pure", () => {
+  it("names every open blocker; none, or all closed past the limit, is no hold", () => {
+    const open = [
+      { number: 1, state: "open" },
+      { number: 2, state: "closed", closed_at: hoursAgo(1) },
+      { number: 3, state: "open" },
+    ];
+    expect(blockerHold(open, NOW)).toContain("#1, #3");
+    expect(blockerHold([], NOW)).toBeNull();
+    expect(blockerHold([{ number: 2, state: "closed", closed_at: hoursAgo(24) }], NOW)).toBeNull();
+  });
+
+  it("a closed blocker with no close time counts as closed just now: the safe side", () => {
+    expect(blockerHold([{ number: 2, state: "closed" }], NOW)).toContain("#2");
   });
 });
 
