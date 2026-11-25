@@ -1,3 +1,5 @@
+import { basename } from "node:path";
+import { fileURLToPath } from "node:url";
 import { expect, type Page } from "@playwright/test";
 
 /**
@@ -93,9 +95,54 @@ export const EDITION_CLOCK = new Date("2026-11-09T14:00:00Z");
  */
 const isBoardChannel = (url: URL): boolean => url.pathname === "/events";
 
+/**
+ * The fourth irreproducible input: which mono face the OS has (#8014). `--mono`
+ * (app/src/styles/theme.css), `MONO` (src/ui/tokens.ts) and the 3D scene's label font are system
+ * stacks with no `@font-face` behind them, so the face is whatever is installed. CI's
+ * `ubuntu-latest` has none of the named families and falls through to `monospace` (DejaVu Sans
+ * Mono); the cloud session image ships JetBrains Mono, so the same tree drew a lighter, narrower
+ * `MARKET OPEN` eyebrow and failed 7 market-clock shots by 131 px each (2026-11-23, #7735's head).
+ *
+ * WHAT THIS DOES — registers the face CI already renders, DejaVu Sans Mono 2.37 (copied from
+ * ubuntu-latest's fonts-dejavu-core into e2e/fonts, Bitstream Vera licence beside it), under every
+ * named family in those stacks. A page's own font faces shadow installed fonts of the same name,
+ * so the stack resolves to this file on any OS. Its pixels are not the old baselines' though:
+ * Chromium on Linux hints a page font differently from the same file installed (26 glyphs at
+ * 12.5px measured 216 px wide versus 203 px), and `local("DejaVu Sans Mono")` takes the page-font
+ * path too. So the shots carrying mono text were re-baselined once, from CI, when this landed.
+ * Test-only: no app code changes and members still see their own system face (self-hosting a
+ * face for members is a product call, out of scope here).
+ *
+ * REJECTED: widening MARKET_CLOCK_DIFF_PIXELS / FROZEN_DIFF_RATIO to absorb the swap — a budget
+ * wide enough for a font change hides real top-bar drift. Installing JetBrains Mono on CI — a
+ * workflow edit plus a full re-baseline, and still at the mercy of the next image's fonts.
+ */
+const PINNED_MONO_FAMILIES = ["JetBrains Mono", "SF Mono", "SFMono-Regular", "Menlo", "Consolas"];
+const PINNED_MONO_FILES = [
+  { url: "/__e2e__/fonts/DejaVuSansMono.ttf", weight: "400" },
+  { url: "/__e2e__/fonts/DejaVuSansMono-Bold.ttf", weight: "700" },
+];
+const isPinnedMonoFile = (url: URL): boolean => url.pathname.startsWith("/__e2e__/fonts/");
+const PIN_MONO = `
+  (() => {
+    const families = ${JSON.stringify(PINNED_MONO_FAMILIES)};
+    const files = ${JSON.stringify(PINNED_MONO_FILES)};
+    for (const family of families) {
+      for (const file of files) {
+        document.fonts.add(new FontFace(family, "url(" + file.url + ")", { weight: file.weight }));
+      }
+    }
+  })();
+`;
+
 export async function freezePage(page: Page): Promise<void> {
   await page.clock.setFixedTime(FIXED_CLOCK);
   await page.addInitScript(SEEDED_RANDOM);
+  await page.addInitScript(PIN_MONO);
+  await page.route(isPinnedMonoFile, (route) => {
+    const name = basename(new URL(route.request().url()).pathname);
+    return route.fulfill({ path: fileURLToPath(new URL(`fonts/${name}`, import.meta.url)) });
+  });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.route(isBoardChannel, (route) => route.abort());
 }

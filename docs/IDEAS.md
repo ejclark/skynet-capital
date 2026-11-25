@@ -691,6 +691,9 @@ and a citation that's the *entire* justification ("// Collections (2026-08-26, #
 real narration case — rather than routing every flagged line through the same judgment call by hand.
 _(src: Claude · while: comment-bloat DX audit, 2026-08-30)_
 
+**Shipped (#7950, 2026-11-25):** the scanner now reads whole comments and flags one only when a
+citation or caller is its entire content; the count went from 2065 lines to 1 comment.
+
 ### `repair-watchlist-scan.mjs`'s path fallback can mask a real name-drift
 
 Found while renaming the Moneypenny-branded workflows (#968): the scanner treats a workflow as

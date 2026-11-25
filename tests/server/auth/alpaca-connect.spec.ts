@@ -28,6 +28,17 @@ describe("alpacaConnectProvider", () => {
     expect(url).toContain("redirect_uri=https%3A%2F%2Fapp%2Fonboard%2Falpaca%2Fcallback");
   });
 
+  it("asks for trading and data only, and for a paper account only", () => {
+    const params = new URL(provider.authorizeUrl("https://app/cb", "s")).searchParams;
+    expect(params.get("scope")).toBe("trading data");
+    expect(params.get("env")).toBe("paper");
+  });
+
+  it("keeps env=paper even with a custom scope", () => {
+    const url = alpacaConnectProvider({ clientId: "a", clientSecret: "b", scope: "trading" });
+    expect(new URL(url.authorizeUrl("https://app/cb", "s")).searchParams.get("env")).toBe("paper");
+  });
+
   it("honors a custom scope", () => {
     const url = alpacaConnectProvider({
       clientId: "aid",

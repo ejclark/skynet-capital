@@ -2,6 +2,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "@rstest/core";
 import {
   createIds,
@@ -10,6 +11,7 @@ import {
   mutationFor,
   resolveQuery,
 } from "../../scripts/issues-graphql.mjs";
+import { ghRest } from "../../scripts/moneypenny/gh.mjs";
 import { callerLabel, createBudget, parseRateHeaders } from "../../scripts/rest-budget.mjs";
 import { hermeticGitEnv } from "../support/hermetic-git.js";
 
@@ -58,6 +60,19 @@ describe("rest budget: reading GitHub's rate headers", () => {
     b.observe({ remaining: 29, resource: "search" });
     expect(lines).toEqual([]);
     expect(b.useGraphql()).toBe(false);
+  });
+
+  it("turns GraphQL off once it fails, and hands the call to REST only while REST has calls", () => {
+    const lines: string[] = [];
+    const b = createBudget({ log: (l) => lines.push(l), caller: () => "x" });
+    b.observe({ remaining: 250, resource: "core" });
+    expect(b.useGraphql()).toBe(true);
+    expect(b.graphqlRefused(new Error("curl: (22)\nGitHub said: not enabled"))).toBe(true);
+    expect(b.useGraphql()).toBe(false);
+    expect(b.graphqlRefused(new Error("again"))).toBe(true);
+    expect(lines.filter((l) => l.includes("GraphQL failed here"))).toHaveLength(1);
+    b.exhausted();
+    expect(b.graphqlRefused(new Error("spent"))).toBe(false);
   });
 
   it("treats a REST refusal for rate limit as an empty allowance", () => {
@@ -206,9 +221,15 @@ describe("rest budget: issues.mjs writes as GraphQL mutations", () => {
 /**
  * A curl that answers like GitHub at a chosen REST `remaining`: it writes the rate headers to the
  * `-D` file, logs every call, saves each GraphQL document, and answers a resolve read or an
- * updateIssue. `refuseWrites` makes every REST write a 403 for rate limit, as GitHub does when spent.
+ * updateIssue. `refuseWrites` makes every REST write a 403 for rate limit, as GitHub does when spent;
+ * `refuseAll` refuses the reads too, the state at 0 left. An issue read over GraphQL (its query asks
+ * for `subIssuesSummary`) answers with the issue.
  */
-function runAt(remaining: number, argv: string[], { refuseWrites = false } = {}) {
+function runAt(
+  remaining: number,
+  argv: string[],
+  { refuseWrites = false, refuseAll = false, refuseGraphql = false } = {},
+) {
   const dir = mkdtempSync(join(tmpdir(), "rest-budget-"));
   const issue = '{"id":70,"node_id":"I_7","number":7,"title":"t","state":"open","labels":[]}';
   writeFileSync(
@@ -222,12 +243,16 @@ in="$(cat)"
 case "$url" in
   */graphql)
     printf '%s\\n' "$in" >> "${dir}/graphql.log"
+    if [ "${refuseGraphql ? "1" : ""}" = 1 ]; then
+      echo '{"message":"This GraphQL query is not enabled for this session. Use gh api repos/{owner}/{repo}/... instead."}'; exit 22
+    fi
     case "$in" in
+      *subIssuesSummary*) echo '{"data":{"repository":{"issue":{"id":"I_7","databaseId":70,"number":7,"title":"t","state":"OPEN","url":"https://x/7","labels":{"nodes":[]},"subIssuesSummary":{"total":0,"completed":0},"issueDependenciesSummary":{"blockedBy":0}}}}}' ;;
       *'"query":"query('*) echo '{"data":{"repository":{"l0":{"id":"LA_bug"}}}}' ;;
       *) echo '{"data":{"u":{"issue":{"id":"I_7","databaseId":70,"number":7,"title":"t","state":"OPEN","url":"https://x/7","labels":{"nodes":[{"name":"bug"}]}}}}}' ;;
     esac ;;
   *)
-    if [ "$method" != GET ] && [ "${refuseWrites ? "1" : ""}" = 1 ]; then
+    if [ "${refuseAll ? "1" : ""}" = 1 ] || { [ "$method" != GET ] && [ "${refuseWrites ? "1" : ""}" = 1 ]; }; then
       echo '{"message":"API rate limit exceeded for user ID 1."}'; exit 22
     fi
     echo '${issue}' ;;
@@ -254,6 +279,7 @@ esac
   const calls = read("curl.log").trim().split("\n").filter(Boolean);
   return {
     res,
+    rest: calls.filter((c) => !c.endsWith("/graphql")),
     restWrites: calls.filter((c) => / -X /.test(` ${c} `) && !c.endsWith("/graphql")),
     graphql: read("graphql.log"),
   };
@@ -285,6 +311,51 @@ describe("rest budget: issues.mjs at the edge of the allowance (end to end)", ()
     expect(res.status).toBe(0);
     expect(restWrites).toHaveLength(1);
     expect(graphql).toContain("updateIssue");
+  });
+
+  // The measured gap (2026-11-24, #8346's repair): at 0 left `update` stopped at its first act, the
+  // issue read, so the GraphQL write behind it never ran.
+  it("at 0 left, update reads the issue through GraphQL and still posts its comment", () => {
+    const dir = mkdtempSync(join(tmpdir(), "rest-budget-comment-"));
+    writeFileSync(join(dir, "c.md"), "hello");
+    const { res, rest, graphql } = runAt(0, ["update", "7", "--comment-file", join(dir, "c.md")], {
+      refuseAll: true,
+    });
+    expect(res.status, res.stderr).toBe(0);
+    expect(rest).toHaveLength(1); // the one refused read, never sent again over REST
+    expect(graphql).toContain("subIssuesSummary");
+    expect(graphql).toContain("addComment");
+    expect(res.stdout).toMatch(/^#7 /);
+  });
+
+  // A Claude Code cloud session's proxy refuses GraphQL with a 403 whatever the token
+  // (docs/vendor/claude-code/cloud-environments.md). Under 300 left, REST still has the calls.
+  it("with 250 left in a cloud session, a write GraphQL refuses goes over REST", () => {
+    const { res, restWrites, graphql } = runAt(250, ["update", "7", "--add", "bug"], {
+      refuseGraphql: true,
+    });
+    expect(res.status, res.stderr).toBe(0);
+    expect(graphql).not.toBe(""); // it tried GraphQL first
+    expect(restWrites).toHaveLength(1);
+    expect(res.stderr).toMatch(/GraphQL failed here \(.*not enabled for this session/);
+    expect(res.stdout).toMatch(/^#7 /);
+  });
+
+  it("at 0 left in a cloud session, the write fails on GraphQL's own refusal, never retried on REST", () => {
+    const { res, restWrites } = runAt(0, ["update", "7", "--add", "bug"], {
+      refuseAll: true,
+      refuseGraphql: true,
+    });
+    expect(res.status).not.toBe(0);
+    expect(restWrites).toEqual([]);
+    expect(res.stderr).toMatch(/not enabled for this session/);
+  });
+
+  it("at 0 left, show prints the issue read through GraphQL, its board column included", () => {
+    const { res, graphql } = runAt(0, ["show", "7"], { refuseAll: true });
+    expect(res.status, res.stderr).toBe(0);
+    expect(graphql).toContain("issue(number: 7)");
+    expect(res.stdout).toMatch(/^#7 \[[^\]]+\] t /);
   });
 });
 
@@ -330,5 +401,90 @@ printf '{}\\n__SHIP_HTTP__200'
     expect(low.stderr).toMatch(/REST 812 left .* caller: ship\.sh open · branch feedback\/8289/);
     expect(run("4000").stderr).not.toMatch(/rate-limit:/);
     expect(run("20", "search").stderr).not.toMatch(/rate-limit:/);
+  });
+});
+
+// #8289 slice 2: only issues.mjs and ship.sh named their caller, so the 83 scripts on gh.mjs's
+// `ghRest` (every Moneypenny lane, `rank`, `work-gate`, the digests) spent the shared allowance
+// unseen. `ghRest` is now `restCall`'s GET, so it reports into the same budget.
+describe("rest budget: every script on ghRest names its caller", () => {
+  const headerDump = (left: number, resource = "core") =>
+    `HTTP/2 200\r\nx-ratelimit-remaining: ${left}\r\nx-ratelimit-resource: ${resource}\r\n\r\n`;
+  const dumpTo = (args: string[]) => {
+    const file = args[args.indexOf("-D") + 1];
+    if (!file) throw new Error("ghRest asked curl for no header dump (-D)");
+    return file;
+  };
+  const answeringAt =
+    (left: number, resource = "core") =>
+    (_cmd: string, args: string[]) => {
+      writeFileSync(dumpTo(args), headerDump(left, resource));
+      return '{"number":7}';
+    };
+
+  it("reports each read's remaining count to the budget it is given", () => {
+    const lines: string[] = [];
+    const into = createBudget({ log: (l) => lines.push(l), caller: () => "route.mjs sweep" });
+    expect(ghRest("issues/7", { token: "t", run: answeringAt(640), into })).toEqual({ number: 7 });
+    ghRest("issues/8", { token: "t", run: answeringAt(639), into });
+    expect(into.remaining()).toBe(639);
+    expect(lines).toEqual([
+      "rate-limit: REST 640 left of the shared hourly allowance — caller: route.mjs sweep",
+    ]);
+  });
+
+  it("reports a refused read too, and ignores the search bucket", () => {
+    const into = createBudget({ log: () => undefined });
+    ghRest("search/issues?q=x", { token: "t", run: answeringAt(12, "search"), into });
+    expect(into.remaining()).toBeNull();
+    const refused = (_cmd: string, args: string[]) => {
+      writeFileSync(dumpTo(args), headerDump(0));
+      throw Object.assign(new Error("Command failed: curl\ncurl: (22) … error: 403"), {
+        stdout: '{"message":"API rate limit exceeded for user ID 1."}',
+      });
+    };
+    expect(() => ghRest("issues/7", { token: "t", run: refused, into })).toThrow(/rate limit/);
+    expect(into.remaining()).toBe(0);
+  });
+
+  it("end to end: a script on ghRest logs its caller once, under 1,000 left only", () => {
+    const dir = mkdtempSync(join(tmpdir(), "ghrest-budget-"));
+    writeFileSync(
+      join(dir, "curl"),
+      `#!/bin/bash
+prev=""; hdr=""
+for a in "$@"; do [ "$prev" = "-D" ] && hdr="$a"; prev="$a"; done
+printf 'HTTP/2 200\\r\\nx-ratelimit-remaining: %s\\r\\nx-ratelimit-resource: core\\r\\n\\r\\n' "$STUB_LEFT" > "$hdr"
+echo '{"number":7}'
+`,
+    );
+    chmodSync(join(dir, "curl"), 0o755);
+    const probe = join(dir, "route-probe.mjs");
+    const gh = pathToFileURL(resolve("scripts/moneypenny/gh.mjs")).href;
+    writeFileSync(
+      probe,
+      `import { ghRest } from ${JSON.stringify(gh)};\nghRest("issues/7");\nghRest("issues/8");\n`,
+    );
+    const run = (left: string) =>
+      spawnSync(process.execPath, [probe, "sweep"], {
+        cwd: dir,
+        env: {
+          ...process.env,
+          PATH: `${dir}:${process.env.PATH}`,
+          GH_TOKEN: "stub",
+          GITHUB_REPOSITORY: "o/r",
+          GITHUB_RUN_ID: "42",
+          GITHUB_WORKFLOW: "moneypenny",
+          STUB_LEFT: left,
+        },
+        encoding: "utf8",
+      });
+    const low = run("812");
+    expect(low.status, low.stderr).toBe(0);
+    expect(low.stderr.match(/rate-limit:/g)).toHaveLength(1);
+    expect(low.stderr).toMatch(
+      /REST 812 left .* caller: route-probe\.mjs sweep · run 42 \(moneypenny\)/,
+    );
+    expect(run("4000").stderr).not.toMatch(/rate-limit:/);
   });
 });
