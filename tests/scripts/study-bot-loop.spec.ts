@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "@rstest/core";
 import { adoptionsAt, buildBook } from "../../scripts/study/worlds/book.mjs";
 import { checkInstant, nyOffset, resolveToken } from "../../scripts/study/worlds/instant.mjs";
@@ -34,9 +35,24 @@ describe("a world's own instant", () => {
 });
 
 describe("a world's adoptions ledger is its pin's (#8058)", () => {
-  // bot-loop-today's corpus commit, and the commit before the ledger file was first written.
+  // bot-loop-today's corpus commit, and profile-today's (2026-10-07), which predates the ledger
+  // file (first written in 794d6be0, 2026-11-01). Both must be world pins: a cloud clone is
+  // shallow, and the session-start hook fetches only the `commit` pins in the worlds' inputs, at
+  // depth 1 — a commit's parent never arrives, so `<sha>^` fails there (#8488).
   const PIN = "5dadb4923a7cbd97df9e03bda375e9967f58f693";
-  const BEFORE_LEDGER = "794d6be06a4acfbff8905d4daf200be7e64087ed^";
+  const BEFORE_LEDGER = "dccf617c00a86a2852fbbaa79c30d5fa5482ac9d";
+
+  it("reads only commits a world pins, so a shallow clone the hook prepared holds them", () => {
+    const dir = "scripts/study/worlds/inputs";
+    const pins = readdirSync(dir)
+      .filter((f) => f.endsWith(".json"))
+      .flatMap((f) => [
+        ...readFileSync(`${dir}/${f}`, "utf8").matchAll(/"commit": *"([0-9a-f]{40})"/g),
+      ])
+      .map((m) => m[1]);
+    expect(pins).toContain(PIN);
+    expect(pins).toContain(BEFORE_LEDGER);
+  });
 
   it("reads the ledger as the pin held it, whatever the working tree's says", () => {
     expect(adoptionsAt(PIN)["ai-dip-2026-10/2a/CRWV-WHEEL"]?.change).toBe("stop-new-entries");
