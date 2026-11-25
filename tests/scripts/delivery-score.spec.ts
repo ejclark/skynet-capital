@@ -158,24 +158,33 @@ describe("delivery score: the default window", () => {
   });
 });
 
-// The wiring, driven through a stub `curl` (ghRest's one shell-out): the CLI with no argument
-// must exit 0 and name its window, and an issue nothing merged builds must cost no events read —
-// that read was one REST call per issue, which is what made the live score too slow for the
-// push tick's command budget.
+// The wiring, driven through a stub `curl` (ghRest's and graphql's one shell-out): the CLI with no
+// argument must exit 0 and name its window, and an issue nothing merged builds must cost no events
+// read. That read was one REST call per issue (363 a bare run, #8289); it now goes in GraphQL
+// batches, and back to REST only when GraphQL is refused (the stub refuses when `refuse` exists).
 describe("delivery score: the CLI with no argument, against a stub GitHub", () => {
   const STUB_CURL = `#!/usr/bin/env bash
 url="\${@: -1}"
 echo "$url" >> "$STUB/calls"
 case "$url" in
+*/graphql)
+  echo "graphql $(cat)" >> "$STUB/calls"
+  if [ -e "$STUB/refuse" ]; then echo '{"message":"not enabled for this session"}'; exit 22; fi
+  echo '{"data":{"repository":{}}}' ;;
 */pulls?*) cat "$STUB/pulls.json" ;;
 */issues?*) cat "$STUB/issues.json" ;;
 */events?*) echo '[]' ;;
 *) echo '[]' ;;
 esac
 `;
-  const run = (args: string[], { pulls = [], issues = [] }: Record<string, unknown[]> = {}) => {
+  const run = (
+    args: string[],
+    { pulls = [], issues = [] }: Record<string, unknown[]> = {},
+    { refuse = false } = {},
+  ) => {
     const dir = mkdtempSync(join(tmpdir(), "delivery-score-"));
     try {
+      if (refuse) writeFileSync(join(dir, "refuse"), "");
       writeFileSync(join(dir, "curl"), STUB_CURL, { mode: 0o755 });
       writeFileSync(join(dir, "pulls.json"), JSON.stringify(pulls));
       writeFileSync(join(dir, "issues.json"), JSON.stringify(issues));
@@ -209,7 +218,7 @@ esac
     expect(out.includes(heading(before)) || out.includes(heading(after))).toBe(true);
   });
 
-  it("reads events only for an issue something merged builds", () => {
+  const cohort = () => {
     const since = sinceOf([], Date.now()).since;
     const recent = new Date(Date.parse(since) + 2 * DAY).toISOString();
     const pulls = [
@@ -226,7 +235,21 @@ esac
       },
       { number: 501, state: "open", labels: [], created_at: recent, body: "" },
     ];
-    const { status, calls } = run([], { pulls, issues });
+    return { pulls, issues };
+  };
+
+  it("reads events only for an issue something merged builds, in one GraphQL batch", () => {
+    const { status, calls } = run([], cohort());
+    expect(status).toBe(0);
+    const graphql = calls.filter((u) => u.startsWith("graphql "));
+    expect(graphql).toHaveLength(1);
+    expect(graphql[0]).toContain("i500: issue(number: 500)");
+    expect(graphql[0]).not.toContain("i501:");
+    expect(calls.some((u) => u.includes("/events"))).toBe(false);
+  });
+
+  it("reads them over REST, still only for that issue, when GraphQL is refused", () => {
+    const { status, calls } = run([], cohort(), { refuse: true });
     expect(status).toBe(0);
     expect(calls.some((u) => u.includes("issues/500/events"))).toBe(true);
     expect(calls.some((u) => u.includes("issues/501/events"))).toBe(false);
