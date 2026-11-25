@@ -208,7 +208,7 @@ export function digestLine(prev, curr, since) {
   );
 }
 
-// ─── IO (the open list on REST; each queued issue's facts on GraphQL, #8289) ──────────────────────
+// ─── IO (the open list on REST; each queued issue's facts on GraphQL, REST where refused, #8289) ───
 
 /** The rows, from the open-issue list and each queued issue's facts (queue-facts.mjs). `readFacts`
  *  is injected for specs. Two REST reads per issue were 278 calls a run (#8289); now it is the list. */

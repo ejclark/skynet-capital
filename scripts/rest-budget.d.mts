@@ -16,6 +16,7 @@ export interface Budget {
   observe(h?: Partial<RateHeaders>): void;
   exhausted(): void;
   useGraphql(): boolean;
+  graphqlRefused(err: unknown): boolean;
   remaining(): number | null;
 }
 export function createBudget(args?: {

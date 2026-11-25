@@ -406,10 +406,16 @@ function ghRest(path, opts) {
       budget.exhausted();
     }
   }
-  return remember(readIssue(issueRead[1], { repo: REPO() }));
+  try {
+    return remember(readIssue(issueRead[1], { repo: REPO() }));
+  } catch (err) {
+    if (!budget.graphqlRefused(err)) throw err;
+    return remember(restRead(path, opts));
+  }
 }
 
-/** One write: REST while the allowance holds, GraphQL under 300 left or once REST refuses (#8289). */
+/** One write: REST while the allowance holds, GraphQL under 300 left or once REST refuses, and back
+ *  to REST when GraphQL itself is refused while REST still has calls (a cloud session, #8289). */
 export function ghWrite(method, path, payload) {
   const op = { method, path, payload };
   if (!budget.useGraphql()) {
@@ -420,9 +426,15 @@ export function ghWrite(method, path, payload) {
       budget.exhausted(); // a refusal is a write that did not happen, so it is safe to send again
     }
   }
-  const comment = /^issues\/comments\/(\d+)$/.exec(path);
-  if (comment && !ids.hasComment(comment[1])) ids.register(restRead(path), "comment");
-  return graphqlWrite(op, ids);
+  try {
+    const comment = /^issues\/comments\/(\d+)$/.exec(path);
+    if (comment && !ids.hasComment(comment[1])) ids.register(restRead(path), "comment");
+    return graphqlWrite(op, ids);
+  } catch (err) {
+    // A cloud session's proxy refuses GraphQL: under 300 left, REST still has the calls to send it.
+    if (!budget.graphqlRefused(err)) throw err;
+    return remember(restCall(method, path, payload));
+  }
 }
 
 /** Every issue in `state` (PRs dropped — the issues endpoint returns both), newest first. */

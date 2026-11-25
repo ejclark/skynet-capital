@@ -13,6 +13,11 @@
 //   2. FALL BACK. Under GRAPHQL_BELOW, `budget.useGraphql()` turns true and issues.mjs sends its
 //      writes and issue reads through GraphQL (scripts/issues-graphql.mjs), keeping the last ~300 REST calls for
 //      the reads that have no cheap GraphQL twin.
+//   3. ...UNLESS GRAPHQL IS REFUSED HERE. A Claude Code cloud session's proxy answers GraphQL with a
+//      403 (`This GraphQL query is not enabled for this session`, docs/vendor/claude-code/
+//      cloud-environments.md → GitHub proxy), whatever the token. There the fallback was a step
+//      down: a write sent to GraphQL with 299 REST calls left failed outright (#8289, 2026-11-25).
+//      `graphqlRefused` turns GraphQL off for the process and says whether REST can still take it.
 //
 // CORE ONLY. GitHub stamps every response with its own bucket in `x-ratelimit-resource`; the search
 // bucket allows 30 a minute, so reading its `remaining` as the hourly one would log "29 left" on
@@ -81,6 +86,7 @@ export function createBudget({
 } = {}) {
   let remaining = null;
   let reset = null;
+  let graphqlOff = false;
   const said = new Set();
   const say = (key, line) => {
     if (said.has(key)) return;
@@ -107,7 +113,25 @@ export function createBudget({
     observe,
     /** A REST write GitHub refused for rate limit: the allowance is spent, whatever we last read. */
     exhausted: () => observe({ remaining: 0, reset, resource: "core" }),
-    useGraphql: () => remaining !== null && remaining < GRAPHQL_BELOW,
+    useGraphql: () => !graphqlOff && remaining !== null && remaining < GRAPHQL_BELOW,
+    /**
+     * GraphQL failed a call this process routed to it. True when REST may still take that call (it
+     * has not been read or refused at 0), and GraphQL stays off for the rest of the process; false
+     * when REST is spent too, so the caller throws GraphQL's own error.
+     */
+    graphqlRefused: (err) => {
+      if (remaining === 0) return false;
+      graphqlOff = true;
+      const why = String(err?.message ?? err ?? "")
+        .split("\n")
+        .filter(Boolean)
+        .pop();
+      say(
+        "refused",
+        `rate-limit: GraphQL failed here (${String(why).slice(0, 120)}) — this run's issue calls stay on REST (#8289)`,
+      );
+      return true;
+    },
     remaining: () => remaining,
   };
 }
