@@ -27,8 +27,9 @@ import { join } from "node:path";
 import { digestFiles } from "./digest-scan.mjs";
 import { isMain } from "./is-main.mjs";
 import { readinessNotes } from "./issue-readiness.mjs";
-import { ensureGhToken, ghRest, ghRestAll } from "./moneypenny/gh.mjs";
+import { ensureGhToken, ghRestAll } from "./moneypenny/gh.mjs";
 import { PRIORITY_LABELS, parkedBy } from "./moneypenny/labels.mjs";
+import { readQueueFacts } from "./queue-facts.mjs";
 
 const H = 3600e3;
 
@@ -207,26 +208,29 @@ export function digestLine(prev, curr, since) {
   );
 }
 
-// ─── IO (REST core bucket) ───────────────────────────────────────────────────────────────────────
+// ─── IO (the open list on REST; each queued issue's facts on GraphQL, #8289) ──────────────────────
 
-function liveRows() {
-  const now = Date.now();
-  const open = ghRestAll("issues?state=open").filter((i) => !i.pull_request);
+/** The rows, from the open-issue list and each queued issue's facts (queue-facts.mjs). `readFacts`
+ *  is injected for specs. Two REST reads per issue were 278 calls a run (#8289); now it is the list. */
+export function liveRows({
+  now = Date.now(),
+  listOpen = () => ghRestAll("issues?state=open"),
+  readFacts = readQueueFacts,
+} = {}) {
+  const open = listOpen().filter((i) => !i.pull_request);
   const openNumbers = new Set(open.map((i) => i.number));
-  const rows = [];
-  for (const issue of open) {
+  const queued = open.filter((issue) => {
     const labels = issue.labels.map((l) => l.name);
-    if (!inQueue(labels) || parkedBy(labels).length) continue;
-    const events = ghRest(`issues/${issue.number}/events?per_page=100`);
-    const readyTimes = events
-      .filter((e) => e.event === "labeled" && e.label?.name === "ready")
-      .map((e) => Date.parse(e.created_at));
-    const blocks = ghRest(`issues/${issue.number}/dependencies/blocking`)
-      .map((b) => b.number)
-      .filter((n) => openNumbers.has(n));
+    return inQueue(labels) && !parkedBy(labels).length;
+  });
+  const facts = readFacts(queued.map((i) => i.number));
+  const rows = [];
+  for (const issue of queued) {
+    const labels = issue.labels.map((l) => l.name);
+    const { readyAt = null, blocks = [] } = facts.get(issue.number) ?? {};
     const row = rankRow(issue, {
-      readyAt: labels.includes("ready") && readyTimes.length ? Math.max(...readyTimes) : null,
-      blocks,
+      readyAt: labels.includes("ready") ? readyAt : null,
+      blocks: blocks.filter((n) => openNumbers.has(n)),
       now,
     });
     if (row) rows.push(row);
