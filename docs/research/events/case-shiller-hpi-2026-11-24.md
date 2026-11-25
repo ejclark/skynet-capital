@@ -571,3 +571,60 @@ memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-11-24
 <!-- probe-ref: {"symbols":{},"vix":26.62,"daysBand":"low:0+","adjacentIds":["advance-economic-indicators-2026-11-27","advance-services-q3-2026-11-19","aruoba-inflation-term-structure-2026-11-20","beige-book-2026-11-25","china-ga-ge-sb-suspension-expiry-2026-11-27","consumer-confidence-2026-11-24","durable-goods-2026-11-25","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","gdp-q3-2026-second-2026-11-25","industrial-production-annual-revision-2026-11-24","japan-cpi-2026-11-20","japan-cpi-tokyo-flash-2026-11-27","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-1-5y-2026-11-20","jgb-liquidity-enhancement-5-11y-2026-11-27","jpx-market-closure-2026-11-23","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","opec-plus-meeting-2026-11-29","opex-2026-11-20","pce-2026-11-25","philly-fed-mfg-2026-11-19","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","retail-ecommerce-q3-2026-11-19","sifma-bond-early-close-2026-11-27","sp-global-flash-us-pmi-2026-11-23","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","treasury-10y-tips-2026-11-19","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out (2026-11-25, the day after the print).** Macro-print mode carries no `earnings-cycle` /
+`intraday-edges` run (`symbols: []` by design); both caches were cleared first anyway. The *report* is
+scored from the primary release re-fetched today and the *tape* from CBOE's own history plus Yahoo
+daily bars, never from memory. Primaries: S&P's press page for the edition (press.spglobal.com,
+HTTP 200, 89,008 bytes) and its PR Newswire copy (id 302949528, HTTP 200, 222,471 bytes).
+
+**What printed — a flat 2.1% national read, no surprise on the content kill switch.**
+
+| Measure | Sept 2026 | Aug 2026 | Read |
+|---|---|---|---|
+| National NSA y/y | **+2.1%** | +2.1% | matches August |
+| 10-City y/y | **+3.5%** | +3.6% | down 0.1 |
+| 20-City y/y | **+2.6%** | +2.6% | flat |
+| NSA m/m (National · 10-City · 20-City) | −0.3% · −0.5% · −0.5% | | seasonal fall slowdown |
+| SA m/m (National · 10-City · 20-City) | +0.2% · +0.2% · +0.1% | | underlying gains |
+| Leaders / laggards | Chicago +6.9%, New York +5.8%, Miami +4.6% / Seattle −1.9% | | Miami into the top three |
+
+The kill switch "September national NSA y/y prints negative" did not fire (+2.1%). The release also
+quotes CPI +3.7% y/y, so real home prices fell for the 16th straight month. FRED `CSUSHPINSA`
+(HTTP 200) now carries 2026-09-01 at 335.754 against 336.779, which is the release's −0.3%.
+
+**Forward tests, scored from re-run data** (cells filled in
+[`forward-tests/case-shiller-hpi-2026-11-24.md`](../forward-tests/case-shiller-hpi-2026-11-24.md)):
+
+| Row | Call | Result |
+|---|---|---|
+| `-1` | released on 2026-11-24, not delayed | **pass** — the publisher's own page names "the November 24, 2026, release date" |
+| `-2` | PR Newswire stamp before 10:30 ET | **pass** — 14:33Z = **09:33 EST** |
+| `-3` | VIX9D/VIX below 0.9072 | **kill** — 26.68 / 26.36 = **1.0121**; base rate 13 of 16 |
+| `-4` | SPX \|close-to-close\| below 0.7111% | **pass** — 7,237.17 → 7,201.09 = **−0.4985%** |
+| `-5` | Wayne County notice again | **pass** — thirteenth consecutive edition, one year from 2025-11-25 |
+
+**What the stance got right and wrong.** *Right:* stand aside; the date held with no carve-out for the
+holiday week; the Detroit outage is now thirteen editions and a year old; nothing here was attributable
+to trade. *Wrong, and said plainly:* the compression call (`-3`) failed in a stress week. The session
+opened with VIX at 26.6 after 35.9 on 11-20, so the front of the curve was not discounting the holiday;
+the registration sample (VIX ~15.7 at the time) could not have seen that, and 2026 joins 2012 and 2018
+as the third reading above 1.00, which is the "real stress, not a calendar artifact" reading the kill
+text named. **The 11:09 explanation stays open:** `-2` shows Thanksgiving week is not inherently late
+(09:33), but the 2026-10-27 edition stamped **11:12 EDT** in a non-holiday week with the same routine
+Wayne paragraph, so lateness has now appeared with neither candidate cause. Fifteen editions on the
+record: median ~10:03, 2 after 11:00, 1 before 09:30 (the 2025-10-28 09:20), so the "second pre-09:30
+edition" kill switch did not fire. The two tape tests share a regime that was far from their samples;
+read both as one observation each.
+
+**Loop census (CLAUDE.md orientation).** A person still does the *sense* step for the close-out's tape
+legs: CBOE's `VIX_History.csv` and `SPX_History.csv` lag the session by more than a day while its
+VIX9D file does not, so a close-out has to cross-read Yahoo by hand. Nothing else here needed a human.
+
+This event is now scored. The scanner goes quiet on it; the `probe-ref` block appended below carries
+today's readings per the lane contract and is dead state, since a passed event is never screened again.
+
+**Last assessed:** 2026-11-25
+<!-- probe-ref: {"symbols":{},"vix":26.36,"daysBand":"low:0+","adjacentIds":["advance-economic-indicators-2026-11-27","advance-services-q3-2026-11-19","aruoba-inflation-term-structure-2026-11-20","beige-book-2026-11-25","china-ga-ge-sb-suspension-expiry-2026-11-27","consumer-confidence-2026-11-24","durable-goods-2026-11-25","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","gdp-q3-2026-second-2026-11-25","industrial-production-annual-revision-2026-11-24","japan-cpi-2026-11-20","japan-cpi-tokyo-flash-2026-11-27","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-1-5y-2026-11-20","jgb-liquidity-enhancement-5-11y-2026-11-27","jpx-market-closure-2026-11-23","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","opec-plus-meeting-2026-11-29","opex-2026-11-20","pce-2026-11-25","philly-fed-mfg-2026-11-19","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","retail-ecommerce-q3-2026-11-19","sifma-bond-early-close-2026-11-27","sp-global-flash-us-pmi-2026-11-23","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","treasury-10y-tips-2026-11-19","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25"],"screenStreak":0} -->

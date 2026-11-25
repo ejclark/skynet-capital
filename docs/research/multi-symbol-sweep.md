@@ -71,6 +71,10 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"The Tuesday before Thanksgiving compresses the front of the vol curve: VIX9D/VIX closes below 0.9072 on 2026-11-24 (FT-case-shiller-hpi-2026-11-24-3)"** — added 2026-11-25 from the
+  [case-shiller-hpi-2026-11-24 close-out](events/case-shiller-hpi-2026-11-24.md). The ratio closed **26.68 / 26.36 = 1.0121**, with VIX at **35.89** two sessions earlier, making 2026 the third reading above 1.00 in sixteen years (2012 and 2018 are the others).
+  Do not register a fixed ratio bar for a holiday-week session without conditioning on the prior week's VIX level; the 0.8592 median came from a calm sample (VIX ~15.7 at registration) and says nothing about a stress week, and n=1.
+
 - **"The 2Y auction-day front-end rally is a live regime: the 2026-11-23 2Y CMT closes at or below -3.0bp (FT-treasury-2y-note-2026-11-23-1)"** — added 2026-11-24 from the
   [treasury-2y-note-2026-11-23 close-out](events/treasury-2y-note-2026-11-23.md). The 2Y closed **4.63 → 4.63 (0bp)** on a far-from-FOMC sale at $69B, with the prior-session VIX at **35.89** and the 2Y already **-13bp** on the sale-eve session.
   Do not use the -6.07bp 2023+ auction-day prior flat for the next 2Y sale; condition it on prior-session VIX under 20 (FT-3 passed the same day), and do not read one 0bp print as proof the regime is gone.
