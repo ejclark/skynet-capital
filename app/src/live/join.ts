@@ -16,6 +16,8 @@ export interface PersonaClass {
 
 export interface JoinIndex {
   readonly wired: boolean;
+  /** Connect with Alpaca's one-tap path is on (#8250). Absent or false: the key-paste guide. */
+  readonly connect?: boolean;
   /**
    * Whether the account-type picker renders (owners, or a deployment with no auth). Rendering,
    * never authority — the server decides what it accepts (`join-api-routes.ts`).

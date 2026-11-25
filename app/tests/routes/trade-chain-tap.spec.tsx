@@ -8,7 +8,13 @@ import {
 } from "@tanstack/react-router";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import * as actualResearch from "../../src/live/research" with { rstest: "importActual" };
-import { normalizeLimit, normalizeQty, Route, suggestionNote } from "../../src/routes/trade";
+import {
+  normalizeLimit,
+  normalizeQty,
+  normalizeShares,
+  Route,
+  suggestionNote,
+} from "../../src/routes/trade";
 
 /**
  * A tap on the standalone Chain section opens the ticket the cell names (#5166): the chain's own
@@ -174,6 +180,11 @@ describe("/trade — a suggestion link of Moneypenny's fills the whole ticket (#
     expect(normalizeQty("0")).toBeUndefined();
     expect(normalizeQty("2.5")).toBeUndefined();
     expect(normalizeQty("1000")).toBeUndefined();
+    // `?shares=` (#8250): a practice pick's whole-share count.
+    expect(normalizeShares("24")).toBe(24);
+    expect(normalizeShares("0")).toBeUndefined();
+    expect(normalizeShares("2.5")).toBeUndefined();
+    expect(normalizeShares("100001")).toBeUndefined();
     expect(normalizeLimit("3.15")).toBe(3.15);
     expect(normalizeLimit(6.9)).toBe(6.9);
     expect(normalizeLimit("3.155")).toBeUndefined();

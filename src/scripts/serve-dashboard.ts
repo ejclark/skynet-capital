@@ -95,6 +95,7 @@ import { wireOptionLifecycleSweep } from "./dashboard-option-lifecycle.js";
 import { bootTelemetry } from "./dashboard-telemetry.js";
 import { startIvClock } from "./iv-clock-wiring.js";
 import { offlineClock } from "./offline-clocks.js";
+import { wirePracticeData } from "./practice-data-wiring.js";
 import { assertProductionAccess } from "./production-access.js";
 
 const PORT = resolvePort(process.env);
@@ -273,6 +274,12 @@ async function main(): Promise<void> {
     dataSource.mode === "live"
       ? resolveAlpacaConnect(process.env, { service, log: (line) => console.log(line) })
       : undefined;
+  // The newcomer puzzle's bars, on a house login, never a member's (practice-data-wiring.ts).
+  const practiceData = wirePracticeData({
+    dataSource,
+    envRoster,
+    ...(editionNow ? { offlineNow: editionNow } : {}),
+  });
 
   // Account service + live-roster/findParticipant/clientFor helpers (dashboard-desk-wiring.ts).
   // Removing an account closes BOTH of its sockets — the fill stream and (if it is streaming a
@@ -470,6 +477,7 @@ async function main(): Promise<void> {
     ...(publicUrl ? { publicUrl } : {}),
     addParticipant: (input) => service.addParticipant(input),
     ...(alpacaConnect ? { alpacaConnect } : {}),
+    ...(practiceData ? { practiceData } : {}),
     rotateCredentials: (input) => service.rotateCredentials(input),
     accountAdmin: buildAccountAdmin(accounts, store),
     subscriptions,

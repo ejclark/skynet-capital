@@ -28,4 +28,9 @@ describe("EnvPill", () => {
       expect(pill.className).not.toMatch(/chip-(human|bot)/);
     }
   });
+
+  it("names a newcomer's practice pick in words on the same neutral pill (#8250)", () => {
+    render(<EnvPill mode="practice" />);
+    expect(screen.getByText("PRACTICE PICK")).toHaveClass("env-pill");
+  });
 });

@@ -8,11 +8,17 @@ export const PAPER_WORD = "SIM";
 
 /**
  * Where an account's orders go — `sim` is the paper account every member trades on today; `live`
- * and `observe` are a bot check's run mode (it placed orders, or only watched).
+ * and `observe` are a bot check's run mode (it placed orders, or only watched); `practice` is a
+ * newcomer's practice pick (#8250), which is no order at all and goes nowhere until they connect.
  */
-export type EnvMode = "sim" | "live" | "observe";
+export type EnvMode = "sim" | "live" | "observe" | "practice";
 
-const MODE_WORD: Record<EnvMode, string> = { sim: PAPER_WORD, live: "LIVE", observe: "OBSERVE" };
+const MODE_WORD: Record<EnvMode, string> = {
+  sim: PAPER_WORD,
+  live: "LIVE",
+  observe: "OBSERVE",
+  practice: "PRACTICE PICK",
+};
 
 /**
  * Labels the trading mode (SIM, LIVE) in one neutral pill, so a mode never borrows a kind chip's colour.

@@ -13,6 +13,7 @@ import {
 } from "../live/onboarding";
 import { AlpacaGuide } from "./alpaca-guide";
 import { MilestonePanel } from "./milestone-panel";
+import { NewcomerPath, PlacePracticePick } from "./newcomer-path";
 
 /**
  * MILESTONE M·01 — ONBOARDING (#1119, from the Claude Design canvas "Alpaca onboarding process
@@ -22,8 +23,9 @@ import { MilestonePanel } from "./milestone-panel";
  * trade, each marked done by the server's reading of a ledger (`/api/onboarding`) — never by
  * anything this chapter decides:
  *
- *   1. connect Alpaca — the five-step guide as progressive-disclosure accordions, the connect
- *      form inside step 5 (`alpaca-guide.tsx`), while the viewer has no linked human account
+ *   1. connect Alpaca — a 60-second puzzle, a practice pick, then Connect with Alpaca
+ *      (`newcomer-path.tsx`, #8250); while Connect is off on the server, the five-step key-paste
+ *      guide (`alpaca-guide.tsx`) stands in its card, unchanged
  *   2. meet Moneypenny — opens her rail with the intro; her first reply is the step (the
  *      engagement track's own milestone; a filed issue is a separate, harder achievement)
  *   3. make the first trade — rung 101 on the desk, with the session hours in the viewer's zone
@@ -133,7 +135,13 @@ function ConnectStep({
           </button>
         ) : null}
       </div>
-      {open && (!step.done || canReopen) ? (
+      {open && !step.done ? (
+        <div className="ob-connect">
+          <NewcomerPath join={join.data} onJoined={onJoined} />
+        </div>
+      ) : null}
+      {step.done ? <PlacePracticePick /> : null}
+      {open && canReopen ? (
         <div className="ob-connect">
           <AlpacaGuide join={join.data} onJoined={onJoined} />
         </div>
