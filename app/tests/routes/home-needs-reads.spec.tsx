@@ -7,7 +7,7 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
-import { NeedsYou, readGaps } from "../../src/routes/index";
+import { NeedsYou, readGaps } from "../../src/shell/needs-you";
 
 /**
  * #8316: "Needs you" is a claim, so its all-clear shows only when every read it rests on

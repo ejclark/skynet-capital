@@ -74,7 +74,7 @@ Layout rules that fall out of it: a field is never wider than its content class 
 4-character strike never gets a third of the panel); an estimate reads as a two-column
 definition list at every width, never a ragged 4 + 3.
 
-**Three named widths** (#3816 slice 10) — the only window widths a layout breaks at, so "phone"
+**Four named widths** (#3816 slice 10; panels added by #8297) — the only window widths a layout breaks at, so "phone"
 means one number. Each is where the CSS already broke most often; JS reads them from
 `app/src/shell/widths.ts`. `@media` cannot read a custom property, so stylesheets write the number.
 
@@ -82,10 +82,11 @@ means one number. Each is where the CSS already broke most often; JS reads them 
 |---|---|---|
 | **phone** | ≤ 700px | clears every portrait phone with room; the 16 rules that fold grids to two or one column and drop secondary lines already sat here |
 | **tablet** | ≤ 860px | catches portrait tablets (768 · 820 · 834); the shell wraps here — topbar rows, rails and side-by-side panels stack |
+| **panels** | ≥ 1024px | the narrowest window that seats a 220px panel, the phone screen at 430px and a 240px panel side by side with gutters; a page that takes the desktop side panels (#8297) stands them here, and below it, ≤ 1023, the phone layouts are the layouts |
 | **bench** | ≥ 1280px | the narrowest window giving `/trade`'s form and chain ~450px columns each, so its sections dock; below it is ≤ 1279 |
 
 The widening side of an edge is its complement (`min-width: 701px` · `861px`, `max-width:
-1279px`). `npm run breakpoints:scan` lists every width outside the set (advisory). The top bar's view row is
+1023px` · `1279px`). `npm run breakpoints:scan` lists every width outside the set (advisory). The top bar's view row is
 not a window edge: Moneypenny's rail used to narrow the bar without narrowing the window (she is a
 dock under the page since #7487 slice 2), and the bar still asks its own width (`@container topbar`, `shell.css`, #4046) whether the views still fit beside its marks.
 

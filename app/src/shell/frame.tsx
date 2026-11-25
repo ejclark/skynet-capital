@@ -1,4 +1,5 @@
 import type { ReactElement, ReactNode } from "react";
+import { type PanelsFor, SidePanels } from "./side-panels";
 
 /**
  * The page frame (#738; the IA decision, docs/IA.md §8, #3807 slice 2a, 2026-09-26): TWO
@@ -89,23 +90,31 @@ import type { ReactElement, ReactNode } from "react";
  */
 export function PageFrame({
   controls,
+  panels,
   children,
 }: {
+  /** The desktop side panels (#8297): from 1024px the page's stage stands in the middle with the
+   *  member's standing context beside it (`side-panels.tsx`). Absent, the frame is one column. */
+  readonly panels?: PanelsFor;
   /** The page's controls row — its section switch, kinds or sub-nav links — at the top of the
    *  stage. A row, never a column; absent, the stage opens on its own content. */
   readonly controls?: ReactNode;
   readonly children: ReactNode;
 }): ReactElement {
+  const stage = (
+    <main id="main" className="stage">
+      {controls ? (
+        <nav className="stage-controls" aria-label="Section">
+          {controls}
+        </nav>
+      ) : null}
+      {children}
+    </main>
+  );
+  if (!panels) return <div className="frame">{stage}</div>;
   return (
-    <div className="frame">
-      <main id="main" className="stage">
-        {controls ? (
-          <nav className="stage-controls" aria-label="Section">
-            {controls}
-          </nav>
-        ) : null}
-        {children}
-      </main>
+    <div className="frame frame-panels" data-panels={panels}>
+      <SidePanels page={panels}>{stage}</SidePanels>
     </div>
   );
 }

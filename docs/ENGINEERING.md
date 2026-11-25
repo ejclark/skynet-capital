@@ -441,7 +441,7 @@ written as history; its check C has a before/after for rule 2.
   `app/src/styles/theme.css`. `tests/ui/fluid-shell-css.spec.ts` fails any `max-width: <n>px` in a
   view stylesheet — a 640px card looks right on a laptop and leaves two-thirds of a monitor empty.
 - **New styles start from the phone and break only at the named widths** — phone ≤ 700 · tablet
-  ≤ 860 · bench ≥ 1280 (`docs/BRAND.md` → *Three named widths*; JS imports them from
+  ≤ 860 · panels ≥ 1024 · bench ≥ 1280 (`docs/BRAND.md` → *Four named widths*; JS imports them from
   `app/src/shell/widths.ts`). Write the base rule for 390px and widen with `min-width` at one of
   those edges; a new number in a media query needs a reason stronger than "it looked right here".
   Existing off-set widths are not mass-rewritten — `npm run breakpoints:scan` lists them.

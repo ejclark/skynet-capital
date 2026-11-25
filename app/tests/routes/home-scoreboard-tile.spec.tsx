@@ -7,7 +7,7 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
-import { ScoreboardTile } from "../../src/routes/index";
+import { ScoreboardTile } from "../../src/shell/needs-you";
 import { SEAT_LINE, SEAT_READING_LINE, SEAT_UNREAD_LINE } from "../../src/shell/party-table";
 
 /**

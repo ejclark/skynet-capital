@@ -235,20 +235,20 @@ function Standings(): ReactElement {
 
   if (board.isPending)
     return (
-      <PageFrame>
+      <PageFrame panels="scoreboard">
         <p className="note">Reading the board…</p>
       </PageFrame>
     );
   if (board.isError)
     return (
-      <PageFrame>
+      <PageFrame panels="scoreboard">
         <p className="note">The board is unreachable — {String(board.error)}</p>
       </PageFrame>
     );
   const { rows, generatedAt } = board.data;
   const armed = a && !board.data.compare ? rows.find((r) => r.key === a) : undefined;
   return (
-    <PageFrame>
+    <PageFrame panels="scoreboard">
       <header className="page-header">
         <h1>Scoreboard</h1>
         <p>The members together against the house bot, then every account in the Field.</p>
