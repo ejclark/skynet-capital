@@ -11,7 +11,7 @@
 //      to stderr naming the caller (script, subcommand, branch, CI run, session). Slice 2 cuts
 //      whichever caller those lines name most.
 //   2. FALL BACK. Under GRAPHQL_BELOW, `budget.useGraphql()` turns true and issues.mjs sends its
-//      writes through GraphQL (scripts/issues-graphql.mjs), keeping the last ~300 REST calls for
+//      writes and issue reads through GraphQL (scripts/issues-graphql.mjs), keeping the last ~300 REST calls for
 //      the reads that have no cheap GraphQL twin.
 //
 // CORE ONLY. GitHub stamps every response with its own bucket in `x-ratelimit-resource`; the search
@@ -21,10 +21,12 @@
 // The header comes from curl's `-D <file>`, not `%header{}` in `-w` (curl 7.84+) and not `-D -`
 // (a proxy's CONNECT answer and a `100 Continue` each add a header block to stdout). The LAST
 // `x-ratelimit-remaining` in the file is the API's own.
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { basename, join } from "node:path";
-import { sh, withResponseBody } from "./moneypenny/gh.mjs";
+//
+// THE CALL LIVES IN gh.mjs (`restCall`, under `ghRest`), so every script on the shared REST read
+// reports here, not only issues.mjs: the 83 scripts on `ghRest` were the blind spot #8471 measured.
+// This file imports nothing of ours, which keeps gh.mjs → rest-budget.mjs one-way (no-circular).
+import { execFileSync } from "node:child_process";
+import { basename } from "node:path";
 
 export const REST_LOG_BELOW = 1000;
 export const GRAPHQL_BELOW = 300;
@@ -112,67 +114,14 @@ export function createBudget({
 
 const gitBranch = () => {
   try {
-    return sh("git", ["branch", "--show-current"]);
+    return execFileSync("git", ["branch", "--show-current"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
   } catch {
     return "";
   }
 };
 
-/** The process-wide budget every REST call in this process reports into. */
+/** The process-wide budget every REST call in this process reports into (gh.mjs's `restCall`). */
 export const budget = createBudget({ caller: () => callerLabel({ branch: gitBranch() }) });
-
-/**
- * One REST call over curl (HTTPS_PROXY honoured, as gh.mjs's ghRest), its rate headers reported to
- * `into` whether it succeeded or failed — a 403 for rate limit still carries `remaining: 0`.
- * `path` is repo-relative or a full URL. A failure throws with GitHub's own reason appended.
- */
-export function restCall(
-  method,
-  path,
-  payload,
-  {
-    repo = process.env.GITHUB_REPOSITORY ?? "ejclark/skynet-capital",
-    token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN || "",
-    run = sh,
-    into = budget,
-    agent = "skynet-issues",
-  } = {},
-) {
-  const url = path.startsWith("http")
-    ? path
-    : `https://api.github.com/repos/${repo}/${path.replace(/^\//, "")}`;
-  const dir = mkdtempSync(join(tmpdir(), "rest-budget-"));
-  const headers = join(dir, "headers");
-  const args = ["-sS", "--fail-with-body", "-D", headers];
-  if (method !== "GET") args.push("-X", method);
-  args.push(
-    "-H",
-    `Authorization: Bearer ${token}`,
-    "-H",
-    "Accept: application/vnd.github+json",
-    "-H",
-    `User-Agent: ${agent}`,
-  );
-  // Without Content-Type curl sends `--data-binary` as form-urlencoded and the API answers 415.
-  if (payload !== undefined)
-    args.push("-H", "Content-Type: application/json", "--data-binary", "@-");
-  args.push(url);
-  try {
-    const out = run("curl", args, payload === undefined ? {} : { input: JSON.stringify(payload) });
-    return JSON.parse(out || "null");
-  } catch (err) {
-    throw withResponseBody(err);
-  } finally {
-    let text = "";
-    try {
-      text = readFileSync(headers, "utf8");
-    } catch {
-      // no answer reached us (or a stub curl wrote none) — nothing to report
-    }
-    into.observe(parseRateHeaders(text));
-    rmSync(dir, { recursive: true, force: true });
-  }
-}
-
-/** A REST read with the budget attached — the drop-in for gh.mjs's `ghRest(path)`. */
-export const restRead = (path, opts) => restCall("GET", path, undefined, opts);

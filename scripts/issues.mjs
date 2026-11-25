@@ -49,10 +49,10 @@ import { isMain } from "./is-main.mjs";
 import { lintIssue } from "./issue-lint.mjs";
 import { createIds, graphqlWrite, readIssue } from "./issues-graphql.mjs";
 import { missingDecisionCallout } from "./moneypenny/decision-callout.mjs";
-import { ensureGhToken, ghRestAll, isRateLimited } from "./moneypenny/gh.mjs";
+import { ensureGhToken, ghRestAll, isRateLimited, restCall, restRead } from "./moneypenny/gh.mjs";
 import { FOOTER } from "./moneypenny/labels.mjs";
 import { statusForIssue, subIssueCounts } from "./moneypenny/projects.mjs";
-import { budget, restCall, restRead } from "./rest-budget.mjs";
+import { budget } from "./rest-budget.mjs";
 
 const REPO = () => process.env.GITHUB_REPOSITORY ?? "ejclark/skynet-capital";
 
