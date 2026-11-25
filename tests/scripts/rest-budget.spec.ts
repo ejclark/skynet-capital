@@ -2,6 +2,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "@rstest/core";
 import {
   createIds,
@@ -10,6 +11,7 @@ import {
   mutationFor,
   resolveQuery,
 } from "../../scripts/issues-graphql.mjs";
+import { ghRest } from "../../scripts/moneypenny/gh.mjs";
 import { callerLabel, createBudget, parseRateHeaders } from "../../scripts/rest-budget.mjs";
 import { hermeticGitEnv } from "../support/hermetic-git.js";
 
@@ -360,5 +362,90 @@ printf '{}\\n__SHIP_HTTP__200'
     expect(low.stderr).toMatch(/REST 812 left .* caller: ship\.sh open · branch feedback\/8289/);
     expect(run("4000").stderr).not.toMatch(/rate-limit:/);
     expect(run("20", "search").stderr).not.toMatch(/rate-limit:/);
+  });
+});
+
+// #8289 slice 2: only issues.mjs and ship.sh named their caller, so the 83 scripts on gh.mjs's
+// `ghRest` (every Moneypenny lane, `rank`, `work-gate`, the digests) spent the shared allowance
+// unseen. `ghRest` is now `restCall`'s GET, so it reports into the same budget.
+describe("rest budget: every script on ghRest names its caller", () => {
+  const headerDump = (left: number, resource = "core") =>
+    `HTTP/2 200\r\nx-ratelimit-remaining: ${left}\r\nx-ratelimit-resource: ${resource}\r\n\r\n`;
+  const dumpTo = (args: string[]) => {
+    const file = args[args.indexOf("-D") + 1];
+    if (!file) throw new Error("ghRest asked curl for no header dump (-D)");
+    return file;
+  };
+  const answeringAt =
+    (left: number, resource = "core") =>
+    (_cmd: string, args: string[]) => {
+      writeFileSync(dumpTo(args), headerDump(left, resource));
+      return '{"number":7}';
+    };
+
+  it("reports each read's remaining count to the budget it is given", () => {
+    const lines: string[] = [];
+    const into = createBudget({ log: (l) => lines.push(l), caller: () => "route.mjs sweep" });
+    expect(ghRest("issues/7", { token: "t", run: answeringAt(640), into })).toEqual({ number: 7 });
+    ghRest("issues/8", { token: "t", run: answeringAt(639), into });
+    expect(into.remaining()).toBe(639);
+    expect(lines).toEqual([
+      "rate-limit: REST 640 left of the shared hourly allowance — caller: route.mjs sweep",
+    ]);
+  });
+
+  it("reports a refused read too, and ignores the search bucket", () => {
+    const into = createBudget({ log: () => undefined });
+    ghRest("search/issues?q=x", { token: "t", run: answeringAt(12, "search"), into });
+    expect(into.remaining()).toBeNull();
+    const refused = (_cmd: string, args: string[]) => {
+      writeFileSync(dumpTo(args), headerDump(0));
+      throw Object.assign(new Error("Command failed: curl\ncurl: (22) … error: 403"), {
+        stdout: '{"message":"API rate limit exceeded for user ID 1."}',
+      });
+    };
+    expect(() => ghRest("issues/7", { token: "t", run: refused, into })).toThrow(/rate limit/);
+    expect(into.remaining()).toBe(0);
+  });
+
+  it("end to end: a script on ghRest logs its caller once, under 1,000 left only", () => {
+    const dir = mkdtempSync(join(tmpdir(), "ghrest-budget-"));
+    writeFileSync(
+      join(dir, "curl"),
+      `#!/bin/bash
+prev=""; hdr=""
+for a in "$@"; do [ "$prev" = "-D" ] && hdr="$a"; prev="$a"; done
+printf 'HTTP/2 200\\r\\nx-ratelimit-remaining: %s\\r\\nx-ratelimit-resource: core\\r\\n\\r\\n' "$STUB_LEFT" > "$hdr"
+echo '{"number":7}'
+`,
+    );
+    chmodSync(join(dir, "curl"), 0o755);
+    const probe = join(dir, "route-probe.mjs");
+    const gh = pathToFileURL(resolve("scripts/moneypenny/gh.mjs")).href;
+    writeFileSync(
+      probe,
+      `import { ghRest } from ${JSON.stringify(gh)};\nghRest("issues/7");\nghRest("issues/8");\n`,
+    );
+    const run = (left: string) =>
+      spawnSync(process.execPath, [probe, "sweep"], {
+        cwd: dir,
+        env: {
+          ...process.env,
+          PATH: `${dir}:${process.env.PATH}`,
+          GH_TOKEN: "stub",
+          GITHUB_REPOSITORY: "o/r",
+          GITHUB_RUN_ID: "42",
+          GITHUB_WORKFLOW: "moneypenny",
+          STUB_LEFT: left,
+        },
+        encoding: "utf8",
+      });
+    const low = run("812");
+    expect(low.status, low.stderr).toBe(0);
+    expect(low.stderr.match(/rate-limit:/g)).toHaveLength(1);
+    expect(low.stderr).toMatch(
+      /REST 812 left .* caller: route-probe\.mjs sweep · run 42 \(moneypenny\)/,
+    );
+    expect(run("4000").stderr).not.toMatch(/rate-limit:/);
   });
 });
