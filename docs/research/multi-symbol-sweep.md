@@ -75,6 +75,9 @@ robust, alpha fragile — is the finding.
   [consumer-confidence-2026-11-24 close-out](events/consumer-confidence-2026-11-24.md). The headline printed **103.3**, **+11.4** from a revised 91.9 (+11.6 from the as-published 91.7), Expectations 83.6 (+9.9), with Democrats and Independents sharply up and Republicans slightly down.
   Do not extend two midterm precedents (Nov 2018, Nov 2022; both fell) into a restraint call on the next post-election print; the partisan offset was real and the headline rose anyway.
 
+- **"ITB's session range on an FHFA House Price Index day stays under its release-day p75 (2.918%, n=68) with no regime condition (FT-fhfa-hpi-2026-11-24-3)"** — added 2026-11-25 from the [fhfa-hpi-2026-11-24 close-out](events/fhfa-hpi-2026-11-24.md). ITB ranged **3.558%** on 11-24 (H 96.18 / L 92.78 / C 95.56, +2.42% on the day) at a VIX close of 26.36, with the five prior sessions at 2.5-3.4%.
+  Do not register an unconditional ITB range ceiling for a housing print; this is the second case after the pending-home-sales kill on this list, and the miss reads as regime, not release.
+
 - **"The first `^N225` cash session after a JPX `Not Open` total blackout is an ordinary Tokyo-closure bar: 2026-11-24 |close-to-close| stays below 2.09% (FT-jpx-market-closure-2026-11-23-1)"** — added 2026-11-25 from the
   [jpx-market-closure-2026-11-23 forward-test scoring](events/jpx-market-closure-2026-11-23.md). Registered 2026-09-09 off a calm 12-vs-39 sample (1.536% vs 1.404%, t=0.39); the 11-24 bar printed **+3.91%** (56,436.65 → 58,644.63), past the 2.09% line, after a US session of **+4.73%** (`^VIX` 35.89 → 26.62) that Tokyo could not price on the dark Monday.
   Do not calibrate a post-blackout `^N225` band on calm-regime history alone, and do not read this one bar as proof the blackout itself matters: the gap and the stress regime are confounded, and the twelve-case null stands unrefuted on its own sample.

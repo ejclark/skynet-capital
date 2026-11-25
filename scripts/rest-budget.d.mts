@@ -16,6 +16,7 @@ export interface Budget {
   observe(h?: Partial<RateHeaders>): void;
   exhausted(): void;
   useGraphql(): boolean;
+  graphqlRefused(err: unknown): boolean;
   remaining(): number | null;
 }
 export function createBudget(args?: {
@@ -23,16 +24,3 @@ export function createBudget(args?: {
   caller?: () => string;
 }): Budget;
 export const budget: Budget;
-export function restCall(
-  method: string,
-  path: string,
-  payload?: unknown,
-  opts?: {
-    repo?: string;
-    token?: string;
-    run?: (cmd: string, args: string[], opts?: Record<string, unknown>) => string;
-    into?: Pick<Budget, "observe">;
-    agent?: string;
-  },
-): unknown;
-export function restRead(path: string, opts?: Parameters<typeof restCall>[3]): unknown;

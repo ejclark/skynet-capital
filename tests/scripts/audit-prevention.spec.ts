@@ -84,6 +84,21 @@ describe("the questions every correctness reviewer is asked", () => {
     expect(flat(readFileSync(".claude/agents/reviewer.md", "utf8"))).toMatch(STALE_MARKER);
   });
 
+  // A rule loosened for the one caller a task names still answers every other caller: #7724's relaxed
+  // ack rule also ran on page open, and #7714's new `unchecked` rows fed a `notRun` read as "re-run".
+  const SHARED_RULE =
+    /relaxes a condition in a predicate several callers share.*new kind or value to a shared flag, enum or marker.*every caller and reader of it, not only the one the task names.*input the task never mentioned/i;
+
+  it("ask the audit's reviewer what every caller of a loosened shared rule now returns", async () => {
+    const { calls } = await audit([], { causes: [] });
+    const prompt = flat(calls.find((c) => c.opts.label?.startsWith("review"))?.prompt ?? "");
+    expect(prompt).toMatch(SHARED_RULE);
+  });
+
+  it("ask the reviewer agent the same of a loosened shared rule", () => {
+    expect(flat(readFileSync(".claude/agents/reviewer.md", "utf8"))).toMatch(SHARED_RULE);
+  });
+
   // A hash link checked only by reading its own line ships a jump to nothing (the target never renders
   // under the link's query params) or under the sticky head (the target has no scroll-margin-top).
   const HASH_JUMP =

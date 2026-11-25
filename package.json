@@ -101,6 +101,7 @@
     "loop:scorecard": "node scripts/loop-scorecard.mjs",
     "bottleneck:baseline": "node scripts/bottleneck-baseline.mjs",
     "mermaid:lint": "node scripts/mermaid-lint.mjs",
+    "ears:lifecycle": "node scripts/ears-lifecycle.mjs",
     "arch:pages": "node scripts/architecture-pages.mjs",
     "research:week": "tsx src/scripts/week-study.ts",
     "workflow:lint": "node scripts/workflow-lint.mjs",

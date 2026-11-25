@@ -57,7 +57,8 @@ post-deploy.
 
 1. **Determinism is a precondition, not a tolerance setting.** Every screenshot spec calls
    `freezePage()` from `e2e/determinism.ts` before `page.goto` — seeded `Math.random`, pinned
-   clock, reduced motion. A render that does not reproduce cannot be adjudicated by a diff, by a
+   clock, reduced motion, and a bundled mono face (`e2e/fonts`) under every named family in the
+   mono stacks, so the OS's installed fonts never choose the glyphs (#8014). A render that does not reproduce cannot be adjudicated by a diff, by a
    human *or* by an AI reviewer; the tolerance is not the fix. The tell that this rule is being
    broken is a screenshot scoped small "because it's flaky", or a `maxDiffPixelRatio` that keeps
    creeping up. `/login` had both: clipping to one text element kept the corruption under a 0.02
@@ -200,8 +201,9 @@ We don't have one, and we won't add one. Instead:
   standard above) is intent. A comment whose only content is a bare issue/PR number, "used by X", or
   "added for the Y flow" is narration — git blame and the PR already carry that, and it rots the moment
   the number stops being resolvable.
-  `node scripts/comment-bloat-scan.mjs` flags candidates (advisory, `docs/COACHES.md`'s Comment-bloat
-  Coach) — `/code-review` and `reviewer` judge each flagged line against this split, not a blanket cut.
+  `node scripts/comment-bloat-scan.mjs` flags the "only content" case (advisory, `docs/COACHES.md`'s
+  Comment-bloat Coach); a WHY that cites its source with `(#N)` is kept. A longer history paragraph
+  is not something a pattern can judge: `/code-review` and `reviewer` weigh it against this split.
 - Folder structure encodes the architecture, so structure alone tells you where behavior lives:
 
 ```

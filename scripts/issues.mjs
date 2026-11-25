@@ -42,17 +42,17 @@
 //   node scripts/issues.mjs show 123 [--json]
 //
 // Token: GH_TOKEN or GITHUB_TOKEN (REST core bucket), else `gh auth token` (ensureGhToken). Repo: GITHUB_REPOSITORY or ejclark/skynet-capital.
-// Under 1,000 REST calls left it names its caller on stderr; under 300 its writes go through
-// GraphQL (#8289, scripts/rest-budget.mjs).
+// Under 1,000 REST calls left it names its caller on stderr; under 300 its writes and issue reads go
+// through GraphQL (#8289, scripts/rest-budget.mjs).
 import { readFileSync } from "node:fs";
 import { isMain } from "./is-main.mjs";
 import { lintIssue } from "./issue-lint.mjs";
-import { createIds, graphqlWrite } from "./issues-graphql.mjs";
+import { createIds, graphqlWrite, readIssue } from "./issues-graphql.mjs";
 import { missingDecisionCallout } from "./moneypenny/decision-callout.mjs";
-import { ensureGhToken, ghRestAll, isRateLimited } from "./moneypenny/gh.mjs";
+import { ensureGhToken, ghRestAll, isRateLimited, restCall, restRead } from "./moneypenny/gh.mjs";
 import { FOOTER } from "./moneypenny/labels.mjs";
 import { statusForIssue, subIssueCounts } from "./moneypenny/projects.mjs";
-import { budget, restCall, restRead } from "./rest-budget.mjs";
+import { budget } from "./rest-budget.mjs";
 
 const REPO = () => process.env.GITHUB_REPOSITORY ?? "ejclark/skynet-capital";
 
@@ -375,8 +375,8 @@ export function followUps({ child, parentNumber, blockers = [], afterLinks = [],
 // ─── IO (REST core bucket, curl so HTTPS_PROXY is honoured — see gh.mjs's ghRest header) ──────────
 //
 // #8289: every REST call reports its `x-ratelimit-remaining` to rest-budget.mjs, which names the
-// caller under 1,000 left. Under 300, or once REST refuses a write for rate limit, writes go through
-// GraphQL instead (issues-graphql.mjs) — a separate allowance that sat idle while REST ran dry. The
+// caller under 1,000 left. Under 300, or once REST refuses a call for rate limit, writes and issue
+// reads go through GraphQL instead (issues-graphql.mjs) — a separate allowance that sat idle while REST ran dry. The
 // REST objects read along the way are registered in `ids`, so a GraphQL write rarely needs to
 // resolve an issue it already has in hand.
 
@@ -388,10 +388,34 @@ function remember(answer) {
   return answer;
 }
 
-/** A REST read on the budget — the local stand-in for gh.mjs's `ghRest`. */
-const ghRest = (path, opts) => remember(restRead(path, opts));
+/**
+ * A REST read on the budget — the local stand-in for gh.mjs's `ghRest`. An issue read
+ * (`issues/<n>`, the first act of update, link, show and every blocker check) takes the writes'
+ * route: GraphQL under 300 left or once REST refuses it. Without it, `update` stopped at 0 REST left
+ * before its GraphQL write could run (measured 2026-11-24, #8346's repair). Lists, search and a
+ * comment read stay on REST: GraphQL has no cheap twin for them.
+ */
+function ghRest(path, opts) {
+  const issueRead = /^issues\/(\d+)$/.exec(path);
+  if (!issueRead) return remember(restRead(path, opts));
+  if (!budget.useGraphql()) {
+    try {
+      return remember(restRead(path, opts));
+    } catch (err) {
+      if (!isRateLimited(err)) throw err;
+      budget.exhausted();
+    }
+  }
+  try {
+    return remember(readIssue(issueRead[1], { repo: REPO() }));
+  } catch (err) {
+    if (!budget.graphqlRefused(err)) throw err;
+    return remember(restRead(path, opts));
+  }
+}
 
-/** One write: REST while the allowance holds, GraphQL under 300 left or once REST refuses (#8289). */
+/** One write: REST while the allowance holds, GraphQL under 300 left or once REST refuses, and back
+ *  to REST when GraphQL itself is refused while REST still has calls (a cloud session, #8289). */
 export function ghWrite(method, path, payload) {
   const op = { method, path, payload };
   if (!budget.useGraphql()) {
@@ -402,9 +426,15 @@ export function ghWrite(method, path, payload) {
       budget.exhausted(); // a refusal is a write that did not happen, so it is safe to send again
     }
   }
-  const comment = /^issues\/comments\/(\d+)$/.exec(path);
-  if (comment && !ids.hasComment(comment[1])) ids.register(restRead(path), "comment");
-  return graphqlWrite(op, ids);
+  try {
+    const comment = /^issues\/comments\/(\d+)$/.exec(path);
+    if (comment && !ids.hasComment(comment[1])) ids.register(restRead(path), "comment");
+    return graphqlWrite(op, ids);
+  } catch (err) {
+    // A cloud session's proxy refuses GraphQL: under 300 left, REST still has the calls to send it.
+    if (!budget.graphqlRefused(err)) throw err;
+    return remember(restCall(method, path, payload));
+  }
 }
 
 /** Every issue in `state` (PRs dropped — the issues endpoint returns both), newest first. */
