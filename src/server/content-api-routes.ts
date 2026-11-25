@@ -63,9 +63,11 @@ async function outpostPerformanceView(
 
 /** The research shelf as data. It keeps history (everyEvent) — a closed-out call is a receipt worth
  *  stepping back to — and carries the exchange closures across that whole span, so the rail can
- *  colour a closed weekday and count a week's sessions without a broker credential. */
-function shelfJson(): ResearchShelfJson {
-  const asOf = new Date().toISOString();
+ *  colour a closed weekday and count a week's sessions without a broker credential.
+ *  `asOf` picks each symbol chip's next event, so it must be the board's own today, the one its
+ *  calendar shows — `researchNow` on a pinned e2e boot, never a second, unpinned clock (#8483). */
+function shelfJson(now: Date): ResearchShelfJson {
+  const asOf = now.toISOString();
   const events = everyEvent();
   const first = events[0]?.date ?? asOf.slice(0, 10);
   const last = events[events.length - 1]?.date ?? first;
@@ -87,10 +89,12 @@ function shelfJson(): ResearchShelfJson {
  * time-dependent parts (the as-of stamp, which events are upcoming) to under a minute.
  */
 let shelfBodies: { key: string; shelf: string; calendar: string } | undefined;
-function cachedShelfBodies(): { shelf: string; calendar: string } {
-  const key = `${new Date().toISOString().slice(0, 16)}|${corpusFingerprint(RESEARCH_DIR())}`;
+function cachedShelfBodies(config: DashboardServerConfig): { shelf: string; calendar: string } {
+  // Keyed on the as-of minute, not the wall clock's: two clocks may serve one process (tests).
+  const now = config.researchNow?.() ?? new Date();
+  const key = `${now.toISOString().slice(0, 16)}|${corpusFingerprint(RESEARCH_DIR())}`;
   if (shelfBodies?.key !== key) {
-    const shelf = shelfJson();
+    const shelf = shelfJson(now);
     shelfBodies = {
       key,
       shelf: JSON.stringify(shelf),
@@ -136,10 +140,10 @@ export async function serveContentApi(
     res.end(body);
     return true;
   };
-  if (path === "/api/research") return serialized(cachedShelfBodies().shelf);
+  if (path === "/api/research") return serialized(cachedShelfBodies(config).shelf);
   // The calendar's slice (#3977 slice 5): the three surfaces that draw the market calendar read
   // this ~8% projection of the same view instead of the whole shelf. Same dispatcher, same gate.
-  if (path === "/api/research/calendar") return serialized(cachedShelfBodies().calendar);
+  if (path === "/api/research/calendar") return serialized(cachedShelfBodies(config).calendar);
   if (path === "/api/research/coverage") {
     // R&D → Coverage (#3811 slice 3): the viewer's own holdings and fund bars, so never cached.
     await serveCoverageJson(res, config, session);

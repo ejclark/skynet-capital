@@ -459,6 +459,7 @@ async function main(): Promise<void> {
     hub,
     healthHistory,
     ...(editionNow ? { editionNow } : {}),
+    ...(fixedNow ? { researchNow: fixedNow } : {}),
     logLine: (line) => console.log(line),
     // Ceremonies ride the board's seq-numbered patch stream as fire-once cues.
     ceremonies,
