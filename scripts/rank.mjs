@@ -29,7 +29,7 @@ import { isMain } from "./is-main.mjs";
 import { readinessNotes } from "./issue-readiness.mjs";
 import { ensureGhToken, ghRestAll } from "./moneypenny/gh.mjs";
 import { PRIORITY_LABELS, parkedBy } from "./moneypenny/labels.mjs";
-import { readQueueFacts } from "./queue-facts.mjs";
+import { NEED_ALL, needOf, readQueueFacts } from "./queue-facts.mjs";
 
 const H = 3600e3;
 
@@ -88,6 +88,12 @@ export function kindOf({ labels = [], blocks = [] }) {
 export const blocksOf = (issue) =>
   Array.from({ length: Number(issue?.issue_dependencies_summary?.blocking) || 0 }, () => 0);
 
+/** A plan with open sub-issues ranks through its children, never itself. Pure. */
+const hasOpenSubs = (issue) => {
+  const subs = issue?.sub_issues_summary;
+  return Boolean(subs && subs.total > subs.completed);
+};
+
 /** Where a Kind sits in the lane order: 0 first. */
 export const kindIndex = (kind) => KINDS.indexOf(kind);
 
@@ -104,8 +110,7 @@ export function rankRow(issue, { readyAt = null, blocks = [], now }) {
   const labels = (issue.labels ?? []).map((l) => (typeof l === "string" ? l : l.name));
   if (!inQueue(labels)) return null;
   if (parkedBy(labels).length) return null;
-  const subs = issue.sub_issues_summary;
-  if (subs && subs.total > subs.completed) return null;
+  if (hasOpenSubs(issue)) return null;
   const body = issue.body ?? "";
   const notes = readinessNotes({ title: issue.title, body, labels });
   const { cls, why, hand = false } = classOf({ labels, blocks });
@@ -211,7 +216,9 @@ export function digestLine(prev, curr, since) {
 // ─── IO (the open list on REST; each queued issue's facts on GraphQL, REST where refused, #8289) ───
 
 /** The rows, from the open-issue list and each queued issue's facts (queue-facts.mjs). `readFacts`
- *  is injected for specs. Two REST reads per issue were 278 calls a run (#8289); now it is the list. */
+ *  is injected for specs. Two REST reads per issue were 278 calls a run (#8289); now it is the list.
+ *  An issue with open sub-issues never makes a row, so no facts are read for it; where GraphQL is
+ *  refused, each issue's row names the REST reads it needs (`needOf`). */
 export function liveRows({
   now = Date.now(),
   listOpen = () => ghRestAll("issues?state=open"),
@@ -223,7 +230,12 @@ export function liveRows({
     const labels = issue.labels.map((l) => l.name);
     return inQueue(labels) && !parkedBy(labels).length;
   });
-  const facts = readFacts(queued.map((i) => i.number));
+  const ranked = queued.filter((i) => !hasOpenSubs(i));
+  const byNumber = new Map(ranked.map((i) => [i.number, i]));
+  const facts = readFacts(
+    ranked.map((i) => i.number),
+    { need: (n) => (byNumber.has(n) ? needOf(byNumber.get(n)) : NEED_ALL) },
+  );
   const rows = [];
   for (const issue of queued) {
     const labels = issue.labels.map((l) => l.name);

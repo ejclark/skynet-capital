@@ -56,5 +56,8 @@ export function liveRows(opts?: {
     labels: { name: string }[];
     pull_request?: unknown;
   }[];
-  readFacts?: (numbers: number[]) => Map<number, { readyAt: number | null; blocks: number[] }>;
+  readFacts?: (
+    numbers: number[],
+    opts: { need: (n: number) => { ready: boolean; blocks: boolean } },
+  ) => Map<number, { readyAt: number | null; blocks: number[] }>;
 }): RankRow[];
