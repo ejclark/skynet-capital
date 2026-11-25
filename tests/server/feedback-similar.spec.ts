@@ -198,7 +198,28 @@ describe("createSimilarFeedbackSearch — fetch then score, end to end", () => {
       details: "Spinner never resolves on my phone.",
     });
 
-    expect(result).toEqual([{ number: 55, title: "Options chain never loads on mobile Safari" }]);
+    expect(result).toEqual([
+      {
+        number: 55,
+        title: "Options chain never loads on mobile Safari",
+        url: "https://github.com/x/y/issues/55",
+      },
+    ]);
+  });
+
+  // #4286: the draft card waits on this search, so a hung GitHub must give up, not hold the card.
+  it("bounds the request with a timeout signal", async () => {
+    const signals: unknown[] = [];
+    const doFetch = (_m: string, _u: string, _h: unknown, _b: unknown, signal?: AbortSignal) => {
+      signals.push(signal);
+      return Promise.resolve({ status: 200, body: [] });
+    };
+    const search = createSimilarFeedbackSearch(
+      { token: "t", repo: "x/y" },
+      doFetch as unknown as typeof import("../../src/http/fetch-json.js").fetchJson,
+    );
+    await search({ title: "a", details: "b" });
+    expect(signals[0]).toBeInstanceOf(AbortSignal);
   });
 });
 
