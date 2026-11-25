@@ -61,6 +61,16 @@ export function usePanelsWidth(): boolean {
  *  a move from hue (docs/BRAND.md → Accessibility). Flat or unpriced wears none. */
 export const TONE_SHAPE: Readonly<Record<Tone, string>> = { pos: "▲", neg: "▼", flat: "" };
 
+/** The tone a shown figure's own sign gives it: "+1.20%" up, "-0.40%" down, "+0.00%" or "—"
+ *  (no move to show) flat. A row's arrow and hue read from THIS, never from a sibling number
+ *  (#8500): a short's `dayPct` is "—" while its `dayTone` follows today's dollar P/L, and the old
+ *  row wore ▲ beside "—", a shape implying a move the figure does not show. */
+export function figureTone(figure: string): Tone {
+  const n = Number.parseFloat(figure.replace("−", "-").replace(/[^\d.+-]/g, ""));
+  if (!Number.isFinite(n) || n === 0) return "flat";
+  return n > 0 ? "pos" : "neg";
+}
+
 /** "14:32" in the viewer's own clock for an ISO read time; the raw text when it isn't a date. */
 export function readTime(iso: string): string {
   const at = new Date(iso);
@@ -113,26 +123,27 @@ function HeldNames(): ReactElement | null {
         What you hold
       </h2>
       <ul className="dp-held-rows">
-        {rows.map(({ position: p, accountId }) => (
-          <li key={`${accountId}:${p.symbol}`}>
-            <Link className="dp-held-row" to="/accounts">
-              <span className="dp-held-name">
-                <span className="dp-held-symbol">{p.display}</span>
-                {p.plainName ? <span className="dp-held-sub">{p.plainName}</span> : null}
-              </span>
-              <span className="dp-held-fig num">
-                <span>{p.price}</span>
-                <span className={`dp-held-move tone-${p.dayTone}`}>
-                  {TONE_SHAPE[p.dayTone] ? (
-                    <span aria-hidden="true">{TONE_SHAPE[p.dayTone]} </span>
-                  ) : null}
-                  {p.dayPct}
-                  <span className="visually-hidden"> today</span>
+        {rows.map(({ position: p, accountId }) => {
+          const tone = figureTone(p.dayPct);
+          return (
+            <li key={`${accountId}:${p.symbol}`}>
+              <Link className="dp-held-row" to="/accounts">
+                <span className="dp-held-name">
+                  <span className="dp-held-symbol">{p.display}</span>
+                  {p.plainName ? <span className="dp-held-sub">{p.plainName}</span> : null}
                 </span>
-              </span>
-            </Link>
-          </li>
-        ))}
+                <span className="dp-held-fig num">
+                  <span>{p.price}</span>
+                  <span className={`dp-held-move tone-${tone}`}>
+                    {TONE_SHAPE[tone] ? <span aria-hidden="true">{TONE_SHAPE[tone]} </span> : null}
+                    {p.dayPct}
+                    <span className="visually-hidden"> today</span>
+                  </span>
+                </span>
+              </Link>
+            </li>
+          );
+        })}
       </ul>
       {read ? <p className="dp-source num">Paper broker's prices · read {readTime(read)}</p> : null}
     </section>
@@ -177,6 +188,7 @@ function JournalCard(): ReactElement {
           failed read is never shown as "filing is switched off" (#8316's rule). */}
       {feedback.data ? (
         <JournalComposer
+          keepDraftAs="side-panel"
           wishesEnabled={feedback.data.enabled && journal.wishesEnabled}
           notesAvailable={journal.available}
           notesReason={journal.reason}
@@ -207,7 +219,12 @@ function ScoreboardFolded(): ReactElement {
   );
 }
 
-/** The frame's three columns at panels width; the page alone below it. */
+/** The frame's three columns at panels width; the page alone below it.
+ *
+ *  ONE SHAPE AT EVERY WIDTH (#8500). The stage holds the same slot whether the panels stand or
+ *  not: each panel's slot is `null` below 1024, never dropped. Two differently-shaped fragments
+ *  (`<>{stage}</>` against `<><aside/>{stage}<aside/></>`) put the stage at a different index, so
+ *  React unmounted `<main>` on every crossing and the page under it lost its state. */
 export function SidePanels({
   page,
   children,
@@ -216,25 +233,28 @@ export function SidePanels({
   readonly children: ReactNode;
 }): ReactElement {
   const wide = usePanelsWidth();
-  if (!wide) return <>{children}</>;
   return (
     <>
-      <aside className="dp dp-left" aria-label="What you hold, what needs you and the market">
-        <HeldNames />
-        <NeedsYou />
-        <PanelClock />
-      </aside>
+      {wide ? (
+        <aside className="dp dp-left" aria-label="What you hold, what needs you and the market">
+          <HeldNames />
+          <NeedsYou />
+          <PanelClock />
+        </aside>
+      ) : null}
       {children}
-      <aside className="dp dp-right" aria-label="Journal and Scoreboard">
-        <JournalCard />
-        {page === "scoreboard" ? (
-          <ScoreboardFolded />
-        ) : (
-          <ul className="dp-scoreboard">
-            <ScoreboardTile />
-          </ul>
-        )}
-      </aside>
+      {wide ? (
+        <aside className="dp dp-right" aria-label="Journal and Scoreboard">
+          <JournalCard />
+          {page === "scoreboard" ? (
+            <ScoreboardFolded />
+          ) : (
+            <ul className="dp-scoreboard">
+              <ScoreboardTile />
+            </ul>
+          )}
+        </aside>
+      ) : null}
     </>
   );
 }
