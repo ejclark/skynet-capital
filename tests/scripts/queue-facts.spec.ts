@@ -1,8 +1,10 @@
 import { describe, expect, it } from "@rstest/core";
+import type { FactsNeed } from "../../scripts/queue-facts.mjs";
 import {
   BATCH,
   factsOf,
   factsQuery,
+  needOf,
   readQueueFacts,
   restFactsOf,
 } from "../../scripts/queue-facts.mjs";
@@ -132,12 +134,57 @@ describe("queue facts: GraphQL refused (a cloud session)", () => {
     expect(facts.get(BATCH * 3)?.blocks).toEqual([5]);
   });
 
+  it("reads only the facts each issue's row leaves open", () => {
+    const reads: string[] = [];
+    const need = new Map([
+      [1, { ready: true, blocks: false }],
+      [2, { ready: false, blocks: true }],
+      [3, { ready: false, blocks: false }],
+    ]);
+    const facts = readQueueFacts([1, 2, 3, 4], {
+      repo: "o/r",
+      send: refused,
+      read: restRead(reads),
+      log: () => undefined,
+      need: (n: number) => need.get(n),
+    });
+    expect(reads).toEqual([
+      "issues/1/events?per_page=100",
+      "issues/2/dependencies/blocking",
+      "issues/4/events?per_page=100",
+      "issues/4/dependencies/blocking",
+    ]);
+    expect(facts.get(1)).toEqual({ readyAt: Date.parse("2026-11-20T00:00:00Z"), blocks: [] });
+    expect(facts.get(2)).toEqual({ readyAt: null, blocks: [5] });
+    expect(facts.get(3)).toEqual({ readyAt: null, blocks: [] });
+  });
+
   it("still throws when REST fails too, so a rank never prints with its facts missing", () => {
     expect(() =>
       restFactsOf(1, () => {
         throw new Error("API rate limit exceeded");
       }),
     ).toThrow(/rate limit/);
+  });
+});
+
+describe("queue facts: which REST reads a list row needs", () => {
+  const row = (labels: string[], blocking?: number) => ({
+    labels: labels.map((name) => ({ name })),
+    ...(blocking === undefined
+      ? {}
+      : { issue_dependencies_summary: { blocking, total_blocking: blocking } }),
+  });
+
+  it("asks for a ready time only when the issue is labeled ready", () => {
+    expect(needOf(row(["feedback", "ready"], 0)).ready).toBe(true);
+    expect(needOf(row(["feedback"], 0)).ready).toBe(false);
+  });
+
+  it("asks for the blocking list only when the summary counts one, or has no summary", () => {
+    expect(needOf(row(["feedback"], 2)).blocks).toBe(true);
+    expect(needOf(row(["feedback"], 0)).blocks).toBe(false);
+    expect(needOf(row(["feedback"])).blocks).toBe(true);
   });
 });
 
@@ -172,5 +219,46 @@ describe("rank's live read", () => {
     const one = rows.find((r: { number: number }) => r.number === 1);
     expect(one?.readyHours).toBe(2);
     expect(one?.why).toBe("unblocks #3");
+  });
+
+  // The cloud path end to end: GraphQL refused, REST answers from the same fixtures as before. 140
+  // queued issues used to cost 280 reads; now only the ready one and the blocking one are read.
+  it("where GraphQL is refused, reads only the ready issue's events and the blocker's list", () => {
+    const reads: string[] = [];
+    const quiet = Array.from({ length: 140 }, (_, k) => ({
+      ...issue(100 + k, ["feedback"]),
+      issue_dependencies_summary: { blocking: 0 },
+    }));
+    const rows = liveRows({
+      now: Date.parse("2026-11-25T12:00:00Z"),
+      listOpen: () => [
+        { ...issue(1, ["feedback", "ready"]), issue_dependencies_summary: { blocking: 0 } },
+        { ...issue(2, ["bottleneck"]), issue_dependencies_summary: { blocking: 1 } },
+        { ...issue(3, ["plan", "ready"]), sub_issues_summary: { total: 2, completed: 1 } },
+        ...quiet,
+      ],
+      readFacts: (numbers: number[], opts: { need: (n: number) => FactsNeed }) =>
+        readQueueFacts(numbers, {
+          repo: "o/r",
+          send: () => {
+            throw new Error("This GraphQL query is not enabled for this session");
+          },
+          read: (path: string) => {
+            reads.push(path);
+            if (path === "issues/1/events?per_page=100")
+              return [
+                { event: "labeled", label: { name: "ready" }, created_at: "2026-11-25T10:00:00Z" },
+              ];
+            if (path === "issues/2/dependencies/blocking") return [{ number: 1, state: "open" }];
+            return [];
+          },
+          log: () => undefined,
+          ...opts,
+        }),
+    });
+    expect(reads).toEqual(["issues/1/events?per_page=100", "issues/2/dependencies/blocking"]);
+    expect(rows.find((r: { number: number }) => r.number === 1)?.readyHours).toBe(2);
+    expect(rows.find((r: { number: number }) => r.number === 2)?.why).toBe("unblocks #1");
+    expect(rows.some((r: { number: number }) => r.number === 3)).toBe(false);
   });
 });
