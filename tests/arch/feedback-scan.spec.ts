@@ -2,6 +2,12 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+  closingPrOf,
+  closingPrQuery,
+  PR_BATCH,
+  readClosingPrs,
+} from "../../scripts/feedback-scan.mjs";
 
 // The feedback lane's scoreboard. Until 2026-08-22 the only number describing this lane was a
 // sentence someone hand-counted by reading GitHub, and it was optimistic — it said "exactly one
@@ -139,24 +145,26 @@ describe("the closing-PR rename", () => {
     );
   });
 
-  it("hydrates the two fields the new field no longer carries", () => {
+  it("hydrates the two fields the new field no longer carries, from either read", () => {
     // Without these the scoreboard misreports: every shipped issue loses its MERGED state, and
     // time-to-first-answer loses one of its candidates.
-    expect(SOURCE).toMatch(/state: pr\.merged \? "MERGED"/);
-    expect(SOURCE).toMatch(/createdAt: pr\.created_at/);
-  });
-
-  it("hydrates over REST, not a second gh --json call", () => {
-    // A second `gh --json` would compile to GraphQL — the scarce bucket the postmaster exhausted
-    // on 2026-08-26 (docs/LESSONS.md). One REST read per referenced PR is the core bucket.
-    expect(SOURCE).toMatch(/ghRest\(`pulls\/\$\{number\}`\)/);
+    expect(closingPrOf({ merged: true, createdAt: "2026-09-01T00:00:00Z" })).toEqual({
+      state: "MERGED",
+      createdAt: "2026-09-01T00:00:00Z",
+    });
+    expect(closingPrOf({ merged: false, createdAt: "2026-09-01T00:00:00Z" })?.state).toBe(
+      "UNMERGED",
+    );
+    expect(SOURCE).toMatch(
+      /closingPrOf\(\{ merged: pr\?\.merged, createdAt: pr\?\.created_at \}\)/,
+    );
   });
 
   it("drops a reference it could not read rather than counting it as merged", () => {
     // The conservative direction: a wrongly-merged reading would inflate the lane's own success
     // rate, which is the single number this scoreboard exists to keep honest.
-    expect(SOURCE).toMatch(/prCache\.set\(number, undefined\)/);
-    expect(SOURCE).toMatch(/if \(hydrated\) out\.push\(hydrated\)/);
+    expect(closingPrOf(null)).toBeUndefined();
+    expect(SOURCE).toMatch(/\.filter\(\(hydrated\) => hydrated\)/);
   });
 
   it("names the field when gh rejects one, instead of dumping 'Command failed'", () => {
@@ -167,6 +175,108 @@ describe("the closing-PR rename", () => {
   it("leaves the pure scorers reading the internal shape, so fixtures stay valid", () => {
     // The rename is absorbed at the edge; `outcomeOf` and `firstAnswerAt` are untouched.
     expect(SOURCE).toMatch(/issue\.closedByPullRequests \?\? \[\]/);
+  });
+});
+
+/**
+ * ONE GRAPHQL READ PER 50 CLOSING PRs (#8289 slice 2). `npm run rest:meter` counted this scan at 114
+ * REST calls on 2026-11-25, 113 of them `pulls/<n>`, inside every digest, on the 5,000/hr REST
+ * allowance a surge empties while GraphQL sits idle. The PRs are now read in aliased batches, and a
+ * batch GraphQL refuses goes back to the old per-PR REST read.
+ */
+describe("closing PRs are read in GraphQL batches", () => {
+  const node = (n: number) => ({
+    merged: n % 2 === 0,
+    createdAt: `2026-09-0${(n % 9) + 1}T00:00:00Z`,
+  });
+  const answer = (query: string) => {
+    const repository: Record<string, unknown> = {};
+    for (const [, n] of query.matchAll(/p(\d+): pullRequest/g))
+      repository[`p${n}`] = node(Number(n));
+    return { repository };
+  };
+
+  it("asks one aliased document for each PR's merged flag and open time", () => {
+    const q = closingPrQuery([12, 34]);
+    expect(q).toContain("p12: pullRequest(number: 12) { merged createdAt }");
+    expect(q).toContain("p34: pullRequest(number: 34) { merged createdAt }");
+    expect(q).toContain("repository(owner: $owner, name: $name)");
+  });
+
+  it("reads 113 PRs in 3 GraphQL calls and no REST call", () => {
+    const numbers = Array.from({ length: 113 }, (_, i) => 8000 + i);
+    const sent: string[] = [];
+    const rest: string[] = [];
+    const lines: string[] = [];
+    const prs = readClosingPrs(numbers, {
+      repo: "o/r",
+      send: (query: string, vars: Record<string, string>) => {
+        expect(vars).toEqual({ owner: "o", name: "r" });
+        sent.push(query);
+        return answer(query);
+      },
+      read: (path: string) => {
+        rest.push(path);
+        return null;
+      },
+      log: (line: string) => lines.push(line),
+    });
+    expect(sent).toHaveLength(Math.ceil(113 / PR_BATCH));
+    expect(rest).toEqual([]);
+    expect(lines).toEqual([]);
+    expect(prs.size).toBe(113);
+    expect(prs.get(8000)).toEqual({ state: "MERGED", createdAt: node(8000).createdAt });
+    expect(prs.get(8001)?.state).toBe("UNMERGED");
+  });
+
+  it("reads a refused batch over REST, one PR at a time, and says so once", () => {
+    const lines: string[] = [];
+    const rest: string[] = [];
+    const prs = readClosingPrs([5, 6], {
+      repo: "o/r",
+      send: () => {
+        throw new Error("curl: (22) 403\nThis GraphQL query is not enabled for this session");
+      },
+      read: (path: string) => {
+        rest.push(path);
+        return { merged: path.endsWith("/6"), created_at: "2026-09-03T00:00:00Z" };
+      },
+      log: (line: string) => lines.push(line),
+    });
+    expect(rest).toEqual(["pulls/5", "pulls/6"]);
+    expect(prs.get(5)).toEqual({ state: "UNMERGED", createdAt: "2026-09-03T00:00:00Z" });
+    expect(prs.get(6)?.state).toBe("MERGED");
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toContain("GraphQL refused 2 closing-PR reads");
+    expect(lines[0]).toContain("not enabled for this session");
+  });
+
+  it("names a PR missing from the answer and never counts it as merged", () => {
+    const lines: string[] = [];
+    const prs = readClosingPrs([7], {
+      repo: "o/r",
+      send: () => ({ repository: { p7: null } }),
+      read: () => {
+        throw new Error("REST must not be read when GraphQL answered");
+      },
+      log: (line: string) => lines.push(line),
+    });
+    expect(prs.get(7)).toBeUndefined();
+    expect(lines).toEqual([
+      "· feedback-scan: closing PR #7 unreadable (not in the GraphQL answer) — counted as not merged",
+    ]);
+  });
+
+  it("makes no call at all when no issue names a closing PR", () => {
+    const prs = readClosingPrs([], {
+      send: () => {
+        throw new Error("no read expected");
+      },
+      read: () => {
+        throw new Error("no read expected");
+      },
+    });
+    expect(prs.size).toBe(0);
   });
 });
 

@@ -22,6 +22,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { isMain } from "./is-main.mjs";
+import { graphql } from "./issues-graphql.mjs";
 import { ghRest, ghRestAll } from "./moneypenny/gh.mjs";
 import { LABELS } from "./moneypenny/index.mjs";
 
@@ -68,11 +69,10 @@ function ghJson(args) {
  * time-to-first-answer. So the rename alone is not the fix; the missing fields have to come back
  * from somewhere.
  *
- * They come from REST, one read per referenced PR, on the plentiful core bucket — never a second
- * `gh --json` call, which compiles to GraphQL and is the scarce one the postmaster already
- * exhausted once (docs/LESSONS.md, 2026-08-26). The scorers keep reading `closedByPullRequests`
- * in its original `{state, createdAt}` shape, so every pure function and fixture below is
- * untouched: the rename is absorbed here, at the I/O edge, where it belongs.
+ * They come back in one pass over every referenced PR (`readClosingPrs`, below), never a second
+ * `gh --json` call. The scorers keep reading `closedByPullRequests` in its original
+ * `{state, createdAt}` shape, so every pure function and fixture below is untouched: the rename is
+ * absorbed here, at the I/O edge, where it belongs.
  */
 function fetchIssues() {
   const issues = JSON.parse(
@@ -89,9 +89,16 @@ function fetchIssues() {
       "number,title,state,createdAt,closedAt,labels,comments,closedByPullRequestsReferences,body",
     ]) || "[]",
   );
+  const refsOf = (issue) =>
+    (issue.closedByPullRequestsReferences ?? [])
+      .map((ref) => Number(ref?.number))
+      .filter(Number.isInteger);
+  const prs = readClosingPrs([...new Set(issues.flatMap(refsOf))]);
   return issues.map((issue) => ({
     ...issue,
-    closedByPullRequests: hydrateClosingPrs(issue.closedByPullRequestsReferences ?? []),
+    closedByPullRequests: refsOf(issue)
+      .map((number) => prs.get(number))
+      .filter((hydrated) => hydrated),
   }));
 }
 
@@ -101,8 +108,8 @@ function fetchIssues() {
  * day, the oldest open filing with no state was the first to fall off that window, and the row
  * then printed its all-clear over the very filing it exists to name.
  *
- * Over REST through `ghRestAll`, on the plentiful core bucket rather than a second `gh --json`
- * (GraphQL, the scarce one — see `fetchIssues`). `ghRestAll` pages to the end and throws at its
+ * Over REST through `ghRestAll` (one call per 100 open filings) rather than a second `gh --json`
+ * list. `ghRestAll` pages to the end and throws at its
  * page ceiling rather than return a cut list, so a read that could not see every open filing
  * exits 2 here, and the digest's call to this scan fails loud instead of printing the all-clear.
  * Mapped to `gh issue list`'s shape so `unseenFilings` reads both the same; the issues endpoint
@@ -121,43 +128,92 @@ function fetchOpenIssues() {
 }
 
 /**
- * `{number}` → `{state, createdAt}` for each closing reference, read over REST.
+ * `{number}` → `{state, createdAt}` for every closing reference, as a Map.
  *
- * Memoised per run: several issues can close on the same PR. A reference we cannot read degrades
- * to `undefined` and is dropped rather than counted as merged — the conservative direction, since
- * a wrongly-merged reading would inflate the lane's own success rate, which is the one number this
- * scoreboard exists to keep honest.
+ * ONE GRAPHQL READ PER 50 PRs, NOT ONE REST READ EACH (#8289 slice 2). Every session draws on one
+ * 5,000/hr REST allowance, and a surge emptied it 28 minutes before the refill while the separate
+ * GraphQL allowance sat idle (measured 2026-11-24). `npm run rest:meter` counted this scan at 114
+ * REST calls a run on 2026-11-25, 113 of them `pulls/<n>`, and it runs inside every digest. So the
+ * reads are one aliased GraphQL document per PR_BATCH numbers (1 point each): the same run spends 1
+ * REST call (the open-filing list) and ~3 GraphQL points. The list above is already a `gh --json`
+ * call, which is GraphQL too, so this adds no new place the scan can fail.
+ *
+ * BACK TO REST WHEN GRAPHQL IS REFUSED. A batch GraphQL refuses (a cloud session's proxy, a PR
+ * number it cannot resolve) is read one PR at a time over REST, the read this scan made before,
+ * with one stderr line saying so. Per batch, not sticky: one unresolvable number costs its own
+ * batch the saving, not the whole run.
+ *
+ * A reference we cannot read maps to `undefined` and is dropped rather than counted as merged — the
+ * conservative direction, since a wrongly-merged reading would inflate the lane's own success rate,
+ * which is the one number this scoreboard exists to keep honest. The undercount is named on stderr,
+ * so a lane that looks unanswered can be told apart from one whose closing PR could not be read.
  *
  * Same-repo only. A closing PR in another repository would need its own path; none exist here, and
- * inventing one unused would be a second code path nothing exercises.
+ * inventing one unused would be a second code path nothing exercises. `send` is issues-graphql.mjs's
+ * `graphql` and `read` gh.mjs's `ghRest`, both injected for specs.
  */
-const prCache = new Map();
-function hydrateClosingPrs(refs) {
-  const out = [];
-  for (const ref of refs) {
-    const number = Number(ref?.number);
-    if (!Number.isInteger(number)) continue;
-    if (!prCache.has(number)) {
-      try {
-        const pr = ghRest(`pulls/${number}`);
-        prCache.set(number, { state: pr.merged ? "MERGED" : "UNMERGED", createdAt: pr.created_at });
-      } catch (err) {
-        // Optional per reference: the scoreboard stays a conservative lower bound without it (see
-        // above). But the undercount is named, so a lane that looks unanswered can be told apart
-        // from one whose closing PR simply could not be read.
-        const why = String(err?.stderr || err?.message || err)
-          .trim()
-          .split("\n")[0];
-        console.error(
-          `· feedback-scan: closing PR #${number} unreadable (${why}) — counted as not merged`,
-        );
-        prCache.set(number, undefined);
+export const PR_BATCH = 50;
+
+/** One aliased document asking each PR whether it merged and when it was opened. Pure. */
+export function closingPrQuery(numbers) {
+  const fields = numbers.map(
+    (n) => `p${Number(n)}: pullRequest(number: ${Number(n)}) { merged createdAt }`,
+  );
+  return `query($owner: String!, $name: String!) { repository(owner: $owner, name: $name) { ${fields.join(" ")} } }`;
+}
+
+/** The scorers' `{state, createdAt}` from one PR node, or undefined when there is none. Pure. */
+export function closingPrOf(node) {
+  if (!node?.createdAt) return undefined;
+  return { state: node.merged ? "MERGED" : "UNMERGED", createdAt: node.createdAt };
+}
+
+export function readClosingPrs(
+  numbers,
+  {
+    repo = process.env.GITHUB_REPOSITORY ?? "ejclark/skynet-capital",
+    send = graphql,
+    read = ghRest,
+    log = (line) => console.error(line),
+  } = {},
+) {
+  const [owner, name] = repo.split("/");
+  const firstLine = (err) =>
+    String(err?.stderr || err?.message || err)
+      .trim()
+      .split("\n")
+      .filter(Boolean)
+      .pop();
+  const unreadable = (number, why) =>
+    log(`· feedback-scan: closing PR #${number} unreadable (${why}) — counted as not merged`);
+  const prs = new Map();
+  for (let i = 0; i < numbers.length; i += PR_BATCH) {
+    const batch = numbers.slice(i, i + PR_BATCH);
+    let data;
+    try {
+      data = send(closingPrQuery(batch), { owner, name });
+    } catch (err) {
+      log(
+        `· feedback-scan: GraphQL refused ${batch.length} closing-PR reads (${String(firstLine(err)).slice(0, 120)}) — reading them over REST (#8289)`,
+      );
+      for (const number of batch) {
+        try {
+          const pr = read(`pulls/${number}`);
+          prs.set(number, closingPrOf({ merged: pr?.merged, createdAt: pr?.created_at }));
+        } catch (restErr) {
+          unreadable(number, firstLine(restErr));
+          prs.set(number, undefined);
+        }
       }
+      continue;
     }
-    const hydrated = prCache.get(number);
-    if (hydrated) out.push(hydrated);
+    for (const number of batch) {
+      const hydrated = closingPrOf(data?.repository?.[`p${number}`]);
+      if (!hydrated) unreadable(number, "not in the GraphQL answer");
+      prs.set(number, hydrated);
+    }
   }
-  return out;
+  return prs;
 }
 
 /**
