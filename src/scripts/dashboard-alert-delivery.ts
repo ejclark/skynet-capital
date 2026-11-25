@@ -14,8 +14,9 @@ import { type DeskAlertsDeps, deskAlertsFor } from "../server/desk-alerts-route.
  *    what is new. A fill or a rejection therefore reaches them within a second of the broker's own
  *    echo, with no polling added anywhere.
  * 2. **The sweep.** Expiry reminders and assignment risk are standing conditions, not events —
- *    nothing fires them. A timer re-derives them for MEMBERS WHO OPTED IN ONLY, so a deployment
- *    where nobody has turned delivery on does no broker reads at all and the cost of this feature
+ *    nothing fires them. A timer, plus one pass at boot (#8398), re-derives them for MEMBERS WHO OPTED IN ONLY — the account-wide
+ *    channel on, or one order watched (#8352: the sweep is a watch's only retry) — so a deployment
+ *    where nobody has asked for delivery does no broker reads at all and the cost of this feature
  *    is exactly zero until someone asks for it.
  *
  * Both paths share `deskAlertsFor`, the strip's own derivation, so a delivered alert is by
@@ -56,6 +57,9 @@ export function wireAlertDelivery(options: {
    *  so an account that changed hands stops mailing its previous owner. */
   readonly ownerEmailFor: (participantId: string) => string | undefined;
   readonly sweepMinutes?: number;
+  /** Settles when boot has banked the broker window (the reconcile); the boot sweep waits for it.
+   *  A rejection still lets the pass run. */
+  readonly ready?: Promise<unknown>;
 }): AlertDeliveryWiring {
   const store = createAlertDeliveryStore(options.env);
   const built = createAlertDelivery(options.env);
@@ -104,16 +108,31 @@ export function wireAlertDelivery(options: {
     if (event.target.kind === "order") queue(event.actor.participantId);
   });
 
+  // An open watch earns the sweep too, channel off or not (#8352): a watch's send that failed (a
+  // 429, the 10 s timeout) or whose pass was lost (a throw, a restart) has no other retry unless
+  // the account happens to place another order — and its fill leaves the 24 h window regardless.
   const sweep = async (): Promise<void> => {
     const members = await store.listMembers().catch(() => []);
     for (const id of members) {
-      const { prefs } = await store.load(id);
-      if (prefs.channel !== "off") queue(id);
+      const { prefs, watches } = await store.load(id);
+      if (prefs.channel !== "off" || watches.length > 0) queue(id);
     }
   };
   const minutes = Number(options.env.SKYNET_ALERT_SWEEP_MINUTES ?? "") || DEFAULT_SWEEP_MINUTES;
   const timer = setInterval(() => void sweep(), minutes * 60_000);
   timer.unref?.();
+  // One pass at boot (#8398). Every release restarts the process and this timer, and releases land
+  // far more often than once an hour, so without it a failed watch send waits for an hour of
+  // unbroken uptime that may never come, and its fill ages out of the 24 h window unsent. It waits
+  // for `ready` (the boot reconcile) so it reads the broker window's fills; the sent-ledger keeps a
+  // pass that finds nothing new from mailing anything twice.
+  let stopped = false;
+  void Promise.resolve(options.ready)
+    .catch(() => undefined)
+    .then(() => {
+      if (!stopped) return sweep();
+    })
+    .catch((error) => console.warn(`Alert delivery boot sweep failed: ${String(error)}`));
   console.log(`Alert delivery: on (${transport.channel} as ${transport.from}, sweep ${minutes}m)`);
 
   return {
@@ -121,6 +140,7 @@ export function wireAlertDelivery(options: {
     transport,
     nudge: queue,
     stop: () => {
+      stopped = true;
       clearInterval(timer);
       subscription.unsubscribe();
     },

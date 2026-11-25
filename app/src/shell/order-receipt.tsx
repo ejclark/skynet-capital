@@ -134,7 +134,9 @@ export function OrderReceipt({
         </div>
       </div>
       {/* At 390, in order: state · the order in words · the note · this · Modify / Cancel (#8251). */}
-      {isLive(read.state) ? <FillWatch deskId={deskId} orderId={now.orderId} /> : null}
+      {/* The watch is saved under the order's id now — a modify from the Orders pane moves it to
+          the successor without touching `now`, so read the followed row's id first (#8351). */}
+      {isLive(read.state) ? <FillWatch deskId={deskId} orderId={row?.id ?? now.orderId} /> : null}
       {isLive(read.state) ? (
         row?.cancelable ? (
           <div className="receipt-act">

@@ -81,6 +81,31 @@ describe("DeskAlerts", () => {
     );
   });
 
+  it("says a failed positions read in words, never 'Nothing to flag' or 'isn't linked' (#8334)", async () => {
+    next = { available: false, reason: "read-failed", alerts: [], dismissable: false };
+    const { unmount } = render(withClient(<DeskAlerts deskId="human-eric" />));
+    await waitFor(() =>
+      expect(screen.getByText(/positions couldn't be read right now/)).toBeInTheDocument(),
+    );
+    expect(screen.queryByText(/Nothing to flag/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/isn't linked/)).not.toBeInTheDocument();
+    unmount();
+
+    // The order alerts still show; the missing position alerts are said beside them.
+    next = { available: true, asOf: "t", alerts: [], dismissable: true, positionsUnread: true };
+    const empty = render(withClient(<DeskAlerts deskId="human-eric" />));
+    await waitFor(() =>
+      expect(screen.getByText(/positions couldn't be read right now/)).toBeInTheDocument(),
+    );
+    expect(screen.queryByText(/Nothing to flag/)).not.toBeInTheDocument();
+    empty.unmount();
+
+    next = { available: true, asOf: "t", alerts, dismissable: true, positionsUnread: true };
+    render(withClient(<DeskAlerts deskId="human-eric" />));
+    await waitFor(() => expect(screen.getByText("Act now")).toBeInTheDocument());
+    expect(screen.getByText(/positions couldn't be read right now/)).toBeInTheDocument();
+  });
+
   it("renders each alert with its priority word and glyph, and dismisses by fingerprint", async () => {
     next = { available: true, asOf: "t", alerts, dismissable: true };
     nextDismiss = { ok: true };

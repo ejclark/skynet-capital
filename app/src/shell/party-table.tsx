@@ -20,16 +20,38 @@ import type { BoardParty, PartySeat } from "../live/board";
 /** The line a member without a seat reads — here and on the home's Scoreboard tile. */
 export const SEAT_LINE = "Your seat opens with your first filled paper order";
 
+/** The line while the seat's two reads (your accounts, the party's table) are still loading (#8368). */
+export const SEAT_READING_LINE = "Reading your seat at the party's table…";
+
+/** The line when either read failed: whether you hold a seat is unknown, never "no seat" (#8368). */
+export const SEAT_UNREAD_LINE = "Your seat can't be read right now";
+
 /** True when one of the viewer's own accounts sits at the table. */
 export const ownsSeat = (party: BoardParty, ownedIds: readonly string[]): boolean =>
   party.seats.some((s) => ownedIds.includes(s.key));
 
+/**
+ * A read the seat verdict rests on, or why it is not known yet (#8368): `"reading"` while it loads,
+ * `"unread"` when it failed. Whether a member holds a seat needs BOTH their accounts and the party's
+ * table; with either unknown the honest answer is "not known", never "no seat".
+ */
+export type SeatRead<T> = T | "reading" | "unread";
+
+/** A query's data as a `SeatRead`: data it holds (even stale, after a failed refetch) wins. */
+export const seatRead = <T,>(q: {
+  readonly data: T | undefined;
+  readonly isError: boolean;
+}): SeatRead<T> => (q.data !== undefined ? q.data : q.isError ? "unread" : "reading");
+
 /** The one plain line the home's Scoreboard tile shows (criterion 10): the seat line before the
- *  viewer's first fill, the lead line (or why there is none) after it. */
+ *  viewer's first fill, the lead line (or why there is none) after it — and, while either read is
+ *  loading or has failed, that the seat is being read or can't be (#8368). */
 export function scoreboardTileLine(
-  party: BoardParty | undefined,
-  ownedIds: readonly string[],
+  party: SeatRead<BoardParty | undefined>,
+  ownedIds: SeatRead<readonly string[]>,
 ): { readonly line: string; readonly lit: boolean } {
+  if (party === "unread" || ownedIds === "unread") return { line: SEAT_UNREAD_LINE, lit: false };
+  if (party === "reading" || ownedIds === "reading") return { line: SEAT_READING_LINE, lit: false };
   if (!(party && ownsSeat(party, ownedIds))) return { line: SEAT_LINE, lit: false };
   return {
     line: party.lead ? party.lead.line : (party.leadNote ?? "The party's table"),
@@ -69,10 +91,11 @@ export function PartyTable({
   ownedIds,
 }: {
   readonly party: BoardParty;
-  /** The viewer's own account ids (`["settings"]`); empty while they load or when there are none. */
-  readonly ownedIds: readonly string[];
+  /** The viewer's own account ids (`["settings"]`), or why they are not known yet (#8368). */
+  readonly ownedIds: SeatRead<readonly string[]>;
 }): ReactElement {
-  const seated = ownsSeat(party, ownedIds);
+  const owned = typeof ownedIds === "string" ? [] : ownedIds;
+  const seated = ownsSeat(party, owned);
   return (
     <section className="party" aria-labelledby="party-title">
       <h2 id="party-title" className="party-eyebrow">
@@ -101,7 +124,13 @@ export function PartyTable({
           <dd className="party-fig-note">{party.houseNote ?? "its own 1M return"}</dd>
         </div>
       </dl>
-      {seated ? null : (
+      {ownedIds === "unread" ? (
+        // Whether the viewer holds a seat is unknown, so the table says so in words (#8368).
+        <p className="party-seat-line">
+          <span aria-hidden="true">! </span>
+          {SEAT_UNREAD_LINE}
+        </p>
+      ) : ownedIds === "reading" || seated ? null : (
         <p className="party-seat-line">
           <span aria-hidden="true">◇ </span>
           <Link to="/trade">{SEAT_LINE}</Link>
@@ -110,7 +139,7 @@ export function PartyTable({
       {party.seats.length > 0 ? (
         <ul className="party-seats" aria-label="Seated members, A to Z">
           {party.seats.map((s) => (
-            <SeatRow key={s.key} seat={s} mine={ownedIds.includes(s.key)} />
+            <SeatRow key={s.key} seat={s} mine={owned.includes(s.key)} />
           ))}
         </ul>
       ) : null}

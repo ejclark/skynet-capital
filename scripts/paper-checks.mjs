@@ -107,9 +107,12 @@ function report(record) {
       `${row.check}: ${row.outcome} (${row.phase}) ${row.answer}${row.nextWindow ? ` [next ${row.nextWindow}]` : ""}`,
     );
   }
-  if (record.stillOpen.length > 0) log(`still open after cleanup: ${record.stillOpen.join(", ")}`);
-  if (record.positionsLeft.length > 0)
-    log(`still held after cleanup: ${record.positionsLeft.join(", ")}`);
+  if (record.unread) log(`could not read after cleanup: ${record.unread.join(", ")}`);
+  const unread = (what) => record.unread?.some((u) => u.startsWith(what));
+  const open = unread("open orders") ? "not confirmed closed" : "still open after cleanup";
+  if (record.stillOpen.length > 0) log(`${open}: ${record.stillOpen.join(", ")}`);
+  const held = unread("positions") ? "not confirmed closed" : "still held after cleanup";
+  if (record.positionsLeft.length > 0) log(`${held}: ${record.positionsLeft.join(", ")}`);
   if (dryRun) {
     log("dry run: nothing sent and no results written");
     return;

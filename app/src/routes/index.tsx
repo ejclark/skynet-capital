@@ -5,13 +5,13 @@ import stillTower from "../assets/tower-still.jpg";
 import { parseBoardMetric } from "../live/board";
 import { type Desk, fetchDesk } from "../live/desk";
 import { markOf } from "../live/position-mark";
-import { fetchQuests, unreadLine } from "../live/quests";
+import { fetchQuests, questsReadFailed, unreadLine } from "../live/quests";
 import { fetchSettings } from "../live/settings";
 import { isCampaignAddress } from "../shell/campaign-forward";
 import { PageFrame } from "../shell/frame";
 import { reopenTarget } from "../shell/last-app";
 import { useParty } from "../shell/mission-windows";
-import { scoreboardTileLine } from "../shell/party-table";
+import { scoreboardTileLine, seatRead } from "../shell/party-table";
 import { usePhoneWidth } from "../shell/use-media";
 import { TowerSlot } from "../shell/vantage";
 
@@ -53,7 +53,8 @@ type HomeSearch = {
   readonly b?: string;
 };
 
-/** The five apps, in the topbar's order. Each says what its place does, never a coined name. */
+/** The apps: the topbar's five in its order, then Bots (#8254). Each says what its place does,
+ *  never a coined name. */
 export const APPS = [
   {
     to: "/campaign",
@@ -65,6 +66,7 @@ export const APPS = [
   { to: "/trade", glyph: "⇄", name: "Trade", line: "Place a paper trade" },
   { to: "/activity", glyph: "≡", name: "Activity", line: "Every order, yours and the bots'" },
   { to: "/research", glyph: "⌕", name: "R&D", line: "Research the market and its playbooks" },
+  { to: "/bots", glyph: "◈", name: "Bots", line: "Watch the house bots and why they skipped" },
 ] as const;
 
 export interface NeedsRow {
@@ -209,7 +211,7 @@ export function NeedsYou(): ReactElement {
     desksFailed: desks.isError,
     desksUnreachable: desks.data?.filter((s) => s.desk.error).length ?? 0,
     desksRead: desks.data?.length ?? 0,
-    questsFailed: quests.isError,
+    questsFailed: quests.isError || questsReadFailed(quests.data),
     questsUnread: quests.data?.available ? quests.data.unread : [],
   });
   return (
@@ -260,11 +262,16 @@ export function NeedsYou(): ReactElement {
  * Scoreboard either way: the page is open to every member, only the seat is earned. It reads the
  * Party window's own query (`useParty`), so the home adds no request the app did not already make.
  */
-function ScoreboardTile(): ReactElement {
+export function ScoreboardTile(): ReactElement {
   const settings = useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
   const party = useParty();
-  const ownedIds = (settings.data?.accounts ?? []).map((a) => a.id);
-  const { line, lit } = scoreboardTileLine(party.data?.party, ownedIds);
+  // Each read is its data, or "reading" / "unread": a pending or failed read is never "no seat" (#8368).
+  const accounts = seatRead(settings);
+  const board = seatRead(party);
+  const { line, lit } = scoreboardTileLine(
+    typeof board === "string" ? board : board.party,
+    typeof accounts === "string" ? accounts : accounts.accounts.map((a) => a.id),
+  );
   return (
     <li>
       <Link

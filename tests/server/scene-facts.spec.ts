@@ -218,11 +218,36 @@ describe("sceneFacts — one event from the next 14 days", () => {
     expect(market.event.questHref).toBeUndefined();
     expect(market.event.ticketHref).toBeUndefined();
     expect(market.event.ticketWords).toBe(NO_TICKET_WORDS);
-    expect(NO_TICKET_WORDS).toMatch(/names no stock the trade ticket trades/);
-    // A name the ticker directory does not know as tradable is the same case.
-    const unknown = event({ id: "zzqx-2026-11-11-print", symbols: ["ZZQX"] });
-    const odd = found(read({ eventId: unknown.id, events: [unknown] }));
-    expect(odd.event.ticketHref).toBeUndefined();
-    expect(odd.event.ticketWords).toBe(NO_TICKET_WORDS);
+    expect(NO_TICKET_WORDS).toMatch(/names no stock/);
+  });
+
+  it("links the ticket on a stock the ticker directory does not know, never says it names none (#8367)", () => {
+    // A recent IPO's lock-up expiry: the directory is a suggestion list, not a whitelist ("A MISS
+    // IS NEVER A BLOCK", ticker-directory/index.ts), and the ticket takes the symbol as free text.
+    const spcx = event({
+      id: "spcx-lockup-expiry-2026-12-08",
+      kind: "lockup-expiry",
+      date: "2026-11-18",
+      symbols: ["SPCX"],
+    });
+    const held = found(read({ held: ["SPCX"], events: [spcx, cpi] }));
+    expect(held.event.id).toBe(spcx.id);
+    expect(held.event.onYourBook).toEqual(["SPCX"]);
+    expect(held.event.ticketHref).toBe("/trade?symbol=SPCX");
+    expect(held.event.ticketWords).toBeUndefined();
+    // Reached by underlying, no holding: the same link.
+    const asked = found(read({ underlying: "SPCX", events: [spcx, cpi] }));
+    expect(asked.event.ticketHref).toBe("/trade?symbol=SPCX");
+    expect(asked.event.ticketWords).toBeUndefined();
+    // With a linked desk there is a symbol for the sized links to key on.
+    const desk = found(
+      read({ held: ["SPCX"], desk: { id: "desk-1", cash: 50_000 }, events: [spcx] }),
+    );
+    expect(desk.event.questHref ?? desk.event.ticketHref).toBe("/trade?symbol=SPCX");
+    // A known-tradable name still leads when the event names both kinds.
+    const both = event({ id: "pair-2026-11-11", symbols: ["ZZQX", "CRWV"] });
+    expect(found(read({ eventId: both.id, events: [both] })).event.ticketHref).toBe(
+      "/trade?symbol=CRWV",
+    );
   });
 });

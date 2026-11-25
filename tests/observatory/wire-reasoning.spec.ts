@@ -211,7 +211,7 @@ describe("reasoningForOrder — playbook and deciding persona (#3687 slice 4)", 
     });
   });
 
-  it("withholds the playbook on every account the viewer does not own, keeping the why (#885)", () => {
+  it("withholds the playbook from a viewer who owns no account and is not a member, keeping the why (#885)", () => {
     const fired = intent({
       playbookId: "S1-NVDA",
       playbookMode: "standard",
@@ -247,5 +247,42 @@ describe("reasoningForOrder — playbook and deciding persona (#3687 slice 4)", 
     const unanswered = attachWireReasoning(rows, deps)[0]?.reasoning;
     expect(unanswered).not.toHaveProperty("playbookId");
     expect(unanswered).not.toHaveProperty("strategy");
+  });
+
+  it("gives a signed-in member a bot row's playbook and strategy, never the broker's words (#8254)", () => {
+    const fired = intent({
+      playbookId: "S1-NVDA",
+      playbookMode: "standard",
+      strategy: "s1-nvda-fade",
+    });
+    const record: DecisionRecord = {
+      at: 1,
+      personaId: "sauron",
+      mode: "live",
+      rawIntents: [fired],
+      guardedIntents: [fired],
+      outcomes: [
+        {
+          intent: fired,
+          action: "rejected",
+          result: { intent: fired, status: "rejected", reason: "account PA123 lacks buying power" },
+        },
+      ],
+    };
+    const deps = { findByOrderId: () => ({ record, intent: fired as never }) };
+    const [member] = attachWireReasoning([row()], {
+      ...deps,
+      ownsAccount: () => false,
+      member: true,
+    });
+    expect(member?.reasoning).toMatchObject({
+      playbookId: "S1-NVDA",
+      playbookMode: "standard",
+      strategy: "s1-nvda-fade",
+    });
+    expect(member?.reasoning).not.toHaveProperty("brokerReason");
+    // The pre-auth side of the invite gate keeps #885's strip.
+    const [outsider] = attachWireReasoning([row()], { ...deps, ownsAccount: () => false });
+    expect(outsider?.reasoning).not.toHaveProperty("playbookId");
   });
 });

@@ -68,7 +68,8 @@ export function intentOf(event) {
 
 /**
  * The pure decision for each issue a PR names. `facts` per issue: `isOpenIssue` (open, and an issue
- * rather than a PR), `hasLabel`, `namedByOtherOpenPr`, `leased`, `laneBuild` (the PR is a claim
+ * rather than a PR), `hasLabel`, `namedByOtherOpenPr`, `leased`, `sessionHeld` (the issue carries
+ * `session-held`, #8314), `laneBuild` (the PR is a claim
  * lane's own — `isClaimLaneBuild`), `platter` (the PR is a platter — `isPlatter`). Returns one row
  * per issue:
  * `{number, action: "add" | "remove" | "none", reason}`.
@@ -89,6 +90,7 @@ export function planPrInProgress({ event, facts = [] } = {}) {
     if (!f.hasLabel) return row("none", "carries no in-progress");
     if (f.namedByOtherOpenPr) return row("none", "another open PR still names it");
     if (f.leased) return row("none", "a live claim lease still holds it");
+    if (f.sessionHeld) return row("none", "a live session holds it (`session-held`)");
     return row("remove", "its last open PR closed");
   });
 }
@@ -98,13 +100,18 @@ const readPrFromRest = (number) =>
 
 const listOpenPrsFromRest = () => ghRestAll("pulls?state=open");
 
-// A live session's hold on a plan counts whatever its stamp's age: this merge is activity on the
-// plan, so the hold is live right now (#6065, session-hold.mjs). Without it a session's first merge
-// took the label off mid-session, and the plan lane built the slice the session was still building.
-const leasedFromRefs = (number) =>
-  isClaimed(`feedback-${number}`).claimed ||
-  isClaimed(`plan-${number}`).claimed ||
-  isSessionHeld(`plan-${number}`);
+// A live session's hold counts whatever its stamp's age: this merge is activity on the issue, so
+// the hold is live right now (#6065, session-hold.mjs). Without it a session's first merge took the
+// label off mid-session, and the lane built the slice the session was still building: a plan's on
+// 2026-10-26 (#6065), a multi-PR feedback issue's twice on 2026-11-24 (#8314). Reads injectable.
+export const leasedFromRefs = (
+  number,
+  { claimed = (slug) => isClaimed(slug).claimed, held = isSessionHeld } = {},
+) =>
+  claimed(`feedback-${number}`) ||
+  claimed(`plan-${number}`) ||
+  held(`feedback-${number}`) ||
+  held(`plan-${number}`);
 
 const prEvidence = (pr) => ({
   title: pr?.title ?? "",
@@ -138,8 +145,11 @@ export function syncPrInProgress(
     if (!intent) return { number };
     const issue = readIssueFn(number);
     const isOpenIssue = issue?.state === "open" && !issue?.pull_request;
-    const hasLabel = (issue?.labels ?? []).some((l) => l?.name === LABELS.inProgress.name);
-    return { number, isOpenIssue, hasLabel, laneBuild, platter };
+    const names = (issue?.labels ?? []).map((l) => l?.name);
+    const hasLabel = names.includes(LABELS.inProgress.name);
+    // #8314 — the cloud-safe hold. This merge is activity, so the hold is live now (#6065's rule).
+    const sessionHeld = names.includes(LABELS.sessionHeld.name);
+    return { number, isOpenIssue, hasLabel, laneBuild, platter, sessionHeld };
   });
 
   if (intent === "release" && facts.some((f) => f.isOpenIssue && f.hasLabel)) {
@@ -151,7 +161,7 @@ export function syncPrInProgress(
     for (const f of facts) {
       if (!(f.isOpenIssue && f.hasLabel)) continue;
       f.namedByOtherOpenPr = stillNamed.has(f.number);
-      if (!f.namedByOtherOpenPr) f.leased = isLeased(f.number);
+      if (!(f.namedByOtherOpenPr || f.sessionHeld)) f.leased = isLeased(f.number);
     }
   }
 

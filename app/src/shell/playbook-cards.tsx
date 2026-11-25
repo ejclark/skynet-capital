@@ -18,7 +18,7 @@ import {
   UNMANAGED_WORDS,
 } from "../live/heartbeat";
 import { landingCard, type PlaybookLanding } from "../live/playbook-landing";
-import { playbookName, playbookTitle } from "../live/playbook-name";
+import { playbookName, playbookTitle, strategyNaming } from "../live/playbook-name";
 import { land } from "./landing";
 import { PlaybookOpen, WhenOpened } from "./playbook-open";
 import { positionAnchor } from "./position-anchor";
@@ -78,9 +78,10 @@ function metaOf(card: PlaybookCard, named: boolean): string {
   return [named ? card.mode : undefined, since].filter(Boolean).join(" · ");
 }
 
-/** A playbook's name, or on a bot the viewer does not own (#885) the mode it runs in. */
+/** A playbook's name as a strategy, or with no name to read (#885, a read before sign-in) the mode
+ *  it runs in. */
 function titleOf(card: PlaybookCard, named: boolean): string {
-  if (named && card.playbookId) return playbookTitle(card.playbookId);
+  if (named && card.playbookId) return strategyNaming(card.playbookId).title;
   const mode = card.mode ?? "unnamed";
   return `${mode.charAt(0).toUpperCase()}${mode.slice(1)} mode`;
 }
@@ -97,6 +98,7 @@ function StateWord({ glyph, word }: { readonly glyph: string; readonly word: str
  *  keyboard and a screen reader for free. A card with nothing more to say is a plain row. */
 function Card({
   name,
+  sub,
   state,
   glyph,
   word,
@@ -107,6 +109,8 @@ function Card({
   children,
 }: {
   readonly name: string;
+  /** The strategy's plain line under its name (#8254), when the card is named. */
+  readonly sub?: string;
   readonly state: string;
   readonly glyph: string;
   readonly word: string;
@@ -127,7 +131,10 @@ function Card({
   }, [arrived]);
   const head = (
     <>
-      <span className="pbb-name">{name}</span>
+      <span className="pbb-name">
+        {name}
+        {sub ? <span className="pbb-sub">{sub}</span> : null}
+      </span>
       <span className="pbb-word">
         <StateWord glyph={glyph} word={word} />
         {wide ? <span className="pbb-meta pbb-wide"> · {wide}</span> : null}
@@ -251,9 +258,15 @@ function Arrival({
   );
 }
 
+/** The strategy's plain line under a named card's title, or nothing on a nameless one. */
+function subOf(card: PlaybookCard, named: boolean): { readonly sub?: string } {
+  return named && card.playbookId ? { sub: strategyNaming(card.playbookId).line } : {};
+}
+
 function PlaybookRow({
   card,
   named,
+  owned,
   deskId,
   week,
   playbooks,
@@ -261,6 +274,8 @@ function PlaybookRow({
 }: {
   readonly card: PlaybookCard;
   readonly named: boolean;
+  /** The viewer owns the bot: the card opens to its rules and the way to change it. */
+  readonly owned: boolean;
   readonly deskId: string;
   readonly week?: CheckWeek;
   readonly playbooks: readonly PlaybookHeartbeat[] | null;
@@ -271,12 +286,13 @@ function PlaybookRow({
   const meta = metaOf(card, named);
   const fact = cardFact(card);
   const drawn = weekOf(card, week, playbooks, arrival?.fill);
-  // A non-owner's card has no reason to read: its mode and since are the fact, and there is
-  // nothing behind it to open.
-  if (!named) {
+  // A non-owner's card has nothing behind it to open: its name (#8254), mode and since are the
+  // fact. The rules, the landing and the way to change it are the owner's.
+  if (!(named && owned)) {
     return (
       <Card
         name={titleOf(card, named)}
+        {...subOf(card, named)}
         state={card.state}
         glyph={glyph}
         word={word}
@@ -288,6 +304,7 @@ function PlaybookRow({
   return (
     <Card
       name={titleOf(card, named)}
+      {...subOf(card, named)}
       state={card.state}
       glyph={glyph}
       word={word}
@@ -406,6 +423,7 @@ export function PlaybookCards({
   deskId,
   merged,
   named,
+  owned = named,
   unmanaged,
   none,
   week,
@@ -415,6 +433,8 @@ export function PlaybookCards({
   readonly deskId: string;
   readonly merged: BotPlaybooks;
   readonly named: boolean;
+  /** The viewer owns the bot (defaults to `named`, the owner's page). */
+  readonly owned?: boolean;
   /** This week on the strip's clock — each card draws its lane from it. */
   readonly week?: CheckWeek;
   /** The heartbeat's verdict lines, which a nameless card's lane is matched through. */
@@ -448,6 +468,7 @@ export function PlaybookCards({
               key={card.key}
               card={card}
               named={named}
+              owned={owned}
               deskId={deskId}
               playbooks={playbooks}
               {...(week ? { week } : {})}

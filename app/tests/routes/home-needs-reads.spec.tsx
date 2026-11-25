@@ -113,6 +113,13 @@ describe("Needs you reads a failed read as a failure, never as all-clear (#8316)
     expect(screen.getByText("Quests can't be read right now.")).toBeInTheDocument();
   });
 
+  it("says the quests can't be read when the account's broker read failed (#8334)", async () => {
+    serve({ "/api/quests": ok({ available: false, reason: "read-failed", quests: [] }) });
+    await mount();
+    expect(screen.queryByText(ALL_CLEAR)).toBeNull();
+    expect(screen.getByText("Quests can't be read right now.")).toBeInTheDocument();
+  });
+
   it("says what went unjudged when the quests read leaves names unread", async () => {
     serve({
       "/api/quests": ok({

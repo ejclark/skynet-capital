@@ -1,0 +1,151 @@
+// REST BUDGET — read GitHub's `x-ratelimit-remaining` on every REST call, say who is spending once it
+// runs low, and tell the caller when to move its writes to GraphQL (#8289 slice 1).
+//
+// WHY. Every session — the surge orchestrator, five cloud build sessions, Moneypenny's lanes acting
+// for Eric — draws on ONE 5,000/hr REST allowance, because a person's tokens and the apps acting for
+// that person share it. Measured 2026-11-24: 622 calls in 4 minutes, empty by ~07:34Z, refilled
+// 08:02Z — dry 28 minutes an hour, while the separate 5,000-point GraphQL allowance read 9 used.
+// Nobody could say which caller drained it, so nothing could be cut. Two answers live here:
+//
+//   1. NAME THE SPENDER. Under REST_LOG_BELOW remaining, the first call that sees it logs one line
+//      to stderr naming the caller (script, subcommand, branch, CI run, session). Slice 2 cuts
+//      whichever caller those lines name most.
+//   2. FALL BACK. Under GRAPHQL_BELOW, `budget.useGraphql()` turns true and issues.mjs sends its
+//      writes and issue reads through GraphQL (scripts/issues-graphql.mjs), keeping the last ~300 REST calls for
+//      the reads that have no cheap GraphQL twin.
+//   3. ...UNLESS GRAPHQL IS REFUSED HERE. A Claude Code cloud session's proxy answers GraphQL with a
+//      403 (`This GraphQL query is not enabled for this session`, docs/vendor/claude-code/
+//      cloud-environments.md → GitHub proxy), whatever the token. There the fallback was a step
+//      down: a write sent to GraphQL with 299 REST calls left failed outright (#8289, 2026-11-25).
+//      `graphqlRefused` turns GraphQL off for the process and says whether REST can still take it.
+//
+// CORE ONLY. GitHub stamps every response with its own bucket in `x-ratelimit-resource`; the search
+// bucket allows 30 a minute, so reading its `remaining` as the hourly one would log "29 left" on
+// every search. Only `core` (or an unnamed bucket) counts.
+//
+// The header comes from curl's `-D <file>`, not `%header{}` in `-w` (curl 7.84+) and not `-D -`
+// (a proxy's CONNECT answer and a `100 Continue` each add a header block to stdout). The LAST
+// `x-ratelimit-remaining` in the file is the API's own.
+//
+// THE CALL LIVES IN gh.mjs (`restCall`, under `ghRest`), so every script on the shared REST read
+// reports here, not only issues.mjs: the 83 scripts on `ghRest` were the blind spot #8471 measured.
+// This file imports nothing of ours, which keeps gh.mjs → rest-budget.mjs one-way (no-circular).
+import { execFileSync } from "node:child_process";
+import { basename } from "node:path";
+
+export const REST_LOG_BELOW = 1000;
+export const GRAPHQL_BELOW = 300;
+
+/**
+ * `{ remaining, reset, resource }` from a raw header dump — the last value of each, header names
+ * matched case-insensitively. `remaining` is null when no header carried it (a stub, a network
+ * failure before any answer). Pure.
+ */
+export function parseRateHeaders(text) {
+  const last = (name) => {
+    const re = new RegExp(`^${name}:\\s*(\\S+)`, "gim");
+    let value = null;
+    for (const m of String(text ?? "").matchAll(re)) value = m[1];
+    return value;
+  };
+  const remaining = last("x-ratelimit-remaining");
+  const reset = last("x-ratelimit-reset");
+  return {
+    remaining: remaining === null || !/^\d+$/.test(remaining) ? null : Number(remaining),
+    reset: reset && /^\d+$/.test(reset) ? Number(reset) : null,
+    resource: last("x-ratelimit-resource"),
+  };
+}
+
+/**
+ * Who is spending: the script and its first argument, then whatever names the session — branch,
+ * CI workflow and run, Claude Code session. One line, ` · ` between parts. Pure (`branch` injected).
+ */
+export function callerLabel({ argv = process.argv, env = process.env, branch = "" } = {}) {
+  const script = argv[1] ? basename(argv[1]) : "node";
+  const parts = [[script, argv[2], argv[3]].filter(Boolean).join(" ")];
+  if (branch) parts.push(`branch ${branch}`);
+  if (env.GITHUB_RUN_ID)
+    parts.push(`run ${env.GITHUB_RUN_ID}${env.GITHUB_WORKFLOW ? ` (${env.GITHUB_WORKFLOW})` : ""}`);
+  if (env.CLAUDE_CODE_SESSION_ID) parts.push(`session ${env.CLAUDE_CODE_SESSION_ID}`);
+  return parts.join(" · ");
+}
+
+const resetClock = (reset) =>
+  reset ? ` (refills ${new Date(reset * 1000).toISOString().slice(11, 16)}Z)` : "";
+
+/**
+ * One process's view of the REST allowance. `observe` takes each response's parsed headers; it logs
+ * once on crossing REST_LOG_BELOW and once on crossing GRAPHQL_BELOW, never per call — a session
+ * making 40 calls under the line still writes two lines. `caller` is a function so the branch read
+ * (one `git` call) happens only when a line is actually written.
+ */
+export function createBudget({
+  log = (line) => console.error(line),
+  caller = () => callerLabel(),
+} = {}) {
+  let remaining = null;
+  let reset = null;
+  let graphqlOff = false;
+  const said = new Set();
+  const say = (key, line) => {
+    if (said.has(key)) return;
+    said.add(key);
+    log(line);
+  };
+  const observe = ({ remaining: r, reset: t, resource } = {}) => {
+    if (typeof r !== "number") return;
+    if (resource && resource !== "core") return;
+    remaining = r;
+    reset = t ?? reset;
+    if (r < REST_LOG_BELOW)
+      say(
+        "low",
+        `rate-limit: REST ${r} left of the shared hourly allowance${resetClock(reset)} — caller: ${caller()}`,
+      );
+    if (r < GRAPHQL_BELOW)
+      say(
+        "graphql",
+        `rate-limit: REST under ${GRAPHQL_BELOW} — this run's issue writes go through GraphQL (#8289)`,
+      );
+  };
+  return {
+    observe,
+    /** A REST write GitHub refused for rate limit: the allowance is spent, whatever we last read. */
+    exhausted: () => observe({ remaining: 0, reset, resource: "core" }),
+    useGraphql: () => !graphqlOff && remaining !== null && remaining < GRAPHQL_BELOW,
+    /**
+     * GraphQL failed a call this process routed to it. True when REST may still take that call (it
+     * has not been read or refused at 0), and GraphQL stays off for the rest of the process; false
+     * when REST is spent too, so the caller throws GraphQL's own error.
+     */
+    graphqlRefused: (err) => {
+      if (remaining === 0) return false;
+      graphqlOff = true;
+      const why = String(err?.message ?? err ?? "")
+        .split("\n")
+        .filter(Boolean)
+        .pop();
+      say(
+        "refused",
+        `rate-limit: GraphQL failed here (${String(why).slice(0, 120)}) — this run's issue calls stay on REST (#8289)`,
+      );
+      return true;
+    },
+    remaining: () => remaining,
+  };
+}
+
+const gitBranch = () => {
+  try {
+    return execFileSync("git", ["branch", "--show-current"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  } catch {
+    return "";
+  }
+};
+
+/** The process-wide budget every REST call in this process reports into (gh.mjs's `restCall`). */
+export const budget = createBudget({ caller: () => callerLabel({ branch: gitBranch() }) });

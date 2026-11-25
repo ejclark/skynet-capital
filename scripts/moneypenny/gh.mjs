@@ -2,6 +2,10 @@
 // this one call, so every caller gets the same encoding/stdio behaviour and there's one place to
 // change it. Split out of moneypenny.mjs (formerly postmaster.mjs; 2026-08-26, the noExcessiveLinesPerFile split).
 import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { budget, parseRateHeaders } from "../rest-budget.mjs";
 
 // maxBuffer: execFileSync's 1 MB default is smaller than one page of 100 PRs with bodies, so any
 // full-page read died with ENOBUFS — latency-scan crashed on it (#4056's L9 study) and the delivery
@@ -126,33 +130,79 @@ export function withRetry(
  * 40421267754: two `sync project status` runs a second apart both died that way on one issue read.
  * The exit status is the same 22; only the body survives, and `withResponseBody` puts it where
  * every classifier reads. `run` is injected so that path is provable without a network call.
+ *
+ * ON THE BUDGET (#8289). It is `restCall`'s GET, so every read reports `x-ratelimit-remaining` and
+ * names its caller on stderr once under 1,000 REST calls are left. See `restCall` below.
  */
-export function ghRest(
+export function ghRest(path, opts = {}) {
+  return restCall("GET", path, undefined, opts);
+}
+
+/**
+ * One REST call over curl, its rate headers reported to the process's REST budget (#8289). `ghRest`
+ * is its GET; issues.mjs sends its writes through it too.
+ *
+ * WHY EVERY CALL REPORTS (#8289 slice 2). Every session, the surge orchestrator and the lanes acting
+ * for Eric draw on one 5,000/hr REST allowance, and a surge emptied it 28 minutes before the refill
+ * (2026-11-24). Slice 1 named the caller under 1,000 left, but only from issues.mjs and ship.sh;
+ * the 83 scripts on `ghRest` (every Moneypenny lane, `rank`, `work-gate`, the digests) reported
+ * nothing, so a surge-hour gather could not see most of the scripted spend (#8471's detail).
+ * Reading the header here costs no call: curl's `-D` dumps the headers of the answer we already
+ * asked for, and rest-budget.mjs writes at most two lines a process.
+ *
+ * A failure still reports: a 403 for rate limit carries `remaining: 0`. `into` is injectable so a
+ * spec can watch the report; `agent` is the User-Agent.
+ */
+export function restCall(
+  method,
   path,
-  { token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN, run = sh } = {},
+  payload,
+  {
+    repo = process.env.GITHUB_REPOSITORY ?? "ejclark/skynet-capital",
+    token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN || "",
+    run = sh,
+    into = budget,
+    agent = "skynet-moneypenny",
+  } = {},
 ) {
-  const repo = process.env.GITHUB_REPOSITORY ?? "ejclark/skynet-capital";
   const url = path.startsWith("http")
     ? path
     : `https://api.github.com/repos/${repo}/${path.replace(/^\//, "")}`;
-  let out;
+  const dir = mkdtempSync(join(tmpdir(), "rest-budget-"));
+  const headers = join(dir, "headers");
+  const args = ["-sS", "--fail-with-body", "-D", headers];
+  if (method !== "GET") args.push("-X", method);
+  args.push(
+    "-H",
+    `Authorization: Bearer ${token ?? ""}`,
+    "-H",
+    "Accept: application/vnd.github+json",
+    "-H",
+    `User-Agent: ${agent}`,
+  );
+  // Without Content-Type curl sends `--data-binary` as form-urlencoded and the API answers 415.
+  if (payload !== undefined)
+    args.push("-H", "Content-Type: application/json", "--data-binary", "@-");
+  args.push(url);
   try {
-    out = run("curl", [
-      "-sS",
-      "--fail-with-body",
-      "-H",
-      `Authorization: Bearer ${token ?? ""}`,
-      "-H",
-      "Accept: application/vnd.github+json",
-      "-H",
-      "User-Agent: skynet-moneypenny",
-      url,
-    ]);
+    const out = run("curl", args, payload === undefined ? {} : { input: JSON.stringify(payload) });
+    return JSON.parse(out || "null");
   } catch (err) {
     throw withResponseBody(err);
+  } finally {
+    let text = "";
+    try {
+      text = readFileSync(headers, "utf8");
+    } catch {
+      // no answer reached us (or a stub curl wrote none) — nothing to report
+    }
+    into.observe(parseRateHeaders(text));
+    rmSync(dir, { recursive: true, force: true });
   }
-  return JSON.parse(out || "null");
 }
+
+/** A REST read on the budget — `restCall`'s GET. */
+export const restRead = (path, opts) => restCall("GET", path, undefined, opts);
 
 /**
  * Append GitHub's own reason — the error body's `message`, else the raw body — to a failed curl's

@@ -21,9 +21,10 @@ import { BotPlaybooksSection } from "../shell/bot-playbooks";
  * route should not have the playbook store view") is kept: the store still renders only on R&D,
  * and an owner reaches it from here through each card's "Change or pause it in R&D".
  *
- * Any member can read any bot here, but which playbooks it runs is its owner's (#885, Eric
- * 2026-08-29: "at this time, we do not show what playbooks others are using"; docs/IA.md §5.2):
- * the server withholds the ids from a non-owner, and this page never asks the section to draw them.
+ * Any member can read any bot here, and which playbooks it runs too (#8254, lifting #885 for bot
+ * accounts on Eric's 2026-11-10 call, #6007: "user account and trade information is visible to
+ * other users for the sake of gameplay"; docs/IA.md §5.2): each card is named by its strategy. Its
+ * rules, its landing and the way to change it stay the owner's (`owned`).
  */
 
 function PlaybooksPage(): ReactElement {
@@ -56,7 +57,7 @@ function PlaybooksPage(): ReactElement {
         <BotPlaybooksSection
           deskId={id}
           botName={d.name}
-          showPlaybooks={isOwn}
+          owned={isOwn}
           checksOpen={checks === "open"}
         />
       )}

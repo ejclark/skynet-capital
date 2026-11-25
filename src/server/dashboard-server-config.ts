@@ -54,9 +54,11 @@ import type { ReadMarketClock } from "./market-clock.js";
 import type { MemberCampaignStore } from "./member-campaign-store.js";
 import type { MemberChainStore } from "./member-chain-store.js";
 import type { MemberConvictionStore } from "./member-conviction-store.js";
+import type { MemberFollowStore } from "./member-follow-store.js";
 import type { MemberVisitStore } from "./member-visits.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
 import type { OpsStatusDeps } from "./ops-status-routes.js";
+import type { BotsStandingRead } from "./ops-status-service.js";
 import type { SubmitOptionTrade } from "./option-trade-service.js";
 import type { OrderAuditRecord } from "./order-audit-log.js";
 import type { ReadOwnerQueue } from "./owner-queue.js";
@@ -215,6 +217,10 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
   readonly findByOrderId?: (
     orderId: string,
   ) => { readonly record: DecisionRecord; readonly intent: OrderIntent } | undefined;
+  /** The playbook that placed a bot's order, off the same join but remembered for the process
+   *  (`rememberPlaybooks`, #8397): Activity's chip list asks about every order in the ledger on
+   *  every member's read. Omit and the desk routes ask `findByOrderId` afresh on each request. */
+  readonly playbookOfOrder?: (orderId: string) => string | undefined;
   /** Which other personas trade on an account — the order-id join kept per account, advanced by
    *  only the ledger lines appended since and asked again only when the decision store gains a row
    *  it can match (`account-personas-fold.ts`, #4619). Omit and the Decisions tab shows the
@@ -463,6 +469,16 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * list answers empty and a save answers "not wired in this deployment."
    */
   readonly memberChains?: MemberChainStore;
+  /**
+   * The bots a member follows on the Bots screen (#8254) — a pin keyed by `opaqueMemberId`, read by
+   * the bots API alone: it orders the list and opens nothing. Omit to disable (offline mode): the
+   * list answers with no follows and a follow answers "not wired in this deployment."
+   */
+  readonly memberFollows?: MemberFollowStore;
+  /** What the bots process last reported on its `/controls` poll — the house mode and each bot's
+   *  gate verdict — plus this app's Mission Control holds, for the Bots screen's standing words
+   *  (#8254). Omit and every standing reads "not reported", never guessed. */
+  readonly readBotsStanding?: () => BotsStandingRead;
   /**
    * Whether the house has a ledger on a symbol, for a campaign's research ask. Omit to read the
    * research shelf on each save (`shelfResearched`); specs pass a fixed answer.

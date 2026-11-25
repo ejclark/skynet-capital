@@ -34,15 +34,14 @@ either delete the narration or leave it, one comment at a time, without changing
 1. `bash scripts/wt-start.sh docs/triage-comment-bloat-<slug>` — fetch, branch off `origin/main`,
    `node_modules` and one status line, in one call. After it, one plain command per call — never a
    `&&` chain around git; `/usr/bin/git` where plain `git` is refused (`docs/DELEGATION.md` rail 2).
-2. Confirm the target file is still flagged: test its comment lines against the four regexes in
-   `NARRATION_PATTERNS` (`scripts/comment-bloat-scan.mjs`), case-insensitively. They are
-   JavaScript regexes, so use `grep -niP`, or `grep -niE` with each `\d` rewritten as `[0-9]`
-   (GNU `grep -E` has no `\d`; a literal copy matches nothing). `--candidate` names only the
-   single worst file, so it cannot confirm an arbitrary target. If nothing matches any more,
-   report `status: "skipped"` with "no longer flagged". Don't re-pick a different file.
-3. Open the flagged file and read every comment the scan matched (a bare `(#123)` citation, "PR
-   #N", "issue #N", or "added/removed/used by/handles the case from"). For each one, read the
-   surrounding code and decide:
+2. Confirm the target file is still flagged: `node scripts/comment-bloat-scan.mjs` prints each
+   flagged comment as `file:line` (the first 50). `--candidate` names only the single worst file,
+   so it cannot confirm an arbitrary target. If the file is not listed any more, report
+   `status: "skipped"` with "no longer flagged". Don't re-pick a different file.
+3. Open the flagged file and read every comment the scan listed. Since #7950 a comment is listed
+   only when a citation ("#123", "PR #N", "issue #N"), a caller ("used by `x.ts`") or an
+   "added for / removed in" phrase is its whole content. For each one, read the surrounding code
+   and decide:
    - **Pure narration** — the comment's only content is "this happened" / "this is here because of
      ticket N", and the code is otherwise self-explanatory or already has a separate WHY comment
      → **delete** the narration comment.

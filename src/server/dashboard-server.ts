@@ -14,6 +14,7 @@ import {
   streamBoardPatches,
 } from "./board-patch-routes.js";
 import { serveBookWaitApi } from "./book-wait-routes.js";
+import { serveBotsApi } from "./bots-api-routes.js";
 import { serveClientErrorApi } from "./client-error-route.js";
 import { serveCompanionApi } from "./companion-routes.js";
 import { serveJsonApi } from "./content-api-routes.js";
@@ -207,6 +208,9 @@ async function servePlaybookWrites(
   if (await serveMemberConvictionsApi(req, res, path, config, session)) return true;
   if (await serveMemberCampaignsApi(req, res, path, config, session)) return true;
   if (await serveMemberChainsApi(req, res, path, config, session)) return true;
+  // Following a bot is a pin, not a subscription (#8254): it lives beside the playbook writes only
+  // because it is a member write; it opens nothing.
+  if (await serveBotsApi(req, res, path, config, session)) return true;
   return serveAuthoredPlaysApi(req, res, path, config, session);
 }
 

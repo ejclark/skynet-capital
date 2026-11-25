@@ -14,10 +14,12 @@
 
 import { createAlertDismissals } from "../adapters/jsonl-alert-dismissals.js";
 import { createWatchlist } from "../adapters/jsonl-watchlist-store.js";
+import { opensHeldReason, suspendedReason } from "../autonomous/bot-controls.js";
 import { JsonlAuditStore } from "../autonomous/jsonl-audit-store.js";
 import { signalWindows } from "../autonomous/signal-windows.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
 import { reconcileBrokerActivity, recoverStreamGap } from "../observatory/activity-backfill.js";
+import { rememberPlaybooks } from "../observatory/activity-filter.js";
 import {
   bootPublishingActivityStore,
   publishingFeedback,
@@ -322,6 +324,7 @@ async function main(): Promise<void> {
     authoredPlays,
     memberCampaigns,
     memberChains,
+    memberFollows,
     discoveryQueue,
     campaignQuestions,
     memberConvictions,
@@ -432,6 +435,8 @@ async function main(): Promise<void> {
     env: process.env,
     activityEvents: activityEventBus,
     ownerEmailFor,
+    // Its boot sweep waits for the broker window to be banked (#8398).
+    ready: reconciled,
     deps: () => ({
       hub,
       optionsClientFor: (id) => clientFor(id, dataSource.optionsClientFactory),
@@ -475,6 +480,14 @@ async function main(): Promise<void> {
     authoredPlays,
     memberCampaigns,
     memberChains,
+    memberFollows,
+    // The Bots screen's standing words (#8254): the same poll and holds the ops panel reads.
+    readBotsStanding: () => ({
+      processMode: insightsBridge.botsProcessMode(),
+      verdicts: insightsBridge.botsGate(),
+      suspendedReason: (botId: string) => suspendedReason(botControls.load(), botId),
+      opensHeldReason: (botId: string) => opensHeldReason(botControls.load(), botId),
+    }),
     discoveryQueue,
     campaignQuestions,
     discoveryPerPass: discoveryPerPass(),
@@ -611,6 +624,16 @@ async function main(): Promise<void> {
     // symbol+side+time match (`decision-context.ts`) is a different code path entirely, and only
     // the replicated store supports an exact order-id index.
     ...(insightsBridge.findByOrderId ? { findByOrderId: insightsBridge.findByOrderId } : {}),
+    // The same join for a bot order's playbook alone, remembered across requests (#8397): every
+    // member's read of a bot's Activity builds its chip list from every order in the ledger.
+    ...(insightsBridge.findByOrderId
+      ? {
+          playbookOfOrder: rememberPlaybooks(
+            insightsBridge.findByOrderId,
+            insightsBridge.orderJoinMark,
+          ),
+        }
+      : {}),
     readAccountPersonas,
     // A leg once matched never changes (the leg table is insert-only), so remember the hits (#4458),
     // and the misses until the table gains a row (#4619).

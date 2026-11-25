@@ -20,7 +20,7 @@ export interface CheckRow {
   readonly answer: string;
   readonly attempts: readonly Attempt[];
   readonly orderIds: readonly string[];
-  /** `nothing placed` · `cancelled` · `still open` — filled in after cleanup. */
+  /** `nothing placed` · `cancelled` · `still open` · `not confirmed closed` — filled in after cleanup. */
   readonly cleanup: string;
   readonly nextWindow?: string;
 }
@@ -31,9 +31,12 @@ export interface RunRecord {
   readonly finishedAt: string;
   readonly exitCode: number;
   readonly rows: readonly CheckRow[];
-  /** Order ids still open after cleanup; non-empty means the run exited 1. */
+  /** Order ids still open after cleanup (or not confirmed closed, see `unread`); non-empty means
+   *  the run exited 1. */
   readonly stillOpen: readonly string[];
   readonly positionsLeft: readonly string[];
+  /** The lists cleanup couldn't read to confirm, with why (#8371); present means the run exited 1. */
+  readonly unread?: readonly string[];
 }
 
 export interface ResultsFile {

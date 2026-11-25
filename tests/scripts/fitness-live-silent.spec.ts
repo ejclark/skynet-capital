@@ -429,6 +429,9 @@ function verdictAt(stub: string, now: number) {
         STUB: stub,
         FLY_BIN: join(stub, "fly"),
         GH_BIN: join(stub, "gh"),
+        // fitness.mjs spawns deploy-lag.mjs, which runs bare `gh`: without the stub first on PATH
+        // each run here made 5 live REST calls (#8289 slice 2).
+        PATH: `${stub}:${process.env.PATH}`,
         HOME: stub,
         FITNESS_RETRY_MS: "0",
         FITNESS_SPAWN_MS: "2000",

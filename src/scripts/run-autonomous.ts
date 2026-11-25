@@ -360,7 +360,7 @@ async function runLive(): Promise<void> {
     process.env,
     promotedPlays.rosterFor,
     memberConvictions.lookupFor,
-  ); // issue #885
+  );
   // The env's forced-pick arming — parsed only to be reported below (the bots no longer obey it,
   // #4535 slice 4c-2); the bot it runs on, the first, carries the stored count on its roster.
   const betaForcing = parseBetaForcing(process.env.SKYNET_BETA_FORCING);

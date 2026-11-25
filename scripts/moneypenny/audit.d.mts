@@ -56,6 +56,8 @@ export interface AlreadyFlaggedPR {
 }
 /** An open issue carrying `in-progress`, and how long it has been quiet (#3960). */
 export interface InProgressIssue {
+  /** False for a `session-held`-only issue (#8314): the sweep clears the hold, not the label. */
+  inProgress?: boolean;
   title: string;
   number: number;
   hoursQuiet: number;

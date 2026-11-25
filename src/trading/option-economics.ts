@@ -49,6 +49,10 @@ export interface OptionTicketContext {
   readonly tradingEnabled: boolean;
   readonly isSelf: boolean;
   readonly marketOpen?: boolean;
+  /** The account's read failed (#8399, the option twin of #8335): `cash` and `positions` are a
+   *  degraded row's zeros, not the account. Open and close previews refuse with
+   *  `ACCOUNT_UNREAD_REFUSAL` and make no cash, collateral, cover or held-contract claim. */
+  readonly accountUnread?: true;
   /** Indicative premium $/share for the chosen contract (last quote/close), when known. */
   readonly premium?: number;
   /** The underlying's last known price, when known. */

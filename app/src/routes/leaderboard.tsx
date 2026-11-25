@@ -9,7 +9,7 @@ import { useComparePlace } from "../shell/compare-place";
 import { DeskHoverName } from "../shell/desk-hovercard";
 import { PageFrame } from "../shell/frame";
 import { HeadToHead } from "../shell/head-to-head";
-import { PartyTable } from "../shell/party-table";
+import { PartyTable, seatRead } from "../shell/party-table";
 import { RankFlow } from "../shell/rank-flow";
 
 /**
@@ -213,7 +213,10 @@ function Standings(): ReactElement {
   const board = useQuery({ ...boardQueryOptions(by, pick), placeholderData: keepPreviousData });
   // The viewer's own accounts mark their seat with "you" (#8253): the same read as the league card.
   const settings = useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
-  const ownedIds = (settings.data?.accounts ?? []).map((acct) => acct.id);
+  // A pending or failed read is "reading" / "unread", never an empty list that reads as "no seat" (#8368).
+  const accounts = seatRead(settings);
+  const ownedIds =
+    typeof accounts === "string" ? accounts : accounts.accounts.map((acct) => acct.id);
   const reranking = board.isPlaceholderData && board.data?.metric !== by;
   const compareShown = Boolean(board.data?.compare);
   const heading = useRef<HTMLHeadingElement | null>(null);

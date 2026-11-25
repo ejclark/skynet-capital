@@ -10,8 +10,22 @@
 import { asString } from "./json-fields.js";
 import type { FetchFn } from "./providers.js";
 
-/** Default OAuth scope: read/manage the account (balance + positions) for the board. */
-export const ALPACA_DEFAULT_SCOPE = "account:write trading";
+/**
+ * Default OAuth scope (#8250): `trading` to place the member's own orders, `data` so a later
+ * step can read quotes on their own login without a second consent screen. Reading the account
+ * (balance + positions) is Alpaca's default, so it needs no scope. `account:write` is left out
+ * on purpose: nothing here writes account settings or watchlists, and a newcomer's consent
+ * screen should ask for nothing unused.
+ */
+export const ALPACA_DEFAULT_SCOPE = "trading data";
+
+/**
+ * Paper only, on every authorize URL. Alpaca's doc: with `env` omitted "the user will be
+ * prompted to authorize both a live and a paper account" — a live grant has no place in a
+ * paper-trading game. The server reads this param back at boot and keeps Connect off unless
+ * it is present (`alpaca-connect-routes.ts`).
+ */
+export const ALPACA_CONNECT_ENV = "paper";
 
 export interface AlpacaConnectConfig {
   readonly clientId: string;
@@ -49,6 +63,7 @@ export function alpacaConnectProvider(config: AlpacaConnectConfig): AlpacaConnec
         redirect_uri: redirectUri,
         state,
         scope,
+        env: ALPACA_CONNECT_ENV,
       });
       return `${AUTHORIZE_URL}?${params}`;
     },

@@ -200,8 +200,9 @@ We don't have one, and we won't add one. Instead:
   standard above) is intent. A comment whose only content is a bare issue/PR number, "used by X", or
   "added for the Y flow" is narration — git blame and the PR already carry that, and it rots the moment
   the number stops being resolvable.
-  `node scripts/comment-bloat-scan.mjs` flags candidates (advisory, `docs/COACHES.md`'s Comment-bloat
-  Coach) — `/code-review` and `reviewer` judge each flagged line against this split, not a blanket cut.
+  `node scripts/comment-bloat-scan.mjs` flags the "only content" case (advisory, `docs/COACHES.md`'s
+  Comment-bloat Coach); a WHY that cites its source with `(#N)` is kept. A longer history paragraph
+  is not something a pattern can judge: `/code-review` and `reviewer` weigh it against this split.
 - Folder structure encodes the architecture, so structure alone tells you where behavior lives:
 
 ```

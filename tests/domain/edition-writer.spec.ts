@@ -214,6 +214,58 @@ describe("writeEdition", () => {
   });
 });
 
+// #8353: the landing page's closed row draws a story's line beside its lead fact's figure, so the
+// two must be about the same name. This fixture makes the independent picks differ: the item the
+// ahead line names (MRVL, dated first) and the name the news line names (AMD, the filing that sorts
+// first) are not the session's biggest mover (NVDA, −10.0%), which every story also carries.
+describe("a story's line and its lead fact name the same thing (#8353)", () => {
+  const cast = ["NVDA", "AMD", "MRVL", "MSFT", "AMZN", "SMH"];
+  const named = (line: string) => cast.filter((s) => new RegExp(`\\b${s}\\b`).test(line));
+  const split = input({
+    prints: [print("MRVL", "2026-11-25", "estimate"), print("NVDA", "2026-11-27", "confirmed")],
+    news: [
+      news(
+        "sec-amd-1",
+        "Advanced Micro Devices files an 8-K (AMD)",
+        "2026-11-24T20:00:00Z",
+        "SEC: EDGAR 8-K",
+      ),
+      news("gdelt-n", "Nvidia shares slide as chips sell off", "2026-11-24T19:00:00Z"),
+    ],
+  });
+
+  it("leads every story kind with the figure of the name its line shows", () => {
+    const e = writeEdition(split);
+    expect(e.stories.map((s) => s.id)).toEqual(["movers", "ahead", "news"]);
+    for (const s of e.stories) {
+      const lead = s.facts[0];
+      const inLine = named(s.line);
+      // A row that names a ticker shows that ticker's own move; one that names none shows no ticker's.
+      expect(`${s.id}: ${inLine.join(",") || "none"}`).toBe(
+        `${s.id}: ${cast.includes(lead?.label ?? "") ? lead?.label : "none"}`,
+      );
+    }
+    expect(() => judge(e)).not.toThrow();
+  });
+
+  it("keeps the other names' moves on the story, after the named one", () => {
+    const ahead = writeEdition(split).stories.find((s) => s.id === "ahead");
+    expect(ahead?.line).toBe("Next: MRVL quarterly results");
+    expect(ahead?.facts.map((f) => `${f.label} ${f.value}`)).toEqual(["MRVL +1.3%", "NVDA −10.0%"]);
+    const story = writeEdition(split).stories.find((s) => s.id === "news");
+    expect(story?.line).toBe("AMD in the news");
+    expect(story?.facts.map((f) => `${f.label} ${f.value}`)).toEqual(["AMD +3.0%", "NVDA −10.0%"]);
+  });
+
+  it("leads with the campaign's average when the line names no ticker", () => {
+    const e = writeEdition(input({ prints: [], events: [event("cpi-2026-11", "2026-11-25")] }));
+    const ahead = e.stories.find((s) => s.id === "ahead");
+    expect(named(ahead?.line ?? "")).toEqual([]);
+    expect(ahead?.facts[0]?.label).toMatch(/average/);
+    expect(() => judge(e)).not.toThrow();
+  });
+});
+
 describe("the formatting the cards use", () => {
   it("signs every change with the house minus, and never prints a negative zero", () => {
     expect(signedPct(3.14)).toBe("+3.1%");

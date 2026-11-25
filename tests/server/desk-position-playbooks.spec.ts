@@ -193,13 +193,11 @@ describe.each([
     }
   });
 
-  // The house's playbook ideas (`considerations`) are public catalogue entries and may name
-  // S1-NVDA for anyone; only the positions must not say which ones this bot runs.
-  it("names no playbook on any position of a non-owner's copy", async () => {
+  // A bot's playbooks are every signed-in member's since #8254 (Eric, 2026-11-10, #6007), so a
+  // member who does not own the bot reads the same tags the owner does.
+  it("names the same playbooks on a signed-in member's copy of a bot", async () => {
     const { desk } = await read("guest@x");
-    const rows = JSON.stringify(desk.positions);
-    for (const name of ["NVDA-CALL-SPREAD", "CRWV-WHEEL", "S1-NVDA", "playbook"]) {
-      expect(rows).not.toContain(name);
-    }
+    expect(tagOf(desk, PUT)).toEqual({ playbookId: "CRWV-WHEEL", playbookMode: "aggressive" });
+    expect(tagOf(desk, LOW).playbookId).toBe("NVDA-CALL-SPREAD");
   });
 });

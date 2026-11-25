@@ -2,7 +2,8 @@
  * The stock-side paper checks (#8256): 1 bracket-after-close, 2 extended-hours, 3 evening-quotes,
  * 4 fractional-exits. Every entry is a limit that can't fill (30% of the last IEX trade); the one
  * exception is check 4's 0.5-share market buy and its sell-back, which exist to give the OCO a
- * position to sit on. Cleanup (`cleanup.ts`) cancels whatever these leave open.
+ * position to sit on. Check 1 and check 4 cancel their own resting orders before the next order
+ * goes out (#8373); cleanup (`cleanup.ts`) cancels whatever is still open at the end.
  */
 import { type CheckAnswer, sayAll, verdict } from "./answer.js";
 import {
@@ -46,20 +47,38 @@ export async function bracketAfterClose(desk: Desk): Promise<CheckAnswer> {
   };
   const reads = await readAll("read back");
   // Started 15 minutes or less before the open: watch both through 09:31 ET, 20 minutes at most.
+  // A signal ends the watch (#8372): the script's sleep returns at once after one, so a loop bounded
+  // only by the clock would spin broker reads until 09:31 instead of letting cleanup start.
+  // Only a read made at or after the open is kept as "after the open" (#8393): a signal before the
+  // open would otherwise leave a pre-open read under that label, and the README would print it as
+  // check 1's answer.
   const started = desk.now();
   const openAt = openingToday({ ...desk.facts, now: started });
   let afterOpen: Attempt[] = [];
   if (openAt !== undefined && openAt - started <= 15 * MINUTE) {
     const until = Math.min(openAt + MINUTE, started + 20 * MINUTE);
-    while (desk.now() < until) {
+    while (desk.now() < until && !desk.ledger.interrupted) {
       await desk.sleep(Math.min(MINUTE, until - desk.now()));
-      afterOpen = await readAll("after the open");
+      if (desk.ledger.interrupted) break;
+      const readAt = desk.now();
+      const watched = await readAll("after the open");
+      if (readAt >= openAt) afterOpen = watched;
     }
+  }
+  // Polled and recorded, so cancel (#8373): in a run that crosses the open, check 4 sells SPY next,
+  // and an open SPY buy limit beside a sell is what Alpaca's wash-trade guard refuses. After a
+  // signal, the run's cleanup cancels them instead. The cancels are instrumentation: kept in the
+  // attempts, left out of the answer the README prints.
+  const cancelled: Attempt[] = [];
+  for (const s of sent) {
+    if (desk.ledger.interrupted) break;
+    const gone = await cancel(desk, `${s.label}, cancelled`, s.orderId);
+    if (gone) cancelled.push(gone);
   }
   return {
     outcome: verdict(sent),
     answer: sayAll([...sent, ...reads, ...afterOpen]),
-    attempts: [...sent, ...reads, ...afterOpen],
+    attempts: [...sent, ...reads, ...afterOpen, ...cancelled],
   };
 }
 

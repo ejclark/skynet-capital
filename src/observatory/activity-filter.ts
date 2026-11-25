@@ -37,6 +37,54 @@ export function requestedUnderlying(raw: string | null | undefined): string | un
 /** The playbook that placed an order, by its id — undefined for an order no playbook placed. */
 export type PlaybookOf = (orderId: string) => string | undefined;
 
+/** The decision store's exact order-id join, read only for the intent's playbook. */
+export type FindOrderIntent = (
+  orderId: string,
+) => { readonly intent: { readonly playbookId?: string | undefined } } | undefined;
+
+/**
+ * `findByOrderId` narrowed to the playbook, remembered for the process (#8397). Since #8254 every
+ * signed-in member's read of a bot's Activity builds the chip list, which asks about EVERY order in
+ * the ledger (`ledgerPlaybooks`) — about 16k at 180 days, each one a whole decision record assembled
+ * and parsed, on every `no-store` request. The join's tables are insert-only, so an order's playbook
+ * never changes once found: a hit (a playbook, or a decision that named none) is kept for good, and
+ * the next read asks only about orders it has not seen.
+ *
+ * A miss is kept only while `joinMark` holds still. A decision replicated late can name an order the
+ * ledger already holds, and that write moves `DecisionDb.orderJoinMark`, which forgets every miss at
+ * once. The mark is read once per synchronous pass, as `rememberSpreadLegs` reads its own, since the
+ * chip list asks for the whole ledger in one turn. With no `joinMark`, no miss is kept.
+ *
+ * Holds order ids and playbook names, never decision records.
+ */
+export function rememberPlaybooks(find: FindOrderIntent, joinMark?: () => string): PlaybookOf {
+  const found = new Map<string, string | undefined>();
+  const missed = new Set<string>();
+  let missedAt: string | undefined;
+  let markThisPass: string | undefined;
+  const missedNow = (orderId: string, readMark: () => string): boolean => {
+    if (markThisPass === undefined) {
+      markThisPass = readMark();
+      queueMicrotask(() => {
+        markThisPass = undefined;
+      });
+    }
+    if (markThisPass !== missedAt) {
+      missed.clear();
+      missedAt = markThisPass;
+    }
+    return missed.has(orderId);
+  };
+  return (orderId) => {
+    if (found.has(orderId)) return found.get(orderId);
+    if (joinMark && missedNow(orderId, joinMark)) return undefined;
+    const hit = find(orderId);
+    if (hit) found.set(orderId, hit.intent.playbookId);
+    else if (joinMark) missed.add(orderId);
+    return hit?.intent.playbookId;
+  };
+}
+
 export interface ActivityNarrowing {
   readonly underlying?: string | undefined;
   readonly playbook?: string | undefined;

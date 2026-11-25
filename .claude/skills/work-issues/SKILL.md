@@ -56,12 +56,17 @@ mandate, per `docs/MONEYPENNY.md`'s authority section.
 
    On admit, label it `in-progress` right away (`gh issue edit <n> --add-label in-progress`) —
    that label is what the Orchestration board's Building now column and the cap count (#3960).
-   **On a `plan` issue, take its lease first:** `node scripts/moneypenny/index.mjs --hold
-   plan-<n>`. `claimed: false` means the plan lane or another session holds it, so skip it. The
-   label alone comes off at your first slice merge, and the plan lane would then build the slice
-   you are still building (#6065). The hold
-   lasts while you show activity (a merge on the plan or a state-block edit) and goes stale after
-   2h quiet (`scripts/moneypenny/session-hold.mjs`).
+   **On a `plan` issue, or any issue you will ship in more than one PR, take its lease first:**
+   `node scripts/moneypenny/index.mjs --hold plan-<n>` (a plan) or `--hold feedback-<n>`
+   (anything else). `claimed: false` means a lane or another session holds it, so skip it. The
+   label alone comes off at your first PR's merge, and the lane would then build the PR you are
+   still building (#6065 for a plan; #8314, twice in one hour of a surge, for a feedback issue).
+   `--hold` also puts the `session-held` label on (over REST); in a cloud session the proxy
+   refuses the lease write (HTTP 403) and the label alone is the hold, still answering
+   `claimed: true`. Every claim path refuses a `session-held` issue, so the label lasts until you
+   `--release`, or the stall audit clears it after 6h quiet. A lease-only hold lasts while you
+   show activity (a merge, a state-block edit, a label or comment on the issue) and goes stale
+   after 2h quiet (`scripts/moneypenny/session-hold.mjs`).
    A fresh plan can also be refused because the board's Next part queued column (started plans
    with a next part approved and nobody building) is at `startedPlanCap` — the CLI says so; finish
    one of those instead (#4393, #6871).
@@ -94,10 +99,12 @@ mandate, per `docs/MONEYPENNY.md`'s authority section.
    (workflow files, the irreversible class per `envelope.json`, taste holds). On any other outcome:
    apply the label, comment the reason in one line, and move on. Either way, remove `in-progress`
    (`--remove-label in-progress`) on every terminal outcome — PR merged, `next-slice`,
-   `needs-info` or `needs-eric`; the stall audit only catches one forgotten for 6h. A held
-   **plan** ends differently: a slice merge is not the end of it. When you stop working the plan
-   (the pass ends, or you hand it on), run `node scripts/moneypenny/index.mjs --release plan-<n>`,
-   which drops the lease and the label together, so the plan lane can continue it on the next sweep. A `needs-eric` item doesn't block
+   `needs-info` or `needs-eric`; the stall audit only catches one forgotten for 6h. A **held**
+   issue ends differently: a merge is not the end of it. When you stop working it (its last PR
+   merges, any other terminal outcome, the pass ends, or you hand it on), run `node
+   scripts/moneypenny/index.mjs --release plan-<n>` (or `feedback-<n>`), which drops the lease,
+   `session-held` and `in-progress` together (over REST where GraphQL is refused), so the lane can
+   continue a plan on the next sweep. A `needs-eric` item doesn't block
    the rest of the queue; it just stops competing for the same PR slot. **On a `plan` issue, every
    outcome is an edit to its state block** (the slice's new state, the next pickup line, one dated
    log line), made with `npm run issues -- update N --edit-comment <id> --comment-file f` so it

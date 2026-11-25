@@ -163,14 +163,9 @@ describe("narrowing a bot's Activity on the server", () => {
     expect(page.playbooks).toEqual(["CRWV-WHEEL", "NVDA-CALL-SPREAD", "S1-NVDA"]);
   });
 
-  it("ignores a non-owner's ?playbook= and returns the unfiltered page, naming no playbook", async () => {
-    const { page, body } = await read("?playbook=NVDA-CALL-SPREAD", "guest@x");
-    expect(ids(page)).toEqual(["mleg-1", "put-1", "shr-1", "hand-1"]);
-    expect(page).not.toHaveProperty("playbooks");
-    for (const name of ["NVDA-CALL-SPREAD", "CRWV-WHEEL", "S1-NVDA"]) {
-      expect(body).not.toContain(name);
-    }
-    // A stock filter is no secret: it still narrows a non-owner's copy.
+  it("narrows any signed-in member's copy of a bot by playbook too, since #8254 made a bot's names theirs", async () => {
+    expect(ids((await read("?playbook=NVDA-CALL-SPREAD", "guest@x")).page)).toEqual(["mleg-1"]);
+    expect(ids((await read("?playbook=CRWV-WHEEL", "guest@x")).page)).toEqual(["put-1"]);
     expect(ids((await read("?symbol=CRWV", "guest@x")).page)).toEqual(["put-1"]);
   });
 
