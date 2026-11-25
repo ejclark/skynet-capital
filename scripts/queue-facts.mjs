@@ -22,6 +22,15 @@
 // saving, a cloud session gets its rank. A REST failure still throws, so a rank never prints with
 // its facts missing. The REST events read is the first page, so the stale-ready caveat above
 // applies there.
+//
+// REST READS ONLY WHAT THE LIST ROW CANNOT SAY. Over REST that was still 2 calls per queued issue,
+// about 280 a run (2026-11-25: 211 issues carried a queue label), and cloud sessions are where the
+// surge orchestrator reads the queue every wave. The open-issue list rank already holds says which
+// facts can matter: a ready time is only used for an issue labeled `ready` (25 of 211 that day), and
+// a blocking list only exists where `issue_dependencies_summary.blocking` is above 0 (11 of 211). So
+// `need(n)` names the reads an issue needs and the REST path skips the rest. Measured live that day:
+// 184 ranked issues took 26 reads instead of 368, in the same order as the GraphQL path. An issue
+// with no row to judge from (`need` absent) still gets both reads.
 import { graphql } from "./issues-graphql.mjs";
 import { ghRest } from "./moneypenny/gh.mjs";
 
@@ -51,13 +60,26 @@ export function factsOf(node) {
   return { readyAt: readyTimes.length ? Math.max(...readyTimes) : null, blocks };
 }
 
-/** One issue's facts over REST, the two reads `rank` made per issue before #8471. */
-export function restFactsOf(n, read = ghRest) {
-  const readyTimes = (read(`issues/${n}/events?per_page=100`) ?? [])
+/** Both reads, for an issue with no list row to judge from. */
+export const NEED_ALL = Object.freeze({ ready: true, blocks: true });
+
+/** Which REST reads one open-issue list row needs (see the header): its ready time only when it is
+ *  labeled `ready`, its blocking list only when its dependency summary counts one. A row without a
+ *  summary reads the list, so a missing field never hides a blocker. Pure. */
+export function needOf(issue) {
+  const labels = (issue?.labels ?? []).map((l) => (typeof l === "string" ? l : l?.name));
+  const blocking = issue?.issue_dependencies_summary?.blocking;
+  return { ready: labels.includes("ready"), blocks: blocking == null || Number(blocking) > 0 };
+}
+
+/** One issue's facts over REST: the events read and the blocking read `rank` made per issue before
+ *  #8471, each only when `need` asks for it. */
+export function restFactsOf(n, read = ghRest, need = NEED_ALL) {
+  const readyTimes = (need.ready ? (read(`issues/${n}/events?per_page=100`) ?? []) : [])
     .filter((e) => e?.event === "labeled" && e.label?.name === "ready")
     .map((e) => Date.parse(e.created_at))
     .filter(Number.isFinite);
-  const blocks = (read(`issues/${n}/dependencies/blocking`) ?? [])
+  const blocks = (need.blocks ? (read(`issues/${n}/dependencies/blocking`) ?? []) : [])
     .filter((b) => b?.state !== "closed")
     .map((b) => b.number);
   return { readyAt: readyTimes.length ? Math.max(...readyTimes) : null, blocks };
@@ -66,7 +88,8 @@ export function restFactsOf(n, read = ghRest) {
 /**
  * The facts for every number, as a Map, in ceil(n / BATCH) GraphQL reads. `send` is
  * issues-graphql.mjs's `graphql` and `read` gh.mjs's `ghRest` (both injected for specs). A batch
- * GraphQL refuses, and every batch after it, is read over REST instead (see the header).
+ * GraphQL refuses, and every batch after it, is read over REST instead (see the header), asking
+ * only for the reads `need(n)` names.
  */
 export function readQueueFacts(
   numbers,
@@ -75,6 +98,7 @@ export function readQueueFacts(
     send = graphql,
     read = ghRest,
     log = (line) => console.error(line),
+    need = () => NEED_ALL,
   } = {},
 ) {
   const [owner, name] = repo.split("/");
@@ -94,11 +118,11 @@ export function readQueueFacts(
           .filter(Boolean)
           .pop();
         log(
-          `rank: GraphQL refused the queue read (${String(why).slice(0, 120)}) — reading ${numbers.length - i} issues over REST, 2 calls each (#8289)`,
+          `rank: GraphQL refused the queue read (${String(why).slice(0, 120)}) — reading ${numbers.length - i} issues over REST, only the facts each one's labels and dependency summary leave open (#8289)`,
         );
       }
     }
-    for (const n of batch) facts.set(n, restFactsOf(n, read));
+    for (const n of batch) facts.set(n, restFactsOf(n, read, need(n) ?? NEED_ALL));
   }
   return facts;
 }
