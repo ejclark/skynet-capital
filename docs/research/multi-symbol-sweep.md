@@ -74,6 +74,10 @@ robust, alpha fragile — is the finding.
 - **"ITB's session range on an FHFA House Price Index day stays under its release-day p75 (2.918%, n=68) with no regime condition (FT-fhfa-hpi-2026-11-24-3)"** — added 2026-11-25 from the [fhfa-hpi-2026-11-24 close-out](events/fhfa-hpi-2026-11-24.md). ITB ranged **3.558%** on 11-24 (H 96.18 / L 92.78 / C 95.56, +2.42% on the day) at a VIX close of 26.36, with the five prior sessions at 2.5-3.4%.
   Do not register an unconditional ITB range ceiling for a housing print; this is the second case after the pending-home-sales kill on this list, and the miss reads as regime, not release.
 
+- **"A G.17 annual revision moves the level of the latest month's total-industry capacity utilization by 0.5pp or more against its first print (FT-industrial-production-annual-revision-2026-11-24-2)"** — added 2026-11-25 from the
+  [industrial-production-annual-revision-2026-11-24 close-out](events/industrial-production-annual-revision-2026-11-24.md). Registered 2026-11-09 at about 40% from a four-observation read of the Board's prose; October 2026 went **76.4% (11-17 first print) to 76.8% (11-24 revision), +0.4pp**, while the revision moved Q4 2025 by +0.9pp.
+  Do not expect an annual revision to move the current month's utilization by a half-point on the strength of a base-year change plus two benchmark years; the larger moves land in the benchmarked history. One observation; the manufacturing rate moved +1.1pp, so a manufacturing-keyed test is a separate hypothesis.
+
 - **"The 2Y auction-day front-end rally is a live regime: the 2026-11-23 2Y CMT closes at or below -3.0bp (FT-treasury-2y-note-2026-11-23-1)"** — added 2026-11-24 from the
   [treasury-2y-note-2026-11-23 close-out](events/treasury-2y-note-2026-11-23.md). The 2Y closed **4.63 → 4.63 (0bp)** on a far-from-FOMC sale at $69B, with the prior-session VIX at **35.89** and the 2Y already **-13bp** on the sale-eve session.
   Do not use the -6.07bp 2023+ auction-day prior flat for the next 2Y sale; condition it on prior-session VIX under 20 (FT-3 passed the same day), and do not read one 0bp print as proof the regime is gone.
