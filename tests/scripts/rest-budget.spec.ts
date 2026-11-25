@@ -62,6 +62,19 @@ describe("rest budget: reading GitHub's rate headers", () => {
     expect(b.useGraphql()).toBe(false);
   });
 
+  it("turns GraphQL off once it fails, and hands the call to REST only while REST has calls", () => {
+    const lines: string[] = [];
+    const b = createBudget({ log: (l) => lines.push(l), caller: () => "x" });
+    b.observe({ remaining: 250, resource: "core" });
+    expect(b.useGraphql()).toBe(true);
+    expect(b.graphqlRefused(new Error("curl: (22)\nGitHub said: not enabled"))).toBe(true);
+    expect(b.useGraphql()).toBe(false);
+    expect(b.graphqlRefused(new Error("again"))).toBe(true);
+    expect(lines.filter((l) => l.includes("GraphQL failed here"))).toHaveLength(1);
+    b.exhausted();
+    expect(b.graphqlRefused(new Error("spent"))).toBe(false);
+  });
+
   it("treats a REST refusal for rate limit as an empty allowance", () => {
     const b = createBudget({ log: () => undefined, caller: () => "x" });
     b.exhausted();
@@ -215,7 +228,7 @@ describe("rest budget: issues.mjs writes as GraphQL mutations", () => {
 function runAt(
   remaining: number,
   argv: string[],
-  { refuseWrites = false, refuseAll = false } = {},
+  { refuseWrites = false, refuseAll = false, refuseGraphql = false } = {},
 ) {
   const dir = mkdtempSync(join(tmpdir(), "rest-budget-"));
   const issue = '{"id":70,"node_id":"I_7","number":7,"title":"t","state":"open","labels":[]}';
@@ -230,6 +243,9 @@ in="$(cat)"
 case "$url" in
   */graphql)
     printf '%s\\n' "$in" >> "${dir}/graphql.log"
+    if [ "${refuseGraphql ? "1" : ""}" = 1 ]; then
+      echo '{"message":"This GraphQL query is not enabled for this session. Use gh api repos/{owner}/{repo}/... instead."}'; exit 22
+    fi
     case "$in" in
       *subIssuesSummary*) echo '{"data":{"repository":{"issue":{"id":"I_7","databaseId":70,"number":7,"title":"t","state":"OPEN","url":"https://x/7","labels":{"nodes":[]},"subIssuesSummary":{"total":0,"completed":0},"issueDependenciesSummary":{"blockedBy":0}}}}}' ;;
       *'"query":"query('*) echo '{"data":{"repository":{"l0":{"id":"LA_bug"}}}}' ;;
@@ -310,6 +326,29 @@ describe("rest budget: issues.mjs at the edge of the allowance (end to end)", ()
     expect(graphql).toContain("subIssuesSummary");
     expect(graphql).toContain("addComment");
     expect(res.stdout).toMatch(/^#7 /);
+  });
+
+  // A Claude Code cloud session's proxy refuses GraphQL with a 403 whatever the token
+  // (docs/vendor/claude-code/cloud-environments.md). Under 300 left, REST still has the calls.
+  it("with 250 left in a cloud session, a write GraphQL refuses goes over REST", () => {
+    const { res, restWrites, graphql } = runAt(250, ["update", "7", "--add", "bug"], {
+      refuseGraphql: true,
+    });
+    expect(res.status, res.stderr).toBe(0);
+    expect(graphql).not.toBe(""); // it tried GraphQL first
+    expect(restWrites).toHaveLength(1);
+    expect(res.stderr).toMatch(/GraphQL failed here \(.*not enabled for this session/);
+    expect(res.stdout).toMatch(/^#7 /);
+  });
+
+  it("at 0 left in a cloud session, the write fails on GraphQL's own refusal, never retried on REST", () => {
+    const { res, restWrites } = runAt(0, ["update", "7", "--add", "bug"], {
+      refuseAll: true,
+      refuseGraphql: true,
+    });
+    expect(res.status).not.toBe(0);
+    expect(restWrites).toEqual([]);
+    expect(res.stderr).toMatch(/not enabled for this session/);
   });
 
   it("at 0 left, show prints the issue read through GraphQL, its board column included", () => {

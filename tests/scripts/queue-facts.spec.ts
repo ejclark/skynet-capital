@@ -1,5 +1,11 @@
 import { describe, expect, it } from "@rstest/core";
-import { BATCH, factsOf, factsQuery, readQueueFacts } from "../../scripts/queue-facts.mjs";
+import {
+  BATCH,
+  factsOf,
+  factsQuery,
+  readQueueFacts,
+  restFactsOf,
+} from "../../scripts/queue-facts.mjs";
 import { liveRows } from "../../scripts/rank.mjs";
 
 // #8289 slice 2: `npm run rank` spent 278 REST calls a run (2 per queued issue) from the one hourly
@@ -60,6 +66,78 @@ describe("queue facts: the batched read", () => {
     expect(q).toContain("i7: issue(number: 7)");
     expect(q).toContain("i8289: issue(number: 8289)");
     expect(q).toContain("last: 100");
+  });
+});
+
+// A Claude Code cloud session's proxy refuses this GraphQL document with a 403 whatever the token
+// (docs/vendor/claude-code/cloud-environments.md). GraphQL-only, `rank` exited 1 there.
+describe("queue facts: GraphQL refused (a cloud session)", () => {
+  const refused = () => {
+    throw new Error(
+      "Command failed: curl\nGitHub said: This GraphQL query is not enabled for this session",
+    );
+  };
+  const restRead = (reads: string[]) => (path: string) => {
+    reads.push(path);
+    if (path.endsWith("/events?per_page=100"))
+      return [
+        { event: "labeled", label: { name: "ready" }, created_at: "2026-11-20T00:00:00Z" },
+        { event: "unlabeled", label: { name: "ready" }, created_at: "2026-11-24T00:00:00Z" },
+      ];
+    return [
+      { number: 5, state: "open" },
+      { number: 6, state: "closed" },
+    ];
+  };
+
+  it("reads every issue over REST, two calls each, and says so once", () => {
+    const reads: string[] = [];
+    const lines: string[] = [];
+    const facts = readQueueFacts([1, 2], {
+      repo: "o/r",
+      send: refused,
+      read: restRead(reads),
+      log: (l: string) => lines.push(l),
+    });
+    expect(reads).toEqual([
+      "issues/1/events?per_page=100",
+      "issues/1/dependencies/blocking",
+      "issues/2/events?per_page=100",
+      "issues/2/dependencies/blocking",
+    ]);
+    expect(facts.get(2)).toEqual({ readyAt: Date.parse("2026-11-20T00:00:00Z"), blocks: [5] });
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatch(/not enabled for this session.*2 issues over REST/);
+  });
+
+  it("keeps the batches GraphQL answered and stops asking it after the first refusal", () => {
+    const numbers = Array.from({ length: BATCH * 3 }, (_, k) => k + 1);
+    let sends = 0;
+    const reads: string[] = [];
+    const facts = readQueueFacts(numbers, {
+      repo: "o/r",
+      send: (query: string) => {
+        sends++;
+        if (sends > 1) refused();
+        const repository: Record<string, unknown> = {};
+        for (const m of query.matchAll(/i(\d+): issue/g)) repository[`i${m[1]}`] = {};
+        return { repository };
+      },
+      read: restRead(reads),
+      log: () => undefined,
+    });
+    expect(sends).toBe(2);
+    expect(reads).toHaveLength(BATCH * 2 * 2);
+    expect(facts.get(1)).toEqual({ readyAt: null, blocks: [] });
+    expect(facts.get(BATCH * 3)?.blocks).toEqual([5]);
+  });
+
+  it("still throws when REST fails too, so a rank never prints with its facts missing", () => {
+    expect(() =>
+      restFactsOf(1, () => {
+        throw new Error("API rate limit exceeded");
+      }),
+    ).toThrow(/rate limit/);
   });
 });
 

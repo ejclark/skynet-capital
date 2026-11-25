@@ -17,7 +17,7 @@
 // comment, edit a comment, add a sub-issue, add a blocked-by edge, add labels. An op it does not
 // know throws rather than guessing. One read rides along, `readIssue`: every write command reads
 // its issue first, so a write fallback alone still stopped at 0 REST left (#8289, 2026-11-24).
-import { sh } from "./moneypenny/gh.mjs";
+import { sh, withResponseBody } from "./moneypenny/gh.mjs";
 
 const ISSUE_FIELDS =
   "id databaseId number title body state url labels(first: 100) { nodes { name } }";
@@ -210,10 +210,28 @@ export function resolveQuery(need, repo) {
   };
 }
 
-/** POST one GraphQL document over curl; throws on an HTTP failure or any `errors` in the answer. */
+/**
+ * POST one GraphQL document over curl; throws on an HTTP failure or any `errors` in the answer. An
+ * HTTP failure carries GitHub's own words (`withResponseBody`): a Claude Code cloud session's proxy
+ * answers every GraphQL document outside its pinned PR set with a 403 saying `This GraphQL query is
+ * not enabled for this session`, and a caller deciding to go back to REST needs to read that.
+ */
 export function graphql(query, variables, { run = sh, token } = {}) {
   const tok = token ?? (process.env.GH_TOKEN || process.env.GITHUB_TOKEN || "");
-  const out = run(
+  let out;
+  try {
+    out = post(run, tok, query, variables);
+  } catch (err) {
+    throw withResponseBody(err);
+  }
+  const res = JSON.parse(out || "null");
+  if (res?.errors?.length)
+    throw new Error(`GraphQL: ${res.errors.map((e) => e.message).join("; ")}`);
+  return res?.data ?? {};
+}
+
+function post(run, tok, query, variables) {
+  return run(
     "curl",
     [
       "-sS",
@@ -232,10 +250,6 @@ export function graphql(query, variables, { run = sh, token } = {}) {
     ],
     { input: JSON.stringify({ query, variables }) },
   );
-  const res = JSON.parse(out || "null");
-  if (res?.errors?.length)
-    throw new Error(`GraphQL: ${res.errors.map((e) => e.message).join("; ")}`);
-  return res?.data ?? {};
 }
 
 /**
