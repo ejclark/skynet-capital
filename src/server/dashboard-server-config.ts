@@ -50,12 +50,15 @@ import type { FixAnnouncementStore } from "./fix-announcement-store.js";
 import type { GithubTokenDeps } from "./github-token.js";
 import type { InviteDeps } from "./invite-form.js";
 import type { JournalStore } from "./journal-store.js";
+import type { ReadMarketClock } from "./market-clock.js";
 import type { MemberCampaignStore } from "./member-campaign-store.js";
 import type { MemberChainStore } from "./member-chain-store.js";
 import type { MemberConvictionStore } from "./member-conviction-store.js";
+import type { MemberFollowStore } from "./member-follow-store.js";
 import type { MemberVisitStore } from "./member-visits.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
 import type { OpsStatusDeps } from "./ops-status-routes.js";
+import type { BotsStandingRead } from "./ops-status-service.js";
 import type { SubmitOptionTrade } from "./option-trade-service.js";
 import type { OrderAuditRecord } from "./order-audit-log.js";
 import type { ReadOwnerQueue } from "./owner-queue.js";
@@ -65,6 +68,7 @@ import type {
   RotateCredentialsInput,
   RotateResult,
 } from "./participant-service.js";
+import type { PartySeats } from "./party-seats.js";
 import type { PlayMilestoneLedger } from "./play-milestone-ledger.js";
 import type { PracticeData } from "./practice-puzzle.js";
 import type { ProgressionService } from "./progression-service.js";
@@ -99,6 +103,11 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * or curve carries a mark.
    */
   readonly capitalFlows?: CapitalFlowReader;
+  /**
+   * Who sits at the party's table (#8253): a member's first filled paper order, read from our own
+   * journal. Omit (tests, offline) and nobody is seated — the table shows open seats only.
+   */
+  readonly partySeats?: PartySeats;
   /**
    * Legacy shared-password gate. Used only when `auth` is not configured (localhost/offline).
    * When set, every request must carry ?key=<password>.
@@ -212,6 +221,10 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
   readonly findByOrderId?: (
     orderId: string,
   ) => { readonly record: DecisionRecord; readonly intent: OrderIntent } | undefined;
+  /** The playbook that placed a bot's order, off the same join but remembered for the process
+   *  (`rememberPlaybooks`, #8397): Activity's chip list asks about every order in the ledger on
+   *  every member's read. Omit and the desk routes ask `findByOrderId` afresh on each request. */
+  readonly playbookOfOrder?: (orderId: string) => string | undefined;
   /** Which other personas trade on an account — the order-id join kept per account, advanced by
    *  only the ledger lines appended since and asked again only when the decision store gains a row
    *  it can match (`account-personas-fold.ts`, #4619). Omit and the Decisions tab shows the
@@ -324,6 +337,9 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
   /** The transport that carries an alert off this machine — the one half that needs Eric's
    *  credential. Absent: delivery reads as unconfigured IN WORDS, never a silent drop. */
   readonly alertDelivery?: AlertDeliveryPort;
+  /** Run one delivery pass for this account now — the fill-watch route calls it after a tap, so an
+   *  order that ended a moment before still gets its one email (#8251). Absent: no transport. */
+  readonly alertDeliveryNudge?: (participantId: string) => void;
   /** Where a member's watchlist is kept (`watchlist-route.ts`, #4332). Absent: the route says the
    *  list isn't stored on this deployment rather than accepting names into memory. */
   readonly watchlist?: WatchlistPort;
@@ -458,6 +474,16 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    */
   readonly memberChains?: MemberChainStore;
   /**
+   * The bots a member follows on the Bots screen (#8254) — a pin keyed by `opaqueMemberId`, read by
+   * the bots API alone: it orders the list and opens nothing. Omit to disable (offline mode): the
+   * list answers with no follows and a follow answers "not wired in this deployment."
+   */
+  readonly memberFollows?: MemberFollowStore;
+  /** What the bots process last reported on its `/controls` poll — the house mode and each bot's
+   *  gate verdict — plus this app's Mission Control holds, for the Bots screen's standing words
+   *  (#8254). Omit and every standing reads "not reported", never guessed. */
+  readonly readBotsStanding?: () => BotsStandingRead;
+  /**
    * Whether the house has a ledger on a symbol, for a campaign's research ask. Omit to read the
    * research shelf on each save (`shelfResearched`); specs pass a fixed answer.
    */
@@ -503,6 +529,9 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    *  only on an offline e2e boot (`SKYNET_EDITION_NOW`, src/scripts/offline-clocks.ts, #7901); omit
    *  and the wall clock is used. */
   readonly editionNow?: () => Date;
+  /** Market hours from Alpaca's calendar and clock, shared and cached (`market-clock.ts`, #8248).
+   *  Absent: the checked-in table answers, and says so (`source: "table"`). */
+  readonly readMarketClock?: ReadMarketClock;
   /**
    * `GET/POST /api/council` — the Sunday Council's weekly thesis line (issue #2224 shape 1). Omit
    * to disable (offline mode) — the shell renders the honest "not switched on yet" state instead

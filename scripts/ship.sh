@@ -63,18 +63,52 @@ repo() {
 # The JSON goes to curl on stdin, never as an argument: Linux caps one argv string at 128 KiB, and
 # a platter ledger (~122 KB on #5852) died at curl's `-d` argument with "Argument list too long"
 # (#6212). The same cap is why every payload builder below reads its body from stdin, not sys.argv.
+#
+# #8289: every call also dumps its headers (`-D`) so rate_note can read `x-ratelimit-remaining`.
 api() {
-  local args=(-sS -X "$1" -w '\n__SHIP_HTTP__%{http_code}'
+  local hdr rc=0
+  hdr="$(mktemp)"
+  local args=(-sS -X "$1" -w '\n__SHIP_HTTP__%{http_code}' -D "$hdr"
     -H "Authorization: Bearer $TOKEN"
     -H "Accept: application/vnd.github+json"
     -H "X-GitHub-Api-Version: 2022-11-28"
     -H "User-Agent: skynet-ship")
   if [ -n "${3:-}" ]; then
     printf '%s' "$3" | curl "${args[@]}" -H "Content-Type: application/json" --data-binary @- \
-      "$API/repos/$(repo)$2"
+      "$API/repos/$(repo)$2" || rc=$?
   else
-    curl "${args[@]}" "$API/repos/$(repo)$2"
+    curl "${args[@]}" "$API/repos/$(repo)$2" || rc=$?
   fi
+  rate_note "$hdr"
+  rm -f "$hdr"
+  return "$rc"
+}
+
+# rate_note HEADER-FILE — one stderr line naming this run once the shared REST allowance is under
+# 1,000 (#8289). Every session draws on one 5,000/hr allowance; on 2026-11-24 a surge emptied it
+# 28 minutes before the refill and nothing said who spent it. The line names the spender so slice 2
+# can cut it. Core bucket only (search answers carry their own, much smaller, `remaining`). Once per
+# run: api() runs in a $(...) subshell, so the "already said" flag is a file keyed on the top-level
+# shell's PID ($$ is the parent's even inside the subshell). Never fails the call it reports on.
+RATE_LOG_BELOW=1000
+rate_note() {
+  [ -s "$1" ] || return 0
+  local left resource reset flag
+  # `|| true`: a header GitHub left out is an empty value, not a pipefail exit under `set -e`.
+  left="$(grep -i '^x-ratelimit-remaining:' "$1" | tail -1 | tr -dc '0-9' || true)"
+  resource="$(grep -i '^x-ratelimit-resource:' "$1" | tail -1 | tr -d '\r' | awk '{print $2}' || true)"
+  reset="$(grep -i '^x-ratelimit-reset:' "$1" | tail -1 | tr -dc '0-9' || true)"
+  [ -n "$left" ] && [ "$left" -lt "$RATE_LOG_BELOW" ] || return 0
+  [ -z "$resource" ] || [ "$resource" = core ] || return 0
+  flag="${TMPDIR:-/tmp}/skynet-ship-rate.$$"
+  [ -e "$flag" ] && return 0
+  : >"$flag" 2>/dev/null || true
+  local who="ship.sh ${SHIP_SUBCOMMAND:-?} · branch $(git branch --show-current 2>/dev/null || echo '?')"
+  [ -z "${GITHUB_RUN_ID:-}" ] || who="$who · run $GITHUB_RUN_ID${GITHUB_WORKFLOW:+ ($GITHUB_WORKFLOW)}"
+  [ -z "${CLAUDE_CODE_SESSION_ID:-}" ] || who="$who · session $CLAUDE_CODE_SESSION_ID"
+  local when=""
+  [ -z "$reset" ] || when=" (refills $(date -u -d "@$reset" +%H:%MZ 2>/dev/null || date -u -r "$reset" +%H:%MZ 2>/dev/null))"
+  echo "rate-limit: REST $left left of the shared hourly allowance$when — caller: $who" >&2
 }
 # GitHub refuses a PR body over 65,536 CHARACTERS with a 422 "body is too long" — a second, lower
 # wall behind the argv cap above. Moving the body to stdin (#6216) got #5852's ~122 KB ledger past
@@ -301,15 +335,17 @@ $mm"
   # 5. A closing keyword closes its issue on merge WHEREVER it sits (#4509): #4496's Follow-ups
   #    bullet "#4315 — … Closes #3811." described a LATER PR and closed live plan #3811 mid-flight.
   #    The house format already says where intent lives — `Closes #N` / `Part of #N` in a Summary
-  #    bullet — so a keyword anywhere else, or one contradicting a `Part of`, fails. Fenced blocks
-  #    and inline code are skipped (GitHub links neither), so a body can still quote the syntax.
+  #    bullet — so a keyword anywhere else, or one contradicting a `Part of`, fails.
+  #    Code spans and fences are read like any other line (#8370): markdown links neither, but the
+  #    squash commit message is the body as PLAIN TEXT, and GitHub closes from the commit. #8310's
+  #    Follow-ups line quoted "`Closes #8256`" and closed its parent two seconds after merge, with
+  #    slice 2 unbuilt. Quote the syntax with a placeholder (`Closes #N`) — the pattern needs digits.
   local kw='\b(close[sd]?|fix(e[sd])?|resolve[sd]?):?[[:space:]]+([[:alnum:]_.-]+/[[:alnum:]_.-]+)?#[0-9]+'
   local prose; prose="$(awk '
-    /^[[:space:]]*```/ { fence = !fence; next }
-    fence { next }
-    /^## Summary/ { sum = 1; next }
-    /^## |^<details>/ { sum = 0 }
-    { gsub(/`[^`]*`/, ""); print (sum ? "S" : "O") NR ": " $0 }' "$f")"
+    /^[[:space:]]*```/ { fence = !fence }
+    !fence && /^## Summary/ { sum = 1; next }
+    !fence && /^## |^<details>/ { sum = 0 }
+    { print (sum ? "S" : "O") NR ": " $0 }' "$f")"
   local stray; stray="$(grep -iE "^O[0-9]+: .*$kw" <<<"$prose" | head -3 | sed -E 's/^O/line /' || true)"
   [ -z "$stray" ] || fail "closing keyword outside the Summary — GitHub closes that issue on merge wherever it sits. Move it to a Summary bullet if this PR finishes it; otherwise reword (\"finishes\", \"will close\"):
 $stray"
@@ -318,6 +354,14 @@ $stray"
   partof="$(grep -oiE 'part of:?[[:space:]]+#[0-9]+' <<<"$prose" | grep -oE '#[0-9]+' | sort -u || true)"
   [ -z "$closed" ] || [ -z "$partof" ] || both="$(comm -12 <(echo "$closed") <(echo "$partof") || true)"
   [ -z "$both" ] || fail "an issue is both 'Part of' and closed by this PR — the closing keyword wins on merge. Keep one: $(echo $both)"
+
+  # 6. A name Eric already rejected, above the fold (#8290). The list is docs/plain-names.json;
+  #    code spans, quotes and identifiers are skipped, so a body can still discuss a name as a name.
+  local pn
+  if ! pn="$(node scripts/plain-names.mjs --above-fold "$f" 2>&1)"; then
+    fail "a rejected name is back above the fold:
+$pn"
+  fi
 
   if [ "$fails" -gt 0 ]; then
     echo "ship checkbody: $fails problem(s) — the PR body is the durable record; see docs/PICTURES.md." >&2
@@ -1896,6 +1940,7 @@ cmd_platter() {
 # Sourced (a spec driving api() or platter_sync_body against a stub curl), stop at the definitions.
 [ "${BASH_SOURCE[0]}" = "$0" ] || return 0
 
+SHIP_SUBCOMMAND="${1:-}" # rate_note's caller line (#8289)
 case "${1:-}" in
   open) shift; need_token; cmd_open "$@" ;;
   merge) shift; need_token; cmd_merge "$@" ;;

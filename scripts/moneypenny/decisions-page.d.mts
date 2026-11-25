@@ -14,7 +14,8 @@ export const REUSE_AFTER_MS: number;
 export const HELD_PING_MS: number;
 
 export interface PageState {
-  entries: { n: number; issue: number; since: number }[];
+  /** `ask` is the card snapshot an answered ask keeps until its reply is receipted (#8060). */
+  entries: { n: number; issue: number; since: number; ask?: { title: string; items: AskItem[] } }[];
   retired: { n: number; issue: number; since: number; until: number }[];
   pinged: number[];
   pingedAt: number;

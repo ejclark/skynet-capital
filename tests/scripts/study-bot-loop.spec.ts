@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { describe, expect, it } from "@rstest/core";
-import { buildBook } from "../../scripts/study/worlds/book.mjs";
+import { adoptionsAt, buildBook } from "../../scripts/study/worlds/book.mjs";
 import { checkInstant, nyOffset, resolveToken } from "../../scripts/study/worlds/instant.mjs";
 
 /**
@@ -30,6 +30,21 @@ describe("a world's own instant", () => {
 
   it("refuses to build a world in a process standing on another day", () => {
     expect(() => buildBook("bot-loop-today")).toThrow(/STUDY_INSTANT=2026-11-23T15:00:00-05:00/);
+  });
+});
+
+describe("a world's adoptions ledger is its pin's (#8058)", () => {
+  // bot-loop-today's corpus commit, and the commit before the ledger file was first written.
+  const PIN = "5dadb4923a7cbd97df9e03bda375e9967f58f693";
+  const BEFORE_LEDGER = "794d6be06a4acfbff8905d4daf200be7e64087ed^";
+
+  it("reads the ledger as the pin held it, whatever the working tree's says", () => {
+    expect(adoptionsAt(PIN)["ai-dip-2026-10/2a/CRWV-WHEEL"]?.change).toBe("stop-new-entries");
+  });
+
+  it("holds nothing at a pin that predates the ledger, and refuses a pin it cannot read", () => {
+    expect(adoptionsAt(BEFORE_LEDGER)).toEqual({});
+    expect(() => adoptionsAt("0".repeat(40))).toThrow(/not in this clone/);
   });
 });
 
@@ -102,7 +117,9 @@ describe("the bot's-loop worlds, built on their own day", () => {
     expect(stop?.intent.reason).toMatch(/^SAURON exit-safety trip \(aggressive\): drawdown/);
     const wheel = today.subscriptions.sauron?.find((s) => s.playbookId === "CRWV-WHEEL");
     expect(wheel?.convictionId).toBe("ai-dip-2026-10");
-    // The pin's adoptions ledger holds that pair exits-only, so the runner records no verdict.
+    // The pin's adoptions ledger (src/playbooks/conviction-adoptions.json as the world's corpus
+    // commit held it, book.mjs → adoptionsAt; never main's live file, #8058) holds that pair
+    // exits-only, so the runner records no verdict.
     const said = newest(today, "sauron").playbookVerdicts?.map((v) => v.playbookId) ?? [];
     expect(said).not.toContain("CRWV-WHEEL");
     expect(said).toContain("SAURON");

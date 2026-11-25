@@ -2,18 +2,21 @@ import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "@rstest/core";
 import { parseConcepts, sectionOf, tableRows } from "../../scripts/crawl/cohesion-plan.mjs";
 
-// The phone-of-apps IA (docs/IA.md §8.4, #8247): one app per concept. §2f's App cell names exactly
+// The phone-of-apps IA (docs/IA.md §8.4, #8247): one app per concept. The names are the ones
+// #8291 gave the apps by their job (Eric, 2026-11-24): Trade, Who's who, Bots, Practice. §2f's App cell names exactly
 // one home for every concept, and §8.4's route table names every route file exactly once — so a
 // later move that adds a concept or a route without placing it fails here, not in review.
 
+// Named by their job since #8291: Desk is Trade, Cast is Who's who, Garage is Bots, Film Room is
+// Practice.
 const APPS = [
   "Game Master",
-  "Desk",
+  "Trade",
   "Journal",
-  "Cast",
+  "Who's who",
   "Scoreboard",
-  "Garage",
-  "Film Room",
+  "Bots",
+  "Practice",
   "Home",
   "Settings",
   "before sign-in",
@@ -42,15 +45,17 @@ const columns = header
 
 describe("the App cell's rule", () => {
   it("takes one app from the list", () => {
-    expect(appOf(" Desk ")).toEqual({ app: "Desk" });
+    expect(appOf(" Trade ")).toEqual({ app: "Trade" });
     expect(appOf("before sign-in")).toEqual({ app: "before sign-in" });
   });
 
   it("refuses no app, two apps, and a name off the list", () => {
     expect(appOf("")).toEqual({ error: "names no app" });
-    expect(appOf("Desk · Scoreboard")).toMatchObject({ error: expect.stringContaining("2 apps") });
-    expect(appOf("Desk and Garage")).toMatchObject({ error: expect.stringContaining("2 apps") });
+    expect(appOf("Trade · Scoreboard")).toMatchObject({ error: expect.stringContaining("2 apps") });
+    expect(appOf("Trade and Bots")).toMatchObject({ error: expect.stringContaining("2 apps") });
     expect(appOf("R&D")).toEqual({ error: '"R&D" is not an app' });
+    // The names Eric retired on 2026-11-24 (#8291) are off the list, so a stale cell fails here.
+    expect(appOf("Desk")).toEqual({ error: '"Desk" is not an app' });
   });
 });
 

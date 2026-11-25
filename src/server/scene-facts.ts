@@ -39,6 +39,12 @@ export const MARKET_CLOSED_WORDS =
 export const NO_EVENT_WORDS =
   "nothing is on the event calendar for the next 14 days, which is not the same as nothing happening";
 
+/** When the event names no stock at all (a market-wide event): the record holds no ticket, and
+ *  the scene must not pick a stock for the party (#8317). Words to repeat, like `marketWords`; the
+ *  game master's rules say what follows. A named stock the ticker directory lacks is NOT this case
+ *  (#8367): see `ticketSymbol`. */
+export const NO_TICKET_WORDS = "this event names no stock, so the record holds no ticket for it";
+
 export interface SceneEvent extends UpcomingEventRow {
   readonly kind: MarketEvent["kind"];
   /** Titles of the house campaigns that link this event; empty when none does. */
@@ -48,8 +54,10 @@ export interface SceneEvent extends UpcomingEventRow {
   readonly timing?: string;
   /** A link to the ticket's review screen carrying the quest, when one derives for this desk. */
   readonly questHref?: string;
-  /** The plain ticket link on the event's first tradable symbol, when it names one. */
+  /** The plain ticket link on the event's first known-tradable symbol, else its first symbol. */
   readonly ticketHref?: string;
+  /** `NO_TICKET_WORDS`, only when the event names no stock (so neither link derives). */
+  readonly ticketWords?: string;
 }
 
 export type SceneFacts =
@@ -92,6 +100,17 @@ export interface SceneFactsQuery {
   readonly prints?: readonly EarningsPrint[];
   readonly campaigns?: readonly Campaign[];
   readonly root?: string;
+}
+
+/**
+ * The symbol the plain ticket link opens on: the event's first symbol the ticker directory knows as
+ * tradable, else its first symbol. The directory is a suggestion list, not a whitelist ("A MISS IS
+ * NEVER A BLOCK", `ticker-directory/index.ts`; `isTradable`'s own "not known tradable"): a recent
+ * IPO's lock-up expiry names a stock the ticket takes as free text, and the desk's review gate is
+ * the authority on it (#8367). Undefined only for a market-wide event.
+ */
+function ticketSymbol(event: MarketEvent): string | undefined {
+  return event.symbols.find(isTradable) ?? event.symbols[0];
 }
 
 /** The chat renders `/trade?…` links only (`places.ts`); a quest's href is the app's own path. */
@@ -155,7 +174,7 @@ export function sceneFacts(query: SceneFactsQuery): SceneFacts {
     .filter((c) => linkEvents(c, [event]).length > 0)
     .map((c) => c.title);
   const isEarningsPrint = event.kind === "earnings";
-  const tradable = event.symbols.find(isTradable);
+  const ticket = ticketSymbol(event);
   const questHref = questHrefFor(event, campaigns, query, root);
   return {
     found: true,
@@ -171,7 +190,8 @@ export function sceneFacts(query: SceneFactsQuery): SceneFacts {
         ? { timing: BEFORE_OPEN.test(event.source) ? BEFORE_OPEN_WORDS : AFTER_CLOSE_WORDS }
         : {}),
       ...(questHref ? { questHref } : {}),
-      ...(tradable ? { ticketHref: `/trade?symbol=${encodeURIComponent(tradable)}` } : {}),
+      ...(ticket ? { ticketHref: `/trade?symbol=${encodeURIComponent(ticket)}` } : {}),
+      ...(questHref || ticket ? {} : { ticketWords: NO_TICKET_WORDS }),
     },
     otherEvents: inWindow - 1,
     notCovered: NOT_COVERED,

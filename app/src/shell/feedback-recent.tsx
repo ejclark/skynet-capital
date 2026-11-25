@@ -6,8 +6,10 @@ import { InlineResult } from "../ui";
 import { Toggle } from "./toggle";
 
 /**
- * "Your recent feedback" (#738 phase 9d) — the member's own filings with live status badges, and
- * the follow-up fold. Ownership is the server's check (against the member's own logged filings);
+ * "Your wishes and filings" (#738 phase 9d; "Your recent feedback" until the Journal, #8190) — the
+ * member's own filings with live status badges, and the follow-up fold. A wish sent from the
+ * journal is a filing like any other; its row says "Wish" in words (bold, never a colour alone)
+ * where another filing names its kind. Ownership is the server's check (against the member's own logged filings);
  * the fold here is a courtesy, never the gate.
  *
  * Shipped items are filtered out by default (#429's still-open EARS box: "completed filtered out
@@ -197,7 +199,7 @@ export function RecentFeedback({
   return (
     <section className="fb-recent">
       <div className="fb-recent-head">
-        <h2 className="fb-h">Your recent feedback</h2>
+        <h2 className="fb-h">Your wishes and filings</h2>
         {shippedCount > 0 ? (
           <Toggle label="Show" value={filter} options={RECENT_FILTERS} onPick={setFilter} />
         ) : null}
@@ -226,7 +228,8 @@ export function RecentFeedback({
                   #{filing.issueNumber} · {filing.title}
                 </a>
                 <span className="fb-meta fb-filed num">
-                  {filing.kind} · filed {filing.filedAt.slice(0, 10)}
+                  {filing.source === "journal" ? <b className="fb-wish">Wish</b> : filing.kind} ·
+                  filed {filing.filedAt.slice(0, 10)}
                 </span>
                 {view?.track ? <StatusTrack steps={view.track} /> : null}
                 {view ? (

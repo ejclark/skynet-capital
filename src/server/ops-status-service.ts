@@ -159,8 +159,9 @@ export function personaGateSignal(verdicts: readonly PersonaGateVerdict[] | unde
   };
 }
 
-/** One bot's standing, in the words the card prints: never a bare "live", which would read as money. */
-function botStanding(
+/** One bot's standing, in the words the card prints: never a bare "live", which would read as money.
+ *  Judged under a house that places orders; `botStandingUnder` adds the house mode. */
+export function botStanding(
   verdict: PersonaGateVerdict,
   suspended: string | null,
   opensHeld: string | null,
@@ -182,6 +183,35 @@ function botStanding(
     return { placing: false, words: "placing exits only: its owner stopped new positions" };
   }
   return { placing: true, words: "placing paper orders" };
+}
+
+export type BotStanding = ReturnType<typeof botStanding>;
+
+/** The Bots screen's read (#8254): what the bots process last reported on its `/controls` poll, plus this app's own holds. */
+export interface BotsStandingRead {
+  readonly processMode: BotMode | undefined;
+  readonly verdicts: readonly PersonaGateVerdict[] | undefined;
+  readonly suspendedReason: (botId: string) => string | null;
+  readonly opensHeldReason: (botId: string) => string | null;
+}
+
+/** The house mode's words for every bot while it is `observe`: the house switch holds them all. */
+export const HOUSE_WATCHING_WORDS = "watching: the house mode places no orders";
+
+/**
+ * One bot's standing under the house mode the bots process reported (the Bots screen, #8254), or
+ * null when nothing reported it: no house mode yet, no verdict for this bot, or a verdict from a
+ * build that predates #6954's `mode`. Null is said as "not reported", never guessed as placing.
+ */
+export function botStandingUnder(
+  processMode: BotMode | undefined,
+  verdict: PersonaGateVerdict | undefined,
+  suspended: string | null,
+  opensHeld: string | null,
+): BotStanding | null {
+  if (!(processMode && verdict?.mode)) return null;
+  if (processMode === "observe") return { placing: false, words: HOUSE_WATCHING_WORDS };
+  return botStanding(verdict, suspended, opensHeld);
 }
 
 /**

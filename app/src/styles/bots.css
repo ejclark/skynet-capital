@@ -1,0 +1,142 @@
+/* THE BOTS SCREEN (#8254) — cards at 390, two to a row from 861px. Every state is a glyph and a
+   word; no hue carries meaning alone (docs/BRAND.md → Accessibility). */
+.bots-roster {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.bots-observe {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  font-size: 13px;
+  line-height: 1.4;
+}
+/* The state glyphs in the mono face the session pill uses: the body face has no ◐ and falls back
+   to a sliver that no longer reads as half-filled. */
+.bots-glyph {
+  font-family: var(--mono);
+}
+.bots-group {
+  margin: 0 0 8px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.bots-cards {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+.bots-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  min-width: 0;
+}
+.bots-card-open {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 12px 8px;
+  color: var(--text);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.bots-card-open:hover .bots-card-go {
+  color: var(--accent);
+}
+.bots-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+}
+.bots-card-name {
+  font-size: 15px;
+  font-weight: 600;
+}
+.bots-card-persona,
+.bots-card-label {
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+.bots-card-thesis {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+.bots-card-runs {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.bots-card-line,
+.bots-card-skip {
+  font-size: 13px;
+  line-height: 1.4;
+}
+.bots-card-go {
+  margin-top: 2px;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+.bots-follow {
+  align-self: flex-start;
+  min-height: 44px;
+  margin: 0 12px 8px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.bots-follow[aria-pressed="true"] {
+  border-color: var(--accent);
+  font-weight: 600;
+}
+.bots-not-running summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+}
+.bots-not-running ul {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.bots-not-running li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.bots-note {
+  margin: 0;
+}
+@media (min-width: 861px) {
+  .bots-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

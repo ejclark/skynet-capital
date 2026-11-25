@@ -84,6 +84,21 @@ describe("the questions every correctness reviewer is asked", () => {
     expect(flat(readFileSync(".claude/agents/reviewer.md", "utf8"))).toMatch(STALE_MARKER);
   });
 
+  // A rule loosened for the one caller a task names still answers every other caller: #7724's relaxed
+  // ack rule also ran on page open, and #7714's new `unchecked` rows fed a `notRun` read as "re-run".
+  const SHARED_RULE =
+    /relaxes a condition in a predicate several callers share.*new kind or value to a shared flag, enum or marker.*every caller and reader of it, not only the one the task names.*input the task never mentioned/i;
+
+  it("ask the audit's reviewer what every caller of a loosened shared rule now returns", async () => {
+    const { calls } = await audit([], { causes: [] });
+    const prompt = flat(calls.find((c) => c.opts.label?.startsWith("review"))?.prompt ?? "");
+    expect(prompt).toMatch(SHARED_RULE);
+  });
+
+  it("ask the reviewer agent the same of a loosened shared rule", () => {
+    expect(flat(readFileSync(".claude/agents/reviewer.md", "utf8"))).toMatch(SHARED_RULE);
+  });
+
   // A hash link checked only by reading its own line ships a jump to nothing (the target never renders
   // under the link's query params) or under the sticky head (the target has no scroll-margin-top).
   const HASH_JUMP =
@@ -113,6 +128,21 @@ describe("the questions every correctness reviewer is asked", () => {
 
   it("ask the reviewer agent the same comparison", () => {
     expect(flat(readFileSync(".claude/agents/reviewer.md", "utf8"))).toMatch(DECLARED_SET);
+  });
+
+  // A parser of real repo history checked against one hand-made sample ships with the shapes it
+  // drops, and a window started from a date rather than the commit's instant leaves PRs in no window.
+  const HISTORY_REPLAY =
+    /parses or windows real repo history.*replay it over the last 20 to 50 real merged PRs or commits on `?origin\/main`?.*drops, splits or leaves out of every window.*one hand-made shape.*window start given as a date where a commit instant exists/i;
+
+  it("ask the audit's reviewer to replay history-parsing code over real recent merges", async () => {
+    const { calls } = await audit([], { causes: [] });
+    const prompt = flat(calls.find((c) => c.opts.label?.startsWith("review"))?.prompt ?? "");
+    expect(prompt).toMatch(HISTORY_REPLAY);
+  });
+
+  it("ask the reviewer agent for the same replay", () => {
+    expect(flat(readFileSync(".claude/agents/reviewer.md", "utf8"))).toMatch(HISTORY_REPLAY);
   });
 });
 

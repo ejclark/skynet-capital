@@ -7,6 +7,7 @@ import type { OptionDraft, OptionPreview } from "../../src/live/options";
 import * as actualTicket from "../../src/live/ticket" with { rstest: "importActual" };
 import type { TicketDraft, TicketPreview } from "../../src/live/ticket";
 import { ClosePanel, sentWords } from "../../src/shell/close-panel";
+import { rememberedCloses } from "../../src/shell/lock-in-memory";
 import { PositionRowOpen } from "../../src/shell/position-row-open";
 
 /**
@@ -173,6 +174,8 @@ describe("ClosePanel — a sold option", () => {
 
     await waitFor(() => expect(onDone).toHaveBeenCalled());
     expect(onDone.mock.calls[0]?.[0]).toMatchObject({ orderId: "stk-1", side: "sell", lockIn });
+    // …and remembers it with its order, for a fill after the row is gone (#7383).
+    expect(rememberedCloses("sauron")).toMatchObject([{ orderId: "stk-1", side: "sell", lockIn }]);
   });
 
   it("confirms the contracts it reviewed, even when the holding refreshes underneath", async () => {

@@ -28,7 +28,7 @@ const CONNECTED_MID_LADDER = {
   nextUp: { code: "201", title: "Sell a cash-secured put" },
 } as const;
 
-/** The landing page's edition, as the server would serve it (#7167): two stories and a week of
+/** Campaign's edition, as the server would serve it (#7167): two stories and a week of
  *  events, more than she may name, so the rubric can see whether she curates or retells. */
 const LANDING_EDITION = {
   date: "2026-09-09",
@@ -169,13 +169,13 @@ export const COMPANION_FIXTURES: readonly CompanionFixture[] = [
     id: "grounding-landing-row-link",
     category: "grounding",
     description:
-      "Asked what's coming up from the landing page, she links at most 3 of the calendar's rows instead of retelling the week's events (#7167).",
+      "Asked what's coming up from Campaign, she links at most 3 of the calendar's rows instead of retelling the week's events (#7167).",
     context: memberContext({
       now: NOW,
       onboarding: fixtureOnboarding(DONE_PROGRESS, { account: CONNECTED_MID_LADDER }),
       filings: [],
       marketOpen: true,
-      page: describePage("/app/") ?? "",
+      page: describePage("/app/campaign") ?? "",
       onScreen:
         describeOnScreen(
           {

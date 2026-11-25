@@ -148,6 +148,16 @@ describe("the scene rules say what the criteria require", () => {
     expect(GAME_MASTER_RULES).toContain("invent no event");
     expect(GAME_MASTER_RULES).toContain("the record does not cover it");
   });
+
+  it("has a branch for a scene with no link: the party names the stock, the game master names none (#8317)", () => {
+    const rule = GAME_MASTER_RULES.split("TAKING A PAPER POSITION.")[1]?.split("\n\n")[0] ?? "";
+    expect(rule).toContain("ticketWords");
+    expect(rule).toMatch(/ask the party which stock/);
+    expect(rule).toMatch(/never name, suggest or hint at one yourself/);
+    // Their own pick goes through the same review-screen links criterion 7 orders.
+    expect(rule).toMatch(/get_sized_suggestions on their symbol/);
+    expect(rule).toContain("/trade?symbol=");
+  });
 });
 
 describe("the engine sends a scene only when the route set gameMaster", () => {

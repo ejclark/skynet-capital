@@ -2,8 +2,8 @@
  * Advisory dedup for a drafted filing (#1867 slice 1) — before `draft_feedback` hands the rail a
  * draft, this looks for open `feedback`-labeled issues that already say roughly the same thing,
  * so a member sees "this might already be filed" before sending a duplicate. Slice 2 (rendering
- * the matches in the rail UI) is a separate PR; this module only produces the `{ number, title }`
- * list the tool result carries.
+ * the matches on the dock's draft card, #4286) carries the same list, plus each issue's page, on the
+ * draft the dock holds.
  *
  * SIMILARITY APPROACH — a plain lexical (Jaccard-over-tokens) heuristic, not embeddings. This repo
  * doesn't want a new spend surface beyond the search itself (CLAUDE.md), and a per-draft call to a
@@ -27,6 +27,9 @@ type DoFetch = typeof fetchJson;
 export interface SimilarIssue {
   readonly number: number;
   readonly title: string;
+  /** The issue's page, so the draft card can link it (#4286). The bound search always sets it;
+   *  the model's tool result leaves it off (number and title are all it needs). */
+  readonly url?: string;
 }
 
 /** Open `feedback`-labeled issues, as read off GitHub — just enough to score against a draft. */
@@ -138,6 +141,10 @@ export function findSimilarIssues(
   return scored.map((s) => ({ number: s.issue.number, title: s.issue.title }));
 }
 
+/** The draft card waits on this search since #4286 put the matches on it, so a slow GitHub costs
+ *  at most this long and then reads as "no matches". */
+const SEARCH_TIMEOUT_MS = 4_000;
+
 /** Read every currently-open `feedback`-labeled issue — capped at 100 (GitHub's max page size),
  *  which this friends-and-family desk's open-feedback queue is nowhere near approaching. Never
  *  throws: an unreachable GitHub or a bad token degrades to "no matches" rather than blocking the
@@ -148,7 +155,13 @@ export async function fetchOpenFeedbackIssues(
 ): Promise<readonly OpenFeedbackIssue[]> {
   try {
     const url = `https://api.github.com/repos/${config.repo}/issues?state=open&labels=feedback&per_page=100`;
-    const res = await doFetch("GET", url, githubHeaders(config.token));
+    const res = await doFetch(
+      "GET",
+      url,
+      githubHeaders(config.token),
+      undefined,
+      AbortSignal.timeout(SEARCH_TIMEOUT_MS),
+    );
     if (res.status !== 200 || !Array.isArray(res.body)) return [];
     return (res.body as readonly { number?: unknown; title?: unknown; body?: unknown }[])
       .filter((raw) => typeof raw.number === "number" && typeof raw.title === "string")
@@ -175,7 +188,10 @@ export function createSimilarFeedbackSearch(
 ): FindSimilarFeedback {
   return async (draft) => {
     const issues = await fetchOpenFeedbackIssues(config, doFetch);
-    return findSimilarIssues(draft, issues);
+    return findSimilarIssues(draft, issues).map((m) => ({
+      ...m,
+      url: `https://github.com/${config.repo}/issues/${String(m.number)}`,
+    }));
   };
 }
 

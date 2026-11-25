@@ -10,6 +10,7 @@
 // invented this session. Text inside quotation marks is skipped by both — it is his words or the
 // app's, which the quote check verifies instead.
 
+import { plainNameProblems } from "../plain-names.mjs";
 import { AREA_MAX_WORDS, areaSpecProblems, areasFor, wordCount } from "../steer/areas.mjs";
 import { compareProblems } from "../steer/compare.mjs";
 import { QUESTION_KINDS } from "../steer/design.mjs";
@@ -129,6 +130,8 @@ export function copyProblems(where, text, ui) {
   for (const run of titleRuns(text)) {
     if (!inUi(run, ui)) out.push(`${where}: “${run}” isn't a name the app uses — say what it does`);
   }
+  // A name Eric rejected fails even where the app's UI still says it (#8290).
+  out.push(...plainNameProblems(text, where));
   return out;
 }
 

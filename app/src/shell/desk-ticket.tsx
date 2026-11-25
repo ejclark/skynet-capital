@@ -242,6 +242,7 @@ export function DeskTicket({
       onSymbolCommit={onSymbolCommit}
       carried={carryFits(shareCarry.current, initialSymbol) ? shareCarry.current : undefined}
       onCarry={keepShareCarry}
+      exitAtEntry={plays.data?.exitAtEntry === true}
     />
   );
   // Working orders, Alerts and Option positions moved to the Orders section (#3407, Workbench

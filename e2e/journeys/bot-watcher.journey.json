@@ -163,6 +163,29 @@
           "judge": "can this reader find what the bot actually did?"
         }
       ]
+    },
+    {
+      "id": "j3",
+      "name": "the Bots screen: which bot skipped, and why (#8254)",
+      "steps": [
+        {
+          "id": "s1",
+          "goto": "/app/bots",
+          "sees": "one card per house bot: its thesis, its standing in words, whether its loop is checking, and why it last skipped; the bots that aren't running folded at the end; the bots-only note last",
+          "ears": "WHEN a viewer opens the Bots screen, the app shall list every bot account with a way to its checks.",
+          "expect": [
+            { "role": "heading", "name": "Bots", "exact": true },
+            { "role": "link", "name": "Sauron", "within": "main" },
+            { "text": "For now the bots trade and humans trade by hand." }
+          ],
+          "act": { "click": { "role": "link", "name": "Sauron", "within": "main" } },
+          "after": [
+            { "url": "/app/u/sauron/playbooks?checks=open" },
+            { "role": "heading", "name": "Playbooks", "exact": true }
+          ],
+          "judge": "can this reader find why a bot skipped, and open every check it recorded?"
+        }
+      ]
     }
   ]
 }

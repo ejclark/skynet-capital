@@ -423,15 +423,23 @@ function CloseRow({
 
 /** The desk's held option contracts, or nothing — a desk with no options shows no card.
  *
+ *  One exception (#8392): a failed broker read leaves the desk with no rows AND an error, which
+ *  is not "no options held" — what it holds is unknown. So a desk carrying `readError` still asks
+ *  the route, and when the route answers `read-failed` the card renders with that sentence alone
+ *  rather than vanishing as though the account held nothing.
+ *
  *  @category trading
  */
 export function OptionPositionsCard({
   deskId,
   positions,
+  readError,
   focus,
 }: {
   readonly deskId: string;
   readonly positions: readonly DeskPosition[];
+  /** The desk payload's `error` — set when the account's broker read failed. */
+  readonly readError?: string;
   readonly focus?: PositionFocus;
 }): ReactElement | null {
   const queryClient = useQueryClient();
@@ -439,10 +447,27 @@ export function OptionPositionsCard({
   const statement = useQuery({
     queryKey: ["option-positions", deskId],
     queryFn: () => fetchOptionPositions(deskId),
-    enabled: deskId !== "" && held.length > 0,
+    enabled: deskId !== "" && (held.length > 0 || Boolean(readError)),
     staleTime: 30_000,
   });
-  if (held.length === 0) return null;
+  const readFailed =
+    statement.data !== undefined &&
+    !statement.data.available &&
+    statement.data.reason === "read-failed";
+  if (held.length === 0) {
+    // The live `readError` gates the sentence, not the cached answer alone (#8414): once the read
+    // recovers the query is disabled, so a cached `read-failed` would never be refetched away.
+    if (!(readError && readFailed)) return null;
+    return (
+      <section className="panel gate-panel" aria-label="Option positions">
+        <h2 className="panel-title">Option positions</h2>
+        <p className="tkt-note tkt-book">
+          The broker read for this account failed, so any option contracts it holds can't be listed
+          right now. They come back on the next read.
+        </p>
+      </section>
+    );
+  }
   const rowsBySymbol = new Map(
     (statement.data?.available ? statement.data.rows : []).map((row) => [row.symbol, row]),
   );
@@ -475,6 +500,12 @@ export function OptionPositionsCard({
           />
         ))}
       </div>
+      {readFailed ? (
+        <p className="tkt-note tkt-book">
+          The broker read for this account failed, so prices, greeks and the book total are missing
+          right now. They come back on the next read.
+        </p>
+      ) : null}
       {statement.data?.available ? (
         <>
           <BookLine book={statement.data.book} representative={statement.data.representative} />

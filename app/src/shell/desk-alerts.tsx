@@ -17,11 +17,16 @@ import { ConnectLink } from "./connect-link";
  * positions card's own read (`position-watch.ts`), so nothing here is a second opinion.
  *
  * Honesty rules: priority is a WORD and a glyph, never a hue alone (a standing reader is
- * red/green colourblind); an unlinked account says so instead of an empty list; Dismiss is one tap
+ * red/green colourblind); an unlinked account says so instead of an empty list, and so does a failed
+ * read (#8334: the broker read or this list's own, never "Nothing to flag"); Dismiss is one tap
  * (a dismissal risks nothing) and the same condition escalating re-shows; where the deployment
  * keeps no dismissals the strip says that rather than offering a button that forgets.
  * @category trading
  */
+
+/** The account's broker read failed (#8334): its position alerts are unknown, not absent. */
+const POSITIONS_UNREAD =
+  "Your positions couldn't be read right now, so alerts about them (expiry, assignment risk, earnings windows on what you hold) are missing. They come back on the next read.";
 
 const PRIORITY_GLYPH: Record<AlertPriority, string> = { critical: "‼", warning: "!", info: "i" };
 const PRIORITY_WORD: Record<AlertPriority, string> = {
@@ -76,7 +81,18 @@ export function DeskAlerts({ deskId }: { readonly deskId: string }): ReactElemen
   });
   const [pendingId, setPendingId] = useState<string | undefined>();
   const [notice, setNotice] = useState<string | undefined>();
-  if (deskId === "" || !query.data) return null;
+  if (deskId === "") return null;
+  if (query.isError) {
+    return (
+      <section className="wr-panel al-panel" aria-label="Alerts">
+        <h3 className="wr-h">Alerts</h3>
+        <p className="tkt-note">
+          Alerts couldn't be read right now. They come back on the next read.
+        </p>
+      </section>
+    );
+  }
+  if (!query.data) return null;
   const data = query.data;
 
   const onDismiss = async (alert: DeskAlert) => {
@@ -96,27 +112,34 @@ export function DeskAlerts({ deskId }: { readonly deskId: string }): ReactElemen
   return (
     <section className="wr-panel al-panel" aria-label="Alerts">
       <h3 className="wr-h">Alerts</h3>
-      {!data.available ? (
+      {!data.available && data.reason === "read-failed" ? (
+        <p className="tkt-note">{POSITIONS_UNREAD}</p>
+      ) : !data.available ? (
         <p className="tkt-note">
           Alerts read your own option positions, and this session isn't linked to a trading account
           yet — <ConnectLink />.
         </p>
+      ) : data.positionsUnread && data.alerts.length === 0 ? (
+        <p className="tkt-note">{POSITIONS_UNREAD}</p>
       ) : data.alerts.length === 0 ? (
         <p className="tkt-note">
           Nothing to flag — expiry reminders and assignment risk on your option positions, and what
           your orders did (filled, cancelled, rejected), show here.
         </p>
       ) : (
-        <ul className="wr-list al-list">
-          {data.alerts.map((alert) => (
-            <AlertRow
-              key={alert.id}
-              alert={alert}
-              onDismiss={data.dismissable ? onDismiss : undefined}
-              pending={pendingId === alert.id}
-            />
-          ))}
-        </ul>
+        <>
+          {data.positionsUnread ? <p className="tkt-note">{POSITIONS_UNREAD}</p> : null}
+          <ul className="wr-list al-list">
+            {data.alerts.map((alert) => (
+              <AlertRow
+                key={alert.id}
+                alert={alert}
+                onDismiss={data.dismissable ? onDismiss : undefined}
+                pending={pendingId === alert.id}
+              />
+            ))}
+          </ul>
+        </>
       )}
       {/* Delivery sits with what it governs: the switch for "also reach me when this page is
           closed" belongs beside the alerts themselves, not in a settings page a member would have

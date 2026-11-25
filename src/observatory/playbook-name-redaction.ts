@@ -89,3 +89,10 @@ function redact<T>(value: T, matcher: RegExp | undefined, key?: string): T {
 export function withoutPlaybookNames<T>(stripped: T, original: unknown = stripped): T {
   return redact(stripped, matcherFor(playbookIdsIn(original)));
 }
+
+/** `value` with every invalidator cut back to the order's own falsifier and no name touched — a
+ *  bot's copy as any member reads it once its playbook names are public (#8254): an order stored
+ *  before #5043 still carries the playbook's retire rule in its words, which stays the owner's. */
+export function withoutLegacyRetireRules<T>(value: T): T {
+  return redact(value, undefined);
+}

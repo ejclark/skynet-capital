@@ -20,6 +20,7 @@ import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { type EventStance, eventQuests } from "./event-quests.js";
 import { readEventStances } from "./event-stances.js";
 import { type GuidanceDeps, guidanceMarketFor } from "./guidance-route.js";
+import { POSITIONS_READ_FAILED } from "./option-positions-route.js";
 import { requireGet, sendJson } from "./page-shell.js";
 import { type ReadVix, readVix } from "./vix-feed.js";
 
@@ -34,6 +35,10 @@ import { type ReadVix, readVix } from "./vix-feed.js";
  * rate (`src/options/conditions-quests.ts`). EVENTS (slice 4): a calendar event a house campaign
  * links to a symbol, whose written ledger carries a buy signal, offers the cash-secured put it
  * allows (`event-quests.ts`); it reads local files only and costs no market read.
+ *
+ * UNREAD IS NOT EMPTY (#8334): a hub row whose broker read failed carries `positions: []`, cash 0
+ * and an `error`; every source here reads those, so the answer is `read-failed`, never a short or
+ * empty list that reads as "nothing to do".
  *
  * Privacy: a member's quests answer to that member alone — the target must be in the session's
  * owned set, or it does not exist for this caller (the alerts route's rule). The stake is read from
@@ -64,6 +69,7 @@ const MAX_READING_AGE_DAYS = 5;
 type QuestsAnswer =
   | { readonly kind: "missing" }
   | { readonly kind: "unlinked" }
+  | { readonly kind: "unavailable"; readonly reason: typeof POSITIONS_READ_FAILED }
   | {
       readonly kind: "ok";
       readonly asOf: Date;
@@ -236,6 +242,7 @@ export async function questsFor(
   if (!desk) return { kind: "missing" };
   const client = config.optionsClientFor?.(id);
   if (!client) return { kind: "unlinked" };
+  if (desk.error) return { kind: "unavailable", reason: POSITIONS_READ_FAILED };
   const asOf = config.now?.() ?? new Date();
   const [positions, conditions] = await Promise.all([
     positionQuestsFor(id, desk, client, config, deps, refresh),
@@ -286,8 +293,9 @@ async function serveList(
     sendJson(res, 404, { error: "no such account" });
     return;
   }
-  if (answer.kind === "unlinked") {
-    sendJson(res, 200, { available: false, reason: "unlinked", quests: [] });
+  if (answer.kind === "unlinked" || answer.kind === "unavailable") {
+    const reason = answer.kind === "unlinked" ? "unlinked" : answer.reason;
+    sendJson(res, 200, { available: false, reason, quests: [] });
     return;
   }
   sendJson(res, 200, {

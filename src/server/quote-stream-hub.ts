@@ -53,8 +53,11 @@ export const SYMBOLS_PER_STREAM = 30;
  *  inside the window is held and flushed when the window closes). */
 export const DEFAULT_THROTTLE_MS = 1_000;
 
-/** Said in words when the member's account cannot carry a stream at all — an OAuth session has no
- *  key/secret pair, and the market-data websocket authenticates with one (`credentials.ts`). */
+/** Said in words when the member's account cannot carry a stream at all. The reason is our wiring,
+ *  not Alpaca: `wireQuoteStream` (dashboard-desk-wiring.ts) gives an account with no key/secret pair
+ *  — one linked through Connect — no poller, and today's Connect scope (`ALPACA_DEFAULT_SCOPE`,
+ *  alpaca-connect.ts) asks for no `data` scope. Alpaca's OAuth guide says "The OAuth Token can be
+ *  used to authenticate for Market Data Stream."; step 5 of #8161 lifts the limit. */
 export const NO_STREAM_CREDENTIAL =
   "Live quotes stream through your own connected key, and this account is linked another way — the price here is the one read when you picked the symbol, not a moving one.";
 
@@ -84,7 +87,9 @@ export interface QuoteStreamSinks {
 export interface QuoteStreamHubDeps {
   /**
    * Open (but do not start) the socket for one member, wired to these sinks. `undefined` means
-   * this member has no key/secret pair to authenticate a market-data socket with.
+   * our wiring gives this member no poller: an account with no key/secret pair (a Connect link) gets
+   * none, and the Connect scope carries no `data` scope — not an Alpaca limit, since its OAuth guide
+   * says "The OAuth Token can be used to authenticate for Market Data Stream." (step 5 of #8161).
    */
   readonly openSocket: (
     requesterId: string,

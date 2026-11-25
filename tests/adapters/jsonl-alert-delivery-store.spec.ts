@@ -23,7 +23,11 @@ describe("JsonlAlertDeliveryStore", () => {
 
   it("reads as off for a member who never opted in", async () => {
     const store = new JsonlAlertDeliveryStore(dir);
-    expect(await store.load("human-nobody")).toEqual({ prefs: DELIVERY_OFF, sent: [] });
+    expect(await store.load("human-nobody")).toEqual({
+      prefs: DELIVERY_OFF,
+      sent: [],
+      watches: [],
+    });
     expect(await store.listMembers()).toEqual([]);
   });
 
@@ -45,6 +49,7 @@ describe("JsonlAlertDeliveryStore", () => {
     expect(await second.load("human-ann")).toEqual({
       prefs: { channel: "email", minPriority: "critical", destination: "ann@x.com" },
       sent: ["fp-1"],
+      watches: [],
     });
   });
 
@@ -57,7 +62,11 @@ describe("JsonlAlertDeliveryStore", () => {
     });
     await store.recordSent("human-ann", "fp-1");
     await store.savePrefs("human-ann", DELIVERY_OFF);
-    expect(await store.load("human-ann")).toEqual({ prefs: DELIVERY_OFF, sent: ["fp-1"] });
+    expect(await store.load("human-ann")).toEqual({
+      prefs: DELIVERY_OFF,
+      sent: ["fp-1"],
+      watches: [],
+    });
   });
 
   it("scopes per member and lists only members who saved a choice", async () => {
@@ -74,10 +83,39 @@ describe("JsonlAlertDeliveryStore", () => {
     expect((await store.load("human-bob")).prefs.destination).toBe("bob@x.com");
   });
 
+  it("lists a member who only armed a watch, so the sweep can retry its send (#8352)", async () => {
+    const store = new JsonlAlertDeliveryStore(dir);
+    await store.saveWatch("human-cat", {
+      orderId: "ord-1",
+      destination: "cat@x.com",
+      link: "https://app.example/app/trade?desk=human-cat&section=orders",
+      at: "2026-11-24T02:00:00.000Z",
+    });
+    expect(await store.listMembers()).toEqual(["human-cat"]);
+  });
+
   it("builds from the environment with the volume-pinned default", () => {
     expect(createAlertDeliveryStore({})).toBeInstanceOf(JsonlAlertDeliveryStore);
     expect(createAlertDeliveryStore({ SKYNET_ALERT_DELIVERY_DIR: dir })).toBeInstanceOf(
       JsonlAlertDeliveryStore,
     );
+  });
+  it("keeps one-order watches across a fresh instance, and an unwatch ends one (#8251)", async () => {
+    const store = new JsonlAlertDeliveryStore(dir);
+    const watch = (orderId: string) => ({
+      orderId,
+      destination: "owner@x.com",
+      link: "https://app.example/app/trade?desk=human-acct&section=orders",
+      at: "2026-11-24T02:00:00.000Z",
+    });
+    await store.saveWatch("human-acct", watch("ord-1"));
+    await store.saveWatch("human-acct", watch("ord-2"));
+    await store.dropWatch("human-acct", "ord-1");
+
+    const fresh = new JsonlAlertDeliveryStore(dir);
+    const record = await fresh.load("human-acct");
+    expect(record.watches).toEqual([watch("ord-2")]);
+    // A watch is not an account-wide choice: delivery still reads as off.
+    expect(record.prefs).toEqual(DELIVERY_OFF);
   });
 });

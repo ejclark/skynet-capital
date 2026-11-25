@@ -97,8 +97,10 @@ export function ledgerRows(ledgerMd) {
       };
     })
     .map((r, _, all) =>
-      // A bare `#N` shared by two asks on one day would let one line clear both: cite the cell.
-      !r.ask.includes(" · ") && all.some((o) => o !== r && o.cite === r.cite)
+      // An id shared by two asks on one day would let one line clear both: cite the whole cell.
+      // That covers `#N · <question>` too, answer-readback's row format for a multi-question card
+      // (#8342); a row alone on its day keeps its short cite, so existing profile cites still hold.
+      all.some((o) => o !== r && o.cite === r.cite)
         ? { ...r, askId: flat(r.ask).trim(), cite: `ALIGNMENT ${r.date} · ${flat(r.ask).trim()}` }
         : r,
     );

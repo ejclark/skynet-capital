@@ -104,11 +104,11 @@
         {
           "id": "s4b",
           "goto": "/app/accounts?section=feedback",
-          "sees": "Profile → Feedback: what a filing is for, and one button — Talk to Moneypenny — that opens her History over the dock and puts the cursor in her box, where hello is said (#7487 slice 2); offline, a line that feedback is not switched on yet",
-          "ears": "WHEN a member with no linked account opens Profile → Feedback, the app shall offer one control that opens Moneypenny.",
+          "sees": "Profile → Journal: what a wish and a filing are for, and one button — Talk to Moneypenny — that opens her History over the dock and puts the cursor in her box, where hello is said (#7487 slice 2); offline, a line that feedback is not switched on yet",
+          "ears": "WHEN a member with no linked account opens Profile → Journal, the app shall offer one control that opens Moneypenny.",
           "expect": [
             { "url": "/app/accounts?section=feedback" },
-            { "role": "heading", "name": "Your feedback" },
+            { "role": "heading", "name": "Your journal" },
             { "role": "button", "name": "Talk to Moneypenny" }
           ],
           "judge": "can this reader tell how to say hello, in ten seconds?"

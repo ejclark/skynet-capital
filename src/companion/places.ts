@@ -29,11 +29,20 @@ export interface Place {
   readonly what: string;
 }
 
+// `/` is the home screen and Campaign is its own app at `/campaign` (#8189). The list kept `/` as
+// Campaign until #8369, so her Campaign link opened the home screen; each row now names the page
+// `companion-page.ts`'s Page line says is there. `/` stays listed, as Home (the brand link's own
+// label in `__root.tsx`), because her `/#story-…` row links are judged on it and forward to Campaign.
 export const PLACES: readonly Place[] = [
   {
     path: "/",
+    name: "Home",
+    what: "the home screen: the tower, what needs them, and a tile for each app",
+  },
+  {
+    path: "/campaign",
     name: "Campaign",
-    what: "the landing page: the day's market news, the calendar, quests and the party",
+    what: "the day's market news, the calendar, quests and the party",
   },
   { path: "/trade", name: "Trade", what: "the ticket" },
   { path: "/leaderboard", name: "Leaderboard", what: "the standings, bots and humans" },
@@ -50,7 +59,11 @@ export const PLACES: readonly Place[] = [
   { path: "/learn", name: "Milestones", what: "the ladder's chapters, on Profile" },
   { path: "/learn/trading", name: "the Trading chapter", what: "the trading rungs" },
   { path: "/playbooks", name: "Playbooks", what: "the playbooks chapter, on Profile" },
-  { path: "/feedback", name: "Feedback", what: "the member's own filings, on Profile" },
+  {
+    path: "/feedback",
+    name: "Journal",
+    what: "the member's wishes, filings and private notes, on Profile",
+  },
 ];
 
 /** The Leaderboard's rankings as `?by=` values — `app/src/live/board.ts`'s `BOARD_METRICS`,

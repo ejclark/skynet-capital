@@ -7,6 +7,7 @@ import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { opaqueMemberId } from "./feedback-issue.js";
 import { parseJsonRecord, readJsonPost, requireGet, sendJson } from "./page-shell.js";
 import { playLocked } from "./progression-service.js";
+import { exitAtEntryFor } from "./trade-api-routes.js";
 
 /**
  * THE TICKET'S CATALOG AND LADDER — what the shell's trade page needs to know
@@ -33,6 +34,7 @@ async function servePlays(
   config: DashboardServerConfig,
   requesterId: string | undefined,
   requesterOpaqueId: string | undefined,
+  exitAtEntry: boolean,
 ): Promise<void> {
   const progression =
     requesterId && config.progression
@@ -46,6 +48,10 @@ async function servePlays(
     wheels: progression?.wheels ?? false,
     ...(gate ? { gate: { reason: gate, note: LADDER_GATE_NOTE } } : {}),
     ...(progression?.nextUp ? { nextUp: progression.nextUp } : {}),
+    // The exit-at-entry setting (#8249), as the trade API will judge this session: the stock form
+    // offers Stop-Limit and "Add an exit" only when this says so. Present only when admitted, so a
+    // session the setting doesn't reach reads the same answer as before it existed.
+    ...(exitAtEntry ? { exitAtEntry: true } : {}),
     plays: TRADE_TYPES.map((t) => {
       const locked = playLocked(t.code, progression);
       const prev = locked && !gate ? ladderNeighbor(t.code, -1) : undefined;
@@ -131,7 +137,14 @@ export async function servePlaysApi(
   const requesterId = config.auth ? resolveCurrentId(session, config.resolveOwnerId) : undefined;
   if (path === "/api/trade/plays") {
     const requesterOpaqueId = session ? opaqueMemberId(session.email) : undefined;
-    if (requireGet(req, res)) await servePlays(res, config, requesterId, requesterOpaqueId);
+    if (requireGet(req, res))
+      await servePlays(
+        res,
+        config,
+        requesterId,
+        requesterOpaqueId,
+        exitAtEntryFor(config, session),
+      );
     return true;
   }
   await serveWheels(req, res, config, requesterId);

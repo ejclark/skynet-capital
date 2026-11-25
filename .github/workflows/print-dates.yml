@@ -17,6 +17,9 @@
 # open (scripts/print-dates-pr.mjs). That PR touches no protected path, so pipeline.yml arms its
 # auto-merge after verify and integration tests, like any other plumbing change.
 #
+# A SECOND JOB, `edition` (#8252), rides this clock: the day's edition for the landing page, written
+# by code after the close. It is independent of `refresh` and documented above its own job below.
+#
 # HOW IT READS: green with no PR = nothing changed. A `needs-ir` outcome is a warning on a green
 # run: a company date moved and stays an estimate until someone reads IR. RED means the source did
 # not answer — exit 2, every fetch failed, or exit 3, a playbook symbol's fetch failed — so a dead
@@ -111,3 +114,61 @@ jobs:
         run: |
           echo "::error::confirm-print-dates exited ${{ steps.refresh.outputs.code }} (2 = every fetch failed, 3 = a playbook symbol went unchecked). Nothing about the unchecked prints is known."
           exit 1
+
+  # THE DAY'S EDITION (#8252): the landing page's news, written by code after each close. It rides
+  # this file's clock (no new cron line, docs/ROUTINES.md) and is independent of `refresh`, so one
+  # failing never stops the other. `npm run edition:write` (src/scripts/edition-write.ts) makes its
+  # free scan first: not a session, before the close, or already written → `nothing-due`, exit 0,
+  # no data fetch. Otherwise it runs the free news collector, reads Yahoo daily closes, builds the
+  # edition with every number from code, judges it with parseEdition, and writes it; any gap (a
+  # missing close, every news source unreachable) writes nothing and turns the run red.
+  #
+  # WHAT IT HOLDS: the same App token as `refresh`, scoped to contents and PR writes, minted only
+  # when a file was written. No Fly token, no Alpaca key, no model, no member's data.
+  edition:
+    runs-on: ubuntu-latest
+    # The news collector waits 10s between GDELT queries to stay polite; a run is a few minutes.
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .nvmrc
+
+      - name: Install dependencies
+        run: npm ci --no-audit # tsx runs the writer; biome formats the file it writes
+
+      - name: Write the day's edition
+        id: write
+        # The script appends `outcome=` (and `file=` when it wrote one) to GITHUB_OUTPUT itself; a
+        # gap exits 1 and this run is red with nothing written.
+        run: npm run -s edition:write
+
+      - id: app-token
+        if: ${{ steps.write.outputs.outcome == 'written' }}
+        uses: ./.github/actions/app-token
+        with:
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Open or update the edition PR
+        if: ${{ steps.write.outputs.outcome == 'written' }}
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          FILE: ${{ steps.write.outputs.file }}
+        run: |
+          DATE=$(basename "$FILE" .json)
+          BRANCH="chore/edition-$DATE"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$BRANCH"
+          git add src/domain/editions src/domain/news
+          git commit -m "chore(edition): the day's edition for $DATE" -m "Part of #8252"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          git push --force origin "$BRANCH"
+          node scripts/edition-pr.mjs "$BRANCH" "$FILE"

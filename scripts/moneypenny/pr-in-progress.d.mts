@@ -16,6 +16,8 @@ export interface PrIssueFacts {
   hasLabel?: boolean;
   namedByOtherOpenPr?: boolean;
   leased?: boolean;
+  /** The issue carries `session-held`: a cloud session's hold (#8314). */
+  sessionHeld?: boolean;
   /** The PR is a claim lane's own build — never marked on open (#5056 slice 2). */
   laneBuild?: boolean;
   /** The PR is a platter — never marked on open, never counted as still building (#4562). */
@@ -33,6 +35,12 @@ export function planPrInProgress(input?: {
   event?: string;
   facts?: PrIssueFacts[];
 }): PrInProgressRow[];
+
+/** A live claim lease, or a live session's hold on `feedback-<n>` / `plan-<n>` (#6065, #8314). */
+export function leasedFromRefs(
+  number: number,
+  reads?: { claimed?: (slug: string) => boolean; held?: (slug: string) => boolean },
+): boolean;
 
 export interface RestPr {
   number?: number;

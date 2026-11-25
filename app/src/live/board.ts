@@ -48,10 +48,41 @@ export interface BoardRow {
   readonly flow?: BoardFlow;
 }
 
-export interface BoardBlock {
-  readonly text: Record<string, string>;
-  readonly tone?: Record<string, FieldTone>;
-  readonly bar?: Record<string, number>;
+/** One seated member at the party's table (#8253) — mirrors the server's `PartySeat`. */
+export interface PartySeat {
+  readonly key: string;
+  readonly name: string;
+  readonly monthReturn: string;
+  readonly monthReturnTone: FieldTone;
+  /** "not synced yet" beside a "—". */
+  readonly monthReturnNote?: string;
+  readonly booked: string;
+  readonly bookedTone: FieldTone;
+}
+
+/** Who leads, in words, a signed figure and a glyph — mirrors the server's `PartyLead`. */
+export interface PartyLead {
+  readonly line: string;
+  readonly glyph: string;
+  readonly figure: string;
+  readonly tone: FieldTone;
+}
+
+/** The party's table: members together against the house bot. Mirrors the server's `PartyView`;
+ *  every string arrives formatted, and the browser sums nothing. */
+export interface BoardParty {
+  readonly seats: readonly PartySeat[];
+  readonly partyReturn: string;
+  readonly partyReturnTone: FieldTone;
+  readonly partyCount: string;
+  readonly houseReturn: string;
+  readonly houseReturnTone: FieldTone;
+  readonly houseNote?: string;
+  readonly openSeats: number;
+  readonly openLine: string;
+  readonly lead?: PartyLead;
+  readonly leadNote?: string;
+  readonly footnote: string;
 }
 
 /** One side of a head-to-head — every figure server-formatted. Mirrors `standingsCompareView`. */
@@ -99,7 +130,8 @@ export interface BoardSnapshot {
   readonly generatedAt: string;
   readonly metric: string;
   readonly rows: readonly BoardRow[];
-  readonly blocks: Readonly<Record<string, BoardBlock>>;
+  /** Absent only from a server older than #8253. */
+  readonly party?: BoardParty;
   readonly compare?: BoardCompare;
   /** How many live ops this snapshot has absorbed since it was fetched — the seam's heartbeat. */
   readonly opsApplied: number;
@@ -107,7 +139,7 @@ export interface BoardSnapshot {
 
 /** The subset of the wire's op vocabulary this 2D view consumes. Empire/piece ops belong to the
  *  3D world and are deliberately ignored here — unknown kinds are NOT gaps. */
-interface FieldOp {
+export interface FieldOp {
   readonly kind: "field";
   readonly key: string;
   readonly text?: Record<string, string>;
@@ -135,7 +167,7 @@ interface ApiBoard {
   readonly metric: string;
   readonly view: {
     readonly rows: readonly BoardRow[];
-    readonly blocks: Readonly<Record<string, BoardBlock>>;
+    readonly party?: BoardParty;
   };
   readonly compare?: BoardCompare;
 }
@@ -161,7 +193,7 @@ export async function fetchBoard(
     generatedAt: body.generatedAt,
     metric: body.metric,
     rows: body.view.rows,
-    blocks: body.view.blocks,
+    ...(body.view.party ? { party: body.view.party } : {}),
     ...(body.compare ? { compare: body.compare } : {}),
     opsApplied: 0,
   };
@@ -172,6 +204,9 @@ export const isOtherRun = (held: string | undefined, seen: string | undefined): 
   held !== undefined && seen !== undefined && held !== seen;
 
 const isField = (op: PatchOp): op is FieldOp => op.kind === "field";
+
+/** The field key the party's table rides on the wire (`standings-patch.ts`). */
+const PARTY_KEY = "party";
 
 function applyRowOp(rows: readonly BoardRow[], op: FieldOp): readonly BoardRow[] {
   const next = rows.map((row) =>
@@ -188,11 +223,54 @@ function applyRowOp(rows: readonly BoardRow[], op: FieldOp): readonly BoardRow[]
   return [...next].sort((a, b) => b.sortValue - a.sortValue);
 }
 
-function applyBlockOp(block: BoardBlock, op: FieldOp): BoardBlock {
+/** An empty string on the wire means "none": the server flattens absent optionals to "". */
+const present = (v: string | undefined): string | undefined => (v ? v : undefined);
+
+/**
+ * The `party` field op placed onto the table it addresses (`partyFields` on the server): flat
+ * keys back onto the structured view, a seat's figures by `seat:<id>:…`. Who sits at the table
+ * never changes here — that is a `reframe`.
+ */
+export function applyPartyOp(party: BoardParty, op: FieldOp): BoardParty {
+  const t = op.text ?? {};
+  const tone = op.tone ?? {};
+  const pick = (key: string, was: string): string => t[key] ?? was;
+  const leadLine = t.lead ?? party.lead?.line ?? "";
+  const houseNote = present(pick("houseNote", party.houseNote ?? ""));
+  const leadNote = present(pick("leadNote", party.leadNote ?? ""));
+  const { houseNote: _h, leadNote: _l, lead: _d, ...rest } = party;
   return {
-    text: { ...block.text, ...op.text },
-    ...(block.tone || op.tone ? { tone: { ...block.tone, ...op.tone } } : {}),
-    ...(block.bar || op.bar ? { bar: { ...block.bar, ...op.bar } } : {}),
+    ...rest,
+    partyReturn: pick("partyReturn", party.partyReturn),
+    partyReturnTone: tone.partyReturn ?? party.partyReturnTone,
+    partyCount: pick("partyCount", party.partyCount),
+    houseReturn: pick("houseReturn", party.houseReturn),
+    houseReturnTone: tone.houseReturn ?? party.houseReturnTone,
+    openLine: pick("openLine", party.openLine),
+    ...(houseNote ? { houseNote } : {}),
+    ...(leadNote ? { leadNote } : {}),
+    ...(leadLine
+      ? {
+          lead: {
+            line: leadLine,
+            glyph: pick("leadGlyph", party.lead?.glyph ?? ""),
+            figure: pick("leadFigure", party.lead?.figure ?? ""),
+            tone: tone.lead ?? party.lead?.tone ?? "flat",
+          },
+        }
+      : {}),
+    seats: party.seats.map((s) => {
+      const note = present(pick(`seat:${s.key}:returnNote`, s.monthReturnNote ?? ""));
+      const { monthReturnNote: _n, ...seat } = s;
+      return {
+        ...seat,
+        monthReturn: pick(`seat:${s.key}:return`, s.monthReturn),
+        monthReturnTone: tone[`seat:${s.key}:return`] ?? s.monthReturnTone,
+        booked: pick(`seat:${s.key}:booked`, s.booked),
+        bookedTone: tone[`seat:${s.key}:booked`] ?? s.bookedTone,
+        ...(note ? { monthReturnNote: note } : {}),
+      };
+    }),
   };
 }
 
@@ -210,13 +288,12 @@ export function applyPatch(snapshot: BoardSnapshot, patch: BoardPatch): BoardSna
   if (patch.ops.some((op) => op.kind === "reframe")) return null;
 
   let rows = snapshot.rows;
-  const blocks: Record<string, BoardBlock> = { ...snapshot.blocks };
+  let party = snapshot.party;
   let applied = 0;
   for (const op of patch.ops) {
     if (!isField(op)) continue; // empire/piece/cue ops belong to other surfaces
-    const block = blocks[op.key];
-    if (block) {
-      blocks[op.key] = applyBlockOp(block, op);
+    if (op.key === PARTY_KEY && party) {
+      party = applyPartyOp(party, op);
       applied += 1;
     } else if (rows.some((row) => row.key === op.key)) {
       rows = applyRowOp(rows, op);
@@ -230,7 +307,7 @@ export function applyPatch(snapshot: BoardSnapshot, patch: BoardPatch): BoardSna
     seq: patch.seq,
     generatedAt: patch.at,
     rows,
-    blocks,
+    ...(party ? { party } : {}),
     opsApplied: snapshot.opsApplied + applied,
   };
 }

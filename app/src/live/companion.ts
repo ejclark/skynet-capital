@@ -61,6 +61,13 @@ export interface CompanionDraft {
     readonly plan?: number;
     readonly words: string;
   };
+  /** Open feedback issues that read like this one (#4286), up to 3 — listed on the card before
+   *  "submit", never sent with the filing. Absent when none is close enough. */
+  readonly similar?: readonly {
+    readonly number: number;
+    readonly title: string;
+    readonly url?: string;
+  }[];
 }
 
 /** The page the member is asking from — `pathname + search`, e.g. `/trade?symbol=NVDA`. The server

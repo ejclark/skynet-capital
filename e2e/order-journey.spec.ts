@@ -20,6 +20,7 @@ const ROUTES = {
   stockForm: "/app/trade",
   optionsTicket: "/app/trade",
   book: "/app/accounts",
+  orders: "/app/trade?section=orders",
 } as const;
 
 const OWNER = "crawl@example.test";
@@ -374,5 +375,73 @@ test.describe("Exits at entry: the setting decides", () => {
     );
     expect(exits).toHaveLength(2);
     expect((await desk(request)).positions.find((p) => p.symbol === "XLE")?.quantity).toBe("3");
+  });
+});
+
+// The form's half of #8249 (PR 2): what a member on a phone sees under each setting. QQQ: the book
+// does not hold it, and no other test here buys it.
+const dollars = (value: number): string => `$${value.toFixed(2)}`;
+
+test.describe("Exits at entry: the form at 390×844", () => {
+  test("with the setting off, the form offers no Stop-Limit and no exit", async ({ page }) => {
+    test.skip(EXIT_ON(), "the plain form is the setting-off half");
+    await phone(page);
+    await page.goto(ROUTES.stockForm);
+    const type = page.getByLabel("Order type", { exact: true });
+    await type.selectOption("limit");
+    await expect(type.locator("option")).toHaveText(["Market", "Limit", "Stop-Market"]);
+    await expect(page.getByRole("button", { name: "Add an exit" })).toHaveCount(0);
+  });
+
+  test("with the setting on, a limit buy with an exit entered on the form fills, and the position and both exits show", async ({
+    page,
+  }) => {
+    test.skip(!EXIT_ON(), "the bracket is the setting-on half");
+    await phone(page);
+    const request = page.request;
+    expect((await desk(request)).positions.some((p) => p.symbol === "QQQ")).toBe(false);
+    // A limit at or above the ask fills on placement; the exits sit well clear of the touch.
+    const { ask } = await getJson<{ ask: number }>(request, "/api/trade/quote?symbol=QQQ");
+    const limit = Math.ceil(ask) + 1;
+    const takeProfit = limit + 5;
+    const stop = Math.max(1, Math.floor(ask) - 5);
+    const known = new Set((await orders(request)).map((o) => o.id));
+
+    await page.goto(ROUTES.stockForm);
+    await page.getByLabel("Symbol", { exact: true }).click();
+    await page.keyboard.type("QQQ");
+    await page.locator("label", { hasText: /^Shares$/ }).click();
+    await page.keyboard.type("2");
+    await page.getByLabel("Order type", { exact: true }).selectOption("limit");
+    await page.getByLabel("Limit price", { exact: true }).fill(String(limit));
+    await page.getByRole("button", { name: "Add an exit" }).click();
+    await page.getByLabel("Take-profit", { exact: true }).fill(String(takeProfit));
+    await page.getByLabel("Stop-Market", { exact: true }).fill(String(stop));
+    await expect(page.getByText(/^Guards regular hours only/)).toBeVisible();
+    await page.getByRole("button", { name: "Review order" }).click();
+    await expect(page.getByText(`Take-profit ${dollars(takeProfit)} · +`)).toBeVisible();
+    await expect(page.getByText(`Stop-Market ${dollars(stop)} · about −`)).toBeVisible();
+    await page.getByRole("button", { name: /^Submit order/ }).click();
+    await expect(
+      page.getByText(
+        `Sent with its exits: Take-profit ${dollars(takeProfit)} · Stop-Market ${dollars(stop)}.`,
+      ),
+    ).toBeVisible();
+
+    // The bracket adds three rows (the entry and its two exits); the entry is the one buy.
+    const entryId = async (): Promise<string | undefined> =>
+      (await orders(request)).find(
+        (o) => !known.has(o.id) && o.symbol === "QQQ" && o.side === "buy",
+      )?.id;
+    await expect.poll(entryId, POLL).toBeDefined();
+    const entry = await filled(request, (await entryId()) as string);
+    expect(entry).toEqual(expect.objectContaining({ filledQuantity: 2 }));
+
+    await page.goto(ROUTES.orders);
+    await expect(page.getByText(`Take-profit ${dollars(takeProfit)} · GTC`)).toBeVisible();
+    await expect(page.getByText(`Stop-Market ${dollars(stop)} · GTC`)).toBeVisible();
+
+    await page.goto(ROUTES.book);
+    await expect(page.getByRole("link", { name: /^QQQ ,.* 2 shares ,/ })).toBeVisible();
   });
 });

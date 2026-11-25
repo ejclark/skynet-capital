@@ -21,8 +21,7 @@ import { sinceLine } from "../live/edition-sectors";
 import { useHorizonRange } from "../live/horizon-params";
 import { DEFAULT_WINDOW, type MissionWindow, parseWindow } from "../live/mission";
 import { type PageKeys, usePublishPageKeys } from "../live/page-keys";
-import { signedMoney } from "../live/position-act";
-import { fetchQuests, placeQuests, type QuestsAnswer } from "../live/quests";
+import { fetchQuests, placeQuests, type QuestsAnswer, questsReadFailed } from "../live/quests";
 import { targetedEditionAnchor, useLandOnEdition } from "../shell/edition-anchor";
 import { PageFrame } from "../shell/frame";
 import { AskBox, EventThread, StoryAsk } from "../shell/landing-ask";
@@ -41,7 +40,7 @@ import {
   marketGlance,
   OverviewWindow,
   PartyWindow,
-  partyRows,
+  QUESTS_UNREAD,
   useParty,
 } from "../shell/mission-windows";
 import { SectorOverview } from "../shell/sector-overview";
@@ -108,6 +107,8 @@ function windowSpec(
     readonly inside: readonly EditionDate[];
     readonly figures: Partial<Record<MissionWindow, string>>;
     readonly hasAccount: boolean;
+    /** The quests read failed (the account's broker read, or the route itself): never "connect". */
+    readonly questsFailed: boolean;
   },
 ): { title: string; sub: string; figure?: string; links: readonly WindowLink[] } {
   const { edition, figures } = ctx;
@@ -140,7 +141,9 @@ function windowSpec(
         title: "Quests",
         sub: ctx.hasAccount
           ? "Your next steps, at your pace"
-          : "Your next steps, once you're connected",
+          : ctx.questsFailed
+            ? "Your next steps, once your account can be read"
+            : "Your next steps, once you're connected",
         ...fig("quests"),
         links: [
           { label: "Calendar: the stories behind them", to: "calendar" },
@@ -211,6 +214,8 @@ type WindowBodyProps = {
   readonly waited: number;
   /** The member's quests answer, only when it is available (no account = undefined). */
   readonly answer: Extract<QuestsAnswer, { available: true }> | undefined;
+  /** No answer because the read failed, not because there is no account (#8334). */
+  readonly questsFailed: boolean;
   readonly placed: ReturnType<typeof placeQuests>;
   readonly pivot: readonly string[];
   readonly open: ReturnType<typeof useOpenWindow>;
@@ -257,14 +262,16 @@ function CalendarBody({
   );
 }
 
-/** The Quests window's body: the member's own quests, or the one step that gets them (connect a
- *  paper account) for a viewer with no account. */
+/** The Quests window's body: the member's own quests, the failed read in words (#8334), or the one
+ *  step that gets them (connect a paper account) for a viewer with no account. */
 function QuestsBody({
   answer,
+  questsFailed,
   placed,
   onConnect,
-}: Pick<WindowBodyProps, "answer" | "placed" | "onConnect">): ReactElement {
+}: Pick<WindowBodyProps, "answer" | "questsFailed" | "placed" | "onConnect">): ReactElement {
   if (answer) return <AccountQuests quests={placed.account} unread={answer.unread} />;
+  if (questsFailed) return <p className="note">{QUESTS_UNREAD}</p>;
   return (
     <ul className="mctl-rows">
       <MissionRow
@@ -292,6 +299,7 @@ function WindowBody(props: WindowBodyProps): ReactElement | null {
             inside={props.inside}
             waited={props.waited}
             quests={answer ? placed.account : undefined}
+            questsFailed={props.questsFailed}
             open={props.open}
           />
         </>
@@ -380,19 +388,26 @@ function Landing(): ReactElement {
   const edition = view.data.edition;
   const today = view.data.today;
   const answer = quests.data?.available ? quests.data : undefined;
+  const questsFailed = quests.isError || questsReadFailed(quests.data);
   const placed = placeQuests(answer?.quests ?? [], edition?.stories ?? []);
   const inside = edition && today ? calendarShows(edition, today, horizon, pivot).inside : [];
   const market = marketGlance(edition?.sectors);
   // ◆ means "a story waits on it" on the calendar itself, so the figure counts only those events.
   const waited = inside.filter((e) => waitingOn(e, edition?.stories ?? []).length > 0).length;
-  const total = party.data ? partyRows(party.data.rows).total : undefined;
+  const partyFigure = party.data?.party?.partyReturn;
   const figures: Partial<Record<MissionWindow, string>> = {
     ...(market.figure ? { market: market.figure.replace(" wk", "") } : {}),
     calendar: `◆ ${String(waited)}`,
     ...(answer ? { quests: String(placed.account.length) } : {}),
-    ...(total !== undefined ? { party: signedMoney(total) } : {}),
+    ...(partyFigure !== undefined ? { party: partyFigure } : {}),
   };
-  const spec = windowSpec(cur, { edition, inside, figures, hasAccount: Boolean(answer) });
+  const spec = windowSpec(cur, {
+    edition,
+    inside,
+    figures,
+    hasAccount: Boolean(answer),
+    questsFailed,
+  });
   return (
     <PageFrame>
       <div className="mctl">
@@ -419,6 +434,7 @@ function Landing(): ReactElement {
               inside={inside}
               waited={waited}
               answer={answer}
+              questsFailed={questsFailed}
               placed={placed}
               pivot={pivot}
               open={open}

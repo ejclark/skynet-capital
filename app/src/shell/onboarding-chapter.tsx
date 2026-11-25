@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useState } from "react";
 import { fetchJoin } from "../live/join";
-import { localSessionSuffix } from "../live/market-hours";
+import { localSessionSuffix } from "../live/market-session";
 import { meetMoneypenny } from "../live/moneypenny";
 import {
   fetchOnboarding,
@@ -68,7 +68,8 @@ function StepAction({ step }: { readonly step: OnboardingStep }): ReactElement |
   return null;
 }
 
-/** Step 3's note carries the session window in the viewer's own zone after "4:00 PM ET". */
+/** Step 3's note carries the coming session's real hours after "4:00 PM ET": the viewer's own
+ *  zone, and a half day said in words (#8248). */
 function stepDetail(step: OnboardingStep): string {
   return step.id === "first-trade"
     ? step.detail.replace("4:00 PM ET", `4:00 PM ET${localSessionSuffix()}`)

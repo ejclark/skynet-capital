@@ -223,6 +223,52 @@ describe("GET /api/trade/alerts", () => {
     expect(orders.body.alerts.map((a) => a.dedupeKey)).toEqual(["rejected:o-2", "filled:o-1"]);
   });
 
+  describe("when the account's broker read failed (#8334)", () => {
+    // What `degraded()` builds: no positions, zero cash, and the error.
+    const failed = { id: "human-ann", cash: 0, positions: [], error: "broker read timed out" };
+    const failedHub = { hub: { getState: () => ({ participants: [failed] }) } };
+
+    it("says the read failed with no other source, never an empty list", async () => {
+      const { status, body } = await list(config(failedHub));
+      expect(status).toBe(200);
+      expect(body).toEqual({
+        available: false,
+        reason: "read-failed",
+        alerts: [],
+        dismissable: false,
+      });
+    });
+
+    it("keeps the order alerts and flags the position alerts as unread", async () => {
+      const log = {
+        list: () =>
+          Promise.resolve([
+            {
+              id: "e1",
+              actor: { participantId: "human-ann" },
+              correlationId: "o-1",
+              source: "stream",
+              outcome: "success" as const,
+              eventType: "order.updated",
+              target: { kind: "order", id: "o-1" },
+              at: "2026-09-01T13:40:00Z",
+              visibility: "owner-only" as const,
+              payload: { symbol: "NVDA", side: "buy", quantity: 5, status: "rejected" },
+            },
+          ]),
+      };
+      const { body } = await list(config({ ...failedHub, activityLog: log }));
+      expect(body.available).toBe(true);
+      expect((body as { positionsUnread?: boolean }).positionsUnread).toBe(true);
+      expect(body.alerts.map((a) => a.dedupeKey)).toEqual(["rejected:o-1"]);
+    });
+
+    it("carries no flag on a good read", async () => {
+      const { body } = await list(config());
+      expect("positionsUnread" in body).toBe(false);
+    });
+  });
+
   describe("on a bot's own account, its decision loop's health (bot watch)", () => {
     // 2026-09-01T14:00Z is 10:00 ET on a Tuesday session; the bot's newest pass was at 9:40.
     const sauron = { id: "bot-sauron", kind: "bot", displayName: "Sauron", cash: 0, positions: [] };

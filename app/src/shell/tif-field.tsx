@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { marketSession } from "../live/market-session";
+import { marketSession, viewerTimeZone } from "../live/market-session";
 import { TIF_LABELS, type TicketTimeInForce, tifNote } from "../live/ticket";
 import { useNow } from "./market-session";
 
@@ -44,7 +44,9 @@ export function TimeInForceField({
           </button>
         ))}
       </div>
-      <span className="seg-why">{tifNote(effective, marketSession(now ?? ticking))}</span>
+      <span className="seg-why">
+        {tifNote(effective, marketSession(now ?? ticking), viewerTimeZone())}
+      </span>
     </fieldset>
   );
 }

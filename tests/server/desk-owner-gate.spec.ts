@@ -2,6 +2,8 @@ import { withoutOwnerReasoning } from "../../src/observatory/wire-reasoning.js";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
 import {
   ownsDesk,
+  playbookRead,
+  withoutCycleBrokerFields,
   withoutCycleOwnerFields,
   withoutHeartbeatPlaybookIds,
 } from "../../src/server/desk-owner-gate.js";
@@ -173,5 +175,57 @@ describe("the playbook strips", () => {
       personaId: "sauron",
       expectation: "CRWV stays above $80",
     });
+  });
+});
+
+describe("what a viewer reads of an account's playbooks (#8254 lifting #885 for bot accounts)", () => {
+  it("gives the owner everything and a signed-in member a bot's names", () => {
+    expect(playbookRead("bot", true, true)).toBe("owner");
+    expect(playbookRead("bot", false, true)).toBe("names");
+  });
+
+  it("leaves a human account's non-owner read where #885 put it, and every signed-out read", () => {
+    expect(playbookRead("human", false, true)).toBe("none");
+    expect(playbookRead("human", false, false)).toBe("none");
+    expect(playbookRead("bot", false, false)).toBe("none");
+  });
+
+  it("keeps a bot's playbook chip for a member and drops the broker's words and the retire rule", () => {
+    const cycle = {
+      at: "2026-10-01T15:00:00.000Z",
+      mode: "live" as const,
+      status: "placed" as const,
+      headline: "1 placed",
+      rawCount: 1,
+      guardedCount: 1,
+      outcomes: [
+        {
+          symbol: "CRWV",
+          side: "sell",
+          quantity: 1,
+          playbook: "CRWV-WHEEL",
+          playbookMode: "standard",
+          strategy: "crwv-wheel-put",
+          reason: "CRWV-WHEEL window open: sell a put",
+          action: "placed",
+          brokerReason: "account 123 approved",
+          forecast: {
+            direction: "up",
+            invalidator: "CRWV settles below $80",
+            retireRule: "the play retires if its net P/L is below 0",
+          },
+        },
+      ],
+    };
+    const [read] = withoutCycleBrokerFields([cycle as never]);
+    expect(read?.outcomes[0]).toMatchObject({
+      playbook: "CRWV-WHEEL",
+      playbookMode: "standard",
+      strategy: "crwv-wheel-put",
+      reason: "CRWV-WHEEL window open: sell a put",
+      forecast: { invalidator: "CRWV settles below $80" },
+    });
+    expect(read?.outcomes[0]).not.toHaveProperty("brokerReason");
+    expect(read?.outcomes[0]?.forecast).not.toHaveProperty("retireRule");
   });
 });
