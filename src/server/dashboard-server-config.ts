@@ -525,6 +525,10 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    *  only on an offline e2e boot (`SKYNET_EDITION_NOW`, src/scripts/offline-clocks.ts, #7901); omit
    *  and the wall clock is used. */
   readonly editionNow?: () => Date;
+  /** The R&D shelf's clock — `/api/research`'s as-of, which picks each symbol chip's next event.
+   *  Pinned only on an offline e2e boot (`SKYNET_FIXED_NOW`, the browser's own frozen instant, so
+   *  the chips and the calendar header read one today, #8483); omit and the wall clock is used. */
+  readonly researchNow?: () => Date;
   /** Market hours from Alpaca's calendar and clock, shared and cached (`market-clock.ts`, #8248).
    *  Absent: the checked-in table answers, and says so (`source: "table"`). */
   readonly readMarketClock?: ReadMarketClock;

@@ -7,6 +7,9 @@
  *
  *   - `SKYNET_FIXED_NOW` — the Council's week label. playwright.config.ts passes FIXED_CLOCK
  *     (e2e/determinism.ts); before it, every baseline carrying the label changed on Mondays.
+ *     The R&D shelf's as-of reads it too (`researchNow`, #8483): its symbol chips picked their next
+ *     event off the real date while the calendar header showed the frozen week, so the R&D
+ *     screenshot moved every time a print passed.
  *   - `SKYNET_EDITION_NOW` — `/api/edition`'s today, which picks the latest edition on or before
  *     it and cuts the dated items behind it. A separate instant because FIXED_CLOCK sits before
  *     the first checked-in edition: read against it, the page would have no edition at all. Read

@@ -107,6 +107,39 @@ describe("serveContentApi — the calendar's slice (#3977 slice 5)", () => {
   });
 });
 
+describe("serveContentApi — the shelf's chips read the board's own as-of (#8483)", () => {
+  const chips = async (researchNow?: () => Date) => {
+    const { res, out } = fakeRes();
+    await serveContentApi(
+      res,
+      "/api/research",
+      "/api/research",
+      configWith(researchNow ? { researchNow } : {}),
+      undefined,
+    );
+    const body = JSON.parse(out.body ?? "{}") as {
+      symbols: { symbol: string; next?: { date: string } }[];
+    };
+    return new Map(body.symbols.map((s) => [s.symbol, s.next?.date]));
+  };
+
+  it("picks each symbol's next event as of the pinned clock, not the real date", async () => {
+    // Two pinned instants a print apart: a chip that read the wall clock would answer both the same.
+    const before = await chips(() => new Date("2026-08-01T14:00:00Z"));
+    const after = await chips(() => new Date("2026-09-18T14:00:00Z"));
+    const moved = [...after].filter(([sym, date]) => date && before.get(sym) !== date);
+    expect(moved.length).toBeGreaterThan(0);
+    // Never an event behind the as-of: every chip's date is on or after its pinned day.
+    for (const date of after.values()) if (date) expect(date >= "2026-09-18").toBe(true);
+    for (const date of before.values()) if (date) expect(date >= "2026-08-01").toBe(true);
+  });
+
+  it("falls back to the wall clock when no research clock is wired", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    for (const date of (await chips()).values()) if (date) expect(date >= today).toBe(true);
+  });
+});
+
 describe("serveContentApi — the symbol summary, light (#4807 slice 4)", () => {
   const serve = async (url: string) => {
     const { res, out } = fakeRes();
