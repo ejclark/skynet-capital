@@ -206,9 +206,15 @@ describe("rest budget: issues.mjs writes as GraphQL mutations", () => {
 /**
  * A curl that answers like GitHub at a chosen REST `remaining`: it writes the rate headers to the
  * `-D` file, logs every call, saves each GraphQL document, and answers a resolve read or an
- * updateIssue. `refuseWrites` makes every REST write a 403 for rate limit, as GitHub does when spent.
+ * updateIssue. `refuseWrites` makes every REST write a 403 for rate limit, as GitHub does when spent;
+ * `refuseAll` refuses the reads too, the state at 0 left. An issue read over GraphQL (its query asks
+ * for `subIssuesSummary`) answers with the issue.
  */
-function runAt(remaining: number, argv: string[], { refuseWrites = false } = {}) {
+function runAt(
+  remaining: number,
+  argv: string[],
+  { refuseWrites = false, refuseAll = false } = {},
+) {
   const dir = mkdtempSync(join(tmpdir(), "rest-budget-"));
   const issue = '{"id":70,"node_id":"I_7","number":7,"title":"t","state":"open","labels":[]}';
   writeFileSync(
@@ -223,11 +229,12 @@ case "$url" in
   */graphql)
     printf '%s\\n' "$in" >> "${dir}/graphql.log"
     case "$in" in
+      *subIssuesSummary*) echo '{"data":{"repository":{"issue":{"id":"I_7","databaseId":70,"number":7,"title":"t","state":"OPEN","url":"https://x/7","labels":{"nodes":[]},"subIssuesSummary":{"total":0,"completed":0},"issueDependenciesSummary":{"blockedBy":0}}}}}' ;;
       *'"query":"query('*) echo '{"data":{"repository":{"l0":{"id":"LA_bug"}}}}' ;;
       *) echo '{"data":{"u":{"issue":{"id":"I_7","databaseId":70,"number":7,"title":"t","state":"OPEN","url":"https://x/7","labels":{"nodes":[{"name":"bug"}]}}}}}' ;;
     esac ;;
   *)
-    if [ "$method" != GET ] && [ "${refuseWrites ? "1" : ""}" = 1 ]; then
+    if [ "${refuseAll ? "1" : ""}" = 1 ] || { [ "$method" != GET ] && [ "${refuseWrites ? "1" : ""}" = 1 ]; }; then
       echo '{"message":"API rate limit exceeded for user ID 1."}'; exit 22
     fi
     echo '${issue}' ;;
@@ -254,6 +261,7 @@ esac
   const calls = read("curl.log").trim().split("\n").filter(Boolean);
   return {
     res,
+    rest: calls.filter((c) => !c.endsWith("/graphql")),
     restWrites: calls.filter((c) => / -X /.test(` ${c} `) && !c.endsWith("/graphql")),
     graphql: read("graphql.log"),
   };
@@ -285,6 +293,28 @@ describe("rest budget: issues.mjs at the edge of the allowance (end to end)", ()
     expect(res.status).toBe(0);
     expect(restWrites).toHaveLength(1);
     expect(graphql).toContain("updateIssue");
+  });
+
+  // The measured gap (2026-11-24, #8346's repair): at 0 left `update` stopped at its first act, the
+  // issue read, so the GraphQL write behind it never ran.
+  it("at 0 left, update reads the issue through GraphQL and still posts its comment", () => {
+    const dir = mkdtempSync(join(tmpdir(), "rest-budget-comment-"));
+    writeFileSync(join(dir, "c.md"), "hello");
+    const { res, rest, graphql } = runAt(0, ["update", "7", "--comment-file", join(dir, "c.md")], {
+      refuseAll: true,
+    });
+    expect(res.status, res.stderr).toBe(0);
+    expect(rest).toHaveLength(1); // the one refused read, never sent again over REST
+    expect(graphql).toContain("subIssuesSummary");
+    expect(graphql).toContain("addComment");
+    expect(res.stdout).toMatch(/^#7 /);
+  });
+
+  it("at 0 left, show prints the issue read through GraphQL, its board column included", () => {
+    const { res, graphql } = runAt(0, ["show", "7"], { refuseAll: true });
+    expect(res.status, res.stderr).toBe(0);
+    expect(graphql).toContain("issue(number: 7)");
+    expect(res.stdout).toMatch(/^#7 \[[^\]]+\] t /);
   });
 });
 

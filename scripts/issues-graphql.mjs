@@ -15,16 +15,21 @@
 //
 // The ops this covers are exactly issues.mjs's: create, PATCH an issue (title/body/labels/state),
 // comment, edit a comment, add a sub-issue, add a blocked-by edge, add labels. An op it does not
-// know throws rather than guessing.
+// know throws rather than guessing. One read rides along, `readIssue`: every write command reads
+// its issue first, so a write fallback alone still stopped at 0 REST left (#8289, 2026-11-24).
 import { sh } from "./moneypenny/gh.mjs";
 
 const ISSUE_FIELDS =
   "id databaseId number title body state url labels(first: 100) { nodes { name } }";
 
+// A read also asks for the two counts the board column reads (`boardStatus` in issues.mjs): a
+// fallback `show` or `update` prints the same `[Status]` its REST read would have.
+const READ_FIELDS = `${ISSUE_FIELDS} subIssuesSummary { total completed } issueDependenciesSummary { blockedBy }`;
+
 /** A GraphQL issue node, shaped like the REST issue the caller already prints. Pure. */
 export function restShape(node) {
   if (!node) return null;
-  return {
+  const shaped = {
     id: node.databaseId,
     node_id: node.id,
     number: node.number,
@@ -34,6 +39,10 @@ export function restShape(node) {
     html_url: node.url,
     labels: (node.labels?.nodes ?? []).map((l) => ({ name: l.name })),
   };
+  if (node.subIssuesSummary) shaped.sub_issues_summary = { ...node.subIssuesSummary };
+  if (node.issueDependenciesSummary)
+    shaped.issue_dependencies_summary = { blocked_by: node.issueDependenciesSummary.blockedBy };
+  return shaped;
 }
 
 const REASONS = { completed: "COMPLETED", not_planned: "NOT_PLANNED", duplicate: "DUPLICATE" };
@@ -280,6 +289,19 @@ export function createIds({ repo, send = graphql } = {}) {
 
 function fail(what) {
   throw new Error(`GraphQL fallback: could not resolve ${what}`);
+}
+
+/**
+ * Read one issue through GraphQL, REST-shaped — the twin of REST's `GET issues/<n>` (measured gap,
+ * 2026-11-24: `update` refused at 0 REST left with GraphQL 4,671 of 5,000 free, because its first
+ * act is this read). Throws when the issue does not exist, as the REST 404 would. 1 point.
+ */
+export function readIssue(n, { repo, send = graphql } = {}) {
+  const [owner, name] = repo.split("/");
+  const query = `query($owner: String!, $name: String!) { repository(owner: $owner, name: $name) { issue(number: ${Number(n)}) { ${READ_FIELDS} } } }`;
+  const issue = restShape(send(query, { owner, name }).repository?.issue);
+  if (!issue) throw new Error(`GraphQL: issue #${n} not found in ${repo}`);
+  return issue;
 }
 
 /** Send one REST-described op as GraphQL: resolve its ids, mutate, return the REST-shaped answer. */
