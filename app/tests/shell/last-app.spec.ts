@@ -2,9 +2,9 @@ import { describe, expect, it } from "@rstest/core";
 import {
   APP_ROOTS,
   appOf,
+  noteLoadStart,
   readLastApp,
   reopenTarget,
-  settleFirstLoad,
 } from "../../src/shell/last-app";
 
 // Returning opens the last app used (#8189 criterion 7): its root, only on the session's first load
@@ -48,13 +48,15 @@ describe("the record", () => {
 });
 
 describe("only a fresh load at bare / reopens", () => {
-  it("never on a preload, a search or a hash, and never once the first load has settled", () => {
+  it("never on a preload, a search or a hash, and never once a second load has started", () => {
     window.localStorage.setItem("skynet.last-app", "/trade");
+    expect(noteLoadStart()).toBe(false);
     expect(reopenTarget({ preload: false, searchStr: "", hash: "" })).toBe("/trade");
     expect(reopenTarget({ preload: true, searchStr: "", hash: "" })).toBeUndefined();
     expect(reopenTarget({ preload: false, searchStr: "?by=return", hash: "" })).toBeUndefined();
     expect(reopenTarget({ preload: false, searchStr: "", hash: "main" })).toBeUndefined();
-    settleFirstLoad();
+    // A second load starting settles it, with no resolve in between (#8494).
+    expect(noteLoadStart()).toBe(true);
     expect(reopenTarget({ preload: false, searchStr: "", hash: "" })).toBeUndefined();
     window.localStorage.removeItem("skynet.last-app");
   });

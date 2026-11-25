@@ -4,7 +4,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { parseSearch, stringifySearch } from "./live/search-params";
 import { routeTree } from "./routeTree.gen";
-import { settleFirstLoad } from "./shell/last-app";
+import { settleAfterPageLoad } from "./shell/last-app";
 import { routeErrorOptions } from "./shell/route-error";
 import "./styles/index.css";
 
@@ -19,11 +19,8 @@ const router = createRouter({
   ...routeErrorOptions,
 });
 
-// After the first location resolves, a navigation to `/` is a Home tap, never "returning" (#8189).
-const unsubscribe = router.subscribe("onResolved", () => {
-  settleFirstLoad();
-  unsubscribe();
-});
+// Once a second load starts, a navigation to `/` is a Home tap, never "returning" (#8189, #8494).
+settleAfterPageLoad(router);
 
 declare module "@tanstack/react-router" {
   interface Register {
