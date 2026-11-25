@@ -21,3 +21,11 @@ export function agedOutCandidates<T extends { sha: string }>(
   runs: T[],
   p?: { windowShas?: Set<string>; isLearned?: (sha: string) => boolean },
 ): T[];
+export function firstRealUnlearned<T extends { sha: string; id: number }>(
+  runs: T[],
+  p: {
+    isLearned: (sha: string) => boolean;
+    isPhantom: (id: number) => Promise<boolean>;
+    need?: number;
+  },
+): Promise<{ real: T[]; unlearnedShas: number; checked: number }>;
