@@ -224,7 +224,7 @@ once; this section is only what differs for issues.
 |---|---|
 | Bug on a visual surface | the member's screenshot / clip — already the highest-value field on the form |
 | Plan or multi-slice story | `flowchart` of the slices and what unlocks what — this PR's edges thick |
-| A plan's lifecycle (a gate, a mode, a rung) | `stateDiagram-v2` — each guarded transition is one EARS line |
+| A plan's lifecycle (a gate, a mode, a rung) | `stateDiagram-v2` — each guarded transition is one EARS line; `npm run ears:lifecycle -- --stdin` writes them (`/ears`) |
 | New route or request path | `sequenceDiagram` |
 | Gate, mode, or lifecycle change | `stateDiagram-v2` |
 | A proposed, not-yet-built diagram | any of the above with `config: { look: handDrawn }` — the sketch register — captioned as proposed |
