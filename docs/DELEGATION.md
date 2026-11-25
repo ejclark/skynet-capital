@@ -59,7 +59,9 @@ into separate lint, typecheck and per-suite calls (#5191).
    no faster than once a minute** (`sleep 60` or longer between reads): every session, cloud build
    and lane acting for Eric shares one 5,000/hr REST allowance, and on 2026-11-24 a surge emptied it
    28 minutes before the refill (#8289). A check run takes minutes; a 10-second loop spends a call
-   every 10 seconds to learn nothing. **Temp files are yours alone:** write them inside your own worktree
+   every 10 seconds to learn nothing. Before adding a script a session runs on every wave or PR,
+   count what it spends: `npm run rest:meter -- <command>` prints its REST and GraphQL calls by
+   caller (it meters live calls, so it spends what it counts). **Temp files are yours alone:** write them inside your own worktree
    (`scratchpad/` there is gitignored) or in a session-scratchpad subfolder named after your
    label — never a shared generic name such as a bare body.md. Every agent in a workflow shares one
    scratchpad; on 2026-10-11 one agent overwrote another's PR body and commit message mid-ship
