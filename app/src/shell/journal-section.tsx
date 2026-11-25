@@ -30,13 +30,13 @@ import { JournalNotes } from "./journal-notes";
 /** What the composer and the notes read while the journal read is out, and when it failed: notes
  *  off, said plainly, so a slow or broken notes store never holds up or takes down the filings.
  *  Wishes stay governed by the feedback read's own `enabled` (the same token decides both). */
-const JOURNAL_OPENING: JournalIndex = {
+export const JOURNAL_OPENING: JournalIndex = {
   available: false,
   wishesEnabled: true,
   notes: [],
   reason: "Opening your notes…",
 };
-const JOURNAL_DOWN: JournalIndex = {
+export const JOURNAL_DOWN: JournalIndex = {
   ...JOURNAL_OPENING,
   reason: "Your notes are unreachable right now.",
 };
