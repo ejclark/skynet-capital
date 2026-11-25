@@ -121,11 +121,9 @@ rstest.mock("../../src/shell/accounts-overview-section", () => ({
 rstest.mock("../../src/shell/events-section", () => ({
   EventsSection: () => <p data-testid="events">The book's events</p>,
 }));
-// The tower column's card has its own spec; here only where the column stands.
+// The league card has its own spec.
 rstest.mock("../../src/shell/sauron-card", () => ({
-  SauronCard: ({ under }: { under?: boolean }) => (
-    <section data-testid="tower" data-under={under ? "true" : "false"} />
-  ),
+  SauronCard: () => <section data-testid="league" />,
 }));
 rstest.mock("../../src/shell/alpaca-guide", () => ({
   AlpacaGuide: () => <p data-testid="connect-guide">The five-step connect guide</p>,
@@ -419,34 +417,23 @@ function benchWidth(): () => void {
   return () => Reflect.deleteProperty(window, "matchMedia");
 }
 
-describe("the big tower's own column (#3977)", () => {
-  it("stands the tower column beside the page from the bench width, on every section", async () => {
+describe("no tower on the Profile page (#8189 criterion 2)", () => {
+  it("draws no tower column at the bench width, on any section", async () => {
     const restore = benchWidth();
     try {
       accounts = [ERIC];
       onboardingComplete = true;
       const router = mountAccounts("/accounts");
       expect(await screen.findByTestId("overview")).toBeInTheDocument();
-      // The league stands under the column's tower (the frame draws the tower itself, vantage.tsx).
-      const tower = screen.getByTestId("tower");
-      expect(tower.dataset.under).toBe("true");
-      expect(
-        tower.closest("aside.tower-column")?.querySelector("[data-tower-slot]"),
-      ).not.toBeNull();
+      expect(document.querySelector("aside.tower-column")).toBeNull();
+      expect(document.querySelector("[data-tower-slot]")).toBeNull();
       await userEvent.click(screen.getByRole("button", { name: "Milestones" }));
       await waitFor(() =>
         expect(router.state.location.search).toMatchObject({ section: "milestones" }),
       );
-      expect(screen.getByTestId("tower").closest("aside.tower-column")).not.toBeNull();
+      expect(document.querySelector("[data-tower-slot]")).toBeNull();
     } finally {
       restore();
     }
-  });
-
-  it("leaves a narrower window one column, with no tower column (the Overview carries the card)", async () => {
-    accounts = [ERIC];
-    mountAccounts("/accounts");
-    expect(await screen.findByTestId("overview")).toBeInTheDocument();
-    expect(document.querySelector("aside.tower-column")).toBeNull();
   });
 });

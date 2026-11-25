@@ -9,26 +9,24 @@ import {
   useTowerRun,
 } from "./tower-bus";
 import { usePhoneWidth } from "./use-media";
-import { useTowerColumn } from "./use-tower-column";
 
 /**
- * THE PAGE'S TOWER (#3977, Eric 2026-09-30, picked by eye from a mock): one big tower, unboxed, in
- * the page frame's own column from just under the navbar, on every non-Settings page at the bench
- * width and wider (`frame.tsx`, `tower-column.tsx`) — "I never intended to have 2 towers… show the
- * big tower across all screens… remove the section outline around the tower [so the] light from
- * the eye [is] less contained." It was the crest at the calendar head's right cap behind
- * `?shell=watchtower` (#3807 slice 3a); the flag, the crest's framing and its slot are retired.
+ * THE HOME SCREEN'S TOWER (#8189, #8161 stage 2; docs/IA.md §8.4). One big tower, unboxed (Eric,
+ * 2026-09-30: "remove the section outline around the tower [so the] light from the eye [is] less
+ * contained"), in the home screen's tower box from the tablet width. It stood in the page frame's
+ * own column on every non-Settings page from #3977 until #8189 took it off every page but the home:
+ * pages rest on information, and the column took ~37% of a 1280px window.
  *
  * ONE WINDOW FOR THE SESSION. A single `/tower?frame=card` iframe, mounted here in the shell as a
- * sibling of the page (never inside the topbar), laid over the column's slot (`TowerSlot`) with
+ * sibling of the page (never inside the topbar), laid over the home's slot (`TowerSlot`) with
  * fixed positioning that a ResizeObserver and the scroll keep in step — never re-parented, never
  * unmounted across navigation, because every mount is a new WebGL context and a shader compile.
- * Moving from the Profile page to Trade keeps the same tower. It mounts the first time a slot is
- * visible and then only hides:
+ * Leaving the home and coming back keeps the same tower. It mounts the first time a slot is visible
+ * and then only hides:
  *
- *   · hidden and paused (`tower:run {on:false}`) below the bench width, where no page draws the
- *     column (the Profile page's Overview and an account's page keep their boxed card instead, with
- *     its own frame), and on any page without a slot (Settings);
+ *   · hidden and paused (`tower:run {on:false}`) on every page but the home, and on the home at
+ *     the tablet width and narrower, where the home shows a committed still instead (no WebGL on a
+ *     phone until #3977's real-device recheck);
  *   · paused, still in place, while scrolled off screen or in a background tab;
  *   · under reduced motion the scene draws its one still frame and sends nothing else.
  *
@@ -39,11 +37,11 @@ import { useTowerColumn } from "./use-tower-column";
  * a regard plays. `?crest=still|live` still sets it from a URL.
  */
 
-/** Where the page frame's column asks for the tower. */
+/** Where the home screen's box asks for the tower. */
 export const SLOT_SELECTOR = "[data-tower-slot]";
 
-/** The scene framed for the column (the character card's framing: horns near the top, the Eye
- *  ~60% across), at the scene's full quality — the same frame the Profile page's card drew. */
+/** The scene in the character card's framing (horns near the top, the Eye ~60% across), at the
+ *  scene's full quality; `frame=card` re-fits any box, so the home's wide box needs no change. */
 export const COLUMN_SRC = "/tower?frame=card";
 
 /** The frame's src for a page at `search`: `?probe=1` on the page is forwarded, so the scene shows
@@ -60,12 +58,7 @@ export function columnSrc(search: string, crest: Crest = "live"): string {
 
 const routePath = (pathname: string): string => pathname.replace(/^\/app(?=\/|$)/, "") || "/";
 
-const isSettings = (pathname: string): boolean => {
-  const path = routePath(pathname);
-  return path === "/settings" || path.startsWith("/settings/");
-};
-
-/** The home screen (#8189): its tower box takes the frame from the tablet width, not the bench. */
+/** The home screen (#8189): the one page with a tower box. */
 export const isHome = (pathname: string): boolean => routePath(pathname) === "/";
 
 interface Box {
@@ -152,10 +145,10 @@ export function VantageFrame({
   /** The app column: where the slot and the regard targets live. */
   readonly root: RefObject<HTMLElement | null>;
   readonly pathname: string;
-  /** At the bench width or wider — where the page frame draws the tower column. */
+  /** On the home screen above the tablet width — the one place the moving tower shows. */
   readonly wide: boolean;
 }): ReactElement | null {
-  const eligible = wide && !isSettings(pathname);
+  const eligible = wide;
   const slot = useSlot(root, eligible, pathname);
   const box = useBox(slot);
   const shown = eligible && slot !== null && box !== null;
@@ -214,15 +207,13 @@ export function Vantage({
   readonly root: RefObject<HTMLElement | null>;
 }): ReactElement | null {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  // Where the page frame gives the tower its column (`use-tower-column.ts`); the home screen's tower
-  // box takes the frame from 861px, since a phone gets its committed still instead (#8189).
-  const column = useTowerColumn();
+  // The home's tower box takes the frame from 861px; a phone gets its committed still (#8189).
   const phone = usePhoneWidth();
-  const wide = column || (isHome(pathname) && !phone);
+  const wide = isHome(pathname) && !phone;
   return <VantageFrame root={root} pathname={pathname} wide={wide} />;
 }
 
-/** The column's art box: an empty, sized box the page's one tower frame is laid over. */
+/** The home's art box: an empty, sized box the session's one tower frame is laid over. */
 export function TowerSlot(): ReactElement {
   return <span className="tower-slot" data-tower-slot="" aria-hidden="true" />;
 }

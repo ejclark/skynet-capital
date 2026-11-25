@@ -1,12 +1,12 @@
-/* The page's tower (#3977): the shell's one frame (`shell/vantage.tsx`), laid over the tower
-   column's slot (`TowerSlot`, `shell/tower-column.tsx`) on every non-Settings page at the bench
-   width and wider. It was the crest at the calendar head's right cap behind `?shell=watchtower`
-   (#3807 slice 3a); that flag and its slot are retired. */
+/* The home screen's tower (#8189): the shell's one frame (`shell/vantage.tsx`), laid over the
+   home's slot (`TowerSlot`, `routes/index.tsx`) from the tablet width. It stood in the page frame's
+   own column on every page from #3977 until #8189; before that it was the crest at the calendar
+   head's right cap (#3807 slice 3a). */
 
-/* The column's art box: the size the character card's art always had. */
+/* The art box: it fills the home's tower box (`home.css`). */
 .tower-slot {
   display: block;
-  height: 664px;
+  height: 100%;
   pointer-events: none;
 }
 

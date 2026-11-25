@@ -9,6 +9,7 @@ import { fetchQuests, questsReadFailed, unreadLine } from "../live/quests";
 import { fetchSettings } from "../live/settings";
 import { isCampaignAddress } from "../shell/campaign-forward";
 import { PageFrame } from "../shell/frame";
+import { reopenTarget } from "../shell/last-app";
 import { useParty } from "../shell/mission-windows";
 import { scoreboardTileLine, seatRead } from "../shell/party-table";
 import { usePhoneWidth } from "../shell/use-media";
@@ -33,6 +34,9 @@ import { TowerSlot } from "../shell/vantage";
  * review count uses each position's fact badge without the option book's spot (`markOf`), so a
  * sold option's near-strike call can lag the Profile page's by one read; the count still lands on
  * the page that shows the badges.
+ *
+ * RETURNING OPENS THE LAST APP (slice 2): a fresh page load at bare `/` replaces the address with
+ * the root of the last of the five apps used (`shell/last-app.ts`); a Home tap always shows this.
  *
  * OLD ADDRESSES KEEP LANDING. `/?w=`, `/?show=` and Moneypenny's `/#story-…` / `/#event-…` /
  * `/#calendar` links were always Campaign; they forward to `/campaign` with search and hash intact
@@ -290,7 +294,7 @@ export function ScoreboardTile(): ReactElement {
 
 function Home(): ReactElement {
   return (
-    <PageFrame towerless>
+    <PageFrame>
       <div className="home">
         <h1 className="visually-hidden">Home</h1>
         <TowerBox />
@@ -322,7 +326,7 @@ export const Route = createFileRoute("/")({
     ...(asId(search.a) ? { a: asId(search.a) } : {}),
     ...(asId(search.b) ? { b: asId(search.b) } : {}),
   }),
-  beforeLoad: ({ search, location }) => {
+  beforeLoad: ({ search, location, preload }) => {
     if (search.by !== undefined || search.a !== undefined || search.b !== undefined)
       throw redirect({ to: "/leaderboard", search: { ...search, by: search.by ?? "equity" } });
     // Campaign's own addresses forward with their search and hash, replacing the entry.
@@ -333,6 +337,9 @@ export const Route = createFileRoute("/")({
         hash: location.hash,
         replace: true,
       });
+    // Returning (a fresh load at bare `/`) reopens the last app used, at its root (`last-app.ts`).
+    const reopen = reopenTarget({ preload, searchStr: location.searchStr, hash: location.hash });
+    if (reopen) throw redirect({ to: reopen, replace: true });
   },
   component: Home,
 });

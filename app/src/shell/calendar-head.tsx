@@ -37,7 +37,7 @@ import { LENSES, type Lens } from "../live/research";
  * words, which is why the line opens with the door's own name.
  *
  * NO RIGHT CAP (#3977): the crest that capped this row under `?shell=watchtower` (#3807 slice 3a) is
- * retired — the tower stands in the page frame's own column now (`tower-column.tsx`).
+ * retired — the tower stands on the home screen only now (#8189, `routes/index.tsx`).
  * @category hero
  */
 

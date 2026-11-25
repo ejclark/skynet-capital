@@ -39,6 +39,9 @@ interface Fixture {
   body?: string;
   createdHoursAgo?: number;
   base?: string;
+  /** #8289: the stub answers only what the scan may read: the check runs, or nothing at all. */
+  reads?: "runs" | "none";
+  labels?: string[];
 }
 
 const prs: Fixture[] = [
@@ -110,6 +113,46 @@ const prs: Fixture[] = [
     runs: [],
     suites: [ghost],
   },
+  // #8289: heads the check runs alone settle. The stub answers nothing else for them, so a scan
+  // that still read their suites or PR would hit a 404 and report null.
+  {
+    number: 8,
+    ref: "feedback/80",
+    files: [],
+    state: "blocked",
+    runs: [{ name: "verify", status: "completed", conclusion: "failure", completed_at: ago(50) }],
+    suites: [],
+    reads: "runs",
+  },
+  {
+    number: 9,
+    ref: "feedback/90",
+    files: [],
+    state: "blocked",
+    runs: [{ name: "verify", status: "in_progress", conclusion: null, started_at: ago(0.2) }],
+    suites: [],
+    reads: "runs",
+  },
+  {
+    number: 10,
+    ref: "feedback/100",
+    files: [],
+    state: "clean",
+    runs: green.map((r) => ({ ...r, completed_at: ago(1) })),
+    suites: [],
+    reads: "runs",
+  },
+  // Held on purpose and green for 10h: never stuck, and its labels are on the list already.
+  {
+    number: 11,
+    ref: "feedback/110",
+    files: [],
+    state: "clean",
+    runs: green,
+    suites: [],
+    reads: "none",
+    labels: ["hold-merge"],
+  },
 ];
 
 function routes() {
@@ -121,12 +164,14 @@ function routes() {
     head: { sha: `sha${p.number}`, ref: p.ref },
     base: { ref: p.base ?? "main" },
     body: p.body ?? "",
-    labels: [],
+    labels: (p.labels ?? []).map((name) => ({ name })),
   }));
   for (const p of prs) {
+    if (p.reads === "none") continue;
     out[`commits/sha${p.number}/check-runs?per_page=100`] = {
       check_runs: p.runs,
     };
+    if (p.reads === "runs") continue;
     out[`commits/sha${p.number}/check-suites?per_page=100`] = {
       check_suites: p.suites,
     };
@@ -204,5 +249,19 @@ describe("stuck-pr-scan — a protected or boarded PR is skipped only while it w
 
   it("WHEN a stacked child's base is not main, THEN the scan skips it, as headless-pr.mjs does", () => {
     expect(named(7)).toBeUndefined();
+  });
+});
+
+describe("stuck-pr-scan — a PR its check runs settle costs one read (#8289)", () => {
+  const stuck = runScan();
+
+  it("WHEN a head is red, running or freshly green, THEN the scan stops at its check runs", () => {
+    // Their suites and PR reads 404 in this stub; a scan that asked for them would report null.
+    expect(stuck).not.toBeNull();
+    expect(stuck?.map((s) => s.number)).not.toEqual(expect.arrayContaining([8, 9, 10]));
+  });
+
+  it("WHEN a PR is held, THEN the scan reads nothing past the open list", () => {
+    expect(stuck?.find((s) => s.number === 11)).toBeUndefined();
   });
 });

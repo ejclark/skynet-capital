@@ -38,9 +38,16 @@ export const RED_CLOSE_CAP: number;
 /** The block with its next-pickup line naming the closed PR's work first. Pure. */
 export function blockAfterClose(body: string, prNumber: number): string;
 export function redLaneIntents(candidates?: RedLanePr[]): RedLaneIntent[];
+/** Why a red PR waits on its issue's blocked-by links (one open, or the last closed under the age
+ *  limit ago), or null. Pure. */
+export function blockerHold(
+  blockers: { number: number; state?: string; closed_at?: string | null }[],
+  nowMs: number,
+  hours?: number,
+): string | null;
 export function gatherRedLanePrs(
   nowMs: number,
-  opts?: { hours?: number; rest?: (path: string) => unknown },
+  opts?: { hours?: number; rest?: (path: string) => unknown; log?: (line: string) => void },
 ): RedLanePr[];
 export function redLaneOrNone(
   nowMs: number,

@@ -94,6 +94,23 @@ export function needsHeadAt(checkRuns = [], suites = [], required = REQUIRED_CHE
   return latestRequired(checkRuns, required).size === 0 && !suites.some(isActionsSuite);
 }
 
+/**
+ * Do the head's check runs alone settle that `judgePr` returns null, whatever the PR read and the
+ * suites would say? Two heads are settled: a required check red or still running (only an all-green
+ * head or a head with no required run can be stuck), and a head green for less than `hours`. The
+ * scan reads check runs first and stops here, so an in-flight or red PR costs one REST call, not
+ * three (#8289: 32 calls per `ship.sh open` on 2026-11-25, most of them for PRs nobody could call
+ * stuck). Pure.
+ */
+export function settledByRuns(
+  checkRuns = [],
+  { now = Date.now(), hours = DEFAULT_HOURS, required = REQUIRED_CHECKS } = {},
+) {
+  const green = greenHead(checkRuns, required);
+  if (green) return (now - green.at) / 3.6e6 < hours;
+  return latestRequired(checkRuns ?? [], required).size > 0;
+}
+
 /** The latest check run of each required name (a re-run supersedes the run it replaced). */
 export function latestRequired(checkRuns, required) {
   const byName = new Map();
