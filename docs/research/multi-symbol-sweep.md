@@ -75,6 +75,14 @@ robust, alpha fragile — is the finding.
   [consumer-confidence-2026-11-24 close-out](events/consumer-confidence-2026-11-24.md). The headline printed **103.3**, **+11.4** from a revised 91.9 (+11.6 from the as-published 91.7), Expectations 83.6 (+9.9), with Democrats and Independents sharply up and Republicans slightly down.
   Do not extend two midterm precedents (Nov 2018, Nov 2022; both fell) into a restraint call on the next post-election print; the partisan offset was real and the headline rose anyway.
 
+- **"The first `^N225` cash session after a JPX `Not Open` total blackout is an ordinary Tokyo-closure bar: 2026-11-24 |close-to-close| stays below 2.09% (FT-jpx-market-closure-2026-11-23-1)"** — added 2026-11-25 from the
+  [jpx-market-closure-2026-11-23 forward-test scoring](events/jpx-market-closure-2026-11-23.md). Registered 2026-09-09 off a calm 12-vs-39 sample (1.536% vs 1.404%, t=0.39); the 11-24 bar printed **+3.91%** (56,436.65 → 58,644.63), past the 2.09% line, after a US session of **+4.73%** (`^VIX` 35.89 → 26.62) that Tokyo could not price on the dark Monday.
+  Do not calibrate a post-blackout `^N225` band on calm-regime history alone, and do not read this one bar as proof the blackout itself matters: the gap and the stress regime are confounded, and the twelve-case null stands unrefuted on its own sample.
+
+- **"A G.17 annual revision moves the level of the latest month's total-industry capacity utilization by 0.5pp or more against its first print (FT-industrial-production-annual-revision-2026-11-24-2)"** — added 2026-11-25 from the
+  [industrial-production-annual-revision-2026-11-24 close-out](events/industrial-production-annual-revision-2026-11-24.md). Registered 2026-11-09 at about 40% from a four-observation read of the Board's prose; October 2026 went **76.4% (11-17 first print) to 76.8% (11-24 revision), +0.4pp**, while the revision moved Q4 2025 by +0.9pp.
+  Do not expect an annual revision to move the current month's utilization by a half-point on the strength of a base-year change plus two benchmark years; the larger moves land in the benchmarked history. One observation; the manufacturing rate moved +1.1pp, so a manufacturing-keyed test is a separate hypothesis.
+
 - **"The 2Y auction-day front-end rally is a live regime: the 2026-11-23 2Y CMT closes at or below -3.0bp (FT-treasury-2y-note-2026-11-23-1)"** — added 2026-11-24 from the
   [treasury-2y-note-2026-11-23 close-out](events/treasury-2y-note-2026-11-23.md). The 2Y closed **4.63 → 4.63 (0bp)** on a far-from-FOMC sale at $69B, with the prior-session VIX at **35.89** and the 2Y already **-13bp** on the sale-eve session.
   Do not use the -6.07bp 2023+ auction-day prior flat for the next 2Y sale; condition it on prior-session VIX under 20 (FT-3 passed the same day), and do not read one 0bp print as proof the regime is gone.

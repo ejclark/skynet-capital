@@ -443,3 +443,46 @@ proposed as a new `src/domain/market-events/proposals/<id>.from-treasury-2y-frn-
 
 **Last assessed:** 2026-11-24
 <!-- probe-ref: {"symbols":{},"vix":26.62,"daysBand":"medium:0+","adjacentIds":["advance-economic-indicators-2026-11-27","advance-services-q3-2026-11-19","aruoba-inflation-term-structure-2026-11-20","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","china-ga-ge-sb-suspension-expiry-2026-11-27","consumer-confidence-2026-11-24","durable-goods-2026-11-25","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","gdp-q3-2026-second-2026-11-25","industrial-production-annual-revision-2026-11-24","japan-cpi-2026-11-20","japan-cpi-tokyo-flash-2026-11-27","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-1-5y-2026-11-20","jgb-liquidity-enhancement-5-11y-2026-11-27","jpx-market-closure-2026-11-23","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","opec-plus-meeting-2026-11-29","opex-2026-11-20","pce-2026-11-25","philly-fed-mfg-2026-11-19","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","retail-ecommerce-q3-2026-11-19","sifma-bond-early-close-2026-11-27","sp-global-flash-us-pmi-2026-11-23","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","treasury-10y-tips-2026-11-19","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25"],"screenStreak":0,"blocked":[]} -->
+
+## Outcome
+
+**Close-out (2026-11-25, D+1 — inside the `closeOutWithinDays` deadline).** Rates mode: `symbols: []`, so
+no `earnings-cycle`/`intraday-edges` instrument applies; the cache was busted anyway per the lane's standing
+instruction and nothing reads it. "Re-run instrument data" means the executed auction record, fetched this
+session: TreasuryDirect `TA_WS/securities/auctioned?type=FRN` (direct, HTTP 200, row updated 2026-11-24 13:05:13 ET), plus the same-day slate from the Bill and Note `auctioned` feeds (both HTTP 200) and Yahoo
+`^VIX` daily closes. Nothing was blocked. **Source mark `TSY:`; the date was `confirmed` on 2026-11-22.**
+
+| Field | 2026-11-24 | Prediction / prior | Result |
+|---|---|---|---|
+| Offering / reopening flag | **$28,000,000,000 / Yes** | $28B reopening (announcement 11-19) | **Matches** |
+| Closing time (competitive) | **01:00 PM ET** | Congestion rule: four same-day auctions → 1:00 p.m. (`-1`) | **Matches; the holiday rule's 11:30 a.m. was wrong** |
+| Index determination | **2026-11-16, 4.155%** | Settlement-precedence rule; not 11-23 (`-2`) | **Matches** |
+| `high_discnt_margin` vs stamp | **5.0bp vs 3.8bp = +1.2bp** | Within ±4.0bp of the 10-28 `spread` (`-3`) | **Inside the band** |
+| Bid-to-cover | **2.87** | Thanksgiving pool 3.045 (recorded, not tested) | Lighter; no price transmission |
+| `spread` stamp | **0.038 (inherited)** | Reopening inherits the new issue's spread | **Holds**; the 11-24 margin is its own number |
+
+**Scored.** All three registered forward tests passed (`-1`, `-2`, `-3`); cells filled in
+[`forward-tests/treasury-2y-frn-2026-11-24.md`](../forward-tests/treasury-2y-frn-2026-11-24.md). No kill, so
+nothing moves to the sweep doc's kill list. Base rates were 12/12, 11/11 and 8/11, so two of the three were
+near-certain going in; what the scoring adds is that the one date where the congestion and holiday rules
+disagreed settled for the congestion rule. The three-auction **2026-12-23** reopening (`treasury-2y-frn-2026-12-23`)
+is the next check on it, where the congestion rule says 11:30 a.m.
+
+**Against the stance.** No position was taken and none was warranted (zero-capital, `symbols: []`). The stance
+held on every claim it made. The demand-null (no Thanksgiving concession) survives a twelfth reopening, with a
+caveat the row records: cover was light (2.87), the mildest sign the compression bites on demand, and it did
+not reach the clearing margin.
+
+**Adjacency, one line each.** VIX 26.62 → 26.36 (11-23 → 11-24 close, a regime well above the 15.72 at initial
+research, no effect on a floating-rate coupon reset by a bill). Same-day calendar: 7 entries on 11-24 (5-Year
+note, consumer confidence, Case-Shiller, FHFA, G.17 revision, Philly Fed NBOS), none moved this auction's
+mechanics. Nothing dated beyond what the calendar already holds, so no proposal file. Conviction proposals
+(`conviction-proposals.mjs --event`) and declared intents (`intents.mjs --event`) both printed `[]`: nothing
+to answer or cite.
+
+**Loop stage a person still had to do:** none. Sense (scanner), decide (this score) and verify (re-fetched
+primary) all ran unattended; the one manual step was recognising that fiscaldata still lags the print, so the
+series statistics come from TreasuryDirect (as at the 10-28 close-out).
+
+**Last assessed:** 2026-11-25
+<!-- probe-ref: {"symbols":{},"vix":26.36,"daysBand":"medium:0+","adjacentIds":["advance-economic-indicators-2026-11-27","advance-services-q3-2026-11-19","aruoba-inflation-term-structure-2026-11-20","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","china-ga-ge-sb-suspension-expiry-2026-11-27","consumer-confidence-2026-11-24","durable-goods-2026-11-25","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","gdp-q3-2026-second-2026-11-25","industrial-production-annual-revision-2026-11-24","japan-cpi-2026-11-20","japan-cpi-tokyo-flash-2026-11-27","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-1-5y-2026-11-20","jgb-liquidity-enhancement-5-11y-2026-11-27","jpx-market-closure-2026-11-23","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","opec-plus-meeting-2026-11-29","opex-2026-11-20","pce-2026-11-25","philly-fed-mfg-2026-11-19","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","retail-ecommerce-q3-2026-11-19","sifma-bond-early-close-2026-11-27","sp-global-flash-us-pmi-2026-11-23","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","treasury-10y-tips-2026-11-19","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25"],"screenStreak":0,"blocked":[]} -->
