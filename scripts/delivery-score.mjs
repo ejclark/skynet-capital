@@ -23,6 +23,7 @@
 // live number against a hand count.
 import { readFileSync } from "node:fs";
 import { isMain } from "./is-main.mjs";
+import { readIssueEvents } from "./issue-events.mjs";
 import { declaredPrs, readinessNotes, sizeCell } from "./issue-readiness.mjs";
 import { ensureGhToken, ghRest } from "./moneypenny/gh.mjs";
 
@@ -204,7 +205,7 @@ export function renderTable(rows, heading) {
   ].join("\n");
 }
 
-// ─── IO (REST core bucket) ───────────────────────────────────────────────────────────────────────
+// ─── IO (REST lists; the per-issue events in GraphQL batches, issue-events.mjs) ─────────────────
 
 /** Every PR created since `sinceMs` minus a week of slack, newest first, stopping at the edge. */
 function pullsSince(sinceMs) {
@@ -230,15 +231,19 @@ function live(since) {
     );
     if (batch.length < 100) break;
   }
-  const rows = [];
-  for (const issue of issues) {
+  // `classify` returns null whatever the events say when nothing merged builds the issue, so only
+  // the issues a merged PR builds get their events read — now in GraphQL batches of 50
+  // (issue-events.mjs, #8289: 363 REST reads a bare run became ~8 GraphQL points).
+  const cohort = issues.filter((issue) => {
     const labels = issue.labels.map((l) => l.name);
-    if (labels.includes("event-research") || labels.includes("ci-failure")) continue;
-    // `classify` returns null whatever the events say when nothing merged builds the issue, and
-    // the events read is the one REST call per issue — skipping it for the issues outside the
-    // cohort is what keeps a 30-day window inside the push tick's command budget.
-    if (!prs.some((p) => p.merged_at && buildsIssue(p, issue.number))) continue;
-    const events = ghRest(`issues/${issue.number}/events?per_page=100`);
+    if (labels.includes("event-research") || labels.includes("ci-failure")) return false;
+    return prs.some((p) => p.merged_at && buildsIssue(p, issue.number));
+  });
+  const eventsByIssue = readIssueEvents(cohort.map((issue) => issue.number));
+  const rows = [];
+  for (const issue of cohort) {
+    const labels = issue.labels.map((l) => l.name);
+    const events = eventsByIssue.get(issue.number) ?? [];
     const scored = classify({ issue, events, prs, now });
     if (!scored || scored.handoff < sinceMs || scored.outcome === "IN-FLIGHT") continue;
     const body = issue.body ?? "";
