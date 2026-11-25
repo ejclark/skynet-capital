@@ -18,6 +18,13 @@
 //   node scripts/incident-scan.mjs --days 14   # lookback window (default 14)
 //   node scripts/incident-scan.mjs --json      # every real failed run + `learned`, for fix-held.mjs
 //   node scripts/incident-scan.mjs --count     # {openEntries, unlearnedRuns, agedOutRuns} for the digest
+//   node scripts/incident-scan.mjs --brief     # ship.sh's read: over budget or not, newest incident only
+//
+// BRIEF (#8289): the full report checks every candidate run for zero jobs, one REST call each, 267
+// calls on 2026-11-25. `ship.sh open` runs this on every PR and only needs the verdict, so
+// `--brief` reads the window's run list, checks unlearned shas newest first, and stops at the
+// budget + 1st real one (incident-runs.mjs → *the brief read*). Same exit code as the report; no
+// aged-out band, which the digest's `--count` still reads.
 //
 // AGED OUT (#5728): the report and `--count` also read the band just past the window and name what
 // left it unlearned (`AGED-OUT UNLEARNED`), so expiry never passes for learning. Report-only — the
@@ -35,7 +42,13 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { agedOutCandidates, PER_PAGE, readAllPages, windowRanges } from "./incident-runs.mjs";
+import {
+  agedOutCandidates,
+  firstRealUnlearned,
+  PER_PAGE,
+  readAllPages,
+  windowRanges,
+} from "./incident-runs.mjs";
 import { learnedIn } from "./moneypenny/lesson-draft.mjs";
 import { reexecWithProxy } from "./proxy-reexec.mjs";
 
@@ -216,6 +229,41 @@ async function count() {
   return 0;
 }
 
+/** `--brief`: the verdict and the newest incident, for a few REST calls instead of one per run. */
+async function brief() {
+  let runs;
+  try {
+    runs = await failedMainRuns();
+  } catch (err) {
+    console.log(
+      `incident-scan: could not reach GitHub (${err.message}) — skipping (offline no-op).`,
+    );
+    return 0;
+  }
+  const limit = budget.unlearnedIncidents;
+  const { real, unlearnedShas, checked } = await firstRealUnlearned(runs, {
+    isLearned,
+    isPhantom: hasZeroJobs,
+    need: limit + 1,
+  });
+  if (real.length <= limit) {
+    console.log(
+      real.length === 0
+        ? `incident-scan: every incident on main in the last ${days}d has a lesson. ✅`
+        : `incident-scan: ${real.length} unlearned incident(s) on main, within the budget of ${limit}.`,
+    );
+    return 0;
+  }
+  const newest = real[0];
+  console.log(
+    `incident-scan: main has unlearned incidents (budget ${limit}). Newest:\n` +
+      `  UNLEARNED  ${newest.sha}  ${newest.date}  ${newest.name}  ${newest.title}\n` +
+      `  ${unlearnedShas} failed sha(s) in the last ${days}d have no lesson; ${checked} checked ` +
+      `for zero-job phantoms (brief read, #8289). The full list: node scripts/incident-scan.mjs`,
+  );
+  return 1;
+}
+
 async function main() {
   reexecWithProxy();
   if (flag("--count")) return count();
@@ -232,6 +280,8 @@ async function main() {
     );
     return 0;
   }
+
+  if (flag("--brief")) return brief();
 
   let scan;
   try {
