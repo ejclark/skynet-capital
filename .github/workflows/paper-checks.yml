@@ -1,0 +1,157 @@
+# Alpaca paper checks, run on demand (#8256 slice 2; shape 5 of #8161).
+#
+# WHAT IT ANSWERS. #8161's build order leans on nine broker limits Alpaca's docs leave unclear
+# (a bracket sent after the close, extended-hours orders, which free feed quotes the evening, …).
+# `npm run paper:checks` (scripts/paper-checks.mjs, src/alpaca/paper-checks/) asks each one with a
+# real paper order on a DEDICATED paper test account, records the broker's own answer, and cancels
+# everything it placed. This job runs it and files the dated answers as a PR.
+#
+# WHICH ACCOUNT. Only the one behind SKYNET_PAPER_CHECK_KEY / SKYNET_PAPER_CHECK_SECRET: a paper
+# account used for nothing but these checks — never a member's, a bot's or Eric's own. No other
+# Alpaca credential is in this job's environment, and the script refuses (exit 2, nothing sent)
+# when either secret is missing, or the account is not an empty `PA…` paper account.
+#
+# WHEN. Dispatch-only, once per market window (the windows are in the issue: 11:00, 16:30, 18:30,
+# 21:30, 09:15 ET, and 07:45 or 16:05 from 2026-12-04). A check whose window is shut records
+# `not in window` and places nothing, so a mistimed run costs nothing. No clock: each answer is
+# needed once, and again only when Alpaca changes something. `only` picks checks (comma-separated
+# ids); its value reaches the shell through an env var, and the script rejects any unknown id.
+#
+# WHAT IT WRITES. The answers land in docs/research/alpaca-paper-checks/ (a dated .json per ET day
+# and the README the script regenerates), force-pushed as ONE fixed branch and opened as one PR by
+# scripts/paper-checks-pr.mjs, the way print-dates.yml files its refresh. Before the run, the open
+# results PR's files are copied in, so this run appends to every answer not yet merged. That PR
+# touches no protected path, so pipeline.yml arms its auto-merge; it says `Closes #8256` only once
+# every scriptable check has a broker answer.
+#
+# RUN LOGS ARE PUBLIC (flow-census.yml says the same). The script prints check ids, outcomes and the
+# broker's words only, and scrubs the key, the secret, the account id and the account number from
+# everything it prints and writes. The run summary carries those same scrubbed lines.
+#
+# HOW IT READS. Green = every check that could run was asked and nothing was left open. Red: exit 2,
+# refused before placing anything (no test-account key, or an account that is not an empty paper
+# account); exit 1, something it placed is still open after cleanup (the ids are in the results
+# file) or the broker could not be read; 130, interrupted and cleaned up. A broker REFUSAL is an
+# answer, never red. A changed record still gets its PR before the red.
+#
+# Protected by envelope.json (`.github/workflows/**`): it boarded the held platter, merged by Eric.
+name: Alpaca paper checks
+
+on:
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "Check ids to run, comma-separated (blank runs every check whose window is open)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  pull-requests: read
+
+# One run at a time: the script's cleanup cancels every `paperchk-` order on the account, so a
+# second run in parallel would cancel the first one's orders mid-check.
+concurrency:
+  group: paper-checks
+  cancel-in-progress: false
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    # Check 1 can watch its bracket through the open for 20 minutes; the rest take seconds.
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .nvmrc
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund # tsx runs the script and the PR step
+
+      - name: Carry the open results PR's answers
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          BRANCH=chore/paper-checks-results
+          open=$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$BRANCH" --state open --json number --jq 'length')
+          if [ "$open" != "0" ]; then
+            git fetch --no-tags origin "$BRANCH"
+            git checkout FETCH_HEAD -- docs/research/alpaca-paper-checks
+            echo "Carried the unmerged answers from the open results PR on $BRANCH."
+          fi
+          # Stage what was carried, so the run step's "changed" means changed BY THIS RUN.
+          git add -- docs/research/alpaca-paper-checks
+
+      - name: Run the paper checks
+        id: run
+        # Never fails here: the exit code is kept for the last step, so a changed record still
+        # reaches its PR when a check left something open.
+        env:
+          SKYNET_PAPER_CHECK_KEY: ${{ secrets.SKYNET_PAPER_CHECK_KEY }}
+          SKYNET_PAPER_CHECK_SECRET: ${{ secrets.SKYNET_PAPER_CHECK_SECRET }}
+          ONLY: ${{ inputs.only }}
+        run: |
+          set +e
+          args=()
+          if [ -n "$ONLY" ]; then args+=(--only "$ONLY"); fi
+          npm run -s paper:checks -- "${args[@]}" 2>&1 | tee "$RUNNER_TEMP/paper-checks.log"
+          code=${PIPESTATUS[0]}
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          # Against the index (the carried answers): a rewritten file, or a new day's file.
+          if git diff --quiet -- docs/research/alpaca-paper-checks \
+            && [ -z "$(git ls-files --others --exclude-standard -- docs/research/alpaca-paper-checks)" ]; then
+            changed=false
+          else
+            changed=true
+          fi
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Alpaca paper checks"
+            echo
+            echo "Exit ${code} · record changed: ${changed}"
+            echo
+            echo '```'
+            cat "$RUNNER_TEMP/paper-checks.log"
+            echo '```'
+            if [ "$changed" = true ]; then
+              echo
+              grep '^|' docs/research/alpaca-paper-checks/README.md
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+
+      # Scoped to the two writes the next step makes. The App token, not GITHUB_TOKEN: a PR opened
+      # with GITHUB_TOKEN starts no workflow, so verify would never run and nothing would arm it.
+      - id: app-token
+        if: ${{ steps.run.outputs.changed == 'true' }}
+        uses: ./.github/actions/app-token
+        with:
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Open or update the results PR
+        if: ${{ steps.run.outputs.changed == 'true' }}
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          BRANCH=chore/paper-checks-results
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$BRANCH"
+          git add docs/research/alpaca-paper-checks
+          git commit -m "chore(research): alpaca paper-check answers ($(TZ=America/New_York date +%F))" -m "Part of #8256"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          git push --force origin "$BRANCH"
+          npx tsx scripts/paper-checks-pr.mjs "$BRANCH" "$RUNNER_TEMP/paper-checks.log"
+
+      - name: Fail when the run did not finish clean
+        if: ${{ steps.run.outputs.code != '0' }}
+        run: |
+          echo "::error::paper-checks exited ${{ steps.run.outputs.code }} (2 = refused before placing anything, e.g. no test-account key; 1 = something it placed is still open, or the broker could not be read; 130 = interrupted). The run summary has the lines."
+          exit 1
