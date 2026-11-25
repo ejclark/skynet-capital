@@ -56,12 +56,36 @@ const browserStorage = (): Storage | undefined => {
   }
 };
 
-/** Whether the router has resolved its first location yet: until it has, a navigation is the page
- *  load itself ("returning"); after it, every navigation is a tap inside the app. `main.tsx` calls
- *  `settleFirstLoad` from the router's first `onResolved`. */
+/** Whether the page load is over: until it is, a navigation is the page load itself ("returning");
+ *  after it, every navigation is a tap inside the app.
+ *
+ *  Settled when the SECOND load starts, never when the first resolves (#8494). The router emits
+ *  `onResolved` only for a load that commits, so a Home tap made while the first page's chunk is
+ *  still downloading superseded that load, the flag never flipped, and the tap reopened the last
+ *  app. Counting starts instead: the first load to start is the page load, and any later one (a
+ *  tap, a back, the reopen's own redirect) is inside the app, committed or not. */
+let loadsStarted = 0;
 let settled = false;
-export function settleFirstLoad(): void {
-  settled = true;
+
+/** Notes that a load began; returns true once the page load is over (the caller may stop
+ *  listening). `settleAfterPageLoad` wires it to a router. */
+export function noteLoadStart(): boolean {
+  loadsStarted += 1;
+  if (loadsStarted > 1) settled = true;
+  return settled;
+}
+
+/** The slice of a router this rule listens to: the event that fires as every load begins, before
+ *  any route's `beforeLoad` runs (router-core's `loadClientRoute`). */
+interface LoadStarts {
+  subscribe(event: "onBeforeLoad", listener: () => void): () => void;
+}
+
+/** Wires the rule to the app's router (`main.tsx`): counts load starts until the page load is over. */
+export function settleAfterPageLoad(router: LoadStarts): void {
+  const unsubscribe = router.subscribe("onBeforeLoad", () => {
+    if (noteLoadStart()) unsubscribe();
+  });
 }
 
 /** The root to reopen when this navigation is the fresh load at bare `/`, else undefined (the
