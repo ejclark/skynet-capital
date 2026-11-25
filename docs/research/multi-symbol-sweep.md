@@ -75,6 +75,10 @@ robust, alpha fragile — is the finding.
   [consumer-confidence-2026-11-24 close-out](events/consumer-confidence-2026-11-24.md). The headline printed **103.3**, **+11.4** from a revised 91.9 (+11.6 from the as-published 91.7), Expectations 83.6 (+9.9), with Democrats and Independents sharply up and Republicans slightly down.
   Do not extend two midterm precedents (Nov 2018, Nov 2022; both fell) into a restraint call on the next post-election print; the partisan offset was real and the headline rose anyway.
 
+- **"The Tuesday before Thanksgiving compresses the front of the vol curve: VIX9D/VIX closes below 0.9072 on 2026-11-24 (FT-case-shiller-hpi-2026-11-24-3)"** — added 2026-11-25 from the
+  [case-shiller-hpi-2026-11-24 close-out](events/case-shiller-hpi-2026-11-24.md). The ratio closed **26.68 / 26.36 = 1.0121**, with VIX at **35.89** two sessions earlier, making 2026 the third reading above 1.00 in sixteen years (2012 and 2018 are the others).
+  Do not register a fixed ratio bar for a holiday-week session without conditioning on the prior week's VIX level; the 0.8592 median came from a calm sample (VIX ~15.7 at registration) and says nothing about a stress week, and n=1.
+
 - **"ITB's session range on an FHFA House Price Index day stays under its release-day p75 (2.918%, n=68) with no regime condition (FT-fhfa-hpi-2026-11-24-3)"** — added 2026-11-25 from the [fhfa-hpi-2026-11-24 close-out](events/fhfa-hpi-2026-11-24.md). ITB ranged **3.558%** on 11-24 (H 96.18 / L 92.78 / C 95.56, +2.42% on the day) at a VIX close of 26.36, with the five prior sessions at 2.5-3.4%.
   Do not register an unconditional ITB range ceiling for a housing print; this is the second case after the pending-home-sales kill on this list, and the miss reads as regime, not release.
 
