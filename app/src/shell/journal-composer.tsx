@@ -60,12 +60,54 @@ function tradePost(draft: TradeDraft): JournalPost {
 
 type Result = { readonly ok: boolean; readonly text: string; readonly href?: string };
 
+interface Draft {
+  readonly choice: Choice;
+  readonly wish: string;
+  readonly experience: string;
+  readonly trade: TradeDraft;
+}
+
+const EMPTY_DRAFT: Draft = { choice: "wish", wish: "", experience: "", trade: EMPTY_TRADE };
+
+/** Unsent words outliving the composer that held them, for this page's life (#8500). The desktop
+ *  side panel's composer leaves when the window narrows past 1024px; widening back finds the words
+ *  where they were, the same rule as #8355's: only a confirmed send clears the box. In memory
+ *  only: a reload starts clean, and nothing unsent is written anywhere. */
+const KEPT_DRAFTS = new Map<string, Draft>();
+
+/** One piece of the draft as state; with a `keepAs` key it also lives in `KEPT_DRAFTS`, so a
+ *  composer mounted again under the same key starts from the words left in it. */
+function useDraftField<K extends keyof Draft>(
+  keepAs: string | undefined,
+  field: K,
+  empty: Draft[K],
+): readonly [Draft[K], (next: Draft[K]) => void] {
+  const [value, setValue] = useState<Draft[K]>(() =>
+    keepAs === undefined ? empty : (KEPT_DRAFTS.get(keepAs)?.[field] ?? empty),
+  );
+  const set = (next: Draft[K]) => {
+    // Written before the state, and even after unmount: a send that confirms once the panel has
+    // gone still clears the kept words, so they never come back as if unsent.
+    if (keepAs !== undefined) {
+      const kept = KEPT_DRAFTS.get(keepAs) ?? { ...EMPTY_DRAFT };
+      KEPT_DRAFTS.set(keepAs, { ...kept, [field]: next });
+    }
+    setValue(next);
+  };
+  return [value, set] as const;
+}
+
 /** @category feedback */
 export function JournalComposer({
   wishesEnabled,
   notesAvailable,
   notesReason,
+  keepDraftAs,
 }: {
+  /** Keep unsent words under this key when the composer leaves the page and comes back (the
+   *  desktop side panel's, which a narrowing window takes away). Absent, the draft is this
+   *  mount's own. */
+  readonly keepDraftAs?: string;
   /** A wish can be filed here (a GitHub token is set). */
   readonly wishesEnabled: boolean;
   /** Notes can be saved here (a session and a store). */
@@ -74,10 +116,14 @@ export function JournalComposer({
   readonly notesReason?: string;
 }): ReactElement {
   const queryClient = useQueryClient();
-  const [choice, setChoice] = useState<Choice>("wish");
-  const [wish, setWish] = useState("");
-  const [experience, setExperience] = useState("");
-  const [trade, setTrade] = useState<TradeDraft>(EMPTY_TRADE);
+  const [choice, setChoice] = useDraftField(keepDraftAs, "choice", EMPTY_DRAFT.choice);
+  const [wish, setWish] = useDraftField(keepDraftAs, "wish", EMPTY_DRAFT.wish);
+  const [experience, setExperience] = useDraftField(
+    keepDraftAs,
+    "experience",
+    EMPTY_DRAFT.experience,
+  );
+  const [trade, setTrade] = useDraftField(keepDraftAs, "trade", EMPTY_DRAFT.trade);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<Result | undefined>();
 

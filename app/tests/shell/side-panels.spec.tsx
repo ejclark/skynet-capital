@@ -1,6 +1,12 @@
 import { describe, expect, it } from "@rstest/core";
 import type { DeskPosition, DeskSnapshot } from "../../src/live/desk";
-import { heldRows, oldestRead, readTime, TONE_SHAPE } from "../../src/shell/side-panels";
+import {
+  figureTone,
+  heldRows,
+  oldestRead,
+  readTime,
+  TONE_SHAPE,
+} from "../../src/shell/side-panels";
 
 /**
  * #8297: the left panel's "What you hold" heads the panel when the member holds positions. WHEN
@@ -48,6 +54,14 @@ describe("heldRows", () => {
 describe("the move's shape and the read time", () => {
   it("pairs up with ▲ and down with ▼; flat wears none", () => {
     expect(TONE_SHAPE).toEqual({ pos: "▲", neg: "▼", flat: "" });
+  });
+
+  it("takes a figure's tone from its own sign, and '—' or a rounded zero as flat (#8500)", () => {
+    expect(figureTone("+1.20%")).toBe("pos");
+    expect(figureTone("-0.40%")).toBe("neg");
+    expect(figureTone("−0.40%")).toBe("neg");
+    expect(figureTone("+0.00%")).toBe("flat");
+    expect(figureTone("—")).toBe("flat");
   });
 
   it("names the oldest read among the accounts listed, skipping a failed one", () => {
