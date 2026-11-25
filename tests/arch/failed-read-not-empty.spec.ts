@@ -27,6 +27,8 @@ const ROUTES = "app/src/routes";
 /** The home's "Needs you" left the route for the shell in #8297 (the desktop panels stand it beside
  *  other pages); the scan follows it there so its anchor never goes blind. */
 const NEEDS_YOU = "app/src/shell/needs-you.tsx";
+/** The desktop side panels (#8297) read desks, filings and notes beside any page that takes them. */
+const SIDE_PANELS = "app/src/shell/side-panels.tsx";
 
 /** Reads a hub participant row's positions: `….getState().participants` plus a `.positions`. */
 const READS_HUB_POSITIONS = (text: string): boolean =>
@@ -122,7 +124,7 @@ describe.each([
   },
   {
     name: "app: a route's query must decide its failure",
-    dirs: [ROUTES, NEEDS_YOU],
+    dirs: [ROUTES, NEEDS_YOU, SIDE_PANELS],
     ext: /\.tsx?$/,
     applies: CALLS_QUERY,
     handles: MENTIONS_QUERY_ERROR,

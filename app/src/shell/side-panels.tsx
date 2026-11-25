@@ -4,12 +4,20 @@ import type { ReactElement, ReactNode } from "react";
 import { type DeskPosition, type DeskSnapshot, fetchDesk, type Tone } from "../live/desk";
 import { fetchFeedbackIndex } from "../live/feedback";
 import { fetchJournal, type JournalIndex } from "../live/journal";
-import { nextOpenLabel } from "../live/market-session";
+import {
+  localTimeSuffix,
+  marketSession,
+  nextOpenInstant,
+  nextOpenLabel,
+  viewerTimeZone,
+} from "../live/market-session";
 import { fetchSettings } from "../live/settings";
+import { FleetHealth, useFleet } from "./fleet-health";
 import { JournalComposer } from "./journal-composer";
 import { JournalNotes } from "./journal-notes";
 import { MarketSession, useNow } from "./market-session";
 import { NeedsYou, ScoreboardTile } from "./needs-you";
+import { HoursNotes } from "./session-status";
 import { useMediaQuery } from "./use-media";
 import { PANELS_QUERY } from "./widths";
 
@@ -59,14 +67,28 @@ export function readTime(iso: string): string {
   return at.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-/** One row per held position across the member's own accounts, biggest weight first. */
-export function heldRows(
-  snapshots: readonly DeskSnapshot[],
-): readonly { readonly position: DeskPosition; readonly account: string }[] {
+/** One row per held position, account by account in the member's own order, each account's
+ *  biggest weight first. A weight is a share of its own account, so it never ranks across two. An
+ *  error-tagged account is skipped: its `positions: []` is a failed read, never "holds nothing". */
+export function heldRows(snapshots: readonly DeskSnapshot[]): readonly {
+  readonly position: DeskPosition;
+  readonly accountId: string;
+}[] {
   return snapshots
     .filter((s) => !s.desk.error)
-    .flatMap((s) => s.desk.positions.map((position) => ({ position, account: s.desk.name })))
-    .sort((a, b) => b.position.weightPct - a.position.weightPct);
+    .flatMap((s) =>
+      [...s.desk.positions]
+        .sort((a, b) => b.weightPct - a.weightPct)
+        .map((position) => ({ position, accountId: s.desk.id })),
+    );
+}
+
+/** The oldest read among the accounts listed: the one time that is true of every row. */
+export function oldestRead(snapshots: readonly DeskSnapshot[]): string | undefined {
+  return snapshots
+    .filter((s) => !s.desk.error)
+    .map((s) => s.generatedAt)
+    .sort((a, b) => Date.parse(a) - Date.parse(b))[0];
 }
 
 function HeldNames(): ReactElement | null {
@@ -83,15 +105,15 @@ function HeldNames(): ReactElement | null {
   if (!desks.data) return null;
   const rows = heldRows(desks.data);
   if (rows.length === 0) return null;
-  const read = desks.data.find((s) => !s.desk.error)?.generatedAt;
+  const read = oldestRead(desks.data);
   return (
     <section className="dp-card dp-held" aria-labelledby="dp-held-title">
       <h2 id="dp-held-title" className="home-eyebrow">
         What you hold
       </h2>
       <ul className="dp-held-rows">
-        {rows.map(({ position: p, account }) => (
-          <li key={`${account}:${p.symbol}`}>
+        {rows.map(({ position: p, accountId }) => (
+          <li key={`${accountId}:${p.symbol}`}>
             <Link className="dp-held-row" to="/accounts">
               <span className="dp-held-name">
                 <span className="dp-held-symbol">{p.display}</span>
@@ -116,15 +138,26 @@ function HeldNames(): ReactElement | null {
   );
 }
 
-/** The opened clock and the next open: the top bar's folded clock steps aside while it stands. */
+/** Everything the top bar's opened status panel says, standing: the clock, the next open (in
+ *  the viewer's own time too), the hours notes (a half day, or hours from the published table when
+ *  the broker's calendar didn't answer) and fleet health. The bar's line steps aside while it
+ *  stands (`side-panels.css`), so nothing the line opened is lost at this width. */
 function PanelClock(): ReactElement {
   const now = useNow();
+  const fleet = useFleet();
+  const local = localTimeSuffix(nextOpenInstant(now), viewerTimeZone());
   return (
-    <section className="dp-card dp-clock" aria-label="Market clock">
+    <section className="dp-card dp-clock" aria-label="Market clock and fleet health">
       <MarketSession now={now} />
-      <p className="dp-clock-next">
-        <span>Next open</span> <span className="num">{nextOpenLabel(now)}</span>
+      <p className="status-panel-row">
+        <span>Next open</span>
+        <span className="num">
+          <span>{nextOpenLabel(now)}</span>
+          {local ? <span className="status-panel-local">{local}</span> : null}
+        </span>
       </p>
+      <HoursNotes view={marketSession(now)} />
+      <FleetHealth fleet={fleet} />
     </section>
   );
 }
@@ -150,11 +183,19 @@ function JournalCard(): ReactElement {
       <h2 id="dp-journal-title" className="home-eyebrow">
         Journal
       </h2>
-      <JournalComposer
-        wishesEnabled={Boolean(feedback.data?.enabled) && journal.wishesEnabled}
-        notesAvailable={journal.available}
-        notesReason={journal.reason}
-      />
+      {/* As Profile's section does: the composer waits for the filings read, so a pending or
+          failed read is never shown as "filing is switched off" (#8316's rule). */}
+      {feedback.data ? (
+        <JournalComposer
+          wishesEnabled={feedback.data.enabled && journal.wishesEnabled}
+          notesAvailable={journal.available}
+          notesReason={journal.reason}
+        />
+      ) : (
+        <p className="note">
+          {feedback.isError ? "Your journal is unreachable right now." : "Opening your journal…"}
+        </p>
+      )}
       <JournalNotes
         notes={journal.notes.slice(0, 1)}
         available={journal.available}

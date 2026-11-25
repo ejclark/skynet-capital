@@ -115,17 +115,47 @@
   color: var(--muted);
 }
 
-/* ── The clock ── */
-.dp-clock-next {
-  margin: 8px 0 0;
+/* ── The clock: the status panel's rows, sized for a 280px panel ── */
+.dp-clock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.35;
+}
+.dp-clock .status-panel-row {
+  margin: 0;
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  font-size: 13px;
+}
+.dp-clock > .status-panel-row > span:first-child {
+  white-space: nowrap;
   color: var(--muted);
 }
-.dp-clock-next .num {
-  color: var(--text);
+.dp-clock .status-panel-row .num {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
+.dp-clock > .status-panel-row[data-note] > span:first-child {
+  white-space: normal;
+}
+/* Fleet health: the bar's panel lays it out as `display: contents` in a row; here it is its own
+   wrapping line, its rows (when asked for) below. */
+.dp-clock .fleet-health {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 8px;
+}
+.dp-clock .fleet-summary {
+  min-width: 0;
+}
+.dp-clock .fleet-health .ops-rows-wrap {
+  flex-basis: 100%;
 }
 
 /* ── The Journal ── */
