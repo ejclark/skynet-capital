@@ -1,4 +1,6 @@
 // Type surface for scripts/moneypenny/decisions-page.mjs (see index.d.mts).
+
+import type { HeldBlock } from "../held-pr.mjs";
 import type { ReplyComment } from "./answer-readback.mjs";
 import type { AskItem } from "./ask-card.mjs";
 
@@ -8,12 +10,17 @@ export const PAGE_LABEL: string;
 export const RECEIPT_OPEN: string;
 export const KEEP_RETIRED_MS: number;
 export const REUSE_AFTER_MS: number;
+/** A held PR he was pinged about is not pinged again inside this (#7317). */
+export const HELD_PING_MS: number;
 
 export interface PageState {
-  entries: { n: number; issue: number; since: number }[];
+  /** `ask` is the card snapshot an answered ask keeps until its reply is receipted (#8060). */
+  entries: { n: number; issue: number; since: number; ask?: { title: string; items: AskItem[] } }[];
   retired: { n: number; issue: number; since: number; until: number }[];
   pinged: number[];
   pingedAt: number;
+  /** Held PRs pinged, and when: a day's memory, so a restarted check never earns a second ping. */
+  heldPinged: { n: number; at: number }[];
 }
 export interface PageIssue {
   number: number;
@@ -32,6 +39,22 @@ export interface NeedsYouRow {
   criterion: number;
   why?: string;
   decision?: string | null;
+  /** Criterion 4 (held PR): green clock or open clock, its hours, and what it blocks (#7317). */
+  green?: boolean;
+  hours?: number;
+  blocks?: HeldBlock[];
+  /** Its check runs could not be read: the page and the ping say "checks unknown" (#8212). */
+  unknown?: boolean;
+}
+/** A held PR as the page lists it: a criterion-4 row, or a merge ask with only its link. */
+export interface HeldRow {
+  number: number;
+  title?: string;
+  green?: boolean;
+  hours?: number;
+  blocks?: HeldBlock[];
+  /** Its check runs could not be read: the page and the ping say "checks unknown" (#8212). */
+  unknown?: boolean;
 }
 export interface ReadbackIntent {
   kind: "readback-eric";
@@ -74,7 +97,8 @@ export function nextState(
 export function renderPage(input: {
   state: PageState;
   asks: Map<number, { issue: number; title: string; items: AskItem[]; rank: number }>;
-  held?: readonly { number: number; title?: string }[];
+  held?: readonly HeldRow[];
+  answered?: ReadonlySet<number>;
 }): string;
 export function receiptedIds(comments?: readonly ReplyComment[]): Set<number>;
 export function isDecisionsReply(payload: unknown): boolean;
@@ -86,5 +110,8 @@ export function planDecisions(input: {
   closing?: Set<number>;
   now: number;
 }): { intents: DecisionsIntent[]; body: string; state: PageState };
-export function pingComment(newcomers: readonly { n: number; issue: number }[]): string;
+export function pingComment(
+  newcomers: readonly { n: number; issue: number }[],
+  newHeld?: readonly HeldRow[],
+): string;
 export function clip(s: unknown, n: number): string;

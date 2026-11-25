@@ -1,0 +1,43 @@
+{
+  "$comment": "Input 'linked-this-morning' (#8005, every area's first day), layered over bot-loop-today: the same Monday, and Casey's first day. Casey was invited last week and linked a paper account this morning: cash only, nothing bought, no bot, nothing watched or written. The league's first-day world (league-first-day) reads it as an account joining the field with no month behind it; the ladder's (ladder-first-day) as onboarding's account step done and no rung earned. The account's history is its opening balance at the link and now (book.mjs derives the second).",
+  "base": "bot-loop-today",
+  "members": [
+    {
+      "email": "eric@study.world",
+      "name": "Eric",
+      "owns": ["eric", "sauron"]
+    },
+    {
+      "email": "jordan@study.world",
+      "name": "Jordan",
+      "owns": ["jordan", "day-trader"]
+    },
+    {
+      "email": "casey@study.world",
+      "name": "Casey",
+      "owns": ["casey"]
+    }
+  ],
+  "participants": {
+    "casey": {
+      "displayName": "Casey",
+      "kind": "human",
+      "cash": 25000,
+      "realizedPl": 0,
+      "positions": []
+    }
+  },
+  "history": {
+    "$comment": "Casey's account from the link this morning: its opening balance, then now (derived as cash, since nothing is held).",
+    "casey": [
+      {
+        "at": "@0d 09:40",
+        "equity": 25000
+      },
+      {
+        "at": "@now",
+        "equity": 0
+      }
+    ]
+  }
+}

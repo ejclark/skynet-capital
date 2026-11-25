@@ -11,10 +11,11 @@ claude.ai side cannot drift from them. **Armed 2026-11-11 on Eric's word in chat
 Both loops are event-driven by design: the audit starts at 6 merged code PRs, the flip starts when the
 lanes' pullable queue is below the work dial's cap. What no repository event does is *notice* either
 condition: a merge is not a tick for the flip, and a queue draining is not a tick for the audit. One
-daily read of both due-checks is the cheapest honest notice: a quiet day costs two REST reads and ends
-there (ROUTINES.md → *No-op must be free*). The platter sweep (step 4, #7939) rides the same clock
-for the same reason: a held PR going green, or main moving under the platter, is no event either; a
-quiet day costs one more read.
+daily read of both due-checks is the cheapest honest notice: a quiet day costs two REST reads for the
+due-checks and ends there (ROUTINES.md → *No-op must be free*); the scorecard (step 6, #8199) adds
+about 20 more, the price of sensing #8161's numbers every day. The platter sweep (step 4, #7939)
+rides the same clock for the same reason: a held PR going green, or main moving under the platter,
+is no event either; a quiet day costs one more read.
 
 **Run time: daily at 10:00 America/Chicago, after the morning steer** (settled 2026-11-11, the
 predicted answer to #7311's open question). The next surge measures whether a weekday-only schedule
@@ -32,7 +33,7 @@ would have missed a loop.
    - `due: true` → run the `post-merge-audit` workflow with the `run:` args the script printed
      (`prs`, `through`, `file: true`). The filing and the marker move are the script's job
      (`scripts/audit-file.mjs`); the session files nothing by hand and edits no marker.
-3. **Flip.** `node scripts/flip-due.mjs --json`.
+3. **Flip.** `node scripts/flip-due.mjs --json`. It is due when the lanes are starved **or** the pile is over the line (more than 20 un-readied `feedback`, or the oldest over 14 days; #8037), and `because` says which. The list may carry `plan` issues untouched for 14 days.
    - `due: false` → note it, go to step 4.
    - `due: true` → run the `clear-path-flip` workflow with `{issues: [<the listed numbers>]}` (at most
      6), save its returned object as JSON, run `node scripts/clear-path-post.mjs <file> --dry-run`,
@@ -64,10 +65,21 @@ would have missed a loop.
      never two classes in one.
    - For each class in `sendBack`: the same branch steps with `--send-back "<class>"` and a normal
      `/ship` PR (no `--hold`): sending a class back only returns asks to him, so it needs no tap.
-6. **Report in one line.** `loops: audit <due|not due>[, filed N bugs, M proposals] · flip <due|not
+   - Then `node scripts/profile-scan.mjs --misses --route` (#8197): every miss no line in
+     `docs/members/eric.md` or `docs/READERS.md` cites as `ALIGNMENT <date> · <ask id>` goes to ONE
+     ready `feedback` issue (opened, or its body refreshed), which the build lane closes by editing
+     the profile. `profile clean` → nothing filed. Keep `profile <clean|routed N>` for step 7.
+6. **Scorecard** (#8199, the sense step of #8161 stage 3). `npm run -s loop:scorecard -- --json`
+   prints #8161's six numbers, each with its goal and its source, and a ready-made `clause`. It
+   always exits 0 and never gates: a row it cannot read says `unavailable`, one whose source is not
+   built yet says `pending`. Keep the `clause` for step 7. This step decides and builds nothing: an
+   off-goal row is reported, never acted on here. About 20 REST reads.
+7. **Report in one line.** `loops: audit <due|not due>[, filed N bugs, M proposals] · flip <due|not
    due>[, readied N of M] · platter <clean|rebuilt #N → #M>[, adopted N] · graduate <none|opened #N for
-   <class>|PR open|sent back <class>>`. A day with nothing due ends here: that line is the whole run.
-   The Routine writes no digest of its own.
+   <class>|PR open|sent back <class>> · profile <clean|routed N> · scorecard <n> open · <n> asks · <n> two-home · journeys
+   <green|red|unknown> · phone <value|pending> · back <value|pending>` (the last clause is step 6's
+   `clause`, verbatim; a number it could not read is `?`). A day with nothing due ends here: that
+   line is the whole run. The Routine writes no digest of its own.
 
 ## What it may not do
 
@@ -76,8 +88,8 @@ would have missed a loop.
 - Flip an issue the scripts did not list, or flip past the clear-path workflow's own refusals.
 - Use `fast-track` beyond what `audit-file.mjs` applies (member, money and state findings, five a run,
   #6319).
-- Run on a `due: false` day beyond the cheap reads: the two due-checks, the platter sweep, and step
-  5's ledger read and check.
+- Run on a `due: false` day beyond the cheap reads: the two due-checks, the platter sweep, step
+  5's ledger read, check and profile scan, and step 6's scorecard.
 - Merge, arm or un-hold the platter, or push any branch but the `platter/<date>` it rebuilds or
   boards onto and step 5's `alignment/graduate-*` or `docs/` branches. It never force-pushes and
   never resolves a conflict on a platter.

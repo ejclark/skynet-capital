@@ -1,3 +1,4 @@
+import { fixedPct } from "../domain/percent.js";
 import { headlineRow, type LadderDrop, type LadderResult } from "./position-guidance-ladder.js";
 import {
   actionable,
@@ -5,7 +6,6 @@ import {
   coverableLots,
   dayText,
   optionsCutoff,
-  pct,
   richnessCap,
   spanText,
   strikeFloor,
@@ -44,7 +44,7 @@ export const why = (rule: GuidanceReason["rule"], text: string): GuidanceReason 
 /** "about a 20% chance" / "about an 18% chance" — the article follows how the number is said
  *  aloud: eight, eleven, eighteen and eighty-something take "an". */
 function aboutChance(p: number): string {
-  const text = pct(p);
+  const text = fixedPct(p);
   return `about ${/^(8|1[18](?!\d))/.test(text) ? "an" : "a"} ${text} chance`;
 }
 
@@ -126,7 +126,7 @@ function richWhy(r: Richness): GuidanceReason {
     );
   }
   if (r.basis === "iv-vs-realized" && r.atmIv !== undefined && r.realizedVol !== undefined) {
-    const priced = `Options are pricing moves of about ${pct(r.atmIv)} a year; the stock has actually moved about ${pct(r.realizedVol)}`;
+    const priced = `Options are pricing moves of about ${fixedPct(r.atmIv)} a year; the stock has actually moved about ${fixedPct(r.realizedVol)}`;
     const verdict =
       r.verdict === "rich"
         ? "sellers are being paid well for the risk"
@@ -174,7 +174,7 @@ function noBand(ctx: LeverContext, which: LeverCall["lever"]): LeverCall {
 const receive = (row: LadderRow, kind: "call" | "put"): GuidanceReason =>
   why(
     "PRICE-AT-BID",
-    `The best fit: 1 ${kind} at the ${usd(row.strike)} strike, expiring ${dayText(row.expiration)}. You receive ${usd(row.bid * 100)} now — yours whatever happens (≈${pct(row.annualizedYield)} a year only if you could repeat it every time).`,
+    `The best fit: 1 ${kind} at the ${usd(row.strike)} strike, expiring ${dayText(row.expiration)}. You receive ${usd(row.bid * 100)} now — yours whatever happens (≈${fixedPct(row.annualizedYield)} a year only if you could repeat it every time).`,
   );
 
 function notAvailable(

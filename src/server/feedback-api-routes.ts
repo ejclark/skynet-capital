@@ -65,7 +65,7 @@ async function serveIndex(
       : undefined;
   // A filing matched to a known problem is fixed when that problem's fix ships (#8005 slice 7):
   // the row says so here, with the screen to try it on.
-  const fixes = await knownProblemFixes(recent, config.fetchFeedbackStatus);
+  const fixes = await knownProblemFixes(recent, config.fetchBuiltPlans);
   // The community milestone track — same identity, same "never trust the client" posture
   // as everything else on this route: the view is derived server-side from the same log.
   const community =
@@ -96,6 +96,8 @@ async function serveIndex(
       kind: e.kind,
       filedAt: e.filedAt,
       url: e.url,
+      // A wish from the journal (#8190), for the Journal section (its next slice) to mark "Wish".
+      ...(e.source ? { source: e.source } : {}),
       ...(statuses?.get(e.issueNumber) ? { status: statuses.get(e.issueNumber) } : {}),
       ...(fixes.get(e.issueNumber) ? { fixed: fixes.get(e.issueNumber) } : {}),
     })),

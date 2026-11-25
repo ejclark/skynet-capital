@@ -37,7 +37,12 @@ whether it's ready.
    - **A process-file diff, when asked** (see *The process-file lens* below).
 3. **Judge correctness first, then taste:**
    - Does the change do what it claims? Read the tests it added or changed — do they actually assert
-     the claimed behavior, or do they assert something weaker that happens to pass?
+     the claimed behavior, or do they assert something weaker that happens to pass? For each test,
+     name the real caller or entry point the defect would travel through. Report it when the spec
+     drives a stand-in instead of what production passes for something the change reads or writes (a
+     response that swallows writes and never disconnects, a dependency returning live data where
+     production passes a stored or degraded one, an assertion like `> 0` or truthy that the wrong
+     value also meets), or when no test drives that real entry point at all.
    - Any edge case the diff's own logic implies but doesn't handle (an empty list, a zero value, a
      boundary the code's conditionals suggest but never test)?
    - Does it introduce or leave behind dead code, an unused export, or a duplicate of something that
@@ -45,10 +50,31 @@ whether it's ready.
      duplication gates' job (`docs/COACHES.md`), and re-litigating it here duplicates their function.
    - For every check the diff adds or changes, name the signal it reads against the real effect it
      claims, and report it when the signal can be true while the effect is not.
+   - For every check that treats a declared list, event name, status string or field name as proof of
+     a fact, open the real artifact or a live payload it describes and compare it with the declared
+     set; report the check when the two can differ, or name the read you could not make (never
+     create an event to get one). A fixture the PR hand-wrote is not that comparison (judge it as a
+     stand-in under the test question above); one whose spec says where it was recorded is.
    - For every read that feeds a verdict, say what it returns when it fails or its window holds no
      sample, and report it if that equals the all-clear answer.
+   - When the diff adds code that parses or windows real repo history (PR bodies, git log, digests),
+     replay it over the last 20 to 50 real merged PRs or commits on `origin/main` and report any it
+     drops, splits or leaves out of every window. A spec built from one hand-made shape, or a window
+     start given as a date where a commit instant exists, is not that proof.
    - When the diff adds a new way to close, park, label or exempt something, grep every reader of that
      state and say what each now sees.
+   - When the diff relaxes a condition in a predicate several callers share, or adds a new kind or
+     value to a shared flag, enum or marker, grep every caller and reader of it, not only the one the
+     task names, and say what each now returns for an input the task never mentioned.
+   - For every test a diff uses to decide 'this is already done or in flight' (a file exists, an id was
+     seen, an open PR holds the branch), say what re-opens it when the new request differs from the old
+     and how long a stalled one can hold the slot, and report any marker with neither a re-open path
+     nor an age limit.
+   - For every link or router call that jumps to an in-app hash (any call without
+     `hashScrollIntoView: false`), name the view it lands on with the link's own query params, and
+     report it when no element with that id renders there or the target has no `scroll-margin-top`
+     clearing the sticky head (under the cockpit head, the measured `--landing-clear` that
+     `publishClearance` writes in `app/src/shell/landing.ts`).
    - Any new comment that narrates history instead of stating a non-obvious WHY — a bare issue/PR
      number, "used by X", "added for the Y flow" (docs/ENGINEERING.md's WHY-vs-narration split)? Flag
      it for deletion; git blame and the PR already carry that history.

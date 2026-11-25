@@ -1,3 +1,4 @@
+import { DATE_RE } from "../domain/time.js";
 import { spanText } from "./position-guidance-rules.js";
 import type {
   GuidanceInputs,
@@ -23,8 +24,6 @@ import type {
 const positive = (x: number | undefined): x is number =>
   x !== undefined && Number.isFinite(x) && x > 0;
 
-const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
-
 /** An open call the rules can reason about honestly: a real strike, expiry, size and premium. A
  *  quote that isn't a positive number is dropped, so "no price to buy it back at" says so. */
 function cleanOpenCalls(calls: readonly OpenCall[]): OpenCall[] {
@@ -34,7 +33,7 @@ function cleanOpenCalls(calls: readonly OpenCall[]): OpenCall[] {
         positive(c.strike) &&
         positive(c.contracts) &&
         positive(c.premium) &&
-        ISO_DAY.test(c.expiration),
+        DATE_RE.test(c.expiration),
     )
     .map((c) => ({
       occ: c.occ,
@@ -54,7 +53,7 @@ function cleanHeldOption(c: HeldLongOption): HeldLongOption | undefined {
       positive(c.strike) &&
       positive(c.contracts) &&
       positive(c.costPerContract) &&
-      ISO_DAY.test(c.expiration)
+      DATE_RE.test(c.expiration)
     )
   )
     return undefined;

@@ -47,8 +47,13 @@ The end time comes from **`get_usage`'s `resetsAt`**, never from a clock rule: t
 2026-10-26. A surge's label needs no revert scheduled, because it reads `normal` at its end time by
 itself, and the reader holds any surge to the next weekly reset whatever its comment says.
 
-1. **Read the reset.** Call `get_usage` and take `resetsAt`, in UTC. If it differs from the next
-   reset by `weeklyResetAnchor` in `work-mode.json`, also open a small PR correcting the anchor:
+1. **Read the reset.** Call `get_usage` and take `resetsAt`, in UTC. Not every session has
+   `get_usage`; then call `get_session` with no id (this session) and read
+   `external_metadata.rate_limit_info`. Its `resetsAt` (epoch seconds) is the weekly reset only
+   when `rateLimitType` reads `seven_day`; any other type is that limit's reset, so fall back to
+   `weeklyResetAnchor` and change nothing (2026-11-24: `seven_day`, 1795496400 = 05:00Z). If the
+   reading differs from the next reset by `weeklyResetAnchor` in `work-mode.json`, also open a
+   small PR correcting the anchor:
    a phone tap's surge and the reader's limit both come from that value.
 2. **Set the dial.** One command; the comment quotes Eric's words with a UTC time and carries
    `surge until <resetsAt, e.g. 2026-11-03T05:00:00Z>` (the shape: the 2026-10-26 23:12Z comment on
@@ -62,7 +67,7 @@ itself, and the reader holds any surge to the next weekly reset whatever its com
 
 Eric, 2026-10-26 23:20Z: *"If churn is a concern, improve orchestration to manage WIP, complete
 WIP, then resume making improvements."* **Before every new wave, count agent-owned WIP; if it is
-over 6 (surge's `inFlightCap` in `work-mode.json`), start nothing — finish first.**
+over surge's `inFlightCap` in `work-mode.json` (10 since 2026-11-23), start nothing — finish first.**
 
 | Counts as WIP | How to count it | How to finish it |
 |---|---|---|
@@ -76,20 +81,37 @@ over 6 (surge's `inFlightCap` in `work-mode.json`), start nothing — finish fir
 
 A wave is 4–8 child sessions (`create_session`, tagged `issue:<n>`, cloud, `docs/COMPUTE.md`
 routing — never a tier picked to save tokens; this is the one time spare quota is the point).
+**Every child gets `source_url: https://github.com/ejclark/skynet-capital` and an
+`outcome_branch`.** Name the branch yourself (e.g. `claude/surge-<n>-<slug>`, or the existing
+PR's branch when the child is finishing one), pass it as `outcome_branch`, and tell the child in
+its prompt to cut and push only that branch. A child created without them has no repo it may push
+to, and its own `add_repo` is refused by its permission classifier: on 2026-11-24 six children
+in a row (three at 03:29Z, three at 04:01Z) built or diagnosed, then stalled unable to push, and
+were respawned at 04:18Z.
 Sources, in pull order (`npm run rank`):
 
-- **The Ready queue** — `/work-issues` in each child, one issue per child.
+- **The Ready queue** — `/work-issues` in each child, one issue per child. The orchestrator
+  admits the issue (`node scripts/moneypenny/admission.mjs --check <n>`) and labels it
+  `in-progress` before it dispatches, and its prompt tells the child to skip /work-issues' QUEUE
+  and `--check` steps and build #<n>: both refuse an `in-progress` issue.
+  **For an issue the child will ship in more than one PR, its prompt names the hold, taken once**:
+  `node scripts/moneypenny/index.mjs --hold feedback-<n>` (or `plan-<n>`) after admission, never
+  before it, since the hold's `session-held` label makes an admission check refuse the issue
+  (#8389), and `--release` on every terminal outcome. A label alone comes off at the first merge,
+  and the lane then builds the next PR beside the child (#8314).
 - **Triage backlogs** — Backlog `feedback` issues that might be clear: batch their numbers into
   **`.claude/workflows/clear-path-flip.js`** (`{issues: [...]}`), save the result as JSON, run
   `node scripts/clear-path-post.mjs <file> --dry-run`, then without `--dry-run`. Gate on its exit
-  status, never through `| tail`. Survivors become the next wave's Ready work.
+  status, never through `| tail`. Survivors become the next wave's Ready work, for a child only
+  once still unclaimed after a tick (§4).
   **Send at most 6 issues per run.** For more, launch runs of 6 or fewer together and post each one
   as it lands. Why: a run caps how many agents it runs at once (2 in a 4-CPU cloud container), and
   its refuters queue behind every judge, so one long list posts nothing until the whole list is
   judged, and a usage stop strands every judged issue (#6711: 0 flips 50 minutes into a run of 33).
   A run of 6 took 5.5 minutes on a laptop (2026-11-10).
 - **Debt** — `/governor` cycles (surge allows 8 dispatches a cycle).
-- **Fan-out from findings** — a bug found mid-wave is filed `bug` + `fast-track` and pulled next.
+- **Fan-out from findings** — a bug found mid-wave is filed `bug` + `fast-track`; the lane
+  self-readies it and pulls it next, never a child (§4).
 
 After each wave merges, run **`.claude/workflows/post-merge-audit.js`** (`{prs: [...]}`) over its
 PRs; it routes money/state/auth PRs to the deep tier and skips docs-only ones by itself. Ration
@@ -122,6 +144,13 @@ reverts.
   onto the new platter tip, re-verify. Never force-push the platter.
 - **A ready issue nothing builds.** The lane takes every ready non-plan issue (#6219); if one
   still sits Ready past a tick, check `pullable()` before re-flipping it.
+- **A fresh `fast-track` bug belongs to the lane, not to a child.** The lane self-readies and
+  claims an audit's `fast-track` filings within about a minute, and a child dispatched in that
+  minute builds the same fix a second time (#8352, #8353, #8355). Give children only what no
+  lane will take: `needs-session` issues, protected work boarding the platter, a slice of a
+  multi-PR issue the session already holds, and a ready issue still unclaimed after a tick:
+  `node scripts/moneypenny/index.mjs --check-claim feedback-<n>` prints `claimed: false` and
+  the issue carries no `in-progress`. A plan is the plan lane's as soon as it reads `ready`.
 - **Subagent text arrives HTML-escaped** (`&lt;`) — unescape before posting
   (`clear-path-post.mjs` does).
 

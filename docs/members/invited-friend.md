@@ -60,14 +60,13 @@ for, and seeing one would read as "I am in the wrong place".
 
 ## 5. What frustrates them
 
-- **The playbook names of another member's bot (fixed, #3834)** — `docs/IA.md` §5.2 says a
-  non-owner's `/u/<bot>` Heartbeat withholds playbook ids (#885). A non-owner's copy of
-  `/api/desk/<bot>/heartbeat` and of its decisions carries no `playbookId`
-  (`src/server/desk-json-routes.ts` → `withoutHeartbeatPlaybookIds`, `src/server/desk-owner-gate.ts`),
-  and the page never draws them (`app/src/shell/bot-playbooks.tsx`, `showPlaybooks` false for a
-  non-owner, down to `decisions-section.tsx`'s playbook chip). Offline no
-  decision trail is wired, so j3 s2 still passes on absent data. A crawl boot that wires one turns
-  it into a real check.
+- **The playbook names of another member's bot (fixed, #3834; reversed for bots, #8254)** — a
+  non-owner's copy once withheld a bot's playbook ids (#885). Since 2026-11-24 a signed-in member
+  reads them, named by strategy ("The wheel on CRWV" with its plain line, never the raw id), on
+  the heartbeat, decisions, thesis and feed (`src/server/desk-owner-gate.ts` → `playbookRead`);
+  the broker's words, the retire rule, the drawn play and the way to change a playbook stay the
+  owner's (`app/src/shell/bot-playbooks.tsx`, `owned`). j3 s2 checks the names read as strategies
+  and that no change link renders.
 - Nothing else on the boundary: every j1 step holds today, at both widths. The friend meets the
   same probe findings every member meets (disabled Activity rows with no reason) — the ledger
   carries those.
@@ -130,9 +129,10 @@ on its step; the line flips to fixed with the fix.
    app shall show its book read-only, with no control that would write to it.** Judge: can this
    reader tell they are looking, not trading?
 2. `/app/u/sauron/playbooks` — Playbooks (Heartbeat merged in as its top strip, #5073); offline,
-   "No decision trail is wired in this deployment." **WHEN the invited friend reads another
-   member's bot's playbooks, the app shall not name the playbooks it runs.** Passes offline on
-   absent data (§5). Judge: can this reader tell the bot is alive without learning its playbooks?
+   each card named by its strategy with its plain line. **WHEN the invited friend reads another
+   member's bot's playbooks, the app shall name each by its strategy, never its raw id, and offer
+   no way to change it.** (#8254 lifted #885 for bot accounts, 2026-11-24.) Judge: can this reader
+   tell what the bot runs, and that it is not theirs to change?
 
 ### j4 — my bot
 

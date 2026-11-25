@@ -70,6 +70,19 @@ describe("decisionSink", () => {
     expect(recorded).toHaveLength(1);
   });
 
+  it("moves the bot's vitals pulse with every decision, and a throwing pulse never fails the cycle (#4220)", () => {
+    const pulses: string[] = [];
+    decisionSink(undefined, undefined, (r) => pulses.push(r.personaId))(decision());
+    expect(pulses).toEqual([decision().personaId]);
+    const throwing = () => {
+      throw new Error("pulse broke");
+    };
+    const recorded: DecisionRecord[] = [];
+    const db = { record: (r: DecisionRecord) => recorded.push(r) };
+    expect(() => decisionSink(undefined, db as never, throwing)(decision())).not.toThrow();
+    expect(recorded).toHaveLength(1); // the decision still lands
+  });
+
   it("is a no-op with neither sink configured — never throws", () => {
     expect(() => decisionSink(undefined, undefined)(decision())).not.toThrow();
   });

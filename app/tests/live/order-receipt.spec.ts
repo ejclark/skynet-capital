@@ -209,7 +209,9 @@ describe("the note", () => {
     receiptNote(read(order, r, fill), market);
 
   it("says queued, with the open it waits for, while the market is closed and nothing filled", () => {
-    expect(note(undefined, closed)).toBe("Queued — nothing fills before the Tue 9:30 ET open.");
+    expect(note(undefined, closed)).toBe(
+      "Queued — nothing fills before the Tue 9:30 ET open, in 13h 30m.",
+    );
   });
 
   it("never says 'simulated fill' in session before a source carries a fill", () => {

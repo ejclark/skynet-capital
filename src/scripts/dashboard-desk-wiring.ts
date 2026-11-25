@@ -80,7 +80,10 @@ export interface QuoteStreamWiringDeps {
  * The live half of the quote stream (#3407 P4): the hub, bound to a real Alpaca market-data socket
  * per member. Read through the LIVE roster on every call, same as `clientFor` — so an account added
  * or rotated at runtime streams on the next page view, not the next restart. A member with no
- * key/secret pair (an OAuth link) gets `undefined`, which the hub turns into a sentence.
+ * key/secret pair (a Connect link) gets `undefined`, which the hub turns into a sentence. That is
+ * our wiring, not an Alpaca limit: the poller below is built from the pair, and the Connect scope
+ * (`ALPACA_DEFAULT_SCOPE`, alpaca-connect.ts) asks for no `data` scope, while Alpaca's OAuth guide
+ * says "The OAuth Token can be used to authenticate for Market Data Stream." Step 5 of #8161 lifts it.
  *
  * Known limit, stated rather than plumbed: a credential rotated WHILE a socket is open leaves that
  * one socket on the old key until the member's page reconnects. `AlpacaMarketDataStream` has

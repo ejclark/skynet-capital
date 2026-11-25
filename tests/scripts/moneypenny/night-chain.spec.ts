@@ -248,6 +248,74 @@ describe("a freed build slot wakes the queue — merge or no merge", () => {
   });
 });
 
+// #6942, 2026-11-24: run 45304863363's wake died on the peek's read of the `ready` list with the
+// App's REST budget at 0, and the red run reopened the CI capsule over a quota. The message is the
+// one `gh` printed there.
+describe("a wake when the token's API budget is spent", () => {
+  const SPENT = new Error("gh: API rate limit exceeded for installation ID 157155153. (HTTP 403)");
+  const spentPeek = () => {
+    throw SPENT;
+  };
+
+  it("skips the dispatch with a warning when the peek's read hits the budget", () => {
+    let dispatches = 0;
+    const result = wakeNext({ freed: 4469, peek: spentPeek, dispatch: () => dispatches++ });
+    expect(dispatches).toBe(0);
+    expect(result).toMatchObject({ dispatched: false });
+    expect(result.line).toMatch(/API budget spent; the wake waits for the next push/);
+  });
+
+  it("skips too when the lease check behind a self-pick hits the budget", () => {
+    let dispatches = 0;
+    const result = wakeNext({
+      freed: 4469,
+      peek: () => ({ number: 4469 }) as never,
+      isHeld: () => {
+        throw SPENT;
+      },
+      dispatch: () => dispatches++,
+    });
+    expect(dispatches).toBe(0);
+    expect(result.dispatched).toBe(false);
+  });
+
+  it("still fails on a read failure that is not the budget", () => {
+    const peek = () => {
+      throw new Error("gh: Not Found (HTTP 404)");
+    };
+    expect(() => wakeNext({ freed: 4469, peek, dispatch: () => undefined })).toThrow(/HTTP 404/);
+  });
+
+  // Run 45333646409 (05:29Z): the peek named #8225, then `gh workflow run` itself answered the
+  // 403, and the red run reopened #6942 a 27th time. Red recovers nothing; the next push dispatches.
+  it("skips with a warning when the dispatch itself hits the budget, naming the pick it held", () => {
+    const SPENT_DISPATCH = new Error(
+      "Command failed: gh workflow run moneypenny-events.yml --ref main -f command=scan\nHTTP 403: API rate limit exceeded for installation ID 157155153.",
+    );
+    let tries = 0;
+    const result = wakeNext({
+      freed: 8213,
+      peek: () => ({ number: 8225 }) as never,
+      dispatch: () => {
+        tries++;
+        throw SPENT_DISPATCH;
+      },
+    });
+    expect(tries).toBe(1);
+    expect(result).toMatchObject({ dispatched: false, pick: 8225 });
+    expect(result.line).toMatch(/#8225 is admissible, but the API budget is spent/);
+  });
+
+  it("still fails when the dispatch is refused for anything but the budget", () => {
+    const dispatch = () => {
+      throw new Error("Command failed: gh workflow run\nHTTP 404: workflow not found");
+    };
+    expect(() =>
+      wakeNext({ freed: 4469, peek: () => ({ number: 4616 }) as never, dispatch }),
+    ).toThrow(/HTTP 404/);
+  });
+});
+
 describe("--end-build: every ending takes in-progress off; the lease stays", () => {
   it("takes the label off the build's issue, and writes nothing else", () => {
     const writes: string[] = [];

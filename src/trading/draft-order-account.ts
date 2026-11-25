@@ -3,7 +3,7 @@ import { coverLegOf, type DraftOrder, type DraftVerdict, draftSymbols } from "./
 import { draftRequirements } from "./draft-order-requirements.js";
 import { heldShares } from "./option-economics.js";
 import { parseOccSymbol } from "./option-symbols.js";
-import type { TicketHolding } from "./order-ticket.js";
+import { ACCOUNT_UNREAD_REFUSAL, type TicketHolding } from "./order-ticket.js";
 
 /**
  * SLICE 2's account-facing half — the seam `draft-order.ts`'s `validate()` was built to take
@@ -17,6 +17,9 @@ import type { TicketHolding } from "./order-ticket.js";
 export interface DraftAccountContext {
   readonly cash: number;
   readonly positions: readonly TicketHolding[];
+  /** The account's read failed (#8335): `cash` and `positions` are placeholders, not the account,
+   *  so the verdict is the one unread refusal and no cash or cover claim. */
+  readonly accountUnread?: true;
 }
 
 /**
@@ -39,6 +42,7 @@ export function validateDraftAccount(
   draft: DraftOrder,
   context: DraftAccountContext,
 ): DraftVerdict {
+  if (context.accountUnread) return { ok: false, refusals: [ACCOUNT_UNREAD_REFUSAL], warnings: [] };
   const refusals: string[] = [];
   const book = heldCoverLegs(context);
   const legs = draft.legs.map(coverLegOf);

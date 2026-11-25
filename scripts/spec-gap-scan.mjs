@@ -85,11 +85,30 @@ const untested = srcFiles
   .sort((a, b) => b.lines - a.lines);
 const debt = untested.length;
 
+// The backfill drill's trading/risk carve-out (.claude/skills/backfill/SKILL.md → Guardrails): code
+// where a spec written against current behavior can enshrine a payoff or sizing bug, so the drill
+// stops for a human. --candidate skips these files. Without that, the eye names a target its own
+// drill must refuse and the coach stalls on it every cycle; governed cycles 7 and 14 both hit
+// src/playbooks/with-unsubscribed-exits.ts. Skipped files still count in `debt` (untested is
+// untested) and are listed apart under `needsHuman`. tests/scripts/spec-gap-carve-out.spec.ts
+// fails if this list drifts from the skill's.
+const CARVE_OUT_DIRS = ["src/trading/", "src/playbooks/", "src/alpaca/"];
+const CARVE_OUT_FILES = ["src/engine/guards.ts", "src/bots/account-guard.ts"];
+const needsHuman = (f) =>
+  CARVE_OUT_DIRS.some((d) => f.startsWith(d)) || CARVE_OUT_FILES.includes(f);
+
 if (process.argv.includes("--candidate")) {
-  // Highest leverage = the biggest untested file (most unwatched behavior).
+  // Highest leverage = the biggest untested file the drill may spec on its own.
+  const workable = untested.filter((u) => !needsHuman(u.file));
+  const held = untested.filter((u) => needsHuman(u.file)).map((u) => u.file);
   console.log(
     JSON.stringify(
-      { candidate: untested[0] ?? null, runnerUp: untested[1] ?? null, debt },
+      {
+        candidate: workable[0] ?? null,
+        runnerUp: workable[1] ?? null,
+        debt,
+        needsHuman: { count: held.length, files: held.slice(0, 10) },
+      },
       null,
       2,
     ),

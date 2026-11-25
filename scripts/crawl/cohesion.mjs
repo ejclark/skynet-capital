@@ -31,12 +31,15 @@
 // words a route shows but never which place a word names. The census reads the same words from the
 // code that renders them instead; a round's `strings.json` stays the study's input.
 //
-// History: rows 4b and 4c read git back to the study (2026-10-09). A shallow clone that stops after
-// that day is reported in the output and the report, never silently undercounted.
+// History: rows 4b and 4c read git back to the study (2026-10-09). A shallow clone's cut-off commit
+// has no parent there, so git diffs it against an empty tree and every file in it reads as added
+// (#8065: 260 parts "since the study" where full history has 96). Both rows skip the cut-off
+// commits, so a shallow clone can only undercount; when a cut-off falls on or after the study, the
+// output and the report say so, and `--update` keeps the budget rather than lower it to that count.
 
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { isMain } from "../is-main.mjs";
 import {
   againstBudget,
@@ -93,7 +96,8 @@ const NOT_NAMES = new Set([
 ]);
 
 const read = (p) => readFileSync(p, "utf8");
-const git = (args) => execFileSync("git", args, { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+const git = (args, cwd = ".") =>
+  execFileSync("git", args, { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
 
 function walk(dir, keep) {
   const out = [];
@@ -186,39 +190,51 @@ function collectNames(cov, homeOf, files) {
   }
   for (const p of parsePlaces(read(PLACES)))
     add(p.name, placeOf(p.path, {}, ctx), "Moneypenny's place name");
-  return labelCollisions(names);
+  return names;
 }
 
 // ── 4. homeless ─────────────────────────────────────────────────────────────────────────────────
 
-function historyNote() {
-  const shallow = git(["rev-parse", "--is-shallow-repository"]).trim() === "true";
-  const first = git(["log", "--reverse", "--format=%cs", "HEAD"]).split("\n")[0];
-  return shallow && first > SINCE
-    ? `history starts at ${first}, after ${SINCE} — run \`git fetch --shallow-since=2026-10-01 origin main\` and re-run; rows 4b and 4c undercount until then`
+/** A shallow clone's cut-off commits (`.git/shallow`): parentless here, though not in history. */
+function cutOffs(cwd) {
+  const file = resolve(cwd, git(["rev-parse", "--git-path", "shallow"], cwd).trim());
+  return new Set(existsSync(file) ? read(file).split("\n").filter(Boolean) : []);
+}
+
+/** Why rows 4b and 4c may undercount here: a cut-off commit dated on or after the study. */
+export function historyNote(cwd = ".") {
+  const cuts = [...cutOffs(cwd)];
+  if (cuts.length === 0) return null;
+  const last = git(["log", "--no-walk", "--format=%cs", ...cuts], cwd)
+    .split("\n")
+    .filter(Boolean)
+    .sort()
+    .at(-1);
+  return last && last >= SINCE
+    ? `history is cut off at ${last}, on or after ${SINCE} — run \`git fetch --shallow-since=2026-10-01 origin main\` and re-run; rows 4b and 4c undercount until then`
     : null;
 }
 
 /** Parts (`app/src/shell/*.tsx`, `app/src/routes/*.tsx`) added since the study, with the scope of
- *  the commit that added each. */
-function addedParts() {
-  const log = git([
-    "log",
-    `--since=${SINCE}`,
-    "--diff-filter=A",
-    "--name-only",
-    "--format=@@%s",
-    "HEAD",
-  ]);
+ *  the commit that added each. A shallow clone's cut-off commits add nothing. */
+export function addedParts(cwd = ".") {
+  const cuts = cutOffs(cwd);
+  const log = git(
+    ["log", `--since=${SINCE}`, "--diff-filter=A", "--name-only", "--format=@@%H %s", "HEAD"],
+    cwd,
+  );
   const out = new Map();
   let scope = "";
+  let skip = false;
   for (const line of log.split("\n")) {
     if (line.startsWith("@@")) {
-      const m = line.match(/^@@(\w+)(?:\(([^)]+)\))?/);
+      skip = cuts.has(line.slice(2, line.indexOf(" ")));
+      const m = line.slice(line.indexOf(" ") + 1).match(/^(\w+)(?:\(([^)]+)\))?/);
       scope = m ? (m[2] ? `${m[1]}(${m[2]})` : m[1]) : "other";
     } else if (
+      !skip &&
       /^app\/src\/(shell|routes)\/[^/]+\.tsx$/.test(line) &&
-      existsSync(line) &&
+      existsSync(join(cwd, line)) &&
       !out.has(line)
     ) {
       out.set(line, scope);
@@ -229,28 +245,98 @@ function addedParts() {
     .sort((a, b) => (a.file < b.file ? -1 : 1));
 }
 
+/** A path counts as named only as a whole: `/api/convictions` is not named by `/api/convictions/mine`. */
+const namesPath = (src, p) =>
+  new RegExp(`${p.replace(/[/-]/g, "\\$&")}(?![a-z0-9/_-])`, "i").test(src);
+
+/** The member routes src/server serves, and those no screen or chat tool names (row 4c's test,
+ *  without its history: the placement check diffs this between a base and its branch). */
+function apiReach(appSrc, companionSrc) {
+  const served = apiPaths(walk("src/server", isSource).map(read).join("\n")).sort();
+  return {
+    served,
+    unread: served.filter((p) => !(namesPath(appSrc, p) || namesPath(companionSrc, p))),
+  };
+}
+
+/** The `/api/…` paths src/server's history adds since the study (row 4c's input). */
+export function serverAdditions(cwd = ".") {
+  const cuts = cutOffs(cwd);
+  // %x01 marks each commit: no diff line can start with it, unlike `@@` (a hunk header).
+  const diff = git(
+    ["log", `--since=${SINCE}`, "-p", "--format=%x01%H", "HEAD", "--", "src/server"],
+    cwd,
+  );
+  const added = [];
+  let skip = false;
+  for (const line of diff.split("\n")) {
+    if (line.startsWith("\x01")) skip = cuts.has(line.slice(1));
+    else if (!skip && line.startsWith("+")) added.push(line);
+  }
+  return apiPaths(added.join("\n")).sort();
+}
+
 /** Member routes added to src/server since the study that nothing in the app or the chat names. */
 function servedNotRendered(appSrc, companionSrc) {
-  const diff = git(["log", `--since=${SINCE}`, "-p", "--format=", "HEAD", "--", "src/server"]);
-  const added = new Set(
-    apiPaths(
-      diff
-        .split("\n")
-        .filter((l) => l.startsWith("+"))
-        .join("\n"),
-    ),
-  );
+  const added = new Set(serverAdditions());
   const server = walk("src/server", isSource).map(read).join("\n");
-  // A path counts as named only as a whole: `/api/convictions` is not named by `/api/convictions/mine`.
-  const names = (src, p) =>
-    new RegExp(`${p.replace(/[/-]/g, "\\$&")}(?![a-z0-9/_-])`, "i").test(src);
   return [...added]
-    .filter((p) => names(server, p))
-    .filter((p) => !(names(appSrc, p) || names(companionSrc, p)))
+    .filter((p) => namesPath(server, p))
+    .filter((p) => !(namesPath(appSrc, p) || namesPath(companionSrc, p)))
     .sort();
 }
 
 // ── the run ─────────────────────────────────────────────────────────────────────────────────────
+
+/** Every `.tsx` under app/src with its text and its links — the names pass's and row 3's input. */
+const linkFiles = (appFiles) =>
+  appFiles
+    .filter((f) => f.endsWith(".tsx"))
+    .map((file) => {
+      const src = read(file);
+      return { file, src, links: scanLinks(src) };
+    });
+
+/**
+ * The member-facing set, read from the tree under the current directory with no git: every screen
+ * the code has (a route, a section, a chapter, a landing window, a server page, a shell part) with
+ * its triage verdict and IA home, and every name the names pass reads (a tab or door that names a
+ * place, a section, window or chapter label, Moneypenny's place names). The placement check
+ * (`placement.mjs`, #8005 slice 2) diffs this between a branch and its base, so a base tree that
+ * `git archive` unpacked reads the same way: `needles: false` skips coverage's proof that each
+ * hand-listed page still exists, which a base older than the list cannot pass.
+ */
+export function memberFacing({ needles = true } = {}) {
+  const cov = readScreens({ needles });
+  const homeOf = homesOf(cov.triageRows);
+  const appFiles = walk("app/src", isSource);
+  const names = collectNames(cov, homeOf, linkFiles(appFiles));
+  const api = apiReach(
+    appFiles.map(read).join("\n"),
+    walk("src/companion", isSource).map(read).join("\n"),
+  );
+  const screens = cov.screens.map((s) => ({
+    key: s.key,
+    path: s.path,
+    home: homeOf.get(s.key),
+    verdict: cov.triage.get(s.key)?.verdict,
+  }));
+  return { screens, names, api };
+}
+
+/** Row 2's input: every §2f concept with the IA homes of the screens that hold it. */
+const conceptsOf = (ia, homeOf) => conceptHomes(parseConcepts(ia), homeOf);
+
+/**
+ * Row 2 alone, read with no git (#8199): the daily scorecard (`scripts/loop-scorecard.mjs`) prints
+ * it, and a shallow clone's history (#8065) must not reach it. Same functions `measure()` uses, so
+ * the two counts cannot disagree on one tree.
+ */
+export function multiHomeConcepts() {
+  const ia = read(IA);
+  checkHomes(ia);
+  return conceptsOf(ia, homesOf(JSON.parse(read(TRIAGE)))).filter((c) => c.homes.length > 1);
+}
 
 export function measure() {
   const ia = read(IA);
@@ -259,15 +345,10 @@ export function measure() {
   const triageRows = JSON.parse(read(TRIAGE));
   const homeOf = homesOf(triageRows);
   const appFiles = walk("app/src", isSource);
-  const files = appFiles
-    .filter((f) => f.endsWith(".tsx"))
-    .map((file) => {
-      const src = read(file);
-      return { file, src, links: scanLinks(src) };
-    });
+  const files = linkFiles(appFiles);
 
-  const labels = collectNames(cov, homeOf, files);
-  const concepts = conceptHomes(parseConcepts(ia), homeOf);
+  const labels = labelCollisions(collectNames(cov, homeOf, files));
+  const concepts = conceptsOf(ia, homeOf);
   const multiHome = concepts.filter((c) => c.homes.length > 1);
   const drops = keyDrops(files, { appLevel: new Set([ROOT]) });
 
@@ -458,7 +539,8 @@ function main() {
     return;
   }
   writeFileSync(OUT, renderMarkdown(m, verdicts));
-  if (args.includes("--update"))
+  // A cut-off history undercounts rows 4b and 4c, so its low count is no reason to lower a budget.
+  if (args.includes("--update") && !m.history)
     writeFileSync(BUDGET, `${JSON.stringify(lowered(m.counts, budget), null, 2)}\n`);
   console.log(`cohesion: → ${OUT}`);
   for (const v of verdicts) {
@@ -466,7 +548,8 @@ function main() {
       `  ${v.rose ? "▲" : " "} ${String(v.now).padStart(3)}  ${LABEL[v.measure]}${v.budget === null ? "" : ` (budget ${v.budget})`}`,
     );
   }
-  if (m.history) console.log(`  ⚠ ${m.history}`);
+  if (m.history)
+    console.log(`  ⚠ ${m.history}${args.includes("--update") ? " (budget left as it was)" : ""}`);
 }
 
 if (isMain(import.meta.url)) main();

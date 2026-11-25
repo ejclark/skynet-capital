@@ -19,9 +19,9 @@
  */
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
 import { researchCapNow } from "../../scripts/moneypenny/events.mjs";
 import { marketDayKey } from "../domain/market-day.js";
+import { DATE_RE } from "../domain/time.js";
 import {
   type DueRun,
   declaredRuns,
@@ -29,10 +29,10 @@ import {
   recordName,
   scheduleSignals,
 } from "../playbooks/signal-schedule.js";
+import { isMain } from "./cli-entry.js";
 import { flag } from "./cli-flag.js";
 
 const RECORDS_DIR = join(process.cwd(), "docs", "research", "signal-runs");
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /** Every record on disk, keyed by the run's command. An unreadable file throws — a broken record
  *  must not read as "never ran" and buy a run the lane already made. */
@@ -133,5 +133,4 @@ export function main(argv: readonly string[] = process.argv.slice(2), deps: Deps
   return 0;
 }
 
-const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
-if (isMain) process.exit(main());
+if (isMain(import.meta.url)) process.exit(main());

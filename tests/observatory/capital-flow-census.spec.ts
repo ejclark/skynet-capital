@@ -8,6 +8,8 @@ import {
   witnesses,
 } from "../../src/observatory/capital-flow-census.js";
 import type { EquitySample } from "../../src/observatory/history-record.js";
+import { lifecycleLedgerRecord } from "../../src/observatory/option-lifecycle-activity.js";
+import { parseLifecycleActivity } from "../../src/trading/option-lifecycle.js";
 
 // #4563 — the shadow ledger is graded before any member sees a capital-flow mark. The run log the
 // census prints into is public, so it must carry counts and floors only.
@@ -56,6 +58,29 @@ describe("witnesses", () => {
   it("agrees when a reset left the book flat, whatever the cash did", () => {
     expect(witnesses(flow(-200_000, -650_000, { heldAfter: 0 }))).toBe("agree");
     expect(witnesses(flow(300_000, -20_000, { heldAfter: 0 }))).toBe("agree");
+  });
+
+  it("agrees on a genuine reset when a bot filled before it in the same window (#8064)", () => {
+    // Flat at $700k, a bot buys $50,000 of SPY, then a reset to $1M clears that position.
+    const buy: TradeActivityRecord = {
+      orderId: "o1",
+      participantId: "human-dana",
+      symbol: "SPY",
+      side: "buy",
+      quantity: 100,
+      filledQuantity: 100,
+      price: 500,
+      status: "filled",
+      at: "2026-10-05T14:01:00.000Z",
+      source: "stream",
+    };
+    const line = inferCapitalFlow(
+      sample("2026-10-05T14:00:00.000Z", 700_000, 700_000),
+      sample("2026-10-05T14:05:00.000Z", 1_000_000, 1_000_000),
+      [buy],
+    );
+    if (!line) throw new Error("precondition: the detector records the reset");
+    expect(witnesses(line, [buy])).toBe("agree");
   });
 
   it("disagrees when the book is still held and cash does not match the equity move", () => {
@@ -140,11 +165,11 @@ describe("an assignment that shares a window with a market move (#7730)", () => 
 
   it("withholds the all-clear and counts the line as disagreeing at the floors it clears", () => {
     const census = censusFlows([assignedOnADownDay()], weekIn, [assignment]);
-    expect(census).toMatchObject({ disagree: 1, lifecycleNear: 1 });
+    expect(census).toMatchObject({ disagree: 1, lifecycleExplained: 1 });
     expect(census.floors.some((row) => row.disagree > 0)).toBe(true);
     const text = censusMarkdown(census);
     expect(text).not.toContain("Every line's witnesses agree: keep today's rule.");
-    expect(text).toContain("Near an assignment, exercise or expiry in the fill journal: 1 line(s)");
+    expect(text).toContain("could have moved: 1 line(s), graded disagree");
   });
 
   it("never prints the all-clear when the journal was not read", () => {
@@ -193,8 +218,86 @@ describe("a covered call assigned away, flattening the book", () => {
   it("disagrees once the journal is read, and the census withholds the all-clear", () => {
     expect(witnesses(line(), [calledAway])).toBe("disagree");
     const census = censusFlows([line()], weekIn, [calledAway]);
-    expect(census).toMatchObject({ agree: 0, disagree: 1, lifecycleNear: 1 });
+    expect(census).toMatchObject({ agree: 0, disagree: 1, lifecycleExplained: 1 });
     expect(censusMarkdown(census)).not.toContain("keep today's rule");
+  });
+});
+
+// #8083 — the one-day margin is there to catch a lifecycle row's cash wherever it landed, not to
+// condemn every line near one. A reset the day after an expiry or an assignment is still a reset:
+// an expiry moves no cash, and an assignment's share leg moves its strike notional, which a
+// reset's cash does not match. Driven through the real parser and ledger writer, so the rows carry
+// the end-of-day stamp production gives a date-only activity.
+describe("a genuine reset the day after an expiry or assignment (#8083)", () => {
+  const friday = (activity_type: string, symbol: string, qty = "1"): TradeActivityRecord => {
+    const parsed = parseLifecycleActivity({
+      id: "act-9",
+      activity_type,
+      symbol,
+      qty,
+      date: "2026-10-23",
+    });
+    if (!parsed) throw new Error("precondition: the row parses");
+    return lifecycleLedgerRecord(parsed, "human-dana");
+  };
+  const expiry = friday("OPEXP", "AAPL261023P00420000");
+  const assigned = friday("OPASN", "AAPL261023P00420000");
+  // The issue's net-short refund: puts marked at −$320k, topped up to $1M on Saturday afternoon.
+  const reset = (): CapitalFlow => {
+    const line = inferCapitalFlow(
+      sample("2026-10-24T14:55:00.000Z", 700_000, 1_020_000),
+      sample("2026-10-24T15:00:00.000Z", 1_000_000, 1_000_000),
+      [],
+    );
+    if (!line) throw new Error("precondition: the detector records the reset");
+    return line;
+  };
+
+  it("sits inside the margin, stamped at the end of Friday (the precondition)", () => {
+    expect(expiry.at).toBe("2026-10-23T23:59:59.999Z");
+    expect(reset()).toMatchObject({ amount: 300_000, unexplainedCash: -20_000, heldAfter: 0 });
+  });
+
+  it("agrees, and the census prints the all-clear, the day after an expiry", () => {
+    expect(witnesses(reset(), [expiry])).toBe("agree");
+    const census = censusFlows([reset()], weekIn, [expiry]);
+    expect(census).toMatchObject({ agree: 1, disagree: 0, lifecycleExplained: 0 });
+    expect(censusMarkdown(census)).toContain("Every line's witnesses agree: keep today's rule.");
+  });
+
+  it("agrees the day after an assignment whose strike notional is not the line's cash", () => {
+    expect(witnesses(reset(), [assigned])).toBe("agree");
+    expect(censusFlows([reset()], weekIn, [assigned]).disagree).toBe(0);
+  });
+
+  it("still disagrees when the assignment's notional is the line's cash", () => {
+    const line = { ...reset(), unexplainedCash: -42_000 };
+    expect(witnesses(line, [assigned])).toBe("disagree");
+    expect(witnesses(line, [friday("OPASN", "AAPL261023P00140000", "3")])).toBe("disagree");
+  });
+
+  it("still disagrees when a near row's cash cannot be known", () => {
+    // A share settlement with no price, and an assignment on a symbol that is not an OCC contract.
+    expect(witnesses(reset(), [friday("OPTRD", "AAPL", "100")])).toBe("disagree");
+    expect(witnesses(reset(), [{ ...assigned, symbol: "AAPL" }])).toBe("disagree");
+  });
+
+  it("matches two assignments landing together, and a settlement's price either way", () => {
+    const call = friday("OPASN", "AAPL261023C00400000", "2");
+    const both = { ...reset(), unexplainedCash: 80_000 - 42_000 };
+    expect(witnesses(both, [assigned, call])).toBe("disagree");
+    const settled = parseLifecycleActivity({
+      id: "act-10",
+      activity_type: "OPTRD",
+      symbol: "AAPL",
+      qty: "100",
+      price: "200",
+      date: "2026-10-23",
+    });
+    if (!settled) throw new Error("precondition: the settlement parses");
+    const row = lifecycleLedgerRecord(settled, "human-dana");
+    expect(witnesses({ ...reset(), unexplainedCash: 20_000 }, [row])).toBe("disagree");
+    expect(witnesses(reset(), [row])).toBe("disagree");
   });
 });
 

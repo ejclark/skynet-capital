@@ -23,13 +23,24 @@
 // asks the code itself: the house stop (`exitSafetyIntents`) over the bot's roster, from the
 // quote and book the input writes, so the exit's words are the stop's own at this commit.
 //
+// THE ROSTER'S ADOPTIONS LEDGER IS THE PIN'S, NOT THE TREE'S (#8058). Which pairs a view holds
+// exits-only is research-ledger state (`src/playbooks/conviction-adoptions.json`): a line lands or
+// is deleted by its own held PR, on any day. Read from the working tree, undoing an adoption on main
+// would change what a frozen world's bots said, and turn red a spec of a PR that never touched
+// either. So a world that names `bots` reads that file as its `corpus` commit held it (`git show`,
+// the same pin compose.mjs extracts the tree's facts from) and hands it to `subscriptionRoster`'s
+// `holds` seam. A pin that predates the file holds nothing, as the bots read it then.
+//
 // Equity is derived, never typed twice: a participant's equity is cash + Σ market value, and the
 // last history point ("@now") is overwritten with it, so the chart, the header and the blotter
 // can never disagree inside one world. Yesterday's close is derived the same way (cash + Σ
 // quantity × lastday — `yesterdayEquity`), so the header's day change is its rows' (#5052). History samples carry the snapshot's cash throughout — a
 // simplification the study does not measure (no surface plots cash over time).
 
+import { execFileSync } from "node:child_process";
+import { join } from "node:path";
 import { UPCOMING_PRINTS } from "../../../src/domain/earnings-calendar.ts";
+import { holdIn } from "../../../src/playbooks/conviction-adoptions.ts";
 import { exitSafetyIntents, playbookVerdicts } from "../../../src/playbooks/playbook.ts";
 import { findPlaybook } from "../../../src/playbooks/registry.ts";
 import { subscriptionRoster } from "../../../src/subscriptions/subscription-roster.ts";
@@ -40,7 +51,43 @@ import {
 } from "../../../src/trading/option-symbols.ts";
 import { loadInput } from "./inputs.mjs";
 import { checkInstant, INSTANT, msOf, resolveTokens } from "./instant.mjs";
+
+/** The deadline production gives one account's broker read (`dashboard-data.ts`), for an input whose
+ *  account's read timed out at the instant (#8005, the league); a pin that predates it says so. */
+const { SNAPSHOT_READ_TIMEOUT_MS } = await import(
+  "../../../src/observatory/dashboard-data.ts"
+).catch(() => ({}));
+
 import { modelMarks } from "./market.mjs";
+
+const ROOT = join(import.meta.dirname, "..", "..", "..");
+const ADOPTIONS_LEDGER = "src/playbooks/conviction-adoptions.json";
+
+const git = (args) =>
+  execFileSync("git", ["-C", ROOT, ...args], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+
+/** The adoptions ledger as `commit` held it: `{}` when the commit predates the file. A commit this
+ *  clone does not hold fails loudly (a shallow clone: fetch the history), never falls back to the
+ *  working tree's ledger, which is the coupling this exists to cut (#8058). */
+export function adoptionsAt(commit) {
+  try {
+    git(["cat-file", "-e", `${commit}^{commit}`]);
+  } catch {
+    throw new Error(`book: the pin ${commit} is not in this clone — fetch its history`);
+  }
+  if (git(["ls-tree", "--name-only", commit, "--", ADOPTIONS_LEDGER]).trim() === "") return {};
+  return JSON.parse(git(["show", `${commit}:${ADOPTIONS_LEDGER}`]));
+}
+
+/** The holds a runner world's bots read: its pin's ledger (`adoptionsAt`). */
+function pinnedHolds(name, input) {
+  const commit = input.corpus?.commit;
+  if (!commit) throw new Error(`book: ${name} names bots, so it must pin its \`corpus\` commit`);
+  return holdIn(adoptionsAt(commit));
+}
 
 /** True when a symbol is an option contract. */
 const isOption = (symbol) => parseOccSymbol(symbol) !== undefined;
@@ -95,8 +142,9 @@ const intentOf = (order) =>
     ...(order.strategy ? { strategy: order.strategy } : {}),
   };
 
-/** Ask the house stop what it sells at that pass, from the input's quote and book (#6954 slice 4). */
-function stopIntent(stop, at, bot) {
+/** Ask the house stop what it sells at that pass, from the input's quote and book (#6954 slice 4).
+ *  `holds`: the pin's adoptions (`pinnedHolds`) in a runner world; else the build's ledger. */
+function stopIntent(stop, at, bot, holds) {
   const asOf = new Date(at).toISOString();
   const quotes = Object.fromEntries(
     Object.entries(stop.bids).map(([symbol, bid]) => [
@@ -104,7 +152,7 @@ function stopIntent(stop, at, bot) {
       { symbol, bid, ask: bid, last: bid, asOf },
     ]),
   );
-  const roster = subscriptionRoster(subscriptionsOf(bot)).enabled;
+  const roster = subscriptionRoster(subscriptionsOf(bot), undefined, undefined, holds).enabled;
   const { intents } = exitSafetyIntents(roster, { asOf, quotes }, stop.book);
   const intent = intents.find((i) => i.symbol === stop.symbol);
   if (!intent) throw new Error(`book: the house stop sold no ${stop.symbol} from the input`);
@@ -152,11 +200,12 @@ const subscriptionsOf = (bot) =>
 
 /** What each subscribed playbook said at that pass — the runner's own pure call
  *  (`with-playbooks.ts`: the print calendar, no external events), so a stale pass reads stale.
- *  `runner`: the roster as the bots resolve it (`subscriptionRoster` — a view's narrowing, a pair
- *  held exits-only, a paused one left out); else every subscription by its plain registry entry. */
-function verdictsAt(bot, at, runner) {
+ *  `holds` (a runner world's, its pin's adoptions): the roster as the bots resolve it
+ *  (`subscriptionRoster` — a view's narrowing, a pair held exits-only, a paused one left out);
+ *  without it, every subscription by its plain registry entry. */
+function verdictsAt(bot, at, holds) {
   const asOf = new Date(at).toISOString();
-  if (runner) return playbookVerdicts(rosterOf(bot), asOf, UPCOMING_PRINTS, []);
+  if (holds) return playbookVerdicts(rosterOf(bot, holds), asOf, UPCOMING_PRINTS, []);
   const enabled = bot.subscribed.map((s) => ({
     playbook: findPlaybook(s.playbookId),
     mode: s.mode,
@@ -167,8 +216,8 @@ function verdictsAt(bot, at, runner) {
 }
 
 /** The bots' own roster over this bot's subscriptions; exits-only pairs record no verdict. */
-function rosterOf(bot) {
-  const roster = subscriptionRoster(subscriptionsOf(bot));
+function rosterOf(bot, holds) {
+  const roster = subscriptionRoster(subscriptionsOf(bot), undefined, undefined, holds);
   if (roster.rejected.length > 0) throw new Error(`book: no playbook ${roster.rejected[0]}`);
   return roster.enabled.filter((e) => !e.exitsOnly);
 }
@@ -179,8 +228,9 @@ const refusalOf = (order) => ({ intent: intentOf(order), reason: order.rule });
 /** An order a watching bot decided: recorded as observed, never sent, never filled. */
 const observedOrder = (order) => ({ outcome: { intent: intentOf(order), action: "observed" } });
 
-/** The bot's decision store (newest first) and the fills its placed orders wrote. */
-function botRecords(bot, runner = false) {
+/** The bot's decision store (newest first) and the fills its placed orders wrote. `holds`: a
+ *  runner world's pinned adoptions (`pinnedHolds`); absent, the profile worlds' plain verdicts. */
+function botRecords(bot, holds) {
   const records = [];
   const fills = [];
   let saleFill;
@@ -200,7 +250,7 @@ function botRecords(bot, runner = false) {
       orders.push(placed);
     }
     if (pass.stopExit) {
-      const intent = stopIntent(pass.stopExit, at, bot);
+      const intent = stopIntent(pass.stopExit, at, bot, holds);
       const order = { intent, orderId: pass.stopExit.orderId, price: pass.stopExit.filled };
       orders.push(placedOrder(order, at, bot.id, bot.id));
     }
@@ -215,7 +265,7 @@ function botRecords(bot, runner = false) {
       outcomes: orders.map((o) => o.outcome),
       ...(pass.halted ? { halted: pass.halted } : {}),
       ...(refusals.length > 0 ? { refusals } : {}),
-      ...(pass.verdicts ? { playbookVerdicts: verdictsAt(bot, at, runner) } : {}),
+      ...(pass.verdicts ? { playbookVerdicts: verdictsAt(bot, at, holds) } : {}),
     });
     fills.push(...orders.flatMap((o) => (o.fill ? [o.fill] : [])));
   }
@@ -250,6 +300,23 @@ export function derivedFields(pos, fills, symbols) {
 
 /** A broker snapshot from an input participant: marks → market values, equity derived. */
 function snapshotOf(p, saleFill) {
+  // An account whose broker read did not finish at the instant (#8005, the league: `docs/IA.md` §5.7
+  // "fails open"): production's own degraded row (`participant-snapshot.ts` → `degraded`) — zeros,
+  // no holdings, and the reason in its own words — so the pages read it as production would.
+  if (p.brokerRead === "timed out") {
+    if (!SNAPSHOT_READ_TIMEOUT_MS) throw new Error("book: this commit has no broker read deadline");
+    return {
+      id: p.id,
+      displayName: p.displayName,
+      kind: p.kind,
+      ...(p.personaId ? { personaId: p.personaId } : {}),
+      cash: 0,
+      equity: 0,
+      positions: [],
+      activity: [],
+      error: String(new Error(`broker read timed out after ${SNAPSHOT_READ_TIMEOUT_MS}ms`)),
+    };
+  }
   const positions = p.positions.map((pos) => {
     const scale = contractMultiplier(pos.symbol);
     const fromSale = pos.fromWheelSale && saleFill?.symbol === pos.symbol;
@@ -283,14 +350,21 @@ function snapshotOf(p, saleFill) {
  * at yesterday's close, less what the input declares was booked today on positions already closed
  * (`closedToday` — the one gap a header may show beyond its rows). Never typed: a hand-typed figure
  * put Eric's header at −$71 beside rows adding to −$4 (day-change.mjs).
+ *
+ * Read from the INPUT's positions, never the snapshot's (#8214): an account whose broker read timed
+ * out at the instant serves production's degraded row with no holdings, but it still closed Friday
+ * holding them — reading the empty snapshot put Jordan's close at cash alone, a false ~20% fall.
  */
-export function yesterdayEquity(p, snapshot) {
+export function yesterdayEquity(p) {
   if (p.lastEquity !== undefined) {
     throw new Error(
       `book: ${p.id} types lastEquity — it is derived from cash and each position's lastday; declare a closed-today amount (closedToday) for any gap`,
     );
   }
-  const atClose = snapshot.positions.reduce((s, x) => s + x.quantity * x.lastdayPrice, p.cash);
+  const atClose = p.positions.reduce(
+    (s, x) => s + x.quantity * x.lastday * contractMultiplier(x.symbol),
+    p.cash,
+  );
   return Math.round((atClose - (p.closedToday ?? 0)) * 100) / 100;
 }
 
@@ -326,8 +400,8 @@ export function buildBook(name) {
       ),
     })),
   };
-  const runner = Array.isArray(input.bots);
-  const bots = botsOf(input).map((b) => ({ input: b, ...botRecords(b, runner) }));
+  const holds = Array.isArray(input.bots) ? pinnedHolds(name, input) : undefined;
+  const bots = botsOf(input).map((b) => ({ input: b, ...botRecords(b, holds) }));
   const botById = new Map(bots.map((b) => [b.input.id, b]));
   const participants = input.participants.map((p) => snapshotOf(p, botById.get(p.id)?.saleFill));
   const activity = {};
@@ -342,9 +416,7 @@ export function buildBook(name) {
     }));
   }
   for (const b of bots) activity[b.input.id] = b.fills;
-  const lastEquity = Object.fromEntries(
-    input.participants.map((p, i) => [p.id, yesterdayEquity(p, participants[i])]),
-  );
+  const lastEquity = Object.fromEntries(input.participants.map((p) => [p.id, yesterdayEquity(p)]));
   const closedToday = Object.fromEntries(
     input.participants.filter((p) => p.closedToday).map((p) => [p.id, p.closedToday]),
   );
@@ -354,12 +426,15 @@ export function buildBook(name) {
   const today = msOf("@0d 00:00");
   const history = {};
   for (const p of participants) {
-    const points = input.history?.[p.id] ?? [];
+    // An account read that failed records no sample now: its history ends at its last good one.
+    const all = input.history?.[p.id] ?? [];
+    const points = p.error ? all.filter((h) => Date.parse(h.at) < Date.parse(INSTANT)) : all;
     const close = points.findLastIndex((h) => Date.parse(h.at) < today);
     history[p.id] = points.map((h, i, all) => ({
       at: h.at,
       participantId: p.id,
-      equity: i === all.length - 1 ? p.equity : i === close ? lastEquity[p.id] : h.equity,
+      equity:
+        i === all.length - 1 && !p.error ? p.equity : i === close ? lastEquity[p.id] : h.equity,
       cash: p.cash,
       realizedPl: p.realizedPl ?? 0,
     }));
@@ -369,7 +444,8 @@ export function buildBook(name) {
   // (`monthReturnPct`); the world's month of history is that sync's input.
   for (const p of participants) {
     const h = history[p.id];
-    if (h?.length > 1) p.monthReturnPct = (h[h.length - 1].equity / h[0].equity - 1) * 100;
+    if (h?.length > 1 && !p.error)
+      p.monthReturnPct = (h[h.length - 1].equity / h[0].equity - 1) * 100;
   }
   return {
     generatedAt: new Date(INSTANT).toISOString(),
@@ -389,6 +465,11 @@ export function buildBook(name) {
     ...(input.controls ? { controls: input.controls } : {}),
     // The per-member stores production always wires, served empty (league-services.mjs).
     ...(input.wired ? { wired: input.wired } : {}),
+    // A member's own R&D records (#8005): the stores production keeps them in, and what each member
+    // saved before the instant, replayed through the real handlers at compose (member-stores.mjs).
+    ...(input.stores ? { stores: input.stores, writes: input.writes ?? [] } : {}),
+    // What each member filed and where each filing stands (member-filings.mjs), when it says.
+    ...(input.feedback ? { feedback: input.feedback } : {}),
     subscriptions,
     history,
     lastEquity,

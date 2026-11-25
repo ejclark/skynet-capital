@@ -13,15 +13,19 @@
 //
 // WHAT IT IS. One open issue labelled `decisions-page`, found by its marker and a bot author. Its
 // BODY is regenerated each tick: every ask on the one Needs-you selector (`assignments.mjs` →
-// `plan().needsYou`, criterion 1), numbered, with its question, letters and prediction, plus a
-// count of held PRs (links only — merging stays his click; nothing here reads text as a merge).
-// He is assigned to this ONE issue while it holds asks; a ping comment goes out at most once per
-// batch window (`batchStart`), and only for asks he has not been pinged about. The per-issue
+// `plan().needsYou`, criterion 1), numbered, with its question, letters and prediction, plus every
+// held PR due his merge (criterion 4), one line each: how long it has been green, what it blocks,
+// what silence does (#7317). Merging stays his click on the PR; nothing here reads text as a merge.
+// He is assigned to this ONE issue while it holds asks or held PRs; a ping comment goes out at most
+// once per batch window (`batchStart`), and only for what he has not been pinged about — a held PR
+// is pinged once a day at most, however often a push restarts its checks. The per-issue
 // `Needs from you` callout stays the source of truth: the page is a view of it, never a copy.
 //
 // NUMBERS ARE STABLE. An ask keeps its number while it is on the page; a freed number is not reused
 // for a day, and every entry records when it got its number, so a reply is read against the page
 // as it stood when he wrote it (decisions-reply.mjs). Pure: no network, no clock.
+
+import { blocksPhrase } from "../held-pr.mjs";
 import { ledgerRows, readbackComment } from "./answer-readback.mjs";
 import { askRank, cardTwin, parseAsk } from "./ask-card.mjs";
 import { batchStart } from "./assignments.mjs";
@@ -41,8 +45,10 @@ const PING_MARKER = "<!-- moneypenny:decisions-ping -->";
 export const KEEP_RETIRED_MS = 7 * 864e5;
 /** How long a freed number waits before another ask may take it. */
 export const REUSE_AFTER_MS = 864e5;
+/** A held PR he was pinged about is not pinged again inside this (#7317: no repeat inside a day). */
+export const HELD_PING_MS = 864e5;
 
-const EMPTY = () => ({ entries: [], retired: [], pinged: [], pingedAt: 0 });
+const EMPTY = () => ({ entries: [], retired: [], pinged: [], pingedAt: 0, heldPinged: [] });
 const safeJson = (o) => JSON.stringify(o).replaceAll("<", "\\u003c").replaceAll(">", "\\u003e");
 export const clip = (s, n) => {
   const t = String(s ?? "")
@@ -67,6 +73,7 @@ export function stateOf(body = "") {
       retired: list(s.retired),
       pinged: list(s.pinged),
       pingedAt: Number(s.pingedAt) || 0,
+      heldPinged: list(s.heldPinged).filter((h) => Number.isFinite(h?.n)),
     };
   } catch {
     return EMPTY();
@@ -126,30 +133,30 @@ function entryLines(e, ask) {
   return out;
 }
 
-/** The page body, from the state and the asks it numbers. `held` is the held PRs. Pure. */
-export function renderPage({ state, asks, held = [] }) {
-  const n = state.entries.length;
+/** The page body, from the state and the asks it numbers. `held` is the held PRs; `answered` the
+ *  asks his reply answered this tick, kept in the state but left off the list (#7957). Pure. */
+export function renderPage({ state, asks, held = [], answered = new Set() }) {
+  const listed = state.entries.filter((e) => !answered.has(e.issue));
+  const n = listed.length;
   const out = [PAGE_MARKER];
-  if (!n)
+  if (!n && held.length)
+    out.push(
+      `**${held.length} held PR${held.length === 1 ? " waits" : "s wait"} on your merge.** No decision to reply to: each is one click on its PR.`,
+    );
+  else if (!n)
     out.push(
       "**Nothing waits on you.** This page fills when an issue needs a decision only you can make.",
     );
   else {
-    const first = state.entries[0];
+    const first = listed[0];
     out.push(
       `**${n} decision${n === 1 ? " waits" : "s wait"} on you. One reply answers ${n === 1 ? "it" : "all of them"}.**`,
       "",
       `Reply with the number and your letter, like \`1A 2B 3 not now\`, or by issue, like \`${first.issue} A\`. Anything I can't read unambiguously is echoed back, never guessed.`,
     );
-    for (const e of state.entries) out.push("", ...entryLines(e, asks.get(e.issue)));
+    for (const e of listed) out.push("", ...entryLines(e, asks.get(e.issue)));
   }
-  if (held.length) {
-    const links = held.map((p) => `#${p.number}`).join(" · ");
-    out.push(
-      "",
-      `**Held for your merge:** ${held.length} — ${links}. Merging stays your click on the PR; no reply here is read as a merge.`,
-    );
-  }
+  if (held.length) out.push("", ...heldLines(held));
   out.push(
     "",
     "<details><summary>How this page works</summary>",
@@ -166,6 +173,37 @@ export function renderPage({ state, asks, held = [] }) {
   );
   return out.join("\n");
 }
+
+/**
+ * The held section: one line per PR — its link, how long it has been green (or open, when its checks
+ * are not green), what it blocks, and what his silence does. A merge ask filed as an issue carries
+ * none of those facts and stays a bare link. Pure.
+ */
+function heldLines(held) {
+  const out = [
+    `**Held for your merge: ${held.length}.** Merging stays your click on the PR; no reply here is read as a merge.`,
+  ];
+  for (const p of held) {
+    const title = p.title ? ` ${clip(p.title, 90)}` : "";
+    if (typeof p.hours !== "number") {
+      out.push(`- #${p.number}${title}`);
+      continue;
+    }
+    const h = Math.floor(p.hours);
+    const clock = p.green ? `green ${h}h` : `open ${h}h, ${checksWord(p)}`;
+    const what = blocksPhrase(p.blocks);
+    const silence = what
+      ? `On silence: it stays open, and ${what} keeps waiting.`
+      : "On silence: it stays open.";
+    out.push(`- #${p.number}${title} — ${clock}${what ? ` · blocks ${what}` : ""} · _${silence}_`);
+  }
+  out.push("_No lane merges a held PR; each moves only on your click._");
+  return out;
+}
+
+/** What a held PR that is not green says about its checks: "unknown" when nobody could read them,
+ *  never "not green" about checks that were never seen (#8212). */
+const checksWord = (p) => (p.unknown ? "checks unknown" : "checks not green");
 
 const isHis = (c) => trustedComment(c) && isEric(c?.user?.login) && !isClaudeComment(c?.body);
 
@@ -203,7 +241,7 @@ function readiesFor(issue, answer) {
 }
 
 /** The answers in one of his replies, as read-back intents plus what was not read. */
-function answerIntent(reply, read, { page, askMap, issueBy, answered }) {
+function answerIntent(reply, read, { page, askOf, issueBy, answered }) {
   const readbacks = [];
   const unread = [...read.unread];
   for (const a of read.applied) {
@@ -212,7 +250,7 @@ function answerIntent(reply, read, { page, askMap, issueBy, answered }) {
       continue;
     }
     answered.add(a.issue);
-    const ask = askMap.get(a.issue);
+    const ask = askOf(a.issue);
     const issue = issueBy.get(a.issue);
     const card = { items: ask.items.map(cardTwin) };
     const rows = ledgerRows({ number: a.issue, title: ask.title, card, answer: a.answer, reply });
@@ -226,7 +264,9 @@ function answerIntent(reply, read, { page, askMap, issueBy, answered }) {
       why: `his reply on the decisions page #${page.number}`,
       said: saidOf(a.answer),
       body,
-      ready: readiesFor(issue, a.answer),
+      // An ask kept only by its snapshot (#8060) may be off the gathered issues: no labels to read,
+      // so no `ready` — an answer that already landed skips the write anyway.
+      ready: issue ? readiesFor(issue, a.answer) : false,
     });
   }
   return {
@@ -273,14 +313,23 @@ export function planDecisions({
   }
   const held = [...needsYou.filter((r) => r.criterion === 4), ...mergeAsks];
   const prior = page ? stateOf(page.body) : EMPTY();
+  // An ask a reply answered carries a snapshot of its card (`ask`) until that reply's receipt
+  // lands (#8060). Its own answer takes it off the selector, so without the snapshot a retry tick
+  // (a busy lease on another ask, a failed receipt POST) read his APPLIED answer as "cleared before
+  // this was read". With it, the retry reads the answer again; fanOut finds the ledger row the
+  // first tick wrote and reports it as read.
+  const kept = new Map(
+    prior.entries.filter((e) => e.ask && !askMap.has(e.issue)).map((e) => [e.issue, e.ask]),
+  );
+  const askOf = (n) => askMap.get(n) ?? kept.get(n);
+  const cardOf = (a) => (a ? { items: a.items.map(cardTwin) } : null);
   // Entries whose ask left since the page was drawn read as cleared, never as an answerable card.
   const readable = [
-    ...prior.entries.map((e) => (askMap.has(e.issue) ? e : { ...e, until: now })),
-    ...prior.retired,
-  ].map((e) => ({
-    ...e,
-    card: askMap.has(e.issue) ? { items: askMap.get(e.issue).items.map(cardTwin) } : null,
-  }));
+    ...prior.entries.map(({ ask: _, ...e }) =>
+      askOf(e.issue) ? { ...e, card: cardOf(askOf(e.issue)) } : { ...e, until: now, card: null },
+    ),
+    ...prior.retired.map((e) => ({ ...e, card: cardOf(askMap.get(e.issue)) })),
+  ];
   const intents = [];
   const answered = new Set();
   if (page) {
@@ -295,29 +344,30 @@ export function planDecisions({
         replyAt: Date.parse(reply.created_at),
       });
       if (!read.referenced) continue; // a note with no number in it is not an answer to anything
-      intents.push(answerIntent(reply, read, { page, askMap, issueBy, answered }));
+      intents.push(answerIntent(reply, read, { page, askOf, issueBy, answered }));
     }
   }
-  const waiting = [...askMap.values()].filter((a) => !answered.has(a.issue));
-  const state = nextState(prior, waiting, now);
+  // An ask answered this tick keeps its number in the STATE until its reply is receipted: nothing
+  // has confirmed the answer landed yet, and this tick's sync runs even if the answer intent throws
+  // or finds its lease busy. Retiring it made the next tick read his unreceipted reply as "cleared
+  // before this was read" (#7957), and so did retiring it once its own answer took it off the
+  // selector while another part of the reply had not landed (#8060). It is only left off the page
+  // he SEES, so his reply clears what he answered at once. A receipted reply is not re-read, so its
+  // asks stop being `answered` and retire on the next tick.
+  const pending = [...kept.keys()].filter((n) => answered.has(n)).map((issue) => ({ issue }));
+  const state = nextState(prior, [...askMap.values(), ...pending], now);
+  state.entries = state.entries.map(({ ask: _, ...e }) => {
+    const a = answered.has(e.issue) && askOf(e.issue);
+    return a ? { ...e, ask: { title: a.title, items: a.items } } : e;
+  });
+  state.retired = state.retired.map(({ ask: _, ...r }) => r);
+  const shown = state.entries.filter((e) => !answered.has(e.issue));
   const ericOn = (page?.assignees ?? []).some((u) => isEric(u?.login ?? u));
-  const hasAsks = state.entries.length > 0;
+  const hasAsks = shown.length > 0 || held.length > 0;
   const assign = hasAsks && !ericOn;
   const unassign = Boolean(page) && !hasAsks && ericOn;
-  let ping = null;
-  const newcomers = state.entries.filter((e) => !state.pinged.includes(e.issue));
-  if (assign)
-    state.pinged = state.entries.map((e) => e.issue); // the assignment is the push
-  else if (hasAsks && newcomers.length) {
-    const urgent = newcomers.some((e) => askMap.get(e.issue)?.rank === 1);
-    if (urgent || batchStart(now) > prior.pingedAt) {
-      ping = pingComment(newcomers);
-      state.pinged = state.entries.map((e) => e.issue);
-      state.pingedAt = now;
-    }
-  }
-  if (assign) state.pingedAt = now;
-  const body = renderPage({ state, asks: askMap, held });
+  const ping = pingFor({ state, prior, shown, held, askMap, assign, now });
+  const body = renderPage({ state, asks: askMap, held, answered });
   if (!page) {
     if (hasAsks)
       intents.push({
@@ -325,7 +375,7 @@ export function planDecisions({
         title: PAGE_TITLE,
         body,
         number: 0,
-        why: `${state.entries.length} open ask(s)`,
+        why: `${shown.length} open ask(s), ${held.length} held PR(s)`,
       });
   } else if (body !== page.body || assign || unassign || ping) {
     intents.push({
@@ -335,21 +385,66 @@ export function planDecisions({
       assign,
       unassign,
       ping,
-      why: `${state.entries.length} open ask(s), ${held.length} held PR(s)`,
+      why: `${shown.length} open ask(s), ${held.length} held PR(s)`,
     });
   }
   return { intents, body, state };
 }
 
-/** The once-per-window nudge: only the asks he has not been pinged about. */
-export function pingComment(newcomers) {
+/**
+ * Who hears what this tick: updates `state`'s ping memory and returns the ping comment, or null.
+ * The assignment is itself the push, so an `assign` tick records everything as told and posts no
+ * ping. Otherwise only what is new — asks never pinged, held PRs not pinged inside a day — and only
+ * once per batch window, unless an ask stops bots or production.
+ *
+ * A held PR due his merge is as much his as a lettered ask (#7317): it keeps him on the page, and a
+ * new one is pinged with the next batch. It is remembered a day by PR, not only while listed, so a
+ * push that restarts its checks never earns it a second ping the same day.
+ */
+function pingFor({ state, prior, shown, held, askMap, assign, now }) {
+  const heldPinged = prior.heldPinged.filter((h) => now - (Number(h.at) || 0) < HELD_PING_MS);
+  const newHeld = held.filter((p) => !heldPinged.some((h) => h.n === p.number));
+  const newcomers = shown.filter((e) => !state.pinged.includes(e.issue));
+  state.heldPinged = heldPinged;
+  const window = batchStart(now) > prior.pingedAt;
+  const urgent = newcomers.some((e) => askMap.get(e.issue)?.rank === 1);
+  const fresh = newcomers.length > 0 || newHeld.length > 0;
+  if (!(assign || (fresh && (urgent || window)))) return null;
+  state.pinged = state.entries.map((e) => e.issue);
+  heldPinged.push(...newHeld.map((p) => ({ n: p.number, at: now })));
+  state.pingedAt = now;
+  return assign ? null : pingComment(newcomers, newHeld);
+}
+
+/** "#7030 (green 26h, blocks plan #6871)" — a held PR as the ping names it. */
+function heldPingItem(p) {
+  if (typeof p.hours !== "number") return `#${p.number}`;
+  const facts = [
+    p.green ? `green ${Math.floor(p.hours)}h` : `open ${Math.floor(p.hours)}h, ${checksWord(p)}`,
+  ];
+  const what = blocksPhrase(p.blocks);
+  if (what) facts.push(`blocks ${what}`);
+  return `#${p.number} (${facts.join(", ")})`;
+}
+
+/** The once-per-window nudge: only the asks and held PRs he has not been pinged about. */
+export function pingComment(newcomers, newHeld = []) {
   const k = newcomers.length;
-  const list = newcomers.map((e) => `${e.n} · #${e.issue}`).join(", ");
-  return [
-    `@${ERIC} — ${k} new decision${k === 1 ? "" : "s"} on this page: ${list}. One reply answers every ask above.`,
-    "",
-    PING_MARKER,
-    "",
-    FOOTER,
-  ].join("\n");
+  const lines = [];
+  if (k) {
+    const list = newcomers.map((e) => `${e.n} · #${e.issue}`).join(", ");
+    lines.push(
+      `@${ERIC} — ${k} new decision${k === 1 ? "" : "s"} on this page: ${list}. One reply answers every ask above.`,
+    );
+  }
+  if (newHeld.length) {
+    const list = newHeld.map(heldPingItem).join("; ");
+    const lead = k ? "And" : `@${ERIC} —`;
+    // "Ready" is a claim about checks: only when no PR in the list is known red or unread (#8212).
+    const state = newHeld.some((p) => p.green === false) ? "waiting on" : "ready for";
+    lines.push(
+      `${lead} ${newHeld.length} held PR${newHeld.length === 1 ? "" : "s"} ${state} your merge: ${list}. Each is one click on its PR; on silence it stays open.`,
+    );
+  }
+  return [lines.join("\n\n"), "", PING_MARKER, "", FOOTER].join("\n");
 }

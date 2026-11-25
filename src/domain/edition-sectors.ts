@@ -29,6 +29,7 @@
  */
 import { isSession, sessionsBefore } from "./market-calendar.js";
 import { GICS_SECTORS } from "./sector-coverage.js";
+import { DAY_MS } from "./time.js";
 
 /** The S&P 500's row: the whole market, drawn apart from the sectors (round 3's run 2 fix: "6 of 9
  *  notes had missed the grey line"). */
@@ -50,8 +51,6 @@ export interface EditionSectors {
   /** `closes[fund][YYYY-MM-DD]`: the edition's own close and each period's starting close. */
   readonly closes: Readonly<Record<string, Readonly<Record<string, number>>>>;
 }
-
-const DAY_MS = 86_400_000;
 
 const iso = (ms: number): string => new Date(ms).toISOString().slice(0, 10);
 const at = (date: string): number => Date.parse(`${date}T00:00:00Z`);
@@ -172,7 +171,8 @@ export interface SectorsView {
   readonly rows: readonly SectorRow[];
 }
 
-const pct = (now: number, then: number): number => Math.round((now / then - 1) * 10_000) / 100;
+const periodMovePct = (now: number, then: number): number =>
+  Math.round((now / then - 1) * 10_000) / 100;
 
 /** Work the moves out of the closes. Assumes `checkSectors` passed. */
 export function sectorsView(sectors: EditionSectors, date: string): SectorsView {
@@ -186,7 +186,7 @@ export function sectorsView(sectors: EditionSectors, date: string): SectorsView 
       const c = sectors.closes[f.fund] as Readonly<Record<string, number>>;
       const close = c[date] as number;
       const moves = Object.fromEntries(
-        SECTOR_PERIODS.map((p) => [p, pct(close, c[from[p]] as number)]),
+        SECTOR_PERIODS.map((p) => [p, periodMovePct(close, c[from[p]] as number)]),
       ) as Record<SectorPeriod, number>;
       const trail = span.map((d) => c[d] as number);
       return {

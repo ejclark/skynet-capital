@@ -1,6 +1,6 @@
 ---
 name: secretary
-description: Regulate feedback to protect the constraint (Eric's attention) — assemble tiered activity digests, codify and refine the templates feedback flows through, and deploy verification teams (red/blue/white/purple/tiger) so items reach Eric pre-verified or not at all. Use when a digest is due (scripts/digest-scan.mjs --due, or the digest Routine fires), when asked to "report out", "what happened", "summarize the week", when the weekly newsletter Routine fires or someone asks for "the newsletter" or "the week so far" (section 4), when a feedback format has recurred ~3 times uncodified, or before queuing anything for Eric's decision that would benefit from a verification pass. Digest-altitude applies to completed, reversible, in-envelope work only — the irreversible class, genuine taste forks, and blockers still interrupt in real time.
+description: Regulate feedback to protect the constraint (Eric's attention) — assemble tiered activity digests, codify and refine the templates feedback flows through, and deploy verification teams (red/blue/white/purple/tiger) so items reach Eric pre-verified or not at all. Use when a digest is due (scripts/digest-scan.mjs --due, or the digest Routine fires), when asked to "report out", "what happened", "summarize the week", when the weekly newsletter Routine fires or someone asks for "the newsletter" or "the week so far" (section 4), when a feedback format has recurred ~3 times uncodified, or before queuing anything for Eric's decision that would benefit from a verification pass. Digest-altitude applies to completed, reversible, in-envelope work only — the irreversible class, taste forks in a class not yet graduated, and blockers still interrupt in real time.
 ---
 
 # Secretary — regulate feedback to protect the constraint
@@ -113,6 +113,15 @@ reactions it drew. Fold the table into "Noise absorbed". It is DETECT-ONLY: read
 a few digests before acting on any of them, and never ratchet a gate on them. Without
 `GITHUB_TOKEN` the merge-latency, comment and reaction columns read ABSENT rather than zero —
 that is the honest state, not a broken run.
+
+**The picture slot** (#3748 slice 7c): `node scripts/digest-scan.mjs --pictures` prints the
+`## The picture` blocks of the PRs merged since the last digest landed on main (its commit
+instant, #8225) — newest first, waived ones skipped, the 5 newest at most (the overflow is
+counted, never hidden). The picture is the
+PR's own, so paste it as printed under `## The picture` rather than re-drawing it; it ranks by
+merge time, not importance, so the Headlines still carry the ranking. Advisory for now:
+`digest-scan --validate` names a digest without the slot, and prints "ratchet due" once 2 digests
+carry it — then add the section to `REQUIRED_SECTIONS` in that PR.
 
 **Deliver:** write `docs/digests/<YYYY-MM-DD>.md`, ship via `/ship` (docs auto-merge), and
 push-notify with the Needs-you count + top headline only.

@@ -1,24 +1,27 @@
 # Eric — the owner
 
 _Built only from his recorded words (quoted, dated) and the fixture. Every other sentence is a
-guess and says so: `hypothesis — proves it wrong: <a dated, observable event>`. This file is his to
-edit (README → "How a member edits their own file"). Twin: `e2e/journeys/eric.journey.json`._
+guess and says so: `hypothesis Hn (<date>) — <the guess>. Proves it wrong (check by <YYYY-MM-DD>):
+<an observable event>.` This file is his to edit (README → "How a member edits their own file").
+Twin: `e2e/journeys/eric.journey.json`. **The one home for what he likes and dislikes**
+(2026-11-23): `docs/READERS.md` keeps how to write to him, `docs/design/decision-rules.md` the
+back-tested design rules, and private memory the datapoints that name family, members, money or
+health; each links here instead of restating. A prediction he overturns in
+`docs/process/ALIGNMENT.md` changes a line here within 7 days, cited as `ALIGNMENT <date> · <ask>`._
 
 ## 1. Who
 
-The owner of the app and its only standing reviewer; a paper trader who wants the app to tell him
-what to do with his book, not just show it. In his words (2026-09-26): *"I need to guidance on what
-trades to execute, how to rebalance my portfolio, when to take profit, when to wait to enter the
-market, etc. Knowing my persona provides you more creative thought on features that help me through
-my journeys."* And on why this file exists at all: *"I also want a persona for me to better
-understand the journeys, how I think, my needs, etc."*
-
-- _hypothesis — he enjoys side quests: the proximity hunt is a standing ask of his (CLAUDE.md →
-  "Side quests — Claude generates ideas too", and the brain-dump rule's "explicit invitation for
-  side quests", `docs/process/WORKING-AGREEMENTS.md` → "A brain-dump is a planning session",
-  2026-09-06), so a surface that offers the next adjacent thing keeps him longer than
-  one that ends. Proves it wrong: a dated note from him that a suggested detour on a member surface
-  was noise._
+The owner of the app and its only standing reviewer: a builder first, and a paper trader who needs
+calm information to decide. In his words (2026-11-23, session on #8161): *"I enjoy the
+artistic/design side of development more than the actual trading. I see too many visual
+distractions in today's UI which bates me into investing time on the UI instead of pursuing
+information to make quality decisions."* The trading need stands (2026-09-26): *"I need to guidance
+on what trades to execute, how to rebalance my portfolio, when to take profit, when to wait to enter
+the market, etc. Knowing my persona provides you more creative thought on features that help me
+through my journeys."* On why this file exists (2026-09-26): *"I also want a persona for me to
+better understand the journeys, how I think, my needs, etc."*; and (2026-11-23, session): *"I'd
+expect you to have a reasonably detailed profile on what I like and/or don't like. I'm sure many
+aspects are off base, the key is the ability to capture datapoints and refine."*
 
 What is known, not guessed: he is red/green colourblind (2026-09-06: *"I have mild red/green
 colorblindness. Higher contrast colors make it easier for me to detect these details"* —
@@ -27,16 +30,17 @@ colorblindness. Higher contrast colors make it easier for me to detect these det
 (2026-08-16: *"faster for me to just review the changes in the preview on desktop mode or live in
 the browser and adapt from there"*); he wants pictures before prose (2026-08-20: *"dumb this shit
 down and draw more pictures... I want some god damn pictures to hang on the fridge"*).
+Side quests are a standing ask of his for Claude's own work (CLAUDE.md → "Side quests — Claude
+generates ideas too"), not for a member surface (§4, *The goal first*).
 
-- _hypothesis — he reads a page's left edge first and decides in seconds whether it is for him
-  (he asks for numbered procedures executable "by scanning the left edge alone",
-  `docs/process/WORKING-AGREEMENTS.md` → "When Eric's action is needed", 2026-08-15). Proves it
-  wrong: a live review after 2026-09-26 where he reacts first to something in the right column or
-  below the fold._
-- _hypothesis — a page that makes him choose a mechanism (a strategy name, a chart setting) loses
-  him; a page that shows him two rendered outcomes keeps him (CLAUDE.md → "Eric directs by
-  outcome, not by technique"). Proves it wrong: a dated request from him for a specific technique
-  setting on a member surface._
+- _hypothesis H2 (2026-09-26, rewritten 2026-11-23) — he reads a page's left edge first and decides
+  in seconds whether it is for him (`docs/READERS.md` → How he reads: "~10 seconds on the opening
+  frame, F-pattern", the fridge rule, 2026-08-20). The data so far agrees but cannot tell left from
+  top: his first unprompted round-0 pins on phone frames sat at 17%/13%, 45%/45% and 7%/4%
+  across/down (#5451 and #5154 on 2026-10-16, #7018 on 2026-11-07), and both live reviews opened on
+  the page head (2026-10-08, 2026-11-09). Proves it wrong (check by 2026-12-31): on a desktop
+  round-0 frame, before Claude's problems show, his first unprompted pin lands right of 50% across
+  or below the first screen, scored from the read-back's "x% across, y% down" and pin order._
 
 ## 2. What he owns
 
@@ -74,6 +78,16 @@ strategy to effectively cycle capital out of position. Doing this effectively wo
 have a lot of capital for the current situation to buy CRWV cash secured PUTs at an extreme low
 ahead of earnings"* — taking profit is not the end of a trade but the funding of the next one.
 
+What he is building, in his words: a game others play and shape — *"1. Enabling a delightful
+trading experience to make paper money. 2. Enabling others to contribute to enhance their
+experience."* (2026-10-26, CLAUDE.md → Commander's intent); a narrated campaign as the way in —
+*"The intent is to have this approach become a primary conduit for how to engage with the app to
+perform trades, collaborate with others in the group, etc."* (2026-11-06, #6948); building blocks
+members put together — *"We are the factory that builds lego pieces that users can easily
+assemble/configure."* (2026-11-23, #8161); and inside the invite gate, a shared table — *"user
+account and trade information is visible to other users for the sake of gameplay"* (2026-11-10,
+#6007; ALIGNMENT 2026-11-10 · #6007, miss: Claude predicted private).
+
 ## 4. How he decides
 
 - **By outcome, with his eyes.** *"My gut tells me we can get rid of the left navigation on all
@@ -110,12 +124,95 @@ ahead of earnings"* — taking profit is not the end of a trade but the funding 
   (sold) should be listed first"*; *"Which strategy triggered the trade feels like the first
   information to show, followed up by the why"* — and the why must be substantiated: *"I don't like
   that the why is "trust me bro"."*
-- _hypothesis — on a phone he reads only what is above the fold of the first screen and acts on at
-  most one thing. Proves it wrong: a phone-session reaction after 2026-09-26 that cites something
-  two screens down._
-- _hypothesis — a "wait" call satisfies him only when it names the date it reopens; an open-ended
-  wait reads as the app having no opinion. Proves it wrong: him accepting an undated "wait" on the
-  live route without asking when._
+- **The goal first; a tangent on a member surface derails him.** An entry page's job (2026-11-09,
+  `docs/IA.md`): *"The first objective is to understand the goal; present options."* Wanted: the
+  ask box with *"canned selections as fallbacks"* (2026-11-08, #7018 round 1; ALIGNMENT 2026-11-08
+  · #7018 round 1 Q1, miss) and, of quests from his own book, *"This shows opportunity.. I want the
+  capability to do this, but in an organic cohesive way that fits with all the other features"*
+  (2026-11-08, #7018 round 1). Not wanted: *"a modal that has only one avenue to 'go back' via
+  closing modal helps streamline reorientation vs this flow enables users to click into other
+  tangents and fully derail."* (2026-10-09, #5037 round 1); *"Threads need to be collapsable - the
+  thread body is noise to the user when it's not the content of focus."* (2026-11-09, #7018 round 5;
+  ALIGNMENT 2026-11-09 · #7018 round 5 Q3, miss). His first problem on the landing page was that
+  asking sat out of sight (ALIGNMENT 2026-11-07 · #7018 round 0, miss: Claude predicted the missing
+  market).
+  - _hypothesis H1 (2026-11-23 audit) — an offered next step keeps him only when it comes from the
+    goal he typed or from what he holds (a quest from his book, a canned path under the ask box);
+    anything else belongs folded. Proves it wrong (check by 2026-12-31): after 2026-11-23, a 👎 or
+    "noise" note from him on a quest or canned path tied to his own goal or holdings, or a 👍 on an
+    unrelated suggestion shown unfolded._
+- **Actionable first on a one-path page, not as a law** (2026-11-09, #7018): *"In general, the
+  highest impact/value (i.e. actionable items) want to be the most accessible, at the top. it is not
+  a hard rule.."*; and (2026-11-08, #7018 round 1): *"This eats up a TON of real estate out of the
+  gate. I would like to flag the key elements of this event as something to pay attention too, but
+  to apply progressive disclosure to withold the bulk of the information until a user expresses
+  interest."*
+  - _hypothesis H3 (2026-09-26, rewritten 2026-11-23) — on a phone he reads only the first screen
+    and acts on at most one thing. Proves it wrong (check by 2027-01-31): after 2026-11-23, a
+    reaction he sends from his phone on the live route (a 390-wide screenshot, a chat or Moneypenny
+    note) that cites something past the first 844px, or two actions in one phone sitting. Pins on
+    phone frames in a round page do not count: he reads those on a desktop._
+- **In trading he names the technique and wants it drawn; settings come after commitment.**
+  *"Is there a bolinger/candlestick like chart we can replace this with to outline where things are
+  at in the cycle (overbought/oversold). This should carry over to other charts too."* (2026-11-08,
+  #7018 round 3); *"Bollinger bands also play into this"* (2026-10-09, #5037 round 1); *"This is a
+  playbook configuration option.. this gets setup after subscibing, hidden before."* (2026-10-16,
+  #5451). A strategy is a trade's first fact (above). It carries its exit before the trade —
+  *"The trade strategy should have exit strategies in mind before executing trades… Exit
+  strategies surfacing during review feels organically part of a review/metrics/analysis
+  process"* (2026-11-01, #5709; ALIGNMENT 2026-11-01 · #5709, miss: Claude predicted the ticket) —
+  and guidance comes from it: *"Playbooks are intended to be the codification of strategies
+  capable of prescribing autonomous action; converting that into guidance seems organic"*
+  (2026-10-21, #5439). Directing by outcome holds where he calls himself an amateur: 3D, rendering,
+  motion (CLAUDE.md → *Eric directs by outcome*).
+- _hypothesis H4 (2026-09-26, rewritten 2026-11-23) — a "wait" call satisfies him only when it
+  names the date it reopens; an open-ended wait reads as the app having no opinion. Proves it wrong
+  (check by 2026-12-31): a note from him that reads the Guidance pane's undated Wait lever (j4 s1,
+  "what would change this") as enough, or a book wait he sets with "Wait until a date…" (#4608)
+  whose reopen day passes with no change to the wait or the position within 3 market days._
+- **Information rests calm; spectacle goes to moments.** He loves fidelity — *"I love polished high
+  fidelity crispness."* (2026-10-10, `docs/design/decision-rules.md` R10) — and the tower: *"I
+  really like this picture and see potential to integrate a lot of amazing on branding animation."*
+  (2026-10-14, #5181). But standing chrome costs him: *"I wish there was a better design to keep the
+  core elements of the eye in the tower without permanently locking up so much real estate."*
+  (2026-10-14, #5181), and standing spectacle pulls him off decisions (§1, 2026-11-23). The tower's
+  latest home (2026-11-23, #8161 point 18) is the home screen above the app tiles, only where it
+  fits; it supersedes the left rail (2026-11-09, #7018 round 9) and the right margin (2026-11-12,
+  #7487, "Move it right").
+  - _hypothesis H6 (2026-11-23 audit) — fidelity and motion go to moments (a win, a scene) and to
+    the home screen; standing trading and information surfaces rest calm, with news on what he holds
+    first. Proves it wrong (check by 2027-01-15): after 2026-11-23, a note from him asking for
+    standing motion on a trading or information surface, or calling a calm one flat._
+- **Wider over narrower.** When several shapes each show the thing from a useful angle, he keeps
+  them as switchable modes: *"I like having access to all 3 capabilities… a powerful way for me to
+  iterate from different angles on demand"* (2026-10-15, #5350 round 3; moved here from
+  `docs/READERS.md`). Since then: "More of all three" sector views, with bars then cut as *"fully
+  redundant with the percentage change"* (2026-11-08, #7018 round 3; ALIGNMENT 2026-11-08 · #7018
+  round 3 Q1, miss); *"Is something preventing us from offering both and/or other experiences?"*
+  (2026-11-23, session on #8161); *"run model C"*, the widest of three test scales (2026-11-23,
+  #8005; ALIGNMENT 2026-11-23 · #8005, miss: Claude predicted B).
+  - _hypothesis H7 (2026-11-23 audit) — offered a narrower option and a wider or combined one, he
+    picks the wider; predict it unless the wider spends what he named as scarce (his attention,
+    quota past the reset). Proves it wrong (check by 2027-01-15): of the first 5 ledger answers
+    after 2026-11-23 that offer both, he picks the narrower in 3 or more._
+- **Spend he can see, never spend that surprises him.** *"woah, this is burning all my weekly
+  quota! stop!"* (2026-10-14); *"we are already 6% burnt for the week. wrap up inflight work but
+  temper the burn rate"* (2026-11-10); yet *"consider fable 5.1 ultracode on the table given we have
+  virtually all our tokens with 2 days left before reset."* (2026-11-01) and *"iterations make
+  incremental improvements which effectively brute force us to a better/superior solution over time
+  even if it's less token effecient."* (2026-11-23, #8037). Governance, credentials and spend stay
+  his (CLAUDE.md → Hard boundaries), reconfirmed 2026-11-23.
+  - _hypothesis H8 (2026-11-23 audit) — he accepts a large run when its price is stated before
+    launch and it ends before the weekly reset, and stops one he could not see coming. Proves it
+    wrong (check by 2026-12-31): after 2026-11-23, a stop or quota remark from him on a run whose
+    price line went out before launch and that ended before the reset, or no remark on an unpriced
+    run that crossed it._
+- **A name teaches the mechanism; the brand is found in the work.** *"the name reflects the deep
+  concepts to a somewhat visceral scientific level"*; *"this is a problem we can work towards
+  resolution over time as we built new content and find our brand identity. Be on the lookout for
+  ideas that we can weave into our brand!"* (2026-11-01, session). His own names (a product, a page,
+  a pun) belong to brand and lore; a feature label or a question to him says what the thing does
+  (`docs/READERS.md`, 2026-09-25). The pick and any rename are his (#6616).
 
 - **Wants the system to decide more of his calls over time** (2026-10-18): *"In theory, If we are
   fully aligned (ongoing goal that we will never fully reach), you would be equipped to make 100% of
@@ -123,6 +220,12 @@ ahead of earnings"* — taking profit is not the end of a trade but the funding 
   scored when he replies (`docs/process/ALIGNMENT.md`). And he dials effort as a count: *"commanding
   x number of iterations is a normalized way to instruct the degree of effort, account of resources
   (tokens) to apply towards an experiment, effort, goal."*
+  Then (2026-11-23, #8161): *"My job will be to steer/direct, not bless."* Then: *"not just my job,
+  but 'humans jobs'."* Screen design (taste) has been decide-and-report since 2026-11-22
+  (`docs/process/ALIGNMENT.md` → Graduated classes). How he wants the work run (decide on evidence,
+  a piling backlog is a defect, failures self-correct before reaching him, no terminal steps) lives
+  in CLAUDE.md and `docs/process/WORKING-AGREEMENTS.md`, not here; his back-tested design rules in
+  `docs/design/decision-rules.md`.
 
 ## 5. What frustrates him
 
@@ -258,6 +361,8 @@ Each step: `goto` · what he sees · the EARS acceptance line · the judge line.
    reopen day is a ⧗ on Events (#4608). **WHEN the owner has decided to wait, the app shall carry
    the wait on the book with the date that reopens it.** Judge: does this reader know when to look
    again?
+   _#4608 made an undated book-level wait impossible, so this step cannot test H4 (§4); only s1's
+   lever can (2026-11-23)._
 
 ### j5 — the phone check (every step at 390×844, touch)
 
@@ -278,10 +383,12 @@ Each step: `goto` · what he sees · the EARS acceptance line · the judge line.
 1. `/app/settings` — Settings opens on Preferences: density and theme (dark · light), applied to
    this browser at once. **WHEN the owner opens Settings, the app shall open on Preferences with
    the theme and density switches.** Judge: can this reader find the palette they read best?
-   - _hypothesis — he picks the palette he reads best, because contrast is what he asked for
-     (2026-09-06: "Higher contrast colors make it easier for me to detect these details"). Proves
-     it wrong: a dated note from him that he never changes the display settings, or his deleting
-     this step._
+   - _hypothesis H5 (2026-09-26, rewritten 2026-11-23) — he picks the palette he reads best,
+     because contrast is what he asked for (2026-09-06: "Higher contrast colors make it easier for
+     me to detect these details"). The choice is stored per browser (`app/src/shell/prefs.ts`,
+     `setTheme` / `setDensity`), so no server record can settle it. Proves it wrong (check by
+     2026-12-31): every screenshot of the live app he attaches through 2026-12-31 shows the default
+     theme and density, or he says he never changes them._
 2. `/app/settings?section=guests` — the Guest list: who is invited and whether they joined (the
    invited friend among them), and the field to invite someone — the owner tier's one tool here
    (§2). **WHEN the owner opens the guest list, the app shall show who is invited and a way to

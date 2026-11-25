@@ -3,6 +3,7 @@ import { CONVICTION_CHIPS } from "./moneypenny-conviction";
 import { FOLLOWUP_CHIPS } from "./moneypenny-followup";
 import { linkPieces, pivotOf } from "./moneypenny-links";
 import { RESEARCH_ASK_CHIPS } from "./moneypenny-research";
+import { PLAY_SCENE, sceneChoiceMoves } from "./moneypenny-scene";
 import { type Chip, chipsFor, type Flow } from "./moneypenny-script";
 
 /**
@@ -19,7 +20,8 @@ import { type Chip, chipsFor, type Flow } from "./moneypenny-script";
  *
  * Precedence is the rail's, unchanged: nothing while a turn is under way; a parked card's own exits
  * (in the conversation it was drafted in); else, on the main conversation at rest, the canned moves
- * for where the member is. A side thread shows only a parked card's exits.
+ * for where the member is, plus "Play a scene" when the server offers scenes. A side thread shows
+ * a parked card's exits, else its way out; a scene thread puts its three choices ahead of that.
  */
 
 /** A move: a canned message sent as the member's own, or a page address the member goes to. */
@@ -27,7 +29,9 @@ export type Move =
   | { readonly kind: "say"; readonly label: string; readonly msg: string }
   | { readonly kind: "go"; readonly label: string; readonly href: string }
   /** Leave a side thread for the main conversation — every thread's way out. */
-  | { readonly kind: "main"; readonly label: string };
+  | { readonly kind: "main"; readonly label: string }
+  /** Start a fresh game-master scene in its own side thread (#8191, `moneypenny-scene.ts`). */
+  | { readonly kind: "scene"; readonly label: string };
 
 /** A side thread's way out: the dock otherwise offers nothing that leads back. */
 export const BACK_TO_MAIN: Move = { kind: "main", label: "Back to the main conversation" };
@@ -47,6 +51,10 @@ export interface MoveState {
   readonly firstTradeDone: boolean;
   /** Her latest line on screen, for the pivot it may offer. */
   readonly latest: MpMessage | undefined;
+  /** The server lets this session play a scene (`GET /api/companion` → `gameMaster`, #8191). */
+  readonly gameMaster?: boolean;
+  /** The side thread on screen is a scene: its choices become moves. */
+  readonly inScene?: boolean;
 }
 
 const say = (c: Chip): Move => ({ kind: "say", label: c.label, msg: c.msg });
@@ -65,7 +73,11 @@ export function movesFor(s: MoveState): readonly Move[] {
   if (exits) return exits.map(say);
   if (parked.draft)
     return chipsFor({ draft: true, connected: false, firstTradeDone: false }).map(say);
-  if (s.inThread) return [BACK_TO_MAIN];
+  // A scene's three choices, when her latest line offers them, then the way out (#8191 AC 13).
+  if (s.inThread)
+    return s.inScene && s.latest?.role === "mp"
+      ? [...sceneChoiceMoves(s.latest.text), BACK_TO_MAIN]
+      : [BACK_TO_MAIN];
   if (s.flow !== "idle") return [];
   const pivot = s.latest?.role === "mp" ? pivotOf(s.latest.text) : undefined;
   // The first one or two places she names also become moves, a thumb-sized way there beside the
@@ -81,7 +93,10 @@ export function movesFor(s: MoveState): readonly Move[] {
     draft: false,
     connected: s.connected,
     firstTradeDone: s.firstTradeDone,
-  }).map(say);
+  })
+    .map(say)
+    // One more move on the main conversation at rest, when the server offers scenes (#8191).
+    .concat(s.gameMaster ? [PLAY_SCENE] : []);
   if (places.length > 0) return [...places, ...canned];
   return pivot
     ? [

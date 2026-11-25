@@ -1,3 +1,4 @@
+import type { HeldBlock, HeldFacts } from "../held-pr.mjs";
 import type { Readback } from "./answer-readback.mjs";
 import type { AskItem } from "./ask-card.mjs";
 // Type surface for scripts/moneypenny/assignments.mjs (see index.d.mts for why scripts/ ships
@@ -5,7 +6,10 @@ import type { AskItem } from "./ask-card.mjs";
 export const ASSIGN_MARKER: string;
 export const UNASSIGN_MARKER: string;
 export const HOLD_MERGE: string;
+/** Criterion 4's backstop: a held PR not known green is asked about after this long open. */
 export const HELD_PR_HOURS: number;
+/** Criterion 4: a held PR green this long is asked about (#7317). */
+export const HELD_GREEN_HOURS: number;
 export const ASSIGN_CAP: number;
 export const OPEN_CAP: number;
 export const BATCH_STARTS_UTC: readonly (readonly [number, number])[];
@@ -72,6 +76,14 @@ export interface NeedsYouRow {
   criterion: 1 | 4;
   why: string;
   decision?: string;
+  /** Criterion 4 only: true when the hours are green hours, false when they are the open backstop's. */
+  green?: boolean;
+  /** Criterion 4 only: hours on the clock that made it due. */
+  hours?: number;
+  /** Criterion 4 only: the open issues the held PR names (`plan` flags a plan), when green. */
+  blocks?: HeldBlock[];
+  /** Criterion 4 only: true when its check runs could not be read — "checks unknown" (#8212). */
+  unknown?: boolean;
 }
 /** An ask his answer cannot complete yet, or a `needs-session` issue (#6953 slice 2). */
 export interface NeedsSessionRow {
@@ -109,6 +121,8 @@ export interface PlanInput {
   lastAskAt?: number;
   /** Live graduated classes (ALIGNMENT.md, `activeGraduated`): their fresh asks go to a session. */
   graduated?: string[];
+  /** `readHeldFacts`'s map: each held PR's green time and what it blocks (#7317). */
+  held?: Map<number, HeldFacts>;
   now?: number;
 }
 /** The graduated class an ask belongs to, else null (#7939 slice 3). */
@@ -141,6 +155,8 @@ export function report(
 export function gather(opts?: {
   /** Injected for specs; production reads through gh.mjs's `ghRestAll` at the wall clock. */
   rest?: (path: string) => unknown[];
+  /** The single-object read for held PRs' check runs; `null` (the default with an injected `rest`) reads none. */
+  read?: ((path: string) => unknown) | null;
   now?: number;
   /** Injected for specs; production reads docs/process/ALIGNMENT.md's live graduated classes. */
   graduated?: () => string[];
@@ -155,6 +171,7 @@ export function gather(opts?: {
     | "replies"
     | "lastAskAt"
     | "graduated"
+    | "held"
   >
 >;
 export function routeAssignments(deps?: {
@@ -168,10 +185,13 @@ export function routeAssignments(deps?: {
     | "replies"
     | "lastAskAt"
     | "graduated"
+    | "held"
   > | null;
   now?: number;
   /** #7939 slice 2: criterion-1 cards are off by default; the decisions page carries those asks. */
   issueCards?: boolean;
+  /** #7317: criterion-4 (held PR) cards are off by default; the decisions page carries those too. */
+  heldCards?: boolean;
 }): AssignIntent[];
 export const ASK_LEASE_MS: number;
 /** How long a closed capsule's carried ask stays on the needs-session list. */

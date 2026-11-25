@@ -54,7 +54,18 @@ export interface FeedbackInput {
    *  or both, re-checked by `parseProblemMatch` on the way in. It earns the row's `ia-<row>`
    *  label and one table row in the body, built from the ledger's words, never the POST's. */
   readonly match?: ProblemMatch;
+  /** Where the member wrote it, when not the chat or the form: `journal` is a wish from the wish
+   *  journal (#8190), in the member's own words. One meta row says so, so triage and the census can
+   *  count journal wishes; it earns no label. */
+  readonly source?: FeedbackSource;
 }
+
+/** The doors a filing can arrive through besides the chat and the form. */
+export type FeedbackSource = "journal";
+
+const SOURCE_LABEL: Record<FeedbackSource, string> = {
+  journal: "the member's wish journal",
+};
 
 /** The issue title a submission gets — the tag mirrors the .github/ISSUE_TEMPLATE forms. */
 export function titleFor(input: FeedbackInput): string {
@@ -83,7 +94,9 @@ export function labelsFor(input: FeedbackInput): readonly string[] {
     ...rowLabel,
     "curated",
     ...(spec.needsEric ? ["needs-eric"] : []),
-    ...(spec.readiness === "partial" ? ["needs-info"] : []),
+    // A matched filing is evidence on its row, never built alone (#8005), so no build waits on the
+    // member's answer: parking it `needs-info` would read "Waiting on your answer" forever.
+    ...(spec.readiness === "partial" && rowLabel.length === 0 ? ["needs-info"] : []),
   ];
 }
 
@@ -145,6 +158,7 @@ export function issueBody(input: FeedbackInput, imageUrls: readonly string[] = [
   const meta: [string, string][] = [["Kind", FEEDBACK_KIND_LABEL[input.kind]]];
   if (input.area) meta.push(["Where", input.area]);
   if (input.match) meta.push([...matchMeta(input.match)]);
+  if (input.source) meta.push(["From", SOURCE_LABEL[input.source]]);
   lines.push("| | |", "|---|---|", ...meta.map(([k, v]) => `| **${k}** | ${tableCell(v)} |`));
   // The link closes claude.yml's issues gate, which every app filing reaches as OWNER (#7444).
   lines.push(

@@ -95,17 +95,41 @@ export function answerFailed(reason: string | undefined): string {
   return why ? `Moneypenny · i couldn't answer that just now: ${why}` : CHAT_DOWN;
 }
 
+/** One similar open issue as a card line: its number links to its page when the server sent
+ *  one. Square brackets in a title would read as a link of their own, so they become round. */
+function similarLine(issue: {
+  readonly number: number;
+  readonly title: string;
+  readonly url?: string;
+}): string {
+  const label = `#${String(issue.number)}`;
+  const title = issue.title.replace(/\[/g, "(").replace(/\]/g, ")");
+  const ref = issue.url?.startsWith("https://") ? `[${label}](${issue.url})` : label;
+  return `- ${ref} ${title}`;
+}
+
 /** The draft as the member sees it before anything files — kind, title, details, the two exits. */
 export function draftCard(draft: {
   readonly kind: string;
   readonly title: string;
   readonly details: string;
   readonly match?: { readonly words: string };
+  readonly similar?: readonly {
+    readonly number: number;
+    readonly title: string;
+    readonly url?: string;
+  }[];
 }): string {
   // A matched draft says what it adds to (#8005 slice 7): the member sees, before "submit", that
   // this files as one more voice on a problem already recorded, not a new feature.
   const known = draft.match?.words ? `\n\nAdds to ${draft.match.words}` : "";
-  return `[${draft.kind}] ${draft.title}\n\n${draft.details}${known}\n\n— reply "submit" to file it, or "never mind" to drop it.`;
+  // Open reports that read like this one (#4286): a look before "submit", never a block. Its own
+  // paragraph, apart from "Adds to", so a card carrying both stays readable at 390px; no line at
+  // all when nothing matched.
+  const similar = draft.similar?.length
+    ? `\n\nMight already be filed:\n${draft.similar.map(similarLine).join("\n")}`
+    : "";
+  return `[${draft.kind}] ${draft.title}\n\n${draft.details}${known}${similar}\n\n— reply "submit" to file it, or "never mind" to drop it.`;
 }
 
 /** The intro, three beats: who she is, the open question, and the onboarding steer that fits.

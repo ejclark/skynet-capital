@@ -1,8 +1,10 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { ladderRefusal } from "../domain/progression.js";
+import { EXIT_AT_ENTRY, exitAtEntryAdmits } from "../trading/exit-at-entry-flag.js";
 import {
   normalizeSymbol,
   previewOrder,
+  type TicketExit,
   type TicketOrderType,
   type TicketTimeInForce,
 } from "../trading/order-ticket.js";
@@ -42,6 +44,7 @@ interface TradeApiBody {
   readonly limitPrice?: number;
   readonly stopPrice?: number;
   readonly timeInForce?: TicketTimeInForce;
+  readonly exit?: TicketExit;
 }
 
 const TRADE_BODY_CAP_BYTES = 8_192;
@@ -51,8 +54,42 @@ function parsePositivePrice(raw: unknown): number | undefined {
   return Number.isFinite(value) && value > 0 ? value : undefined;
 }
 
-/** Strict shape gate: exactly the fields an order needs, verified, everything else dropped. */
-function parseTradeBody(raw: string): TradeApiBody | undefined {
+/** The sentence a session the exit-at-entry setting does not admit gets for a stop-limit or an
+ *  exit (#8249). Refused, never dropped: a dropped `exit` would place the entry with no way out. */
+export const EXIT_AT_ENTRY_REFUSAL =
+  "Stop-limit orders and exits placed with the entry aren't open to this account yet — nothing was placed.";
+
+/** The exit's two prices; undefined when the body carries none; null when `exit` is not an object
+ *  (malformed, never dropped). A price that is missing or not positive is left out, and the
+ *  ticket refuses it in words. */
+function parseExit(raw: unknown): TicketExit | undefined | null {
+  if (raw === undefined || raw === null) return undefined;
+  if (typeof raw !== "object" || Array.isArray(raw)) return null;
+  const { takeProfit, stop } = raw as Record<string, unknown>;
+  const tp = parsePositivePrice(takeProfit);
+  const sl = parsePositivePrice(stop);
+  return {
+    ...(tp !== undefined ? { takeProfit: tp } : {}),
+    ...(sl !== undefined ? { stop: sl } : {}),
+  };
+}
+
+/** Absent, or a type this route places: stop-limit only for an admitted session. */
+function knownOrderType(raw: unknown, exitAtEntry: boolean): boolean {
+  if (raw === undefined || raw === "market" || raw === "limit" || raw === "stop") return true;
+  return exitAtEntry && raw === "stop_limit";
+}
+
+/** A body carrying what only an admitted session may send: a stop-limit, or any `exit` at all. */
+function carriesExitAtEntry(body: Record<string, unknown>): boolean {
+  // `exit: null` reads as no exit, as an absent field does (main drops it like any unknown field).
+  return body.orderType === "stop_limit" || (body.exit !== undefined && body.exit !== null);
+}
+
+/** Strict shape gate: exactly the fields an order needs, verified, everything else dropped.
+ *  `stop_limit` and `exit` parse only when `exitAtEntry` admits the session (the caller refuses
+ *  them otherwise, before this runs). */
+function parseTradeBody(raw: string, exitAtEntry = false): TradeApiBody | undefined {
   const body = parseJsonRecord(raw);
   if (!body) return undefined;
   const participantId = body.participantId;
@@ -68,13 +105,9 @@ function parseTradeBody(raw: string): TradeApiBody | undefined {
   // default, so a client that sent a type the server had not learned yet (a stop-limit, a
   // trailing stop) would have submitted an immediate MARKET order in its place — a protective
   // exit turned into a sale at whatever the market paid (change-scenarios census, 2026-11-16).
-  if (
-    body.orderType !== undefined &&
-    body.orderType !== "limit" &&
-    body.orderType !== "stop" &&
-    body.orderType !== "market"
-  )
-    return undefined;
+  if (!knownOrderType(body.orderType, exitAtEntry)) return undefined;
+  const exit = exitAtEntry ? parseExit(body.exit) : undefined;
+  if (exit === null) return undefined;
   const orderType = body.orderType as TicketOrderType | undefined;
   const limitPrice = parsePositivePrice(body.limitPrice);
   const stopPrice = parsePositivePrice(body.stopPrice);
@@ -91,6 +124,7 @@ function parseTradeBody(raw: string): TradeApiBody | undefined {
     ...(limitPrice !== undefined ? { limitPrice } : {}),
     ...(stopPrice !== undefined ? { stopPrice } : {}),
     ...(timeInForce ? { timeInForce } : {}),
+    ...(exit ? { exit } : {}),
   };
 }
 
@@ -99,10 +133,16 @@ function parseTradeBody(raw: string): TradeApiBody | undefined {
 async function readTradeBody(
   req: IncomingMessage,
   res: ServerResponse,
+  exitAtEntry: boolean,
 ): Promise<{ readonly body: TradeApiBody; readonly questId?: string } | undefined> {
   const raw = await readJsonPost(req, res, TRADE_BODY_CAP_BYTES);
   if (raw === undefined) return undefined;
-  const body = parseTradeBody(raw);
+  const record = parseJsonRecord(raw);
+  if (!exitAtEntry && record && carriesExitAtEntry(record)) {
+    sendJson(res, 400, { error: EXIT_AT_ENTRY_REFUSAL, refusals: [EXIT_AT_ENTRY_REFUSAL] });
+    return undefined;
+  }
+  const body = parseTradeBody(raw, exitAtEntry);
   if (!body) {
     sendJson(res, 400, { error: "malformed order body" });
     return undefined;
@@ -162,6 +202,18 @@ async function reviewQuote(
   }
 }
 
+/** Whether this session may send a stop-limit or an exit (#8249): the boot's setting and the
+ *  server's own owner check, never anything in the request. */
+export function exitAtEntryFor(
+  config: Pick<DashboardServerConfig, "exitAtEntry" | "isOwnerEmail">,
+  session: Session | undefined,
+): boolean {
+  return exitAtEntryAdmits(
+    config.exitAtEntry ?? EXIT_AT_ENTRY,
+    session ? { owner: config.isOwnerEmail?.(session.email) === true } : undefined,
+  );
+}
+
 /** Handle `/api/trade/*`. Returns true when the request was answered. */
 export async function serveTradeApi(
   req: IncomingMessage,
@@ -171,7 +223,7 @@ export async function serveTradeApi(
   session: Session | undefined,
 ): Promise<boolean> {
   if (path !== "/api/trade/review" && path !== "/api/trade/submit") return false;
-  const read = await readTradeBody(req, res);
+  const read = await readTradeBody(req, res, exitAtEntryFor(config, session));
   if (!read) return true;
   const { body } = read;
 
@@ -195,9 +247,13 @@ export async function serveTradeApi(
     }
     const isSelf = requesterId !== undefined && requesterId === body.participantId;
     const quotePrice = isSelf ? await reviewQuote(config, requesterId, body.symbol) : undefined;
+    // UNREAD IS NOT EMPTY (#8335): a failed broker read degrades to a row with $0 cash, no
+    // positions and `error` set. Priced against that, a buy reads "more than your cash" and a sell
+    // "you don't hold this", so the row's error rides along and the review says the read failed.
     const preview = previewOrder(body, {
       cash: snapshot.cash,
       positions: snapshot.positions,
+      ...(snapshot.error ? { accountUnread: true as const } : {}),
       tradingEnabled: Boolean(config.tradingEnabled),
       isSelf,
       ...(quotePrice !== undefined ? { quotePrice } : {}),

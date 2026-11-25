@@ -10,8 +10,10 @@ import type { HouseRosterReport } from "../autonomous/house-roster-wire.js";
 import type { PlaybookFunnelView } from "../autonomous/playbook-funnel.js";
 import type { SignalWindows } from "../autonomous/signal-windows.js";
 import type { CompanionTurn } from "../companion/companion-chat.js";
+import type { GameMasterPilot } from "../companion/game-master-flag.js";
 import type { Lesson } from "../domain/campaign-lessons.js";
 import type { OrderIntent, PlaybookVerdict } from "../domain/types.js";
+import type { AlpacaNewsClient } from "../news/alpaca-news-client.js";
 import type { ActivityEventBus } from "../observatory/activity-event.js";
 import type { TradeActivityRecord } from "../observatory/activity-store.js";
 import type { CapitalFlowReader } from "../observatory/capital-flow-ledger.js";
@@ -24,7 +26,9 @@ import type { AlertDismissalsPort } from "../ports/alert-dismissals.js";
 import type { WatchlistPort } from "../ports/watchlist.js";
 import type { IvHistoryPort } from "../research/iv-record.js";
 import type { SpotCheckPort } from "../research/spot-checks.js";
+import type { ExitAtEntry } from "../trading/exit-at-entry-flag.js";
 import type { AccountAdmin } from "./account-forms.js";
+import type { AlpacaConnect } from "./alpaca-connect-routes.js";
 import type { Authenticator } from "./auth/authenticator.js";
 import type { AuthoredPlayStore } from "./authored-play-store.js";
 import type { BookHealthHistoryPort } from "./book-health-history-store.js";
@@ -42,13 +46,19 @@ import type { SubmitDraftOrder } from "./draft-trade-service.js";
 import type { ExitPlanStore } from "./exit-plan-store.js";
 import type { FeedbackRouteDeps } from "./feedback-routes.js";
 import type { FilingCommentsDeps } from "./filing-comments-form.js";
+import type { FixAnnouncementStore } from "./fix-announcement-store.js";
 import type { GithubTokenDeps } from "./github-token.js";
 import type { InviteDeps } from "./invite-form.js";
+import type { JournalStore } from "./journal-store.js";
+import type { ReadMarketClock } from "./market-clock.js";
 import type { MemberCampaignStore } from "./member-campaign-store.js";
 import type { MemberChainStore } from "./member-chain-store.js";
 import type { MemberConvictionStore } from "./member-conviction-store.js";
+import type { MemberFollowStore } from "./member-follow-store.js";
+import type { MemberVisitStore } from "./member-visits.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
 import type { OpsStatusDeps } from "./ops-status-routes.js";
+import type { BotsStandingRead } from "./ops-status-service.js";
 import type { SubmitOptionTrade } from "./option-trade-service.js";
 import type { OrderAuditRecord } from "./order-audit-log.js";
 import type { ReadOwnerQueue } from "./owner-queue.js";
@@ -58,6 +68,7 @@ import type {
   RotateCredentialsInput,
   RotateResult,
 } from "./participant-service.js";
+import type { PartySeats } from "./party-seats.js";
 import type { PlayMilestoneLedger } from "./play-milestone-ledger.js";
 import type { ProgressionService } from "./progression-service.js";
 import type { QuoteStreamPort } from "./quote-stream-hub.js";
@@ -92,6 +103,11 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    */
   readonly capitalFlows?: CapitalFlowReader;
   /**
+   * Who sits at the party's table (#8253): a member's first filled paper order, read from our own
+   * journal. Omit (tests, offline) and nobody is seated — the table shows open seats only.
+   */
+  readonly partySeats?: PartySeats;
+  /**
    * Legacy shared-password gate. Used only when `auth` is not configured (localhost/offline).
    * When set, every request must carry ?key=<password>.
    */
@@ -111,6 +127,12 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * registers a new account. Omit to disable the feature (e.g. offline mode).
    */
   readonly addParticipant?: (input: AddParticipantInput) => Promise<AddResult>;
+  /**
+   * Connect with Alpaca (#8250): the OAuth account link the Onboarding chapter offers in place of
+   * a key paste. Present only when the app's secrets are set and its authorize URL asks for a
+   * paper account (`alpaca-connect-wiring.ts`); omit and the chapter keeps the key-paste guide.
+   */
+  readonly alpacaConnect?: AlpacaConnect;
   /**
    * Self-service credential rotation. When provided, `GET /rotate` serves a compact form and
    * `POST /rotate` swaps an EXISTING account's key/secret in place — the sanctioned path for
@@ -195,6 +217,10 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
   readonly findByOrderId?: (
     orderId: string,
   ) => { readonly record: DecisionRecord; readonly intent: OrderIntent } | undefined;
+  /** The playbook that placed a bot's order, off the same join but remembered for the process
+   *  (`rememberPlaybooks`, #8397): Activity's chip list asks about every order in the ledger on
+   *  every member's read. Omit and the desk routes ask `findByOrderId` afresh on each request. */
+  readonly playbookOfOrder?: (orderId: string) => string | undefined;
   /** Which other personas trade on an account — the order-id join kept per account, advanced by
    *  only the ledger lines appended since and asked again only when the decision store gains a row
    *  it can match (`account-personas-fold.ts`, #4619). Omit and the Decisions tab shows the
@@ -291,6 +317,9 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
   readonly activityLog?: Pick<ActivityEventBus, "list">;
   /** Options data (chains/spot) via a participant's own credentials, for the /trade ticket. */
   readonly optionsClientFor?: (participantId: string) => AlpacaOptionsClient | undefined;
+  /** News on held names via a participant's own credentials (`held-news-route.ts`, #8203) —
+   *  never the bots' shared key. Absent = the route says the session isn't linked. */
+  readonly newsClientFor?: (participantId: string) => AlpacaNewsClient | undefined;
   /** The underlying quote, pushed instead of polled (`quote-stream-route.ts`, #3407 P4) — one
    *  market-data socket per member, on that member's own credential. Absent = the route says so
    *  and the quote keeps its 15-second poll. */
@@ -304,6 +333,9 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
   /** The transport that carries an alert off this machine — the one half that needs Eric's
    *  credential. Absent: delivery reads as unconfigured IN WORDS, never a silent drop. */
   readonly alertDelivery?: AlertDeliveryPort;
+  /** Run one delivery pass for this account now — the fill-watch route calls it after a tap, so an
+   *  order that ended a moment before still gets its one email (#8251). Absent: no transport. */
+  readonly alertDeliveryNudge?: (participantId: string) => void;
   /** Where a member's watchlist is kept (`watchlist-route.ts`, #4332). Absent: the route says the
    *  list isn't stored on this deployment rather than accepting names into memory. */
   readonly watchlist?: WatchlistPort;
@@ -335,6 +367,13 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * picker, whose authorization has no such bypass. Omit when OAuth isn't configured.
    */
   readonly isOwnerEmail?: (email: string) => boolean;
+  /** The game-master pilot's setting (#8191) — specs only. Absent, the committed
+   *  `GAME_MASTER_PILOT` in `companion/game-master-flag.ts` is the setting; boot never sets this. */
+  readonly gameMasterPilot?: GameMasterPilot;
+  /** The exit-at-entry setting (#8249). Absent, the committed `EXIT_AT_ENTRY` in
+   *  `trading/exit-at-entry-flag.ts` is the setting; the boot sets it only from
+   *  `exitAtEntrySetting`, which reads an override on the offline writes boot alone. */
+  readonly exitAtEntry?: ExitAtEntry;
   /** What waits on the owner's decision or merge (`owner-queue.ts`); read into Moneypenny's turn
    *  only when `isOwnerEmail` passes for the session. Omit when the feedback token is unset. */
   readonly readOwnerQueue?: ReadOwnerQueue;
@@ -365,6 +404,17 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    *  signed-in member may open one by id, never a visitor. Omit and `/api/companion/screenshots*`
    *  does not exist (offline wiring). */
   readonly companionScreenshots?: CompanionScreenshotStore;
+  /** Which shipped fixes Moneypenny has already announced to each member (#8078,
+   *  `fix-announcement-store.ts`), so "told once" holds across threads, devices and long chats.
+   *  Omit (offline wiring) and she falls back to the transcript, which forgets within ten lines. */
+  readonly fixAnnouncements?: FixAnnouncementStore;
+  /** The day each signed-in member last loaded the shell, and the screens they landed on (#8169,
+   *  `member-visits.ts`). Omit (offline wiring) and nothing is recorded. */
+  readonly memberVisits?: MemberVisitStore;
+  /** A member's private experience and trade notes from the wish journal (#8190,
+   *  `journal-store.ts`). Omit (offline wiring) and `/api/journal` saves no notes; wishes still
+   *  file through `submitFeedback`. */
+  readonly journal?: JournalStore;
   /**
    * The Playbook Store (issue #885) — an account's own playbook subscriptions and capital
    * sub-allocations. Omit to disable (offline mode) — the catalog still browses, just with no
@@ -420,6 +470,16 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    */
   readonly memberChains?: MemberChainStore;
   /**
+   * The bots a member follows on the Bots screen (#8254) — a pin keyed by `opaqueMemberId`, read by
+   * the bots API alone: it orders the list and opens nothing. Omit to disable (offline mode): the
+   * list answers with no follows and a follow answers "not wired in this deployment."
+   */
+  readonly memberFollows?: MemberFollowStore;
+  /** What the bots process last reported on its `/controls` poll — the house mode and each bot's
+   *  gate verdict — plus this app's Mission Control holds, for the Bots screen's standing words
+   *  (#8254). Omit and every standing reads "not reported", never guessed. */
+  readonly readBotsStanding?: () => BotsStandingRead;
+  /**
    * Whether the house has a ledger on a symbol, for a campaign's research ask. Omit to read the
    * research shelf on each save (`shelfResearched`); specs pass a fixed answer.
    */
@@ -465,6 +525,9 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    *  only on an offline e2e boot (`SKYNET_EDITION_NOW`, src/scripts/offline-clocks.ts, #7901); omit
    *  and the wall clock is used. */
   readonly editionNow?: () => Date;
+  /** Market hours from Alpaca's calendar and clock, shared and cached (`market-clock.ts`, #8248).
+   *  Absent: the checked-in table answers, and says so (`source: "table"`). */
+  readonly readMarketClock?: ReadMarketClock;
   /**
    * `GET/POST /api/council` — the Sunday Council's weekly thesis line (issue #2224 shape 1). Omit
    * to disable (offline mode) — the shell renders the honest "not switched on yet" state instead

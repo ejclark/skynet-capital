@@ -1,6 +1,7 @@
+import { fixedPct } from "../domain/percent.js";
 import { EXIT_DTE, longCallExit, TAKE_PROFIT, timeStopDay } from "../playbooks/long-call-rules.js";
 import { type LeverContext, why } from "./position-guidance-levers.js";
-import { daysBetween, dayText, pct, pulseOf, usd } from "./position-guidance-rules.js";
+import { daysBetween, dayText, pulseOf, usd } from "./position-guidance-rules.js";
 import type { GuidanceReason, HeldLongOption, LongCallCall } from "./position-guidance-types.js";
 
 /**
@@ -37,7 +38,7 @@ const owner = (c: HeldLongOption): string =>
 /** "bid $6.00 against the $12.00 you paid — half of it" / "— 2.3× it": the price against cost. */
 function againstCost(bid: number, paid: number): string {
   const x = bid / paid;
-  const how = x >= 1 ? `${x.toFixed(1)}× it` : `${pct(x)} of it`;
+  const how = x >= 1 ? `${x.toFixed(1)}× it` : `${fixedPct(x)} of it`;
   return `The bid is ${usd(bid)} against the ${usd(paid)} you paid — ${how}`;
 }
 

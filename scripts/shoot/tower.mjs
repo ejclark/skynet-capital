@@ -72,6 +72,10 @@ const SHOTS = [
   // sit) and captures mid-glance, so the turn toward it is visible.
   { tag: "card", w: 384, h: 664, card: true },
   { tag: "card-glance", w: 384, h: 664, card: true, glance: [-420, 330] },
+  // The home screen's phone still (#8189): at ≤860 the home shows a committed picture of the card
+  // framing, never a WebGL frame. Shot at 2× the phone box (390×200) so it is crisp on a phone; the
+  // PNG is cut to `app/src/assets/tower-still.jpg` (≤100KB) by hand with ImageMagick.
+  { tag: "home-still", w: 780, h: 400, card: true },
   // The crest at the calendar band's RIGHT cap (plan #3807 slice 3a): the same still camera framed
   // on the crown and the Eye. The glance pose posts a point 600px to the LEFT of the frame — where
   // the calendar's days sit — and captures mid-glance (the panel's F2: legible at this size?).

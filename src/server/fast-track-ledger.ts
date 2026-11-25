@@ -18,7 +18,8 @@ import { horizonRowsOf } from "./research-event-calls.js";
 
 const KILL_HEADER = /^\*\*Kill switches[^*\n]*\*\*\s*$/m;
 const BULLET = /^(?:[-*]|\d+\.)\s+/;
-const ISO_DAY = /\b\d{4}-\d{2}-\d{2}\b/g;
+/** Every YYYY-MM-DD inside free text (global, unanchored) — not the whole-string shape check `DATE_RE`. */
+const ISO_DAY_IN_TEXT = /\b\d{4}-\d{2}-\d{2}\b/g;
 /** A switch's own authoring stamp — "(new, 2026-08-31)" — is when it was written, not when it fires. */
 const STAMP = /\((?:new|added|updated|revised)\b[^)]*\)/gi;
 
@@ -56,7 +57,7 @@ export function killSwitchBullets(md: string): string[] {
 
 /** True while the switch can still fire on `asOf`: undated, or naming a day not yet past. */
 export function stillLive(text: string, asOf: string): boolean {
-  const days = text.replace(STAMP, "").match(ISO_DAY) ?? [];
+  const days = text.replace(STAMP, "").match(ISO_DAY_IN_TEXT) ?? [];
   const today = asOf.slice(0, 10);
   return days.length === 0 || days.some((d) => d >= today);
 }

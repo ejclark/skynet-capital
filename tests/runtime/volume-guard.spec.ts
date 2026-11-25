@@ -69,8 +69,10 @@ describe("volumePersistenceWarnings", () => {
       ...pinned,
       SKYNET_DATA_ROOT: "/app/data",
     });
-    expect(warnings).toHaveLength(1);
-    expect(warnings[0]).toContain("SKYNET_COMPANION_SCREENSHOTS_DIR");
+    // One warning per derived store — they share the root, so a root off the mount strands all.
+    const derived = Object.keys(DERIVED_STORES);
+    expect(warnings).toHaveLength(derived.length);
+    for (const name of derived) expect(warnings.some((w) => w.includes(name))).toBe(true);
   });
 
   it("leaves an unset opt-in store alone — unset means the feature is dark, not unpinned", () => {

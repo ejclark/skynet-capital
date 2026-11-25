@@ -20,6 +20,8 @@ export type { ChatConvictionDraft, ResearchAskDraft };
 export interface CompanionIndex {
   readonly enabled: boolean;
   readonly disclosure: string;
+  /** Whether this session may play a game-master scene (#8191) — the server's pilot setting. */
+  readonly gameMaster?: boolean;
 }
 
 export async function fetchCompanionIndex(): Promise<CompanionIndex> {
@@ -59,6 +61,13 @@ export interface CompanionDraft {
     readonly plan?: number;
     readonly words: string;
   };
+  /** Open feedback issues that read like this one (#4286), up to 3 — listed on the card before
+   *  "submit", never sent with the filing. Absent when none is close enough. */
+  readonly similar?: readonly {
+    readonly number: number;
+    readonly title: string;
+    readonly url?: string;
+  }[];
 }
 
 /** The page the member is asking from — `pathname + search`, e.g. `/trade?symbol=NVDA`. The server
@@ -105,13 +114,20 @@ export async function streamCompanionTurn(
   /** A follow-up on the member's own filing (#7286 slice 8) — its card, for the member's tap. */
   onFollowup?: (draft: FollowupDraft) => void,
   onResearchAsk?: (draft: ResearchAskDraft) => void,
+  /** A scene turn (#8191): the server honours it only when its pilot setting admits the session. */
+  mode?: "game-master",
 ): Promise<void> {
   const res = await fetch("/api/companion/chat", {
     method: "POST",
     credentials: "same-origin",
     headers: { "content-type": "application/json" },
     // The page's keys ride beside it (#7167 slice 1): what's on screen, for her links to land on.
-    body: JSON.stringify({ messages, page: currentPage(), keys: pageKeys() }),
+    body: JSON.stringify({
+      messages,
+      page: currentPage(),
+      keys: pageKeys(),
+      ...(mode ? { mode } : {}),
+    }),
   });
   if (!(res.headers.get("content-type") ?? "").includes("text/event-stream")) {
     const body = (await res.json().catch(() => ({}))) as { error?: string };

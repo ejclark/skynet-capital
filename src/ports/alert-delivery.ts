@@ -1,4 +1,5 @@
 import type { AlertDeliveryPrefs, DeliveryMessage } from "../alerts/alert-delivery.js";
+import type { FillWatch } from "../alerts/fill-watch.js";
 
 /**
  * The two boundaries alert delivery reaches across (#3407 P4 slice 3): where a member's own choice
@@ -16,6 +17,9 @@ export interface AlertDeliveryRecord {
   readonly prefs: AlertDeliveryPrefs;
   /** Fingerprints already delivered, so a re-derived alert is never mailed twice. */
   readonly sent: readonly string[];
+  /** Orders this member asked to hear about once, from the order receipt (#8251). Independent of
+   *  `prefs`: a watch mails even while the account-wide channel is off. */
+  readonly watches: readonly FillWatch[];
 }
 
 /** Where a member's delivery choice and sent-ledger live. Durable: both must outlive a deploy. */
@@ -26,8 +30,12 @@ export interface AlertDeliveryStorePort {
   savePrefs(consumerId: string, prefs: AlertDeliveryPrefs): Promise<void>;
   /** Note that this fingerprint reached this member. Idempotent — a repeat costs a line only. */
   recordSent(consumerId: string, fingerprint: string): Promise<void>;
-  /** Every member who has ever saved a choice — the sweep's whole working set, so a deployment
-   *  where nobody opted in does no work at all. */
+  /** Arm (or re-arm) a one-order watch. Last write per order id wins. */
+  saveWatch(consumerId: string, watch: FillWatch): Promise<void>;
+  /** End a watch — sent, or moved to a modify's new order id. Unknown ids are a no-op. */
+  dropWatch(consumerId: string, orderId: string): Promise<void>;
+  /** Every member who has ever saved a choice or armed a watch — the sweep's whole working set
+   *  (it re-checks each record), so a deployment where nobody opted in does no work at all. */
   listMembers(): Promise<readonly string[]>;
 }
 

@@ -5,7 +5,6 @@ import { parseOccSymbol } from "../../../src/trading/option-symbols";
 import type { DeskPosition } from "../live/desk";
 import {
   fetchChain,
-  fetchOptionPositions,
   type OptionDraft,
   type OptionPreview,
   reviewOption,
@@ -39,11 +38,13 @@ import {
 } from "../live/ticket";
 import { InlineResult } from "../ui";
 import { closeRefusal, optionCloseWords } from "./close-panel";
-import { LockInWatch } from "./lock-in-ceremony";
+import { LockInWatch, type SentLockInClose } from "./lock-in-ceremony";
+import { rememberLockIn } from "./lock-in-memory";
 import { type LockInFlag, lockInFlag } from "./locked-in";
 import { usePriceContext } from "./position-picture";
 import { plural } from "./position-row-spec";
 import { RollRow } from "./roll-row";
+import { useHeldSpot } from "./use-held-spot";
 
 /**
  * ACT IN THE ROW (#5070 slice 3; round 2 of #5037, R2's depth ladder step 3). Inside a position's
@@ -274,6 +275,24 @@ function Recap({
   );
 }
 
+/** A flagged close as the ceremony reads it — one shape for the live watch and the memory. */
+function sentLockIn(
+  position: DeskPosition,
+  verb: ActVerb,
+  orderId: string,
+  count: number,
+  lockIn: LockInFlag,
+): SentLockInClose {
+  return {
+    orderId,
+    symbol: position.symbol,
+    display: position.display,
+    side: verb.pays ? "buy" : "sell",
+    count,
+    lockIn,
+  };
+}
+
 /** The row as a prefilled ticket: how many, the limit and where it came from, how long it lasts,
  *  and one line of what it does — then Review, which asks the server before the recap opens. */
 function CloseTicket({
@@ -300,6 +319,8 @@ function CloseTicket({
   const [timeInForce, setTimeInForce] = useState<TicketTimeInForce>("day");
   const [state, setState] = useState<Step>({ step: "editing" });
   const seed = useLimitSeed(position, verb);
+  // A sold option's Consider badge is judged on its stock's price first (#7383).
+  const spot = useHeldSpot(deskId, position);
   const shownLimit = limitText ?? (seed?.price !== undefined ? seed.price.toFixed(2) : "");
   const count = parseQuantity(countText);
   const limit = typedPrice(shownLimit);
@@ -329,12 +350,16 @@ function CloseTicket({
   // Place sends exactly the order the recap showed: the count and limit fixed at Review.
   const place = async (order: Order, preview: TicketPreview | OptionPreview) => {
     setState({ step: "submitting", order, preview });
-    const lockIn = lockInFlag(position);
+    const lockIn = lockInFlag(position, spot);
     try {
       const result = position.isOption
         ? await submitOption(optionDraft(deskId, position, order))
         : await submitTicket(ticketDraft(deskId, position, order));
       setState({ step: "done", result, order, ...(lockIn ? { lockIn } : {}) });
+      // Remembered with its order, so a fill after this sheet is gone is still celebrated on the
+      // next Overview load (#7383; `lock-in-memory.ts`) — the same close `LockInWatch` reads.
+      if (result.ok && lockIn)
+        rememberLockIn(deskId, sentLockIn(position, verb, result.orderId, order.count, lockIn));
       if (result.ok) refresh();
     } catch (error) {
       setState({ step: "error", message: String(error) });
@@ -422,14 +447,7 @@ function CloseTicket({
       {state.step === "done" && state.result.ok && state.order && state.lockIn ? (
         <LockInWatch
           deskId={deskId}
-          sent={{
-            orderId: state.result.orderId,
-            symbol: position.symbol,
-            display: position.display,
-            side: verb.pays ? "buy" : "sell",
-            count: state.order.count,
-            lockIn: state.lockIn,
-          }}
+          sent={sentLockIn(position, verb, state.result.orderId, state.order.count, state.lockIn)}
         />
       ) : null}
       {state.step === "done" ? (
@@ -474,12 +492,7 @@ function RollInRow({
   readonly position: DeskPosition;
   readonly onFilled: () => void;
 }): ReactElement {
-  const book = useQuery({
-    queryKey: ["option-positions", deskId],
-    queryFn: () => fetchOptionPositions(deskId),
-    staleTime: 30_000,
-  });
-  const spot = book.data?.rows.find((r) => r.symbol === position.symbol)?.spot;
+  const spot = useHeldSpot(deskId, position);
   const { facts } = usePriceContext(position, spot);
   return (
     <RollRow

@@ -18,9 +18,10 @@ import { isCompletedFill } from "./fill-flare";
  * WHAT IT REMEMBERS, AND WHEN. The flag is read off the whole ROW (`lockInFlag`; the row is where
  * the badge is, so a close of one of its buys carries it too) and rides the `SentClose` from the
  * moment the order is sent, never re-read at the fill: by then the desk has refetched, and a full
- * close has no row left to ask. A written option is judged on its strike first and the opened row
- * has no live stock price, so a sold option is never flagged here (a badge we cannot confirm is a
- * celebration we must not make) — threading the price in is #7383.
+ * close has no row left to ask. A written option is judged on its strike first, so its flag needs
+ * the stock's price: both close paths read it off the option book the badge itself was drawn from
+ * (`use-held-spot.ts`, #7383) and pass it as `spot`. Without one a sold option is never flagged (a
+ * badge we cannot confirm is a celebration we must not make).
  *
  * WHO MAY SEE IT. The fill is the one `useOrderFill` hands the receipt: the desk's own stream,
  * owner-scoped on the server through `forVisibility` (#1211; `src/server/desk-events-route.ts`) and

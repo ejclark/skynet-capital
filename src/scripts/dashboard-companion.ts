@@ -15,6 +15,7 @@ import { resolveCompanionChat } from "../companion/companion-chat.js";
 import type { CompanionDeskDeps } from "../companion/companion-tools.js";
 import { evidenceByRow } from "../domain/known-problems.js";
 import { marketDayKey } from "../domain/market-day.js";
+import { regularSessionOpen } from "../domain/market-session.js";
 import type { TradeActivityRecord } from "../observatory/activity-store.js";
 import { rankStructures } from "../options/recommend.js";
 import type { BotControlsStore } from "../server/bot-controls-store.js";
@@ -28,6 +29,10 @@ import { createDiscoveryQueueStore } from "../server/discovery-queue-store.js";
 import { opaqueMemberId } from "../server/feedback-issue.js";
 import type { FeedbackLogStore } from "../server/feedback-log.js";
 import { resolveSimilarFeedback } from "../server/feedback-similar.js";
+import {
+  createFixAnnouncementStore,
+  type FixAnnouncementStore,
+} from "../server/fix-announcement-store.js";
 import { createHouseResearchReader } from "../server/house-research.js";
 import type { LadderEvidenceReader } from "../server/ladder-evidence.js";
 import { shelfResearched } from "../server/member-campaign-store.js";
@@ -41,6 +46,7 @@ import { createProgressionStore } from "../server/progression-store.js";
 import { createResearchAnswersReader } from "../server/research-answers.js";
 import { researchedEventIds } from "../server/research-service.js";
 import { resolveRoadmap } from "../server/roadmap.js";
+import { sceneFacts } from "../server/scene-facts.js";
 import { shelfWriteUps } from "../server/shelf-write-ups.js";
 import { upcomingEvents } from "../server/upcoming-events.js";
 import { resolveWhatMembersAsk } from "../server/what-members-ask.js";
@@ -81,6 +87,9 @@ export interface CompanionSetup {
   readonly companionMessageLog: ReturnType<typeof createCompanionMessageLogStore>;
   /** Screenshots attached in the chat (#6007) — on the volume under the derived-store root. */
   readonly companionScreenshots: CompanionScreenshotStore;
+  /** Which shipped fixes she has already announced to each member (#8078) — beside the
+   *  subscriptions file on the volume. */
+  readonly fixAnnouncements: FixAnnouncementStore;
 }
 
 /** Resolve the companion turn (and the progression service its curriculum tool reads) for one
@@ -138,6 +147,14 @@ export function setupCompanion(env: NodeJS.ProcessEnv, deps: CompanionSetupDeps)
         held,
         ...(underlying ? { underlying } : {}),
       }),
+    // One game-master scene (#8191): the same baked-in calendar and ledgers, plus the clock.
+    readSceneFacts: (query) =>
+      sceneFacts({
+        asOf: marketDayKey(new Date().toISOString()),
+        questDay: new Date().toISOString().slice(0, 10),
+        marketOpen: regularSessionOpen(),
+        ...query,
+      }),
     // The ledgers, campaigns and lessons are checked in; the research list is on the volume.
     readResearchOn,
     ...(deps.suggestMarketFor ? { suggestMarketFor: deps.suggestMarketFor } : {}),
@@ -170,5 +187,6 @@ export function setupCompanion(env: NodeJS.ProcessEnv, deps: CompanionSetupDeps)
     );
   }
   const companionScreenshots = createCompanionScreenshotStore(env, (m) => console.error(m));
-  return { companion, progression, companionMessageLog, companionScreenshots };
+  const fixAnnouncements = createFixAnnouncementStore(env, (m) => console.error(m));
+  return { companion, progression, companionMessageLog, companionScreenshots, fixAnnouncements };
 }

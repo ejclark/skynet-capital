@@ -1,5 +1,12 @@
 import { execFileSync } from "node:child_process";
-import { gitSince } from "../../scripts/comms-scan.mjs";
+import { gitSince, harvestPictures, unwrapRows } from "../../scripts/comms-scan.mjs";
+import {
+  carryingPictureSlot,
+  digestFiles,
+  latestDigestSince,
+  missingPictureSlot,
+  RATCHET_AFTER,
+} from "../../scripts/digest-scan.mjs";
 
 /**
  * The landing meter (#456) — the picture-first redesign's own scoreboard.
@@ -165,5 +172,178 @@ describe("the landing meter — a window that starts at an exact moment (#5056)"
         stdio: "pipe",
       }),
     ).toThrow();
+  });
+});
+
+// The digest's picture slot (#3748 slice 7c): the harvest of each merged PR's `## The picture`
+// block. Driven through the same fixture, so the cases pin what a digest would print.
+describe("the digest picture slot — what it harvests", () => {
+  it("prints each PR's picture block newest first and skips the waived and the missing", () => {
+    const out = run("--pictures");
+    const heads = out.split("\n").filter((l) => l.startsWith("### "));
+    expect(heads.map((h) => h.split(" ")[1])).toEqual(["#601", "#602", "#605"]);
+    expect(out).toContain("```mermaid");
+    expect(out).not.toContain("#603"); // waived: nothing to look at
+    expect(out).not.toContain("#604"); // no picture section at all
+  });
+
+  it("caps at the newest N and says how many it left out, never silently truncating", () => {
+    const out = run("--pictures", "--limit=2");
+    expect(out.split("\n").filter((l) => l.startsWith("### "))).toHaveLength(2);
+    expect(out).toContain("1 older picture(s) not shown");
+  });
+
+  it("refuses a --limit that is not a positive integer", () => {
+    expect(() => run("--pictures", "--limit=0")).toThrow();
+  });
+
+  it("emits a block the mermaid gate accepts", () => {
+    const out = run("--pictures");
+    const lint = execFileSync("node", ["scripts/mermaid-lint.mjs", "--stdin"], {
+      cwd: process.cwd(),
+      input: out,
+      encoding: "utf8",
+    });
+    expect(lint).not.toMatch(/✗|error/i);
+  });
+
+  it("keeps the harvested block out of the meter's own JSON rows", () => {
+    expect(Object.keys(report().rows[0] ?? {})).not.toContain("block");
+  });
+});
+
+describe("the digest picture slot — squash bodies wrap, the slot must not show it", () => {
+  it("re-joins a table row the squash body wrapped, and nothing else", () => {
+    const wrapped = [
+      "| a | b |",
+      "|---|---|",
+      "| the long first",
+      "cell | second |",
+      "",
+      "_Caption._",
+    ].join("\n");
+    expect(unwrapRows(wrapped)).toBe(
+      ["| a | b |", "|---|---|", "| the long first cell | second |", "", "_Caption._"].join("\n"),
+    );
+  });
+
+  it("leaves a fenced diagram untouched, even a line that starts with a pipe", () => {
+    const fence = ["```mermaid", "flowchart LR", "| not a row", "  A --> B", "```"].join("\n");
+    expect(unwrapRows(fence)).toBe(fence);
+  });
+
+  it("is what the harvest prints", () => {
+    const rows = [
+      {
+        number: 9,
+        subject: "feat: x",
+        picture: "table",
+        block: "| k | v |\n|---|---|\n| one\ntwo | 3 |",
+      },
+    ];
+    expect(harvestPictures(rows)).toContain("| one two | 3 |");
+  });
+
+  // #8225: a wrap right after a pipe leaves a line that LOOKS finished. #8068's 5-column header
+  // was stored like this, so the slot printed loose text where a table should be.
+  it("re-joins a header wrapped right after a pipe, so the delimiter sits under one header row", () => {
+    const wrapped = [
+      "| Where it runs | Browser before | Browser after |",
+      "Result before | Result after |",
+      "|---|---|---|---|---|",
+      "| Cloud | rev 1243 | rev 1234 | 16 failed | 17 passed |",
+    ].join("\n");
+    expect(unwrapRows(wrapped).split("\n")).toEqual([
+      "| Where it runs | Browser before | Browser after | Result before | Result after |",
+      "|---|---|---|---|---|",
+      "| Cloud | rev 1243 | rev 1234 | 16 failed | 17 passed |",
+    ]);
+  });
+
+  it("re-joins a body row wrapped right after a pipe, by the delimiter's column count", () => {
+    const wrapped = [
+      "| a | b | c |",
+      "|---|---|---|",
+      "| one | two |",
+      "three |",
+      "| four | five | six |",
+    ].join("\n");
+    expect(unwrapRows(wrapped).split("\n")).toEqual([
+      "| a | b | c |",
+      "|---|---|---|",
+      "| one | two | three |",
+      "| four | five | six |",
+    ]);
+  });
+
+  it("keeps a genuinely short row apart from the next, rather than overshooting the columns", () => {
+    const table = ["| a | b | c |", "|---|---|---|", "| short |", "| x | y | z |"].join("\n");
+    expect(unwrapRows(table)).toBe(table);
+  });
+
+  it("counts an escaped pipe as cell text, not a column", () => {
+    const wrapped = ["| a | b |", "|---|---|", "| x \\| y |", "z |"].join("\n");
+    expect(unwrapRows(wrapped).split("\n").at(-1)).toBe("| x \\| y | z |");
+  });
+
+  it("leaves a caption paragraph after the blank line alone", () => {
+    const table = ["| a | b |", "|---|---|", "| 1 | 2 |", "", "_A caption | with a pipe._"].join(
+      "\n",
+    );
+    expect(unwrapRows(table)).toBe(table);
+  });
+});
+
+// #8225: digests land ~13:25Z on their own date; a date-only window started at 23:59:59Z that day,
+// so every PR merged between the digest and midnight UTC fell into no digest's slot.
+describe("the digest picture slot — the window starts when the last digest landed", () => {
+  const latest = digestFiles()[0];
+  const date = latest?.slice(0, 10) ?? null;
+
+  it("is the instant of the commit that added the newest digest, not the end of its day", () => {
+    const calls: string[][] = [];
+    const since = latestDigestSince((args: string[]) => {
+      calls.push(args);
+      return args[0] === "rev-parse" ? "false\n" : "2026-11-23T13:25:05Z\n";
+    });
+    if (!latest) return expect(since).toBeNull();
+    expect(since).toBe("2026-11-23T13:25:05Z");
+    expect(calls[1]).toEqual(
+      expect.arrayContaining(["--diff-filter=A", "--", `docs/digests/${latest}`]),
+    );
+    expect(gitSince(since as string)).toBe("2026-11-23T13:25:05Z");
+  });
+
+  it("falls back to the date when the digest is not committed yet", () => {
+    const since = latestDigestSince((args: string[]) => (args[0] === "rev-parse" ? "false" : ""));
+    expect(since).toBe(date);
+  });
+
+  it("falls back to the date in a shallow clone, which would date every file at the graft", () => {
+    const since = latestDigestSince((args: string[]) =>
+      args[0] === "rev-parse" ? "true" : "2026-11-24T02:00:00Z",
+    );
+    expect(since).toBe(date);
+  });
+
+  it("falls back to the date when git itself fails", () => {
+    const since = latestDigestSince(() => {
+      throw new Error("not a git repository");
+    });
+    expect(since).toBe(date);
+  });
+});
+
+describe("the digest picture slot — the advisory ratchet has a reader", () => {
+  const files = ["2026-11-23.md", "2026-11-25.md", "2026-11-26.md", "2026-11-27.md"];
+  const text = (f: string) => (f === "2026-11-26.md" ? "## The picture\n" : "no slot");
+
+  it("names a digest from the advisory day on that lacks the slot, and never an older one", () => {
+    expect(missingPictureSlot(files, text)).toEqual(["2026-11-25.md", "2026-11-27.md"]);
+  });
+
+  it("counts the digests that carry it, so the ratchet fires on a number", () => {
+    expect(carryingPictureSlot(files, text)).toEqual(["2026-11-26.md"]);
+    expect(RATCHET_AFTER).toBe(2);
   });
 });

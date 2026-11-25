@@ -58,6 +58,13 @@ npm run lint
 npm test
 ```
 
+## Asks that cost money
+
+A change that would cost the project money (a bigger server, more tokens, a raised cap, a new paid
+API) is never built straight away: it is filed as a **pitch** for Eric, in five lines (who wants it,
+$ per month, what it buys, the free alternative tried first, the number that would undo it). The
+shape and the label are in [`docs/ISSUES.md`](docs/ISSUES.md) → *Pitch issues*; `issue-lint` checks it.
+
 ## Merging — auto-merge on green, no babysitting
 
 Every PR to `main` runs two required checks: **`CI`** (`node 24 · typecheck · lint · test`) and
@@ -98,11 +105,12 @@ consistently so recurring-intent audits see one templated pattern instead of fre
 One check, not a chain — if it's still open after that, surface it instead of continuing to poll.
 A wait with no event path (a `/grind` or Workflow step, which cannot subscribe) is one REST loop in
 a single `run_in_background` Bash call, never a foreground loop or repeated `gh pr view` (GraphQL,
-refused from cloud sessions). The harness re-invokes the caller when it exits; keep it one line
+refused from cloud sessions), polling no faster than once a minute (#8289: one REST allowance is
+shared by every session). The harness re-invokes the caller when it exits; keep it one line
 with no `git` in it, or the harness will not background it:
 
 ```bash
-until s=$(gh api repos/<owner>/<repo>/pulls/<n> --jq '"\(.merged) \(.state)"') && [ "$s" != "false open" ]; do sleep 30; done; echo "pr <n>: $s"
+until s=$(gh api repos/<owner>/<repo>/pulls/<n> --jq '"\(.merged) \(.state)"') && [ "$s" != "false open" ]; do sleep 60; done; echo "pr <n>: $s"
 ```
 
 ## Keeping agent sessions moving (no PR churn)

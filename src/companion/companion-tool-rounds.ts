@@ -1,6 +1,7 @@
 import { anthropicApiError, logAnthropicUsage, usageOf } from "../http/anthropic-reply.js";
 import type { fetchJson, JsonResponse } from "../http/fetch-json.js";
 import type { CompanionHandlers } from "./companion-chat.js";
+import { GAME_MASTER_RULES } from "./companion-game-master.js";
 import { effortFor, MAX_TOKENS_PER_REPLY, MAX_TOOL_ROUNDS } from "./companion-limits.js";
 import type { CompanionModelId } from "./companion-model.js";
 import { COMPANION_SYSTEM_PROMPT } from "./companion-system-prompt.js";
@@ -44,10 +45,15 @@ interface AnthropicBlock {
   readonly input?: unknown;
 }
 
-export function systemBlocks(volatile: string): readonly unknown[] {
+export function systemBlocks(volatile: string, gameMaster = false): readonly unknown[] {
   return [
     // The byte-stable half, cached: brand rules, the never-an-order invariant, the tour script.
     { type: "text", text: COMPANION_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } },
+    // A game-master scene's rules (#8191): a second byte-stable block with its own breakpoint, so
+    // an ordinary turn's cached prefix is untouched and a scene's own prefix caches too.
+    ...(gameMaster
+      ? [{ type: "text", text: GAME_MASTER_RULES, cache_control: { type: "ephemeral" } }]
+      : []),
     // The volatile half AFTER the cache breakpoint — a timestamp or per-request note here must
     // never sit ahead of the breakpoint, or every request invalidates the cache it's there for.
     ...(volatile ? [{ type: "text", text: volatile }] : []),
@@ -81,8 +87,11 @@ export type ToolRoundOutcome =
 /** The tools this turn may call: the draft hand-off and the issue-queue read always (they read
  *  no member data); the desk lookups only for a member with a linked desk. `declaredToolNames` is
  *  the one source, shared with the unknown-name refusal. */
-export function toolsFor(participantId: string | undefined): readonly unknown[] {
-  const declared: readonly string[] = declaredToolNames(participantId);
+export function toolsFor(
+  participantId: string | undefined,
+  gameMaster = false,
+): readonly unknown[] {
+  const declared: readonly string[] = declaredToolNames(participantId, gameMaster);
   return COMPANION_TOOL_DEFS.filter((t) => declared.includes(t.name));
 }
 
@@ -100,6 +109,7 @@ export async function runToolRounds(
   deskDeps: CompanionDeskDeps,
   participantId: string | undefined,
   handlers: CompanionHandlers,
+  gameMaster = false,
 ): Promise<ToolRoundOutcome> {
   let working = [...initial];
   const deps: CompanionDeskDeps = {
@@ -125,6 +135,7 @@ export async function runToolRounds(
       deps,
       participantId,
       handlers,
+      gameMaster,
     );
     if (step.kind !== "next") return step;
     working = step.working;
@@ -147,6 +158,7 @@ async function oneRound(
   deps: CompanionDeskDeps,
   participantId: string | undefined,
   handlers: CompanionHandlers,
+  gameMaster: boolean,
 ): Promise<RoundStep> {
   let res: JsonResponse;
   try {
@@ -154,9 +166,9 @@ async function oneRound(
       model,
       max_tokens: MAX_TOKENS_PER_REPLY,
       ...effortFor(model),
-      system: systemBlocks(volatile),
+      system: systemBlocks(volatile, gameMaster),
       messages: working,
-      tools: toolsFor(participantId),
+      tools: toolsFor(participantId, gameMaster),
     });
   } catch (error) {
     handlers.onError(error instanceof Error ? error.message : "companion unreachable");
@@ -192,7 +204,9 @@ async function oneRound(
     return { kind: "answered" };
   }
   const results = await Promise.all(
-    toolUses.map((tu) => runCompanionTool(tu.name ?? "", deps, participantId, tu.input)),
+    toolUses.map((tu) =>
+      runCompanionTool(tu.name ?? "", deps, participantId, tu.input, gameMaster),
+    ),
   );
   return {
     kind: "next",

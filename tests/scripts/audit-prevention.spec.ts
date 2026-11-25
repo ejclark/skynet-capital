@@ -68,6 +68,82 @@ describe("the questions every correctness reviewer is asked", () => {
       for (const question of REVIEWER_QUESTIONS) expect(text).toMatch(question);
     },
   );
+
+  // A done-or-in-flight marker with no re-open path and no age limit blocks its item forever while
+  // every run stays green: a shelved ask dropped on a re-ask, an open PR holding a slot unaged.
+  const STALE_MARKER =
+    /already done or in flight.*what re-opens it when the new request differs.*how long a stalled one can hold the slot.*neither a re-open path nor an age limit/i;
+
+  it("ask the audit's reviewer what re-opens an already-handled marker and when it ages out", async () => {
+    const { calls } = await audit([], { causes: [] });
+    const prompt = flat(calls.find((c) => c.opts.label?.startsWith("review"))?.prompt ?? "");
+    expect(prompt).toMatch(STALE_MARKER);
+  });
+
+  it("ask the reviewer agent the same", () => {
+    expect(flat(readFileSync(".claude/agents/reviewer.md", "utf8"))).toMatch(STALE_MARKER);
+  });
+
+  // A rule loosened for the one caller a task names still answers every other caller: #7724's relaxed
+  // ack rule also ran on page open, and #7714's new `unchecked` rows fed a `notRun` read as "re-run".
+  const SHARED_RULE =
+    /relaxes a condition in a predicate several callers share.*new kind or value to a shared flag, enum or marker.*every caller and reader of it, not only the one the task names.*input the task never mentioned/i;
+
+  it("ask the audit's reviewer what every caller of a loosened shared rule now returns", async () => {
+    const { calls } = await audit([], { causes: [] });
+    const prompt = flat(calls.find((c) => c.opts.label?.startsWith("review"))?.prompt ?? "");
+    expect(prompt).toMatch(SHARED_RULE);
+  });
+
+  it("ask the reviewer agent the same of a loosened shared rule", () => {
+    expect(flat(readFileSync(".claude/agents/reviewer.md", "utf8"))).toMatch(SHARED_RULE);
+  });
+
+  // A hash link checked only by reading its own line ships a jump to nothing (the target never renders
+  // under the link's query params) or under the sticky head (the target has no scroll-margin-top).
+  const HASH_JUMP =
+    /link or router call that jumps to an in-app hash.*hashScrollIntoView: false.*view it lands on with the link's own query params.*no element with that id renders there.*scroll-margin-top`? clearing the sticky head.*--landing-clear/i;
+
+  it("ask the audit's reviewer where a hash link lands and whether its target clears the sticky head", async () => {
+    const { calls } = await audit([], { causes: [] });
+    const prompt = flat(calls.find((c) => c.opts.label?.startsWith("review"))?.prompt ?? "");
+    expect(prompt).toMatch(HASH_JUMP);
+  });
+
+  it("ask the reviewer agent where a hash link lands too", () => {
+    expect(flat(readFileSync(".claude/agents/reviewer.md", "utf8"))).toMatch(HASH_JUMP);
+  });
+
+  // A check built on a list or event name written from belief passes its own hand-written fixture
+  // while the shipped file or the live payload says otherwise (a coverage list missing glyphs the
+  // font lacks, an event that lands on a different issue than assumed).
+  const DECLARED_SET =
+    /declared list, event name, status string or field name as proof.*open the real artifact or a live payload.*compare it with the declared set.*report the check when the two can differ.*name the read you could not make.*fixture the PR hand-wrote is not that comparison.*spec says where it was recorded/i;
+
+  it("ask the audit's reviewer to compare a declared set with the real artifact", async () => {
+    const { calls } = await audit([], { causes: [] });
+    const prompt = flat(calls.find((c) => c.opts.label?.startsWith("review"))?.prompt ?? "");
+    expect(prompt).toMatch(DECLARED_SET);
+  });
+
+  it("ask the reviewer agent the same comparison", () => {
+    expect(flat(readFileSync(".claude/agents/reviewer.md", "utf8"))).toMatch(DECLARED_SET);
+  });
+
+  // A parser of real repo history checked against one hand-made sample ships with the shapes it
+  // drops, and a window started from a date rather than the commit's instant leaves PRs in no window.
+  const HISTORY_REPLAY =
+    /parses or windows real repo history.*replay it over the last 20 to 50 real merged PRs or commits on `?origin\/main`?.*drops, splits or leaves out of every window.*one hand-made shape.*window start given as a date where a commit instant exists/i;
+
+  it("ask the audit's reviewer to replay history-parsing code over real recent merges", async () => {
+    const { calls } = await audit([], { causes: [] });
+    const prompt = flat(calls.find((c) => c.opts.label?.startsWith("review"))?.prompt ?? "");
+    expect(prompt).toMatch(HISTORY_REPLAY);
+  });
+
+  it("ask the reviewer agent for the same replay", () => {
+    expect(flat(readFileSync(".claude/agents/reviewer.md", "utf8"))).toMatch(HISTORY_REPLAY);
+  });
 });
 
 describe("the audit's prevention step", () => {

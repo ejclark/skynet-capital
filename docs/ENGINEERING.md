@@ -80,7 +80,10 @@ Re-baseline with `npm run test:e2e:update`, and never as a reflex: a diff is a f
 something explains it. Baselines are Linux-only, so off Linux re-baseline from CI's own run:
 `node scripts/rebaseline-from-ci.mjs <pr>` saves each failing shot's expected, actual and diff for
 reading, then `--run <id> --apply --commit` copies the actuals over the baselines. It refuses
-anything that is not a pixel mismatch on an existing baseline.
+anything that is not a pixel mismatch on an existing baseline. A cloud session, whose proxy refuses
+the artifact's blob host, adds `--from-git`: it reads the same report from the
+`refs/ci-shots/pr-<n>/run-<id>` ref that pipeline.yml's `ci shots` job pushes on a failed PR run,
+once that job is on main (#8295).
 
 ### Requirements in EARS (the upstream half of BDD)
 
@@ -198,8 +201,9 @@ We don't have one, and we won't add one. Instead:
   standard above) is intent. A comment whose only content is a bare issue/PR number, "used by X", or
   "added for the Y flow" is narration — git blame and the PR already carry that, and it rots the moment
   the number stops being resolvable.
-  `node scripts/comment-bloat-scan.mjs` flags candidates (advisory, `docs/COACHES.md`'s Comment-bloat
-  Coach) — `/code-review` and `reviewer` judge each flagged line against this split, not a blanket cut.
+  `node scripts/comment-bloat-scan.mjs` flags the "only content" case (advisory, `docs/COACHES.md`'s
+  Comment-bloat Coach); a WHY that cites its source with `(#N)` is kept. A longer history paragraph
+  is not something a pattern can judge: `/code-review` and `reviewer` weigh it against this split.
 - Folder structure encodes the architecture, so structure alone tells you where behavior lives:
 
 ```

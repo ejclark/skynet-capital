@@ -20,8 +20,7 @@ import {
   parseOccSymbol,
   UNDERLYING_PATTERN,
 } from "./option-symbols.js";
-import type { TicketHolding } from "./order-ticket.js";
-import { normalizeSymbol } from "./order-ticket.js";
+import { ACCOUNT_UNREAD_REFUSAL, normalizeSymbol, type TicketHolding } from "./order-ticket.js";
 
 export type {
   OptionPlayCode,
@@ -139,7 +138,11 @@ export function previewOptionOrder(
   const estPremium =
     request.orderType === "limit" && request.limitPrice ? request.limitPrice : context.premium;
 
-  if (refusals.length === 0) {
+  if (context.accountUnread) {
+    // #8399: priced against a failed read's $0 and empty book, every play would be "unaffordable"
+    // or "uncovered" — say the read failed instead, beside any refusal that is still true.
+    refusals.push(ACCOUNT_UNREAD_REFUSAL);
+  } else if (refusals.length === 0) {
     validateAffordability(request, context, estPremium, refusals, warnings);
   }
   if (request.orderType === "market") {
@@ -368,9 +371,15 @@ export function previewOptionClose(
 
   gateNotes(context, refusals, warnings);
   if (!parts) refusals.push("That isn't an option contract symbol.");
-  validateClose(heldContracts, closing, refusals, warnings);
-  if (parts && refusals.length === 0) {
-    refusals.push(...closeBookRefusals(parts, isShort, closing, context));
+  if (context.accountUnread) {
+    // #8399: a failed read's empty book would say "you don't hold this contract" about one the
+    // member may well hold — the read failing is the one true thing to say.
+    refusals.push(ACCOUNT_UNREAD_REFUSAL);
+  } else {
+    validateClose(heldContracts, closing, refusals, warnings);
+    if (parts && refusals.length === 0) {
+      refusals.push(...closeBookRefusals(parts, isShort, closing, context));
+    }
   }
   if (orderType === "limit" && !(order.limitPrice && order.limitPrice > 0)) {
     refusals.push("A limit close needs a limit price — the premium per share you'll accept.");

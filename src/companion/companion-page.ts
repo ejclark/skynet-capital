@@ -27,7 +27,7 @@ import {
 const MAX_PAGE_CHARS = 400;
 
 /** The SPA's basepath, as a prefix of the path the browser reports. */
-const APP_BASEPATH = /^\/app(?=\/|$)/;
+export const APP_BASEPATH = /^\/app(?=\/|$)/;
 
 const TRADE_SECTIONS: Readonly<Record<string, string>> = {
   chart: "the chart view",
@@ -55,8 +55,11 @@ const PROFILE_TABS: Readonly<Record<string, string>> = {
   thesis: "thesis",
 };
 
+// `/` is the home screen and Campaign lives at `/campaign` (#8267; #8315 caught this map still
+// naming `/` as the news page). Each is named by what it does.
 const PLAIN_PAGES: Readonly<Record<string, string>> = {
-  "/": "the landing page (the day's market news and its calendar)",
+  "/": "the home screen (the tower, what needs them, and a tile for each app)",
+  "/campaign": "the Campaign page (the day's market news, its calendar and their quests)",
   "/accounts": "their accounts page",
   "/leaderboard": "the leaderboard",
   "/saved-positions": "their saved positions",
@@ -113,7 +116,7 @@ function parsePage(page: unknown): { path: string; params: URLSearchParams } | u
 }
 
 /** The page's route, normalised (no trailing slash, no query) — or undefined for anything that
- *  isn't an in-app page. The landing page's context stamp (#7167) keys off `/`. */
+ *  isn't an in-app page. Campaign's context stamp (#7167) keys off `/campaign` (#8315). */
 export function pagePath(page: unknown): string | undefined {
   return parsePage(page)?.path;
 }

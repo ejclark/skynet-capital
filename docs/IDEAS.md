@@ -18,6 +18,13 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **Reword `.claude/skills/steer/SKILL.md`'s "The bar says whether Claude is listening" bullet to
+  name `ackFor` beside `ackAt` and quote today's bar text ("✓ Received — Claude is reading your
+  answers back…").** It describes the page, not a stamp, so #6734's writer check passes it, but it
+  still teaches the old ackAt-only shape and the old wording. The feedback lane's harness refused the
+  write under `.claude/` twice (#7724, #6734) — needs an interactive session.
+  _(src: Claude · while: #6734 feedback build)_
+
 - **Count how many suggested tickets get placed, then decide the ticket's *Suggested* section.**
   #7547 shipped Moneypenny's three sized options for all four strategies; its falsifier (by
   2026-12-13, under 1 in 10 suggested tickets placed → revisit the tier thresholds before more
@@ -111,7 +118,17 @@ Eric-sourced.
   behavior; 3 of the 10 largest untested files sit there. The candidate is always the largest file,
   so the coach stays wedged until someone confirms that file's behavior or the eye skips carve-out
   paths for `--candidate` (still counting them in `debt`, listed apart as needing a human).
-  _(src: Claude · while: governor cycle 7, 2026-11-02)_
+  _(src: Claude · while: governor cycle 7, 2026-11-02)_ **Done** in governed cycle 14
+  (2026-11-23), after the same stall recurred: `--candidate` skips the carve-out and lists it under
+  `needsHuman`; `tests/scripts/spec-gap-carve-out.spec.ts` reads the skill's list so the two can't drift.
+- **A dedupe rep pays its duplication debt in spec-gap debt.** The shared module a consolidation
+  creates is imported by no spec, so the spec-gap eye counts one more untested file each time: of the
+  six such modules from governed cycles 7 and 14–16, `src/domain/is-text.ts`,
+  `src/scripts/cli-entry.ts` and `src/ui/usd-whole.ts` still have no direct spec (cycle 16 specced
+  `src/server/save-body.ts` by hand). The callers' specs exercise the code, but the gate cannot see
+  that. Cheapest fix: the dedupe drill writes a direct spec for the module it creates, in the same
+  rep, so the two coaches stop trading debt.
+  _(src: Claude · while: governor cycles 14–17, 2026-11-24)_
 - **IPO discovery runs only when someone types it.** `npm run research:lockups` now files a listing
   from its public S-1 (#5912 slice 3), but no schedule calls it, so "Anthropic's S-1 lands and
   discovery files it within one run" (the slice's falsifier) waits on a person remembering the run:
@@ -484,8 +501,8 @@ picks it up starts from the fork, not the wish.
 - **The vendored "Diagrams first" output-style line** (`docs/vendor/claude-code/output-styles.md`
   L66-81) into `.claude/output-styles/orient.md`: an in-session explanation of code or flow opens with a diagram. Eric
   put AI→human chat in scope (2026-09-25); judge on a week of replies. _(src: Claude · while: #3748)_
-- **Digest picture slot** — the revival condition (2–3 digests on cadence, IDEAS L296) is met with
-  13 shipped; a generated `kanban` of the ready queue is the candidate. _(src: Claude · while: #3748)_
+- **Digest picture slot** — shipped advisory (#3748 slice 7c: `digest-scan --pictures`); a generated
+  `kanban` of the ready queue stays the candidate for a second slot. _(src: Claude · while: #3748)_
 - **Prose-in-cells** — the table-as-media rule lets a paragraph in a cell pass as a picture (#3735,
   243 words above the fold); an advisory cell-length note in `checkbody`. _(src: Claude · while: the
   2026-09-25 PR census)_
@@ -674,6 +691,9 @@ and a citation that's the *entire* justification ("// Collections (2026-08-26, #
 real narration case — rather than routing every flagged line through the same judgment call by hand.
 _(src: Claude · while: comment-bloat DX audit, 2026-08-30)_
 
+**Shipped (#7950, 2026-11-25):** the scanner now reads whole comments and flags one only when a
+citation or caller is its entire content; the count went from 2065 lines to 1 comment.
+
 ### `repair-watchlist-scan.mjs`'s path fallback can mask a real name-drift
 
 Found while renaming the Moneypenny-branded workflows (#968): the scanner treats a workflow as
@@ -762,10 +782,10 @@ gate + digest delivery prove out. Workflow-file carve-out. _(src: Claude · whil
 research, 2026-08-20)_
 
 ### Digest picture slot — ratchet in only after the digest loop is proven live
-Add `## The picture` to `docs/digests/TEMPLATE.md` + `digest-scan` REQUIRED_SECTIONS once 2–3 digests
-have actually shipped on cadence (the instrument has fired once ever; decorating a dead instrument
-decorates an empty room). The digest picture = `## The picture` blocks harvested from squash bodies
-via local git log. _(src: Claude · while: hat-team comms research, 2026-08-20)_
+**Shipped advisory (#3748 slice 7c):** the template slot and `digest-scan --pictures` exist; `--validate`
+prints "ratchet due" once 2 digests carry it, and that PR adds `## The picture` to `digest-scan`
+REQUIRED_SECTIONS. The digest picture = `## The picture` blocks harvested from squash bodies via
+local git log. _(src: Claude · while: hat-team comms research, 2026-08-20)_
 
 ### Long-session journey nudge from duel-log telemetry
 Teach `scripts/duel-log.mjs` (or the postmaster audit) a heuristic: a session with many turns and no
@@ -1950,3 +1970,13 @@ per PR that is held, unprotected, green and over a day old, for `/secretary`'s d
 page: "held without a protected path; lift it?". That turns a five-day wait into a one-tap
 question the next morning.
 _(src: Claude · while: clearing #7672's mistaken hold)_
+
+### A close-out hold that one far-off forward test cancels buys a session that can only leave
+
+`closeOutHold` (`scripts/forward-test-pending.mjs`) holds a close-out only when *every* pending forward
+test scores inside `closeOutWithinDays`. An event with one in-window row and one row years out (here
+`jpx-market-closure-2026-11-23`: FT-1 due 2026-11-25, FT-2 due 2027-01-15) dispatches on D+1 anyway,
+before FT-1's own bar has closed, so the session can write the outcome but not the score. Holding to the
+latest *in-window* score-by, and leaving the beyond-window row to the `forward-test-due` door, would save
+that session. Falsifier: count close-outs dispatched with an in-window row still unscoreable.
+_(src: Claude · while: closing out jpx-market-closure-2026-11-23 at D+1)_

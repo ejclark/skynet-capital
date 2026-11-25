@@ -19,6 +19,9 @@ import { requireGet, sendJson } from "./page-shell.js";
  * the REQUESTER'S OWN options client (the same read posture as the chain route). Identity is the
  * session's: the target must be in the owned set, or it does not exist for this caller. Fails
  * soft: no client → `unlinked`; a feed failure → rows without greeks, the book naming them.
+ * UNREAD IS NOT EMPTY (#8334): a hub row whose broker read failed (`degraded()` in
+ * participant-snapshot.ts) carries `positions: []` beside its `error`, and that empty list means
+ * "unknown". It answers `read-failed`, never `ok` with no rows ("no options held").
  * Beta-weighting (#4327): a year of daily closes per underlying and for SPY, through the same
  * client, fitted by `beta.ts`; a name that can't be fitted stays un-weighted and named.
  */
@@ -93,6 +96,9 @@ export function clearBetaCache(): void {
  *  call it with the pieces it holds instead of a whole server config. */
 export type OptionPositionsDeps = Pick<DashboardServerConfig, "hub" | "optionsClientFor" | "now">;
 
+/** Why an account's option positions can't be shown when its broker read failed (#8334). */
+export const POSITIONS_READ_FAILED = "read-failed";
+
 /** The positions view for one owned account, or why there is none — shared with the alerts
  *  route so both read the same rows through the same client (#3407 P4 slice 1). */
 export async function loadOptionPositions(
@@ -101,13 +107,15 @@ export async function loadOptionPositions(
 ): Promise<
   | { readonly kind: "missing" }
   | { readonly kind: "unlinked" }
+  | { readonly kind: "unavailable"; readonly reason: typeof POSITIONS_READ_FAILED }
   | { readonly kind: "ok"; readonly view: ReturnType<typeof optionPositionsView> }
 > {
   const desk = config.hub.getState().participants.find((p) => p.id === id);
   if (!desk) return { kind: "missing" };
-  const held = desk.positions.filter((p) => parseOccSymbol(p.symbol) !== undefined);
   const client = config.optionsClientFor?.(id);
   if (!client) return { kind: "unlinked" };
+  if (desk.error) return { kind: "unavailable", reason: POSITIONS_READ_FAILED };
+  const held = desk.positions.filter((p) => parseOccSymbol(p.symbol) !== undefined);
   const underlyings = [
     ...new Set(held.map((p) => parseOccSymbol(p.symbol)?.underlying ?? "")),
   ].filter((u) => u !== "");
@@ -145,8 +153,9 @@ export async function serveOptionPositionsApi(
     sendJson(res, 404, { error: "no such account" });
     return true;
   }
-  if (positions.kind === "unlinked") {
-    sendJson(res, 200, { available: false, reason: "unlinked", rows: [], book: undefined });
+  if (positions.kind === "unlinked" || positions.kind === "unavailable") {
+    const reason = positions.kind === "unlinked" ? "unlinked" : positions.reason;
+    sendJson(res, 200, { available: false, reason, rows: [], book: undefined });
     return true;
   }
   sendJson(res, 200, { available: true, asOf: new Date().toISOString(), ...positions.view });

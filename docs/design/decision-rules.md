@@ -2,12 +2,16 @@
 
 Eric, 2026-10-16: "Context to 30 more sessions. That is a lot of high value feedback about my taste and thought process to gleen; the type of info that is gold for replicating the decision logic i would make - ideal for automation engineering." On the back-test: "Back test- now we're talking."
 
+**Derived, not the home** (2026-11-23, #8197): what he likes and dislikes lives in
+[`docs/members/eric.md`](../members/eric.md), quoted and dated. This page keeps only the rules
+back-tested against his picks; a trait without a back-test goes there, not here.
+
 **What these rules may do, decided by the back-test, not by taste:**
 
 | The call | Confidence | Why | Wrong if |
 |---|---|---|---|
 | **Use the rules as the critic's checklist** before a frame reaches him | medium-high | Rules written only from his words before 2026-10-13 anticipated **33 of his 68** later page notes (49%; bar set in advance: 33%), plus 15 partial | By 2026-11-15, a re-run on rounds after 2026-10-16 anticipates under 33% |
-| **Never use them to pick Build for him** | high | On Build vs More of this they scored **21 of 33 (64%)**, below always guessing More of this (24 of 33, 73%). They over-call Build on single-shape confirm rounds: 11 of 12 misses | A re-run beats the always-More baseline by 10 points |
+| **Never use them to pick Build for him** _(superseded 2026-11-22: screen design (taste) graduated to decide-and-report, and the alignment ledger, not these rules, is the predictor; `docs/process/ALIGNMENT.md` → Graduated classes)_ | high | On Build vs More of this they scored **21 of 33 (64%)**, below always guessing More of this (24 of 33, 73%). They over-call Build on single-shape confirm rounds: 11 of 12 misses | A re-run beats the always-More baseline by 10 points |
 | **Expect More of this on a first drawn round** | medium | Train: Build lands in a later round once the question is down to one change (5 of 6 screens), rarely in the first drawn round (2 of 9). #5451 rounds 1–2 went the same way | His next three screens Build on their first drawn round |
 
 **How it was run** (pre-registered before any rule existed; protocol and amendments in the PR that added this page):

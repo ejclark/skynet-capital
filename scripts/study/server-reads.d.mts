@@ -6,3 +6,11 @@ export function serverRead(
   channel: unknown,
   session: unknown,
 ): Promise<{ status: number; body: unknown } | undefined>;
+
+export function serverWrite(
+  url: string,
+  payload: unknown,
+  config: unknown,
+  channel: unknown,
+  session: unknown,
+): Promise<{ status: number; body: unknown } | undefined>;

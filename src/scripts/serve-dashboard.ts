@@ -14,10 +14,12 @@
 
 import { createAlertDismissals } from "../adapters/jsonl-alert-dismissals.js";
 import { createWatchlist } from "../adapters/jsonl-watchlist-store.js";
+import { opensHeldReason, suspendedReason } from "../autonomous/bot-controls.js";
 import { JsonlAuditStore } from "../autonomous/jsonl-audit-store.js";
 import { signalWindows } from "../autonomous/signal-windows.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
-import { reconcileBrokerActivity } from "../observatory/activity-backfill.js";
+import { reconcileBrokerActivity, recoverStreamGap } from "../observatory/activity-backfill.js";
+import { rememberPlaybooks } from "../observatory/activity-filter.js";
 import {
   bootPublishingActivityStore,
   publishingFeedback,
@@ -29,6 +31,7 @@ import { createBootCapitalFlowStore } from "../observatory/capital-flow-store.js
 import { CapitalFlowWatch, restartBaseline } from "../observatory/capital-flow-watch.js";
 import { CeremonyChannel } from "../observatory/ceremony-channel.js";
 import { buildDashboardData } from "../observatory/dashboard-data.js";
+import { gapRecovery } from "../observatory/gap-recovery.js";
 import {
   createBootHistoryStore,
   rehydrateHistory,
@@ -47,6 +50,7 @@ import { createIvHistoryStore } from "../research/iv-sampler.js";
 import { createSpotChecks } from "../research/spot-checks.js";
 import { resolveDataSource } from "../runtime/data-source.js";
 import { accountPersonasFrom } from "../server/account-personas-fold.js";
+import { resolveAlpacaConnect } from "../server/alpaca-connect-wiring.js";
 import { ownerEmails } from "../server/auth/resolve-auth.js";
 import { createBookHealthHistoryStore } from "../server/book-health-history-store.js";
 import { startBookHealthSampler } from "../server/book-health-sampler.js";
@@ -60,12 +64,16 @@ import { installGracefulShutdown } from "../server/graceful-shutdown.js";
 import { guidanceMarketFor, withWindowChain } from "../server/guidance-route.js";
 import { heldActivity, heldOrderOrigins } from "../server/held-activity.js";
 import { ladderEvidenceReader } from "../server/ladder-evidence.js";
+import { marketClockReader } from "../server/market-clock.js";
+import { createMemberVisitStore } from "../server/member-visits.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
 import { ownerQueueWiring } from "../server/owner-queue.js";
 import { ParticipantService } from "../server/participant-service.js";
+import { PartySeats } from "../server/party-seats.js";
 import { recordPasses } from "../server/play-milestone-sync.js";
 import { publicOriginFrom } from "../server/public-url.js";
 import { resolvePort } from "../server/resolve-port.js";
+import { exitAtEntrySetting } from "../trading/exit-at-entry-flag.js";
 import { setupAccess } from "./dashboard-access.js";
 import { buildAccountAdmin } from "./dashboard-account-admin.js";
 import { wireAlertDelivery } from "./dashboard-alert-delivery.js";
@@ -215,7 +223,33 @@ async function main(): Promise<void> {
   // SKYNET_AUDIT_DIR is set. When present, bot profiles show the live "what it decided and why."
   const auditDir = process.env.SKYNET_AUDIT_DIR;
 
-  dataSource.startStreams({ participants: roster, sink, onActivity, onStatus });
+  // The stream-gap net (#8251): a fill stream that reopens after a drop re-reads that account's
+  // recent orders into the ledger, so a fill in the gap still reaches the ledger, its bus and a
+  // watched order's email — once. Re-reads wait for the boot reconcile and run one at a time per
+  // account; resumes that arrive while one runs coalesce into a single follow-up from the earliest
+  // drop, so a flapping socket can't stack broker reads or race two stale dedupe snapshots.
+  const onResume = gapRecovery({
+    after: reconciled,
+    recover: (participant, droppedAt) => {
+      const client = dataSource.clientFactory(participant);
+      return recoverStreamGap({
+        participantId: participant.id,
+        store: activity,
+        listOrders: (params) => client.listOrders(params),
+        droppedAt,
+      }).then(
+        (r) => {
+          if (r.appended === 0) return;
+          console.log(
+            `[activity] banked ${r.appended} order update(s) from ${participant.id}'s gap`,
+          );
+        },
+        (e) => console.error(`[activity] gap re-read failed for ${participant.id}:`, e),
+      );
+    },
+  });
+
+  dataSource.startStreams({ participants: roster, sink, onActivity, onStatus, onResume });
 
   const owners = ownerEmails(process.env);
   const service = new ParticipantService({
@@ -223,7 +257,7 @@ async function main(): Promise<void> {
     store,
     clientFactory: dataSource.clientFactory,
     startStream: (participant) =>
-      dataSource.startParticipantStream(participant, sink, onStatus, onActivity),
+      dataSource.startParticipantStream(participant, sink, onStatus, onActivity, onResume),
     // Founding record: capture the seed baseline the moment an account joins (fire-and-forget, and
     // idempotent — a re-onboarding member keeps the history they already have).
     recordSeedSample: seedSampleRecorder(history),
@@ -233,6 +267,12 @@ async function main(): Promise<void> {
     findRosterParticipant: (id) => envRoster.find((p) => p.id === id),
     isOwnerEmail: (email) => owners.has(email.toLowerCase()),
   });
+  // Connect with Alpaca (#8250): live only — offline has no Alpaca to send a member to — and on
+  // only once Eric's app secrets are set AND the provider asks for paper (alpaca-connect-wiring.ts).
+  const alpacaConnect =
+    dataSource.mode === "live"
+      ? resolveAlpacaConnect(process.env, { service, log: (line) => console.log(line) })
+      : undefined;
 
   // Account service + live-roster/findParticipant/clientFor helpers (dashboard-desk-wiring.ts).
   // Removing an account closes BOTH of its sockets — the fill stream and (if it is streaming a
@@ -284,6 +324,7 @@ async function main(): Promise<void> {
     authoredPlays,
     memberCampaigns,
     memberChains,
+    memberFollows,
     discoveryQueue,
     campaignQuestions,
     memberConvictions,
@@ -323,8 +364,10 @@ async function main(): Promise<void> {
     feedbackCoach,
     feedbackLog,
     feedbackStatus,
+    builtPlans,
     feedbackFollowup,
     communityProgression,
+    journal,
   } = setupFeedback(process.env);
   // Feedback as the bus's second kind (#784 slice 2): a filing publishes `feedback.filed`, and the
   // GitHub status poll publishes `feedback.status-changed` on a real transition. Both wrap here
@@ -342,6 +385,8 @@ async function main(): Promise<void> {
   // The trade ladder's evidence, held per participant and advanced by appended lines: one fold read
   // by both the Learn page (the progression service) and the Wire's milestone kind (#4619).
   const readLadderEvidence = ladderEvidenceReader({ activity, orderAudit });
+  // The party's table (#8253) seats a member on that same fold's first fill.
+  const partySeats = new PartySeats(readLadderEvidence);
   // Shares the coach's ANTHROPIC_API_KEY/cost dials; also builds the ProgressionService instance
   // and the ladder gate's message log (dashboard-companion.ts owns crossing the id seam).
   const {
@@ -349,6 +394,7 @@ async function main(): Promise<void> {
     progression: progressionService,
     companionMessageLog,
     companionScreenshots,
+    fixAnnouncements,
   } = setupCompanion(process.env, {
     hub,
     readFills: (id) => activity.list(id),
@@ -389,6 +435,8 @@ async function main(): Promise<void> {
     env: process.env,
     activityEvents: activityEventBus,
     ownerEmailFor,
+    // Its boot sweep waits for the broker window to be banked (#8398).
+    ready: reconciled,
     deps: () => ({
       hub,
       optionsClientFor: (id) => clientFor(id, dataSource.optionsClientFactory),
@@ -415,10 +463,12 @@ async function main(): Promise<void> {
     // Ceremonies ride the board's seq-numbered patch stream as fire-once cues.
     ceremonies,
     capitalFlows: flowLedger,
+    partySeats,
     password,
     ...(auth ? { auth } : {}),
     ...(publicUrl ? { publicUrl } : {}),
     addParticipant: (input) => service.addParticipant(input),
+    ...(alpacaConnect ? { alpacaConnect } : {}),
     rotateCredentials: (input) => service.rotateCredentials(input),
     accountAdmin: buildAccountAdmin(accounts, store),
     subscriptions,
@@ -430,6 +480,14 @@ async function main(): Promise<void> {
     authoredPlays,
     memberCampaigns,
     memberChains,
+    memberFollows,
+    // The Bots screen's standing words (#8254): the same poll and holds the ops panel reads.
+    readBotsStanding: () => ({
+      processMode: insightsBridge.botsProcessMode(),
+      verdicts: insightsBridge.botsGate(),
+      suspendedReason: (botId: string) => suspendedReason(botControls.load(), botId),
+      opensHeldReason: (botId: string) => opensHeldReason(botControls.load(), botId),
+    }),
     discoveryQueue,
     campaignQuestions,
     discoveryPerPass: discoveryPerPass(),
@@ -489,13 +547,18 @@ async function main(): Promise<void> {
     recordFeedback: (entry) => feedbackSinks.log.record(entry),
     readFeedback: (id) => feedbackLog.list(id),
     ...(feedbackSinks.status ? { fetchFeedbackStatus: feedbackSinks.status } : {}),
+    ...(builtPlans ? { fetchBuiltPlans: builtPlans } : {}),
     ...(feedbackFollowup ? { submitFollowup: feedbackFollowup } : {}),
     communityProgression,
+    journal,
     ...(companion ? { companion } : {}),
     // `/api/companion/ack`'s store — the caller there already has the session's own opaque id.
     readMessages: (id) => companionMessageLog.list(id),
     recordMessage: (id) => companionMessageLog.record(id),
     companionScreenshots,
+    fixAnnouncements,
+    // Who opened the app, which day, which screens (#8169) — on the volume via storePath.
+    memberVisits: createMemberVisitStore(process.env, (m) => console.error(m)),
     refreshParticipant: (id) => brokerSync.syncParticipant(id),
     readPulseHistory,
     readHeldLedger,
@@ -561,6 +624,16 @@ async function main(): Promise<void> {
     // symbol+side+time match (`decision-context.ts`) is a different code path entirely, and only
     // the replicated store supports an exact order-id index.
     ...(insightsBridge.findByOrderId ? { findByOrderId: insightsBridge.findByOrderId } : {}),
+    // The same join for a bot order's playbook alone, remembered across requests (#8397): every
+    // member's read of a bot's Activity builds its chip list from every order in the ledger.
+    ...(insightsBridge.findByOrderId
+      ? {
+          playbookOfOrder: rememberPlaybooks(
+            insightsBridge.findByOrderId,
+            insightsBridge.orderJoinMark,
+          ),
+        }
+      : {}),
     readAccountPersonas,
     // A leg once matched never changes (the leg table is insert-only), so remember the hits (#4458),
     // and the misses until the table gains a row (#4619).
@@ -591,6 +664,9 @@ async function main(): Promise<void> {
     readHouseRoster: insightsBridge.readHouseRoster,
     signalWindows: signalWindows(process.env),
     tradingEnabled: desk.enabled,
+    // The stop-limit and exit-at-entry setting (#8249): the committed value, which only the offline
+    // writes boot may override (`exitAtEntrySetting` ignores the variable on a live boot).
+    exitAtEntry: exitAtEntrySetting(process.env, dataSource.mode),
     submitTrade: desk.submit,
     submitOptionTrade: desk.submitOption,
     submitDraftOrder: desk.submitDraft,
@@ -600,12 +676,24 @@ async function main(): Promise<void> {
     alertDismissals,
     alertDeliveryStore: alertDelivery.store,
     ...(alertDelivery.transport ? { alertDelivery: alertDelivery.transport } : {}),
+    ...(alertDelivery.nudge ? { alertDeliveryNudge: alertDelivery.nudge } : {}),
     // The names a member chose to watch — member-authored truth nothing re-derives, so it is
     // durable on the same volume (#4332).
     watchlist,
     optionsClientFor: (id) => clientFor(id, dataSource.optionsClientFactory),
+    // News on held names, on the member's own credential — never the bots' key (#8203).
+    newsClientFor: (id) => clientFor(id, dataSource.newsClientFactory),
     quoteStream,
     tradingClientFor: (id) => clientFor(id, dataSource.clientFactory),
+    // Market hours from Alpaca's calendar and clock (#8248), read on a house bot's credential —
+    // never a member's — and shared by every member; the table answers, labelled, when none can.
+    readMarketClock: marketClockReader({
+      client: () => {
+        const bot = hub.getState().participants.find((p) => p.kind === "bot" && !p.error);
+        return bot ? clientFor(bot.id, dataSource.clientFactory) : undefined;
+      },
+      ...(fixedNow ? { now: fixedNow } : {}),
+    }),
     ...("store" in ivHistory ? { ivHistory: ivHistory.store } : {}),
     // Beside the IV history on the same volume, and off whenever it is (research/spot-checks.ts).
     ...(spotChecks ? { spotChecks } : {}),

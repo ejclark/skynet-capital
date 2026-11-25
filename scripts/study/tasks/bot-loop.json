@@ -1,10 +1,12 @@
 {
   "area": "bot-loop",
-  "about": "The area config for one study round over the bot's loop (#8005 slice 5; docs/IA.md §5.2: is a bot running, what it decided, what it is subscribed to, its owner's switch — on /u/<bot> and the account's Playbooks and Thesis sections). Read by scripts/study/round.mjs; everything area-specific lives here or in scripts/study/worlds/bot-loop-*. Worlds: bot-loop-today (Sauron running and trading on its own, its wheel pointed at a conviction view that holds it; the friend's Day Trader held by its breaker) and bot-loop-steered (the same day with each owner steering: Sauron holding new positions, the Day Trader watching only). Viewers: eric owns Sauron, jordan owns The Day Trader, casey owns nothing. `roles` is who each member is here, in plain words, read by the experts and the words pass instead of the cards (#5099), so it never quotes a card. Census routes are copied from links the app builds (a Ledger row's playbook link, a position's Trade link, the Playbooks section's way to R&D, the league card's leaderboard), never composed. No sealed key, framer or tasks yet: those come when the cross-feature round clears (#8005).",
+  "about": "The area config for one study round over the bot's loop (#8005 slice 5; docs/IA.md §5.2: is a bot running, what it decided, what it is subscribed to, its owner's switch — on /u/<bot> and the account's Playbooks and Thesis sections). Read by scripts/study/round.mjs; everything area-specific lives here or in scripts/study/worlds/bot-loop-*. Worlds: bot-loop-today (Sauron running and trading on its own, its wheel pointed at a conviction view that holds it; the friend's Day Trader held by its breaker) and bot-loop-steered (the same day with each owner steering: Sauron holding new positions, the Day Trader watching only). Viewers: eric owns Sauron, jordan owns The Day Trader, casey owns nothing. `roles` is who each member is here, in plain words, read by the experts and the words pass instead of the cards (#5099), so it never quotes a card. Census routes are copied from links the app builds (a Ledger row's playbook link, a position's Trade link, the Playbooks section's way to R&D, the league card's leaderboard), never composed. No sealed key, framer or tasks yet: those come when the cross-feature round clears (#8005). Run 2026-11-23 (surge, the reset at 05:00Z): every census at phone width only, so the experts review the phone, where members struggle (study lesson 2026-10-09); the members still run desktop where the matrix says. The friend owner view is reviewed by the experts once, in the steered world, not twice (budget ~830 calls). The steered world's owner and watcher censuses name their routes (their surfaces list held one or two pages, so none of their facts reached a census screen): the bots' overview, playbooks and ledger pages the app links, and the watcher's own start page.",
   "cutoff": "2026-11-23",
   "tasksPer": 3,
   "runs": 3,
-  "runsByWorld": { "bot-loop-steered": 2 },
+  "runsByWorld": {
+    "bot-loop-steered": 2
+  },
   "censusCap": 100,
   "concurrency": 3,
   "experts": 3,
@@ -81,9 +83,24 @@
     "where these pages send you next: the league table, the trade screen for one holding, and the strategy catalog"
   ],
   "census": [
-    { "world": "bot-loop-today", "viewer": "eric", "for": ["experts", "labels"] },
-    { "world": "bot-loop-today", "viewer": "jordan", "for": ["experts", "labels"] },
-    { "world": "bot-loop-today", "viewer": "casey", "for": ["experts", "labels"] },
+    {
+      "world": "bot-loop-today",
+      "viewer": "eric",
+      "for": ["experts", "labels"],
+      "viewports": ["phone"]
+    },
+    {
+      "world": "bot-loop-today",
+      "viewer": "jordan",
+      "for": ["labels"],
+      "viewports": ["phone"]
+    },
+    {
+      "world": "bot-loop-today",
+      "viewer": "casey",
+      "for": ["experts", "labels"],
+      "viewports": ["phone"]
+    },
     {
       "world": "bot-loop-today",
       "viewer": "eric",
@@ -93,11 +110,41 @@
         "/app/research?section=playbooks&account=sauron",
         "/app/leaderboard?by=month"
       ],
-      "for": ["handoff", "labels"]
+      "for": ["handoff", "labels"],
+      "viewports": ["phone"]
     },
-    { "world": "bot-loop-steered", "viewer": "eric", "for": ["labels"] },
-    { "world": "bot-loop-steered", "viewer": "jordan", "for": ["experts", "labels"] },
-    { "world": "bot-loop-steered", "viewer": "casey", "for": ["labels"] }
+    {
+      "world": "bot-loop-steered",
+      "viewer": "eric",
+      "for": ["labels"],
+      "viewports": ["phone"],
+      "routes": [
+        "/app/u/sauron/playbooks",
+        "/app/settings?section=account&account=sauron",
+        "/app/u/sauron",
+        "/app/accounts?account=sauron&section=playbooks",
+        "/app/u/sauron/ledger"
+      ]
+    },
+    {
+      "world": "bot-loop-steered",
+      "viewer": "jordan",
+      "for": ["experts", "labels"],
+      "viewports": ["phone"]
+    },
+    {
+      "world": "bot-loop-steered",
+      "viewer": "casey",
+      "for": ["labels"],
+      "viewports": ["phone"],
+      "routes": [
+        "/app/leaderboard?by=month",
+        "/app/u/day-trader/playbooks",
+        "/app/u/day-trader",
+        "/app/u/sauron",
+        "/app/u/sauron/playbooks"
+      ]
+    }
   ],
   "thin": {
     "member": "eric",

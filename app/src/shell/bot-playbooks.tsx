@@ -23,13 +23,16 @@ import { WeekStrip } from "./week-lanes";
  * "the whole pass" link whose `#cycle-…` hash names one round (#3961), which also includes the
  * checks that traded so that round is there to open.
  *
- * `showPlaybooks` false on a bot the viewer does not own (#885, docs/IA.md §5.2): the strip and
- * each card's state stay, the names, the roll call and the way to change them do not.
+ * `showPlaybooks` false where no name reaches the viewer (#885 before sign-in, docs/IA.md §5.2): the
+ * strip and each card's state stay, the names and the roll call do not. A signed-in member reads a
+ * bot's names (#8254) with `owned` false: each card is named by its strategy, and its rules, its
+ * landing and the way to change it stay the owner's.
  */
 export function BotPlaybooksSection({
   deskId,
   botName,
   showPlaybooks = true,
+  owned = showPlaybooks,
   checksOpen = false,
   landing,
 }: {
@@ -37,6 +40,8 @@ export function BotPlaybooksSection({
   /** The bot's own name, for the strip's sentence; "This bot" when the page does not know it. */
   readonly botName?: string;
   readonly showPlaybooks?: boolean;
+  /** The viewer owns the bot (defaults to `showPlaybooks`, the owner's own page). */
+  readonly owned?: boolean;
   readonly checksOpen?: boolean;
   /** An order's playbook link (#5073 slice 4a): that card arrives open, the order's mark ringed. */
   readonly landing?: PlaybookLanding;
@@ -76,11 +81,12 @@ export function BotPlaybooksSection({
         deskId={deskId}
         merged={merged}
         named={showPlaybooks}
+        owned={owned}
         unmanaged={showPlaybooks ? (heartbeat.unmanaged ?? []) : []}
         none={heartbeat.playbooks === null && !heartbeat.rollCall}
         playbooks={heartbeat.playbooks}
         {...(heartbeat.week ? { week: heartbeat.week } : {})}
-        {...(landing && showPlaybooks ? { landing } : {})}
+        {...(landing && owned ? { landing } : {})}
       />
       <ShadowProbes deskId={deskId} />
     </div>

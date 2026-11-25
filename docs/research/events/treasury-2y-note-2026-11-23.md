@@ -339,3 +339,80 @@ memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-11-22
 <!-- probe-ref: {"symbols":{},"vix":35.89,"daysBand":"medium:0+","adjacentIds":["advance-economic-indicators-2026-11-27","advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","china-ga-ge-sb-suspension-expiry-2026-11-27","consumer-confidence-2026-11-24","durable-goods-2026-11-25","eurostat-hicp-final-2026-11-18","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","fomc-minutes-2026-11-18","gdp-q3-2026-second-2026-11-25","housing-starts-2026-11-18","industrial-production-annual-revision-2026-11-24","japan-cpi-2026-11-20","japan-cpi-tokyo-flash-2026-11-27","jgb-20y-auction-2026-11-18","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-1-5y-2026-11-20","jgb-liquidity-enhancement-5-11y-2026-11-27","jpx-market-closure-2026-11-23","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","opex-2026-11-20","pce-2026-11-25","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","retail-ecommerce-q3-2026-11-19","sifma-bond-early-close-2026-11-27","sp-global-flash-us-pmi-2026-11-23","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-frn-2026-11-24","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out (2026-11-24, D+1 — inside `closeOutWithinDays`).** Rates mode runs no symbol instrument
+(`symbols: []` by design, so there is no `earnings-cycle`/`intraday-edges` cache; the cache directories were
+cleared anyway). "Re-run data" here means every number below was re-fetched direct from a Treasury primary or
+Yahoo today, never carried from the earlier rows. Sources: the par-curve CSV on home.treasury.gov (HTTP 200,
+newest row 11-23), treasurydirect.gov's auctioned-securities record for CUSIP 91282CRY9 (HTTP 200), and Yahoo
+`^VIX` (HTTP 200). Competitive-base shares are this session's arithmetic on the par-awarded fields, the same
+definition the 10-26 close-out used. `api.fiscaldata.treasury.gov` was not used and the results PDF was not read.
+
+**The headline verdict: the 2Y closed 0bp on auction day, so the registered rally test (FT-1) is killed and the
+calm-tape test (FT-3) passes. The sale itself was an ordinary, in-band print with a dealer takedown in the middle
+of the era's range.**
+
+| Reading | Value | Source (fetched 2026-11-24) |
+|---|---|---|
+| 2Y CMT, 11-20 → 11-23 | **4.63 → 4.63 (0bp)** | home.treasury.gov par CSV |
+| 10Y CMT, same days | 4.92 → 4.92 (0bp) | same |
+| 5Y / 30Y, same days | 4.71 → 4.74 (+3bp) · 5.31 → 5.29 (−2bp) | same |
+| Path into the sale | 2Y 4.88 (11-13) → 4.80 (11-18) → 4.76 (11-19) → 4.63 (11-20, −13bp) → 4.63 | same |
+| VIX close | **26.62** (11-23), down from **35.89** (11-20) | Yahoo `^VIX` |
+| Offered / CUSIP | $69.0B, 91282CRY9, new issue, single-price | treasurydirect auctioned record |
+| High yield · median · low | **4.700%** · 4.650% · 4.570%; 74.54% allotted at the high | same |
+| Stop-out vs 10-26 | 4.700% vs 4.708% (−0.8bp); tail (median to high) 5.0bp | same |
+| Bid-to-cover | **2.65** | same |
+| Competitive base | indirect **51.54%** · direct **38.06%** · dealer **10.40%** (end-user 89.60%) | same, computed |
+
+### Forward tests scored
+
+| Test | Prediction | Result | Verdict |
+|---|---|---|---|
+| `FT-treasury-2y-note-2026-11-23-1` (the auction-day front-end rally is a live regime) | 11-23 2Y CMT move **at or below −3.0bp**; kill if greater | **0bp** (4.63 → 4.63); void clauses all held ($69B, 11-23, FOMC 12-09 is D+16) | **KILL** |
+| `FT-treasury-2y-note-2026-11-23-2` (Thanksgiving week costs the sale no demand) | NOT both bid-to-cover below 2.570 and dealer above 12.3% | b/c **2.65** (above 2.570), dealer **10.40%** (below 12.3%): neither leg printed | **PASS** |
+| `FT-treasury-2y-note-2026-11-23-3` (the rally needs prior-session VIX under 20) | if the 11-20 VIX close is ≥ 20.0, the 11-23 move is greater than −3.0bp | gate read **35.89 ≥ 20.0** (armed, not void); move **0bp** | **PASS** |
+
+**Reading the results honestly.** FT-1 and FT-3 were opposite calls on one number, as the 11-22 row said, so one
+had to score and the other had to fail. FT-1 carried its base rate on its face (78% in-regime, 23% pre-2023), and
+the 0bp print is the fail that the pre-2023 rate makes ordinary, so the kill is **one observation against the
+regime**, not a verdict that it is gone. FT-3 passed in the direction its 67% base rate leaned and the kill
+condition (a rally despite VIX ≥ 20) did not occur, so the calm-tape reading survives **one more data point**; the
+11-20 reading of 35.89 sat far above anything the ≥ 20 bucket had sampled, so this is an extrapolation that held,
+not an interpolation. FT-2 passed at its 83% default rate and is worth little alone: the holiday-week sale covered
+2.65 (above the $69B-era median of 2.640) with a dealer takedown of 10.40% (the 2025-04+ p25 is 10.2%, the median
+11.2%), which is the same direction as leg 4's refutation of a holiday-week discount and now one more $69B-era
+in-week sale on the record (2024-11-25 b/c 2.77, 2025-11-24 b/c 2.68, 2026-11-23 b/c 2.65).
+
+**What the tape says about the regime, on the numbers in this doc.** Three far-from-FOMC 2026 prints are now
+on the record without a rally: 02-24 (0bp), 03-24 (+7bp) and 11-23 (0bp). Counting this one against the
+ledger's stated in-regime base of 21 of 27 at or below −3bp gives **21 of 28 (75%)**, arithmetic on the
+doc's own figure and not a re-run of the full study. Two of the three misses came with VIX above 25 on the
+prior session by this ledger's own record (03-24, and 11-23 at 35.89); 02-24's prior-session VIX was not re-read
+here, so the calm-tape condition is consistent with the misses and is not shown to be binding. The 11-20 session had already carried the front end 13bp lower (4.76 → 4.63), so the
+auction-day bid may have been pulled forward into the sale-eve session; the data here cannot separate that from
+the regime weakening. The VIX fell 9.3 points on 11-23 and the 2Y did not move, which is the tape that FT-3's
+stressed bucket predicts and is also what a pure risk-on unwind does.
+
+**Kill switches, closed out.** (1) the 11-23 move greater than −3.0bp: **fired**, the registered kill of FT-1.
+(2) the 09-22 or 10-26 predecessor printing at 0bp or higher: 10-26 closed −1bp per its own close-out, and 09-22's
+move was not re-read here (it is scored in its own doc). (3) size change: not fired, $69B held. (4) the auction moving off 11-23, or `fomc-2026-12-09` moving
+inside seven days: not fired. (5) the joint weak-cover and heavy-dealer Thanksgiving-week print: not fired.
+
+**What it changes next.** The −6.07bp prior should not be used flat for the next 2Y sale (`treasury-2y-note-2026-12-28`,
+a sibling lane's event); use it conditional on prior-session VIX under 20, as the 11-09 stance update already
+says, and treat a flat tape as the expected one otherwise. Nothing in this event was ever a position, and the
+direction stays watch-only.
+
+**Honest limits.** One auction is one observation on a regime whose three predecessors all decayed, and a scored
+kill on it is thin evidence either way. The 11-20 → 11-23 move is a **daily close-to-close** change on a CMT series
+rounded to 1bp: it cannot show an intraday concession before the 1:00 PM close or a post-award reaction, and says
+nothing about causation. The 11-23 session also carried the 09:45 ET `sp-global-flash-us-pmi-2026-11-23`
+(estimate), whose print was not read here, so the zero is not attributed to the sale alone. No full re-run of the
+2000-2026 auction-day study was done this session, so the 21-of-28 tally is arithmetic on a stated number. This
+document goes quiet from here: `scripts/event-scan.mjs` will not surface it again.
+
+**Last assessed:** 2026-11-24 (close-out — the scanner goes quiet on this event from here)
+<!-- probe-ref: {"symbols":{},"vix":26.62,"daysBand":"medium:0+","adjacentIds":["advance-economic-indicators-2026-11-27","advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","china-ga-ge-sb-suspension-expiry-2026-11-27","consumer-confidence-2026-11-24","durable-goods-2026-11-25","eurostat-hicp-final-2026-11-18","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","fomc-minutes-2026-11-18","gdp-q3-2026-second-2026-11-25","housing-starts-2026-11-18","industrial-production-annual-revision-2026-11-24","japan-cpi-2026-11-20","japan-cpi-tokyo-flash-2026-11-27","jgb-20y-auction-2026-11-18","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-1-5y-2026-11-20","jgb-liquidity-enhancement-5-11y-2026-11-27","jpx-market-closure-2026-11-23","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","opex-2026-11-20","pce-2026-11-25","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","retail-ecommerce-q3-2026-11-19","sifma-bond-early-close-2026-11-27","sp-global-flash-us-pmi-2026-11-23","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-frn-2026-11-24","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25"],"screenStreak":0} -->

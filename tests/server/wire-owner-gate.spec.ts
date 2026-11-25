@@ -90,15 +90,15 @@ const signedIn = {
   resolveOwnerIds: (email: string) => (email === "owner@x" ? ["human-eric", "sauron"] : []),
 } as unknown as Partial<DashboardServerConfig>;
 
-describe("the league Wire withholds a bot's playbook from anyone but its owner (#885)", () => {
-  it("strips the playbook from a fill on an account the viewer does not own, keeping the why", async () => {
+describe("the league Wire: a bot's playbook rides to signed-in members, never to a signed-out read (#885, #8254)", () => {
+  it("gives a signed-in member who does not own the bot its playbook, keeping the why (#8254)", async () => {
     const reasoning = await wireReasoning(signedIn, session("guest@x"));
     expect(reasoning).toMatchObject({
       reason: "the pre-earnings run-up window opened",
       personaId: "sauron",
+      playbookId: "S1-NVDA",
+      playbookMode: "standard",
     });
-    expect(reasoning).not.toHaveProperty("playbookId");
-    expect(reasoning).not.toHaveProperty("playbookMode");
   });
 
   it("keeps it for the account's owner", async () => {

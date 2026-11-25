@@ -26,6 +26,8 @@ export type DeskAlerts =
       readonly alerts: readonly DeskAlert[];
       /** False when this deployment keeps no dismissals — the strip says so instead of a dead button. */
       readonly dismissable: boolean;
+      /** The account's broker read failed: alerts built on its positions are missing (#8334). */
+      readonly positionsUnread?: true;
     }
   | {
       readonly available: false;

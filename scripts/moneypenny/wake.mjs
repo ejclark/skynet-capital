@@ -32,7 +32,7 @@
 // the throttle on a do-nothing build being retried in a loop), never wakes a failed build's own
 // retry (`wakeNext`'s note), and never acts under `halt`: the peek it asks refuses everything
 // there, fast-track included.
-import { sh } from "./gh.mjs";
+import { isRateLimited, sh } from "./gh.mjs";
 import { issueNumberFromSlug, LABELS, setInProgress } from "./labels.mjs";
 
 /** The workflow the push pass re-dispatches, and so the one a wake re-dispatches. */
@@ -62,7 +62,8 @@ export function dispatchScan({ exec = sh, ref = process.env.GITHUB_REF_NAME || "
 /**
  * Ask the sweep's peek; dispatch the scan only when it names something admissible. A dispatch
  * failure throws, so `runIntents` records it and the run goes red — a wake that silently did not
- * happen is the failure this file exists to end.
+ * happen is the failure this file exists to end. A spent API budget is the one exception (below):
+ * it warns by name instead, because the next push makes the same dispatch.
  *
  * A FAILED BUILD IS NEVER RETRIED BY ITS OWN WAKE. `--release` frees a failed build's lease and
  * label so a retry can start — on the next tick. Before this file the next tick was the next merge;
@@ -71,6 +72,22 @@ export function dispatchScan({ exec = sh, ref = process.env.GITHUB_REF_NAME || "
  * the issue that just freed the slot and no claim holds it, nothing is dispatched: its retry keeps
  * the merge-tick pace it always had. When a claim DOES hold it (a build that ended normally keeps
  * its lease for the TTL), the scan's own sweep steps past it — so the wake asks what is behind it.
+ *
+ * A SPENT BUDGET SKIPS THE PEEK, NOT THE DISPATCH (#6942, 2026-11-24). Run 45304863363's wake died
+ * on the peek's read of the `ready` list with the App's REST budget at 0, and the red run reopened
+ * #6942 over a quota. The peek is a read, and the push pass re-peeks on the next merge, so it skips
+ * with a warning, as the router's other reads do (#6998).
+ *
+ * A SPENT BUDGET ON THE DISPATCH SKIPS TOO (#6942, 2026-11-24, run 45333646409). #8159 kept the
+ * dispatch throwing on the rule that a write we could not make is a fault. The next 403 came on the
+ * dispatch itself: the peek named #8225, `gh workflow run` answered "API rate limit exceeded", and
+ * `route` went red and reopened #6942 a 27th time. A red run here recovers nothing: no step re-tries
+ * a failed wake, and the reopen sends a repair session to spend more of the same budget. A dispatch
+ * is not state the way a comment or a label is. It is one tick, and the push pass's retry sweep
+ * makes the same call on the next merge, and a spent hourly budget means merges are landing. So
+ * on the budget alone it warns, says so in the receipt, and stays green. Re-trying the lost tick
+ * after the reset is #7315's job. Every other dispatch failure (a 404 on the workflow, a refused
+ * permission) is a defect in this repo and still throws.
  *
  * @param deps.peek  the retry sweep's dry run (`peekNext`) — the pick, or null; `peek(n)` leaves #n out
  * @param deps.isHeld  does a live claim lease hold #n? (`isClaimed` on either lane's slug)
@@ -85,24 +102,53 @@ export function wakeNext({
   freed,
 } = {}) {
   const why = freed ? `#${freed} freed a build slot` : "a build slot freed";
-  let pick = peek();
-  if (pick && freed && pick.number === freed) {
-    if (!isHeld(freed)) {
-      console.log(
-        `::notice::${why} — the next pick is #${freed} itself with no claim held; no dispatch`,
-      );
-      return {
-        dispatched: false,
-        line: `· ${why} — the next pick is #${freed} itself (a failed build's retry); it waits for the next merge`,
-      };
-    }
-    pick = peek(freed);
+  // The reads: the peek, and the lease check when the pick is the freed issue itself. `SELF` is
+  // "the pick is #freed and no claim holds it", a failed build's own retry.
+  const SELF = Symbol("self");
+  const choose = () => {
+    const first = peek();
+    if (!(first && freed && first.number === freed)) return first;
+    return isHeld(freed) ? peek(freed) : SELF;
+  };
+  let pick;
+  try {
+    pick = choose();
+  } catch (err) {
+    if (!isRateLimited(err)) throw err;
+    console.log(
+      `::warning::${why} — the peek's read hit a spent API budget (${String(err.message).slice(0, 160)}); no dispatch, the next push peeks again`,
+    );
+    return {
+      dispatched: false,
+      line: `· ${why} — API budget spent; the wake waits for the next push`,
+    };
+  }
+  if (pick === SELF) {
+    console.log(
+      `::notice::${why} — the next pick is #${freed} itself with no claim held; no dispatch`,
+    );
+    return {
+      dispatched: false,
+      line: `· ${why} — the next pick is #${freed} itself (a failed build's retry); it waits for the next merge`,
+    };
   }
   if (!pick) {
     console.log(`::notice::${why} — nothing admissible, no dispatch`);
     return { dispatched: false, line: `· ${why} — nothing admissible to start` };
   }
-  dispatch();
+  try {
+    dispatch();
+  } catch (err) {
+    if (!isRateLimited(err)) throw err;
+    console.log(
+      `::warning::${why} — #${pick.number} is admissible, but the scan dispatch hit a spent API budget (${String(err.message).slice(0, 160)}); the next push dispatches it`,
+    );
+    return {
+      dispatched: false,
+      pick: pick.number,
+      line: `· ${why} — #${pick.number} is admissible, but the API budget is spent; the scan waits for the next push`,
+    };
+  }
   console.log(`::notice::${why} — #${pick.number} is admissible; dispatched the scan`);
   return {
     dispatched: true,

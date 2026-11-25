@@ -6,6 +6,7 @@
  * no state of their own beyond the audit store they construct.
  */
 import type { TraderMode } from "../autonomous/autonomous-trader.js";
+import type { DecisionPulse } from "../autonomous/bots-health-file.js";
 import type { DecisionDb } from "../autonomous/decision-db.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { JsonlAuditStore } from "../autonomous/jsonl-audit-store.js";
@@ -56,7 +57,8 @@ export function botOrderPublisher(
 }
 
 /**
- * Console + audit-store sink for one decision cycle. Never throws on either write: `audit` is
+ * Console + audit-store sink for one decision cycle. `pulse` (#4220) first moves the bot's vitals
+ * on the health record, caught like the writes below. Never throws on either write: `audit` is
  * async (JSONL, the existing backstop) and errors are caught; `decisionDb` is `DatabaseSync`
  * (fully synchronous — a throw would propagate synchronously, not via a rejected promise), so its
  * call is wrapped in try/catch instead. Both are optional and independent — a `decisionDb` write
@@ -65,8 +67,14 @@ export function botOrderPublisher(
 export function decisionSink(
   audit: JsonlAuditStore | undefined,
   decisionDb?: DecisionDb,
+  pulse?: (r: DecisionPulse) => void,
 ): (r: DecisionRecord) => void {
   return (r) => {
+    try {
+      pulse?.(r);
+    } catch (error) {
+      console.error("[health] vitals pulse failed:", error);
+    }
     const placed = r.outcomes.filter((o) => o.action === "placed").length;
     const observed = r.outcomes.filter((o) => o.action === "observed").length;
     if (r.mode === "observe" && observed > 0) {

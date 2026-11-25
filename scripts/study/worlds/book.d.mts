@@ -64,7 +64,12 @@ export function derivedFields(
 ): InputPosition;
 
 export function buildBook(name: string): Book;
-export function yesterdayEquity(
-  input: { id: string; cash: number; lastEquity?: number; closedToday?: number },
-  snapshot: { positions: { quantity: number; lastdayPrice: number }[] },
-): number;
+/** The adoptions ledger as `commit` held it (`{}` before the file existed), never the tree's. */
+export function adoptionsAt(commit: string): Record<string, { change: string; adoptedOn: string }>;
+export function yesterdayEquity(input: {
+  id: string;
+  cash: number;
+  positions: { symbol: string; quantity: number; lastday: number }[];
+  lastEquity?: number;
+  closedToday?: number;
+}): number;

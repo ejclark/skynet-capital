@@ -31,12 +31,21 @@ describe("describePage — known pages map to fixed words", () => {
     expect(pageSymbol("/app/trade?symbol=nvda")).toBe("NVDA");
   });
 
-  it("names the landing page, with or without its basepath", () => {
-    const landing = "the landing page (the day's market news and its calendar)";
-    expect(describePage("/")).toBe(landing);
-    expect(describePage("/app/")).toBe(landing);
-    expect(describePage("/app")).toBe(landing);
+  // #8315: #8267 made `/` the home screen and moved Campaign (the day's news and its calendar) to
+  // `/campaign`. Each is named by its job; the home screen names no app.
+  it("names the home screen, with or without its basepath", () => {
+    const home = "the home screen (the tower, what needs them, and a tile for each app)";
+    expect(describePage("/")).toBe(home);
+    expect(describePage("/app/")).toBe(home);
+    expect(describePage("/app")).toBe(home);
     expect(pagePath("/app/")).toBe("/");
+  });
+
+  it("names Campaign where the client posts it from", () => {
+    const campaign = "the Campaign page (the day's market news, its calendar and their quests)";
+    expect(describePage("/app/campaign?w=calendar")).toBe(campaign);
+    expect(describePage("/campaign")).toBe(campaign);
+    expect(pagePath("/app/campaign?w=calendar")).toBe("/campaign");
   });
 
   it("strips only a whole /app segment", () => {

@@ -126,13 +126,22 @@ export function numbersIn(text) {
  */
 export function hedged(text) {
   const { hits, clean } = numberHits(text);
+  return offersChoice(hits, clean);
+}
+
+// "or", optionally followed by the word that signs the next amount: "$4 or up $4", "$4 or lost $4".
+const OR_JOIN =
+  /^[\s,;(]*or[\s(]*(?:(?:up|down|gained|lost|rose|fell|a\s+(?:gain|loss)\s+of)\s+(?:by\s+|of\s+)?(?:about\s+)?)?$/i;
+
+/** The choice check over hits already read — signed ones, when a loss said in words counts. */
+function offersChoice(hits, clean) {
   return hits.some((h, i) => {
     const next = hits[i + 1];
     return (
       next !== undefined &&
       next.unit === h.unit &&
       next.n !== h.n &&
-      /^[\s,;(]*or[\s(]*$/i.test(clean.slice(h.end, next.start))
+      OR_JOIN.test(clean.slice(h.end, next.start))
     );
   });
 }
@@ -238,13 +247,20 @@ export function withinTolerance(n, { value, abs = 0, rel = 0, ignoreSign = false
 // A loss said in words: an unsigned amount right after one of these is negative ("down $4", "lost
 // $412", "a loss of $8", "fell by about 3%"). Read only when the answer's sign matters (no
 // `ignoreSign`): the cross-feature thin slice's member answered "down $4 so far today, at $98,479"
-// for a −$4 day and was failed as +4 (2026-11-23).
+// for a −$4 day and was failed as +4 (2026-11-23). The hedges are GLUE's ("down approx. $4"), and
+// "in the red by $4" is a loss word too (#8057).
 const LOSS_BEFORE =
-  /\b(?:down|lost|losing|fell|dropped|declined|loss\s+of)(?:\s+(?:by|of))?(?:\s+(?:about|around|roughly|nearly|almost))?\s*$/i;
+  /\b(?:down|lost|losing|fell|dropped|declined|loss\s+of|in\s+the\s+red)(?:\s+(?:by|of))?(?:\s+(?:about|around|roughly|approximately|approx\.?|nearly|almost))?\s*$/i;
+// …or a loss word right AFTER the amount: "a $4 loss", "$4 down", "$4 in the red" (#8057). Only
+// when nothing stands between them, so "up $4, down from $10" keeps its +4; and "$10 down to $6"
+// is a price moving, not a $10 loss.
+const LOSS_AFTER = /^\s*(?:loss(?:es)?|down(?!\s+(?:to|from)\b)|in\s+the\s+red)\b/i;
 
 /** A hit whose clause says it is a loss, signed so; any other hit as it was written. */
 const withWordSign = (clean, h) =>
-  h.n > 0 && LOSS_BEFORE.test(clean.slice(Math.max(0, h.start - 40), h.start))
+  h.n > 0 &&
+  (LOSS_BEFORE.test(clean.slice(Math.max(0, h.start - 40), h.start)) ||
+    LOSS_AFTER.test(clean.slice(h.end, h.end + 40)))
     ? { ...h, n: -h.n }
     : h;
 
@@ -254,7 +270,10 @@ function gradeNumber(given, expected) {
   const hits = expected.ignoreSign ? written : written.map((h) => withWordSign(clean, h));
   const found = [...new Set(hits.map((h) => h.n))];
   if (found.length === 0) return { matched: false, why: "no number in the answer" };
-  if (hedged(given)) return { matched: false, why: "it offers a choice of numbers — a guess" };
+  // On the signed hits: "down $4 or up $4" is −4 or +4, a guess, though it writes 4 twice (#8056).
+  if (offersChoice(hits, clean)) {
+    return { matched: false, why: "it offers a choice of numbers — a guess" };
+  }
   const want = Math.abs(expected.value);
   const hit = hits.find((h) => withinTolerance(h.n, expected));
   const sized = (h) =>

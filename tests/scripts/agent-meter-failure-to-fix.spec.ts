@@ -12,7 +12,6 @@ import {
   formatStage,
   LOG_FORMAT,
   ledgerArgs,
-  ledgerStage,
   mainEpisodes,
   parseCommitLog,
   stagesOf,
@@ -572,7 +571,6 @@ describe("a failure's own row", () => {
 });
 
 describe("the ledger row", () => {
-  const none = parseCommitLog("");
   const reading = {
     window: { until: "2026-11-01T00:00:00Z", hours: 720 },
     sources: {
@@ -631,60 +629,8 @@ describe("the ledger row", () => {
     );
   });
 
-  // #6691, reproduced on main at 2f8fca5f: one 15-minute streak beside a 3-day outage still red at
-  // the window's end read p50 15 and wrote `--after 15`, the same as a healthy week.
-  it("keeps a still-red outage in the number as a floor, and says so", () => {
-    const week = { sinceMs: at("2026-10-25T00:00:00Z"), untilMs: window.untilMs };
-    const episodes = mainEpisodes(
-      [
-        run(1, "2026-10-26T08:00:00Z", "success"),
-        run(2, "2026-10-26T09:00:00Z", "failure", "2026-10-26T09:05:00Z"),
-        run(3, "2026-10-26T09:10:00Z", "success", "2026-10-26T09:20:00Z"),
-        run(4, "2026-10-29T00:00:00Z", "failure", "2026-10-29T00:59:00Z"),
-        run(5, "2026-10-30T00:00:00Z", "failure", "2026-10-30T00:10:00Z"),
-      ],
-      [],
-      none,
-      week,
-    );
-    const outageMin = (week.untilMs - at("2026-10-29T00:59:00Z")) / MIN;
-    expect(outageMin).toBe(4261);
-    const stages = stagesOf(episodes);
-    // The stage keeps its rule: the outage is unknown and counted, never 0.
-    expect(stages.toVerified).toMatchObject({ n: 1, unknown: 1, p50Min: 15 });
-    const mainCi = { episodes, stages, ledger: ledgerStage(episodes) };
-    expect(mainCi.ledger).toMatchObject({ n: 2, unknown: 0, floors: 1 });
-    const args = ledgerArgs(
-      { ...reading, sources: { ...reading.sources, mainCi } },
-      [{ date: "2026-10-25", after: 15 }],
-      "2026-11-01",
-    );
-    const after = Number(args[args.indexOf("--after") + 1]);
-    expect(after).toBeGreaterThanOrEqual(outageMin);
-    expect(args.join(" ")).toMatch(/The number is a floor: 1 red streak/);
-  });
-
-  it("writes a row for an outage alone, as a floor, where it used to throw", () => {
-    const episodes = mainEpisodes(
-      [
-        run(1, "2026-10-28T08:00:00Z", "success"),
-        run(2, "2026-10-29T00:00:00Z", "failure", "2026-10-29T00:59:00Z"),
-      ],
-      [],
-      none,
-      window,
-    );
-    const mainCi = { episodes, stages: stagesOf(episodes), ledger: ledgerStage(episodes) };
-    expect(mainCi.stages.toVerified.p50Min).toBeNull();
-    const args = ledgerArgs(
-      { ...reading, sources: { ...reading.sources, mainCi } },
-      [],
-      "2026-11-01",
-    );
-    expect(args).toEqual(expect.arrayContaining(["--baseline", "4261"]));
-    expect(args.join(" ")).toContain("The number is a floor");
-  });
-
+  // The floor cases (a streak still red, an outage alone) live in meter-partial-input.spec.ts
+  // (#6694), with the other rows that read part of their input.
   it("says nothing about a floor when every streak went green inside the window", () => {
     expect(ledgerArgs(reading, [], "2026-11-01").join(" ")).not.toContain("floor:");
   });

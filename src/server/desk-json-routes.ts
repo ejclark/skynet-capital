@@ -10,6 +10,7 @@ import {
   type RollCallRoster,
 } from "../observatory/bot-heartbeat-view.js";
 import {
+  type DecisionCyclesPage,
   decisionCyclesView,
   expectancyView,
   funnelView,
@@ -24,7 +25,12 @@ import { type SpreadOf, spreadLookup } from "../observatory/spread-activity.js";
 import { botLandmarkProminence } from "../observatory/standings.js";
 import { thesisView } from "../observatory/thesis-json-view.js";
 import { thesisPlayView } from "../observatory/thesis-play-view.js";
-import { reasoningForOrder, withoutOwnerReasoning } from "../observatory/wire-reasoning.js";
+import {
+  reasoningForOrder,
+  type WireTradeReasoning,
+  withoutBrokerReasoning,
+  withoutOwnerReasoning,
+} from "../observatory/wire-reasoning.js";
 import { hypothesisVerdicts } from "../playbooks/cond-scout-verdict.js";
 import type { OpenLot } from "../trading/round-trips.js";
 import { empireHealth, projectEmpire } from "../universe/project.js";
@@ -35,9 +41,13 @@ import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { readAccountDecisionsPage } from "./decision-account-view.js";
 import {
   ownsDesk,
+  type PlaybookRead,
+  playbookRead,
+  withoutCycleBrokerFields,
   withoutCycleOwnerFields,
   withoutHeartbeatPlaybookIds,
   withoutLadderPlaybookIds,
+  withoutThesisBrokerFields,
   withoutThesisOwnerFields,
 } from "./desk-owner-gate.js";
 import { MAX_PAGE_SIZE, resolvePageSize } from "./pagination.js";
@@ -45,13 +55,13 @@ import { tagsByOrder } from "./playbook-performance.js";
 
 /** A bot's activity rows each carry the decision that placed them (#3687 slice 4), via the same
  *  exact order-id join the wire feed and the Thesis tab use. Human rows pass through untouched.
- *  A non-owner's copy carries the decision without its playbook (#885) or the broker's words
- *  (`desk-owner-gate.ts`). */
+ *  A non-owner's copy carries the decision and its playbook (#8254 lifted #885 for bot accounts),
+ *  never the broker's words or the retire rule (`desk-owner-gate.ts`). */
 function withDecisions<V extends { readonly activity: readonly { readonly orderId: string }[] }>(
   kind: string,
   view: V,
   config: DashboardServerConfig,
-  owner: boolean,
+  read: PlaybookRead,
 ): V {
   if (kind !== "bot" || !config.findByOrderId) return view;
   return {
@@ -59,7 +69,8 @@ function withDecisions<V extends { readonly activity: readonly { readonly orderI
     activity: view.activity.map((event) => {
       const reasoning = reasoningForOrder(event.orderId, config);
       if (!reasoning) return event;
-      return { ...event, reasoning: owner ? reasoning : withoutOwnerReasoning(reasoning) };
+      // Only a bot's rows carry a decision, so its playbook rides to every member (#8254).
+      return { ...event, reasoning: reasoningFor(read, reasoning) };
     }),
   };
 }
@@ -73,17 +84,27 @@ function botSpreadLookup(kind: string, config: DashboardServerConfig): SpreadOf 
   return spreadLookup({ findSpreadLeg, findByOrderId });
 }
 
-/** The playbook that placed an order, for the bot's OWNER alone (#885: "we do not show what
- *  playbooks others are using"). Filtering a non-owner's copy by playbook would name it by
- *  inference, so anyone else gets no lookup and their `?playbook=` is ignored. Memoised: the
- *  filter and the chip list read the same order ids, one indexed lookup each. */
-function ownerPlaybookOf(
+/** A fill's decision as this viewer reads it (`playbookRead`). */
+function reasoningFor(read: PlaybookRead, reasoning: WireTradeReasoning): unknown {
+  if (read === "owner") return reasoning;
+  return read === "names" ? withoutBrokerReasoning(reasoning) : withoutOwnerReasoning(reasoning);
+}
+
+/** The playbook that placed a bot's order. Once #885's names were the owner's alone; a bot's are
+ *  every member's to read since #8254, so any member may narrow a bot's Activity by `?playbook=`.
+ *  The chip list asks about every order in the ledger on every member's read, so the server's own
+ *  `playbookOfOrder` remembers the answers across requests (#8397); without it, memoised per
+ *  request: the filter and the chip list read the same order ids, one indexed lookup each. */
+function botPlaybookOf(
   kind: string,
   config: DashboardServerConfig,
-  owner: boolean,
+  read: PlaybookRead,
 ): PlaybookOf | undefined {
-  const { findByOrderId } = config;
-  if (kind !== "bot" || !owner || !findByOrderId) return undefined;
+  const { findByOrderId, playbookOfOrder } = config;
+  // Only a bot's orders carry a playbook, and a bot's are every member's to read (#8254).
+  if (kind !== "bot" || read === "none") return undefined;
+  if (playbookOfOrder) return playbookOfOrder;
+  if (!findByOrderId) return undefined;
   const seen = new Map<string, string | undefined>();
   return (orderId) => {
     if (!seen.has(orderId)) seen.set(orderId, findByOrderId(orderId)?.intent.playbookId);
@@ -91,21 +112,21 @@ function ownerPlaybookOf(
   };
 }
 
-/** Which playbook opened each order behind a position the bot holds now (#5073 slice 4b) — the
- *  owner's alone (#885), so anyone else's ledger stays untagged and its positions name nothing.
+/** Which playbook opened each order behind a position the bot holds now (#5073 slice 4b) — every
+ *  member's to read since #8254 lifted #885 for bot accounts; a human's ledger is never tagged.
  *  Only the held symbols' orders are looked up: a closed trade's opener is not this view's to say.
  *  A spread's legs take their spread's playbook, since the question is who put the leg on.
  *  Laid onto the matched lots by their opening order (#4619): tags are attribution only — the
  *  matcher never reads them — so this is the ledger a tagged match returns, without re-matching
  *  and without the whole ledger, which the held lots (`trade-ledger-cache.ts`) let it skip. */
-function ownerTaggedLots(
+function botTaggedLots(
   found: ParticipantSnapshot,
   open: readonly OpenLot[],
   config: DashboardServerConfig,
-  owner: boolean,
+  read: PlaybookRead,
 ): readonly OpenLot[] {
   const { findByOrderId, findSpreadLeg } = config;
-  if (found.kind !== "bot" || !owner || !findByOrderId) return open;
+  if (found.kind !== "bot" || read === "none" || !findByOrderId) return open;
   const held = new Set(found.positions.map((p) => p.symbol));
   const openers = open.flatMap((lot) =>
     held.has(lot.symbol) && lot.entryOrderId ? [{ orderId: lot.entryOrderId }] : [],
@@ -125,14 +146,14 @@ function ownerTaggedLots(
 
 /** `/api/desk/:id/activity` — the account's orders, newest first, keyset-paged by `before`, and
  *  narrowed BEFORE the page is cut (#4650): `?symbol=` to one stock (an option or a spread by its
- *  underlying), `?playbook=` to one playbook's orders for the bot's owner only. No ledger wired
+ *  underlying), `?playbook=` to one playbook's orders on a bot (any member, #8254). No ledger wired
  *  (offline runs without SKYNET_ACTIVITY_DIR) says so — never an empty lie. The audit lines ride
  *  alongside so each row can say who PLACED it; with no audit log wired every row is `unknown`. */
 async function activityPayload(
   found: ParticipantSnapshot,
   config: DashboardServerConfig,
   params: URLSearchParams,
-  owner: boolean,
+  read: PlaybookRead,
 ): Promise<unknown> {
   const [records, origins] = await Promise.all([
     config.readTradeActivity?.(found.id),
@@ -151,14 +172,20 @@ async function activityPayload(
     realizedByOrder: realizedMap,
     roundTrips: roundTripLinks(ledger),
     spreadOf: botSpreadLookup(found.kind, config),
-    ...activityNarrowing(params, ownerPlaybookOf(found.kind, config, owner)),
+    ...activityNarrowing(params, botPlaybookOf(found.kind, config, read)),
   });
-  return { available: true, ...withDecisions(found.kind, view, config, owner) };
+  return { available: true, ...withDecisions(found.kind, view, config, read) };
 }
 
 /** How many passes to read per persona per page — the store's own max. A page of cycles then
  *  collapses quiet runs out of these, so one page can span far more time than `limit` rows. */
 const DECISION_READ = 100;
+
+/** The cycles as this viewer reads them (`playbookRead`). */
+function cyclesFor(read: PlaybookRead, cycles: DecisionCyclesPage["cycles"]): unknown {
+  if (read === "owner") return cycles;
+  return read === "names" ? withoutCycleBrokerFields(cycles) : withoutCycleOwnerFields(cycles);
+}
 
 /** `/api/desk/:id/decisions` — bots only, and only when an audit trail is wired; both absences
  *  say so plainly. Pooled across every persona that trades on this account (beta-scout keeps its
@@ -171,8 +198,8 @@ async function decisionsPayload(
   /** `?trades=none` (#3687 slice 4): only the passes that placed nothing — idle, refused, halted,
    *  rejected — which now live on the Heartbeat tab while trades carry their own decisions. */
   noTrades: boolean,
-  /** False strips each outcome's playbook chip and the broker's words — a non-owner's copy. */
-  owner: boolean,
+  /** What this viewer reads of the bot's playbooks (`playbookRead`). */
+  read: PlaybookRead,
 ): Promise<unknown> {
   if (found.kind !== "bot") return { available: false, kind: found.kind, cycles: [] };
   const page = await readAccountDecisionsPage(found.id, config, {
@@ -196,7 +223,7 @@ async function decisionsPayload(
   return {
     available: true,
     kind: "bot",
-    cycles: owner ? view.cycles : withoutCycleOwnerFields(view.cycles),
+    cycles: cyclesFor(read, view.cycles),
     ...(nextCursor !== undefined ? { nextCursor } : {}),
     ...(funnel ? { funnel: funnelView(funnel) } : {}),
     ...(retrospectives ? { expectancy: expectancyView(retrospectives) } : {}),
@@ -255,7 +282,7 @@ function botHoldings(
 async function thesisPayload(
   found: ParticipantSnapshot,
   config: DashboardServerConfig,
-  owner: boolean,
+  read: PlaybookRead,
 ): Promise<unknown> {
   if (found.kind !== "bot") return { available: false, kind: found.kind };
   const id = found.id;
@@ -290,8 +317,13 @@ async function thesisPayload(
   return {
     available: true,
     kind: "bot",
-    thesis: owner ? view : withoutThesisOwnerFields(view),
-    ladder: ladder && (owner ? ladder : withoutLadderPlaybookIds(ladder)),
+    thesis:
+      read === "owner"
+        ? view
+        : read === "names"
+          ? withoutThesisBrokerFields(view)
+          : withoutThesisOwnerFields(view),
+    ladder: ladder && (read === "none" ? withoutLadderPlaybookIds(ladder) : ladder),
     // Dated, always: nothing bounds how old that pass is, and an undated safety readout reads
     // as current (the same reason `playbookLines` carries `since`).
     ...(pass ? { ladderAsOf: new Date(pass.at).toISOString() } : {}),
@@ -303,7 +335,7 @@ async function thesisPayload(
 async function heartbeatPayload(
   found: ParticipantSnapshot,
   config: DashboardServerConfig,
-  owner: boolean,
+  read: PlaybookRead,
 ): Promise<unknown> {
   const records = found.kind === "bot" ? await config.readDecisions?.(found.id) : undefined;
   if (!records) return { available: false, kind: found.kind };
@@ -318,7 +350,10 @@ async function heartbeatPayload(
     config.readCheckWeek?.(found.id),
     readRunStart && ((verdict, startAt) => readRunStart(found.id, startAt, verdict)),
   );
-  return { available: true, heartbeat: owner ? heartbeat : withoutHeartbeatPlaybookIds(heartbeat) };
+  return {
+    available: true,
+    heartbeat: read === "none" ? withoutHeartbeatPlaybookIds(heartbeat) : heartbeat,
+  };
 }
 
 /**
@@ -367,6 +402,9 @@ export async function serveDeskJson(
   }
   res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
   const owner = ownsDesk(found.id, config, session);
+  // What this viewer reads of the account's playbooks: the owner all, a signed-in member a bot's
+  // names (#8254), anyone else none (`playbookRead`).
+  const read = playbookRead(found.kind, owner, Boolean(session));
   const params = new URL(url, "http://localhost").searchParams;
   const limit = resolvePageSize(params.get("per_page"));
   const before = params.get("before");
@@ -374,12 +412,12 @@ export async function serveDeskJson(
   // posture `resolvePageSize` takes on a bad `per_page`.
   const beforeAt = before !== null && Number.isFinite(Number(before)) ? Number(before) : undefined;
   if (sub === "activity") {
-    res.end(JSON.stringify(await activityPayload(found, config, params, owner)));
+    res.end(JSON.stringify(await activityPayload(found, config, params, read)));
     return;
   }
   // The bot's health panels — one lookup, so a new panel never adds a branch here.
   const panels: Record<string, () => Promise<unknown>> = {
-    heartbeat: () => heartbeatPayload(found, config, owner),
+    heartbeat: () => heartbeatPayload(found, config, read),
     probes: () => Promise.resolve(probesPayload(found, config)),
   };
   const panel = panels[String(sub)];
@@ -396,14 +434,14 @@ export async function serveDeskJson(
           limit,
           beforeAt,
           params.get("trades") === "none",
-          owner,
+          read,
         ),
       ),
     );
     return;
   }
   if (sub === "thesis") {
-    res.end(JSON.stringify(await thesisPayload(found, config, owner)));
+    res.end(JSON.stringify(await thesisPayload(found, config, read)));
     return;
   }
   if (sub === "pulse") {
@@ -437,7 +475,7 @@ export async function serveDeskJson(
   // same honest degrade every other branch here takes, and `deskView` already renders lot-free
   // positions when `ledger` is undefined.
   const untagged = await openLotsOf(found, config);
-  const ledger = untagged ? { open: ownerTaggedLots(found, untagged, config, owner) } : undefined;
+  const ledger = untagged ? { open: botTaggedLots(found, untagged, config, read) } : undefined;
   // The book's health (#5493 slice 1): every finding for the owner, counts for anyone else.
   const health = await deskHealthPayload(found, config, owner, ledger?.open);
   // The considerations rail (#3186 slice 3) folds house playbooks matching a held symbol into the

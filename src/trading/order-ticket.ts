@@ -17,10 +17,15 @@
  * you hold, matching `engine/guards.ts`), no fractional shares, no spending cash you don't have.
  */
 
+import { type ExitPreview, reviewExit, stopLimitWarning, type TicketExit } from "./order-exit.js";
+
+export type { ExitPreview, TicketExit } from "./order-exit.js";
+
 export type TicketAction = "buy" | "sell";
 
-/** Defaults to "market" everywhere it's optional — every existing caller keeps today's behavior. */
-export type TicketOrderType = "market" | "limit" | "stop";
+/** Defaults to "market" everywhere it's optional — every existing caller keeps today's behavior.
+ *  `stop_limit` needs both prices; only a session `exit-at-entry-flag.ts` admits reaches it (#8249). */
+export type TicketOrderType = "market" | "limit" | "stop" | "stop_limit";
 
 /** Day or good-till-cancelled — the two the desk shows (parity study row 13: Fidelity's five
  *  and thinkorswim's eight stay declined until a member asks for one by name). */
@@ -52,7 +57,16 @@ export interface TicketRequest {
   readonly stopPrice?: number;
   /** Omit and `defaultTimeInForce` decides; the preview always says which it will send. */
   readonly timeInForce?: TicketTimeInForce;
+  /** A take-profit and a stop the broker holds, sent with the entry as one bracket order (#8249).
+   *  A whole-share limit buy only (`order-exit.ts`); only an admitted session reaches it. */
+  readonly exit?: TicketExit;
 }
+
+/** The one refusal an order gets while its account can't be read (#8335): the failure in words,
+ *  never a cash or holding refusal priced against the degraded row's $0 and empty positions.
+ *  Shared by the single-leg review and the multi-leg draft check. */
+export const ACCOUNT_UNREAD_REFUSAL =
+  "Your account couldn't be read just now, so this order can't be checked against your cash and holdings. Try again in a moment.";
 
 export interface TicketContext {
   /** Settled cash available to spend. */
@@ -75,6 +89,10 @@ export interface TicketContext {
    *  account doesn't hold, so a first buy is costed and checked against cash like any other. A held
    *  symbol keeps its position's mark. */
   readonly quotePrice?: number;
+  /** The account's read failed (#8335): `cash` and `positions` are a degraded row's zeros, not
+   *  the account. The preview refuses with `ACCOUNT_UNREAD_REFUSAL` and makes no cash or holding
+   *  claim, so "you can't afford it" or "you don't hold it" is never said on an unread account. */
+  readonly accountUnread?: true;
 }
 
 export interface TicketPreview {
@@ -86,6 +104,8 @@ export interface TicketPreview {
   readonly stopPrice?: number;
   /** What the broker will be told — never hidden, even when the member didn't choose (#3407). */
   readonly timeInForce: TicketTimeInForce;
+  /** The exit the order carries, echoed with each leg's dollars against the limit (#8249). */
+  readonly exit?: ExitPreview;
   /** True when the order may be submitted — no refusals. */
   readonly ok: boolean;
   /** Last known price per share: the held position's mark, else the latest quote the caller
@@ -188,6 +208,7 @@ function warnIfFarFromMarket(
 function validatePricedOrder(
   orderType: TicketOrderType,
   request: Pick<TicketRequest, "limitPrice" | "stopPrice">,
+  action: TicketAction,
   estPrice: number | undefined,
   refusals: string[],
   warnings: string[],
@@ -196,6 +217,30 @@ function validatePricedOrder(
     warnIfFarFromMarket(request.limitPrice as number, estPrice, warnings);
   } else if (orderType === "stop" && validateOrderPrice("stop", request.stopPrice, refusals)) {
     warnIfFarFromMarket(request.stopPrice as number, estPrice, warnings);
+  } else if (orderType === "stop_limit") {
+    validateStopLimit(request, action, estPrice, refusals, warnings);
+  }
+}
+
+/** A stop-limit needs both prices; the stop is what triggers it, so it is the one checked against
+ *  the market, and a limit past the stop warns that it may not fill (`order-exit.ts`). */
+function validateStopLimit(
+  request: Pick<TicketRequest, "limitPrice" | "stopPrice">,
+  action: TicketAction,
+  estPrice: number | undefined,
+  refusals: string[],
+  warnings: string[],
+): void {
+  const stopOk = validateOrderPrice("stop", request.stopPrice, refusals);
+  const limitOk = validateOrderPrice("limit", request.limitPrice, refusals);
+  if (stopOk) warnIfFarFromMarket(request.stopPrice as number, estPrice, warnings);
+  if (stopOk && limitOk) {
+    const warning = stopLimitWarning(
+      action,
+      request.stopPrice as number,
+      request.limitPrice as number,
+    );
+    if (warning) warnings.push(warning);
   }
 }
 
@@ -209,6 +254,12 @@ function pricedFields(
   }
   if (orderType === "stop" && request.stopPrice !== undefined) {
     return { stopPrice: request.stopPrice };
+  }
+  if (orderType === "stop_limit") {
+    return {
+      ...(request.limitPrice !== undefined ? { limitPrice: request.limitPrice } : {}),
+      ...(request.stopPrice !== undefined ? { stopPrice: request.stopPrice } : {}),
+    };
   }
   return {};
 }
@@ -234,6 +285,46 @@ export function validateBuy(
   if (cash > 0 && notional / cash > CASH_WARNING_SHARE) {
     warnings.push("This spends nearly all of your available cash.");
   }
+}
+
+/** Estimated dollars in or out: quantity at the last known price. A stop-limit BUY is costed at its
+ *  limit when that is higher, since the broker holds that much cash for it (#8249 review: costed
+ *  at the mark, a limit far above it passed the cash check and met the broker's refusal instead).
+ *  Every other order type keeps the mark, exactly as before. */
+function estimateNotional(
+  estPrice: number | undefined,
+  quantity: number,
+  request: TicketRequest,
+  orderType: TicketOrderType,
+): number | undefined {
+  if (!Number.isFinite(quantity) || quantity <= 0) return undefined;
+  const limit = request.limitPrice;
+  if (orderType === "stop_limit" && request.action === "buy" && limit !== undefined && limit > 0) {
+    return Math.max(limit, estPrice ?? 0) * quantity;
+  }
+  return estPrice === undefined ? undefined : estPrice * quantity;
+}
+
+/** The exit the ticket carries, reviewed against its entry (`order-exit.ts`), as the preview's
+ *  `exit` field — empty when there is none to echo. */
+function exitOf(
+  request: TicketRequest,
+  orderType: TicketOrderType,
+  refusals: string[],
+): { readonly exit?: ExitPreview } {
+  if (!request.exit) return {};
+  const exit = reviewExit(
+    request.exit,
+    {
+      action: request.action,
+      orderType,
+      quantity: request.quantity,
+      ...(request.limitPrice !== undefined ? { limitPrice: request.limitPrice } : {}),
+      ...(request.timeInForce ? { timeInForce: request.timeInForce } : {}),
+    },
+    refusals,
+  );
+  return exit ? { exit } : {};
 }
 
 /**
@@ -263,14 +354,14 @@ export function previewOrder(request: TicketRequest, context: TicketContext): Ti
   const estPrice =
     markPrice(held) ??
     (quote !== undefined && Number.isFinite(quote) && quote > 0 ? quote : undefined);
-  const estNotional =
-    estPrice !== undefined && Number.isFinite(quantity) && quantity > 0
-      ? estPrice * quantity
-      : undefined;
+  const estNotional = estimateNotional(estPrice, quantity, request, orderType);
 
-  validatePricedOrder(orderType, request, estPrice, refusals, warnings);
+  validatePricedOrder(orderType, request, request.action, estPrice, refusals, warnings);
+  const exit = exitOf(request, orderType, refusals);
 
-  if (request.action === "sell") {
+  if (context.accountUnread) {
+    refusals.push(ACCOUNT_UNREAD_REFUSAL);
+  } else if (request.action === "sell") {
     validateSell(quantity, held, refusals, warnings);
   } else {
     validateBuy(estNotional, context.cash, refusals, warnings);
@@ -281,11 +372,11 @@ export function previewOrder(request: TicketRequest, context: TicketContext): Ti
   }
 
   const signedCash =
-    estNotional === undefined
+    estNotional === undefined || context.accountUnread
       ? undefined
       : context.cash + (request.action === "sell" ? estNotional : -estNotional);
   const positionAfter =
-    held === undefined
+    held === undefined || context.accountUnread
       ? undefined
       : held.quantity + (request.action === "sell" ? -quantity : quantity);
 
@@ -296,6 +387,7 @@ export function previewOrder(request: TicketRequest, context: TicketContext): Ti
     orderType,
     ...pricedFields(orderType, request),
     timeInForce: request.timeInForce ?? defaultTimeInForce(orderType),
+    ...exit,
     ok: refusals.length === 0,
     ...(estPrice !== undefined ? { estPrice } : {}),
     ...(estNotional !== undefined ? { estNotional } : {}),

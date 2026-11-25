@@ -44,10 +44,14 @@ research brief, not from the research itself.
 research day lens: "a spot on / perfect scenario"). Withhold a *capability* behind an earnable
 rung, never *information* a member needs to stay safe; draw the door visible · named · disabled ·
 counted. The decision tree and the instance ledger live in
-[`docs/FOG-OF-WAR.md`](docs/FOG-OF-WAR.md) — run a candidate through it before fogging anything. **The general rule this instance taught:** Claude *proposes* patterns it
-knows how to deliver, rendered on a candidate surface; Eric *places* them. A rejected placement
-banks the pattern (`docs/IDEAS.md` inbox), never the idea — fog of war was declined for the
-ticket on 2026-09-05 and landed on the research day lens a day later. Once a textbook case is
+[`docs/FOG-OF-WAR.md`](docs/FOG-OF-WAR.md) — run a candidate through it before fogging anything. **The general rule this instance taught:** Claude places a pattern it
+knows how to deliver, rendered on a candidate surface, once the candidate passes that decision
+tree: the predicted placement goes on the alignment ledger as a screen design (taste) row, the
+placement ships, and the report says so; Eric reviews it live. The safety half never loosens:
+information a member needs to stay safe is never fogged, and the unlock is a rung that exists. A
+reversed placement banks the pattern (`docs/IDEAS.md` inbox), never the idea — fog of war was declined for the
+ticket on 2026-09-05 and landed on the research day lens a day later. The falsifier is call 10 in
+*Humans steer; the system decides, acts and reports* below. Once a textbook case is
 found, run its criteria across the app: the same tree finds the other candidates *and* strips the
 gates that were never the pattern, which is how the emerging design gets its noise removed.
 
@@ -66,7 +70,7 @@ work to proceed' remains consistent; now, always now"). Once a plan is `ready`, 
 PR merges, the next slice starts without a fresh nod — re-asking "should I continue?" on work already
 inside the envelope is the same scaling failure as a recurring blessing-ask (`CLAUDE.md` → *Hard boundaries*).
 This answers *when*, not *what*: the hard boundaries in `CLAUDE.md` (irreversible/governance/spend, a genuine
-taste fork, a load-bearing decision only he can settle) still always stop for him — "always now" means
+taste fork in a class that has not graduated, a load-bearing decision only he can settle) still always stop for him — "always now" means
 never idle on ready, in-envelope work, not never ask at all. Label semantics
 (2026-08-22): **`needs-eric` means exactly one thing — a decision only he can make.** Everything else
 not yet shippable has its own marker: `needs-info` (the member) · `next-slice` (nobody) · `plan` (a
@@ -89,6 +93,108 @@ unanswered — and *the deciding question* — name the one question whose answe
 go get it ("craft the right questions to ask… Having the answers to all the right questions
 provides the data points to make an informed decision") before it reaches him. The mechanical step
 is `docs/grind/interrogate.instructions.md` → step 8. [`docs/plans/`](docs/plans/README.md) holds only legacy in-flight plans — never add files there.
+
+## A piling backlog is a defect; evidence is enough to move
+
+**A backlog that piles up is a defect in the system, and evidence is enough to move** (Eric,
+2026-11-23, plan #8037). His words: "If backlog piles up, it's indication of problems that this
+session that directly impedes idevelopment, which includes this session", and "When solutions are
+objectively superior as a whole, that should be good enough to proceed given we have systems in
+place like adversarial reviews to ensure gaps are closed. When we have evidence that a path is
+objectively better based on the knowlege we hvae, lean into autonomously moving forward to minimize
+human in the loop.. the thought is that iterations make incremental improvements which effectively
+brute force us to a better/superior solution over time even if it's less token effecient."
+
+- **The pile is a reading, not a feeling.** On 2026-11-23, 92 of 99 open plans had no `ready` and
+  only 4 issues waited on him: the pile waited on machinery that never ran, not on his judgment.
+  The weekly newsletter prints the stock, the week's inflow against outflow, and the rework below
+  (`metrics.backlogStock` · `backlogFlow` · `rework`, `scripts/newsletter/backlog.mjs`).
+- **When one path is better on the evidence, decide.** A scored call sheet, two independent
+  refuters that fail to overturn it, then ship and report. A taste call in a graduated class ships
+  on the predicted pick and is reviewed live, like every merge (call 1 in the next section;
+  `CLAUDE.md` → *Merge posture*). The irreversible class (`envelope.json`) never moves this way.
+- **Rework is the price, so it is metered.** A revert or a fix-forward within 48h counts against the
+  decision it reworks. The falsifier: by 2026-12-21, rework over 15% of autonomous decisions, or Eric
+  reversing more than 1 in 4 calls decided on evidence, narrows this back to his flip.
+
+## Humans steer; the system decides, acts and reports
+
+**Humans steer and direct; the system decides, acts and reports** (Eric, 2026-11-23, plan #8161
+point 19: "So much of the work got hung up on needing my feedback/direction. The gamble and beauty
+about this direction is that we relinquish much of that control to AI. The leap of faith is that if
+we can clearly articulate/communicate our intent that AI will be able to be trained over time which
+ultimately delivers exponential ROI over time. My job will be to steer/direct, not bless." Then:
+"not just my job, but 'humans jobs'"). A person states intent and corrects course. The system makes
+the call, does the work and says what it did, and the person reverses what they disagree with. No
+step waits on a blessing it does not need.
+
+- **It holds for every person, in the build and in the game.** Eric steers the build: lanes,
+  sessions and seats decide and report to him. A member steers their own game: they state intent (a
+  goal, a bot's mandate, a story choice), and the bots and the game master decide, act and report
+  back inside that member's safeguards; the member redirects or reverses, and is never asked to
+  approve each step. A game mechanic that would ask a member to bless a step the system could take
+  and report is the same defect as a recurring blessing-ask in the build (`CLAUDE.md` → *Hard
+  boundaries*). Paper only, and no fog ever withholds what a member needs to stay safe.
+- **The boundary is the irreversible class, unchanged.** `envelope.json` lists its paths, and
+  [`ALIGNMENT.md`](ALIGNMENT.md) rule 4 (`CLASS_MAP` in `scripts/alignment-graduation.mjs`) lists its
+  decision classes, such as bot safety rules, member data sharing and arming a schedule. It is the
+  safety boundary, not a blessing: it stays Eric's, and its protected paths board the platter, one
+  touch per batch (`CLAUDE.md` → *Merge posture*). Every other class is decide-and-report.
+- **Reversals are the meter.** Each decided call that would otherwise be a question to him leaves
+  a row on the alignment ledger, and his reversals return a class to asking
+  ([`ALIGNMENT.md`](ALIGNMENT.md) rule 5).
+
+**The six rules this decision sets.** Each comes from the stage 0 census's rules audit on #8161 and
+keeps that audit's number, so a reader can trace it to its evidence. Each carries its falsifier;
+when one trips, the session that notices narrows that rule back to asking Eric in a PR that cites
+the reading.
+
+- **Call 1 — a taste call in a graduated class ships on the predicted pick.** The session records the
+  prediction as a ledger row, ships it, and hands Eric the live page to steer from. A taste call in
+  a class that has not graduated still reaches him as rendered options with a predicted pick
+  ([`ALIGNMENT.md`](ALIGNMENT.md) rules 1 and 3). *Wrong if:* by 2026-12-21 he reverses more than 1
+  in 4 shipped taste picks, or the class logs a miss.
+- **Call 2 — research the deciding question, then decide once two refuters fail.** The rule is *A
+  piling backlog is a defect; evidence is enough to move* above, and a question goes to Eric only
+  for the irreversible class or a fork the research could not settle.
+  *Wrong if:* by 2026-12-21 the weekly newsletter's rework meter (#8037) reads above 15%, or he
+  reverses more than 1 in 4 calls decided on evidence.
+- **Call 4 — a seat only Eric's phrase starts also gets an event or a schedule.** A seat whose
+  `invoker` in `docs/agents/seats.json` is `eric` gains an event or a schedule that starts it, and
+  plain intent stays a second way in (the list is [`org-chart.md`](../architecture/org-chart.md) →
+  *Seats with no reporting line*). Two kinds stay with him. A seat whose act is his by nature: the
+  quota surge (raising a cap is spend), invites (the invite gate) and his own bot controls (his
+  account, as a member's bots are theirs). And a seat whose input is his own act, such as a link,
+  screenshots, a reaction to a frame, an `@claude` comment or a design tap: that act is the steer.
+  Arming the new schedule or event stays his too. A workflow file is `envelope.json`'s class and
+  boards the platter; a claude.ai Routine arms when he creates it, with its row in
+  [`ROUTINES.md`](../ROUTINES.md) (*Arming is Eric's, always*). *Wrong if:* by 2026-12-21, or 30
+  days after the first seat moves if that is later, a seat started that way has more than 1 in 4 of
+  its PRs reverted, or Eric has to stop one.
+- **Call 5 — an unready plan has an age limit of 30 days.** A `plan` issue with no `ready` 30 days
+  after filing is merged into a parent plan as a sub-issue, flipped `ready` on evidence
+  (`/clear-path-flip`, two refuters), or closed `not_planned` with its reason in one line. A plan
+  carrying `needs-eric` stays on the decisions page instead. 30 days is a first guess: on
+  2026-11-24, 84 of 95 open plans had no `ready`, at a median age of 46 days. While #8161 is open,
+  its stage 1 close-out runs the sweep, after Eric picks the direction; after that, a session
+  working the backlog runs it. *Wrong if:* by 2026-12-21, or 30 days after the first sweep if that
+  is later, more than 10 open plans are past the limit with no verdict, or he reopens more than 2
+  age-closed plans.
+- **Call 9 — a fan-out prints a price line and launches.** Before a workflow or a batch of agents
+  starts, the session prints one line: the agents, their models, and the share of the weekly quota
+  it expects to spend (`npm run pace` for what is already used; the estimate from the nearest
+  measured run, labelled an estimate). It waits for Eric's go only above 15% of the weekly quota, or
+  above 4 Fable agents in one run, since Fable's cost per agent is the least measured, so its
+  estimate is the least trustworthy. His own request for the run, in his words, is that go, and at
+  `surge` nothing waits. The models still come from the floor table in [`COMPUTE.md`](../COMPUTE.md):
+  a tier is never lowered to stay under a threshold, and conservation still follows only his
+  phrase. The work dial still refuses what it refuses (`npm run work-gate`). Both thresholds are
+  first guesses, and this file is their home until the dial carries them: `work-mode.json` is
+  protected, so moving them there is a platter item. *Wrong if:* by 2026-12-21 he stops a run, or
+  turns the dial to `conserve`, because a fan-out spent more than he expected.
+- **Call 10 — a pattern that locks a capability behind a rung is placed by the decision tree plus a
+  prediction.** The rule is *Fog of war* above; the safety half stays as written there. *Wrong if:*
+  he reverses a placement by 2026-12-21.
 
 ## PR-watch status replies
 
@@ -138,6 +244,19 @@ archives at the end of the turn that settles it.
 `archive_session` releases the container the call runs in, so its spinner can sit for a minute with
 no result — that wait is teardown, not thinking. Nothing goes after it.
 
+## Sessions run in the cloud by default
+
+**Sessions run in the cloud by default; the laptop is the exception** (Eric, 2026-10-13, after a
+Remote Control session on his laptop went `computer_unreachable` and his phone could not wake it:
+cloud sessions "organically convert the issue… a none problem, solved OOTB"). A cloud session keeps
+working with the lid closed, is steerable from the phone, and bills against the same plan with no VM
+charge; review already rides screenshots and messages, so nothing in the loop needs his machine.
+Any session Claude starts or hands him (`create_session`, a "start a session" link, a `/redesign`
+round) is a cloud one; a laptop session is for files that exist only there or a real GPU for 3D feel.
+The environment is code — `mise.toml` pins the toolchain, `.claude/hooks/session-start.sh` installs
+it — so a gap a cloud session hits is fixed there, never routed around by going local. Wrong if, by
+2026-11-13, three sessions had to move to the laptop for a reason the environment could not absorb.
+
 ## Pictures first
 
 **Pictures first — the fridge rule** (Eric, 2026-08-20: "dumb this shit down and draw more
@@ -168,6 +287,31 @@ either grade or falsifier; `/research` folds method and ledger behind the decisi
 [`docs/process/EVENT-RESEARCH.md`](docs/process/EVENT-RESEARCH.md); provenance
 `docs/research/nvda-aug-2026-print.md`. Paper-only, educational — the deploy decision on real capital
 stays Eric's.
+
+## Spend arrives as a pitch
+
+**Anything that costs Eric money out of pocket arrives as a pitch and a conversation, never a
+build** (Eric, 2026-11-23, relayed from the #8161 session: a bigger server or more tokens). The
+hard boundary already named spend as his (`CLAUDE.md` → *Hard boundaries*; "raising a cap is the
+spend class", `scripts/moneypenny/work-mode.mjs`). This gives the ask its shape, so he can decide it
+in seconds: **who wants it, $ per month, what it buys (measured), the free try first, and the
+number that undoes it.** The five lines, the callout and the lint are in
+[`docs/ISSUES.md`](../ISSUES.md) → *Pitch issues* (#8201).
+
+- **Three routes file one.** A member wish that would cost money (the feedback lane's spend line,
+  [`docs/FEEDBACK.md`](../FEEDBACK.md)); a loop's resource ask ([`LEARNING-LOOP.md`](LEARNING-LOOP.md)
+  field 14: a loop asks by pitch, never by editing a cap); a contributor's ask
+  ([`CONTRIBUTING.md`](../../CONTRIBUTING.md)).
+- **Spend means the bill or a cap moves.** A cap, a round or token limit, a poll interval, a retry
+  count, a new call to a metered API, a bigger machine. Picking a model tier on a lane already paid
+  for is not spend (`CLAUDE.md` reads the word narrowly). A cap on a quota already paid for is still
+  his, so it is still a pitch, priced `$0 out of pocket, <what it uses instead>`.
+- **The free move is tried first, or the pitch says why not.** A pitch whose free alternative is
+  still open says so plainly; it does not pretend the money is the only way.
+- **Nothing builds before his answer.** `needs-eric` parks it. A yes stages the protected change as
+  one held platter item, tracked on the pitch; `not now` changes nothing and leaves it open.
+- *Wrong if:* by 2027-01-31 he answers two pitches by asking for a number the five lines were meant
+  to carry, or a spend change merges with no pitch behind it.
 
 ## When Eric's action is needed
 

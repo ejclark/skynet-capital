@@ -38,6 +38,18 @@ describe("feedbackLogEntry", () => {
       filedAt: "2026-08-22T12:00:00.000Z",
     });
     expect(result.uuid).toBeTruthy();
+    expect(result).not.toHaveProperty("source");
+  });
+
+  it("keeps a journal wish's source, so the screen can mark it (#8190)", () => {
+    const result = feedbackLogEntry(
+      { kind: "idea", title: "I wish it", source: "journal" },
+      "abc1234567",
+      { url: "https://github.com/x/y/issues/9", number: 9 },
+      "2026-08-22T12:00:00.000Z",
+    );
+
+    expect(result.source).toBe("journal");
   });
 });
 

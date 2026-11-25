@@ -41,7 +41,7 @@ interface SaveBody {
   readonly stake: unknown;
 }
 
-function parseSaveBody(raw: string): SaveBody | undefined {
+function parseSavedPositionBody(raw: string): SaveBody | undefined {
   const body = parseJsonRecord(raw);
   if (!body) return undefined;
   const symbol =
@@ -123,7 +123,7 @@ export async function serveSavedPositionsApi(
   if (raw === undefined) return true;
 
   if (path === "/api/saved-positions/save") {
-    const body = parseSaveBody(raw);
+    const body = parseSavedPositionBody(raw);
     if (!body) {
       sendJson(res, 400, { error: "malformed save body" });
       return true;

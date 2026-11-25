@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { CompanionMessage } from "../companion/companion-chat.js";
-import { memberContext } from "../companion/companion-context.js";
+import { MAX_FIXED_ANNOUNCED, memberContext } from "../companion/companion-context.js";
 import { describeHolding } from "../companion/companion-holding.js";
 import {
   COMPANION_MODEL_CALLS_MAX,
@@ -10,8 +10,9 @@ import {
 import { describeOnScreen, parsePageKeys } from "../companion/companion-on-screen.js";
 import { describePage, pagePath, pageSymbol } from "../companion/companion-page.js";
 import { COMPANION_DISCLOSURE, FIRST_TRADE_TOUR } from "../companion/companion-system-prompt.js";
+import { GAME_MASTER_PILOT, gameMasterAdmits } from "../companion/game-master-flag.js";
 import { editions, editionView } from "../domain/edition.js";
-import { regularSessionOpen } from "../domain/market-session.js";
+import { marketHoursLine } from "../domain/market-clock.js";
 import type { Session } from "./auth/session.js";
 import { companionConvictionsFor } from "./companion-convictions-port.js";
 import { companionFollowupFor } from "./companion-followup-port.js";
@@ -22,6 +23,7 @@ import { resolveCurrentId } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { opaqueMemberId } from "./feedback-issue.js";
 import { knownProblemFixes } from "./known-problem-fixes.js";
+import { readClockFor } from "./market-clock.js";
 import { onboardingView } from "./onboarding-api-routes.js";
 import { describeOwnerQueue, type OwnerQueue, type ReadOwnerQueue } from "./owner-queue.js";
 import { parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
@@ -33,8 +35,9 @@ import { openSseStream, sseFrame } from "./sse.js";
  * other member-only route checks upstream (`gateRequest` in `dashboard-auth-gate.ts`, wired by
  * the caller before this file ever runs):
  *
- *   GET  /api/companion       → { enabled } — whether `ANTHROPIC_API_KEY` is set, so the client
- *                                can render "not switched on yet" instead of a dead input box.
+ *   GET  /api/companion       → { enabled, gameMaster } — whether `ANTHROPIC_API_KEY` is set, so
+ *                                the client can render "not switched on yet" instead of a dead
+ *                                input box, and whether this session may play a scene (#8191).
  *   POST /api/companion/chat  → the turn, streamed back over SSE (`delta`/`done`/`error` events).
  *   POST /api/companion/ack   → records the ladder gate's own evidence: a real message reached
  *                                the rail. Deliberately independent of `/chat` — a message can be
@@ -111,57 +114,107 @@ function parseMessages(body: Record<string, unknown> | undefined): CompanionMess
   return parsed;
 }
 
+/** Whether this session may play a game-master scene (#8191): the committed pilot setting and the
+ *  server's own owner check, never anything in the request. */
+function gameMasterFor(config: DashboardServerConfig, session: Session): boolean {
+  const owner = config.isOwnerEmail?.(session.email) === true;
+  return gameMasterAdmits(config.gameMasterPilot ?? GAME_MASTER_PILOT, { owner });
+}
+
 /** `{ enabled }` plus the two client-facing constants a chat UI needs verbatim rather than
- *  duplicating: the standing disclosure footer, and the guided first-trade tour's steps. */
-function serveCompanionIndex(res: ServerResponse, config: DashboardServerConfig): void {
+ *  duplicating: the standing disclosure footer, and the guided first-trade tour's steps; and
+ *  `gameMaster`, whether the dock offers this session a scene (#8191). */
+function serveCompanionIndex(
+  res: ServerResponse,
+  config: DashboardServerConfig,
+  session: Session,
+): void {
   sendJson(res, 200, {
     enabled: Boolean(config.companion),
     disclosure: COMPANION_DISCLOSURE,
     firstTradeTour: FIRST_TRADE_TOUR,
+    gameMaster: Boolean(config.companion) && gameMasterFor(config, session),
   });
 }
 
 /** The member's live context for this turn — the same reads the Onboarding and Feedback pages
- *  make, folded into a few lines for the volatile half of the prompt. Any read failing degrades
- *  to "no context" rather than failing the turn: she answers from the cached help desk instead. */
+ *  make, folded into a few lines for the volatile half of the prompt — and the shipped fixes this
+ *  turn tells her to announce, for the route to record once the reply completes (#8078). Any read
+ *  failing degrades to "no context" rather than failing the turn: she answers from the cached help
+ *  desk instead. */
 async function memberContextFor(
   config: DashboardServerConfig,
   session: Session,
   page?: string,
   holding?: string,
   onScreen?: string,
-): Promise<string | undefined> {
+): Promise<{ readonly text: string; readonly announcing: readonly number[] } | undefined> {
   try {
     // The owner desk (the Moneypenny operator plan): only the server's own owner check turns it
     // on — nothing in the request or the prompt can — and a slow or failed read drops the line,
     // never the turn.
     const owner = config.isOwnerEmail?.(session.email) === true;
-    const [onboarding, filings, ownerQueue] = await Promise.all([
+    const [onboarding, filings, ownerQueue, clock] = await Promise.all([
       onboardingView(config, session),
       config.readFeedback ? config.readFeedback(opaqueMemberId(session.email)) : [],
       owner && config.readOwnerQueue ? ownerQueueWithin(config.readOwnerQueue) : undefined,
+      readClockFor(config),
     ]);
     // "Try it" (#8005 slice 7): a matched filing whose known problem was fixed since they asked.
-    const fixes = await knownProblemFixes(filings, config.fetchFeedbackStatus);
-    const fixed = filings.flatMap((f) => {
+    const fixes = await knownProblemFixes(filings, config.fetchBuiltPlans);
+    const allFixed = filings.flatMap((f) => {
       const fix = fixes.get(f.issueNumber);
       return fix ? [{ issueNumber: f.issueNumber, title: f.title, ...fix }] : [];
     });
-    return memberContext({
+    // "Once" is a server record, not the transcript (#8078): the client resends ten lines of one
+    // thread, so her own announcement ages out and a new thread never had it. Announced filings
+    // stay as a fact; the rest are announced at most two per reply, so a third gets its turn.
+    const told = allFixed.length > 0 ? announcedFor(config, session) : new Set<number>();
+    const fixed = allFixed.filter((f) => !told.has(f.issueNumber)).slice(0, MAX_FIXED_ANNOUNCED);
+    const announcedFixed = allFixed.filter((f) => told.has(f.issueNumber));
+    const text = memberContext({
       now: new Date(),
       onboarding,
       filings: [...filings]
         .sort((a, b) => b.filedAt.localeCompare(a.filedAt))
         .map((f) => ({ issueNumber: f.issueNumber, title: f.title, filedAt: f.filedAt })),
-      marketOpen: regularSessionOpen(),
+      // Open/closed and the day's real close from the broker's calendar (#8248), never a fixed 4:00.
+      marketOpen: clock.isOpen,
+      marketLine: marketHoursLine(clock),
       ...(page ? { page } : {}),
       ...(holding ? { holding } : {}),
       ...(onScreen ? { onScreen } : {}),
       ...(ownerQueue ? { ownerDesk: describeOwnerQueue(ownerQueue) } : {}),
       ...(fixed.length > 0 ? { fixed } : {}),
+      ...(announcedFixed.length > 0 ? { announcedFixed } : {}),
     });
+    return { text, announcing: fixed.map((f) => f.issueNumber) };
   } catch {
     return undefined;
+  }
+}
+
+/** What she has already announced to this member; an unreadable record reads as nothing told,
+ *  which costs one more announcement, never the turn. */
+function announcedFor(config: DashboardServerConfig, session: Session): ReadonlySet<number> {
+  try {
+    return config.fixAnnouncements?.announced(opaqueMemberId(session.email)) ?? new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+/** Record the fixes a completed reply was told to announce. Never throws into the stream. */
+function recordAnnounced(
+  config: DashboardServerConfig,
+  session: Session,
+  announcing: readonly number[],
+): void {
+  if (announcing.length === 0) return;
+  try {
+    config.fixAnnouncements?.record(opaqueMemberId(session.email), announcing);
+  } catch {
+    // A failed write costs one more announcement next turn, never this reply.
   }
 }
 
@@ -181,10 +234,11 @@ async function ownerQueueWithin(read: ReadOwnerQueue): Promise<OwnerQueue | unde
   }
 }
 
-/** The landing page's items, by key (#7167 slice 1): only asked from `/`, and only the keys the
+/** Campaign's items, by key (#7167 slice 1): only asked from `/campaign`, where the news and the
+ *  calendar have lived since #8267 made `/` the home screen (#8315), and only the keys the
  *  server's own edition holds (`companion-on-screen.ts`). A failed edition read adds nothing. */
 function landingOnScreen(page: unknown, keys: unknown): string | undefined {
-  if (pagePath(page) !== "/") return undefined;
+  if (pagePath(page) !== "/campaign") return undefined;
   const parsed = parsePageKeys(keys);
   if (!parsed) return undefined;
   try {
@@ -229,13 +283,17 @@ async function serveChat(
     : undefined;
   const holding = describeHolding(pageSymbol(body?.page), desk);
   const onScreen = landingOnScreen(body?.page, body?.keys);
-  const context = await memberContextFor(
+  const member = await memberContextFor(
     config,
     session,
     describePage(body?.page),
     holding,
     onScreen,
   );
+
+  // A scene turn (#8191) only when the pilot setting admits this session; an unadmitted `mode`
+  // is ignored, never an error, so the turn runs as an ordinary one.
+  const gameMaster = body?.mode === "game-master" && gameMasterFor(config, session);
 
   const screenshotStore = config.companionScreenshots;
   openSseStream(res);
@@ -244,7 +302,8 @@ async function serveChat(
     {
       messages,
       ...(participantId ? { participantId } : {}),
-      ...(context ? { context } : {}),
+      ...(member ? { context: member.text } : {}),
+      ...(gameMaster ? { gameMaster: true } : {}),
       convictions: companionConvictionsFor(config, session),
       // Any signed-in member's screenshot loads by id, whoever attached it (Eric, 2026-11-10).
       ...(screenshotStore ? { loadScreenshot: (id: string) => screenshotStore.load(id) } : {}),
@@ -258,6 +317,8 @@ async function serveChat(
         res.write(sseFrame(JSON.stringify({ text: chunk }), "delta", seq++));
       },
       onDone: () => {
+        // The reply that carried the announce line is the announcement: record it (#8078).
+        recordAnnounced(config, session, member?.announcing ?? []);
         res.write(sseFrame("{}", "done", seq++));
         res.end();
       },
@@ -320,7 +381,7 @@ export async function serveCompanionApi(
     return serveCompanionScreenshots(req, res, path, store, member, config.logLine);
   }
   if (path === "/api/companion" && (req.method ?? "GET") === "GET") {
-    serveCompanionIndex(res, config);
+    serveCompanionIndex(res, config, session);
     return true;
   }
   if (path === "/api/companion/chat") {

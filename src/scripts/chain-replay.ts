@@ -32,6 +32,7 @@ import {
   printVolModel,
 } from "../../scripts/research/long-call-fence-math.mjs";
 import { bars, earningsDates } from "../../scripts/research/market-data.mjs";
+import { mean } from "../domain/mean.js";
 import { AI_DIP_CHAIN, chainStart } from "../playbooks/chain.js";
 import {
   AI_DIP_MODELS,
@@ -105,13 +106,11 @@ const pathOf = (run: ChainRun): string => {
   if (run.path.some((p) => p.event === "expired")) return "expired → the long call";
   return "the put still open";
 };
-const mean = (xs: readonly number[]): number =>
-  xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : Number.NaN;
 const usd = (x: number | null): string =>
   x === null || Number.isNaN(x)
     ? "—"
     : `${x < 0 ? "−" : "+"}$${Math.abs(Math.round(x)).toLocaleString("en-US")}`;
-const pct = (n: number, d: number): string => (d ? `${Math.round((100 * n) / d)}%` : "—");
+const hitRatePct = (n: number, d: number): string => (d ? `${Math.round((100 * n) / d)}%` : "—");
 
 // Each link's own result and the chain's total, by the path the position took.
 const PATHS = ["expired → the long call", "assigned → the wheel keeps it", "the put still open"];
@@ -167,7 +166,7 @@ const lines = [
   ...rows.map(
     (r) =>
       `| ${r.path}${r.open ? ` (${r.open} still open, marked)` : ""} | ${r.runs} | ${usd(r.wheel)} | ` +
-      `${r.longCall === null ? "—" : usd(r.longCall)} | ${usd(r.total)} | ${pct(r.won, r.runs)} |`,
+      `${r.longCall === null ? "—" : usd(r.longCall)} | ${usd(r.total)} | ${hitRatePct(r.won, r.runs)} |`,
   ),
   `| **Every run** | ${runs.length} | ${usd(mean(runs.map((r) => resultOf(r, WHEEL) ?? 0)))} | ` +
     `${usd(
@@ -178,7 +177,7 @@ const lines = [
         }),
       ),
     )} | ` +
-    `${usd(mean(runs.map((r) => r.total)))} | ${pct(runs.filter((r) => r.total > 0).length, runs.length)} |`,
+    `${usd(mean(runs.map((r) => r.total)))} | ${hitRatePct(runs.filter((r) => r.total > 0).length, runs.length)} |`,
   "",
   `_Each link's mean is over the runs it owned a position in; the chain total sits beside them._`,
   "",

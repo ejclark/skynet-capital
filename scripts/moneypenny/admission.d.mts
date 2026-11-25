@@ -45,7 +45,41 @@ export interface AdmissionDeps {
   log?: (line: string) => void;
   /** #6191: issue → the open platter that closes it; the claim lanes read GitHub without it. */
   readBoarded?: () => ReadonlyMap<number, number>;
+  /** #7316: an issue's events, for when `in-progress` last went on; read only past the cap. */
+  readEvents?: (n: number) => ReadonlyArray<{
+    event?: string;
+    label?: { name?: string };
+    created_at?: string;
+  }>;
+  /** #7316: the recount's wait (`SETTLE_MS`); a spec injects a no-op or a scheduler. */
+  settle?: (ms: number) => unknown;
+  /** #8213: the claim lanes' post-mark recount reads this in place of `readInFlight` when set —
+   *  the retry sweep's gate counts a stored list, and the recount must read fresh. */
+  recountInFlight?: () => AdmissionIssue[];
 }
+
+/** How long a claim that is not alone waits after marking, before the count that decides. */
+export const SETTLE_MS: number;
+/** When `in-progress` last went on, in ms, from an issue's events; null when it never did. */
+export function markedAtOf(
+  events:
+    | ReadonlyArray<{ event?: string; label?: { name?: string }; created_at?: string }>
+    | undefined,
+): number | null;
+/** Pure: does `issue` hold a seat — earliest mark first, pull order inside one second? */
+export function seatOf(opts: {
+  issue: AdmissionIssue & { number: number };
+  inFlight?: readonly AdmissionIssue[];
+  mode: AdmissionMode;
+  markedAt?: ReadonlyMap<number, number | null>;
+}): { seated: boolean; count: number; cap: number; urgent?: number };
+/** #7316: the count again after the mark; `keep: false` means give the seat back. */
+export function recountAfterMark(
+  issue: AdmissionIssue & { number: number },
+  deps?: AdmissionDeps,
+): { keep: boolean; reason: string };
+/** `pullQueue`'s comparator alone. */
+export function pullOrder(a: AdmissionIssue, b: AdmissionIssue): number;
 
 export const QUEUE_MARKER: string;
 /** The capsule `Surface` cell, normalised (lowercase, markdown stripped); null when absent/empty. */

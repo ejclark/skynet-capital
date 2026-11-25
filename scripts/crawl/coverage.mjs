@@ -53,12 +53,13 @@ const CHAPTERS = {
   name: "MILESTONE_CHAPTERS",
 };
 
-/** The landing page's windows (#7487): ONE window on its stage at a time, named by `?w=`, so each
- *  is a screen of its own the way a Milestones chapter is. The default (Overview) is never written
- *  and stays the bare `/` row; a `?show=` pivot or an `#event-`/`#story-` link opens the Calendar
- *  (`routes/index.tsx` `openWindow`, mirrored by `windowOf`). */
+/** Campaign's windows (#7487): ONE window on its stage at a time, named by `?w=`, so each is a
+ *  screen of its own the way a Milestones chapter is. The default (Overview) is never written and
+ *  stays the bare `/campaign` row (at `/` until the home screen took it, #8189); a `?show=` pivot or
+ *  an `#event-`/`#story-` link opens the Calendar (`routes/campaign.tsx` `openWindow`, mirrored by
+ *  `windowOf`). */
 const WINDOWS = {
-  path: "/",
+  path: "/campaign",
   param: "w",
   file: "app/src/live/mission.ts",
   name: "WINDOWS",
@@ -495,19 +496,25 @@ function modulePath(mod) {
  * The screens the code has, read from the repo: the route tree, each route's sections, the
  * chapters and windows, the hand-listed server pages and shell parts (each needle checked), and
  * the triage index. Exported for the cohesion census (`cohesion.mjs`), which resolves a link to the
- * screen it lands on with the same `landingOf`.
+ * screen it lands on with the same `landingOf`, and through it for the placement check.
  */
-export function readScreens() {
+export function readScreens({ needles = true } = {}) {
   const routes = parseRouteTree(readFileSync(ROUTE_TREE, "utf8"));
   const sections = new Map();
   for (const r of routes) {
     const list = r.modules.flatMap((m) => sectionsOf(modulePath(m), readOrUndefined));
     if (list.length > 0) sections.set(r.path, list);
   }
-  for (const p of [...SERVER_PAGES, ...SHELL_PARTS]) {
-    if (p.file && !readFileSync(p.file, "utf8").includes(p.needle)) {
+  // `needles: false` is the placement check's base tree (cohesion.mjs memberFacing): a page this
+  // branch adds to the hand list has no serving line there yet, so the base holds only the pages
+  // whose line it has — the new one then reads as the branch's addition, not a fault.
+  const serves = (p) =>
+    !p.file || (existsSync(p.file) && readFileSync(p.file, "utf8").includes(p.needle));
+  const serverPages = needles ? SERVER_PAGES : SERVER_PAGES.filter(serves);
+  const shell = needles ? SHELL_PARTS : SHELL_PARTS.filter(serves);
+  for (const p of needles ? [...SERVER_PAGES, ...SHELL_PARTS] : []) {
+    if (!serves(p))
       throw new Error(`coverage: ${p.screen} — ${p.file} no longer contains ${p.needle}`);
-    }
   }
   const chapters = parseChapters(readFileSync(CHAPTERS.file, "utf8"), CHAPTERS.name);
   const windows = parseChapters(readFileSync(WINDOWS.file, "utf8"), WINDOWS.name);
@@ -515,9 +522,9 @@ export function readScreens() {
     routes,
     sections,
     chapters,
-    serverPages: SERVER_PAGES,
+    serverPages,
     windows,
-    shell: SHELL_PARTS,
+    shell,
   });
   const triageRows = JSON.parse(readFileSync(TRIAGE, "utf8"));
   const routePaths = routes.map((r) => r.path);

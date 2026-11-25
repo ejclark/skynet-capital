@@ -233,6 +233,12 @@ describe("buildReadout — a round with more than ten structural problems (#5845
     finding("L1", "low", "Lead low, second critical"),
     finding("L2", "critical", "The same, worse"),
   ];
+  // The shown lead cites five frames, as an expert's finding can cite forty: only four are shown.
+  const lead = pair[0];
+  if (lead) {
+    lead.evidence = Array.from({ length: 5 }, (_, i) => `extra/l1-${i}.jpg`);
+    for (const rel of lead.evidence) copyFileSync(frame, join(round, rel));
+  }
   appendFileSync(
     join(round, "findings.jsonl"),
     `${[...singles, ...pair].map((f) => JSON.stringify(f)).join("\n")}\n`,
@@ -263,9 +269,25 @@ describe("buildReadout — a round with more than ten structural problems (#5845
     expect(markdown.slice(markdown.indexOf("<details>"))).not.toContain("Lead low");
   });
 
+  it("copies at most FRAMES_SHOWN frames of a shown problem, its first ones", () => {
+    const l1 = copied.filter((name) => name.includes("extra-l1-"));
+    expect(l1.sort()).toEqual([
+      "extra-l1-0.jpg",
+      "extra-l1-1.jpg",
+      "extra-l1-2.jpg",
+      "extra-l1-3.jpg",
+    ]);
+  });
+
   it("copies frames for the ten shown only, never for a folded one", () => {
     const evidence = copied.filter((f) => f.startsWith("extra-")).sort();
-    const shown = ["l1", ...Array.from({ length: 9 }, (_, i) => `s${i + 1}`)];
+    const shown = [
+      "l1-0",
+      "l1-1",
+      "l1-2",
+      "l1-3",
+      ...Array.from({ length: 9 }, (_, i) => `s${i + 1}`),
+    ];
     expect(evidence).toEqual(shown.map((id) => `extra-${id}.jpg`).sort());
     for (const n of [10, 11, 12, 13, 14, 15]) {
       expect(copied).not.toContain(`extra-s${n}.jpg`);

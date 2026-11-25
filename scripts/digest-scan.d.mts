@@ -24,6 +24,10 @@ export function quietReason(
 
 export function digestFiles(): string[];
 export function latestDigestDate(): string | null;
+/** The instant the commit adding the newest digest landed (#8225), or its date when git cannot
+ *  say (uncommitted, shallow clone, git failing); null when there is no digest. `gitRead` is the
+ *  specs' seam: it gets git's argv and returns its stdout. */
+export function latestDigestSince(gitRead?: (args: string[]) => string): string | null;
 export function needsYouLines(planned: Pick<Planned, "needsYou">): string[];
 /** The Needs-you list with the asks on the Decisions page folded to one line (#7939). */
 export function foldedNeedsYouLines(
@@ -44,3 +48,14 @@ export function learningLine(count: {
 export function memberFilingsLine(
   unseen: readonly { number: number; title?: string; ageHours: number }[],
 ): string;
+/** Digests dated from the advisory day on that lack the `## The picture` slot (#3748 slice 7c). */
+export function missingPictureSlot(
+  files: readonly string[],
+  readText: (file: string) => string,
+): string[];
+/** Digests carrying the picture slot before it is ratcheted into the required sections. */
+export const RATCHET_AFTER: number;
+export function carryingPictureSlot(
+  files: readonly string[],
+  readText: (file: string) => string,
+): string[];

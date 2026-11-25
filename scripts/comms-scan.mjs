@@ -9,9 +9,13 @@
 //   node scripts/comms-scan.mjs              # human report
 //   node scripts/comms-scan.mjs --table      # markdown table, for pasting into a digest
 //   node scripts/comms-scan.mjs --json       # machine shape
-//   ... --since=YYYY-MM-DD                   # window override (default: the last digest's date)
+//   ... --since=YYYY-MM-DD                   # window override (default: the instant the last
+//                                            #    digest landed on main, #8225)
 //   ... --since=2026-10-10T16:00:00-05:00    # …or an exact instant: the decisions page (#5056)
 //                                            #    starts its reel at the previous page's Done
+//   node scripts/comms-scan.mjs --pictures   # the digest's picture slot: each PR's `## The picture`
+//                                            #    block, newest first, waived ones skipped (#3748 7c)
+//   ... --limit=N                            # cap --pictures at the N newest (default 5)
 //   ... --offline                           # skip every GitHub call, even with a token set
 //   ... --fixture=<path.json>                # read commits from a file instead of git (specs)
 //
@@ -27,7 +31,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
-import { latestDigestDate } from "./digest-scan.mjs";
+import { latestDigestSince } from "./digest-scan.mjs";
 import { isMain } from "./is-main.mjs";
 import { reexecWithProxy } from "./proxy-reexec.mjs";
 
@@ -60,8 +64,13 @@ const has = (name) => process.argv.includes(`--${name}`);
  * a lane reaches for is the interesting question ("do screenshots draw more reactions than
  * mermaid?"), and a yes/no column cannot answer it.
  */
+/** The text under a squash body's `## The picture` heading, up to the next `## `. Pure. */
+export function pictureSection(body) {
+  return body.split(/^## The picture$/m)[1]?.split(/^## /m)[0] ?? "";
+}
+
 export function pictureState(body) {
-  const section = body.split(/^## The picture$/m)[1]?.split(/^## /m)[0] ?? "";
+  const section = pictureSection(body);
   if (!section.trim()) return { picture: "missing", waiver: null };
   const waiver = section.match(/^Picture: waived — (.+)$/m);
   if (waiver) return { picture: "waived", waiver: (waiver[1] ?? "").trim() };
@@ -106,6 +115,7 @@ export function parseLog(raw) {
         ericComments: null,
         reactions: null,
         ...pictureState(body),
+        block: pictureSection(body).trim(),
       };
     })
     .filter((r) => r.number !== null);
@@ -157,6 +167,123 @@ function readLog(since) {
     { cwd: ROOT, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 },
   );
   return parseLog(raw);
+}
+
+const FENCE_RE = /^\s*```/;
+
+/** A GFM delimiter row (`|---|:--:|`): has a pipe, and every cell is dashes with optional colons. */
+const isDelimiterRow = (line) => {
+  const inner = line.trim().replace(/^\|/, "").replace(/\|$/, "");
+  return (
+    line.includes("|") &&
+    inner.includes("-") &&
+    inner.split("|").every((c) => /^\s*:?-+:?\s*$/.test(c))
+  );
+};
+
+/** Cells in a row that starts with `|`: unescaped pipes, less the closing one when it has it. */
+const cellCount = (row) => {
+  const s = row.trim().replace(/\\\|/g, "");
+  const pipes = (s.match(/\|/g) ?? []).length;
+  return s.endsWith("|") ? pipes - 1 : pipes;
+};
+
+const endsOpen = (row) => !/\|\s*$/.test(row);
+
+/** The rule for a run with no delimiter row: a row that does not end with `|` takes the next line. */
+function joinOpenRows(run) {
+  const out = [];
+  for (const line of run) {
+    const last = out.at(-1);
+    if (last !== undefined && /^\|/.test(last) && endsOpen(last)) {
+      out[out.length - 1] = `${last} ${line.trim()}`;
+    } else {
+      out.push(line);
+    }
+  }
+  return out;
+}
+
+/**
+ * One table's lines, re-joined against its delimiter's column count. GFM puts the delimiter right
+ * under the header, so every line between the run's first and the delimiter is header. Below it a
+ * row takes the next line while it is open (no closing `|`) or short of the column count — the
+ * wrap right after a pipe, which leaves a row that LOOKS finished (#8225: #8068's header) — but
+ * never when the join would overshoot the count, so a genuinely short row keeps its neighbour.
+ */
+function joinTableRun(run) {
+  const d = run.findIndex(isDelimiterRow);
+  if (d < 1) return joinOpenRows(run);
+  const cols = cellCount(run[d]);
+  const header = [run[0], ...run.slice(1, d).map((l) => l.trim())].join(" ");
+  const out = [header, run[d]];
+  let row = null;
+  for (const line of run.slice(d + 1)) {
+    if (row !== null) {
+      const joined = `${row} ${line.trim()}`;
+      if (endsOpen(row) || (cellCount(row) < cols && cellCount(joined) <= cols)) {
+        row = joined;
+        continue;
+      }
+      out.push(row);
+    }
+    row = line;
+  }
+  if (row !== null) out.push(row);
+  return out;
+}
+
+/**
+ * Re-join the table rows a squash commit body wrapped. `git log` returns the stored body, which
+ * GitHub hard-wraps near 72 columns, so a `| a | b |` row arrives split across lines and renders as
+ * stray text (the 2026-11-24 review: 28 of 34 table pictures and 6 of 7 screenshot pictures were
+ * split). A table run starts at a line beginning with `|` and lasts to the next blank line or
+ * fence; inside it, rows are rebuilt against the delimiter row's column count (`joinTableRun`), so
+ * a wrap mid-cell AND a wrap right after a pipe both rejoin (#8225: 77 of 228 table pictures since
+ * 2026-10-20 still read split under the mid-cell-only rule). Fenced code is left alone — a mermaid
+ * line is never a table row. Pure.
+ */
+export function unwrapRows(block) {
+  const lines = block.split("\n");
+  const out = [];
+  let fenced = false;
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    if (FENCE_RE.test(line)) fenced = !fenced;
+    if (fenced || FENCE_RE.test(line) || !/^\|/.test(line)) {
+      out.push(line);
+      i += 1;
+      continue;
+    }
+    const run = [];
+    while (i < lines.length && lines[i].trim() !== "" && !FENCE_RE.test(lines[i])) {
+      run.push(lines[i]);
+      i += 1;
+    }
+    out.push(...joinTableRun(run));
+  }
+  return out.join("\n");
+}
+
+/** How many pictures the digest slot carries unless `--limit` says otherwise — the cap that keeps a
+ *  busy week's harvest from overflowing the digest's fold (#3748 slice 7c's falsifier). */
+export const PICTURE_LIMIT = 5;
+
+/**
+ * The digest's picture slot, from parsed rows (git log order: newest first). Waived and missing
+ * pictures are skipped — a waiver has nothing to look at — and at most `limit` of the newest are
+ * kept, each under a `### #N subject` line so a reader can tell whose picture it is. Pure.
+ * `null` when the window held no picture, so the caller can say that instead of printing nothing.
+ */
+export function harvestPictures(rows, limit = PICTURE_LIMIT) {
+  const shown = rows.filter((r) => r.picture !== "waived" && r.picture !== "missing" && r.block);
+  if (!shown.length) return null;
+  const kept = shown.slice(0, limit);
+  const parts = kept.map((r) => `### #${r.number} ${r.subject}\n\n${unwrapRows(r.block)}`);
+  const more = shown.length - kept.length;
+  if (more > 0) parts.push(`_${more} older picture(s) not shown — the ${limit} newest only._`);
+  return parts.join("\n\n");
 }
 
 const hoursBetween = (fromIso, toIso) =>
@@ -240,10 +367,22 @@ export function summarize(rows) {
   };
 }
 
+/** `--pictures`: the digest slot, or the one line that says the window held none. */
+function picturesReport(rows, window) {
+  const limit = Number(arg("limit") ?? PICTURE_LIMIT);
+  if (!Number.isInteger(limit) || limit < 1) {
+    throw new Error("comms-scan: --limit must be a positive integer.");
+  }
+  return (
+    harvestPictures(rows, limit) ??
+    `_No PR picture merged since ${window}: every change was waived or had none._`
+  );
+}
+
 async function main() {
   reexecWithProxy();
   const fixture = arg("fixture");
-  const since = arg("since") ?? latestDigestDate();
+  const since = arg("since") ?? latestDigestSince();
   if (!fixture) {
     if (!since) throw new Error("comms-scan: no digest to measure from — pass --since=YYYY-MM-DD.");
     gitSince(since); // throws on a malformed window, before any git or GitHub call
@@ -255,12 +394,19 @@ async function main() {
   const rows = fixture ? readFixture(fixture) : readLog(since);
   // --offline forces the free tier even where a token exists: the picture columns are the ones
   // the digest reads most, and they should never cost a round trip to look at.
-  const token = has("offline") ? null : process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+  const token =
+    has("offline") || has("pictures") ? null : process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
   if (token && rows.length) await enrich(rows, token);
 
+  if (has("pictures")) {
+    process.stdout.write(`${picturesReport(rows, window)}\n`);
+    return;
+  }
   if (has("json")) {
+    // The meter's shape: the harvested block is the digest slot's, not a column of the meter.
+    const meter = rows.map(({ block: _block, ...row }) => row);
     process.stdout.write(
-      `${JSON.stringify({ since: window, enriched: Boolean(token), ...summarize(rows), rows }, null, 2)}\n`,
+      `${JSON.stringify({ since: window, enriched: Boolean(token), ...summarize(rows), rows: meter }, null, 2)}\n`,
     );
     return;
   }

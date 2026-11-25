@@ -7,6 +7,13 @@ export const FOOTER: string;
 export function issueNumberFromSlug(slug: unknown): number | null;
 /** Put `in-progress` on or take it off an issue; best-effort, false on a failed write (#3960). */
 export function setInProgress(number: number | null | undefined, add: boolean): boolean;
+/** #8314: `session-held` on or off over REST — the one label write a cloud session has. */
+export function setSessionHeld(number: number | null | undefined, add: boolean): boolean;
+export function setLabelRest(
+  number: number | null | undefined,
+  name: string,
+  add: boolean,
+): boolean;
 
 type PullLabel = string | { name?: string };
 /** The issue shapes the pull rule reads: a REST row, an event payload's issue, or gh JSON. */
@@ -60,6 +67,8 @@ export interface LabelSpec {
   managed?: boolean;
 }
 export const LABELS: Record<string, LabelSpec>;
+/** The labels this file applies and therefore provisions on GitHub. */
+export const MANAGED_LABELS: readonly LabelSpec[];
 /** `P0`–`P3`, in lane order. */
 export const PRIORITY_LABELS: string[];
 /** Every label name the repo speaks — what `issue-lint` and the seat registry validate against. */

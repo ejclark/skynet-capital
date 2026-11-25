@@ -40,7 +40,8 @@ describe("order type labels", () => {
   });
 
   it("renders an unrecognized server type as itself rather than guessing", () => {
-    expect(orderTypeLabel("stop_limit")).toBe("stop_limit");
+    // Was "stop_limit" until #8249 gave that type its name; a type the desk still can't place.
+    expect(orderTypeLabel("trailing_stop")).toBe("trailing_stop");
   });
 });
 

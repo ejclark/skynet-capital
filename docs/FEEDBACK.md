@@ -66,7 +66,11 @@ in code — only as a host secret, exactly like the Alpaca keys.
    A filing Moneypenny matched to a known problem (#8005 slice 7) also carries `ia-<row>`, the row
    of the IA ledger (`docs/IA.md` §10) it is evidence on, and a **Known problem** line naming the
    row and its plan in the ledger's own words. Ask her to file "one list for all my orders" and
-   the issue carries `ia-U1`. `npm run ia:ledger -- --evidence` counts members per row by those
+   the issue carries `ia-U1`. Such a filing is evidence, not a build (#8005 slice 2): it never
+   self-readies, even curated (`triageFeedbackDecision`; a person's `bug` + `fast-track` still
+   readies it), the daily flip never lists it, and it is never parked on the member, because the
+   row is fixed as a whole, never one filing at a time.
+   `npm run ia:ledger -- --evidence` counts members per row by those
    two labels into `docs/members/ia-ledger-evidence.md`; regenerate `src/domain/ia-ledger.json`
    with `npm run ia:ledger` whenever §10 changes.
 5. On the Profile page's Feedback section (`/app/accounts?section=feedback`), "Your recent feedback" shows a live status badge per filing (Filed — waiting to be
@@ -119,7 +123,11 @@ refuters on a clear call — and posts one of three outcomes on the issue
 | --- | --- | --- |
 | Clear, and neither refuter could refute it | `ready` | *Up next* (the admission gate still decides when it starts) |
 | Only the acceptance criteria or the size fell short | `needs-info` + plain questions | *Waiting on your answer*. Their **Follow up** re-runs the check automatically |
-| A fork only Eric settles, the protected class, a blocker, or a refuter said no | none, a plain note | *Filed — waiting to be picked*: nothing is asked of the member |
+| A fork only Eric settles, the protected class, a blocker, a new place no IA group holds, or a refuter said no | none, a plain note | *Filed — waiting to be picked*: nothing is asked of the member |
+| Never judged: it carries `ia-<row>`, a known problem fixed as a whole, never one filing at a time | none, and no note | *Filed — waiting to be picked*, then *Fixed — try it* if a fix for that problem ships (#8026) |
+
+The judge's fifth check, `placed`, records the IA home the filing extends (`docs/IA.md` §5) in the
+posted check table, so the build starts from a named home (#8005 slice 2).
 
 Each session runs on its own runner with a read-only token, reads only the thread's member and bot comments, and returns one JSON blob; the post script, on a fresh runner, is the one writer and builds every posted line itself. It runs
 for filings carrying a `member-` label, not `curated` ones (the coach path above), and only while the
@@ -158,6 +166,13 @@ one queue — and the third would be buried under the first two.
 | Sliced — first slice shipped, remainder on the issue | `next-slice` | nobody |
 | Needs the member to clarify | `needs-info` | **the member** |
 | A decision only Eric can make | `needs-eric` | **Eric — and only this one** |
+
+**A member wish that would cost money is the fourth row, filed as a pitch** (#8201): the build
+session files a `pitch` + `needs-eric` issue in the five lines of [`docs/ISSUES.md`](ISSUES.md) →
+*Pitch issues* (who wants it, $ per month, what it buys, the free try first, the number that undoes
+it) and points the member's issue at it, instead of a bare `needs-eric` with a per-use delta. Spend
+is a change to how much a lane consumes per use or how often it runs; a model pick on a lane
+already paid for is not.
 
 ### Replying to `needs-info` / `needs-eric` restarts the build (#3959 slices 1–2)
 

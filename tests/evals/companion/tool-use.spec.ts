@@ -192,7 +192,10 @@ describe("runCompanionEval with tool use", () => {
   it("declares the real, full tool list for a fixture that declares tool use", async () => {
     const { doFetch, calls } = scripted([textReply("Now: #4242."), verdict(true)]);
     await runCompanionEval([withTools], "k", doFetch, noopDoStream);
-    expect(toolNamesOf(calls[0]?.body)).toEqual([...COMPANION_TOOL_NAMES]);
+    // Every tool but the scene read, which only a game-master fixture's turn declares (#8191).
+    expect(toolNamesOf(calls[0]?.body)).toEqual(
+      COMPANION_TOOL_NAMES.filter((n) => n !== "get_scene_facts"),
+    );
   });
 
   it("keeps a fixture without tool use on the deskless list, as before", async () => {

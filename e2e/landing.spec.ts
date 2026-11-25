@@ -19,8 +19,8 @@ test.describe("landing page", () => {
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/app/");
-    await expect(page).toHaveURL(/\/app\/$/);
+    await page.goto("/app/campaign");
+    await expect(page).toHaveURL(/\/app\/campaign$/);
     const quick = page.locator(".mctl-window .ask-quick");
     await expect(quick).toBeVisible();
     const before = await page
@@ -54,10 +54,10 @@ test.describe("landing page", () => {
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/app/?w=market");
+    await page.goto("/app/campaign?w=market");
     await page.evaluate(() => window.localStorage.removeItem("skynet.landing.sector-look"));
     await page.reload();
-    await expect(page).toHaveURL(/\/app\/\?w=market$/);
+    await expect(page).toHaveURL(/\/app\/campaign\?w=market$/);
     const rows = page.locator(".sectors-rows--lines > li");
     await expect(rows).toHaveCount(12);
     await expect(rows.first()).toContainText("S&P 500");
@@ -97,7 +97,7 @@ test.describe("landing page", () => {
   });
 
   test("redraws every move for the period chosen, Week first (AT2)", async ({ page }) => {
-    await page.goto("/app/?w=market");
+    await page.goto("/app/campaign?w=market");
     const period = page.getByRole("group", { name: "Period" });
     await expect(period.getByRole("button", { name: "Week" })).toHaveAttribute(
       "aria-pressed",
@@ -114,7 +114,7 @@ test.describe("landing page", () => {
   test("draws the same numbers as Lines or Tiles, Lines first, and keeps the last view (AT3)", async ({
     page,
   }) => {
-    await page.goto("/app/?w=market");
+    await page.goto("/app/campaign?w=market");
     await page.evaluate(() => window.localStorage.setItem("skynet.landing.sector-look", "bars"));
     await page.reload();
     // Bars are gone (AT3 revised): a member who had picked them opens on Lines.
@@ -142,7 +142,7 @@ test.describe("landing page", () => {
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/app/?w=calendar");
+    await page.goto("/app/campaign?w=calendar");
     const cal = page.locator(".mctl-window .ecal");
     await expect(cal).toBeVisible();
     await expect(page.locator(".sectors")).toHaveCount(0);
@@ -193,7 +193,7 @@ test.describe("landing page", () => {
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/app/?w=calendar");
+    await page.goto("/app/campaign?w=calendar");
     const cal = page.locator(".ecal");
     const lenses = cal.locator(".eh-lens");
     await expect(lenses).toHaveText(["Day", "Week", "Month"]);
@@ -222,7 +222,7 @@ test.describe("landing page", () => {
   // AT11: at desktop width R&D's month grid sits beside the rows, the range banded on it.
   test("adds R&D's month grid beside the rows at desktop width (AT11)", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
-    await page.goto("/app/?w=calendar");
+    await page.goto("/app/campaign?w=calendar");
     const cal = page.locator(".ecal");
     const grid = cal.locator(".ecal-grid .eh-grid");
     await expect(grid).toBeVisible();
@@ -240,7 +240,7 @@ test.describe("landing page", () => {
     page,
   }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
-    await page.goto("/app/?w=market");
+    await page.goto("/app/campaign?w=market");
     await page.evaluate(() => window.localStorage.removeItem("skynet.landing.sector-look"));
     await page.reload();
     const rows = page.locator(".sectors-rows--lines > li");
@@ -267,7 +267,7 @@ test.describe("landing page", () => {
   test("offers at most two quick questions under the member's own (criterion 2)", async ({
     page,
   }) => {
-    await page.goto("/app/");
+    await page.goto("/app/campaign");
     const quick = page.getByRole("list", { name: "Quick questions" }).getByRole("button");
     await expect(quick.first()).toBeVisible();
     expect(await quick.count()).toBeLessThanOrEqual(2);
@@ -276,7 +276,7 @@ test.describe("landing page", () => {
   test("answers a story's hunch with the record, never a buy call (criteria 5, 7)", async ({
     page,
   }) => {
-    await page.goto("/app/?w=calendar");
+    await page.goto("/app/campaign?w=calendar");
     await page.locator(".story--lead > .story-row > summary").click();
     const ask = page.locator(".story--lead .story-ask");
     await expect(ask.getByText("Ask your own")).toBeVisible();
@@ -333,7 +333,7 @@ test.describe("landing page", () => {
         json: { available: true, asOf: "2026-11-09T12:00:00Z", quests, unread: [] },
       }),
     );
-    await page.goto("/app/?w=quests");
+    await page.goto("/app/campaign?w=quests");
     const part = page.locator(".mctl-window section.quests");
     // The section's own heading is visually hidden inside the window, but still names it.
     await expect(part.getByRole("heading", { name: "Your quests" })).toBeAttached();
@@ -346,7 +346,7 @@ test.describe("landing page", () => {
     await part.scrollIntoViewIfNeeded();
     await part.screenshot({ path: "test-results/landing-quests-390.jpg", quality: 85 });
     // The market quest sits inside the lead story, closed until tapped, opening on a draft ticket.
-    await page.goto("/app/?w=calendar");
+    await page.goto("/app/campaign?w=calendar");
     await page.locator(".story--lead > .story-row > summary").click();
     const inStory = page.locator(".story--lead .story-quests");
     await expect(inStory.locator(".quest-label")).toHaveText(
@@ -366,7 +366,7 @@ test.describe("landing page", () => {
   test("gives Campaign the first tab, and the Leaderboard leaves the bar for Profile's card", async ({
     page,
   }) => {
-    await page.goto("/app/");
+    await page.goto("/app/campaign");
     const nav = page.locator("nav.topnav");
     await expect(nav.getByRole("link", { name: "Campaign", exact: true })).toHaveAttribute(
       "aria-current",
@@ -374,7 +374,7 @@ test.describe("landing page", () => {
     );
     await expect(nav.getByRole("link", { name: "Leaderboard" })).toHaveCount(0);
     await page.goto("/app/leaderboard");
-    await expect(page.getByRole("heading", { name: "Leaderboard" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Scoreboard" })).toBeVisible();
   });
 });
 
@@ -386,7 +386,7 @@ test.describe("campaign mission control", () => {
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/app/");
+    await page.goto("/app/campaign");
     const win = page.locator("section.mctl-window");
     await expect(win).toHaveCount(1);
     await expect(win.locator("h1.mctl-window-title")).toHaveText("Where things stand");
@@ -410,9 +410,9 @@ test.describe("campaign mission control", () => {
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/app/");
+    await page.goto("/app/campaign");
     await page.locator("section.mctl-window button.mctl-row", { hasText: "The calendar" }).click();
-    await expect(page).toHaveURL(/\/app\/\?w=calendar$/);
+    await expect(page).toHaveURL(/\/app\/campaign\?w=calendar$/);
     await expect(page.locator("h1.mctl-window-title")).toHaveText("The calendar");
     await expect(page.locator(".mctl-window .ecal")).toBeVisible();
     const pills = page
@@ -425,7 +425,7 @@ test.describe("campaign mission control", () => {
     await expect(pills.nth(1)).toHaveAttribute("aria-current", "page");
     // The trail is Back: its Overview pill returns, and Overview is never written to the address.
     await pills.nth(0).click();
-    await expect(page).toHaveURL(/\/app\/$/);
+    await expect(page).toHaveURL(/\/app\/campaign$/);
     await expect(page.locator("h1.mctl-window-title")).toHaveText("Where things stand");
   });
 
@@ -434,13 +434,15 @@ test.describe("campaign mission control", () => {
   }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     // A real key from the edition: the first event row the calendar draws in EDITION_CLOCK's week.
-    await page.goto("/app/?w=calendar");
+    await page.goto("/app/campaign?w=calendar");
     const event = page.locator(".ecal li.ecal-event[id^='event-']").first();
     await expect(event).toBeAttached();
     const id = await event.getAttribute("id");
     expect(id).toMatch(/^event-\d{4}-\d{2}-\d{2}/);
     await page.goto("about:blank");
+    // Her old `/#event-…` link: the home forwards it to Campaign with the hash (#8189).
     await page.goto(`/app/#${id}`);
+    await expect(page).toHaveURL(/\/app\/campaign\?/);
     await expect(page.locator("h1.mctl-window-title")).toHaveText("The calendar");
     await expect(page.locator(`[id="${id}"]`)).toBeAttached();
     // The inferred window is written into the address (replace, hash kept), so stepping the
@@ -451,7 +453,7 @@ test.describe("campaign mission control", () => {
 
   test("shows the Waypoints rail at 1280 and hides it at 390", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
-    await page.goto("/app/");
+    await page.goto("/app/campaign");
     const rail = page.getByRole("navigation", { name: "Waypoints" });
     await expect(rail).toBeVisible();
     await expect(rail.locator(".mctl-way")).toHaveCount(5);
@@ -465,7 +467,7 @@ test.describe("campaign mission control", () => {
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/app/?w=market");
+    await page.goto("/app/campaign?w=market");
     const box = page.getByRole("textbox", { name: "Message Moneypenny" });
     const tags = page.getByRole("list", { name: "Your moves" }).locator("li.mp-tag");
     await page

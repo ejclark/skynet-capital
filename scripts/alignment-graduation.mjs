@@ -18,6 +18,14 @@
 // SEND BACK. A class in "Graduated classes" with a miss dated on or after its graduation, or one
 // the table now calls irreversible, is flagged `sendBack`: a normal PR removes its row.
 //
+// RULE 5, THE TIGHTEN-BACK (#8161). Every class outside the irreversible class is decide-and-report
+// (Eric, 2026-11-23: "My job will be to steer/direct, not bless"), so the meter is his reversals. A
+// decided call's Score reads `decided on his behalf` while it stands and `miss (reversed)` once he
+// undoes it. A class is read over its last TIGHTEN_WINDOW decided calls (those since its graduation,
+// for a graduated class, so graduating again starts a fresh window): 3 reversals in a full window,
+// or 2 in a shorter one, flag `tightenBack` — more than 1 in 4, with one reversal in a young class
+// read as a data point rather than a rate. Report-only, like the rest of this file.
+//
 //   node scripts/alignment-graduation.mjs [--json] [--file F]   # the check; exit 0 always (advisory)
 //   node scripts/alignment-graduation.mjs --body "<class>"        # the held PR's body, for ship.sh
 //   node scripts/alignment-graduation.mjs --graduate "<class>"    # add its row (refuses if not eligible)
@@ -29,6 +37,8 @@ const DEFAULT_FILE = new URL("../docs/process/ALIGNMENT.md", import.meta.url);
 /** Rule 3's numbers. */
 export const STREAK = 3;
 export const WINDOW = 5;
+/** Rule 5's window: the decided calls a class is read over. */
+export const TIGHTEN_WINDOW = 8;
 
 /**
  * Every class the ledger uses, with its rule-4 verdict and the line that decides it. Add a class
@@ -54,16 +64,47 @@ export const CLASS_MAP = {
     "safeguards on autonomous trading; held by safety-scales-to-stakes until he moves it",
   ],
 };
-/** A class the table does not name, but whose words say rule 4: still not eligible, louder. */
-const RULE_FOUR_WORDS =
-  /spend|budget|credential|secret|token|password|merge|arm|access|invite|privacy|outward|deploy/i;
+/**
+ * The words that name each irreversible class's ACT, for text CLASS_MAP does not name: an unmapped
+ * class name, or an ask's own question and title (`graduatedClass` in moneypenny/assignments.mjs
+ * vetoes on them). One row per irreversible class, so the veto reaches all seven, not only the
+ * ones a single keyword list happened to cover: #8059's four asks ("land" a held PR, turn on a
+ * Routine, show members' positions to the public, give a friend a login) said none of the old
+ * words and graduated as screen design. The rows hold every word the old single list held, so
+ * nothing it vetoed graduates now. Still wording, so still a backstop: a new irreversible class
+ * needs a row here (a spec fails without one), and a missed wording is a new word in its row.
+ */
+export const RULE_FOUR_ACTS = [
+  ["spend limits", /spend|budget|\bcap\b|\$\d|quota|billing|subscription|\bpaid\b/i],
+  ["credentials", /credential|secret|token|password|api key/i],
+  ["review queue", /merge|\bland(s|ed)?\b|platter|held pr|hold-merge|deploy/i],
+  ["schedule (arming)", /arm|routine|\bcron\b|schedul/i],
+  [
+    "member data sharing",
+    /privacy|outward|public|pre-?auth|non-?members?|logged[- ]out|signed[- ]out|outsiders?|anonymi[sz]|\bshar(e|es|ed|ing)\b|expos(e|es|ed|ing)\b|every member|all members|other members|everyone's/i,
+  ],
+  [
+    "member onboarding",
+    /access|invite|onboard|\b(give|grant|create|make|send|issue|set up)\b.{0,40}\b(login|account|seat|sign-?in)\b|\badd\b.{0,40}\bto the (app|league|repo|org)\b/i,
+  ],
+  ["bot safety rules", /breaker|\bbots?\b|wheel|playbook|paper order|safeguard|kill switch/i],
+];
+
+/** The irreversible class whose act `text` names, else `null`. Pure. */
+export function ruleFourAct(text = "") {
+  return RULE_FOUR_ACTS.find(([, re]) => re.test(String(text)))?.[0] ?? null;
+}
 
 /** `{ verdict: "reversible"|"irreversible"|"unmapped", why }` for a class name. Pure. */
 export function ruleFour(cls = "") {
   const hit = CLASS_MAP[String(cls).trim().toLowerCase()];
   if (hit) return { verdict: hit[0], why: hit[1] };
-  if (RULE_FOUR_WORDS.test(cls))
-    return { verdict: "irreversible", why: "not in CLASS_MAP, and its words name rule 4" };
+  const act = ruleFourAct(cls);
+  if (act)
+    return {
+      verdict: "irreversible",
+      why: `not in CLASS_MAP, and its words name rule 4 (${act})`,
+    };
   return { verdict: "unmapped", why: "not in CLASS_MAP: add it by PR before it can graduate" };
 }
 
@@ -86,7 +127,7 @@ function cells(line) {
 }
 
 /** The table rows under a `## <heading>` section, header and separator dropped. */
-function sectionRows(md, heading) {
+export function sectionRows(md, heading) {
   const lines = String(md ?? "").split("\n");
   const from = lines.findIndex((l) => new RegExp(`^##\\s+${heading}\\b`, "i").test(l));
   if (from === -1) return [];
@@ -116,6 +157,17 @@ export function scoreOf(cell = "") {
   return null;
 }
 
+/** Rule 5: `kept` or `reversed` for a decided call's Score cell, `null` for any other row. Pure. */
+export function decidedOf(cell = "") {
+  const s = String(cell)
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .trim()
+    .toLowerCase();
+  if (/^decided on his behalf\b/.test(s)) return "kept";
+  if (/^miss \(reversed\)/.test(s)) return "reversed";
+  return null;
+}
+
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 /** The Ledger table as rows `{ date, cls, ask, predicted, given, score }`, by date. Pure. */
@@ -129,6 +181,7 @@ export function parseLedger(md) {
       predicted: c[3],
       given: c[4],
       score: scoreOf(c[5]),
+      decided: decidedOf(c[5]),
       i,
     }))
     .sort((a, b) => a.date.localeCompare(b.date) || a.i - b.i)
@@ -175,6 +228,16 @@ function sendBackOf(grad, scored, rule4) {
   return rule4.verdict === "reversible" ? null : `rule 4 / unmapped: ${rule4.why}`;
 }
 
+/** Rule 5: why a class returns to asking, else `null`. Pure. */
+function tightenOf(all, grad) {
+  const decided = all
+    .filter((r) => r.decided && (!grad || r.date >= grad.date))
+    .slice(-TIGHTEN_WINDOW);
+  const reversed = decided.filter((r) => r.decided === "reversed").length;
+  const trips = reversed >= (decided.length < TIGHTEN_WINDOW ? 2 : 3);
+  return trips ? `${reversed} of the last ${decided.length} decided calls reversed` : null;
+}
+
 /** One class's record. Pure. */
 function statsOf(cls, all, grad) {
   const scored = all.filter((r) => r.score);
@@ -197,6 +260,7 @@ function statsOf(cls, all, grad) {
     graduated: grad,
     eligible: rule3 && rule4.verdict === "reversible" && !grad,
     sendBack: sendBackOf(grad, scored, rule4),
+    tightenBack: tightenOf(all, grad),
     branch: branchOf(cls),
     lastFive,
   };
@@ -215,6 +279,7 @@ export function check(md) {
     },
     eligible: classes.filter((c) => c.eligible).map((c) => c.cls),
     sendBack: classes.filter((c) => c.sendBack).map((c) => c.cls),
+    tighten: classes.filter((c) => c.tightenBack).map((c) => c.cls),
     graduated: graduated.map((g) => g.cls),
     classes,
   };
@@ -349,6 +414,7 @@ function summary(result) {
     if (c.eligible) state = `ELIGIBLE → ${c.branch}`;
     if (c.graduated) state = `graduated ${c.graduated.date}`;
     if (c.sendBack) state = `SEND BACK (${c.sendBack})`;
+    if (c.tightenBack) state = `RETURNS TO ASKING, rule 5 (${c.tightenBack})`;
     lines.push(
       `- ${c.cls}: ${c.matches} match · ${c.misses} miss · streak ${c.streak} · last-5 misses ${c.lastFiveMisses} · ${c.rule4} · ${state}`,
     );

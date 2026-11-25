@@ -3,6 +3,7 @@ import { parseLeaderMetric } from "../observatory/standings-metric.js";
 import type { StandingsOptions } from "../observatory/standings-view.js";
 import { serveAdminApi } from "./admin-api-routes.js";
 import { serveAlertDeliveryApi } from "./alert-delivery-route.js";
+import { serveAlpacaConnect } from "./alpaca-connect-routes.js";
 import { isAppShellPath, serveAppShell } from "./app-shell-routes.js";
 import type { Session } from "./auth/session.js";
 import { serveAuthoredPlaysApi } from "./authored-plays-api-routes.js";
@@ -13,6 +14,7 @@ import {
   streamBoardPatches,
 } from "./board-patch-routes.js";
 import { serveBookWaitApi } from "./book-wait-routes.js";
+import { serveBotsApi } from "./bots-api-routes.js";
 import { serveClientErrorApi } from "./client-error-route.js";
 import { serveCompanionApi } from "./companion-routes.js";
 import { serveJsonApi } from "./content-api-routes.js";
@@ -32,12 +34,16 @@ import { serveFastTrackApi } from "./fast-track-route.js";
 import { serveFeedbackApi } from "./feedback-api-routes.js";
 import { serveFeedbackRoute } from "./feedback-routes.js";
 import { serveFilingCommentsApi } from "./filing-comments-api-routes.js";
+import { serveFillWatchApi } from "./fill-watch-route.js";
+import { serveHeldNewsApi } from "./held-news-route.js";
 import { serveJoinApi } from "./join-api-routes.js";
+import { serveJournalApi } from "./journal-api-routes.js";
 import { serveLearnApi } from "./learn-api-routes.js";
 import { serveLegacyRedirect } from "./legacy-redirects.js";
 import { serveMemberCampaignsApi } from "./member-campaigns-api-routes.js";
 import { serveMemberChainsApi } from "./member-chains-api-routes.js";
 import { serveMemberConvictionsApi } from "./member-convictions-api-routes.js";
+import { noteAppVisit, servePresenceApi } from "./member-visits.js";
 import { serveOnboardingApi } from "./onboarding-api-routes.js";
 import { serveOptionApi } from "./option-api-routes.js";
 import { serveOptionLifecycleApi } from "./option-lifecycle-route.js";
@@ -69,7 +75,7 @@ export function createDashboardServer(config: DashboardServerConfig): Server {
   // ONE channel per server, driven by ONE hub subscription: the board diff is computed once per
   // tick regardless of how many viewers are watching, and every viewer shares one seq run.
   const channel = createBoardChannel();
-  driveBoardChannel(config.hub, channel, config.ceremonies, config.capitalFlows);
+  driveBoardChannel(config.hub, channel, config.ceremonies, config.capitalFlows, config.partySeats);
   return createServer((req, res) => {
     void handle(req, res, config, channel).catch((error: unknown) => {
       // Last-resort net (mirrors insights-listener.ts): every route handler below is expected to
@@ -202,6 +208,9 @@ async function servePlaybookWrites(
   if (await serveMemberConvictionsApi(req, res, path, config, session)) return true;
   if (await serveMemberCampaignsApi(req, res, path, config, session)) return true;
   if (await serveMemberChainsApi(req, res, path, config, session)) return true;
+  // Following a bot is a pin, not a subscription (#8254): it lives beside the playbook writes only
+  // because it is a member write; it opens nothing.
+  if (await serveBotsApi(req, res, path, config, session)) return true;
   return serveAuthoredPlaysApi(req, res, path, config, session);
 }
 
@@ -224,7 +233,9 @@ async function serveWriteApis(
   if (await serveQuestsTakenApi(req, res, path, config, session)) return true;
   if (await serveBookWaitApi(req, res, path, config, session)) return true;
   if (await serveFastTrackApi(req, res, path, config, session)) return true;
+  if (await serveHeldNewsApi(req, res, path, config, session)) return true;
   if (await serveAlertDeliveryApi(req, res, path, config, session)) return true;
+  if (await serveFillWatchApi(req, res, path, config, session)) return true;
   if (await serveWatchlistApi(req, res, path, config, session)) return true;
   if (await serveOptionApi(req, res, path, config, session)) return true;
   if (await serveDraftOrderApi(req, res, path, config, session)) return true;
@@ -241,9 +252,11 @@ async function serveWriteApis(
   if (serveCouncilRepliesApi(req, res, path, config.councilReplies, session)) return true;
   if (await serveFilingCommentsApi(req, res, path, config.filingComments, session)) return true;
   if (await serveFeedbackApi(req, res, path, config, session)) return true;
+  if (await serveJournalApi(req, res, path, config, session)) return true;
   if (await serveCompanionApi(req, res, path, config, session)) return true;
   if (await serveAdminApi(req, res, path, config, session)) return true;
   if (await serveClientErrorApi(req, res, path, session, config.logLine)) return true;
+  if (await serveAlpacaConnect(req, res, path, config, session)) return true;
   return serveJoinApi(req, res, path, config, session);
 }
 
@@ -257,10 +270,13 @@ async function serveAuthorizedRoute(
   session: Session | undefined,
   channel: BoardPatchChannel,
 ): Promise<void> {
+  // An open tab never reloads the shell, so its in-view ping is how "last seen" learns of it
+  // (#8262). Only the ping counts: a hidden tab still calls the API (#8319).
+  if (await servePresenceApi(req, res, path, config.memberVisits, session, config.now?.())) return;
   if (path === "/events") {
     const params = new URL(url, "http://localhost").searchParams;
     const metric = parseLeaderMetric(params.get("by"));
-    streamBoardPatches(req, res, channel, metric, parseCompareParams(params));
+    streamBoardPatches(req, res, channel, metric, parseCompareParams(params), config.partySeats);
     return;
   }
   if (await serveJsonApi(res, path, url, config, channel, session)) {
@@ -288,6 +304,7 @@ async function serveAuthorizedRoute(
   }
   // The React shell — static app/dist behind the same gate as the board.
   if (isAppShellPath(path)) {
+    noteAppVisit(config.memberVisits, session, path, config.now?.());
     serveAppShell(res, path);
     return;
   }

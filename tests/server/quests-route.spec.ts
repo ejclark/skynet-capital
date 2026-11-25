@@ -165,6 +165,24 @@ describe("GET /api/quests — position quests", () => {
     expect(body).toEqual({ available: false, reason: "unlinked", quests: [] });
   });
 
+  it("says the read failed on an error-tagged hub row, never an empty list (#8334)", async () => {
+    const { client, reads } = broker(24);
+    const failed = {
+      hub: {
+        getState: () => ({
+          participants: [
+            { id: "ann-7", kind: "human", cash: 0, equity: 0, positions: [], error: "timed out" },
+          ],
+        }),
+      },
+    };
+    const cfg = { ...config("ann-7", [], client), ...failed } as unknown as DashboardServerConfig;
+    const { status, body } = await quests(cfg);
+    expect(status).toBe(200);
+    expect(body).toEqual({ available: false, reason: "read-failed", quests: [] });
+    expect(reads).toEqual([]);
+  });
+
   it("leaves other paths alone", async () => {
     const { res } = fakeRes();
     const cfg = config("ann-6", [], broker(1).client);

@@ -14,10 +14,21 @@ export function withRetry<T>(
     sleep?: (ms: number) => void;
   },
 ): T;
-export function ghRest(
-  path: string,
-  opts?: { token?: string; run?: (cmd: string, args: string[]) => string },
-): unknown;
+export interface RestOpts {
+  repo?: string;
+  token?: string;
+  run?: (cmd: string, args: string[], opts?: Record<string, unknown>) => string;
+  /** Where the call's rate headers are reported; the process-wide REST budget by default (#8289). */
+  into?: {
+    observe(h: { remaining: number | null; reset: number | null; resource: string | null }): void;
+  };
+  agent?: string;
+}
+/** A REST GET on the budget (#8289): `restCall("GET", path)`. */
+export function ghRest(path: string, opts?: RestOpts): unknown;
+/** One REST call over curl, its `x-ratelimit-*` headers reported to `into` (#8289). */
+export function restCall(method: string, path: string, payload?: unknown, opts?: RestOpts): unknown;
+export function restRead(path: string, opts?: RestOpts): unknown;
 /** Append a failed curl's response body (GitHub's own reason) to its message (#6224). */
 export function withResponseBody<E>(err: E): E;
 /** Every page of a REST list; each page retried on a GitHub 5xx (#5918). */

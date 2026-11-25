@@ -447,6 +447,9 @@ node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answe
    A world may name its own instant (`instant`, #8010): put it after anything the pin's code
    serves as already true (a scored claim, a stated view), and the pin's own commit can be its
    corpus.
+   What a member wrote before the instant (a stated view, a drafted playbook) is the input's
+   `writes`, replayed through production's own handlers into production's own stores at each
+   write's time (`worlds/member-stores.mjs`, R&D); a write the handler refuses stops the compose.
 3. Run the framer, then the task author, then the lint. Freeze and hash the tasks.
 4. Thin slice: one member, one task, phone width.
 5. Full round, then grade, then the readout. Add what broke to *Lessons* below.
@@ -572,7 +575,63 @@ node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answe
   distraction"), added after the profile round, so no canary had read them. Asked what it knew,
   the expert recited them: every expert would have started primed. The checks stay; the quotes
   moved here. A role prompt carries method, never the owner's complaints.
+- 2026-11-23 · **the canary voided the thin slice's planted-defect control: the words role named
+  what its own prompt held.** Its picture-label rule carried three of this app's labels as examples
+  and the retro it came from (#5160 retro, 2026-10-14); asked what it knew, it listed them. The same
+  role had passed the main round's canary minutes before, so the risk is a die roll every round,
+  not a fixed fault. The rule stays in plain method words; the examples and the cite moved here, and
+  the actor role's line on easily-distracted members dropped the owner's words it quoted (Eric,
+  2026-10-14: "a good attribute to factor into personas in our user studies").
 - 2026-11-23 · **the thin slice's two other catches.** After three lint rewrites the tasks step
   crashed on a helper it never imported (that path had never run); and the oracle failed a right
   "down $4 so far today" for a −$4 day, because a sign counted only as a touching minus. Both fixed;
   rescored, the session passes. Before quoting task success, read one answer by hand.
+- 2026-11-24 · **the bot's loop round: the facts sheet holds the book, not the loop.** Its 768 facts
+  are balances, positions and orders; none says whether a bot is running, what holds it, when it
+  last checked or why it placed an order, and the order facts' regions no longer match the pin's
+  Ledger rows, so no order fact reached a task. All 21 tasks became book reads framed around the
+  bots; the loop reached members only through those scenarios, and the experts carried it (#8109).
+- 2026-11-24 · **the steered world listed one page for its watcher and two for its owner**, so no
+  fact of the watcher's sheet was on a census screen and the task step refused. A census entry now
+  names its `routes` where a viewer's surfaces list is thin; widening it means re-taking the harvest
+  too (`0-preflight/harvest` is kept while its `labels.txt` exists).
+- 2026-11-24 · **price the census before the round.** Seven viewer × world censuses at phone and
+  desktop measured toward three hours and ~570 expert calls; the round ran every census at phone
+  only (members still ran desktop), three at a time, beside the round rather than inside it, and
+  took the thin slice's identical census as its own. A control's census can narrow to the views its
+  fixed and planted mechanisms live on (`tasks/bot-loop-control.json`; logged as config drift).
+- 2026-11-24 · **a cloud session's background job stops at 30 minutes unless given the 2-hour
+  ceiling, and a container restart stops all of them.** A round resumes from its `done.json`
+  files, but a census restarts from its first route, so long censuses are worth running as their
+  own jobs.
+- 2026-11-24 · **the readout drew every frame a lead problem cited**: 24 in one row and 259 files
+  (9MB) for the bot's loop, where the profile round's page carried 11. It now shows at most four a
+  problem (`FRAMES_SHOWN`, readout.mjs), and every frame stays in the round directory.
+- 2026-11-24 · **the cross-feature round (586 calls, 40 sessions) re-found 6 of its 32 recorded
+  clashes but found 48 new structural problems at 86% validity.** The key was the IA ledger's
+  naming and placement clashes; the blind task author wrote fact lookups, which rarely walk a
+  collision. A key whose items no task can reach measures the tasks, not the evaluators: write an
+  area key from what that area's tasks can touch, and record touches.
+- 2026-11-24 · **with the chat in hand, the oracle's "place seen" rule fails right answers.** 11 of
+  24 failures reported the fact right, from Moneypenny or added up by hand, without seeing where the
+  page shows it. Success stays the oracle's; the readout now prints the right answers beside it,
+  never in its place (`plan-scorecard.mjs`).
+- 2026-11-24 · **a phone member's typing reached the page with no field focused** (#8126): a tap
+  aimed at the ask box hit the chip above it, the next keystrokes went to the document, and a "?"
+  opened the keyboard-shortcuts panel. A phone shows no keyboard then. The checker marked those
+  findings as the harness; the recorder now refuses such typing (#8151).
+- 2026-11-24 · **the task author never sets a task's fewest views, so lostness was null on every
+  session.** The plan's row now takes R from the fewest views any member needed to succeed at the
+  task. Two more: the lint still dropped one task after three rewrites over everyday words that are
+  also labels ("against", "strike"); and a desktop census in a world that renders the 3D landmark
+  costs ~5 minutes a route, so pre-run the censuses beside the sessions, never beside other
+  browsers (Chromium's GPU process ignores `nice`).
+- 2026-11-24 · **the session budget was over-projected:** 8.7 calls a session measured against 14
+  projected (the thin slice's one chatty session), so the round ran 2 runs a task where 3 (~770
+  calls) would have fit under the ≈830 approved. Project from the first five sessions, not one.
+- 2026-11-24 · **the cross-feature round's fixed-build control failed on a real leftover.** Its two
+  items were Moneypenny's place names (#8012), a mechanism only the chat shows, which experts never
+  see and members rarely trigger. An expert still read "R&D … calls itself 'Research' elsewhere":
+  the write-ups' back link, which the fix never touched (#8236). A fixed-build control proves
+  little when its fixed mechanism lives where no evaluator looks; pick fixes the census can see, and
+  key a leftover's place as its own item.

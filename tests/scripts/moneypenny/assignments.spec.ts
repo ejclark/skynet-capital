@@ -1,51 +1,17 @@
 import { describe, expect, it } from "@rstest/core";
-import { needsSessionLine } from "../../../scripts/digest-scan.mjs";
-import { parseAsk } from "../../../scripts/moneypenny/ask-card.mjs";
 import {
   ASSIGN_CAP,
   ASSIGN_MARKER,
-  artifactGap,
-  askOnce,
   assignmentComment,
-  batchStart,
   decisionLine,
   executeAssignments,
   gather,
-  lastAskedAt,
-  markedByComments,
-  OPEN_CAP,
   plan,
   report,
   routeAssignments,
   UNASSIGN_MARKER,
-  unassignmentComment,
 } from "../../../scripts/moneypenny/assignments.mjs";
-import { routeSweep } from "../../../scripts/moneypenny/events.mjs";
-
-// #4289 (#3818 slice 5): `needs-eric` means one thing — a decision only Eric can make. The dry run
-// lists every such issue with the decision it waits on and says what it WOULD assign; it writes
-// nothing (live assignment is a separate step after Eric reads a dry run).
-const NOW = Date.parse("2026-09-30T12:00:00Z");
-const CALLOUT =
-  "**Ask.**\n\n> [!IMPORTANT]\n> **Needs from you**\n> 1. Pick A or B? — why\n> 2. second";
-const CALLOUT_WITH_OPTIONS = [
-  "> [!IMPORTANT]",
-  "> **Needs from you**",
-  "> 1. Re-arm the breaker? — a bot safety rule",
-  ">    - A (predicted, medium): yes",
-  ">    - B: no",
-].join("\n");
-const issue = (over: Record<string, unknown> = {}) => ({
-  number: 1,
-  title: "t",
-  body: CALLOUT,
-  state: "open",
-  created_at: "2026-09-28T12:00:00Z",
-  labels: [{ name: "needs-eric" }],
-  assignees: [],
-  user: { login: "skynet-envoy[bot]" },
-  ...over,
-});
+import { CALLOUT, issue, NOW } from "./assignments-fixtures";
 
 describe("decisionLine: the one decision an issue waits on", () => {
   it("reads the first numbered item of the callout", () => {
@@ -187,6 +153,89 @@ describe("plan: assignments (criteria 1–4)", () => {
   });
 });
 
+// #7317: the four held PRs of 2026-11-10 sat a median 37.6 h green, then merged in 93 s once one
+// message listed them. Criterion 4 now starts its clock when the checks go green.
+describe("criterion 4 on the green clock (#7317)", () => {
+  const T = Date.parse("2026-09-30T12:00:00Z");
+  const pr = (over: Record<string, unknown> = {}) => ({
+    number: 7030,
+    title: "feat: held",
+    state: "open",
+    labels: [{ name: "hold-merge" }],
+    created_at: new Date(T - 5 * 36e5).toISOString(), // open 5h: the old 12h timer is silent
+    head: { ref: "feat/x" },
+    assignees: [],
+    ...over,
+  });
+  type Block = { number: number; title: string; plan: boolean };
+  const facts = (greenHoursAgo: number | null, blocks: Block[] = []) =>
+    new Map([
+      [7030, { greenAt: greenHoursAgo === null ? null : T - greenHoursAgo * 36e5, blocks }],
+    ]);
+  const plan6871 = [{ number: 6871, title: "plan", plan: true }];
+
+  it("asks 4h after both required checks went green, naming what it blocks", () => {
+    const { needsYou, actions } = plan({ prs: [pr()], held: facts(4, plan6871), now: T });
+    expect(needsYou).toEqual([
+      expect.objectContaining({
+        number: 7030,
+        criterion: 4,
+        green: true,
+        hours: 4,
+        blocks: plan6871,
+        why: "held PR green 4h",
+      }),
+    ]);
+    expect(actions[0]?.decision).toContain("green 4h and it blocks plan #6871");
+  });
+
+  it("does not ask before 4h green", () => {
+    expect(plan({ prs: [pr()], held: facts(3), now: T }).needsYou).toEqual([]);
+  });
+
+  it("never unassigns a held PR he holds because a push restarted its checks", () => {
+    const asIssue = issue({ number: 7030, labels: [], assignees: [{ login: "ejclark" }] });
+    const his = pr({ assignees: [{ login: "ejclark" }] });
+    expect(
+      plan({ issues: [asIssue], prs: [his], held: facts(null), markers: new Set([7030]), now: T })
+        .actions,
+    ).toEqual([]);
+  });
+
+  it("sends no per-PR card: held PRs reach him on the decisions page, one ask for all", () => {
+    const two = [pr(), pr({ number: 7211 })];
+    const held = new Map([
+      [7030, { greenAt: T - 26 * 36e5, blocks: [] }],
+      [7211, { greenAt: T - 5 * 36e5, blocks: [] }],
+    ]);
+    const assignments = { issues: [], prs: two, markers: new Set<number>(), held };
+    expect(plan({ ...assignments, now: T }).needsYou.map((r) => r.number)).toEqual([7030, 7211]);
+    expect(routeAssignments({ assignments, now: T })).toEqual([]);
+    expect(routeAssignments({ assignments, now: T, heldCards: true })).toHaveLength(2);
+  });
+
+  it("gather reads each held PR's check runs through the single-object read", () => {
+    const paths: string[] = [];
+    const rest = (path: string) =>
+      path === "pulls?state=open" ? [pr({ head: { ref: "feat/x", sha: "s1" } })] : [];
+    const read = (path: string) => {
+      paths.push(path);
+      return {
+        check_runs: ["verify", "integration tests"].map((name) => ({
+          name,
+          status: "completed",
+          conclusion: "success",
+          completed_at: new Date(T - 6 * 36e5).toISOString(),
+        })),
+      };
+    };
+    const deps = gather({ rest, read, now: T, graduated: () => [] });
+    expect(paths[0]).toBe("commits/s1/check-runs?per_page=100");
+    expect(deps.held.get(7030)?.greenAt).toBe(T - 6 * 36e5);
+    expect(plan({ ...deps, now: T }).needsYou[0]).toMatchObject({ number: 7030, green: true });
+  });
+});
+
 describe("assignmentComment", () => {
   it("quotes the decision and carries the marker criteria 2–3 key on", () => {
     const body = assignmentComment({ decision: "Pick A or B?" });
@@ -249,8 +298,9 @@ describe("routeAssignments: the sweep's intents", () => {
     ]);
   });
 
-  it("gives a held PR a decision of its own — the merge click is the ask", () => {
+  it("gives a held PR a decision of its own when per-PR cards are on — the merge click is the ask", () => {
     const [intent] = routeAssignments({
+      heldCards: true,
       assignments: {
         issues: [],
         prs: [
@@ -270,8 +320,8 @@ describe("routeAssignments: the sweep's intents", () => {
     if (!intent) throw new Error("one intent expected");
     expect(intent).toMatchObject({ kind: "assign-eric", number: 10, criterion: 4 });
     expect(intent.body).toContain("Merge this held PR");
-    // …and claims nothing it never checked: `heldPrHours` reads state/draft/label/age only, and
-    // `hold-merge` also goes on a PR held for a taste fork.
+    // …and claims nothing it never checked: with no check runs read, the card says neither green
+    // nor protected (`hold-merge` also goes on a PR held for a taste fork).
     expect(intent.body).not.toMatch(/green|protected/i);
   });
 });
@@ -344,561 +394,5 @@ describe("executeAssignments: the two writes", () => {
     );
     expect(calls.every((a) => a[0] === "api")).toBe(true);
     expect(calls.every((a) => !a.includes("issue"))).toBe(true);
-  });
-});
-
-// #5955 (study 2026-11-01, "escalation keeps asking"): the lane unassigned Eric when `needs-eric`
-// came off at 10-25T02:20, the label came back at 10-26T11:40, and for six days the capsule carried
-// the marker, had nobody assigned and was absent from every digest — the code read the marker as
-// "he unassigned himself". The marker is still the memory; the lane's own unassign now writes a
-// second marker, and "marked" means the newest of the two is an ask.
-describe("markedByComments: asked, and not since cleared by this lane", () => {
-  const bot = (body: string) => ({ body, user: { type: "Bot" }, author_association: "NONE" });
-  const eric = (body: string) => ({ body, user: { type: "User" }, author_association: "OWNER" });
-  const stranger = (body: string) => ({
-    body,
-    user: { type: "User" },
-    author_association: "NONE",
-  });
-
-  it("is marked after an ask, and unmarked once this lane's unassign follows it", () => {
-    expect(markedByComments([bot(`ask\n${ASSIGN_MARKER}`)])).toBe(true);
-    expect(markedByComments([bot(`ask\n${ASSIGN_MARKER}`), bot(`off\n${UNASSIGN_MARKER}`)])).toBe(
-      false,
-    );
-  });
-
-  it("is marked again once a later ask follows the unassign", () => {
-    const thread = [
-      bot(`ask\n${ASSIGN_MARKER}`),
-      bot(`off\n${UNASSIGN_MARKER}`),
-      eric(`ask again\n${ASSIGN_MARKER}`),
-    ];
-    expect(markedByComments(thread)).toBe(true);
-  });
-
-  it("is unmarked with no comments, and ignores a stranger's marker on this public repo", () => {
-    expect(markedByComments([])).toBe(false);
-    expect(markedByComments([stranger(`x\n${ASSIGN_MARKER}`)])).toBe(false);
-    expect(
-      markedByComments([bot(`ask\n${ASSIGN_MARKER}`), stranger(`x\n${UNASSIGN_MARKER}`)]),
-    ).toBe(true);
-  });
-
-  // The wiring, not just the rule: `gather()` is what both the sweep and the digest plan from.
-  it("gather: a returning label on a capsule this lane unassigned asks again and reaches the digest", () => {
-    const thread = [bot(`ask\n${ASSIGN_MARKER}`), bot(`off\n${UNASSIGN_MARKER}`)];
-    const returned = issue({ number: 5955, title: "[ci] Pipeline — release · deploy bots" });
-    const rest = (path: string) => {
-      if (path.startsWith("issues?state=open&labels=needs-eric")) return [returned];
-      if (path.startsWith("issues?state=all&assignee=")) return [];
-      if (path.includes("labels=needs-session")) return [];
-      if (path === "pulls?state=open") return [];
-      if (path === "issues/5955/comments") return thread;
-      throw new Error(`unexpected read ${path}`);
-    };
-    const deps = gather({ rest });
-    expect(deps.markers.has(5955)).toBe(false);
-    const { actions, needsYou } = plan({ ...deps, now: NOW });
-    expect(actions).toEqual([expect.objectContaining({ kind: "assign", number: 5955 })]);
-    expect(needsYou.map((n) => n.number)).toEqual([5955]);
-
-    // And the opposite half still holds: an ask he answered by unassigning himself stays quiet.
-    const his = gather({
-      rest: (p: string) => (p === "issues/5955/comments" ? [thread[0]] : rest(p)),
-    });
-    expect(his.markers.has(5955)).toBe(true);
-    expect(plan({ ...his, now: NOW }).actions).toEqual([]);
-  });
-
-  it("gather: the same rule for a held PR — closed and unassigned, then reopened, it is asked again", () => {
-    const held = {
-      number: 10,
-      title: "platter",
-      state: "open",
-      draft: false,
-      created_at: new Date(NOW - 13 * 36e5).toISOString(),
-      labels: [{ name: "hold-merge" }],
-      assignees: [],
-      head: { ref: "platter/2026-11" },
-    };
-    const rest = (path: string) => {
-      if (path.startsWith("issues?state=")) return [];
-      if (path === "pulls?state=open") return [held];
-      if (path === "issues/10/comments")
-        return [bot(`ask\n${ASSIGN_MARKER}`), bot(`off\n${UNASSIGN_MARKER}`)];
-      if (path === "pulls/10/files") return [{ filename: ".github/workflows/x.yml" }];
-      throw new Error(`unexpected read ${path}`);
-    };
-    const deps = gather({ rest, now: NOW });
-    expect(deps.markers.has(10)).toBe(false);
-    expect(plan({ ...deps, now: NOW }).actions).toEqual([
-      expect.objectContaining({ kind: "assign", criterion: 4, number: 10 }),
-    ]);
-  });
-
-  it("says a closed issue is asked again on reopen, not on relabel", () => {
-    expect(unassignmentComment({ why: "issue closed" })).toContain("reopened");
-    expect(unassignmentComment({ why: "needs-eric removed" })).not.toContain("reopened");
-  });
-});
-
-// The composition order inside routeSweep is behaviour, not arrangement: every lane in that sweep
-// plans from one pre-write snapshot, so two of them can disagree about the same issue in one tick.
-describe("routeSweep: a close beats an ask on the same issue", () => {
-  const needsEricIssue = issue({ number: 42, title: "shipped but still labelled" });
-
-  it("drops the assignment for an issue this same tick is closing as shipped", () => {
-    const intents = routeSweep({
-      shippedFeedback: [{ number: 42, title: "shipped but still labelled", pr: 99 }],
-      assignments: { issues: [needsEricIssue], prs: [], markers: new Set() },
-      now: NOW,
-      issueCards: true,
-    }) as { kind: string; number?: number; issueNumber?: number }[];
-    expect(intents.map((i) => i.kind)).toEqual(["close-shipped"]);
-  });
-
-  it("still asks when nothing in the tick touches that issue (with per-issue cards on)", () => {
-    const intents = routeSweep({
-      assignments: { issues: [needsEricIssue], prs: [], markers: new Set() },
-      now: NOW,
-      issueCards: true,
-    }) as { kind: string }[];
-    expect(intents.map((i) => i.kind)).toEqual(["assign-eric"]);
-  });
-
-  // #7939 slice 2: the decisions page carries criterion 1's asks, so no card goes out per issue.
-  it("sends no per-issue card for an issue ask by default", () => {
-    const intents = routeSweep({
-      assignments: { issues: [needsEricIssue], prs: [], markers: new Set() },
-      now: NOW,
-    }) as { kind: string }[];
-    expect(intents).toEqual([]);
-  });
-});
-
-// #6953 slice 2, call 1: half the asks in the 2026-11-06 digest could not be completed by his
-// answer, because the thing his "yes" would act on did not exist yet — #6942 asked him to merge a
-// branch with no PR, #6620 was a held PR carrying only a patch, #6618 asked him to merge #6620.
-// The missing actor is a session, so none of them is assigned to him; all are listed for one.
-describe("no ask before its artifact exists (#6953)", () => {
-  const ask = (line: string) => `**Ask.**\n\n> [!IMPORTANT]\n> **Needs from you**\n> 1. ${line}`;
-  const branchAsk = issue({
-    number: 6942,
-    body: ask("Merge the tested fix on branch `fix/breaker-stepless-cancelled-leg`? — protected."),
-  });
-  const heldPatch = {
-    number: 6620,
-    title: "held patch",
-    state: "open",
-    created_at: "2026-09-28T00:00:00Z",
-    labels: [{ name: "hold-merge" }],
-    head: { ref: "fix/node-24" },
-    assignees: [],
-  };
-
-  it("does not assign a merge of a branch no open PR is built from, and lists it for a session", () => {
-    const planned = plan({ issues: [branchAsk], now: NOW });
-    expect(planned.actions).toEqual([]);
-    expect(planned.needsYou).toEqual([]);
-    expect(planned.needsSession).toEqual([
-      expect.objectContaining({
-        number: 6942,
-        why: expect.stringContaining("`fix/breaker-stepless-cancelled-leg`"),
-      }),
-    ]);
-  });
-
-  it("asks as usual once a PR is open from that branch", () => {
-    const pr = { ...heldPatch, number: 7001, head: { ref: "fix/breaker-stepless-cancelled-leg" } };
-    const planned = plan({ issues: [branchAsk], prs: [pr], now: NOW });
-    expect(planned.actions.map((a) => a.number)).toContain(6942);
-    expect(planned.needsSession).toEqual([]);
-  });
-
-  it("only a merge ask is held to it: a branch named in any other ask is still his", () => {
-    const other = issue({ body: ask("Delete the stale branch `platter/old`? — tidy.") });
-    expect(plan({ issues: [other], now: NOW }).actions).toHaveLength(1);
-  });
-
-  it("never assigns a held PR whose only files are patches, nor a merge ask that names one", () => {
-    const merge6620 = issue({ number: 6618, body: ask("Merge #6620 once it boards the platter?") });
-    const planned = plan({
-      issues: [merge6620],
-      prs: [heldPatch],
-      patchOnly: new Set([6620]),
-      now: NOW,
-    });
-    expect(planned.actions).toEqual([]);
-    expect(planned.needsYou).toEqual([]);
-    expect(planned.needsSession.map((n) => n.number)).toEqual([6618, 6620]);
-    // The same PR with a real file is criterion 4 as before.
-    expect(plan({ prs: [heldPatch], now: NOW }).actions).toEqual([
-      expect.objectContaining({ kind: "assign", criterion: 4, number: 6620 }),
-    ]);
-  });
-
-  it("one he already holds stays in Needs you — he holds it — and is listed for a session too", () => {
-    const his = { ...branchAsk, assignees: [{ login: "ejclark" }] };
-    const planned = plan({ issues: [his], now: NOW });
-    expect(planned.needsYou.map((n) => n.number)).toEqual([6942]);
-    expect(planned.needsSession.map((n) => n.number)).toEqual([6942]);
-  });
-
-  it("lists every needs-session issue that still waits: open, or closed by a proof close", () => {
-    const capsule = {
-      state: "closed",
-      state_reason: "not_planned",
-      closed_at: new Date(NOW - 2 * 864e5).toISOString(),
-      labels: [{ name: "ci-failure" }, { name: "needs-session" }],
-    };
-    const row = (number: number, over: Record<string, unknown>) => ({
-      number,
-      title: `s${number}`,
-      body: "",
-      ...over,
-    });
-    const planned = plan({
-      sessionIssues: [
-        row(1, { state: "open" }),
-        row(2, { ...capsule, body: ask("Merge it?") }),
-        row(3, { ...capsule, state_reason: "completed" }),
-        row(4, { ...capsule, state_reason: null, pull_request: {} }),
-        // Past the reopen window a fault has been quiet 14 days: nothing is left waiting.
-        row(5, { ...capsule, closed_at: new Date(NOW - 15 * 864e5).toISOString() }),
-        // A not-planned close that is no CI capsule: another lane's, and not this list's.
-        row(6, { ...capsule, labels: [{ name: "needs-session" }] }),
-      ],
-      now: NOW,
-    });
-    expect(planned.needsSession).toEqual([
-      expect.objectContaining({ number: 1, why: "labelled needs-session" }),
-      expect.objectContaining({ number: 2, decision: "Merge it?" }),
-    ]);
-  });
-
-  it("the base branch a PR merges into is never read as a head with no PR", () => {
-    const into = issue({ body: ask("Merge #6900 into the `main` branch? — it is green.") });
-    expect(plan({ issues: [into], now: NOW }).needsSession).toEqual([]);
-  });
-
-  it("lists a carried ask exactly as long as repair.mjs would reopen its capsule", async () => {
-    const { REOPEN_SINCE_MS } = await import("../../../scripts/moneypenny/assignments.mjs");
-    const { REOPEN_DAYS } = await import("../../../scripts/moneypenny/repair.mjs");
-    expect(REOPEN_SINCE_MS).toBe(REOPEN_DAYS * 864e5);
-  });
-
-  it("artifactGap reads the whole callout, not only its first item", () => {
-    const two = ask("Pick a name? — taste\n> 2. Merge branch `x/y` after?");
-    expect(artifactGap({ number: 1, body: two })).toContain("`x/y`");
-    expect(artifactGap({ number: 1, body: two }, { openHeads: new Set(["x/y"]) })).toBeNull();
-  });
-
-  it("gather reads the file lists of held and named PRs, and the needs-session issues", () => {
-    const asked: string[] = [];
-    const held = { ...heldPatch, created_at: new Date(NOW - 13 * 36e5).toISOString() };
-    const rest = (path: string): unknown[] => {
-      asked.push(path);
-      if (path.startsWith("issues?state=open&labels=needs-eric")) {
-        return [issue({ number: 6618, body: ask("Merge #6620? — and #6794 is an issue") })];
-      }
-      if (path === "pulls?state=open") return [held];
-      if (path === "pulls/6620/files") return [{ filename: "MONEYPENNY-EVENTS-6618.patch" }];
-      if (path === "issues?state=open&labels=needs-session") return [{ number: 9 }];
-      if (path.startsWith("issues?state=closed&labels=needs-session,ci-failure&since=")) {
-        return [{ number: 10 }];
-      }
-      return [];
-    };
-    const deps = gather({ rest, now: NOW });
-    expect([...deps.patchOnly]).toEqual([6620]);
-    expect(deps.sessionIssues).toEqual([{ number: 9 }, { number: 10 }]);
-    // #6794 is not an open PR, so its files are never read.
-    expect(asked).not.toContain("pulls/6794/files");
-  });
-
-  it("the digest's needs-a-session line counts and names them", () => {
-    expect(needsSessionLine({ needsSession: [] })).toBe(
-      "- Needs a session: nothing is waiting on a session.",
-    );
-    expect(
-      needsSessionLine({ needsSession: [{ number: 6942, why: "asks for a merge of branch `x`" }] }),
-    ).toBe(
-      "- Needs a session: 1 waiting on a session, not on you — #6942 asks for a merge of branch `x`.",
-    );
-  });
-});
-
-// #6953 slice 3: two batches a day, at most OPEN_CAP open, ranked, and his reply read back.
-describe("the batch rhythm", () => {
-  const AFTER_8 = Date.parse("2026-11-07T14:05:00Z");
-  const many = [9, 7, 1, 5, 3].map((number) => issue({ number }));
-  const route = (assignments: Record<string, unknown>, now = AFTER_8) =>
-    routeAssignments({
-      assignments: { issues: many, prs: [], markers: new Set(), ...assignments },
-      now,
-      issueCards: true,
-    });
-
-  it("starts a batch at 14:00Z and 21:30Z", () => {
-    expect(new Date(batchStart(Date.parse("2026-11-07T14:05:00Z"))).toISOString()).toBe(
-      "2026-11-07T14:00:00.000Z",
-    );
-    expect(new Date(batchStart(Date.parse("2026-11-07T21:31:00Z"))).toISOString()).toBe(
-      "2026-11-07T21:30:00.000Z",
-    );
-    expect(new Date(batchStart(Date.parse("2026-11-07T03:00:00Z"))).toISOString()).toBe(
-      "2026-11-06T21:30:00.000Z",
-    );
-  });
-
-  it("sends nothing new once this window's batch has gone out", () => {
-    expect(route({ lastAskAt: Date.parse("2026-11-07T14:01:00Z") })).toEqual([]);
-    expect(route({ lastAskAt: Date.parse("2026-11-07T13:59:00Z") })).toHaveLength(ASSIGN_CAP);
-  });
-
-  it("still clears removals between batches", () => {
-    const stale = issue({ number: 20, labels: [], assignees: [{ login: "ejclark" }] });
-    const intents = route({ issues: [stale], markers: new Set([20]), lastAskAt: AFTER_8 });
-    expect(intents.map((i) => i.kind)).toEqual(["unassign-eric"]);
-  });
-
-  it("never lets more than OPEN_CAP be open at once", () => {
-    const held = [101, 102, 103, 104].map((number) =>
-      issue({ number, assignees: [{ login: "ejclark" }] }),
-    );
-    const intents = route({ issues: [...held, ...many], markers: new Set([101, 102, 103, 104]) });
-    expect(OPEN_CAP).toBe(5);
-    expect(intents).toHaveLength(1);
-  });
-
-  it("ranks bot rules ahead of internal asks, then oldest first", () => {
-    const internal = issue({ number: 1, title: "Raise the debt gates?" });
-    const bots = issue({ number: 8, title: "Let the breaker re-arm?" });
-    const intents = route({ issues: [internal, bots] });
-    expect(intents.map((i) => i.number)).toEqual([8, 1]);
-  });
-
-  it("lets a stop go between batches and past the open cap", () => {
-    const stop = issue({ number: 50, labels: [{ name: "needs-eric" }, { name: "fast-track" }] });
-    const held = [101, 102, 103, 104, 105].map((number) =>
-      issue({ number, assignees: [{ login: "ejclark" }] }),
-    );
-    const intents = route({
-      issues: [stop, ...held, ...many],
-      markers: new Set([101, 102, 103, 104, 105]),
-      lastAskAt: AFTER_8,
-    });
-    expect(intents.map((i) => i.number)).toEqual([50]);
-  });
-
-  it("tells each card how many asks wait", () => {
-    const [first] = route({});
-    expect(first?.body).toContain("2 more asks next batch.");
-  });
-});
-
-describe("lastAskedAt", () => {
-  it("is the newest ask marker from a trusted comment", () => {
-    const at = (iso: string, body: string, type = "Bot") => ({
-      body,
-      created_at: iso,
-      user: { type },
-      author_association: "NONE",
-    });
-    expect(
-      lastAskedAt([
-        at("2026-11-07T14:00:00Z", ASSIGN_MARKER),
-        at("2026-11-07T21:30:00Z", "hello"),
-        at("2026-11-08T01:00:00Z", ASSIGN_MARKER, "User"),
-      ]),
-    ).toBe(Date.parse("2026-11-07T14:00:00Z"));
-  });
-});
-
-describe("his reply is read back in the same tick", () => {
-  const thread = [
-    {
-      body: assignmentComment({ items: parseAsk(CALLOUT_WITH_OPTIONS) }),
-      user: { type: "Bot", login: "skynet-envoy[bot]" },
-      author_association: "NONE",
-      created_at: "2026-11-07T00:00:00Z",
-    },
-    {
-      id: 9,
-      body: "A",
-      user: { type: "User", login: "ejclark" },
-      author_association: "OWNER",
-      created_at: "2026-11-07T01:00:00Z",
-    },
-  ];
-  const asked = issue({ number: 4, body: CALLOUT_WITH_OPTIONS, assignees: [{ login: "ejclark" }] });
-  const open = (comments: unknown[]) =>
-    gather({
-      now: NOW,
-      rest: (path: string) => {
-        if (path.startsWith("issues?state=open&labels=needs-eric")) return [asked];
-        if (path.includes("/comments")) return comments;
-        return [];
-      },
-    });
-
-  it("gathers the reply, routes a read-back ahead of any new ask, and scores it", () => {
-    const deps = open(thread);
-    expect(deps.replies).toHaveLength(1);
-    const [intent] = routeAssignments({ assignments: deps, now: NOW });
-    expect(intent).toMatchObject({ kind: "readback-eric", number: 4 });
-    expect(intent?.body).toContain("Read as: A.");
-    expect(intent?.body).toContain("match");
-  });
-
-  it("reads nothing when the reply is not an answer", () => {
-    const chatty = [thread[0], { ...thread[1], body: "why is this asked?" }];
-    expect(open(chatty).replies).toEqual([]);
-  });
-});
-
-describe("askOnce carries a read-back out under the lease, once", () => {
-  const intent = {
-    kind: "readback-eric",
-    number: 4,
-    body: "Read as: A.",
-    criterion: 1,
-    why: "x",
-  } as const;
-  const run = (calls: string[]) => (_cmd: string, args: readonly string[]) => {
-    calls.push(args.join(" "));
-    return "";
-  };
-  const ask = {
-    body: ASSIGN_MARKER,
-    user: { type: "Bot" },
-    author_association: "NONE",
-    created_at: "2026-11-07T00:00:00Z",
-  };
-
-  it("clears the label, the assignment and answers", () => {
-    const calls: string[] = [];
-    const line = askOnce(intent, {
-      run: run(calls),
-      retry: <T>(fn: () => T) => fn(),
-      rest: () => [ask],
-      read: () => ({ body: "x" }),
-    } as never);
-    expect(line).toContain("read #4");
-    expect(calls).toHaveLength(3);
-  });
-
-  it("does nothing when another sweep already cleared it", () => {
-    const calls: string[] = [];
-    const line = askOnce(intent, {
-      run: run(calls),
-      retry: <T>(fn: () => T) => fn(),
-      rest: () => [],
-      read: () => ({ body: "x" }),
-    } as never);
-    expect(line).toContain("already cleared");
-    expect(calls).toEqual([]);
-  });
-});
-
-describe("a read-back and a stale unassign never double up", () => {
-  it("plans the read-back only, for an issue whose label a failed read-back already took off", () => {
-    const reply = {
-      number: 4,
-      title: "t",
-      ask: {},
-      card: null,
-      reply: {},
-      answer: { kind: "yes" },
-    };
-    const stale = issue({ number: 4, labels: [], assignees: [{ login: "ejclark" }] });
-    const { actions, holding } = plan({
-      issues: [stale],
-      prs: [],
-      markers: new Set([4]),
-      replies: [reply as never],
-      now: NOW,
-    });
-    expect(actions.map((a) => a.kind)).toEqual(["readback"]);
-    expect(holding).toBe(0);
-  });
-});
-
-// #7939 slice 3: an ask whose class has graduated (docs/process/ALIGNMENT.md rule 3) is decided by a
-// session at its predicted answer and reported in Headlines, never assigned. Rule 4's classes stay
-// his even when a hand-edited table lists them.
-describe("plan: a graduated class is decided, not asked", () => {
-  const ARCHIVE = [
-    "> [!IMPORTANT]",
-    "> **Needs from you**",
-    "> 1. Archive this session? — its PRs are closed",
-    ">    - A (predicted, high): archive",
-    ">    - B: keep it open",
-  ].join("\n");
-  const archiveAsk = issue({ number: 70, title: "archive check", body: ARCHIVE });
-
-  it("routes a fresh ask of a graduated class to a session, with no assignment and no needs-you line", () => {
-    const planned = plan({ issues: [archiveAsk], graduated: ["session housekeeping"], now: NOW });
-    expect(planned.actions).toEqual([]);
-    expect(planned.needsYou).toEqual([]);
-    expect(planned.needsSession).toEqual([
-      expect.objectContaining({
-        number: 70,
-        why: expect.stringContaining('graduated class "session housekeeping"'),
-      }),
-    ]);
-  });
-
-  it("asks as before when the class has not graduated, or the ask carries no prediction", () => {
-    expect(plan({ issues: [archiveAsk], now: NOW }).actions.map((a) => a.number)).toEqual([70]);
-    const unpredicted = issue({ number: 71, title: "archive check", body: CALLOUT });
-    const planned = plan({ issues: [unpredicted], graduated: ["session housekeeping"], now: NOW });
-    expect(planned.actions.map((a) => a.number)).toEqual([71]);
-  });
-
-  it("never lets rule 4's class past him, even listed as graduated", () => {
-    const breaker = issue({ number: 72, body: CALLOUT_WITH_OPTIONS });
-    const planned = plan({ issues: [breaker], graduated: ["bot safety rules"], now: NOW });
-    expect(planned.actions.map((a) => a.number)).toEqual([72]);
-    expect(planned.needsSession).toEqual([]);
-  });
-
-  it("reads the class the ask states, so an ask the keywords cannot place still graduates", () => {
-    const stated = ARCHIVE.replace(
-      ">    - A (predicted, high)",
-      ">    - Class: session housekeeping\n>    - A (predicted, high)",
-    ).replace("Archive this session?", "Close out the old branch?");
-    const planned = plan({
-      issues: [issue({ number: 74, title: "tidy", body: stated })],
-      graduated: ["session housekeeping"],
-      now: NOW,
-    });
-    expect(planned.needsSession.map((n) => n.number)).toEqual([74]);
-  });
-
-  it("lets the keywords veto a stated reversible class when they land on rule 4", () => {
-    const lie = ARCHIVE.replace(
-      ">    - A (predicted, high)",
-      ">    - Class: session housekeeping\n>    - A (predicted, high)",
-    ).replace("Archive this session?", "Raise the spend cap?");
-    const planned = plan({
-      issues: [issue({ number: 75, title: "tidy", body: lie })],
-      graduated: ["session housekeeping"],
-      now: NOW,
-    });
-    expect(planned.actions.map((a) => a.number)).toEqual([75]);
-    expect(planned.needsSession).toEqual([]);
-  });
-
-  it("leaves an ask he already holds with him", () => {
-    const held = issue({
-      number: 73,
-      title: "archive check",
-      body: ARCHIVE,
-      assignees: ["ejclark"],
-    });
-    const planned = plan({ issues: [held], graduated: ["session housekeeping"], now: NOW });
-    expect(planned.needsYou.map((n) => n.number)).toEqual([73]);
   });
 });

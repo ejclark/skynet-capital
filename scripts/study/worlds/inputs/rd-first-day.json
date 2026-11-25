@@ -1,0 +1,22 @@
+{
+  "$comment": "World 'rd-first-day' (#8005, R&D), layered over rd-today: the same Monday, and Casey's first day. Casey was invited last week and linked a paper account this morning: cash only, nothing bought, no bot of their own, nothing watched, no view stated, no playbook drafted. So R&D's Playbooks has nobody of Casey's to subscribe, and every 'your' list is empty. The account's history is its opening balance at the link and now (book.mjs derives the second).",
+  "base": "rd-today",
+  "members": [
+    { "email": "eric@study.world", "name": "Eric", "owns": ["eric", "sauron"] },
+    { "email": "jordan@study.world", "name": "Jordan", "owns": ["jordan", "day-trader"] },
+    { "email": "casey@study.world", "name": "Casey", "owns": ["casey"] }
+  ],
+  "participants": {
+    "casey": {
+      "displayName": "Casey",
+      "kind": "human",
+      "cash": 25000,
+      "realizedPl": 0,
+      "positions": []
+    }
+  },
+  "history": {
+    "$comment": "Casey's account from the link this morning: its opening balance, then now (derived as cash, since nothing is held).",
+    "casey": [{ "at": "@0d 09:40", "equity": 25000 }, { "at": "@now", "equity": 0 }]
+  }
+}

@@ -12,6 +12,7 @@ import { join } from "node:path";
 import { buildAuthoredPlaysWire } from "../autonomous/authored-plays-wire.js";
 import { buildShadowOrders, type ShadowReport } from "../autonomous/authored-shadow-wire.js";
 import { stampCredentialVersions } from "../autonomous/bot-controls.js";
+import type { BotsVitals } from "../autonomous/bots-vitals-wire.js";
 import type { CondScoutSnapshot } from "../autonomous/cond-scout-wire.js";
 import type { BotMode, PersonaGateVerdict } from "../autonomous/controls-poll-wire.js";
 import { buildConvictionsWire } from "../autonomous/convictions-wire.js";
@@ -125,6 +126,12 @@ export interface InsightsBridgeHandle {
   /** The bots app's env house roster as its most recent poll reported it (#4650) — re-read from
    *  every poll like `botsGate`, so a bots build that stops reporting stops being quoted. */
   readonly readHouseRoster: () => HouseRosterReport | undefined;
+  /** The bots process's pulse as of its most recent poll (#4220, `bots-vitals-wire.ts`): sha,
+   *  boot, bridge, last poll, tick, eval and order, per bot. In memory only — a dashboard restart
+   *  reads "no vitals" until the next poll (~30s), the honest answer. `undefined` from an older
+   *  bots build or a malformed header; re-read from every poll like `botsGate`. Behind the invite
+   *  gate when rendered (#1307 slice 2); no route serves it yet. */
+  readonly botsVitals: () => BotsVitals | undefined;
 }
 
 export interface CredentialsBridgeDeps {
@@ -183,6 +190,7 @@ export function startInsightsBridge(
   let botsGate: readonly PersonaGateVerdict[] | undefined;
   let botsProcessMode: BotMode | undefined;
   let houseRoster: HouseRosterReport | undefined;
+  let botsVitals: BotsVitals | undefined;
   let condScout: CondScoutSnapshot | undefined;
   let authoredShadow: ShadowReport | undefined;
   // The drafts in a shadow test go out on every poll, read fresh like the subscriptions above.
@@ -237,6 +245,9 @@ export function startInsightsBridge(
       botsGate = report.gate;
       botsProcessMode = report.processMode;
       houseRoster = report.houseRoster;
+      // Latest wins, and a poll without vitals clears them: an old build or a garbled header is
+      // "no vitals", which the panel renders red (#1307 slice 2), never the last green it saw.
+      botsVitals = report.vitals;
       for (const line of seed(report)) console.log(line);
     },
     ...(credentialsDeps && botCredentialsSecret
@@ -265,6 +276,7 @@ export function startInsightsBridge(
     readCondScout: () => condScout,
     readAuthoredShadow: () => authoredShadow,
     readHouseRoster: () => houseRoster,
+    botsVitals: () => botsVitals,
     ...(decisionDb
       ? {
           readDecisions: async (personaId, page) =>

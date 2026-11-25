@@ -53,3 +53,23 @@
 .receipt .wo-notice:empty {
   display: none;
 }
+/* "Email me when it fills" (#8251): the armed state is a check glyph and a sentence — never a
+ * tone on its own. The address wraps rather than pushing the card wider at 390. */
+.receipt-watch,
+.receipt-watch-off {
+  margin: 0;
+}
+.receipt-watch {
+  font-weight: 600;
+}
+.receipt-watch-to {
+  overflow-wrap: anywhere;
+}
+.receipt-watch-arm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.receipt-watch-arm .tkt-note {
+  margin: 0;
+}

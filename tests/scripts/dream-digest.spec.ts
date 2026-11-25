@@ -116,6 +116,28 @@ describe("memory review digest", () => {
     });
   });
 
+  // #8231: "claude-code #1234" used to read the open/closed state of this repo's #1234.
+  it("does not take another repo's issue for one of ours", () => {
+    const issues = (text: string) => memoryClaims(text).issues;
+    expect(issues("claude-code #1234 and anthropics/claude-code #2345 track it")).toEqual([]);
+    expect(issues("upstream anthropics/claude-code#3456 or its PR (claude-code #4567)")).toEqual(
+      [],
+    );
+    expect(issues("https://github.com/anthropics/claude-code/issues/5678")).toEqual([]);
+    expect(issues("after #5135, see (#6001) and skynet-capital #6002")).toEqual([5135, 6001, 6002]);
+  });
+
+  // #8343: the repo word matched a lone `-`, so a list bullet or a dash separator dropped the ref.
+  it("keeps a bare reference after a dash", () => {
+    const issues = (text: string) => memoryClaims(text).issues;
+    expect(issues("# notes\n- #5850 scan findings: file as needs-eric issues\nsee #6001")).toEqual([
+      5850, 6001,
+    ]);
+    expect(issues("scan findings - #5850")).toEqual([5850]);
+    expect(issues("- owner/other-repo#123 and - claude-code #4567")).toEqual([]);
+    expect(issues("- ejclark/skynet-capital #6002")).toEqual([6002]);
+  });
+
   it("finds the npm scripts a memory tells a session to run", () => {
     expect(
       memoryClaims("Run `npm run -s issues -- update 4` then npm run steer:build").npmScripts,

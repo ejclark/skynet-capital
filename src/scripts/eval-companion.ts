@@ -1,4 +1,5 @@
 import { COMPANION_FIXTURES } from "../evals/companion/fixtures.js";
+import { COMPANION_GAME_MASTER_FIXTURES } from "../evals/companion/game-master-fixtures.js";
 import { formatCompanionReport, runCompanionEval } from "../evals/companion/run-eval.js";
 import { COMPANION_TOOL_FIXTURES } from "../evals/companion/tool-fixtures.js";
 
@@ -19,7 +20,12 @@ if (!apiKey) {
 }
 
 // The tool-use fixtures (#7286 slice 5) run beside the main suite, scored on their calls too.
-const fixtures = [...COMPANION_FIXTURES, ...COMPANION_TOOL_FIXTURES];
+// The game-master scene fixtures (#8191) run as scene turns, scored the same way.
+const fixtures = [
+  ...COMPANION_FIXTURES,
+  ...COMPANION_TOOL_FIXTURES,
+  ...COMPANION_GAME_MASTER_FIXTURES,
+];
 const report = await runCompanionEval(fixtures, apiKey, undefined, undefined, (line) =>
   console.log(line),
 );

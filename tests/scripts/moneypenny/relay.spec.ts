@@ -407,6 +407,24 @@ describe("relay — a remainder the closing PR built", () => {
     expect(finalSliceBy(issue5214([prRef({ body })]))).toBeNull();
   });
 
+  // #8370: #8310 said "Part of #8256 (slice 1 of 2)" in its Summary and quoted "`Closes #8256`"
+  // in a Follow-ups line; GitHub closed #8256 from the squash commit, and the relay read the
+  // keyword as "this was the last slice" and cleared `next-slice` instead of re-filing slice 2.
+  it("relays when the closing PR also says Part of the issue — it declared itself non-final (#8370)", () => {
+    const body =
+      "## Summary\n\n- Part of #5214 (slice 1 of 2): the workflow files.\n\n<details>\n\n" +
+      "### Follow-ups\n\n- slice 2: the script (writes `Closes #5214` when every row is answered)\n</details>\n";
+    const issue = issue5214([prRef({ body })]);
+
+    expect(finalSliceBy(issue)).toBeNull();
+    expect(only(routeRelay({ closedWithRemainder: [issue] })).kind).toBe("relay-remainder");
+  });
+
+  it("still reads a final slice that also says `slice 2 of #n` as the remainder landing", () => {
+    const body = "- Closes #5214 — slice 2 of #5214, the last one.";
+    expect(finalSliceBy(issue5214([prRef({ body })]))).toBe(6012);
+  });
+
   it("relays when the PR only says Part of — an early slice never closes the issue", () => {
     const issue = issue5214([prRef({ body: "- Part of #5214 — slice 1." })]);
 

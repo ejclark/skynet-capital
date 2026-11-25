@@ -179,6 +179,37 @@ describe("GET /api/trade/option-positions", () => {
     });
   });
 
+  it("says the read failed on an error-tagged hub row, never ok with no rows (#8334)", async () => {
+    const asked: string[] = [];
+    const client = {
+      getContractSnapshots: (symbols: string[]) => {
+        asked.push(...symbols);
+        return Promise.resolve(new Map());
+      },
+      getUnderlyingPrice: () => Promise.resolve(undefined),
+    };
+    // What `degraded()` builds when the broker read fails: no positions, zero cash, and the error.
+    const failed = { id: "human-ann", cash: 0, positions: [], error: "broker read timed out" };
+    const { res, out } = fakeRes();
+    await serveOptionPositionsApi(
+      get("/api/trade/option-positions?participantId=human-ann"),
+      res,
+      "/api/trade/option-positions",
+      config({
+        hub: { getState: () => ({ participants: [failed] }) },
+        optionsClientFor: () => client,
+      }),
+      ann,
+    );
+    expect(out.status).toBe(200);
+    expect(JSON.parse(out.body ?? "{}")).toEqual({
+      available: false,
+      reason: "read-failed",
+      rows: [],
+    });
+    expect(asked).toEqual([]);
+  });
+
   it("claims only its path", async () => {
     const { res } = fakeRes();
     expect(

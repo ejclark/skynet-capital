@@ -38,6 +38,9 @@ export interface PlaysIndex {
   /** The feedback gate (#1119), while it holds: every rung locked for one reason, stated. */
   readonly gate?: { readonly reason: string; readonly note: string };
   readonly nextUp?: string;
+  /** The exit-at-entry setting admits this session (#8249): the stock form offers Stop-Limit and
+   *  "Add an exit". Absent means it doesn't, and the form is exactly as before. */
+  readonly exitAtEntry?: boolean;
   readonly plays: readonly PlayInfo[];
 }
 
@@ -247,7 +250,12 @@ export type OptionPositions =
       /** Absent when SPY's price couldn't be read — nothing could be weighted. */
       readonly betaWeighted?: BetaWeightedBook;
     }
-  | { readonly available: false; readonly reason: "unlinked"; readonly rows: readonly [] };
+  | {
+      readonly available: false;
+      /** `read-failed`: the account's broker read failed, so what it holds is unknown (#8334). */
+      readonly reason: "unlinked" | "read-failed";
+      readonly rows: readonly [];
+    };
 
 export const fetchOptionPositions = (participantId: string): Promise<OptionPositions> =>
   getJson(`/api/trade/option-positions?participantId=${encodeURIComponent(participantId)}`);

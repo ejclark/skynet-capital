@@ -81,6 +81,7 @@ async function runFixture(
       messages: [...modelHistory],
       context: fixture.context,
       ...(toolUse ? { participantId: FIXTURE_PARTICIPANT_ID } : {}),
+      ...(fixture.gameMaster ? { gameMaster: true } : {}),
     };
     const callsBefore = sink.length;
     let text = "";

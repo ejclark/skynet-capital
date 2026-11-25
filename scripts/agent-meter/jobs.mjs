@@ -241,6 +241,14 @@ export function flowJob(flow) {
   row.notes.push(
     `${flow.managing} of ${flow.typed} typed messages (${flow.share}%) manage a session, by rules that undercount, so compare this with earlier readings only`,
   );
+  // Which sessions the share is of, and whether the baseline was read over the same ones (#6702).
+  if (flow.read) {
+    row.notes.push(
+      `sessions read: ${flow.read.sessions} (${flow.read.laptop} laptop, ${flow.read.cloud} cloud)`,
+    );
+  }
+  if (flow.baseline)
+    row.notes.push(`against the baseline: ${flow.baseline.verdict}, ${flow.baseline.line}`);
   return row;
 }
 

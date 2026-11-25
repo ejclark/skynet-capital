@@ -9,6 +9,10 @@ export interface NewsArticle {
   readonly summary: string;
   readonly symbols: readonly string[];
   readonly createdAt: string;
+  /** The story's own link, as the feed sent it. The sentiment path never reads it (#8203). */
+  readonly url?: string;
+  /** The publisher the feed names (e.g. "benzinga"). The sentiment path never reads it (#8203). */
+  readonly source?: string;
 }
 
 interface RawArticle {
@@ -17,6 +21,8 @@ interface RawArticle {
   readonly summary?: string;
   readonly symbols?: string[];
   readonly created_at?: string;
+  readonly url?: string;
+  readonly source?: string;
 }
 
 /**
@@ -31,8 +37,10 @@ export class AlpacaNewsClient {
     this.transport = transport;
   }
 
-  async getNews(symbols: readonly string[], limit = 20): Promise<NewsArticle[]> {
-    const query = `?symbols=${symbols.join(",")}&limit=${limit}&sort=desc`;
+  /** `start` (ISO-8601) bounds the read to stories since then; the held-news read sends it (#8203). */
+  async getNews(symbols: readonly string[], limit = 20, start?: string): Promise<NewsArticle[]> {
+    const since = start ? `&start=${encodeURIComponent(start)}` : "";
+    const query = `?symbols=${symbols.join(",")}&limit=${limit}&sort=desc${since}`;
     const response = await this.transport.get(`/v1beta1/news${query}`);
     if (response.status < 200 || response.status >= 300) {
       throw new AlpacaApiError(response.status, response.body);
@@ -44,6 +52,8 @@ export class AlpacaNewsClient {
       summary: article.summary ?? "",
       symbols: article.symbols ?? [],
       createdAt: article.created_at ?? "",
+      ...(typeof article.url === "string" ? { url: article.url } : {}),
+      ...(typeof article.source === "string" ? { source: article.source } : {}),
     }));
   }
 }

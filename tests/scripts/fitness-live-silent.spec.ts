@@ -26,7 +26,7 @@ import {
 //   node scripts/fitness-audit.mjs --bugs <file> --spec tests/scripts/fitness-live-silent.spec.ts \
 //     --with src/alerts/bot-watch.ts --with src/domain/market-session.ts \
 //     --with src/domain/market-calendar.ts --with src/domain/intl-format.ts \
-//     --with scripts/deploy-lag.mjs --with scripts/bot-relevant.mjs --with scripts/fitness-rungs.mjs \
+//     --with scripts/deploy-lag.mjs --with scripts/bot-relevant.mjs --with scripts/fitness-rungs.mjs --with scripts/fitness-judges.mjs \
 //     --with scripts/journal-tally.mjs --with scripts/journal-tally.d.mts \
 //     --with .dockerignore --with Dockerfile
 
@@ -429,6 +429,9 @@ function verdictAt(stub: string, now: number) {
         STUB: stub,
         FLY_BIN: join(stub, "fly"),
         GH_BIN: join(stub, "gh"),
+        // fitness.mjs spawns deploy-lag.mjs, which runs bare `gh`: without the stub first on PATH
+        // each run here made 5 live REST calls (#8289 slice 2).
+        PATH: `${stub}:${process.env.PATH}`,
         HOME: stub,
         FITNESS_RETRY_MS: "0",
         FITNESS_SPAWN_MS: "2000",

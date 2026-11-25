@@ -224,7 +224,7 @@ once; this section is only what differs for issues.
 |---|---|
 | Bug on a visual surface | the member's screenshot / clip — already the highest-value field on the form |
 | Plan or multi-slice story | `flowchart` of the slices and what unlocks what — this PR's edges thick |
-| A plan's lifecycle (a gate, a mode, a rung) | `stateDiagram-v2` — each guarded transition is one EARS line |
+| A plan's lifecycle (a gate, a mode, a rung) | `stateDiagram-v2` — each guarded transition is one EARS line; `npm run ears:lifecycle -- --stdin` writes them (`/ears`) |
 | New route or request path | `sequenceDiagram` |
 | Gate, mode, or lifecycle change | `stateDiagram-v2` |
 | A proposed, not-yet-built diagram | any of the above with `config: { look: handDrawn }` — the sketch register — captioned as proposed |
@@ -279,17 +279,19 @@ unclaimed until `feedback` was hand-added, the same gap #5332 closed for `bug` a
 filing at capture (`FEEDBACK.md` → *What the lane will build*). **Beyond that, a session applies
 `ready` when the path is clear and Eric's flip would only be a rubber stamp** (Eric, 2026-10-19:
 "if there's a clear path forward and moving forward boils down to … me rubber stamping.. fuck the
-red tape"). *Clear* means all four, written down: acceptance criteria present; size S or M, or the
+red tape"). *Clear* means all five, written down: acceptance criteria present; size S or M, or the
 next slice a plan's state block already names; no open fork only he can settle and nothing in
-`envelope.json`'s protected class; not blocked by an open issue. And it is *earned*, never asserted:
+`envelope.json`'s protected class; not blocked by an open issue; and an IA home, written first —
+the `docs/IA.md` §5 group the build extends, or "no new place" (#8005 slice 2; a new place no group
+holds is Eric's to place). And it is *earned*, never asserted:
 an independent verifier tried to refute the call and could not. The flip is a footed comment (the
-four checks, the verifier's line) and then the label, so the label stays an authorization with a
-paper trail rather than a formality — what it never becomes is a way to keep a loop fed. Falsifier:
+five checks, the verifier's line) and then the label, so the label stays an authorization with a
+paper trail rather than a formality — what it never becomes is a way to keep a loop fed. **A pile is a reason too** (Eric, 2026-11-23: "If backlog piles up, it's indication of problems that ... directly impedes development"; #8037): the flip is also due when more than 20 `feedback` issues wait for `ready` or the oldest has waited over 14 days, with the lanes fed, and it then lists `plan` issues nobody has touched for 14 days beside them. That is the same judgment on a different clock, never a lower bar: the five checks and both refuters still decide each issue. Falsifier:
 if by 2026-11-19 three session-readied issues end `needs-eric`, closed `not_planned`, or in a
 reverted build, narrow this back to his flip. **Run it by name:** `.claude/workflows/clear-path-flip.js`
-(`{issues: [...]}`) judges the four checks, sends each positive call to two independent refuters
+(`{issues: [...]}`) judges the five checks, sends each positive call to two independent refuters
 (envelope paths · the thread) and returns survivors; `node scripts/clear-path-post.mjs <result.json>`
-posts only those, adding `feedback` to a non-plan issue that lacks it. `node scripts/flip-due.mjs` says when a run is due (the lanes' pullable count is under the dial's `inFlightCap`) and which up to 6 issues to hand it; `clear-path-post` records each refusal so they sit out 7 days (#7311). A member's freeform filing gets the same judgment the moment it lands, one issue at a time, from `moneypenny-events.yml`'s `assess-*` jobs (#7544; `FEEDBACK.md` → *What the lane will build*): starvation is the batch's clock, and a member waiting to hear where they stand is this one's. A `plan` issue has a second, equivalent door: a ready-shaped comment from
+posts only those, adding `feedback` to a non-plan issue that lacks it. `node scripts/flip-due.mjs` says when a run is due (the lanes' pullable count is under the dial's `inFlightCap`, or the pile is over the line above) and which up to 6 issues to hand it; `clear-path-post` records each refusal so they sit out 7 days (#7311). A member's freeform filing gets the same judgment the moment it lands, one issue at a time, from `moneypenny-events.yml`'s `assess-*` jobs (#7544; `FEEDBACK.md` → *What the lane will build*): starvation is the batch's clock, and a member waiting to hear where they stand is this one's. A `plan` issue has a second, equivalent door: a ready-shaped comment from
 an OWNER/MEMBER/COLLABORATOR (`isReadySignal()` in `scripts/moneypenny/plan-claim.mjs` — "ready",
 "go", "ready — use the proposed defaults"). Neither door retires the other. A comment carrying the
 Claude footer counts only when its first line is exactly `ready — take slice 1 per the state block`,
@@ -402,6 +404,7 @@ decayed to 4/126 PR bodies, every gated one held).
 | mermaid | every block parses under GitHub's own Mermaid (`scripts/mermaid-lint.mjs`) | a syntax error renders as the opening frame |
 | `needs-eric` decision | labelled `needs-eric` ⇒ a `Needs from you` callout above the fold, ≥1 numbered item | the label promises a decision; the callout is where it has to live |
 | `bottleneck` baseline | labelled `bottleneck` ⇒ a `**Before:**` line with a number, or `unmeasured — <why>` | a fix nobody measured before cannot be shown to have worked |
+| `pitch` shape | labelled `pitch` ⇒ its five lines filled (a `$` in Monthly cost, a number in Rolls back if), `needs-eric`, and `- Class: spend limits` in the callout | a spend ask he cannot price, compare or undo is not a decision he can make |
 | raw URLs | SHA-pinned | branch URLs 404 at squash-merge |
 | title | imperative, ≤120 chars (past ~80 only a note: mobile list views truncate), not `Fix bug`-class | Google's rule, their anti-patterns |
 
@@ -445,6 +448,48 @@ fan-out"), so it carries the measurement, in two lines of the body:
   before 2026-10-01 are reported as legacy; the research grind backfills their Before line when
   it picks one up (`docs/grind/research-bottleneck.instructions.md`, step 2).
 - First instance: #3926, the CI-failure recurrence storm.
+
+## Pitch issues — a spend ask in five lines (#8201)
+
+Anything that costs Eric money out of pocket (a bigger server, more tokens, a raised cap) reaches
+him as a **pitch** and a conversation, never as a build (Eric, 2026-11-23, relayed on #8161). The
+rule lives in [`docs/process/WORKING-AGREEMENTS.md`](process/WORKING-AGREEMENTS.md) → *Spend arrives
+as a pitch*; this is its shape. A pitch is an issue labelled `pitch` **and** `needs-eric`, with these
+five lines above the fold, one line each so they read on a phone (no table that scrolls sideways):
+
+```text
+- **Who wants it:** <a seat, a loop, or a member by `member-<id>` label, never a name>
+- **Monthly cost:** $<n>/month, <how it was priced>  (or `$0 out of pocket, <what it uses instead>`)
+- **What it buys:** <number and unit>, <how it is measured>
+- **Free alternative first:** <what was tried, #N, what it moved>  (or `not tried, <why>`)
+- **Rolls back if:** <number> by <date>, <what reads it>
+```
+
+Plus the `Needs from you` callout in rule 8's grammar, so the assignment card carries the whole ask:
+
+```text
+> [!IMPORTANT]
+> **Needs from you**
+> 1. <the ask as a closed question> — <why, trailing>
+>    - A (predicted, <confidence>): approve for <period>
+>    - B: try the free alternative first
+>    - Class: spend limits
+>    - On silence: nothing is spent; it stays assigned to you
+```
+
+- **`issue-lint` refuses** a `pitch` body missing any of the five lines (one problem per line, named),
+  a Monthly cost with no `$` figure, a Rolls back line with no number, the label without
+  `needs-eric`, and a callout without `Class: spend limits` (`scripts/pitch-issue.mjs`).
+- **Nothing new routes it.** `needs-eric` parks it, so nothing builds a pitch before his answer;
+  `assignments.mjs` assigns him with the ask card; `answer-readback.mjs` reads his `A`, `yes` or
+  `not now`; and `spend limits` is irreversible in `alignment-graduation.mjs`, so a pitch never
+  graduates to decide-and-report.
+- **After a yes,** the protected change (a cap in `work-mode.json`, a model dial) is staged as one
+  held item on the platter, tracked on the pitch. After a `not now`, nothing changes and the pitch
+  stays open with his answer logged.
+- **The lane judges what is spend; the lint checks only the shape.** No keyword guess files a pitch.
+  The spend line itself is drawn in `.github/prompts/feedback-build.md` and `envelope.json`.
+- Filed with `node scripts/issues.mjs create --labels pitch,needs-eric`.
 
 ## The state block — a plan issue's context store (#3765)
 

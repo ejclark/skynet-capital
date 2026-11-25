@@ -68,6 +68,12 @@ export const DEFAULT_ROOT_ON_FLY = "/data";
 export const DERIVED_STORES = {
   // Screenshots attached in Moneypenny's chat (#6007): signed-in members only, capped at 100 MB.
   SKYNET_COMPANION_SCREENSHOTS_DIR: "companion-screenshots",
+  // The day each member last opened the app and the screens they landed on (#8169): one small
+  // file per day, 180 days kept. Losing it on deploy would blank the retention read it exists for.
+  SKYNET_MEMBER_VISITS_DIR: "member-visits",
+  // A member's private experience and trade notes from the wish journal (#8190): one JSONL file
+  // per member. A wish is not here; it is a filing, kept in the feedback log.
+  SKYNET_JOURNAL_DIR: "journal",
 } as const satisfies Readonly<Record<string, string>>;
 
 /**

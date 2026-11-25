@@ -2,16 +2,20 @@ import type { OrderForecast } from "../domain/types.js";
 import type { HeartbeatView, PlaybookHeartbeat } from "../observatory/bot-heartbeat-view.js";
 import type { CheckWeekView } from "../observatory/check-week-view.js";
 import type { DecisionCycleView } from "../observatory/decision-json-view.js";
-import { withoutPlaybookNames } from "../observatory/playbook-name-redaction.js";
+import {
+  withoutLegacyRetireRules,
+  withoutPlaybookNames,
+} from "../observatory/playbook-name-redaction.js";
 import type { SafeguardLadderEntry } from "../observatory/safeguard-ladder-view.js";
 import type { ThesisView } from "../observatory/thesis-json-view.js";
-import { withoutOwnerReasoning } from "../observatory/wire-reasoning.js";
+import { withoutBrokerReasoning, withoutOwnerReasoning } from "../observatory/wire-reasoning.js";
 import { resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 
 /**
- * WHICH PLAYBOOKS A BOT RUNS IS ITS OWNER'S TO SEE (#885, Eric 2026-08-29: "at this time, we do
- * not show what playbooks others are using"; docs/IA.md §5.2 — a non-owned bot's Heartbeat shows
+ * WHAT A BOT'S OWNER KEEPS (#885, Eric 2026-08-29: "at this time, we do not show what playbooks
+ * others are using"; narrowed for bot accounts by #8254 — `playbookRead` below says who reads what,
+ * and the strips here serve its `none` read; docs/IA.md §5.2 — a non-owned bot's Heartbeat shows
  * "state + verdict words, playbook ids withheld"). The `/u/:id` pages lifted Heartbeat's verdict
  * table, the decision outcome chips and Activity's "Playbook" row onto any member's view of any
  * bot, so the desk JSON family strips the playbook key before it leaves the server for a session
@@ -30,6 +34,26 @@ import type { DashboardServerConfig } from "./dashboard-server-config.js";
  * `desk-events-route.ts`): with no OAuth configured there is no one to withhold from (the local,
  * single-operator run); otherwise the session's full owned set from `resolveOwnedIds`.
  */
+
+/**
+ * WHAT A VIEWER READS OF AN ACCOUNT'S PLAYBOOKS (#8254 PR 2). #885's rule was written when no
+ * screen watched the bots; Eric's newer call (2026-11-10, #6007: "user account and trade information
+ * is visible to other users for the sake of gameplay") covers a bot's strategy, and a watching
+ * screen that cannot say what a bot runs cannot say why it skipped. So:
+ *
+ * - `owner` — everything, as before.
+ * - `names` — a bot account read by any other signed-in member: playbook ids, modes and strategy tags ride;
+ *   the broker's words (#4650), a playbook's retire rule (#5043) and the thesis owner fields (the
+ *   owner's drawn play) stay the owner's.
+ * - `none` — a human account read by a non-owner, or any read from the pre-auth side of the invite
+ *   gate: #885 unchanged, every name withheld.
+ */
+export type PlaybookRead = "owner" | "names" | "none";
+
+export function playbookRead(kind: string, owner: boolean, member: boolean): PlaybookRead {
+  if (owner) return "owner";
+  return kind === "bot" && member ? "names" : "none";
+}
 
 export function ownsDesk(
   id: string,
@@ -143,6 +167,45 @@ export function withoutCycleOwnerFields(cycles: readonly DecisionCycleView[]): (
     })),
     cycles,
   );
+}
+
+/** Decision cycles as any member reads a bot's (#8254): the playbook chips stay; the broker's words
+ *  and each forecast's retire rule go. */
+export function withoutCycleBrokerFields(cycles: readonly DecisionCycleView[]): (Omit<
+  DecisionCycleView,
+  "outcomes"
+> & {
+  readonly outcomes: readonly (Omit<Outcome, "brokerReason" | "forecast"> & {
+    readonly forecast?: Omit<OrderForecast, "retireRule">;
+  })[];
+})[] {
+  return withoutLegacyRetireRules(
+    cycles.map((cycle) => ({
+      ...cycle,
+      outcomes: cycle.outcomes.map(({ brokerReason: _b, forecast, ...outcome }) =>
+        forecast ? { ...outcome, forecast: withoutRetireRule(forecast) } : outcome,
+      ),
+    })),
+  );
+}
+
+/** A bot's thesis as any member reads it (#8254): each marker keeps its playbook; its decision loses
+ *  the broker's words and the retire rule, and the owner's drawn play stays the owner's. */
+export function withoutThesisBrokerFields(thesis: ThesisView): Omit<
+  ThesisView,
+  "markers" | "play"
+> & {
+  readonly markers: readonly (Omit<ThesisView["markers"][number], "reasoning"> & {
+    readonly reasoning?: ReturnType<typeof withoutBrokerReasoning>;
+  })[];
+} {
+  const { play: _play, ...rest } = thesis;
+  return withoutLegacyRetireRules({
+    ...rest,
+    markers: thesis.markers.map(({ reasoning, ...marker }) =>
+      reasoning ? { ...marker, reasoning: withoutBrokerReasoning(reasoning) } : marker,
+    ),
+  });
 }
 
 type WithheldMarker = Omit<ThesisView["markers"][number], "reasoning" | "playbookId"> & {

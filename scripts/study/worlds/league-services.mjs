@@ -30,6 +30,7 @@ import { buildOpsStatus } from "../../../src/server/ops-status-service.ts";
 import { createProgressionService } from "../../../src/server/progression-service.ts";
 import { isOccSymbol } from "../../../src/trading/option-symbols.ts";
 import { INSTANT } from "./instant.mjs";
+import { memberFilings } from "./member-filings.mjs";
 
 const AT = new Date(INSTANT);
 const REPO = "ejclark/skynet-capital";
@@ -125,7 +126,7 @@ function progression(book) {
   return createProgressionService({
     readEvidence: ladderOf(book),
     readMessages: async () => [],
-    readFeedback: async () => [],
+    readFeedback: memberFilings(book.feedback).readFeedback ?? (async () => []),
     now: () => new Date(AT),
   });
 }
@@ -174,10 +175,13 @@ export function leagueServices(book) {
     readAllLadderProgress: async () => [],
     readLadderEvidence: ladderOf(book),
     readMergedPullRequests: async () => [],
-    // Feedback is switched on (production has its token); this world's members have filed nothing.
+    // Feedback is switched on (production has its token). A world's members have filed nothing
+    // unless its input says what they filed (`feedback`, member-filings.mjs): then the log is theirs
+    // and each filing's status is production's own read of GitHub's answer.
     submitFeedback: refuse("submitting feedback"),
     submitFollowup: refuse("a feedback follow-up"),
     readFeedback: async () => [],
+    ...memberFilings(book.feedback),
     // The Council is on; nobody has spoken this week.
     council: {
       load: () => ({ weeks: {} }),

@@ -90,11 +90,15 @@ async function composeWorld(world, runDir, server) {
   }
   // A world with Moneypenny's chat in members' hands (`chat: true`, #8005) composes her index as
   // production's with the companion on; a member's turns are answered by world-chat.mjs, never here.
-  const config = world.chat
-    ? { ...server.serverConfig(book), companion: chatAnsweredElsewhere }
-    : server.serverConfig(book);
+  const config = {
+    ...server.serverConfig(book),
+    ...(world.chat ? { companion: chatAnsweredElsewhere } : {}),
+    ...(await server.memberStores(book.stores)),
+  };
   // A pinned boot id: the payloads are hashed, and a random one would make every compose differ.
   const channel = server.createBoardChannel("study");
+  // What the world's members saved before the instant, through the real handlers (#8005).
+  await server.replayWrites(book.writes ?? [], { config, channel, ...server });
   const fixtures = world.fixtures(book);
   const manifest = [];
   const missing = [];
@@ -177,6 +181,7 @@ async function composeOne(runDir, name) {
     ...(await import("./day-change.mjs")),
     ...(await import("./fill-sessions.mjs")),
     ...(await import("./server-config.mjs")),
+    ...(await import("./member-stores.mjs")),
     ...(await import("../server-reads.mjs")),
     ...(await import("../../../src/server/board-patch-routes.ts")),
   };

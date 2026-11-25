@@ -324,3 +324,57 @@ this doc goes quiet.
 
 **Last assessed:** 2026-11-23
 <!-- probe-ref: {"symbols":{},"vix":35.89,"daysBand":"low:0+","adjacentIds":["advance-economic-indicators-2026-11-27","advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","china-ga-ge-sb-suspension-expiry-2026-11-27","consumer-confidence-2026-11-24","durable-goods-2026-11-25","eurostat-hicp-final-2026-11-18","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","fomc-minutes-2026-11-18","gdp-q3-2026-second-2026-11-25","housing-starts-2026-11-18","industrial-production-annual-revision-2026-11-24","japan-cpi-2026-11-20","japan-cpi-tokyo-flash-2026-11-27","jgb-20y-auction-2026-11-18","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-1-5y-2026-11-20","jgb-liquidity-enhancement-5-11y-2026-11-27","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","opex-2026-11-20","pce-2026-11-25","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","retail-ecommerce-q3-2026-11-19","sifma-bond-early-close-2026-11-27","sp-global-flash-us-pmi-2026-11-23","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25"],"screenStreak":0,"blocked":[]} -->
+
+## Outcome
+
+**Close-out (2026-11-24, D+1, 00:01 UTC = 09:01 JST; inside `closeOutWithinDays`, ceiling 11-29).** Instrument
+caches were busted first and every number below was read live this session (Yahoo `^N225`/`^GSPC`/`^VIX`
+daily bars, JPX pages re-fetched), not recalled. Hard limits honoured: no trade, no calendar edit, the entry
+stays as filed. Nothing was held, so there is no P/L to score.
+
+**The event happened as filed.** Tokyo was dark in every listed product on **Mon 2026-11-23**.
+- JPX holiday-trading page (HTTP 200, 48,373 B, `Update : Jun. 26, 2026`) still reads `November 23 | Mon. |
+  Labor Thanksgiving Day | Not Open⁶ | Finalized`, footnote 6 verbatim (FY2026 BCP test, Nov 21 through 23).
+- The finalized xlsx (HTTP 200, 11,884 B, 77 entries, 16 `Not Open`) carries serial 46349 = `Labor
+  Thanksgiving Day | Not Open`, unchanged from the 2026-09-09 read.
+- The tape agrees: `^N225` has **no 2026-11-23 bar**, the series runs 11-20 (56,436.65) straight to 11-24.
+  That is the missing-bar test of leg 5 firing as validated, now on this very date. The calendar entry has
+  been `confirmed` since 2026-09-20 (`JPX:` source); the header's `estimate` wording above is the 09-09
+  history and is not edited.
+
+**What the dark day missed.** The US ran a full session carrying the 2y note: `^GSPC` **6,910.39 → 7,237.17
+(+4.73%)** on 11-23 and `^VIX` **35.89 → 26.62 (-9.27 pt)**, a sharp rebound from the 11-20 AI-led rout. That
+whole move is unpriced in Tokyo until the 11-24 cash bar, which is the situation the Tuesday attribution
+trap described, in an extreme regime. The execution guards held as written: no Osaka/TOCOM or JGB-futures
+session ran on the Monday before `jgb-40y-auction-2026-11-25`; JPX states GTC/GTD orders do not expire on a
+`Not Open` day.
+
+**Stance vs outcome.** Stand aside, no position: nothing to score, no guard tripped. Legs 1 and 3
+(the date, the BCP-window mechanism) are borne out by the exchange's own labels on the day. Leg 4's
+live test is still open (below).
+
+**Forward tests: none scored here, on purpose.**
+- **FT-jpx-market-closure-2026-11-23-1** (score by 2026-11-25) keys on the 2026-11-24 `^N225` cash
+  close-to-close. At fetch time that session was **in progress** (`^N225` 11-24 close `null`; the cash
+  close is 06:00 UTC), so there is no settled number. Scoring it from a partial bar or from memory
+  would be falsification, so the row is left `_open_`: the scanner re-dispatches this lane as
+  `forward-test-due` once the score-by arrives. Read that score against the regime above: with the
+  S&P +4.73% unpriced and VIX in the 26-36 range, a print at or above 2.09% is far more likely a
+  regime effect than a blackout one. The row and its line stay unedited and the score must say which.
+- **FT-jpx-market-closure-2026-11-23-2** (score by 2027-01-15) is beyond this window by design and stays
+  `_open_` for the same door. Its premise is intact today: the page still lists `2027-09-20 | Not Open |
+  Scheduled` and `2027-11-23 | Open | Scheduled`.
+- No conviction proposal or declared intent names this event, so `research:claims` has nothing to score.
+
+**Process note (loop census).** The scanner dispatched this close-out one day before FT-1 could be scored:
+`closeOutHold` holds only when *every* pending row is in-window, so FT-2's 2027 date cancels the hold that
+FT-1's 11-25 date alone would have earned. A person (or this session) had to notice. Captured in
+`docs/IDEAS.md` rather than fixed here.
+
+**Last assessed:** 2026-11-24
+<!-- probe-ref: {"symbols":{},"vix":26.62,"daysBand":"low:0+","adjacentIds":["advance-economic-indicators-2026-11-27","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","consumer-confidence-2026-11-24","durable-goods-2026-11-25","fhfa-hpi-2026-11-24","gdp-q3-2026-second-2026-11-25","jgb-40y-auction-2026-11-25","new-home-sales-2026-11-25","pce-2026-11-25","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","treasury-2y-frn-2026-11-24","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25"],"screenStreak":0,"blocked":[]} -->
+
+**Forward-test scoring (2026-11-25, `forward-test-due`).** FT-jpx-market-closure-2026-11-23-1 scored **kill** from Yahoo `^N225` daily bars read live (instrument caches busted first): 2026-11-20 close 56,436.65 → 2026-11-24 close 58,644.63, **+3.91%** against the 2.09% line. Regime named: the gap held one unpriced US session (`^GSPC` +4.73% on 11-23, `^VIX` 35.89 → 26.62 → 26.36 on 11-24) after a -5.1% rout base, so a miss was expected for regime reasons and the bar does not isolate a blackout effect; the kill is recorded as registered and moved to the sweep doc's kill list. FT-2 (score by 2027-01-15) stays `_open_`, not yet due. No conviction proposal or declared intent names this event (both scripts print `[]`), so `research:claims` has nothing to score. Stance unchanged: stand aside, no position; no trade, no calendar edit.
+
+**Last assessed:** 2026-11-25
+<!-- probe-ref: {"symbols":{},"vix":26.36,"daysBand":"low:0+","adjacentIds":["advance-economic-indicators-2026-11-27","beige-book-2026-11-25","durable-goods-2026-11-25","gdp-q3-2026-second-2026-11-25","jgb-40y-auction-2026-11-25","new-home-sales-2026-11-25","pce-2026-11-25","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","treasury-7y-note-2026-11-25"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25"],"screenStreak":0,"blocked":[]} -->

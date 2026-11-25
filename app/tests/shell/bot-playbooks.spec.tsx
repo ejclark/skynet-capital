@@ -278,6 +278,18 @@ describe("BotPlaybooksSection — someone else's bot", () => {
     expect(screen.getByText("Aggressive mode")).toBeInTheDocument();
   });
 
+  it("names each card by its strategy for a member who does not own the bot, and offers no change (#8254)", async () => {
+    next = desk;
+    render(withClient(<BotPlaybooksSection deskId="sauron" botName="Sauron" owned={false} />));
+    expect(await screen.findByText("The pre-print run-up on NVDA")).toBeInTheDocument();
+    expect(
+      screen.getAllByText("Buys before an earnings report, sells before it").length,
+    ).toBeGreaterThan(0);
+    expect(screen.queryByText(/S1-NVDA/)).toBeNull();
+    expect(screen.queryByText(/Change or pause it in R&D/)).toBeNull();
+    expect(screen.queryByText(/is the bot owner's to see/)).toBeNull();
+  });
+
   it("reads the wire a non-owner receives — no ids, no roll call", async () => {
     const { rollCall: _withheld, ...rest } = sauron;
     const anonymous = (sauron.playbooks ?? []).map(({ playbookId: _id, ...v }) => v);

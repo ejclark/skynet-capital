@@ -10,6 +10,7 @@ import { type WorldPatch, WorldPatchChannel } from "../universe/patch-channel.js
 import { projectWorld } from "../universe/project.js";
 import { diffWorld, type WorldCue } from "../universe/world-patch.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
+import type { PartySeats } from "./party-seats.js";
 import { openSseStream, sseFrame } from "./sse.js";
 
 /**
@@ -67,12 +68,17 @@ function toCue(transition: WorldTransition): WorldCue {
  * A newly recorded capital flow (#4563) changes a row's mark, which no field op carries — so it
  * rides the run as a `reframe`, and each open board re-reads `/api/board`. Flows are rare (a member
  * resetting their paper balance), so a full re-read costs nothing worth a new op kind.
+ *
+ * A member taking their seat at the party's table (#8253) is the same kind of change: who sits at
+ * the table is structure, so a gained seat rides the run as a `reframe`. Each tick refreshes the
+ * seats from the journal, so an open board learns of a first fill without a reload.
  */
 export function driveBoardChannel(
   hub: ObservatoryHub,
   channel: BoardPatchChannel,
   ceremonies?: CeremonyChannel,
   flows?: Pick<CapitalFlowReader, "subscribe">,
+  seats?: Pick<PartySeats, "subscribe" | "refresh">,
 ): () => void {
   let prev = hub.getState();
   let prevWorld = projectWorld(prev.participants);
@@ -85,6 +91,7 @@ export function driveBoardChannel(
     // Published even when the WORLD ops are empty: a change the world model doesn't carry (realized
     // P/L, a display-only figure) still moved the board, and the context is what expresses it.
     channel.publish(next.generatedAt, ops, context);
+    if (seats) void seats.refresh(humanIds(next));
   });
   // Ceremonies ride the same seq run so "fire once" is one guarantee, not two. They are flavor over
   // the state, never a change to it, so the context pair is deliberately identical.
@@ -106,12 +113,25 @@ export function driveBoardChannel(
       },
     );
   });
+  const offSeats = seats?.subscribe(() => {
+    const state = hub.getState();
+    channel.publish(
+      state.generatedAt,
+      [{ kind: "reframe", reason: "a member took their seat at the party's table" }],
+      { prev: state, next: state },
+    );
+  });
   return () => {
     offHub();
     offCeremony?.();
     offFlows?.();
+    offSeats?.();
   };
 }
+
+/** The human accounts a seat refresh reads — bots are never party members. */
+export const humanIds = (state: DashboardData): string[] =>
+  state.participants.filter((p) => p.kind === "human").map((p) => p.id);
 
 /** The SSE id a patch carries: `boot:seq`, so a browser's own reconnect header names the run too. */
 const eventId = (boot: string, seq: number) => `${boot}:${seq}`;
@@ -159,9 +179,14 @@ export function streamBoardPatches(
   channel: BoardPatchChannel,
   metric: LeaderMetric,
   compare: Pick<StandingsOptions, "aId" | "bId">,
+  seats?: Pick<PartySeats, "isSeated">,
 ): void {
   openSseStream(res);
-  const opts: StandingsPatchOptions = { metric, ...compare };
+  const opts: StandingsPatchOptions = {
+    metric,
+    ...compare,
+    ...(seats ? { isSeated: seats.isSeated } : {}),
+  };
   const resumeAt = lastEventId(req);
   const { boot } = channel;
 

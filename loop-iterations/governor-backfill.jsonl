@@ -1,2 +1,11 @@
 {"date":"2026-11-02","loop":"governor-backfill","before":37,"after":37,"worth":1,"tokensM":null,"usd":null,"changed":"debt before the first rep"}
 {"date":"2026-11-02","loop":"governor-backfill","before":37,"after":36,"tokensM":2.16,"usd":null,"changed":"behavioral specs for src/evals/companion/fixtures.ts, the replay fixtures the companion eval judges"}
+{"date":"2026-11-23","loop":"governor-backfill","before":44,"after":43,"tokensM":1.85,"usd":null,"changed":"behavioral specs for src/options/trade-suggestions-metrics.ts, the numbers each suggested trade cites"}
+{"date":"2026-11-23","loop":"governor-backfill","before":43,"after":42,"tokensM":1.85,"usd":null,"changed":"behavioral specs for src/server/order-change-review.ts (41 tests), one untested file covered"}
+{"date":"2026-11-24","loop":"governor-backfill","before":43,"after":42,"tokensM":1.84,"usd":null,"changed":"behavioral specs for src/server/campaign-questions-api.ts (37 tests)"}
+{"date":"2026-11-24","loop":"governor-backfill","before":42,"after":41,"tokensM":1.84,"usd":null,"changed":"direct behavioral specs for src/companion/known-problems-tool.ts (32 tests)"}
+{"date":"2026-11-24","loop":"governor-backfill","before":41,"after":40,"tokensM":1.84,"usd":null,"changed":"direct behavioral specs for src/server/option-exit-plan.ts (28 tests)"}
+{"date":"2026-11-24","loop":"governor-backfill","before":40,"after":39,"tokensM":1.67,"usd":null,"changed":"added behavioral specs for src/options/drawdown-base-rates.ts, one untested file covered"}
+{"date":"2026-11-24","loop":"governor-backfill","before":39,"after":38,"tokensM":1.67,"usd":null,"changed":"behavioral specs for src/domain/ticker-directory/technology.ts (one untested file covered)"}
+{"date":"2026-11-24","loop":"governor-backfill","before":39,"after":38,"tokensM":1.67,"usd":null,"changed":"specs for src/evals/companion/stage-trade-fixture.ts (11 behaviors)"}
+{"date":"2026-11-24","loop":"governor-backfill","before":37,"after":36,"tokensM":1.69,"usd":null,"changed":"behavioral specs for src/server/outlook-route.ts (14 behaviors, one untested file covered)"}
