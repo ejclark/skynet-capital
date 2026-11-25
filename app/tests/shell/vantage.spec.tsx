@@ -4,20 +4,20 @@ import { crestFromUrl, usePrefs } from "../../src/shell/prefs";
 import { COLUMN_SRC, columnSrc, TowerSlot, VantageFrame } from "../../src/shell/vantage";
 
 /**
- * The page's tower (#3977): ONE `/tower?frame=card` frame for the session, laid over the page
- * frame's tower column — the same element across navigations, hidden (never unmounted) where there
- * is no column, and never mounted below the bench width.
+ * The home screen's tower (#8189; the page's tower of #3977 before it): ONE `/tower?frame=card` frame
+ * for the session, laid over the home's tower box — the same element across navigations, hidden
+ * (never unmounted) on every other page, and never mounted at the tablet width or narrower.
  */
-function Shell({ pathname, wide, column }: { pathname: string; wide: boolean; column: boolean }) {
+function Shell({ pathname, wide }: { pathname: string; wide: boolean }) {
   const root = useRef<HTMLDivElement>(null);
   return (
     <div ref={root}>
-      {column ? (
-        <aside className="tower-column">
+      {pathname === "/" ? (
+        <div className="home-tower">
           <TowerSlot />
-        </aside>
+        </div>
       ) : null}
-      <VantageFrame root={root} pathname={pathname} wide={wide} />
+      <VantageFrame root={root} pathname={pathname} wide={wide && pathname === "/"} />
     </div>
   );
 }
@@ -58,18 +58,18 @@ describe("the tower's rest (#3807 slice 3a-3)", () => {
 
   it("the frame the shell mounts carries the viewer's choice, and it survives navigation", async () => {
     act(() => usePrefs.getState().setCrest("still"));
-    const view = render(<Shell pathname="/accounts" wide column />);
+    const view = render(<Shell pathname="/" wide />);
     await settle();
     const still = () => view.container.querySelectorAll(`iframe[src="${COLUMN_SRC}&rest=still"]`);
     expect(still()).toHaveLength(1);
-    view.rerender(<Shell pathname="/trade" wide column />);
+    view.rerender(<Shell pathname="/trade" wide />);
     await settle();
     expect(still()).toHaveLength(1);
     act(() => usePrefs.getState().setCrest("live"));
   });
 
   it("the member's Settings choice reaches a frame already mounted — same element, new src", async () => {
-    const view = render(<Shell pathname="/accounts" wide column />);
+    const view = render(<Shell pathname="/" wide />);
     await settle();
     const first = frames(view.container)[0];
     expect(first).toBeDefined();
@@ -84,49 +84,49 @@ describe("the tower's rest (#3807 slice 3a-3)", () => {
 
 describe("VantageFrame", () => {
   it("keeps ONE frame — the same element — across navigations, so the tower never reloads", async () => {
-    const view = render(<Shell pathname="/accounts" wide column />);
+    const view = render(<Shell pathname="/" wide />);
     await settle();
     const first = frames(view.container)[0];
     expect(frames(view.container)).toHaveLength(1);
     expect(first?.getAttribute("data-shown")).toBe("true");
 
-    view.rerender(<Shell pathname="/trade" wide column />);
+    view.rerender(<Shell pathname="/trade" wide />);
     await settle();
     expect(frames(view.container)).toHaveLength(1);
     expect(frames(view.container)[0]).toBe(first);
-    expect(first?.getAttribute("data-shown")).toBe("true");
 
-    view.rerender(<Shell pathname="/research" wide column />);
+    view.rerender(<Shell pathname="/" wide />);
     await settle();
     expect(frames(view.container)[0]).toBe(first);
+    expect(first?.getAttribute("data-shown")).toBe("true");
   });
 
-  it("hides, never unmounts, where a page draws no column (Settings)", async () => {
-    const view = render(<Shell pathname="/accounts" wide column />);
+  it("hides, never unmounts, on every page but the home (#8189 criterion 2)", async () => {
+    const view = render(<Shell pathname="/" wide />);
     await settle();
     const first = frames(view.container)[0];
-    view.rerender(<Shell pathname="/settings" wide column={false} />);
-    await settle();
-    expect(frames(view.container)[0]).toBe(first);
-    expect(first?.getAttribute("data-shown")).toBe("false");
+    for (const page of ["/accounts", "/trade", "/activity", "/research", "/settings"]) {
+      view.rerender(<Shell pathname={page} wide />);
+      await settle();
+      expect(frames(view.container)[0]).toBe(first);
+      expect(first?.getAttribute("data-shown")).toBe("false");
+    }
   });
 
-  it("hides on Settings even if a column were there", async () => {
-    const view = render(<Shell pathname="/accounts" wide column />);
+  it("never mounts a frame at the tablet width or narrower — the home shows its still there", async () => {
+    const view = render(<Shell pathname="/" wide={false} />);
     await settle();
-    view.rerender(<Shell pathname="/settings" wide column />);
-    await settle();
-    expect(frames(view.container)[0]?.getAttribute("data-shown")).toBe("false");
+    expect(frames(view.container)).toHaveLength(0);
   });
 
-  it("never mounts a frame below the bench width — the boxed card draws its own tower there", async () => {
-    const view = render(<Shell pathname="/accounts" wide={false} column />);
+  it("never mounts a frame on a page that is not the home", async () => {
+    const view = render(<Shell pathname="/accounts" wide />);
     await settle();
     expect(frames(view.container)).toHaveLength(0);
   });
 
   it("is decorative: out of the tab order and hidden from assistive tech", async () => {
-    const view = render(<Shell pathname="/accounts" wide column />);
+    const view = render(<Shell pathname="/" wide />);
     await settle();
     const f = frames(view.container)[0] as HTMLIFrameElement;
     expect(f.tabIndex).toBe(-1);

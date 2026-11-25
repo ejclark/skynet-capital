@@ -199,7 +199,7 @@ test.describe("landing at 390px, through the links those doors make (#5022)", ()
 test.describe("an order's full detail at 1280px (#5101)", () => {
   test.use({ viewport: { width: 1280, height: 900 } });
 
-  test("docks beside the live table, off its columns, and Close leaves the row on screen", async ({
+  test("sits beside the live table, off its columns, and Close leaves the row on screen", async ({
     page,
   }) => {
     await stage(page);
@@ -208,22 +208,16 @@ test.describe("an order's full detail at 1280px (#5101)", () => {
     await expect(panel).toBeVisible();
     const row = page.locator(`tr[id="${DEEPEST_CLOSE}"]`);
     await expect(row).toBeVisible();
-    // Not modal, and not over the list: the panel docks over the tower's column, on the stage's
-    // right since #7487 slice 4a (it was the left from #7216), so its left edge starts past the
-    // table's right edge and it sits inside the tower's column.
-    const [table, side, tower] = await Promise.all([
+    // Not modal, and not over the list (#8189 criterion 11): the list makes room and the panel sits
+    // beside it, its left edge past the table's right edge. (It docked over the tower's column
+    // until the tower left every page but the home.)
+    const [table, side] = await Promise.all([
       page.locator("table.blotter").boundingBox(),
       panel.boundingBox(),
-      page.locator(".tower-column").first().boundingBox(),
     ]);
     expect(side).not.toBeNull();
     expect(table).not.toBeNull();
-    expect(tower).not.toBeNull();
     expect(side?.x ?? 0).toBeGreaterThanOrEqual((table?.x ?? 0) + (table?.width ?? 0));
-    expect(side?.x ?? 0).toBeGreaterThanOrEqual((tower?.x ?? 0) - 1);
-    expect((side?.x ?? 0) + (side?.width ?? 0)).toBeLessThanOrEqual(
-      (tower?.x ?? 0) + (tower?.width ?? 0) + 1,
-    );
     await panel.getByRole("button", { name: /Close/ }).click();
     await expect(panel).toHaveCount(0);
     await expect(row).toBeInViewport();

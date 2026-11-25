@@ -102,7 +102,7 @@ describe("docs/IA.md §8.4: every route file is mapped once", () => {
     const expected = [
       ...readdirSync("app/src/routes").filter((f) => f.endsWith(".tsx") && f !== "__root.tsx"),
       "shell dock",
-      "shell tower column",
+      "shell home tower",
       "shell status line",
       "server /login",
       "server /welcome",

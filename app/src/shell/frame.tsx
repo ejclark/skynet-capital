@@ -1,6 +1,4 @@
 import type { ReactElement, ReactNode } from "react";
-import { TowerColumn } from "./tower-column";
-import { useTowerColumn } from "./use-tower-column";
 
 /**
  * The page frame (#738; the IA decision, docs/IA.md §8, #3807 slice 2a, 2026-09-26): TWO
@@ -79,39 +77,27 @@ import { useTowerColumn } from "./use-tower-column";
  * moron"; the range "warrants a larger piece of real estate", #5037 round 1), so it left the head
  * for the one section whose content it changes, with room.
  *
- * THE TOWER'S COLUMN (#3977, Eric 2026-09-30, picked by eye from a mock): from the bench width the
- * frame is TWO columns on every page but Settings — the tower's own column from just under the
- * topbar (`tower-column.tsx`), unboxed, and the stage. A frame-level column, not a page's, because
- * of CONSTANT GEOMETRY above: the stage's left edge and width stay identical across /accounts,
- * /activity, /research, /trade and /u/:id. It holds no navigation and no controls — the tower, and
- * only what a page stands under it (the league on the Profile page). Below the bench width the
- * frame is one column again. IN THE RIGHT MARGIN since #7487 slice 4a (Eric, 2026-11-12: "Move it
- * right"; docs/IA.md §5.9): it stood on the left from #7216 (2026-11-09) only while Moneypenny's
- * rail opened on the right, and that rail is now a dock under the stage (#7487 slice 2). The
- * DOM keeps `<main>` first for the skip link and reading order; `tower-column.css` places it.
+ * THE TOWER LIVES ON THE HOME SCREEN ONLY (#8189, #8161 stage 2; docs/IA.md §8.4). From #3977
+ * (2026-09-30) to #8189 the frame gave the tower its own column on every page but Settings from the
+ * bench width, ~37% of a 1280px window. Pages rest on information now: the frame is the stage
+ * alone at every width, so CONSTANT GEOMETRY above holds by construction, and the tower stands in
+ * the home's own box (`routes/index.tsx`). What a page used to stand under it — the league on the
+ * Profile page and an account's page — sits in that page's own flow.
  *
  * `docs/PATTERNS.md` keeps the ledger these words live in, one row per named pattern.
  * @category navigation
  */
 export function PageFrame({
   controls,
-  tower,
-  towerless = false,
   children,
 }: {
   /** The page's controls row — its section switch, kinds or sub-nav links — at the top of the
    *  stage. A row, never a column; absent, the stage opens on its own content. */
   readonly controls?: ReactNode;
-  /** What the page stands under the tower in its column (#3977) — the league on the Profile page. */
-  readonly tower?: ReactNode;
-  /** Settings keeps its own two-column layout and no tower (its transition was already allowed to
-   *  shift, see CONSTANT GEOMETRY above). */
-  readonly towerless?: boolean;
   readonly children: ReactNode;
 }): ReactElement {
-  const column = useTowerColumn() && !towerless;
   return (
-    <div className={column ? "frame frame--tower" : "frame"}>
+    <div className="frame">
       <main id="main" className="stage">
         {controls ? (
           <nav className="stage-controls" aria-label="Section">
@@ -120,7 +106,6 @@ export function PageFrame({
         ) : null}
         {children}
       </main>
-      {column ? <TowerColumn>{tower}</TowerColumn> : null}
     </div>
   );
 }

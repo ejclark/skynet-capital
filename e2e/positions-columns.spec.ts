@@ -205,34 +205,34 @@ for (const width of [860, 1100]) {
 test.describe("the positions table at 1280px", () => {
   test.use({ viewport: { width: 1280, height: 900 } });
 
+  // No tower column since #8189 (the tower stands on the home screen only): the table has the
+  // stage's room and stands the columns its own width ranks, never scrolling sideways.
   for (const route of ROUTES) {
-    test(`stands five columns beside the tower with no sideways scroll on ${route}`, async ({
+    test(`stands the columns its width ranks, with no tower column and no sideways scroll on ${route}`, async ({
       page,
     }) => {
       await stage(page);
       await page.goto(route);
       await expect(page.locator("table.pos-table").first()).toBeVisible();
       const closed = await measure(page);
-      expect(closed.tower, "the tower has its column").toBe(true);
-      // The bench beside the tower is ~806px: exactly the five, the wide-table extras stepped out.
-      expect(closed.columns).toEqual(FIVE);
-      expectNoSidewaysScroll(closed, "beside the tower");
-      expectNoSidewaysScroll(await openEveryRow(page), "beside the tower, every row opened");
+      expect(closed.tower, "no page but the home draws a tower").toBe(false);
+      for (const key of FIVE) expect(closed.columns).toContain(key);
+      expectRanked(closed, "at 1280");
+      expectNoSidewaysScroll(closed, "at 1280");
+      expectNoSidewaysScroll(await openEveryRow(page), "at 1280, every row opened");
     });
   }
 
-  // Before #7487 slice 2 Moneypenny's rail took 440px here, so the tower stepped aside (#3977) and
-  // the book read as a table or as cards by what was left. The rail is now a dock under the page
-  // and her conversation is a pane inside it (expanded on request), so the premise inverts: expanding
-  // it moves nothing sideways.
-  // The tower keeps its column and the book keeps the same five columns, never scrolling sideways.
+  // Moneypenny is a dock under the page and her conversation a pane inside it (expanded on
+  // request): expanding it moves nothing sideways, and the table keeps the same columns.
   for (const route of ROUTES) {
-    test(`keeps the tower and the five columns with Moneypenny's conversation expanded on ${route}`, async ({
+    test(`keeps the same columns with Moneypenny's conversation expanded on ${route}`, async ({
       page,
     }) => {
       await stage(page);
       await page.goto(route);
       await expect(page.locator("table.pos-table").first()).toBeVisible();
+      const before = await measure(page);
       await page
         .locator(".mp-dock")
         .getByRole("button", { name: /^Expand/ })
@@ -242,8 +242,7 @@ test.describe("the positions table at 1280px", () => {
       ).toHaveAttribute("data-size", "expanded");
       const open = await measure(page);
       expect(open.history).toBe(true);
-      expect(open.tower, "the tower keeps its column").toBe(true);
-      expect(open.columns).toEqual(FIVE);
+      expect(open.columns).toEqual(before.columns);
       expectNoSidewaysScroll(open, "with the conversation expanded");
     });
   }

@@ -35,7 +35,6 @@ import {
   sectionFromSearch,
   sectionsFor,
 } from "../shell/profile-sections";
-import { ProfileTower } from "../shell/profile-tower";
 import type { PageSection } from "../shell/sections";
 import { resolveSection } from "../shell/sections";
 import { ThesisDrawer } from "../shell/thesis-drawer";
@@ -444,7 +443,7 @@ function AccountsBody({
   readonly onSelectSection: (section: AccountsSection) => void;
 }): ReactElement {
   return (
-    <PageFrame tower={<ProfileTower accounts={body.accounts} deskIds={body.deskIds} />}>
+    <PageFrame>
       <h1 className="visually-hidden">Accounts</h1>
       <div className="cockpit">
         <CockpitHead
