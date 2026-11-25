@@ -24,6 +24,11 @@ import { join } from "node:path";
 
 const SERVER = "src/server";
 const ROUTES = "app/src/routes";
+/** The home's "Needs you" left the route for the shell in #8297 (the desktop panels stand it beside
+ *  other pages); the scan follows it there so its anchor never goes blind. */
+const NEEDS_YOU = "app/src/shell/needs-you.tsx";
+/** The desktop side panels (#8297) read desks, filings and notes beside any page that takes them. */
+const SIDE_PANELS = "app/src/shell/side-panels.tsx";
 
 /** Reads a hub participant row's positions: `….getState().participants` plus a `.positions`. */
 const READS_HUB_POSITIONS = (text: string): boolean =>
@@ -50,7 +55,7 @@ const ROUTE_OFFENDERS: Readonly<Record<string, string>> = {};
 
 /** Files known to handle the case today; the scan must find them or it has gone blind. */
 const SERVER_ANCHORS = ["src/server/coverage-route.ts", "src/server/held-news-route.ts"] as const;
-const ROUTE_ANCHORS = ["app/src/routes/accounts.tsx", "app/src/routes/index.tsx"] as const;
+const ROUTE_ANCHORS = ["app/src/routes/accounts.tsx", NEEDS_YOU] as const;
 
 // Pre-fix text, verbatim excerpts. Held news before #8324 (94b66c96^:src/server/held-news-route.ts):
 const PRE_FIX_HELD_NEWS = `
@@ -78,6 +83,7 @@ function NeedsYou(): ReactElement {
 `;
 
 function files(dir: string, ext: RegExp): string[] {
+  if (ext.test(dir)) return [dir];
   return readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
     const path = join(dir, e.name);
     if (e.isDirectory()) return files(path, ext);
@@ -87,14 +93,14 @@ function files(dir: string, ext: RegExp): string[] {
 
 /** Every file the scan applies to, and the ones among them that never mention the failure. */
 function scan(
-  dir: string,
+  dirs: readonly string[],
   ext: RegExp,
   applies: (t: string) => boolean,
   handles: (t: string) => boolean,
 ): { found: string[]; silent: string[] } {
   const found: string[] = [];
   const silent: string[] = [];
-  for (const file of files(dir, ext)) {
+  for (const file of dirs.flatMap((d) => files(d, ext))) {
     const text = readFileSync(file, "utf8");
     if (!applies(text)) continue;
     found.push(file);
@@ -106,7 +112,7 @@ function scan(
 describe.each([
   {
     name: "server: a hub positions read must decide the row's error",
-    dir: SERVER,
+    dirs: [SERVER],
     ext: /\.ts$/,
     applies: READS_HUB_POSITIONS,
     handles: MENTIONS_ROW_ERROR,
@@ -118,7 +124,7 @@ describe.each([
   },
   {
     name: "app: a route's query must decide its failure",
-    dir: ROUTES,
+    dirs: [ROUTES, NEEDS_YOU, SIDE_PANELS],
     ext: /\.tsx?$/,
     applies: CALLS_QUERY,
     handles: MENTIONS_QUERY_ERROR,
@@ -129,7 +135,7 @@ describe.each([
     fix: "branch on `isError` before reading empty data as 'nothing there'",
   },
 ])("failed read is not an empty one — $name", (c) => {
-  const { found, silent } = scan(c.dir, c.ext, c.applies, c.handles);
+  const { found, silent } = scan(c.dirs, c.ext, c.applies, c.handles);
 
   it("finds the files known to handle it — the scan itself must not go blind", () => {
     for (const anchor of c.anchors)

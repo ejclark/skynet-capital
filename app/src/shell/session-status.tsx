@@ -147,7 +147,7 @@ export function SessionStatus({ now }: { readonly now?: Date }): ReactElement {
  * where the hours came from instead. Words, never a tint: a standing reader is red/green
  * colourblind (docs/BRAND.md → Accessibility).
  */
-function HoursNotes({ view }: { readonly view: MarketSessionView }): ReactElement | null {
+export function HoursNotes({ view }: { readonly view: MarketSessionView }): ReactElement | null {
   const today = view.halfDay && view.state !== "closed";
   const next = view.nextHalfDayClose && view.nextOpen ? view.nextOpen.split(" ")[0] : undefined;
   if (!(today || next) && view.source !== "table") return null;

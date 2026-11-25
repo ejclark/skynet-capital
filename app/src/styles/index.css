@@ -55,6 +55,8 @@
 @import "./glossary.css";
 @import "./hero-chart.css";
 @import "./home.css";
+/* after home.css: the panels re-flow the home's tiles in a middle column. */
+@import "./side-panels.css";
 @import "./bots.css";
 @import "./hovercard.css";
 @import "./join.css";

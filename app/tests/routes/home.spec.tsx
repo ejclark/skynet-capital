@@ -1,6 +1,7 @@
 import { describe, expect, it } from "@rstest/core";
-import { APPS, countWords, needsRows } from "../../src/routes/index";
+import { APPS } from "../../src/routes/index";
 import { forwardCampaignPath, isCampaignAddress } from "../../src/shell/campaign-forward";
+import { countWords, needsRows } from "../../src/shell/needs-you";
 
 // The home screen (#8189): what "Needs you" shows, the tiles, and the forward that keeps every old
 // Campaign address landing on `/campaign`.

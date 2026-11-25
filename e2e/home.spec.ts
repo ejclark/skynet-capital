@@ -149,3 +149,81 @@ test("a fresh load at /app/ reopens the last app's root; a Home tap shows the ho
   await expect(page).toHaveURL(/\/app\/$/);
   await expect(page.getByRole("navigation", { name: "Apps" })).toBeVisible();
 });
+
+// The desktop side panels (#8297): from 1024 the phone screen keeps the middle and the standing
+// context stands beside it. Each standing item renders once per screen; below 1024 nothing changes.
+test.describe("the desktop side panels", () => {
+  /** Every standing item, counted where a member would see it. */
+  async function standing(page: import("@playwright/test").Page) {
+    return {
+      needs: await page.getByRole("region", { name: "Needs you" }).count(),
+      clock: await page.getByRole("timer").count(),
+      foldedClock: await page.locator(".topbar .status-clock:visible").count(),
+      journal: await page.getByRole("region", { name: "Journal" }).count(),
+      scoreboardCard: await page.getByRole("link", { name: /^[◆◇]?\s*Scoreboard/ }).count(),
+    };
+  }
+
+  test("home at 1280: Needs you, the clock, the Journal and the Scoreboard card, each once", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("/app/");
+    const left = page.getByRole("complementary", { name: /what needs you/ });
+    const right = page.getByRole("complementary", { name: "Journal and Scoreboard" });
+    await expect(left).toBeVisible();
+    await expect(right).toBeVisible();
+    await expect(left.getByRole("region", { name: "Needs you" })).toBeVisible();
+    await expect(left.getByRole("timer")).toBeVisible();
+    await expect(right.getByRole("link", { name: /Scoreboard/ })).toBeVisible();
+    expect(await standing(page)).toEqual({
+      needs: 1,
+      clock: 1,
+      foldedClock: 0,
+      journal: 1,
+      scoreboardCard: 1,
+    });
+    // The middle keeps the phone screen: the tower and the app tiles, the Scoreboard tile gone.
+    const middle = page.locator("main#main");
+    await expect(middle.locator(".home-tower")).toBeAttached();
+    await expect(middle.getByRole("navigation", { name: "Apps" }).getByRole("link")).toHaveCount(6);
+    // Left, middle, right, in that order across the window.
+    const [l, m, r] = await Promise.all([left, middle, right].map((x) => x.boundingBox()));
+    expect(l && m && r).toBeTruthy();
+    if (!(l && m && r)) return;
+    expect(l.x + l.width).toBeLessThanOrEqual(m.x);
+    expect(m.x + m.width).toBeLessThanOrEqual(r.x);
+  });
+
+  test("Scoreboard at 1280: its own card folds to one line, so the party shows once", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("/app/leaderboard?by=equity");
+    await expect(page.getByRole("heading", { level: 1, name: "Scoreboard" })).toBeVisible();
+    const right = page.getByRole("complementary", { name: "Journal and Scoreboard" });
+    await expect(right.getByText("Scoreboard · open in the middle")).toBeVisible();
+    const counts = await standing(page);
+    expect({ ...counts, scoreboardCard: undefined }).toEqual({
+      needs: 1,
+      clock: 1,
+      foldedClock: 0,
+      journal: 1,
+      scoreboardCard: undefined,
+    });
+    expect(counts.scoreboardCard).toBe(0);
+  });
+
+  test("at 1023 nothing changes: no panels, the home keeps its own Needs you and Scoreboard tile", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1023, height: 900 });
+    await page.goto("/app/");
+    await expect(page.getByRole("navigation", { name: "Apps" })).toBeVisible();
+    await expect(page.locator("aside.dp")).toHaveCount(0);
+    await expect(page.locator(".frame-panels .dp")).toHaveCount(0);
+    await expect(page.getByRole("navigation", { name: "Apps" }).getByRole("link")).toHaveCount(7);
+    expect(await page.getByRole("region", { name: "Needs you" }).count()).toBe(1);
+    await expect(page.locator(".topbar .status-line")).toBeVisible();
+  });
+});
