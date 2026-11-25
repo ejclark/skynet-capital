@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import type { ReactElement, ReactNode } from "react";
 import { type DeskPosition, type DeskSnapshot, fetchDesk, type Tone } from "../live/desk";
 import { fetchFeedbackIndex } from "../live/feedback";
-import { fetchJournal, type JournalIndex } from "../live/journal";
+import { fetchJournal } from "../live/journal";
 import {
   localTimeSuffix,
   marketSession,
@@ -15,6 +15,7 @@ import { fetchSettings } from "../live/settings";
 import { FleetHealth, useFleet } from "./fleet-health";
 import { JournalComposer } from "./journal-composer";
 import { JournalNotes } from "./journal-notes";
+import { JOURNAL_DOWN, JOURNAL_OPENING } from "./journal-section";
 import { MarketSession, useNow } from "./market-session";
 import { NeedsYou, ScoreboardTile } from "./needs-you";
 import { HoursNotes } from "./session-status";
@@ -161,17 +162,6 @@ function PanelClock(): ReactElement {
     </section>
   );
 }
-
-const JOURNAL_OPENING: JournalIndex = {
-  available: false,
-  wishesEnabled: true,
-  notes: [],
-  reason: "Opening your notes…",
-};
-const JOURNAL_DOWN: JournalIndex = {
-  ...JOURNAL_OPENING,
-  reason: "Your notes are unreachable right now.",
-};
 
 /** The Journal's composer and your last note — the Profile section's own reads and parts. */
 function JournalCard(): ReactElement {
