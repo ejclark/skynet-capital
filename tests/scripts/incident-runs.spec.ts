@@ -1,5 +1,10 @@
 import { describe, expect, it } from "@rstest/core";
-import { agedOutCandidates, readAllPages, windowRanges } from "../../scripts/incident-runs.mjs";
+import {
+  agedOutCandidates,
+  firstRealUnlearned,
+  readAllPages,
+  windowRanges,
+} from "../../scripts/incident-runs.mjs";
 
 // #4242: the incident scan read one 50-run page and called it the 14-day window — 499 failed runs
 // existed, and a 76-run outage never showed up. These pin the paging that replaced it.
@@ -75,5 +80,52 @@ describe("the aged-out band", () => {
       isLearned: (sha) => sha === "bbbbbbb",
     });
     expect(out).toEqual([run("ccccccc", 1)]);
+  });
+});
+
+// #8289: `ship.sh open` ran the full report on every PR, one jobs read per failed run (267 REST
+// calls on 2026-11-25). WHEN the ship path asks for the verdict, the scan SHALL stop at the first
+// budget + 1 real unlearned incidents, newest first, and never check a learned sha.
+describe("the brief read", () => {
+  const run = (sha: string, id: number) => ({ sha, id });
+  const runs = [
+    run("aaaaaaa", 9),
+    run("aaaaaaa", 8),
+    run("bbbbbbb", 7),
+    run("ccccccc", 6),
+    run("ddddddd", 5),
+  ];
+
+  it("stops at the first real unlearned incident when the budget is 0", async () => {
+    const asked: number[] = [];
+    const out = await firstRealUnlearned(runs, {
+      isLearned: (sha: string) => sha === "aaaaaaa",
+      isPhantom: (id: number) => {
+        asked.push(id);
+        return Promise.resolve(false);
+      },
+      need: 1,
+    });
+    expect(asked).toEqual([7]);
+    expect(out).toEqual({ real: [run("bbbbbbb", 7)], unlearnedShas: 3, checked: 1 });
+  });
+
+  it("passes a zero-job phantom by and keeps looking", async () => {
+    const out = await firstRealUnlearned(runs, {
+      isLearned: () => false,
+      isPhantom: async (id: number) => id === 9,
+      need: 1,
+    });
+    expect(out.real).toEqual([run("bbbbbbb", 7)]);
+    expect(out.checked).toBe(2);
+  });
+
+  it("IF fewer real incidents exist than it needs, checks every unlearned sha so the count is exact", async () => {
+    const out = await firstRealUnlearned(runs, {
+      isLearned: () => false,
+      isPhantom: async (id: number) => id !== 6,
+      need: 2,
+    });
+    expect(out).toEqual({ real: [run("ccccccc", 6)], unlearnedShas: 4, checked: 4 });
   });
 });

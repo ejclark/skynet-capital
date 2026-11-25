@@ -327,6 +327,70 @@ in the same PR — your own file, never another event's canonical one (#1717). C
 `## Outcome` below from re-run instrument data (cache busted first), never from memory — after which
 this doc goes quiet.
 
+## Outcome
+
+**Close-out (2026-11-25, D+1).** `symbols: []` — macro-print mode carries no `earnings-cycle` /
+`intraday-edges` target. The instrument cache was busted per the lane's contract (`rm -rf
+node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) and the release and tape were
+re-fetched fresh. Primary: conference-board.org/topics/consumer-confidence fetched direct 2026-11-25
+(HTTP 200, 333,489 B), headed *"US Consumer Confidence Surged in November,"* `Updated: Tuesday,
+November 24, 2026`. Tape: Yahoo daily and 5m bars, direct.
+
+**What printed — a surge, against a ledger that stood aside and a forward test that predicted restraint.** Headline **103.3**, **+11.4**
+from an October **revised up to 91.9** (first printed 91.7); Present Situation **132.8** (+13.7);
+Expectations **83.6** (+9.9, back above the Board's 80.0 recession-signal line, which the 10-27 print
+still sat below, as it had since February 2025). Field period **Nov 1–17** (cut-off 11-17). The Board: *"potentially due to
+lower uncertainty following the midterm elections… back to levels of confidence last seen in January
+2025,"* led by labor-market perceptions — jobs plentiful minus hard-to-get **+12.4%** (+7.6pp), net
+current business conditions **+6.5%** (+3.5pp), net expected business conditions **+2.3%** (+5.1pp),
+net expected labor market **−1.2%** (+9.2pp), net expected household income **+6.3%** (−0.7pp).
+**Democrats and Independents improved sharply, Republicans fell slightly** (still the highest group).
+12-month inflation expectations **5.7%**, down for a second month (Oct 5.8%). More consumers expected
+stocks to rise than fall *"market volatility in the first half of November notwithstanding."* No
+consensus is in the Board's text and the one search for it found only 2025 items, so the size of the
+beat against the Street is **not stated**; the +11.4 is against the prior print only. Next release per
+the same page: ***"Tuesday, December 22nd at 10 AM ET."***
+
+**Scoring the standing calls.**
+
+- **FT-1 — pass.** SPY's 11-24 range **1.229%** vs the registered **1.436%** bar; the 10:00 ET 5m bar
+  moved **+0.09%**; the S&P closed **−0.4985%** (7,237.17 → 7,201.09) with no dated source attributing
+  it to this release. Held on a day with an +11.4-point surprise vs the prior print, a
+  single data point for the standing "this print does not move
+  the tape" call. Read inside VIX **26.36**, not the 14–18 regime the 68-day study was run in.
+- **FT-2 — kill.** +11.4 (revised base) / +11.6 (as-published base) against a <+3.0 prediction. The
+  composition-over-level reading failed: partisan offsets existed (Republicans −) and the headline
+  rose anyway. The stance's "read subcomponents before the headline" order is not refuted by this,
+  but its premise that a post-midterm bounce would be absent is. Moved to the sweep doc's kill list.
+- **FT-3 — still open, on purpose; settles 2026-12-22 / scored by 2026-12-31.** Its score-by is past
+  this close-out window and the test is about a publication that has not happened. **Leading
+  evidence, recorded and not scored:** the Board's own page now names **12-22** as the next release,
+  not 12-29. That is the publisher's schedule, a primary, but a schedule is not the publication.
+  `consumer-confidence-2026-12-22` remains `estimate` in its own file; flipping it to `confirmed`
+  (`CB:`) is that id's owner's call, not this ledger's. The scanner re-dispatches this event for FT-3 once
+  2026-12-31 arrives.
+- **Stance — "stand aside", flat through 11-24 → 11-27: nothing to score.** No position, trade or
+  sizing existed (`symbols: []`; no sentiment-keyed playbook, re-grepped 2026-09-06).
+- **Kill switches.** *A different release date* — did not fire (published 11-24 as confirmed).
+  *A funding lapse before 11-24* — did not fire (CR through 12-11, per the 11-09 row's re-check).
+  *A macro/sentiment-keyed playbook lands in `trade-playbooks.md`* — not re-checked in this
+  session; no playbook was filed against this event.
+
+**Cross-reads.** UMich final (11-20) **51.5**, prelim **51.0**, Oct **48.0** — up ~3.5 points; CB up
+**11.4**: same sign, ~3× the size, on a different panel and mode. The 11-22 row's "a lean toward FT-2's
+falsifier" read was right in sign and small in size. The CB panel closed **11-17**, before the 11-19/11-20
+rout (S&P 500 7,323.63 → 6,910.39, −5.6%, 11-18 → 11-20 close), so the print reads a **pre-rout** consumer; the first
+read of a post-rout mood is the 12-22 print.
+
+**What to carry forward.** (1) A mean-reverting, one-month-horizon series with a rebound base
+(Oct 91.7) *still* produced a +11-point month: a directional-restraint registration needs the
+reversion case **and** the continuation case in its falsifier, as the 10-27 close-out already noted.
+(2) The 12-month inflation expectation trend (6.1% → 5.8% → 5.7%) is the series the 12-09 FOMC
+ledger reads against. (3) Revisions have now gone up three months running on this panel (Aug down,
+Sep up, Oct up); score against as-published and name the revision. **Loop stage a person still had to
+do:** none. The only manual-shaped gap is *sense*: the Street consensus is still absent from every
+fetchable source, so every beat/miss here is a prior-print comparison.
+
 **Last assessed:** 2026-10-26
 <!-- probe-ref: {"symbols":{},"vix":18.1,"daysBand":"medium:8+","adjacentIds":["advance-economic-indicators-2026-11-27","advance-services-q3-2026-11-19","aruoba-inflation-term-structure-2026-11-20","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","durable-goods-2026-11-25","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","gdp-q3-2026-second-2026-11-25","japan-cpi-2026-11-20","japan-cpi-tokyo-flash-2026-11-27","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-1-5y-2026-11-20","jgb-liquidity-enhancement-5-11y-2026-11-27","jpx-market-closure-2026-11-23","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","opex-2026-11-20","pce-2026-11-25","philly-fed-mfg-2026-11-19","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","retail-ecommerce-q3-2026-11-19","sifma-bond-early-close-2026-11-27","sp-global-flash-us-pmi-2026-11-23","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","treasury-10y-tips-2026-11-19","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25"],"screenStreak":0} -->
 
@@ -350,3 +414,6 @@ this doc goes quiet.
 
 **Last assessed:** 2026-11-24
 <!-- probe-ref: {"symbols":{},"vix":26.62,"daysBand":"medium:0+","adjacentIds":["advance-economic-indicators-2026-11-27","advance-services-q3-2026-11-19","aruoba-inflation-term-structure-2026-11-20","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","china-ga-ge-sb-suspension-expiry-2026-11-27","durable-goods-2026-11-25","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","gdp-q3-2026-second-2026-11-25","industrial-production-annual-revision-2026-11-24","japan-cpi-2026-11-20","japan-cpi-tokyo-flash-2026-11-27","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-1-5y-2026-11-20","jgb-liquidity-enhancement-5-11y-2026-11-27","jpx-market-closure-2026-11-23","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","opec-plus-meeting-2026-11-29","opex-2026-11-20","pce-2026-11-25","philly-fed-mfg-2026-11-19","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","retail-ecommerce-q3-2026-11-19","sifma-bond-early-close-2026-11-27","sp-global-flash-us-pmi-2026-11-23","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","treasury-10y-tips-2026-11-19","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25"],"screenStreak":0} -->
+
+**Last assessed:** 2026-11-25
+<!-- probe-ref: {"symbols":{},"vix":26.36,"daysBand":"medium:0+","adjacentIds":["advance-economic-indicators-2026-11-27","advance-services-q3-2026-11-19","aruoba-inflation-term-structure-2026-11-20","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","china-ga-ge-sb-suspension-expiry-2026-11-27","durable-goods-2026-11-25","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","gdp-q3-2026-second-2026-11-25","industrial-production-annual-revision-2026-11-24","japan-cpi-2026-11-20","japan-cpi-tokyo-flash-2026-11-27","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-1-5y-2026-11-20","jgb-liquidity-enhancement-5-11y-2026-11-27","jpx-market-closure-2026-11-23","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","opec-plus-meeting-2026-11-29","opex-2026-11-20","pce-2026-11-25","philly-fed-mfg-2026-11-19","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","retail-ecommerce-q3-2026-11-19","sifma-bond-early-close-2026-11-27","sp-global-flash-us-pmi-2026-11-23","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","treasury-10y-tips-2026-11-19","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25"],"screenStreak":0} -->

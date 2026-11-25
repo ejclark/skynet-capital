@@ -596,10 +596,12 @@ EOF_SHOTS
 
   # Learning-Coach preflight (docs/COACHES.md → detection lag). The incident eye rides the path we
   # already traverse — every change ships through here — so a red `main` surfaces without a cron, a
-  # scheduled workflow, or a single polled request. One REST call on the core bucket, at the exact
-  # moment it matters: never stack a change on a broken `main`. Advisory, not a hard stop; the point
-  # is that the gap becomes IMPOSSIBLE to not see, not that shipping gets blocked.
-  node scripts/incident-scan.mjs || {
+  # scheduled workflow, or a single polled request. REST core only, at the exact moment it matters:
+  # never stack a change on a broken `main`. Advisory, not a hard stop; the point is that the gap
+  # becomes IMPOSSIBLE to not see, not that shipping gets blocked. `--brief` (#8289): the full
+  # report read every failed run's jobs, 267 REST calls per PR on 2026-11-25; the verdict needs
+  # the run list and the newest real incident, about 3.
+  node scripts/incident-scan.mjs --brief || {
     echo "ship: ^^ an unlearned incident on $base is above. Run /retro before stacking more on it."
   }
 

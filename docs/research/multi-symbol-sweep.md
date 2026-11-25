@@ -71,6 +71,10 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"The post-midterm rebound does not show up in the Conference Board headline: Nov 2026 rises by less than +3.0 points from October (FT-consumer-confidence-2026-11-24-2)"** — added 2026-11-25 from the
+  [consumer-confidence-2026-11-24 close-out](events/consumer-confidence-2026-11-24.md). The headline printed **103.3**, **+11.4** from a revised 91.9 (+11.6 from the as-published 91.7), Expectations 83.6 (+9.9), with Democrats and Independents sharply up and Republicans slightly down.
+  Do not extend two midterm precedents (Nov 2018, Nov 2022; both fell) into a restraint call on the next post-election print; the partisan offset was real and the headline rose anyway.
+
 - **"The Tuesday before Thanksgiving compresses the front of the vol curve: VIX9D/VIX closes below 0.9072 on 2026-11-24 (FT-case-shiller-hpi-2026-11-24-3)"** — added 2026-11-25 from the
   [case-shiller-hpi-2026-11-24 close-out](events/case-shiller-hpi-2026-11-24.md). The ratio closed **26.68 / 26.36 = 1.0121**, with VIX at **35.89** two sessions earlier, making 2026 the third reading above 1.00 in sixteen years (2012 and 2018 are the others).
   Do not register a fixed ratio bar for a holiday-week session without conditioning on the prior week's VIX level; the 0.8592 median came from a calm sample (VIX ~15.7 at registration) and says nothing about a stress week, and n=1.

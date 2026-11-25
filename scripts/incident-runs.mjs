@@ -74,3 +74,37 @@ export function agedOutCandidates(runs, { windowShas = new Set(), isLearned = ()
   for (const run of runs) if (run.sha && !bySha.has(run.sha)) bySha.set(run.sha, run);
   return [...bySha.values()].filter((r) => !(windowShas.has(r.sha) || isLearned(r.sha)));
 }
+
+// ── the brief read, for the ship path (#8289) ─────────────────────────────────
+//
+// WHY: `ship.sh open` runs the scan on every PR, and the full report asks GitHub for each
+// candidate's jobs (the zero-job phantom check), one REST call a run. Measured 2026-11-25: 114
+// shas in the window and 148 in the aged-out band, so 267 REST calls per PR opened, the largest
+// single spender a build session has on the one hourly allowance every session shares. The ship
+// path only asks "is `main` over its incident budget?", and that is settled by the first
+// budget + 1 real unlearned incidents. So the brief read checks unlearned shas newest first and
+// stops there: one or two jobs reads instead of all of them. Learned shas are never checked.
+
+/**
+ * The newest `need` real (not zero-job) unlearned incidents, one per sha, checking `isPhantom`
+ * one run at a time and stopping once `need` are found. Fewer than `need` back means every
+ * unlearned sha was checked, so the count is exact.
+ *
+ * @param runs runs newest first, as incident-scan.mjs maps them (`sha` already 7 chars)
+ * @param p.isLearned the ledger test (`learnedIn`)
+ * @param p.isPhantom async run id → true for a zero-job run
+ * @param p.need how many real incidents settle the question (the budget + 1)
+ * @returns {{ real, unlearnedShas, checked }} the incidents found, the unlearned shas in all, and
+ *   how many of them were checked
+ */
+export async function firstRealUnlearned(runs, { isLearned, isPhantom, need = 1 }) {
+  const candidates = agedOutCandidates(runs, { isLearned });
+  const real = [];
+  let checked = 0;
+  for (const run of candidates) {
+    if (real.length >= need) break;
+    checked++;
+    if (!(await isPhantom(run.id))) real.push(run);
+  }
+  return { real, unlearnedShas: candidates.length, checked };
+}
