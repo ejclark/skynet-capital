@@ -320,6 +320,15 @@ describe("houseResearchOn — a sector or a market", () => {
     expect(out.lessons.map((l) => l.idea)).toEqual([
       "Backup generator orders track data-centre builds.",
     ]);
+    // #7448 (c): read as a name, CMI still surfaces the lesson, though no campaign's cast holds it.
+    const name = houseResearchOn(
+      { kind: "name", subject: "CMI" },
+      { ...base, campaigns: [AI, OIL, POWER], lessons },
+    );
+    expect(name.campaigns).toEqual([]);
+    expect(name.lessons.map((l) => l.idea)).toEqual([
+      "Backup generator orders track data-centre builds.",
+    ]);
   });
 
   it("lists a lesson once when both its campaign and its company place it in the sector", () => {
