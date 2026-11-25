@@ -4,6 +4,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { parseSearch, stringifySearch } from "./live/search-params";
 import { routeTree } from "./routeTree.gen";
+import { settleFirstLoad } from "./shell/last-app";
 import { routeErrorOptions } from "./shell/route-error";
 import "./styles/index.css";
 
@@ -16,6 +17,12 @@ const router = createRouter({
   parseSearch,
   stringifySearch,
   ...routeErrorOptions,
+});
+
+// After the first location resolves, a navigation to `/` is a Home tap, never "returning" (#8189).
+const unsubscribe = router.subscribe("onResolved", () => {
+  settleFirstLoad();
+  unsubscribe();
 });
 
 declare module "@tanstack/react-router" {

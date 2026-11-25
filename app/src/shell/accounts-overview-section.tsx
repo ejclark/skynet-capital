@@ -13,7 +13,6 @@ import { NewHighCeremony } from "./new-high-ceremony";
 import { PositionPage, PositionPageGone } from "./position-page";
 import { SauronCard } from "./sauron-card";
 import { usePositionPage } from "./use-position-page";
-import { useTowerColumn } from "./use-tower-column";
 
 /**
  * ACCOUNTS' OVERVIEW SECTION — Summary's old cash/position detail and per-account roster, then the
@@ -47,8 +46,8 @@ import { useTowerColumn } from "./use-tower-column";
  * line when none is (`book-wait-line.tsx`). It sits beside the positions, never over them: every
  * review badge below still shows.
  *
- * #3977: at the bench width and wider the card leaves this grid for the page's own tower column
- * (`tower-column.tsx`), open and unboxed from just under the navbar; the grid is then one column.
+ * #8189: the league card stays in this grid at every width — the tower left every page but the
+ * home screen (it stood in the frame's own column from the bench width from #3977).
  *
  * #5992: the member's weekly council line (#3963) no longer stands under the league card — the
  * Council retired, and a thesis now lives in playbook authoring, where it is tested before it trades.
@@ -85,7 +84,6 @@ export function OverviewSection({
   // One account's desk carries the Money strip's allocation (#3689 slice 5).
   const singleDesk = allAccounts ? undefined : desks?.[0]?.desk;
   const landmark = allAccounts || singleDesk?.error ? undefined : desks?.[0]?.landmark;
-  const towerColumn = useTowerColumn();
   // A position's full page (#5070 slice 6): `?position=` takes the Overview's place, one account's.
   const fullPage = usePositionPage();
   const page = positionPageOf(singleDesk, fullPage);
@@ -99,7 +97,7 @@ export function OverviewSection({
       {allAccounts ? null : (
         <NewHighCeremony key={accountId} accountId={accountId} caption={caption} stats={stats} />
       )}
-      <div className={`overview-grid${towerColumn ? " overview-grid--solo" : ""}`}>
+      <div className="overview-grid">
         <div className="overview-worth">
           {allAccounts ? null : <BookWaitLine accountId={accountId} desk={singleDesk} />}
           <NetWorthCard
@@ -139,7 +137,7 @@ export function OverviewSection({
             />
           </div>
         ) : null}
-        {towerColumn ? null : <OverviewCard landmark={landmark} owned={owned} />}
+        <OverviewCard landmark={landmark} owned={owned} />
       </div>
       {desksLoading ? (
         <p className="note">Reading positions…</p>
@@ -177,8 +175,7 @@ function positionPageOf(
   );
 }
 
-/** The boxed card in the Overview's own flow, below the bench width: the tower over the league.
- *  At the bench width it stands open in the page's tower column. */
+/** The league card in the Overview's own flow, at every width (#8189). */
 function OverviewCard({
   landmark,
   owned,
@@ -192,7 +189,6 @@ function OverviewCard({
         {...(landmark ? { landmark } : {})}
         ownedIds={owned.map((a) => a.id)}
         meId={owned.find((a) => a.kind === "human")?.id}
-        scope=".cockpit"
       />
     </div>
   );

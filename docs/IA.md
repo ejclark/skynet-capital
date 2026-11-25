@@ -229,7 +229,7 @@ before sign-in or retired (`tests/scripts/ia-apps.spec.ts` fails on none, two or
 | `owner-tools` | Guests · GitHub | none in §2 (U13) | Settings | `/settings ?section=guests` · `/settings ?section=github` |
 | `target-split` | Target | none in §2 (#4607) | Settings | `/settings ?section=target` |
 | `status` | the status line | Market session clock · Ops status | Home | `shell status line` |
-| `tower` | the tower | Landmark | Home | `shell tower column` |
+| `tower` | the tower | Landmark | Home | `shell home tower` |
 | `sign-in` | Sign in · welcome | none (before sign-in) | before sign-in | `server /login` · `server /welcome` |
 
 **The calls on today's two-home concepts (#8005 slice 1, 2026-11-23).** §8.4 now names one app for
@@ -245,7 +245,7 @@ home holds it — the census measures, slice 6 of #8005 settles — but none is 
   on Activity's feed is #1977's mirror board, the league's read.
 - `guidance` (workbench · none) — `/saved-positions` is Eric's testbed (#3968): its placement is a
   fork held for slice 6 (§8.3), not decided here.
-- `tower` — settled here: `/tower` is the frame the tower column and Sauron's card draw
+- `tower` — settled here: `/tower` is the frame the home screen's tower draws (#8189; the tower column and Sauron's card drew it before)
   (`vantage.tsx` `COLUMN_SRC`), not a destination, so it has no screen of its own.
 
 ## 3. The keys table
@@ -1334,7 +1334,7 @@ call is made where the code or an issue already settles it; a taste or placement
 |---|---|---|
 | R&D → Coverage, Trade → Watchlist, Settings → Target | placed: R&D (§5.4), the workbench (§5.3), Me (§5.6) | each one's own plan placed it (#3811, #3407, #4607); the IA had not written it down |
 | `server /welcome` | keep, before sign-in | the invite email links it; an invitee needs it, and its links reach the Profile sections in one hop |
-| `server /tower` | not a screen: the tower column's frame | the shell's column and Sauron's card load `/tower?frame=card`; retiring it would blank both |
+| `server /tower` | not a screen: the home tower's frame | the home screen's tower loads `/tower?frame=card` (the column and Sauron's card did until #8189); retiring it would blank it |
 | `server /feedback/preview` | retire, as a screen | a JSON endpoint (the feedback form's markdown preview), no caller in `app/src` since the classic form retired; removing the endpoint is dead-code work (`/bury`), not IA |
 | unknown URL | keep (§5.8, Not found) | every dead link needs an honest answer; how it looks is polish, not placement |
 | Council (§2c, §4, §5.7, §6, §8) | marked retired | #5994 retired it 2026-10-25; the rows stay as the record |
@@ -1457,7 +1457,7 @@ with no file is another part of the file above it.
 | `/u/$id/playbooks`, `/u/$id/thesis`, `/u/$id/decisions` | `u.$id.playbooks.tsx` · `u.$id.thesis.tsx` · `u.$id.decisions.tsx` | Bots | step 10 |
 | `/settings` (`app/src/shell/settings-toc.tsx:16-21`) | `settings.tsx` | not an app: the member menu | — |
 | the chat dock under every page | `shell dock` | Game Master | #8191 |
-| the tower column | `shell tower column` | Home | #8189 |
+| the tower, on the home screen only (the frame's column before #8189) | `shell home tower` | Home | built, #8189 |
 | the status line | `shell status line` | every app's top row (Home's page template) | — |
 | the sign-in and invite pages | `server /login` · `server /welcome` | before sign-in | — |
 | the tower's frame | `server /tower` | Home's tower frame | #8189 |
@@ -1533,7 +1533,8 @@ an app, the app picks its own page template. Written here in the slice that buil
 | **Reads** | only what the app already reads, under the same keys: `["settings"]`, `["desks", ids]` (Profile's All-accounts read), `["quests"]` (Campaign's). No endpoint, no broker read |
 | **The way home** | the topbar's brand is a link named "Home" from every page; the Campaign tab points at `/campaign` |
 | **Old addresses** | Campaign's own (`?w=`, `?show=`, `#story-`/`#event-`/`#calendar`) forward to `/campaign` with search and hash, replacing the entry; the board's `?by=`/`?a=`/`?b=` still open `/leaderboard`. Moneypenny keeps writing `/#…`; the dock forwards it before navigating, so a row on the open Campaign lands in place (`shell/campaign-forward.ts`) |
-| **Slice 2 of #8189** | the tower leaves every other page (the frame's column, the boxed cards), and a fresh load at bare `/app/` reopens the last of the five apps used (its root, never its last exact address); a Home tap always shows the home |
+| **Every other page** (slice 2) | no tower: the frame's column and the boxed card art are retired (`frame.tsx`, `sauron-card.tsx`); the league sits in Profile's Overview and an account's Overview at every width; Activity's order detail sits beside the list from the tablet width, never over it |
+| **Returning** (slice 2) | a fresh load at bare `/app/` (sign-in, a new tab, a reload) reopens the root of the last of the five apps used, never its last exact address; home or nothing recorded shows the home; a Home tap always shows the home (`shell/last-app.ts`, a per-browser `localStorage` record read inside try/catch) |
 | **Falsifier** | by 2026-12-21, Eric or a blind round (#8005 slice 4) reads the home as a tap standing between a member and trading: then `/app/` opens Trade by default and the home is reached from the brand alone |
 
 ## 9. What the model contradicts in the plan

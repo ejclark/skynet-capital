@@ -325,10 +325,10 @@
     "mustBeSeenBy": "member, on every route, while the companion is enabled (#7487 slice 2)"
   },
   {
-    "screen": "shell tower column (the 3D tower beside the stage; /tower is its frame)",
+    "screen": "shell home tower (the 3D tower over the home screen's box; /tower is its frame)",
     "verdict": "keep",
     "home": "shell",
-    "mustBeSeenBy": "member at desktop width, on every route but Settings (docs/IA.md §8.1; #7487 slice 4a)"
+    "mustBeSeenBy": "member on the home screen from 861px; a phone sees its committed still (docs/IA.md §8.4; #8189 took it off every other page)"
   },
   {
     "screen": "server /login",

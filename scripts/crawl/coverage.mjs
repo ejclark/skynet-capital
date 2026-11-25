@@ -82,9 +82,10 @@ const SHELL_PARTS = [
     needle: "<MoneypennyDock />",
   },
   {
-    // `/tower` is the frame this column and Sauron's card load (`vantage.tsx` COLUMN_SRC), never a
-    // destination of its own (docs/IA.md §8.3), so a step that opens it lands on this row.
-    screen: "shell tower column (the 3D tower beside the stage; /tower is its frame)",
+    // `/tower` is the frame the home's tower loads (`vantage.tsx` COLUMN_SRC), never a destination
+    // of its own (docs/IA.md §8.3), so a step that opens it lands on this row. Mounted in the shell,
+    // shown on the home screen only since #8189.
+    screen: "shell home tower (the 3D tower over the home screen's box; /tower is its frame)",
     file: "app/src/routes/__root.tsx",
     needle: "<Vantage root={app} />",
     serves: (path) => path === "/tower",

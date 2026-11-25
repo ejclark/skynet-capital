@@ -115,11 +115,9 @@ rstest.mock("../../src/shell/accounts-overview-section", () => ({
 rstest.mock("../../src/shell/events-section", () => ({
   EventsSection: () => <p data-testid="events">The book's events</p>,
 }));
-// The tower column's card has its own spec; here only where the column stands.
+// The league card has its own spec.
 rstest.mock("../../src/shell/sauron-card", () => ({
-  SauronCard: ({ under }: { under?: boolean }) => (
-    <section data-testid="tower" data-under={under ? "true" : "false"} />
-  ),
+  SauronCard: () => <section data-testid="league" />,
 }));
 rstest.mock("../../src/shell/alpaca-guide", () => ({
   AlpacaGuide: () => <p data-testid="connect-guide">The five-step connect guide</p>,

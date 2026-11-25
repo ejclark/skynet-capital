@@ -118,28 +118,78 @@ export function redLaneIntents(candidates = []) {
 }
 
 /**
+ * A PR PARKED ON A NAMED BLOCKER IS NOT ABANDONED (#8484). #8044 sat red for 43h because its
+ * baselines could only be cut once #8295 reached main; #8295 closed at 18:13:31Z and this sweep closed
+ * #8044, and deleted its branch, three minutes later. The pull rule already refuses an OPEN blocker,
+ * but nothing named it in the log, and the red clock it read was the check's own, which had run out
+ * while the PR waited. So the issue's blocked-by links are read whenever it has any: an open one
+ * leaves the PR alone and says which, and once all are closed the age limit counts from the last
+ * close, the moment the PR could first move again.
+ *
+ * Pure: why the PR waits, or null. `blockers` are the issue's blocked-by rows (`{number, state,
+ * closed_at}`); a closed row with no `closed_at` counts as closed just now, the safe side.
+ */
+export function blockerHold(blockers, nowMs, hours = RED_PR_HOURS) {
+  const open = blockers.filter((b) => (b?.state ?? "open") === "open").map((b) => `#${b.number}`);
+  if (open.length) return `is blocked by ${open.join(", ")}, still open`;
+  if (blockers.length === 0) return null;
+  const closes = blockers.map((b) => Date.parse(b.closed_at ?? "") || nowMs);
+  const last = Math.max(...closes);
+  const since = (nowMs - last) / 3.6e6;
+  if (since >= hours) return null;
+  const which = blockers[closes.indexOf(last)]?.number;
+  return `waits on its blocker #${which}, closed ${since.toFixed(1)}h ago: the ${hours}h limit counts from that close`;
+}
+
+/**
+ * Does the PR wait on its issue's blocked-by links? Logs which, so the sweep's line names the blocker.
+ * The rows are read only when the issue has any links (REST rows carry the summary).
+ */
+function waitsOnBlocker({ pr, issue, row, read, nowMs, hours, log }) {
+  const s = row?.issue_dependencies_summary;
+  if (!(Number(s?.total_blocked_by) > 0 || Number(s?.blocked_by) > 0)) return false;
+  const blockers = read(`issues/${issue}/dependencies/blocked_by?per_page=100`) ?? [];
+  const why = blockerHold(blockers, nowMs, hours);
+  if (why) log(`red lane PR #${pr.number} left open: #${issue} ${why}`);
+  return Boolean(why);
+}
+
+/** The free skips, off the open list alone: a lane bot's own non-draft, un-held PR nobody touched
+ *  since `cutoff` gives its branch match; anything else, null. */
+function quietLaneBranch(pr, cutoff) {
+  const lane = LANE_BRANCH.exec(pr.head?.ref ?? "");
+  if (!lane || pr.user?.login !== LANE_BOT || pr.draft) return null;
+  if (Date.parse(pr.updated_at) > cutoff) return null;
+  if ((pr.labels ?? []).some((l) => l.name === LABELS.holdMerge.name)) return null;
+  return lane;
+}
+
+/**
  * Audit-mode read: every lane PR red past the age limit, with what `redLaneIntents` needs. REST core
  * only. The open list carries the author, branch, labels and last-touched time, so a tick where no
  * lane PR is that old costs that one call. Loud on failure, like `gatherStranded`.
  */
-export function gatherRedLanePrs(nowMs, { hours = RED_PR_HOURS, rest = ghRest } = {}) {
+export function gatherRedLanePrs(
+  nowMs,
+  { hours = RED_PR_HOURS, rest = ghRest, log = console.log } = {},
+) {
   const read = (path) => withRetry(() => rest(path));
   const open = ghRestAll("pulls?state=open", { read: rest });
   const cutoff = nowMs - hours * 3.6e6;
   let exempt;
   const out = [];
   for (const pr of open) {
-    const lane = LANE_BRANCH.exec(pr.head?.ref ?? "");
-    if (!lane || pr.user?.login !== LANE_BOT || pr.draft) continue;
-    if (Date.parse(pr.updated_at) > cutoff) continue;
-    if ((pr.labels ?? []).some((l) => l.name === LABELS.holdMerge.name)) continue;
+    const lane = quietLaneBranch(pr, cutoff);
+    if (!lane) continue;
     const checks = read(`commits/${pr.head.sha}/check-runs?per_page=100`);
     const red = redCheck(checks.check_runs ?? [], nowMs);
     if (!red || red.hours < hours) continue;
     const issue = Number(lane[1]);
+    const row = read(`issues/${issue}`);
+    if (waitsOnBlocker({ pr, issue, row, read, nowMs, hours, log })) continue;
     // The pull rule, so this only ever closes a PR that is all that keeps its issue off the queue. A
     // session building it, or an issue parked on someone's decision, gains nothing from the close.
-    if (notPullableReason(read(`issues/${issue}`))) continue;
+    if (notPullableReason(row)) continue;
     exempt ??= exemptionsOver(open);
     const files = ghRestAll(`pulls/${pr.number}/files`, { read: rest }).map((f) => f.filename);
     if (exemptReason({ pr, files, ...exempt })) continue;
@@ -176,7 +226,7 @@ function exemptionsOver(open) {
  */
 export function redLaneOrNone(nowMs, { log = console.log, ...opts } = {}) {
   try {
-    return gatherRedLanePrs(nowMs, opts);
+    return gatherRedLanePrs(nowMs, { ...opts, log });
   } catch (err) {
     log(`::warning::red lane PR pass skipped — ${String(err.message).slice(0, 200)}`);
     return [];

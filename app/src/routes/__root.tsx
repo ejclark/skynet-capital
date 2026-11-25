@@ -11,6 +11,7 @@ import { usePresencePings } from "../live/presence";
 import { BrandEye } from "../shell/brand-eye";
 import { EyeLight } from "../shell/eye-light-layer";
 import { KeyboardChords } from "../shell/keyboard";
+import { useRecordLastApp } from "../shell/last-app";
 import { LockInMoments } from "../shell/lock-in-ceremony";
 import { MemberMenu } from "../shell/member-menu";
 import { MoneypennyDock } from "../shell/moneypenny-dock";
@@ -45,9 +46,9 @@ import { Vantage } from "../shell/vantage";
  * a member picks on the Profile page is the week R&D and Trade open on. The model, its defaults
  * and its falsifier: `live/horizon-params.ts`.
  *
- * The page's tower (#3977; the crest of #3807 slice 3a before it) is ONE frame mounted here, beside
- * the page and never inside the topbar, so it survives every navigation (`shell/vantage.tsx`),
- * laid over the page frame's tower column (`shell/tower-column.tsx`).
+ * The tower (#3977; the crest of #3807 slice 3a before it) is ONE frame mounted here, beside the
+ * page and never inside the topbar, so it survives every navigation (`shell/vantage.tsx`), laid
+ * over the home screen's tower box — the one page that draws the tower since #8189.
  *
  * A failing page renders inside the `<Outlet/>` (the router's default error component, #4614), so
  * the topbar outlives it. `ShellError` is for this layout failing itself — the one case that may
@@ -101,6 +102,8 @@ function StatusLine(): ReactElement {
 
 function RootShell(): ReactElement {
   const app = useRef<HTMLDivElement>(null);
+  // The last of the five apps used, so a fresh load at `/` reopens it (#8189, `last-app.ts`).
+  useRecordLastApp();
   // "Last seen" learns of a tab left open only from this ping, sent while the tab is in view (#8319).
   usePresencePings();
   return (

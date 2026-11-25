@@ -29,7 +29,10 @@ import {
   exemptReason,
   HEADLESS_MINUTES,
   judgePr,
+  latestRequired,
   needsHeadAt,
+  REQUIRED_CHECKS,
+  settledByRuns,
 } from "./stuck-pr-decide.mjs";
 
 const args = process.argv.slice(2);
@@ -59,8 +62,9 @@ async function api(path) {
   return res.json();
 }
 
-/** Every stuck open PR, newest facts only: one list call, then 2–3 calls per PR old enough to matter,
- *  plus one file list per PR judged `unarmed` — an envelope-protected or platter-boarded diff that is
+/** Every stuck open PR, newest facts only: one list call, then one check-runs read per PR old enough
+ *  to matter; only a head those runs leave open (green past `hours`, or no required run) costs 1–3
+ *  more, plus one file list per PR judged `unarmed` — an envelope-protected or platter-boarded diff that is
  *  green and unarmed is left to Eric's merge on purpose, so it is not stuck (#5381–#5383, 2026-10-26).
  *  A headless or blocked one is still named: he cannot merge it either (#6881). */
 async function scan() {
@@ -77,21 +81,25 @@ async function scan() {
     // checks to stall on. It is retargeted to main when its parent merges; headless-pr.mjs skips it too.
     if (listed.draft || listed.base?.ref !== "main" || Date.parse(listed.created_at) > cutoff)
       continue;
+    // A held PR is never stuck (judgePr's first rule), and the list already carries its labels.
+    if ((listed.labels ?? []).some((l) => l.name === "hold-merge")) continue;
     const sha = listed.head.sha;
-    const [checks, suites] = await Promise.all([
-      api(`commits/${sha}/check-runs?per_page=100`),
-      api(`commits/${sha}/check-suites?per_page=100`),
-    ]);
-    const checkRuns = checks.check_runs ?? [];
-    const suiteList = suites.check_suites ?? [];
+    // Check runs first, alone (#8289): a red, running or freshly green head is settled by them, so
+    // most open PRs cost this one call. Suites and the PR read are spent only on a candidate.
+    const checkRuns = (await api(`commits/${sha}/check-runs?per_page=100`)).check_runs ?? [];
+    if (settledByRuns(checkRuns, { hours })) continue;
     // Younger than `hours`, only the no-suite rule can name it, so a head with a run stops here.
     const young = Date.parse(listed.created_at) > Date.now() - hours * 3.6e6;
+    if (young && latestRequired(checkRuns, REQUIRED_CHECKS).size > 0) continue;
+    const suiteList = (await api(`commits/${sha}/check-suites?per_page=100`)).check_suites ?? [];
     if (young && !needsHeadAt(checkRuns, suiteList)) continue;
     // `mergeable_state` is only on the single-PR read, and only worth a call once the checks are in.
     const pr = await api(`pulls/${listed.number}`);
-    const headAt = needsHeadAt(checkRuns, suiteList)
-      ? (await api(`commits/${sha}`)).commit?.committer?.date
-      : null;
+    // A conflicted head is not judged by its age, so its commit time is never read (#8289).
+    const headAt =
+      needsHeadAt(checkRuns, suiteList) && pr.mergeable_state !== "dirty"
+        ? (await api(`commits/${sha}`)).commit?.committer?.date
+        : null;
     const verdict = judgePr({ pr, checkRuns, suites: suiteList, hours, headAt });
     if (!verdict) continue;
     // Only an `unarmed` PR waits for Eric's merge by design. A `headless` or `blocked` one cannot

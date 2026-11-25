@@ -1,8 +1,6 @@
-import { type ReactElement, useId, useRef } from "react";
+import { type ReactElement, useId } from "react";
 import { LeagueCard } from "./league-card";
-import { type Crest, usePrefs } from "./prefs";
-import { useCardFrame, useTowerGlance, useTowerMood } from "./tower-bus";
-import { usePhoneWidth } from "./use-media";
+import { useTowerMood } from "./tower-bus";
 
 /**
  * SAURON'S CHARACTER CARD (plan #3727, design handoff 6a): the league, with Barad-dûr standing
@@ -27,29 +25,12 @@ import { usePhoneWidth } from "./use-media";
  * too — the scene's `rest=still` works in any framing (one frame at rest, the loop only while a
  * glance plays.
  *
- * UNDER THE PAGE'S TOWER (#3977, Eric 2026-09-30, picked by eye from a mock): at the bench width
- * the tower stands unboxed in the page frame's own column (`tower-column.tsx`, drawn by the shell's
- * one frame, `vantage.tsx`), and this card gives up its art to it — `under` is the same card from
- * the shade down: the mist the tower's foot melts into, then the league. Its landmark's dials still
- * reach the tower (`useTowerMood`). It replaces the `?card=art|league` compare (#3807 slice 3b-1),
- * retired unused: neither option was the intent.
- *
- * ON A PHONE (≤860, #3977 the phone face): the same `under` card — no frame mounts, so no WebGL
- * context opens on a phone until a real-device recheck measures one. The Eye stays in view as the
- * brand slot's still picture (`brand-eye.tsx`).
+ * NO ART OF ITS OWN SINCE #8189 (#8161 stage 2; docs/IA.md §8.4). The tower stands on the home
+ * screen only, so this card is the league under its mist, in the page's own flow at every width:
+ * no frame mounts here and no WebGL context opens for it. Its landmark's dials still set the
+ * tower's mood (`useTowerMood`), which the home's frame reads. The boxed art (#3727) and the
+ * `under` card that stood under the frame's column (#3977) are retired with the column.
  */
-
-/** The tower's URL: the card framing, the landmark's dials when this account has one, and the
- *  member's motion setting (`still` asks the scene for `rest=still`). */
-export function towerSrc(
-  landmark?: { readonly power: number; readonly health: number },
-  crest: Crest = "live",
-): string {
-  const dials = landmark
-    ? `&power=${landmark.power.toFixed(3)}&health=${landmark.health.toFixed(3)}`
-    : "";
-  return `/tower?frame=card${dials}${crest === "still" ? "&rest=still" : ""}`;
-}
 
 /** The shade zone: the forge's ember seat, then mist with an uneven, organic top edge. */
 function Shade(): ReactElement {
@@ -105,86 +86,22 @@ function Shade(): ReactElement {
   );
 }
 
-/** Film grain over the art: fractal noise, overlaid faintly. */
-function Grain(): ReactElement {
-  const id = useId().replace(/:/g, "");
-  return (
-    <svg className="char-grain" aria-hidden="true" focusable="false">
-      <filter id={`${id}-grain`} x="0" y="0" width="100%" height="100%">
-        <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves={2} seed={2} />
-        <feColorMatrix
-          type="matrix"
-          values="0 0 0 0 0.9  0 0 0 0 0.93  0 0 0 0 0.95  0 0 0 0.5 -0.18"
-        />
-        <feComposite in2="SourceGraphic" operator="in" />
-      </filter>
-      <rect width="100%" height="100%" fill="#fff" filter={`url(#${id}-grain)`} />
-    </svg>
-  );
-}
-
 /** @category hero */
 export function SauronCard({
   landmark,
   ownedIds,
   meId,
-  scope,
-  under = false,
 }: {
   /** The selected account's landmark dials, when it has one (persona-mapped bots). */
   readonly landmark?: { readonly power: number; readonly health: number };
   readonly ownedIds: readonly string[];
   readonly meId?: string;
-  /** CSS selector for the region whose filter clicks the Eye glances at. */
-  readonly scope: string;
-  /** In the tower column, under the page's tower: the shade and the league, no art of its own. */
-  readonly under?: boolean;
 }): ReactElement {
-  const frame = useRef<HTMLIFrameElement>(null);
-  const crest = usePrefs((s) => s.crest);
-  // Under the column's tower no frame mounts here (the ref stays empty), so this hook sends
-  // nothing; the page's one frame hears the glance itself (`vantage.tsx`).
-  useTowerGlance(scope, frame);
   useTowerMood(landmark);
-  useCardFrame(frame);
-  // No WebGL on a phone (#3977) until a real-device recheck: the still Eye in the brand slot is the
-  // tower's presence there (`brand-eye.tsx`), and this card is the league under its mist.
-  const phone = usePhoneWidth();
-  // On a phone nothing of the tower's sits above the card, so the shade has no art to rise over:
-  // `--bare` drops its pull, or its floor would paint over the controls above it (#4976).
-  if (under || phone)
-    return (
-      <section
-        className={`char-card char-card--under${under ? "" : " char-card--bare"}`}
-        aria-label="The league"
-      >
-        <div className="char-blend">
-          <Shade />
-          <div className="char-body">
-            <LeagueCard ownedIds={ownedIds} meId={meId} />
-          </div>
-        </div>
-      </section>
-    );
+  // No art sits above the card, so the shade has nothing to rise over: `--bare` drops its pull, or
+  // its floor would paint over the controls above it (#4976).
   return (
-    <section className="char-card" aria-label="Sauron's tower and the league">
-      <div className="char-art">
-        <div className="char-art-clip">
-          <iframe
-            ref={frame}
-            src={towerSrc(landmark, crest)}
-            title="Barad-dûr, Sauron's tower, live"
-            loading="lazy"
-            tabIndex={-1}
-          />
-        </div>
-        <Grain />
-        <div className="char-vignette" aria-hidden="true" />
-        <div className="char-frame" aria-hidden="true">
-          <span className="char-corner char-corner--left" />
-          <span className="char-corner char-corner--right" />
-        </div>
-      </div>
+    <section className="char-card char-card--under char-card--bare" aria-label="The league">
       <div className="char-blend">
         <Shade />
         <div className="char-body">
