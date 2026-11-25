@@ -6,6 +6,7 @@ import {
   exemptReason,
   isGhostSuite,
   judgePr,
+  settledByRuns,
   stuckLine,
 } from "../../scripts/stuck-pr-decide.mjs";
 
@@ -419,5 +420,60 @@ describe("exemptReason — protected and platter-boarded PRs are not stuck", () 
         isBoarded: boardedBranches([]),
       }),
     ).toBeNull();
+  });
+});
+
+// #8289: the scan read check runs, suites and the PR for every open PR, 32 REST calls per
+// `ship.sh open` on 2026-11-25, most for PRs that were red or still running. WHEN the check runs
+// alone settle the verdict, THEN the scan SHALL stop after reading them, so `settledByRuns` must
+// never call a head settled that `judgePr` could still name, whatever the PR read and suites say.
+describe("settledByRuns — the check runs alone settle the verdict (#8289)", () => {
+  const red = [
+    { name: "verify", status: "completed", conclusion: "failure", completed_at: ago(50) },
+    {
+      name: "integration tests",
+      status: "completed",
+      conclusion: "skipped",
+      completed_at: ago(50),
+    },
+  ];
+  const running = [{ name: "verify", status: "in_progress", conclusion: null, started_at: ago(9) }];
+  const prs = [
+    pr(),
+    pr({ auto_merge: null, mergeable_state: "clean" }),
+    pr({ auto_merge: null, mergeable_state: "dirty" }),
+    pr({ created_at: ago(200) }),
+  ];
+  const suiteSets = [[], [ghost("action_required")], [realSuite], [queuedClaude, queuedFly]];
+  const neverNamed = (checkRuns: Parameters<typeof judgePr>[0]["checkRuns"]) =>
+    prs.every((p) =>
+      suiteSets.every(
+        (suites) => judgePr({ pr: p, checkRuns, suites, now: NOW, headAt: ago(200) }) === null,
+      ),
+    );
+
+  it("WHEN a required check is red, THEN it is settled and no PR or suite could name it", () => {
+    expect(settledByRuns(red, { now: NOW })).toBe(true);
+    expect(neverNamed(red)).toBe(true);
+  });
+
+  it("WHEN a required check is still running, THEN it is settled", () => {
+    expect(settledByRuns(running, { now: NOW })).toBe(true);
+    expect(neverNamed(running)).toBe(true);
+  });
+
+  it("WHEN the head went green under the threshold, THEN it is settled", () => {
+    expect(settledByRuns(green(DEFAULT_HOURS - 1), { now: NOW })).toBe(true);
+    expect(neverNamed(green(DEFAULT_HOURS - 1))).toBe(true);
+  });
+
+  it("WHEN the head has been green past the threshold, THEN the PR read still decides", () => {
+    expect(settledByRuns(green(DEFAULT_HOURS + 1), { now: NOW })).toBe(false);
+    expect(neverNamed(green(DEFAULT_HOURS + 1))).toBe(false);
+  });
+
+  it("WHEN no required check ran, THEN the suites still decide (ghost or no suite)", () => {
+    expect(settledByRuns([], { now: NOW })).toBe(false);
+    expect(neverNamed([])).toBe(false);
   });
 });

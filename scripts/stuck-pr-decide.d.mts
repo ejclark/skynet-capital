@@ -59,6 +59,11 @@ export function judgePr(input: {
 }): Stuck | null;
 /** Would `judgePr` time this head from its commit (no required run, no Actions suite)? */
 export function needsHeadAt(checkRuns?: CheckRun[], suites?: Suite[], required?: string[]): boolean;
+/** Do the check runs alone settle that `judgePr` returns null (red, running, or green under `hours`)? */
+export function settledByRuns(
+  checkRuns?: CheckRun[],
+  opts?: { now?: number; hours?: number; required?: string[] },
+): boolean;
 /** The latest check run of each required name (a re-run supersedes the run it replaced). */
 export function latestRequired(
   checkRuns: CheckRun[],
