@@ -373,3 +373,18 @@ FT-1's 11-25 date alone would have earned. A person (or this session) had to not
 
 **Last assessed:** 2026-11-24
 <!-- probe-ref: {"symbols":{},"vix":26.62,"daysBand":"low:0+","adjacentIds":["advance-economic-indicators-2026-11-27","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","consumer-confidence-2026-11-24","durable-goods-2026-11-25","fhfa-hpi-2026-11-24","gdp-q3-2026-second-2026-11-25","jgb-40y-auction-2026-11-25","new-home-sales-2026-11-25","pce-2026-11-25","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","treasury-2y-frn-2026-11-24","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25"],"screenStreak":0,"blocked":[]} -->
+
+**Forward-test scoring (2026-11-25, `forward-test-due`).** Instrument cache busted, `^N225` re-pulled live; the
+11-25 session was already printing, so the 11-24 bar is settled.
+- **FT-jpx-market-closure-2026-11-23-1: kill.** 11-24 close **58,644.63** vs 11-20 close **56,436.65** = **+3.912%**,
+  above the 2.09% kill line. The S&P ran **+4.73%** on the dark Monday (VIX 35.89 to 26.62) and slipped -0.50% on
+  11-24 (7,237.17 to 7,201.09, VIX 26.36), so Tokyo repriced the whole rebound on one bar. A regime-plus-blackout
+  reading: the row is a kill as registered, and the `Not Open` label is neither confirmed nor cleanly refuted.
+  The kill goes on the sweep doc's kill list.
+- **FT-...-2** (score by 2027-01-15) stays `_open_`, premise intact as of the last JPX re-read (11-23).
+- No conviction proposal or declared intent names this event; `research:claims` has nothing to score.
+- **Loop census:** the sense-and-score of this row ran with no human; the registered-null's calm-regime sample
+  (a regime control missing at registration) is the stage a person would have caught.
+
+**Last assessed:** 2026-11-25
+<!-- probe-ref: {"symbols":{},"vix":26.36,"daysBand":"low:0+","adjacentIds":["advance-economic-indicators-2026-11-27","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","consumer-confidence-2026-11-24","durable-goods-2026-11-25","fhfa-hpi-2026-11-24","gdp-q3-2026-second-2026-11-25","jgb-40y-auction-2026-11-25","new-home-sales-2026-11-25","pce-2026-11-25","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","treasury-2y-frn-2026-11-24","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25"],"screenStreak":0,"blocked":[]} -->

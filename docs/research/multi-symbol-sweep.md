@@ -1248,6 +1248,9 @@ robust, alpha fragile — is the finding.
 - **"The $42B-era indirect-share floor of 61.7% holds on the November 10-Year new issue (FT-treasury-10y-note-2026-11-10-5)"** — added 2026-11-12 from the
   [treasury-10y-note-2026-11-10 close-out](events/treasury-10y-note-2026-11-10.md). The 11-10 auction printed indirect **61.23%** of competitive awards, 0.47pp under a floor that was simply the minimum of 11 prior prints (2024-11-05). Direct bidders took 29.0% and dealers 9.77%, so end-investor demand held. Do not register a floor equal to a small sample's own minimum; the next print is a coin flip against it.
 
+- **"A total Tokyo blackout is an ordinary Tokyo-closure bar: the first `^N225` session back prints |close-to-close| below 2.09% (FT-jpx-market-closure-2026-11-23-1)"** — added 2026-11-25 from the [jpx-market-closure-2026-11-23 forward-test score](events/jpx-market-closure-2026-11-23.md). The 11-24 bar printed **+3.912%** (58,644.63 vs 56,436.65), 1.87x the line, on a gap that carried a +4.73% S&P rebound and a 9.3-point VIX drop the dark Monday could not price. The twelve-case null behind the 2.09% line was drawn from calm-regime gaps, so this kill reads as a regime effect plus the blackout and cannot isolate the `Not Open` label.
+  Do not re-propose a "blackout is inert" threshold off the 12-case `Not Open` bucket without a control for the US move across the gap.
+
 ## Portfolio-level critique — what no single-symbol view sees
 
 1. **Multiple testing.** ~40–70 statistical looks across eight tickers; the family-corrected bar
