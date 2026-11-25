@@ -46,3 +46,15 @@ export function rankDelta(
   curr: number[],
 ): { movedUp: number[]; retired: number[]; added: number[] };
 export function digestLine(prev: number[] | null, curr: number[], since: string | null): string;
+/** The rows from the open-issue list and each queued issue's facts (queue-facts.mjs, #8289). */
+export function liveRows(opts?: {
+  now?: number;
+  listOpen?: () => {
+    number: number;
+    title: string;
+    body?: string | null;
+    labels: { name: string }[];
+    pull_request?: unknown;
+  }[];
+  readFacts?: (numbers: number[]) => Map<number, { readyAt: number | null; blocks: number[] }>;
+}): RankRow[];
