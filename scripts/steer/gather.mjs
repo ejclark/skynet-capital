@@ -33,6 +33,8 @@
 //   - the reel and the strip: `scripts/comms-scan.mjs --json --offline`, the one merge reader.
 //   - the queue: `scripts/rank.mjs --json`, kept to what `admission.mjs --queue` says is pullable,
 //     with `admission.mjs --next` and the dial from `work-gate.mjs`. The page never moves the dial.
+//     Both admission answers come from its own `runCli`, in this process, sharing the `ready` list
+//     and the plans' hold reads (reads.mjs, #8289).
 //
 // A design round must come through the same door as every other decision: its issue has to be on
 // the Needs-you list (a `Needs from you` callout). A manifest for an issue that is not is refused.
@@ -44,7 +46,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { isMain } from "../is-main.mjs";
 import { plan, gather as readAssignments } from "../moneypenny/assignments.mjs";
-import { ensureGhToken, ghRest, ghRestAll } from "../moneypenny/gh.mjs";
+import { ensureGhToken, ghRestAll } from "../moneypenny/gh.mjs";
 import { designFiles, designRound, loadDesigns } from "./design.mjs";
 import {
   BUDGET_MINUTES,
@@ -53,6 +55,7 @@ import {
   parseSteerMarker,
   splitByPictures,
 } from "./model.mjs";
+import { admissionReads, blockingLists } from "./reads.mjs";
 import { readRecords } from "./records.mjs";
 import { historyFrom, isResearch, reelFrom, STRIP_DAYS, stripFrom } from "./reel.mjs";
 import {
@@ -131,13 +134,7 @@ function becauseMap(sinceIso) {
 }
 
 function decisionsBlock({ deps, planned, designFiles: files, now, slot }) {
-  const blocks = {};
-  for (const n of planned.needsYou.map((r) => r.number)) {
-    if (deps.prs.some((p) => p.number === n)) continue;
-    blocks[n] = ghRest(`issues/${n}/dependencies/blocking`)
-      .filter((b) => b.state === "open")
-      .map((b) => b.number);
-  }
+  const blocks = blockingLists(planned.needsYou, deps);
   const design = loadDesigns(files, {
     issue: flag("design-issue") && Number(flag("design-issue")),
     round: flag("design-round") ?? null,
@@ -170,7 +167,8 @@ function decisionsBlock({ deps, planned, designFiles: files, now, slot }) {
  */
 function queueBlock(gate, next) {
   const halt = gate.position === "halt";
-  const pull = script("scripts/moneypenny/admission.mjs", ["--queue"]);
+  const admission = admissionReads();
+  const pull = admission("--queue");
   const pullable = new Set(pull.map((r) => r.number));
   const ranked = script("scripts/rank.mjs", ["--json"]).filter((r) => pullable.has(r.number));
   const seen = new Set(ranked.map((r) => r.number));
@@ -194,7 +192,7 @@ function queueBlock(gate, next) {
     halt,
     pullable: pullable.size,
     items,
-    nextPick: script("scripts/moneypenny/admission.mjs", ["--next"]),
+    nextPick: admission("--next"),
     dialLink: `https://github.com/${REPO}/issues/${DIAL_ISSUE}`,
     pace: script("scripts/moneypenny/quota.mjs", ["--tick", "--json"]).pace,
     hours: next.hours,
