@@ -153,6 +153,27 @@ reverts.
   the issue carries no `in-progress`. A plan is the plan lane's as soon as it reads `ready`.
 - **Subagent text arrives HTML-escaped** (`&lt;`) — unescape before posting
   (`clear-path-post.mjs` does).
+- **A child's clone is shallow.** Its prompt starts with `git fetch --unshallow origin`: merging
+  main into an older PR branch fails "unrelated histories" without it (2026-11-25, three children).
+- **A child that ends its turn after its PR arms waits forever.** Auto-merge never fires on a
+  conflicted PR, and an ended turn does not wake when main moves. Its prompt says: stay in a
+  Monitor or `until` loop until the PR is merged, and merge main again whenever it reads `dirty`.
+  #8288 went green, then turned dirty when #8286 merged, and its session sat idle until nudged.
+- **Park a PR on its blocker, or the red-lane sweep closes it.** The sweep closed #8044, and
+  deleted its branch, 3 minutes after the platter that unblocked it merged. Since #8485 it skips a
+  PR whose issue has an open native blocked-by link, so record the wait:
+  `node scripts/issues.mjs update <issue> --blocked-by <blocker>`.
+- **Screenshot baselines come from CI, never from a local re-cut.** `ci shots` plus
+  `node scripts/rebaseline-from-ci.mjs <pr> --run <id> --from-git` re-baselines from a cloud
+  session (5 of 5 runs, 2026-11-25), and its dry run shows each diff. A cloud container is Linux
+  and *can* cut `*-chromium-linux.png` locally, but that skips the review: a local re-cut on #8044
+  baked a wrong earnings-chip date into the R&D board's baseline (#8483).
+- **A spent model limit leaves work unreviewed, not failed.** When the weekly Fable limit is
+  spent, every Fable-floor agent dies, and the post-merge audit lists that PR as unreviewed
+  (#8496). Re-run it after the reset. Never review it by hand in the orchestrator.
+- **The silent-stall guard adds `needs-eric` to a lane build that ended quietly.** That is not a
+  decision of his: remove it and re-apply `ready` once. A second stall goes to a child. #8494's
+  retry merged within the hour.
 
 ## 5. Close
 
