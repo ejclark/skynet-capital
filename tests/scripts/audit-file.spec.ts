@@ -4,6 +4,7 @@ import {
   fastTrackable,
   fileAll,
   findExisting,
+  headline,
   lintAll,
   MAX_FAST_TRACK,
   main,
@@ -165,11 +166,15 @@ describe("the capsules", () => {
     expect(body).toContain("````text"); // a fence longer than the agent's own
   });
 
-  it("reads a scope off the path", () => {
+  it("reads a scope off the path, naming the lane's own folder (#8063)", () => {
     expect(scopeOf("app/src/shell/x.tsx")).toBe("shell");
     expect(scopeOf("src/trading/x.ts")).toBe("trading");
     expect(scopeOf(".github/workflows/x.yml")).toBe("ci");
     expect(scopeOf("scripts/x.mjs")).toBe("scripts");
+    expect(scopeOf("scripts/moneypenny/steer-answers.mjs")).toBe("moneypenny");
+    expect(scopeOf("scripts/newsletter/rework.mjs")).toBe("newsletter");
+    expect(scopeOf(".claude/workflows/post-merge-audit.js")).toBe("workflows");
+    expect(scopeOf(".claude/skills/ship/SKILL.md")).toBe("skills");
   });
 
   it("puts a lesson on the proposal when the grouper found one", () => {
@@ -185,6 +190,76 @@ describe("the capsules", () => {
       "A check read a proxy as the outcome: job success, one lumped kind, or a page load.";
     const item = { ...proposalCapsule({ ...proposal, lesson }), labels: ["feedback"] };
     expect(lintAll([item])).toEqual([]);
+  });
+});
+
+// #8063. WHEN a summary is longer than the title budget, the title SHALL be its first sentence or
+// clause, ending on a word boundary, with the full summary in the body. Tonight's three findings
+// (audit wf_d9407c50-46e): the dry run cut each mid-clause and scoped all three `scripts`. Their
+// leads are the dry run's verbatim; their tails are the titles a session then wrote by hand.
+describe("titles read as a defect, not a slice of one (#8063)", () => {
+  const tonight = [
+    {
+      file: "scripts/moneypenny/steer-graduation.mjs",
+      summary:
+        "The new veto only fires when the question or title contains a word from RULE_FOUR_WORDS (merge|deploy|spend|credential), so an irreversible ask worded without one still graduates under a reversible class.",
+      title:
+        "fix(moneypenny): the new veto only fires when the question or title contains a word from RULE_FOUR_WORDS",
+    },
+    {
+      file: "scripts/moneypenny/steer-answers.mjs",
+      summary:
+        "The fix keeps an answered ask in the page state only while it is still on the selector, so if a partly failed answer run drops it, the next tick reports Eric's already-applied answers as not read.",
+      title:
+        "fix(moneypenny): the fix keeps an answered ask in the page state only while it is still on the selector",
+    },
+    {
+      file: "scripts/newsletter/rework.mjs",
+      summary:
+        "The rework meter only counts a fix-forward when the fix PR's own title or body names the decision PR, so it misses a fix-forward that closes the audit's bug issue instead.",
+      title:
+        "fix(newsletter): the rework meter only counts a fix-forward when the fix PR's own title or body names…",
+    },
+  ];
+
+  it("cuts each of tonight's at a clause or a whole word, scoped to its lane", () => {
+    for (const t of tonight) {
+      const bug = bugCapsule(finding({ file: t.file, summary: t.summary }), { fastTrack: false });
+      expect(bug.title).toBe(t.title);
+      expect(bug.title.length).toBeLessThanOrEqual(110);
+      // the full summary, its tail included, still reaches the body
+      expect(bug.body).toContain(t.summary.replace(/\.$/, ""));
+      expect(lintAll([bug])).toEqual([]);
+    }
+  });
+
+  it("keeps a first sentence that fits, and leaves a short summary whole", () => {
+    expect(headline("The meter double-counts. It reads both sides of the ledger twice.", 60)).toBe(
+      "The meter double-counts",
+    );
+    expect(headline("a short defect", 60)).toBe("a short defect");
+  });
+
+  it("never ends mid-word or on a dangling small word, even with no clause to cut at", () => {
+    const h = headline(`${"word ".repeat(30)}the end`, 50);
+    expect(h).toBe(`${"word ".repeat(9)}word…`);
+    expect(headline(`${"alpha bravo ".repeat(4)}the ${"x".repeat(80)}`, 60)).toBe(
+      `${"alpha bravo ".repeat(4).trimEnd()}…`,
+    );
+  });
+
+  it("still finds the issue an older, mid-clause title filed, so nothing is refiled", () => {
+    const [t] = tonight;
+    if (!t) throw new Error("tonight's strings are missing");
+    const item = bugCapsule(finding({ file: t.file, summary: t.summary }), { fastTrack: false });
+    const old = {
+      number: 8059,
+      title:
+        "fix(scripts): the new veto only fires when the question or title contains a word from RULE_FOUR_WORDS (merge|…",
+      body: `Found in PR #7284 at \`${t.file}:26\``,
+      labels: ["bug"],
+    };
+    expect(findExisting(item, [old])?.number).toBe(8059);
   });
 });
 

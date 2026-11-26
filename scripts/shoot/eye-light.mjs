@@ -1,14 +1,18 @@
 // Pictures for #7216 slice 2: the Eye's light. Moneypenny's answer links a position on the Profile
-// page; the tap sends a spark from the tower's Eye to the row: (1) the Eye focuses under a pool of
-// light, (2) a spark arcs over the page with a trail under a moving spotlight, (3) it lands as the
-// page dims around the row, (4) the dim lifts and a ring and a label naming the Eye stay.
+// page; the tap sends a spark from the Eye to the row: (1) the Eye focuses under a pool of light,
+// (2) a spark arcs over the page with a trail under a moving spotlight, (3) it lands as the page
+// dims around the row, (4) the dim lifts and a ring and a label naming the Eye stay.
 //
-// 1760, the tower's column on the page's right (#7487 slice 4a), so the spark arcs leftward to the row; the question goes in through her dock's box and the
-// linked line is tapped in History, which rises from the dock (#7487 slice 2: her links live there,
-// never in the dock's plain latest line; the tap navigates, so History closes as the light plays). The page's clock is held after the tower is ready, so each step is shot at
-// an exact moment of the light rather than wherever a screenshot happened to fall.
+// 860, the widest frame where the light still flies (#8539). Since #8286 the tower stands only on
+// the home page, so on Profile the light starts at the topbar's brand Eye, which CSS draws only at
+// ≤860 (`shell.css`, `lightOrigin` in `eye-light.ts`); wider than that, Profile has no Eye and the
+// ring shows alone. The question goes in through her dock's box and the linked line is tapped in
+// the dock's own conversation pane, where her answers now land (`moneypenny-dock.tsx`, `.mp-list`).
+// The page's clock is held
+// before the tap, so each step is shot at an exact moment of the light rather than wherever a
+// screenshot happened to fall.
 //
-//   npm run build --prefix app && npm run build:scene && node scripts/shoot/eye-light.mjs [outdir]
+//   npm run build --prefix app && node scripts/shoot/eye-light.mjs [outdir]
 
 import { accountsFixture } from "./accounts-fixture.mjs";
 import { openShell } from "./shell.mjs";
@@ -23,15 +27,16 @@ const { page, origin, shoot, close } = await openShell({
       disclosure: "Educational paper trading — not financial advice.",
     },
   },
-  viewport: { width: 1760, height: 900 },
+  viewport: { width: 860, height: 900 },
 });
 await page.emulateMedia({ reducedMotion: "no-preference" });
 
 await page.goto(`${origin}/app/accounts`);
-await page.locator(".tower-column").waitFor();
-const row = page.locator('tr[id^="pos-"]').first();
+await page.locator(".brand-eye").waitFor();
+// The table's row or, where CSS shows cards instead, the card (`position-anchor.ts`).
+const row = page.locator('tr[id^="pos-"]:visible, [data-pos-anchor^="pos-"]:visible').first();
 await row.waitFor();
-const anchor = await row.getAttribute("id");
+const anchor = (await row.getAttribute("id")) ?? (await row.getAttribute("data-pos-anchor"));
 const symbol = anchor.slice("pos-".length);
 console.log(`lighting ${anchor}`);
 
@@ -47,20 +52,10 @@ await page.route("**/api/companion/chat", (route) =>
 );
 await page.route("**/api/companion/ack", (route) => route.fulfill({ json: { ok: true } }));
 
-try {
-  await page.waitForFunction(
-    () => document.querySelector("iframe.vantage")?.contentWindow?.__ready === true,
-    undefined,
-    { timeout: 60_000 },
-  );
-} catch {
-  console.log("the tower never reported ready — shot without it");
-}
 const dock = page.locator(".mp-dock");
 await dock.locator(".mp-box-input").fill("How are my positions doing?");
 await dock.getByRole("button", { name: "Send", exact: true }).click();
-// Her links live in the dock's own conversation pane now (`.mp-convo`, #7556); no History to open.
-const link = dock.locator(".mp-convo .mp-place").first();
+const link = dock.locator(".mp-list .mp-place").first();
 await link.waitFor();
 await page.mouse.move(0, 0);
 await page.waitForTimeout(1200);

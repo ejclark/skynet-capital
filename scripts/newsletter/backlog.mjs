@@ -9,6 +9,7 @@
 //
 // PURE, like the rest of build.mjs's inputs: each function reads only what gather.mjs collected, and
 // the honesty rule is the meter's — a reading that could not be taken is null or its words, never 0.
+import { introducedIn } from "../agent-meter/defects.mjs";
 import { parkedBy } from "../moneypenny/labels.mjs";
 import { prKind } from "./metrics.mjs";
 
@@ -99,13 +100,31 @@ const isDecision = (pr, w) => {
 };
 
 /**
- * The candidate pairs: a decision merged in the week, and a later revert or `fix` merged within
- * 48h (and by the moment of the run) that names it. gather.mjs reads the changed files of these
- * PRs only, so `rework` can keep the pairs that share one; a handful of calls a week.
+ * The decisions an audit bug issue blames, by issue number (#8061). The post-merge audit files each
+ * defect with `| **Introduced in** | #A … |`, and the lane's fix names only that issue, so a fix
+ * naming #B reworks #A. "before #A" says the defect predates #A, so it names no culprit.
  */
-export function reworkCandidates(prs, w, asOfMs) {
+function blamed(defects) {
+  const by = new Map();
+  for (const issue of Array.isArray(defects) ? defects : []) {
+    const introduced = introducedIn(issue.body ?? "");
+    if (issue.number && introduced && !introduced.floor) by.set(issue.number, introduced.prs);
+  }
+  return by;
+}
+
+/**
+ * The candidate pairs: a decision merged in the week, and a later revert or `fix` merged within
+ * 48h (and by the moment of the run) that names it, or names an audit issue (`defects`, as
+ * `{ number, body }`) whose Introduced in cell names it. gather.mjs reads the changed files of
+ * these PRs only, so `rework` can keep the pairs that share one; a handful of calls a week.
+ */
+export function reworkCandidates(prs, w, asOfMs, defects = []) {
   const merged = prs.filter((pr) => pr.mergedAt && Date.parse(pr.mergedAt) <= asOfMs);
   const followers = merged.filter((pr) => REVERT.test(pr.title ?? "") || FIX.test(pr.title ?? ""));
+  const blames = blamed(defects);
+  const names = (f, n) =>
+    f.refs?.includes(n) || f.refs?.some((ref) => blames.get(ref)?.includes(n)) === true;
   return merged
     .filter((d) => isDecision(d, w))
     .flatMap((d) => {
@@ -115,10 +134,7 @@ export function reworkCandidates(prs, w, asOfMs) {
           const fAt = Date.parse(f.mergedAt);
           const late = fAt - at;
           return (
-            f.number !== d.number &&
-            late > 0 &&
-            late <= REWORK_WINDOW_MS &&
-            f.refs?.includes(d.number)
+            f.number !== d.number && late > 0 && late <= REWORK_WINDOW_MS && names(f, d.number)
           );
         })
         .map((f) => ({ decision: d.number, by: f.number, revert: REVERT.test(f.title) }));
@@ -139,28 +155,31 @@ export const candidatePrs = (pairs) =>
  * dilute the rate sevenfold. Its class is its PR kind (prKind).
  *
  * REWORK is a later merged PR, within 48h, that is a revert or a `fix`, names the decision in its
- * title or body, AND changes a file the decision changed. The file test is what keeps a fix that
+ * title or body (or names the audit issue whose Introduced in cell names it, #8061: the audit's
+ * fix-forwards close the bug issue and never name the PR), AND changes a file the decision changed. The file test is what keeps a fix that
  * names a PR only as the push that exposed a bug out of the count: on W47, #7773 named #7762 (a
  * research pulse whose push hit a spent API budget) and #7902 named #7900 (a digest whose commit
  * turned a flaky e2e red), and neither touched the other's files.
  *
  * A decision whose 48h has not run out at the moment of the run is `open`, not clean: the rate is
  * over the decisions whose window has closed. `files` maps a PR number to its changed paths, read
- * for the candidate pairs only. Inputs saved before #8037 lack PR references, and a failed file read
- * arrives as its words: either reads unknown, never zero rework.
+ * for the candidate pairs only; `defects` are the audit issues gather read. Inputs saved before #8037
+ * lack PR references, and a failed file or audit-issue read arrives as its words: each reads
+ * unknown, never zero (or too little) rework.
  */
-export function rework(prs, w, asOfMs, files) {
+export function rework(prs, w, asOfMs, files, defects = []) {
   const merged = prs.filter((pr) => pr.mergedAt && Date.parse(pr.mergedAt) <= asOfMs);
   if (merged.length && !merged.some((pr) => Array.isArray(pr.refs)))
     return "unavailable: these inputs predate the PR references rework reads (#8037)";
   if (typeof files === "string") return files;
+  if (typeof defects === "string") return defects;
   if (files == null || typeof files !== "object")
     return "unavailable: no changed files were read for the rework pairs (#8037)";
   const shares = ({ decision, by }) => {
     const mine = new Set(files[decision] ?? []);
     return (files[by] ?? []).some((path) => mine.has(path));
   };
-  const pairs = reworkCandidates(prs, w, asOfMs).filter(shares);
+  const pairs = reworkCandidates(prs, w, asOfMs, defects).filter(shares);
   const decisions = merged.filter((d) => isDecision(d, w));
   const items = [];
   let open = 0;
