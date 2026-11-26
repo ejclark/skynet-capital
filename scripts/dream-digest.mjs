@@ -247,6 +247,15 @@ const onMain = memo((path) => {
 const unreadWhy = new Map();
 
 /**
+ * Why an issue went unread, by issue number, sorted by gh's own HTTP status, never by free text
+ * (#8260). "not found" (404, 410: another repo's issue, a deleted one) is a gap no re-run clears, so
+ * /dream may score a run past it (#7728). Anything else, a rate limit, a missing login, a network
+ * error, a 5xx, is "could not reach": the next run may read it, so the run is re-run, not scored.
+ */
+const unreadCause = new Map();
+const NOT_FOUND = /\bHTTP 4(?:04|10)\b/;
+
+/**
  * "open", "closed", or null when gh could not say. One call per issue however many memories cite it:
  * this bucket is shared with every lane. A failed read is null, never "open": reading every failure
  * as open let a memory waiting on a closed issue pass the review as clean (#6717). REST, not `gh issue
@@ -261,6 +270,7 @@ const issueState = memo((n) => {
   if (state === "open" || state === "closed") return state;
   const why = res.error?.message ?? (res.stderr?.trim() || `gh printed "${res.stdout?.trim()}"`);
   unreadWhy.set(n, why.split("\n")[0]);
+  unreadCause.set(n, NOT_FOUND.test(res.stderr ?? "") ? "not found" : "could not reach");
   return null;
 });
 
@@ -319,6 +329,7 @@ function staleCandidates(dir) {
       (path) => !(path.startsWith("/") || path.startsWith("~")),
     );
     const cited = [...new Set([...claims.issues, ...claims.futureOnIssue])];
+    const unreadIssues = cited.filter((n) => issueState(n) === null);
     out.push({
       file: name,
       modified: statSync(join(dir, name)).mtime.toISOString().slice(0, 10),
@@ -326,7 +337,8 @@ function staleCandidates(dir) {
         repoPaths.filter((path) => onMain(path) === null),
       ),
       closedIssues: claims.issues.filter((n) => issueState(n) === "closed"),
-      unreadIssues: cited.filter((n) => issueState(n) === null),
+      unreadIssues,
+      unreadCauses: Object.fromEntries(unreadIssues.map((n) => [n, unreadCause.get(n)])),
       missingNpmScripts: unless(scripts, claims.npmScripts.length > 0, () =>
         claims.npmScripts.filter((s) => !Object.hasOwn(scripts, s)),
       ),
@@ -338,7 +350,9 @@ function staleCandidates(dir) {
     console.error("dream-digest: no origin/main to read; cited paths and npm rows say unread");
   else if (!pkg) console.error("dream-digest: no package.json on origin/main; npm rows say unread");
   for (const [n, why] of unreadWhy)
-    console.error(`dream-digest: could not read #${n} (${why}); listed under unreadIssues`);
+    console.error(
+      `dream-digest: could not read #${n} (${why}); listed under unreadIssues as ${unreadCause.get(n)}`,
+    );
   return out;
 }
 
