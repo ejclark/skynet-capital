@@ -1,6 +1,6 @@
 // Pictures for #3807 slice 3b-1: Settings → Preferences' "Tower motion" (phone first, then
 // desktop, then the device's reduced-motion lock). The `?card=art|league` compare it also shot is
-// retired (#3977); the Profile page's tower column has its own pictures (`tower-column.mjs`).
+// retired (#3977); the tower now stands only on the home page (#8286).
 // Same fixture as the Profile pictures (`accounts-fixture.mjs`).
 //
 //   npm run build --prefix app && npm run build:scene && npx tsx scripts/shoot/motion-setting.mjs docs/shots/motion-setting
