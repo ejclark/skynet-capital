@@ -543,3 +543,112 @@ memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-11-25
 <!-- probe-ref: {"symbols":{},"vix":26.36,"daysBand":"low:0+","adjacentIds":["advance-economic-indicators-2026-11-27","aruoba-inflation-term-structure-2026-11-20","aws-reinvent-2026","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","chicago-pmi-2026-11-30","china-ga-ge-sb-suspension-expiry-2026-11-27","consumer-confidence-2026-11-24","cyber-monday-2026-11-30","dallas-fed-mfg-2026-11-30","durable-goods-2026-11-25","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","gdp-q3-2026-second-2026-11-25","industrial-production-annual-revision-2026-11-24","inio-lockup-expiry-2026-11-30","japan-cpi-2026-11-20","japan-cpi-tokyo-flash-2026-11-27","jgb-2y-auction-2026-11-30","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-1-5y-2026-11-20","jgb-liquidity-enhancement-5-11y-2026-11-27","jpx-market-closure-2026-11-23","ofgem-price-cap-announcement-2026-11-25","opec-plus-meeting-2026-11-29","opex-2026-11-20","pce-2026-11-25","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","qnt-lockup-expiry-2026-11-30","russell-recon-lockdown-2026-11-30","russell-style-month-end-capping-effective-2026-11-30","sifma-bond-early-close-2026-11-27","sp-global-flash-us-pmi-2026-11-23","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","uk-consumer-confidence-2026-11-20","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25"],"screenStreak":1} -->
+
+## Outcome
+
+**Close-out (2026-11-26, D+1 — inside `closeOutWithinDays`).** Verdict: **stand-aside held; three of four
+forward tests scored — `-1` PASS, `-2` PASS, `-3` KILL, `-4` left `_open_` (settles 2026-12-23).**
+`symbols: []`, so the mandated cache bust (`rm -rf node_modules/.cache/earnings-cycle
+node_modules/.cache/intraday-edges`) has no target of its own; every number below is a fresh fetch this
+session — the Census release page, Yahoo daily bars, and the Atlanta Fed's own workbooks — never memory.
+
+### Leg 1 — the print, from the primary itself
+
+`census.gov/construction/nrs/current/index.html` (HTTP 200, 241,449 B) and
+`construction/nrs/pdf/newressales.pdf` (HTTP 200, 250,432 B, `last-modified` 2026-11-25 15:00:00 GMT =
+10:00 ET, as scheduled), release **CB26-188** (`CENSUS:`). The confirmed date held on the slot.
+
+| Line | October 2026 | vs. revised September 2026 | vs. October 2025 |
+|---|---|---|---|
+| New houses sold (SAAR) | **701,000** | **+14.2% (±22.6%)\*** (from a revised **614,000**) | +7.5% (±23.0%)\* (from 652,000) |
+| New houses for sale | **470,000** | −1.5% (±1.4%) (from 477,000) | −4.1% (±4.1%)\* |
+| Months' supply | **8.0** | −14.0% (±21.7%)\* (from 9.3) | −11.1% (±20.6%)\* |
+| Median sales price | **$391,300** | −0.3% (±10.9%)\* | −3.2% (±9.2%)\* |
+| Average sales price | **$459,900** | −2.2% (±9.3%)\* | −12.1% (±8.1%) |
+
+`*` is Census's own not-statistically-significant flag. The headline was the biggest m/m in this ledger
+and still sat well inside its error bar (14.2% against ±22.6%) — Leg 5's arithmetic, on the day.
+**Two facts worth banking.** (1) **September was restated 676,000 → 614,000 (−9.2%)**, the second-largest
+one-month revision in the archive's range and the reason this print's "+14.2%" is measured off a much
+lower base than the 676,000 the 10-27 edition reported; this belongs to the sibling
+`new-home-sales-2026-10-27` fragment's `-4` and is recorded here as a fact only, not scored in this
+event's fragment. By this ledger's running count it makes the ≥1.0% revision base rate **28 of 36**
+(27 of 34 at the 10-26 row, August's −0.6% not counted, September's −9.2% counted).
+(2) **Months' supply printed 8.0** — exactly on the `This quarter` call's falsifier line ("below 8.0 in
+any edition through 2027-03-31"), which does **not** fire on a tie; for-sale inventory 470,000 is above
+the 450,000 line. The drop from 9.3 is mostly a bigger sales denominator on a smaller inventory move,
+so the overhang call stands with its falsifier within one tick of firing.
+
+### Leg 2 — the tape: ITB was wide, and the bar was set in a calmer regime
+
+Session high-low range, % of close (Yahoo daily bars, fetched fresh with the repo's contactable UA; the
+first plain fetch 429'd — a client error, not a blocked source):
+
+| | 11-24 | **11-25 (print day)** | 11-25 close-to-close | prior-20-session median range | print day / median |
+|---|---|---|---|---|---|
+| ITB | 3.558 | **4.566** | +2.91% | 3.062 | 1.49× |
+| XHB | 2.903 | 4.722 | +2.36% | 2.768 | 1.71× |
+| SPY | 1.223 | 3.206 | −0.29% | 1.528 | 2.10× |
+| `^VIX` close | 26.36 | 28.29 (intraday 27.49–34.95) | | | |
+
+ITB's 4.566% is above the registered 2.934% line, so `-3` is a **kill as registered**. The session also
+carried the `high`-tier GDP second estimate and PCE the same morning, and a
+VIX that closed 28.29 against 14.5 at registration — and **11 of the 20 sessions before it already
+printed ≥ 2.934%** on ITB, so the bar was one the tape in this regime would clear most days. That is the
+reading the registration itself named ("a kill would be read as evidence about the day rather than about
+the print unless the release-day class as a whole re-tests wider"). The class was **not** re-derived
+this session, so the 65-session, eight-instrument null stands unrefuted and kill switch 1 (a re-run after
+2026-12-23 at p<0.05) is untouched; the test is killed, the stance is not. It is the third housing-print
+ITB ceiling to miss on regime, after pending-home-sales and the FHFA HPI close-out the day before.
+
+### Leg 3 — the nowcast, on the model's own workbook
+
+`GDPNowcastDataReleaseDates.xlsx` (HTTP 200, 16,944 B) → `PostedUpdates` row 77, **2026-11-25:
+"GDP (Q3 2nd estimate), Personal income and outlays, NIPA underlying detail tables, Advance Census
+manufacturing (M3-1), New-home sales"** — verbatim what Leg 2 of the initial research expected.
+`GDPTrackingModelDataAndForecasts.xlsx` (HTTP 200, 10,995,456 B, `last-modified` 2026-11-25 16:46:56 GMT;
+`ContribArchives` still ends 2026-10-28, so the Q4 vintages are read from the workbook's current-quarter
+`ChangeInContributions` and `Contributions` sheets, same numbers the archive carries once extended):
+
+| Vintage (2026:Q4) | `Data releases` | Residential contribution | GDP nowcast |
+|---|---|---|---|
+| 2026-11-18 | Housing starts | −0.2932pp | 3.209% |
+| **2026-11-25** | **GDP (Q3 2nd est.), Personal income and outlays, M3-1, New-home sales, IP revision (11/24)** | **−0.3673pp** (Δ **−0.0741pp**) | **2.902%** (Δ **−0.307pp**) |
+
+The residential move is 0.0741pp, past the 0.02pp bar and 3.7× it. The headline move (0.307pp) is below
+both the 0.4340pp bundled-class median and the 0.3404pp personal-income-only median — the print did not
+add to the headline, as Leg 3 said. **Honest limit:** on a six-item vintage the residential move cannot be
+attributed to this print alone, and its sign was negative on a print that was a headline beat; the test
+asked only whether the vintage moves residential by ≥ 0.02pp, and it did.
+
+### Forward tests, scored (three of four)
+
+| Test | Prediction | Printed | Verdict |
+|---|---|---|---|
+| `-1` | 11-25 GDPNow Q4 residential contribution moves ≥ 0.02pp | **−0.0741pp** (−0.2932 → −0.3673), vintage names New-home sales | **PASS** |
+| `-2` | 11-25 headline m/m carries Census's not-significant asterisk | **+14.2% (±22.6%)\*** — asterisk present | **PASS** (running count 40 of 43) |
+| `-3` | ITB 11-25 range below 2.934% | **4.566%** | **KILL** (regime-confounded; added to the kill list) |
+| `-4` | Oct 2026 level restated by the 12-23 edition differs ≥ 1.0% | first print **701,000** recorded; restatement not published | **`_open_`** until **2026-12-23** (score-by 12-28) |
+
+`-4` is deliberately not scored here: its data does not exist until `new-home-sales-2026-12-23` prints,
+and the scanner re-dispatches it as `forward-test-due` (it is the row `--due` lists under
+`forwardTestsBeyondWindow`). Never shortened, never edited.
+
+### Stance vs. outcome, and the loop
+
+- **Stance held: stand aside.** No symbol, no playbook, no position; the release did what Leg 5 said it
+  would (an asterisked headline, a large revision of the prior month) and the one registered test that
+  touched a price failed on the day's regime, not on a contradiction of the 65-session null.
+- **Conviction claims.** `node scripts/conviction-proposals.mjs --event=new-home-sales-2026-11-25` and
+  `node scripts/intents.mjs --event=new-home-sales-2026-11-25` both print `[]`; `npm run research:claims --
+  --event new-home-sales-2026-11-25` run after the Outcome cells were written (it printed `nothing written`: no conviction reads this event).
+- **Adjacency (close-out, no proposal).** Nothing dated and in-horizon is new: `--on-date=2026-11-25`
+  lists nine tracked entries, all already on the calendar; Thanksgiving closes the market 11-26, half day
+  11-27, FOMC blackout from 11-28. Nothing past the horizon seen.
+- **Loop stage a person still had to do** (sense · decide · act · verify · remember): **verify** — reading
+  the Q4 vintage required knowing that `ContribArchives` lags a quarter behind and that the current-quarter
+  sheets carry it; a fragment-scoring helper that reads `ChangeInContributions` for a named vintage date
+  would automate the check for every GDPNow-keyed row in the register.
+
+**Last assessed:** 2026-11-26
+<!-- probe-ref: {"symbols":{},"vix":28.29,"daysBand":"low:0+","adjacentIds":["advance-economic-indicators-2026-11-27","aruoba-inflation-term-structure-2026-11-20","aws-reinvent-2026","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","chicago-pmi-2026-11-30","china-ga-ge-sb-suspension-expiry-2026-11-27","consumer-confidence-2026-11-24","cyber-monday-2026-11-30","dallas-fed-mfg-2026-11-30","durable-goods-2026-11-25","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","gdp-q3-2026-second-2026-11-25","industrial-production-annual-revision-2026-11-24","inio-lockup-expiry-2026-11-30","japan-cpi-2026-11-20","japan-cpi-tokyo-flash-2026-11-27","jgb-2y-auction-2026-11-30","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-1-5y-2026-11-20","jgb-liquidity-enhancement-5-11y-2026-11-27","jpx-market-closure-2026-11-23","ofgem-price-cap-announcement-2026-11-25","opec-plus-meeting-2026-11-29","opex-2026-11-20","pce-2026-11-25","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","qnt-lockup-expiry-2026-11-30","russell-recon-lockdown-2026-11-30","russell-style-month-end-capping-effective-2026-11-30","sifma-bond-early-close-2026-11-27","sp-global-flash-us-pmi-2026-11-23","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","uk-consumer-confidence-2026-11-20","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25"],"screenStreak":0} -->
