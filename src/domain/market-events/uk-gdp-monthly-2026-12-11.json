@@ -1,0 +1,11 @@
+{
+  "id": "uk-gdp-monthly-2026-12-11",
+  "kind": "macro-print",
+  "title": "UK GDP monthly estimate, October 2026 (ONS, 07:00 London / 02:00 ET) — the last UK activity read the December MPC sees, and the month that carries most of the Q4 nowcast",
+  "date": "2026-12-11",
+  "status": "estimate",
+  "source": "EST: ons.gov.uk/releases/gdpmonthlyestimateukoctober2026, re-fetched direct 2026-11-26 (HTTP 200, 42,152 bytes) — the page reads 'Release date: 11 December 2026 7:00am' and 'This release is not yet published'; the September bulletin published 2026-11-12 independently names 'Next release: 11 December 2026'. A plain 'Release date', not the 'Provisional release date' the ONS puts on quarterly-estimate pages, so the slot is firm on the publisher's own labelling. Stays estimate on two counts only: the confirmed-prefix taxonomy in market-events-data.ts has no slot for the UK Office for National Statistics, and this lane does not self-confirm. Proposed 2026-09-10 by uk-gdp-monthly-2027-01-15; researched and made canonical by its own lane 2026-11-26",
+  "impact": "low",
+  "symbols": [],
+  "notes": "CANONICAL FILE WRITTEN BY THE never-assessed INITIAL RESEARCH 2026-11-26, superseding proposals/uk-gdp-monthly-2026-12-11.from-uk-gdp-monthly-2027-01-15.json, which was read in full first (its reasoning stands: this is the prior state in the Q4 nowcast ladder and the last UK GDP read before the 2026-12-17 Bank of England announcement). WHAT CHANGED SINCE THE PROPOSAL: the 2026-11-12 September print and Q3 first estimate are out (Q3 +0.7% q/q; September +0.2% m/m; August revised to 0.0%), and the Bank raised Bank Rate to 4% on 2026-11-05 (8-1). The flat-October carry-over into Q4 is about +0.2% q/q on the 1dp series. symbols stays empty and impact stays low: no tracked name is UK-listed and no house playbook has a gilt or sterling leg. Estimate widens caution only; nothing date-keyed may act on this. Ledger: docs/research/events/uk-gdp-monthly-2026-12-11.md"
+}
