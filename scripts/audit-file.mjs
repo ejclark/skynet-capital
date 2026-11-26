@@ -57,16 +57,54 @@ const oneLine = (s) => clean(s).replace(/\s+/g, " ");
 const cut = (s, n) => (s.length <= n ? s : `${s.slice(0, n - 1).trimEnd()}…`);
 const lowerLead = (s) => (/^[A-Z](?![A-Z])/.test(s) ? s[0].toLowerCase() + s.slice(1) : s);
 
+/** Where a clause ends: punctuation, a dash, a bracket, or a joining word. Not "when"/"if": cutting
+ *  there drops the condition and leaves "the veto only fires", which says nothing. */
+const CLAUSE_BREAK =
+  /(?:[,;:] | [—–-] | \(| (?:so|so that|because|but|which|while|since|unless|whereas|instead of) )/g;
+/** A clause shorter than this reads as a fragment; take the word-boundary cut instead. */
+const MIN_CLAUSE = 40;
+
+/**
+ * Pure. `text` shortened to `max` characters the way a person would title it (#8063): the first
+ * sentence when it fits, else the longest leading clause that fits, else a cut on a word boundary
+ * marked `…`. Never mid-word. The full text belongs in the body; this is only the headline.
+ * Before #8063 a plain slice cut 3 of 3 titles mid-clause: `…a word from RULE_FOUR_WORDS (merge|…`.
+ */
+export function headline(text, max) {
+  const s = text.trim();
+  if (s.length <= max) return s;
+  const sentence = s.match(/^.+?[.!?](?=\s+[A-Z`"'(]|$)/)?.[0].replace(/[.!?]+$/, "");
+  if (sentence && sentence.length <= max) return sentence;
+  const breaks = [...s.slice(0, max + 1).matchAll(CLAUSE_BREAK)]
+    .map((m) => m.index)
+    .filter((i) => i >= MIN_CLAUSE && i <= max);
+  if (breaks.length) return s.slice(0, breaks.at(-1)).trimEnd();
+  const room = s.slice(0, max);
+  const space = room.lastIndexOf(" ");
+  // a dangling "the…" or "of…" reads as a typo, so the cut backs off any trailing function word
+  const head = (space >= MIN_CLAUSE ? room.slice(0, space) : room.slice(0, max - 1))
+    .replace(/(?:[\s,;:(—–-]+|\s(?:the|a|an|of|to|or|and|in|on|for|with|from|by))+$/i, "")
+    .trimEnd();
+  return `${head}…`;
+}
+
+/** Pure. `prefix` + `text`, headlined so the whole title fits `max`. */
+const titled = (prefix, text, max) => `${prefix}${headline(text, max - prefix.length)}`;
+
 /** Pure. Does a defect at this path earn `fast-track`? Product code and the bot scripts do. */
 export const fastTrackable = (file) => MEMBER_ROOTS.some((r) => file.startsWith(r));
 
-/** Pure. The conventional-commit scope a path reads as: `app/src/shell/x.ts` → `shell`. */
+/**
+ * Pure. The conventional-commit scope a path reads as: `app/src/shell/x.ts` → `shell`. A lane's own
+ * folder names the lane (#8063): `scripts/moneypenny/x.mjs` → `moneypenny`, `.claude/skills/…` →
+ * `skills`. `scripts` alone said nothing about which lane broke.
+ */
 export function scopeOf(file) {
   const parts = file.replace(/^app\//, "").split("/");
   const scope = (() => {
     if (parts[0] === ".github") return "ci";
-    if (parts[0] === ".claude") return "workflows";
-    if (parts[0] === "src" && parts.length > 2) return parts[1];
+    if (["src", "scripts", ".claude"].includes(parts[0]) && parts.length > 2) return parts[1];
+    if (parts[0] === ".claude") return "claude";
     return parts[0] === "src" || parts.length < 2 ? "audit" : parts[0];
   })();
   return scope.toLowerCase().replace(/[^a-z0-9-]/g, "") || "audit";
@@ -84,12 +122,12 @@ function fenced(s) {
 /** Pure. One confirmed finding → the capsule that files it (docs/ISSUES.md grammar). */
 export function bugCapsule(f, { fastTrack }) {
   const summary = oneLine(f.summary).replace(/[.\s]+$/, "");
-  const title = cut(`fix(${scopeOf(f.file)}): ${lowerLead(summary)}`, TITLE_CAP);
+  const title = titled(`fix(${scopeOf(f.file)}): `, lowerLead(summary), TITLE_CAP);
   const labels = ["bug", "feedback", ...(fastTrack ? ["fast-track"] : [])];
   const proof = f.singleLens
     ? "Confirmed on the trace alone: no spec could exercise it."
     : "Confirmed by two refuters: a trace and a failing repro.";
-  const body = `**${cut(summary, 200)}.**
+  const body = `**${headline(summary, 200).replace(/…$/, "")}.**
 
 | | |
 |---|---|
@@ -139,7 +177,7 @@ Severity ${f.severity}, ${f.tier ?? "standard"} review tier, ${f.lens ?? "correc
 export function proposalCapsule(p) {
   const cause = oneLine(p.cause).replace(/[.\s]+$/, "");
   const kind = String(p.kind);
-  const title = cut(`Add a ${kind} for: ${lowerLead(cause)}`, TITLE_CAP);
+  const title = titled(`Add a ${kind} for: `, lowerLead(cause), TITLE_CAP);
   const found = (p.findings ?? []).map((f) => `#${f.pr} ${f.file}: ${oneLine(f.summary)}`);
   const lesson = p.lesson?.trim()
     ? `LESSONS.md already names it: ${oneLine(p.lesson)}. Check that entry before building.`
