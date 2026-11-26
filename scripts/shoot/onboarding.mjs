@@ -2,7 +2,7 @@
 // (/app/accounts?section=milestones&chapter=onboarding, once /app/onboarding, #3807 slice 2b) — milestone M·01 from the REAL built shell (app/dist) over a
 // stub API, five frames: a brand-new member at 390 first (phone-first; steps lead, steps 2–3 held as
 // one line each, the milestones list folded below — #5256), the same at 1280, the member with step 5
-// opened (the connect form inside it), the #8250 puzzle → practice pick → Connect cards at 390, Moneypenny's History open over her dock with her intro from
+// opened (the connect form inside it), the #8250 puzzle → practice pick → Connect cards at 390, Moneypenny's conversation in her dock with her intro from
 // step 2's held line (#7487 slice 2; the page stays put above it), and a connected member (step 1 done, steps 2–3 open in full).
 // JPEG ≤100KB (docs/PICTURES.md) — quality 55, not the harness default, because these
 // frames are 1100px tall and need it to clear the cap.
@@ -191,12 +191,13 @@ await page
 await shoot("onboarding-place-pick-390");
 
 state = fresh;
-// Moneypenny's History — step 2's held line still opens it with her intro (ordered, never locked);
-// the answer is typed in the dock's box. Text waits are scoped to History: her latest line in the
-// dock repeats the same words.
+// Moneypenny's conversation — step 2's held line still opens it with her intro (ordered, never
+// locked); the answer is typed in the dock's box. The History sheet this frame was named for is gone:
+// the conversation now lives in the dock's own pane (`.mp-convo`, #7556), so the waits are scoped
+// there. The frame keeps its name so PR pictures that cite it still resolve (#8283).
 await page.goto(`${origin}/app/accounts?section=milestones&chapter=onboarding`);
 await page.getByRole("button", { name: "Say hello now ›" }).click();
-const history = page.locator(".mp-history");
+const history = page.locator(".mp-dock .mp-convo");
 await history.getByText(/isn't connected yet/).waitFor();
 await page.locator(".mp-dock .mp-box-input").fill("yes");
 await page.keyboard.press("Enter");
