@@ -183,13 +183,13 @@
   {
     "id": "moneypenny",
     "name": "Moneypenny panel",
-    "purpose": "The dock under every page for questions, learning help and filing feedback with Moneypenny, with her History open (here over the Leaderboard).",
+    "purpose": "The dock under every page for questions, learning help and filing feedback with Moneypenny, with her conversation pane expanded (here over the Leaderboard).",
     "where": "the dock under every page",
     "route": "/app/leaderboard?by=equity",
     "world": "profile-today",
     "viewer": "eric",
     "settle": 2500,
-    "clicks": ["button.mp-dock-history"],
+    "clicks": ["button.mp-convo-size"],
     "maxH": {
       "phone": 844,
       "desk": 900

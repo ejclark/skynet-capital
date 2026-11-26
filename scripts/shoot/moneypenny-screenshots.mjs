@@ -89,9 +89,9 @@ await box.fill("Why is this position red?");
 await shoot("moneypenny-screenshot-waiting");
 
 await dock.getByRole("button", { name: "Send", exact: true }).click();
-await dock.locator(".mp-dock-history").click();
-await page
-  .locator(".mp-history")
+// The conversation lives in the dock's own pane now (`.mp-convo`, #7556); no History sheet to open.
+await dock
+  .locator(".mp-convo")
   .getByText(/^Moneypenny · I can see the NVDA put/)
   .waitFor();
 await shoot("moneypenny-screenshot-sent");

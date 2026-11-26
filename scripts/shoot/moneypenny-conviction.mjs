@@ -152,8 +152,8 @@ await dock
 await dock.getByRole("button", { name: "Send", exact: true }).click();
 const handOver = dock.locator(".mp-move", { hasText: "Hand it to my bots" });
 await handOver.waitFor();
-await dock.locator(".mp-dock-history").click();
-const history = page.locator(".mp-history");
+// The conversation lives in the dock's own pane now (`.mp-convo`, #7556); no History sheet to open.
+const history = dock.locator(".mp-convo");
 await history.locator(".mp-draft").last().scrollIntoViewIfNeeded();
 await shoot("conviction-card-phone");
 await handOver.click();

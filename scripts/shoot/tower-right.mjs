@@ -76,11 +76,12 @@ for (const [path, name] of [
 
   await page.setViewportSize({ width: 1760, height: 900 });
   await visit(path, `${name}-open`);
-  await page.locator(".mp-dock-history").click();
-  await page.locator(".mp-history").waitFor();
+// "History open" is now the dock's conversation pane expanded (#7556 folded History into it).
+  await page.locator(".mp-convo-size").click();
+  await page.locator('.mp-convo[data-size="expanded"]').waitFor();
   await page.waitForTimeout(800);
   await shoot(`${side}-${name}-1760-chat-open`);
-  await page.locator(".mp-dock-history").click();
+  await page.locator(".mp-convo-size").click();
 }
 
 await close();

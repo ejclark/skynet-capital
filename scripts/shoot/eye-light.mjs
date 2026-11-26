@@ -59,8 +59,8 @@ try {
 const dock = page.locator(".mp-dock");
 await dock.locator(".mp-box-input").fill("How are my positions doing?");
 await dock.getByRole("button", { name: "Send", exact: true }).click();
-await dock.locator(".mp-dock-history").click();
-const link = page.locator(".mp-history .mp-place").first();
+// Her links live in the dock's own conversation pane now (`.mp-convo`, #7556); no History to open.
+const link = dock.locator(".mp-convo .mp-place").first();
 await link.waitFor();
 await page.mouse.move(0, 0);
 await page.waitForTimeout(1200);

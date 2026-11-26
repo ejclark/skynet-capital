@@ -56,8 +56,9 @@ try {
     const page = await open({ width: 1280, height: 900 });
     await settle(page, PLAIN);
     if (history) {
-      await page.locator(".mp-dock-history").click();
-      await page.locator(".mp-history").waitFor();
+      // "History open" is now the dock's conversation pane expanded (#7556 folded History into it).
+      await page.locator(".mp-convo-size").click();
+      await page.locator('.mp-convo[data-size="expanded"]').waitFor();
       await page.waitForTimeout(600);
     }
     rows.push({
