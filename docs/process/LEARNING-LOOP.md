@@ -156,6 +156,23 @@ Still human: the *sense* of spare quota (his phrase) and the protected merge. Ne
 cloud session cannot write the lanes' bookkeeping branch, so the session-run surge forgets what it
 judged.
 
+**2026-11-24 to 11-26 — the fourth surge**, scoped to the #8161 redesign and extended by Eric
+("can afford burning hot early this week"). It ran 49 hours: 144 PRs merged and 99 issues closed
+by 00:10Z on 11-26, with the week at 79% used. It waited about a day on one click: platter #8275 held
+the `ci shots` job, and once it merged, the 3 PRs it blocked and the desktop layout behind them
+landed in 2h45m.
+
+| Loop | Stage still by hand | Now automated by |
+|---|---|---|
+| Screenshot re-baseline from a cloud session | act: the report artifact sat on a blob host the proxy refuses, so 3 visual PRs waited nearly 2 days | `ci shots` + `rebaseline-from-ci.mjs --from-git` (#8295, #8307, #8275) |
+| Child sessions waiting on a merge | sense: a child ended its turn after arming, its PR turned dirty when main moved, and nobody saw it | not yet: the brief says "stay until merged" (surge skill §4) |
+| A lane build that stops quietly | decide: the stall guard routes it to `needs-eric`, which is not a decision of his | not yet: retried by hand (#8494) |
+| Under-tolerance screenshot drift | sense: diffs under 0.2% merge unseen, and the next visual PR pays (4 inherited diffs across 3 PRs) | not yet: #8493 |
+
+Still human: the protected merge (his, by rule), and the *sense* that a child or a lane went
+quiet. The wave's audits and child reports surfaced 6 bugs and 2 bottlenecks; the lane fixed
+all 5 fast-track bugs within 2 hours of filing.
+
 ## Starting a new loop
 
 1. Fill fields 1–9 before running anything — if the aim, baseline, prediction, pressure test,
