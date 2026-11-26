@@ -288,3 +288,134 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-11-24
 <!-- probe-ref: {"symbols":{},"vix":26.62,"daysBand":"medium:0+","adjacentIds":["advance-economic-indicators-2026-11-27","aruoba-inflation-term-structure-2026-11-20","aws-reinvent-2026","case-shiller-hpi-2026-11-24","chicago-pmi-2026-11-30","china-ga-ge-sb-suspension-expiry-2026-11-27","consumer-confidence-2026-11-24","cyber-monday-2026-11-30","dallas-fed-mfg-2026-11-30","durable-goods-2026-11-25","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","gdp-q3-2026-second-2026-11-25","industrial-production-annual-revision-2026-11-24","inio-lockup-expiry-2026-11-30","japan-cpi-2026-11-20","japan-cpi-tokyo-flash-2026-11-27","jgb-2y-auction-2026-11-30","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-1-5y-2026-11-20","jgb-liquidity-enhancement-5-11y-2026-11-27","jpx-market-closure-2026-11-23","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","opec-plus-meeting-2026-11-29","opex-2026-11-20","pce-2026-11-25","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","qnt-lockup-expiry-2026-11-30","russell-recon-lockdown-2026-11-30","russell-style-month-end-capping-effective-2026-11-30","sifma-bond-early-close-2026-11-27","sp-global-flash-us-pmi-2026-11-23","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","uk-consumer-confidence-2026-11-20","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out (2026-11-26, day after the release).** Macro-print mode (`symbols: []`) runs no
+`earnings-cycle` / `intraday-edges`; the instrument caches were still busted first
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`). The *report* is
+scored from the Board's own edition: `federalreserve.gov/monetarypolicy/beigebook202611-summary.htm`
+plus the twelve `beigebook202611-<district>.htm` pages, all HTTP 200, fetched today (`FED:`). The
+*tape* is Yahoo 5-minute bars fetched today. **No forward test was registered for this event** (the
+stance sized nothing), so the scoring is of the kill switches. Stand-aside held; of the six kills still
+scoreable today, five did not fire, and one fired by its letter and not its substance (below). No trade was
+made or implied.
+
+**The cutoff and preparer predictions.** Stated verbatim: *"prepared at the Federal Reserve Bank of
+Atlanta based on information collected on or before November 16, 2026"* — exactly **nine days**
+before release, the inferred ~11-16, so the convention now has six data points and no miss. The
+edition therefore saw the 11-03 midterms, CPI 11-10 and PPI 11-13, and could not see the 11-17→11-20
+slide, the 11-23 rebound, or PCE. **Preparer:** Atlanta, not the St. Louis the sibling
+`FT-beige-book-2027-05-26-2` projected for this date (see the note for its owner below).
+
+| Count | Nov 25 edition | Oct 14 baseline | Read |
+|---|---|---|---|
+| **Activity** | 8 Districts growing (slight to moderate); **4** no change | 9 growing; 3 no change | softer again |
+| **Labor** | **7** with gains (Boston, NY, Phil, Cleveland, Chicago, Minneapolis, Dallas); **5** unchanged | 8 gains; 4 no change | marginally softer |
+| **Wages** | "rose **moderately**, an uptick from modest" | 5 moderate · 4 modest · 2 slight | firmer |
+| **Prices (selling)** | **2 robust** (Cleveland, St. Louis); "increased moderately overall, as in the prior period" | 3 robust · 8 moderate · 1 modest | **robust 3 → 2** |
+| **Outlook** | "majority of Districts expected slight to moderate growth"; Philadelphia: growth expectations "diminished across all firms" | — | cautious |
+
+**Prices.** The October oil-and-diesel story did not repeat as a headline: the summary names "energy,
+transportation, healthcare, insurance, and tariff-related expenses" and says input cost growth
+"generally outpaced" selling-price increases. New York's strength is on
+*input* prices ("rose strongly") while selling prices eased; it is not counted as robust selling
+prices. Dallas, robust in October, now reads "elevated". Kill switch 3 (**four or more** robust/strong
+selling-price Districts) **did not fire**, at two.
+
+**Labor.** Kill switch 4 (**three or fewer** Districts with employment gains, or explicit layoff
+language) **did not fire** on the count (7). Layoff language did appear, scattered and not a pattern:
+Philadelphia (builders "likely layoffs", an architect "may … consider layoffs"), Chicago ("some new
+layoffs"), San Francisco (layoffs or attrition in insurance, construction, manufacturing, nonprofits),
+New York (a food manufacturer's workforce cut). Minneapolis: "Layoffs remained low overall". The
+summary's own sentence is "Employment levels rose slightly on balance … hiring primarily to replace
+for attrition".
+
+**The AI / data-center leg — kill switch 2 did not fire, and the channel is bigger than in October.**
+All **twelve** District reports carry AI or data-center text (AI in employment: Boston, New York,
+Cleveland, Atlanta, St. Louis, Kansas City, Dallas, San Francisco; data-center demand or construction:
+Philadelphia, Cleveland, Richmond, Atlanta, Chicago, St. Louis, Minneapolis, Dallas, San Francisco). The national summary names it: *"Port volumes were slightly lower due to weather-driven
+disruptions, even as data center–related imports rose"* (Richmond's District report ties the strength
+to "electrical power equipment, computer hardware"). Cleveland: demand for manufactured goods *"grew
+robustly, driven mainly by data center buildouts, power generation, and defense spending"* and
+*"Strong data center demand strained the supply of microchips and electrical components, lengthening
+lead times"*. The **power and siting** half the 10-14 close-out found unverified is now verified, and
+two-sided: Atlanta, *"utility and power-generation contacts reported that future demand for their
+services remained uncertain as data center construction has experienced increased costs and
+complicated planning"*; Richmond, *"data center uncertainty was spilling over to lower-quality
+industrial space planned for data center conversion"*; Chicago, *"concerns about … local data center
+development"*. Read for the sleeve: the demand leg is intact at District level through ~11-16, with
+new cost, planning and siting friction beside it. It cannot reflect the 11-17→11-20 slide.
+
+**The post-midterm read (the TL;DR's first claim).** SUPPORTED, thinly. Election language is in the
+District reports and it points both ways: Philadelphia, consumer sentiment improved on *"gas prices
+easing and the election resolving"*; Cleveland, *"recent midterm election outcomes could impact the
+tax code, causing increased client demand"* (accounting) and, in real estate, investor hesitancy
+tied to *"midterm election uncertainty, geopolitical risks, and rising interest rates"*; Boston, loan
+demand edged lower on *"heightened uncertainty in advance of the midterm elections"*; New York and
+Richmond, election-related friction in real estate; Chicago, volatility attributed to *"geopolitical
+conflict and the midterm elections"*. Mixed, not a clean post-election relief read. Rising interest
+rates are named as a headwind by Boston, Philadelphia, Cleveland, Chicago, Dallas and in the summary
+(auto sales, residential real estate, construction).
+
+**Kill switch 5 — the tape in the 14:00–15:00 ET hour: did not fire.** SPY, Yahoo 5-minute bars,
+2026-11-25 ET (09:30 bucket partial; 16:00 bar is the close print):
+
+| Hour | 09:30 | 10:00 | 11:00 | 12:00 | 13:00 | **14:00 (release)** | 15:00 |
+|---|---|---|---|---|---|---|---|
+| SPY open→close | +0.048% | −0.633% | +0.373% | **+1.324%** | +0.648% | **−0.009%** | +0.167% |
+| SPY hour range | 1.186% | 1.029% | 0.664% | 1.702% | 1.103% | **0.486%** | 0.674% |
+
+The release hour's net move is the **smallest of the seven**, its range the **smallest of the
+seven**, on a day that was anything but quiet: SPY opened **−2.169%** below the 11-24 close
+(718.79 → 703.20) and closed **−0.291%** at 716.70, VIX 26.36 → 28.29, having printed 33.34 at the
+10:00 hour's close. The one thing to say against "inert": the first 5-minute bar at 14:00 was
+**+0.252%**, the hour's second-largest bar, and it was given back (14:10 −0.155%, 14:40 −0.236%,
+14:55 −0.295%); a one-bar pop that reverses inside the hour is exactly the thin-liquidity move the
+kill switch warned manufactures false attribution, and none is claimed. **Rates:** TLT 14:00 **−0.127%**
+(5th of 7 by absolute move; the 10:00 hour was +0.449%); ^TNX **+1.0bp** in the release hour against
+−2.7bp, +0.9bp and +2.0bp in the three hours before it, closing 4.848 (−5.6bp on the day). So "the
+release hour is not a mover" is now measured **three times for equities** (09-02, 10-14, 11-25) and,
+for rates, clean twice (09-02, 11-25) and not once (10-14). **Cause of the morning's
+−2.2% gap and the 12:00 +1.3% hour:** not sourced here (the PCE ledger is not yet closed and my one
+news search found no wrap for the day), so none is asserted.
+
+**Kill switch 6 (an FOMC participant speaks 11-25 → 11-28) — fired by its letter, not by its
+substance, and the kill was drawn too loose.** The Board's November calendar lists **Vice Chair for
+Supervision Michelle W. Bowman on 11-25 at 7:25 a.m. ET**, pre-recorded video for a banking-supervisors
+meeting in Brasília, *"Modernizing Banking Supervision: A Shared Agenda for the Americas"*. She is an
+FOMC voting member, so the switch as written fires. It is a supervision speech delivered 6½ hours
+*before* the release; its text (read today) is not a monetary-policy read of this report. Nothing is
+listed on 11-26, 11-27 or 11-28 except H.4.1 data, so the *interpretation channel* leg 4 relied on
+held. Lesson for the next Beige Book ledger: write that kill as *a monetary-policy or economic-outlook
+speech* by an FOMC participant, not any speech. This row does not edit the registered stance.
+
+**Kill switch 7 (the 11-25 release slipping or the time changing) did not fire:** released
+2026-11-25, 2:00 p.m., "Last Update: November 25, 2026" on every page.
+
+**Scoring the stance.** Stand aside was right on its stated mechanism: nobody had anything to
+position into that the report then moved, and the tape ignored it in its own hour on a violent day.
+The reading-kills it set were mostly not hit; the report's real information, a net softer
+activity/labor read with firmer wages, a lower robust-price count, and the AI/data-center channel
+widening into a cost-and-siting story, is for the 12-09 SEP meeting, not for this tape. Not scored
+as a call: the stance made none beyond "no position", so there is no P/L to score and none is implied.
+
+**A finding for another event's owner (not edited here).** `FT-beige-book-2027-05-26-2` projects the
+preparing Bank from an "unbroken 18-edition" cycle (`… Minneapolis → Atlanta → St. Louis → Boston …`,
+with Atlanta at 2026-10-14 and St. Louis at 2026-11-25). The actuals are **Philadelphia** on 10-14 (the
+10-14 close-out) and **Atlanta** on 11-25 (here). Both dates miss, and the cycle appears to have
+inserted Philadelphia after Minneapolis and run one edition behind the projection since; its
+2027-05-26 → Dallas pick rests on that same cycle and its owner should score it at its own date. This
+lane touches only its own file.
+
+**Verdict.** Informative, inert on the tape. It verified its cutoff to the day for the sixth time,
+confirmed the AI/data-center language leg across all twelve Districts (and its power-and-siting
+friction), and delivered a softer-growth, firmer-wage, fewer-robust-prices read that this tape did not
+trade. This doc goes quiet.
+
+**Loop stage still done by a person:** none. The date re-reads, the cutoff diff and the tape table
+all came from fetched primaries and bars. One judgment remains manual: deciding that a kill's letter
+and its substance diverged (Bowman), which is why that kill is rewritten as a lesson above.
+
+**Last assessed:** 2026-11-26
+<!-- probe-ref: {"symbols":{},"vix":28.29,"daysBand":"medium:0+","adjacentIds":["advance-economic-indicators-2026-11-27","aruoba-inflation-term-structure-2026-11-20","aws-reinvent-2026","case-shiller-hpi-2026-11-24","chicago-pmi-2026-11-30","china-ga-ge-sb-suspension-expiry-2026-11-27","consumer-confidence-2026-11-24","cyber-monday-2026-11-30","dallas-fed-mfg-2026-11-30","durable-goods-2026-11-25","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","gdp-q3-2026-second-2026-11-25","industrial-production-annual-revision-2026-11-24","inio-lockup-expiry-2026-11-30","japan-cpi-2026-11-20","japan-cpi-tokyo-flash-2026-11-27","jgb-2y-auction-2026-11-30","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-1-5y-2026-11-20","jgb-liquidity-enhancement-5-11y-2026-11-27","jpx-market-closure-2026-11-23","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","opec-plus-meeting-2026-11-29","opex-2026-11-20","pce-2026-11-25","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","qnt-lockup-expiry-2026-11-30","russell-recon-lockdown-2026-11-30","russell-style-month-end-capping-effective-2026-11-30","sifma-bond-early-close-2026-11-27","sp-global-flash-us-pmi-2026-11-23","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","uk-consumer-confidence-2026-11-20","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25"],"screenStreak":0} -->
