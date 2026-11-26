@@ -119,7 +119,9 @@ export function buildNewsletter(inputs) {
       // Backlog flow and rework (#8037 slice 1): is the pile shrinking, and what does speed cost.
       backlogStock: over(inputs.openIssues, (i) => backlogStock(i, asOfMs)),
       backlogFlow: over(inputs.issueActivity, (i) => backlogFlow(i, w)),
-      rework: over(inputs.prs, (prs) => rework(prs, w, asOfMs, inputs.prFiles)),
+      rework: over(inputs.prs, (prs) =>
+        rework(prs, w, asOfMs, inputs.prFiles, inputs.defectIssues),
+      ),
       playthroughGaps: knownGaps(inputs.journeyGaps),
       memberChanges: memberChanges(inputs.memberPrs, inputs.memberIssues, w),
       fitness: over(inputs.fitness, (f) => fitness(f.contracts, f.issues, w)),
