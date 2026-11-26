@@ -271,6 +271,27 @@ describe("stale report on a memory folder", () => {
     expect(stderr).toContain("HTTP 403");
   });
 
+  // #8260: a 404 here (another repo's issue) is a gap no re-run clears; a rate limit, a missing
+  // login or a network error is gone on the next run. The report names which, by gh's own status,
+  // so the review never has to guess from free text.
+  it("says why an issue was unread: could not reach for a passing failure", () => {
+    const { rows } = run({ "a.md": "See #6699." }, { gh: GH_FAILS });
+    expect(rows[0].unreadCauses).toEqual({ "6699": "could not reach" });
+  });
+
+  it("says not found when gh answers 404 or 410, and keeps each memory to its own issues", () => {
+    const gh =
+      '#!/bin/sh\ncase "$2" in\n */404) echo "gh: Not Found (HTTP 404)" >&2; exit 1;;\n */410) echo "gh: This issue was deleted (HTTP 410)" >&2; exit 1;;\n */500) echo "gh: Server Error (HTTP 500)" >&2; exit 1;;\n *) echo open;;\nesac\n';
+    const [a, b, clean] = run(
+      { "a.md": "See #404 and #410.", "b.md": "See #500.", "c.md": "See #456." },
+      { gh },
+    ).rows;
+    expect(a.unreadIssues).toEqual([404, 410]);
+    expect(a.unreadCauses).toEqual({ "404": "not found", "410": "not found" });
+    expect(b.unreadCauses).toEqual({ "500": "could not reach" });
+    expect(clean.unreadCauses).toEqual({});
+  });
+
   it("reads an issue through REST, which answers where gh's GraphQL is refused", () => {
     const { rows, calls } = run({ "a.md": "Once #123 has merged, do the other thing." });
     expect(rows[0]).toMatchObject({ closedIssues: [123], unreadIssues: [] });
