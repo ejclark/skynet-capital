@@ -105,9 +105,9 @@ export function openIssues(rest) {
  * The changed files of the PRs in a rework candidate pair (#8037): only those, a handful a week.
  * A PR past the listing cap (2,000 files) throws, and rework reads unknown rather than guess.
  */
-function prFiles(rest, prs, w, asOfMs) {
+function prFiles(rest, prs, w, asOfMs, defects) {
   const files = {};
-  for (const n of candidatePrs(reworkCandidates(prs, w, asOfMs)))
+  for (const n of candidatePrs(reworkCandidates(prs, w, asOfMs, defects)))
     files[n] = pages(rest, `repos/${REPO}/pulls/${n}/files`).map((f) => f.filename);
   return files;
 }
@@ -234,6 +234,13 @@ export function gather(week, asOfMs, nowMs = Date.now()) {
   const runsDir = process.env.AGENT_RUNS_DIR ?? join(homedir(), ".claude", "runs");
   const receipts = join(runsDir, "post-merge-audit.jsonl");
   const prs = attempt(() => mergedPrs(rest, w));
+  // The audit's bug issues: the defects count reads them, and rework follows a fix that names one
+  // back to the PR its Introduced in cell blames (#8061), so each keeps its number.
+  const defects = attempt(() =>
+    defectIssues(rest, w.sinceMs)
+      .filter(trustedComment)
+      .map((i) => ({ number: i.number, created_at: i.created_at, body: i.body })),
+  );
   const inputs = {
     week,
     asOf: new Date(asOfMs).toISOString(),
@@ -241,11 +248,7 @@ export function gather(week, asOfMs, nowMs = Date.now()) {
     tracker: attempt(() => tracker(rest, w)),
     usageNow: !stale,
     localReceipts: existsSync(receipts) ? parseRows(readFileSync(receipts, "utf8")).rows : [],
-    defectIssues: attempt(() =>
-      defectIssues(rest, w.sinceMs)
-        .filter(trustedComment)
-        .map((i) => ({ created_at: i.created_at, body: i.body })),
-    ),
+    defectIssues: defects,
     // The flip's rows on the ledger branch; an absent file is a week with no flip ({ text: "" }), not a failed read.
     flipLedger: attempt(() => ({ text: readLedgerFile(FLIP_REFUSALS_PATH)?.body ?? "" })),
     failureToFix: attempt(() => meter(["--failure-to-fix"], w)),
@@ -262,7 +265,7 @@ export function gather(week, asOfMs, nowMs = Date.now()) {
     // Backlog flow and rework (#8037 slice 1): the open stock now, and the week's issue activity.
     openIssues: snapshot(() => openIssues(rest)),
     issueActivity: attempt(() => issueActivity(rest, w)),
-    prFiles: Array.isArray(prs) ? attempt(() => prFiles(rest, prs, w, asOfMs)) : prs,
+    prFiles: Array.isArray(prs) ? attempt(() => prFiles(rest, prs, w, asOfMs, defects)) : prs,
     // Playthroughs and reactions (#7031 slice 3): the steps still expected to fail, the member-facing
     // merges, and the Revisit and in-app filings that name them.
     journeyGaps: attempt(() => journeyGaps(ROOT)),

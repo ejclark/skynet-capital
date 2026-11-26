@@ -166,6 +166,56 @@ describe("rework — reverts and fix-forwards within 48h, per autonomous decisio
   });
 });
 
+// #8061: this repo's main fix-forward path names the audit's bug issue, not the decision. The audit
+// files bug #B saying "Introduced in #A", and the lane's fix closes #B. WHEN a fix names an issue
+// whose Introduced in cell names a decision, the fix SHALL pair with that decision (W48's real case:
+// fix #8043 named only #6701 and itself, while #6701's body said "Introduced in #6569").
+describe("rework — a fix that closes the audit's bug issue pairs with the PR it names", () => {
+  const audit = (number: number, introduced: string) => ({
+    number,
+    created_at: "2026-11-16T18:00:00Z",
+    body: `| | |\n|---|---|\n| **Found by** | Post-merge audit 2026-11-16 |\n| **Introduced in** | ${introduced} · \`scripts/x.mjs:12\` |\n`,
+  });
+  const pr = (number: number, title: string, mergedAt: string, body = "") => ({
+    number,
+    title,
+    author: "claude[bot]",
+    headRef: `feedback/${number}`,
+    mergedAt,
+    refs: refsOf(title, body),
+  });
+  const prs = [
+    pr(100, "feat(x): thing", "2026-11-16T12:00:00Z"),
+    pr(102, "fix(x): repair (#101) (#102)", "2026-11-17T12:00:00Z", "Closes #101"),
+  ];
+  const files = { 100: ["scripts/x.mjs"], 102: ["scripts/x.mjs"] };
+
+  it("pairs the fix with the decision the bug issue names", () => {
+    expect(prs[1]?.refs).toEqual([101, 102]);
+    expect(reworkCandidates(prs, W47, AS_OF, [audit(101, "#100")])).toEqual([
+      { decision: 100, by: 102, revert: false },
+    ]);
+    const r = rework(prs, W47, AS_OF, files, [audit(101, "#100")]);
+    expect(r.items).toEqual([{ number: 100, kind: "code", how: "fix-forward", by: 102 }]);
+    expect(r.rate).toBe(0.5);
+  });
+
+  it("keeps a defect that predates the decision out: 'before #N' names no culprit", () => {
+    expect(reworkCandidates(prs, W47, AS_OF, [audit(101, "before #100")])).toEqual([]);
+  });
+
+  it("still needs a shared file, so an issue naming the decision is not rework on its own", () => {
+    const apart = { ...files, 102: ["scripts/y.mjs"] };
+    expect(rework(prs, W47, AS_OF, apart, [audit(101, "#100")]).items).toEqual([]);
+  });
+
+  it("reads unknown, never fewer fix-forwards, when the audit issues could not be read", () => {
+    expect(rework(prs, W47, AS_OF, files, "unavailable: search: 403")).toBe(
+      "unavailable: search: 403",
+    );
+  });
+});
+
 describe("refsOf — the numbers a PR names", () => {
   it("reads #N and GitHub's revert body, once each", () => {
     expect(
