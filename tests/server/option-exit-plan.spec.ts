@@ -261,6 +261,78 @@ describe("the exit plan on submit", () => {
     });
   });
 
+  describe("WHEN the order's own fill reaches the hub before the submit returns (#8401)", () => {
+    // The offline writable world folds a market fill into the hub inside the order POST, and live
+    // can too when the fill frame beats the audit append: the held count after the order is what
+    // is LEFT, not what the order was sized against.
+    function fillsDuringSubmit(exitPlans: ExitPlanStore, before: number, after: number) {
+      let held = before;
+      return config(
+        {
+          exitPlans,
+          hub: {
+            getState: () => ({
+              participants: [
+                {
+                  id: "human-ann",
+                  cash: 50_000,
+                  positions: held > 0 ? [{ symbol: OCC, quantity: held }] : [],
+                },
+              ],
+            }),
+          },
+          submitOptionTrade: () => {
+            held = after;
+            return Promise.resolve({ ok: true, orderId: "o-1", status: "filled", symbol: OCC });
+          },
+        },
+        [],
+      );
+    }
+    const closeOf = (contracts: number) => ({
+      kind: "close",
+      participantId: "human-ann",
+      occSymbol: OCC,
+      contracts,
+    });
+
+    for (const [holds, closes] of [
+      [2, 1],
+      [3, 2],
+      [4, 2],
+      [3, 1],
+    ] as const) {
+      it(`holding ${holds}, a close of ${closes} SHALL keep the plan — contracts are still held`, async () => {
+        const exitPlans = new ExitPlanStore(path);
+        exitPlans.carry("human-ann", OCC, NOW);
+        await call(
+          "/api/trade/option/submit",
+          closeOf(closes),
+          fillsDuringSubmit(exitPlans, holds, holds - closes),
+        );
+        expect([...exitPlans.carried("human-ann")]).toEqual([OCC]);
+      });
+    }
+
+    it("holding 2, a close of 2 SHALL drop the plan", async () => {
+      const exitPlans = new ExitPlanStore(path);
+      exitPlans.carry("human-ann", OCC, NOW);
+      await call("/api/trade/option/submit", closeOf(2), fillsDuringSubmit(exitPlans, 2, 0));
+      expect(exitPlans.carried("human-ann").size).toBe(0);
+    });
+
+    it("a purchase without the plan, of a contract not held, SHALL drop an earlier day's plan", async () => {
+      const exitPlans = new ExitPlanStore(path);
+      exitPlans.carry("human-ann", OCC, new Date("2026-10-20T15:00:00Z"));
+      await call(
+        "/api/trade/option/submit",
+        buyCall({ contracts: 1, orderType: "market", limitPrice: undefined }),
+        fillsDuringSubmit(exitPlans, 0, 1),
+      );
+      expect(exitPlans.carried("human-ann").size).toBe(0);
+    });
+  });
+
   it("adding to a held call without the plan keeps the plan it already carries", async () => {
     const exitPlans = new ExitPlanStore(path);
     exitPlans.carry("human-ann", OCC, NOW);
