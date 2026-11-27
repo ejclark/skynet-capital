@@ -370,6 +370,45 @@ every row; a dated adjacent event found gets proposed as a new
 same PR — your own file, never another event's canonical one (#1717). Close-out fills `## Outcome` below from re-run instrument
 data (cache busted first), never from memory — after which this doc goes quiet.
 
+## Outcome
+
+**Close-out (2026-11-27, D+1; inside `closeOutWithinDays`, ceiling 12-02).** Scope first: this event carries no
+tickers (`symbols: []`), so neither the earnings-cycle nor the intraday-edges instrument has a cell for it; their
+caches were busted anyway and the scores below come from re-fetched primaries, not from memory of the tape. Hard
+limits honoured: no calendar entry touched, nothing promoted, no trade. The entry stays as filed.
+
+**The date and the hours held.** NYSE `hours-calendars` re-read 2026-11-27 (HTTP 200, 153,145 bytes): the 2026 row
+is `Thursday, November 26***`, footnote `***` still gives Friday 2026-11-27 a 1:00 p.m. close (1:15 p.m. for eligible
+options). The OCC expiration calendar (HTTP 200, 22,355 bytes) still marks 2026-11-26 as a hatched *Exchange/OCC
+holiday*. So the 41.5-hour closure (Wed 16:00 → Fri 09:30 ET) reproduced as written; finding 1 is not killed.
+
+**Stance vs outcome.** The stance was *stand aside*: nothing was held, so there is no P/L and no guard tripped. The
+three registered measurements:
+- **FT-1, Treasury displaces its Thursday bill slate: pass.** TreasuryDirect shows the 4-Week and 8-Week bills
+  closing Wednesday 11-25, announced Tuesday 11-24 (the 1-day lead the row predicted), and no bill closing on
+  Thursday 11-26. The 7/7 era base rate now reads 8/8. This is the dated `TSY:` promotion path leg 9 named; the
+  calendar entry is not this lane's to edit, so the pointer is recorded here for whoever owns it.
+- **FT-2, the run-in vol mark-down: pass, but thin.** VIX closed 28.29 on 11-25 against 28.44 on 11-19, −0.53%,
+  under the down-leg's registered mean of −5.83%. The kill switch (at or above the 11-19 close) did not fire, and
+  it missed by 0.15 points. The path was a spike and a give-back (11-20 at 35.89, 11-23 at 26.62), so the
+  mark-down was not the clean scheduled drift the leg describes. Read this as direction held, size did not.
+- **FT-3, the Nasdaq corridor: not scoreable here.** Its score-by is 2026-12-04, past this close-out window, so the
+  row stays `_open_` for the `forward-test-due` pass. Interim only, not a score: Nasdaq Composite closed 23,585.80
+  on 11-25 against the 23,879.20 base, −1.23%, with the half day and three more sessions still to print.
+
+**Finding 4 (CBOE's phantom Thanksgiving row) is still open.** `VIX_History.csv` ends at the 11-25 close, so neither
+an 11-26 row nor the 11-27 half-day row exists yet; the kill switch watches refetches until 2026-12-04.
+
+**Adjacency, final.** Read from the calendar and the VIX/Nasdaq tape only; no news search was run, so a
+CPI/FOMC surprise on the 11-25 stack is neither found nor ruled out. The regime that mattered was volatility: VIX 17.49 (11-11) → 35.89 (11-20) → 28.29 (11-25).
+No new dated event inside the horizon, so no proposal file. FRED `VIXCLS` and CBOE agree where both print.
+
+**Loop note.** The stage a person still had to do: nothing in this close-out needed a decision, but the fiscaldata
+`auctions_query` API returned 504 on every try, so the no-auction-on-Thursday half of FT-1 (coupons) fell back to tracked
+calendar entries. TreasuryDirect's `securities/auctioned` answered, but its date filter is ignored, so it was
+read by issue and close dates instead.
+
+
 **Last assessed:** 2026-10-27
 <!-- probe-ref: {"symbols":{},"vix":18.39,"daysBand":"low:15+","adjacentIds":["advance-economic-indicators-2026-11-27","aws-reinvent-2026","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","chicago-pmi-2026-11-30","construction-spending-2026-12-01","consumer-confidence-2026-11-24","cyber-monday-2026-11-30","dallas-fed-mfg-2026-11-30","dallas-fed-tssos-2026-12-01","durable-goods-2026-11-25","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","gdp-q3-2026-second-2026-11-25","georgia-senate-runoff-2026-12-01","inio-lockup-expiry-2026-11-30","ism-manufacturing-2026-12-01","japan-cpi-tokyo-flash-2026-11-27","jgb-2y-auction-2026-11-30","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-5-11y-2026-11-27","jolts-2026-12-01","jpx-market-closure-2026-11-23","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","pce-2026-11-25","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","qnt-lockup-expiry-2026-11-30","russell-recon-lockdown-2026-11-30","russell-style-month-end-capping-effective-2026-11-30","sifma-bond-early-close-2026-11-27","sp-global-flash-us-pmi-2026-11-23","thanksgiving-half-day-2026-11-27","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25"],"screenStreak":1} -->
 
@@ -381,3 +420,6 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-11-26
 <!-- probe-ref: {"symbols":{},"vix":28.29,"daysBand":"low:0+","adjacentIds":["advance-economic-indicators-2026-11-27","aws-reinvent-2026","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","chicago-pmi-2026-11-30","china-ga-ge-sb-suspension-expiry-2026-11-27","construction-spending-2026-12-01","consumer-confidence-2026-11-24","cyber-monday-2026-11-30","dallas-fed-mfg-2026-11-30","dallas-fed-tssos-2026-12-01","durable-goods-2026-11-25","eurostat-hicp-flash-2026-12-01","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","gdp-q3-2026-second-2026-11-25","georgia-senate-runoff-2026-12-01","industrial-production-annual-revision-2026-11-24","inio-lockup-expiry-2026-11-30","ism-manufacturing-2026-12-01","japan-cpi-tokyo-flash-2026-11-27","jgb-2y-auction-2026-11-30","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-5-11y-2026-11-27","jolts-2026-12-01","jpx-market-closure-2026-11-23","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","opec-plus-meeting-2026-11-29","pce-2026-11-25","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","qnt-lockup-expiry-2026-11-30","russell-recon-lockdown-2026-11-30","russell-style-month-end-capping-effective-2026-11-30","sifma-bond-early-close-2026-11-27","sp-global-flash-us-pmi-2026-11-23","thanksgiving-half-day-2026-11-27","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","ism-manufacturing-2026-12-01","pce-2026-11-25"],"screenStreak":1} -->
+
+**Last assessed:** 2026-11-27
+<!-- probe-ref: {"symbols":{},"vix":28.29,"daysBand":"low:0+","adjacentIds":["advance-economic-indicators-2026-11-27","aws-reinvent-2026","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","chicago-pmi-2026-11-30","china-ga-ge-sb-suspension-expiry-2026-11-27","construction-spending-2026-12-01","consumer-confidence-2026-11-24","cyber-monday-2026-11-30","dallas-fed-mfg-2026-11-30","dallas-fed-tssos-2026-12-01","durable-goods-2026-11-25","eurostat-hicp-flash-2026-12-01","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","gdp-q3-2026-second-2026-11-25","georgia-senate-runoff-2026-12-01","industrial-production-annual-revision-2026-11-24","inio-lockup-expiry-2026-11-30","ism-manufacturing-2026-12-01","japan-cpi-tokyo-flash-2026-11-27","jgb-2y-auction-2026-11-30","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-5-11y-2026-11-27","jolts-2026-12-01","jpx-market-closure-2026-11-23","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","opec-plus-meeting-2026-11-29","pce-2026-11-25","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","qnt-lockup-expiry-2026-11-30","russell-recon-lockdown-2026-11-30","russell-style-month-end-capping-effective-2026-11-30","sifma-bond-early-close-2026-11-27","sp-global-flash-us-pmi-2026-11-23","thanksgiving-half-day-2026-11-27","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","ism-manufacturing-2026-12-01","pce-2026-11-25"],"screenStreak":0} -->
