@@ -90,6 +90,10 @@ api() {
 # can cut it. Core bucket only (search answers carry their own, much smaller, `remaining`). Once per
 # run: api() runs in a $(...) subshell, so the "already said" flag is a file keyed on the top-level
 # shell's PID ($$ is the parent's even inside the subshell). Never fails the call it reports on.
+# A call whose stderr goes to /dev/null cannot be heard, so it leaves the flag for the next call
+# (#8391): `ship.sh open`'s first call is `api GET /commits/main 2>/dev/null`, and setting the flag
+# there threw the line away and silenced every later call, so `open` never named itself.
+# `-ef` compares device and inode through /dev/stderr, which works on Linux and on macOS.
 RATE_LOG_BELOW=1000
 rate_note() {
   [ -s "$1" ] || return 0
@@ -102,6 +106,7 @@ rate_note() {
   [ -z "$resource" ] || [ "$resource" = core ] || return 0
   flag="${TMPDIR:-/tmp}/skynet-ship-rate.$$"
   [ -e "$flag" ] && return 0
+  [ /dev/stderr -ef /dev/null ] && return 0
   : >"$flag" 2>/dev/null || true
   local who="ship.sh ${SHIP_SUBCOMMAND:-?} · branch $(git branch --show-current 2>/dev/null || echo '?')"
   [ -z "${GITHUB_RUN_ID:-}" ] || who="$who · run $GITHUB_RUN_ID${GITHUB_WORKFLOW:+ ($GITHUB_WORKFLOW)}"
