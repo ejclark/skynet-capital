@@ -16,6 +16,8 @@ import {
  *   - X-Energy (XE), CIK 0002088896 — 180 days, cut to ten trading days before a blackout period
  *     when it would end near one; its 8-K of 2026-06-04 moved the end from 2026-10-20 to 2026-09-01
  *     (#5920).
+ *   - Bending Spoons (BSP), CIK 0002004711 — a "Restricted Period" ended by an earnings report, and a
+ *     cover offering split between the company and selling shareholders (#8552).
  */
 
 const IAM = [
@@ -50,6 +52,26 @@ const XE = [
   "Pursuant to the lock-up agreements with the underwriters, if (1) at least 120 days have elapsed since the date of this prospectus and (2) such lock-up period is scheduled to end during or within five trading days prior to a broadly applicable period during which trading in our securities would not be permitted under our insider trading policy, or a blackout period, such lock-up period will end ten trading days prior to the commencement of such blackout period.",
 ].join(" ");
 
+// Bending Spoons (BSP), CIK 0002004711, 424B4 fetched 2026-11-27. The cover and "Notwithstanding"
+// sentences are verbatim; the 180-day sentence is cut at its list of restricted acts. The holders'
+// lock-up is called the "Restricted Period" and ends 48 hours after the second quarterly earnings
+// report, which came on 2026-11-19: it ended 2026-11-21, not on the 180-day 2026-12-27 (#8552).
+const BSP = [
+  'This is the initial public offering of Bending Spoons S.p.A. We are offering 34,398,640 of our ordinary shares, with no par value, and certain of our existing shareholders (the "Selling Shareholders") are offering 23,572,375 of our ordinary shares.',
+  "We will not receive any proceeds from the sale of ordinary shares by the Selling Shareholders.",
+  "Prior to this offering, there has been no public market for our ordinary shares.",
+  "The initial public offering price is $29.00 per ordinary share.",
+  "Prospectus dated June 30, 2026.",
+  'Pursuant to such lock-up agreements, each Lock-Up Party agreed that, subject to certain exceptions as described below, for a period of 180 days after the date of this prospectus (such period, the "Restricted Period"), they will not offer, pledge, sell or otherwise dispose of any Lock-Up Securities.',
+  "Notwithstanding the foregoing, the Restricted Period will expire 48 hours after the date on which we publicly release our results in our second quarterly earnings report following the date of this prospectus, provided that at least 125 days have elapsed since the date of this prospectus as of the date of such second quarterly earnings release.",
+].join(" ");
+
+// The last sentence is Concord's (CSQR) risk factor, verbatim and cut short: it names a lock-up and
+// "early release" but is no trigger, and CSQR is rightly `confirmed` (the #8552 re-scan). The rest is
+// a plain 180-day frame around it.
+const RISK_FACTOR =
+  "Prospectus dated July 15, 2026. Prior to this offering, there has been no public market for our common stock. We have agreed not to sell for a period of 180 days after the date of this prospectus, subject to the lock-up agreements. Sales of significant amounts of stock in the public market upon expiration of lock-up agreements, the perception that such sales may occur, or early release of any lock-up agreements, could adversely affect prevailing market prices of our common stock.";
+
 const FOLLOW_ON =
   "Our executive officers and directors are subject to lock-up restrictions during the period ending 90 days after the date of this prospectus. Prospectus dated August 19, 2026.";
 
@@ -76,6 +98,24 @@ describe("parseProspectus", () => {
     const p = parseProspectus(XE);
     expect(p.lockupDays).toBe(180);
     expect(p.earlyRelease).toMatch(/ten trading days prior to the commencement of such blackout/);
+  });
+
+  it("flags a 'Restricted Period' that expires after an earnings report, though it names no days", () => {
+    const p = parseProspectus(BSP);
+    expect(p.lockupDays).toBe(180);
+    expect(p.earlyRelease).toMatch(/Restricted Period will expire 48 hours after/);
+  });
+
+  it("does not read the lock-up risk factor's 'early release' as a trigger", () => {
+    const p = parseProspectus(RISK_FACTOR);
+    expect(p.lockupDays).toBe(180);
+    expect(p.earlyRelease).toBeUndefined();
+  });
+
+  it("sizes the offering with the selling shareholders' shares, not ours alone", () => {
+    const p = parseProspectus(BSP);
+    expect(p.sharesOffered).toBe(57_971_015);
+    expect(p.offeringUsd).toBe(1_681_159_435);
   });
 
   it("breaks a tie between staged periods toward the shorter one — the earlier supply", () => {
@@ -139,6 +179,13 @@ describe("lockupEvent", () => {
     const e = event(XE, "XE");
     expect(e).toMatchObject({ date: "2026-10-20", status: "estimate" });
     expect(e?.notes).toMatch(/blackout period/);
+  });
+
+  it("never files an earnings-ended 'Restricted Period' as confirmed on its 180-day date", () => {
+    const e = event(BSP, "BSP");
+    expect(e).toMatchObject({ date: "2026-12-27", status: "estimate", impact: "medium" });
+    expect(e?.notes).toMatch(/second quarterly earnings report/);
+    expect(e?.notes).toMatch(/^\$1\.7B offering/);
   });
 
   it("files nothing for a follow-on", () => {
