@@ -21,7 +21,12 @@ import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { opaqueMemberId } from "./feedback-issue.js";
 import { serveGuidance } from "./guidance-route.js";
 import { serveChain } from "./option-chain-route.js";
-import { carriesExitPlan, exitPlanOnReview, settleExitPlan } from "./option-exit-plan.js";
+import {
+  carriesExitPlan,
+  exitPlanOnReview,
+  holdingsBeforeOrder,
+  settleExitPlan,
+} from "./option-exit-plan.js";
 import type { DeskOptionRequest } from "./option-trade-service.js";
 import {
   boundedString,
@@ -322,9 +327,11 @@ async function submitOption(
     });
     return;
   }
+  // Read before the order goes: its own fill can reach the hub before the submit returns (#8401).
+  const held = holdingsBeforeOrder(config, request.participantId);
   const result = await config.submitOptionTrade(request, requesterId);
   settleTakenQuest(questId, request.participantId, questOrderOf(request), result, config);
-  sendJson(res, 200, { ...result, ...settleExitPlan(request, result, carry, config) });
+  sendJson(res, 200, { ...result, ...settleExitPlan(request, result, carry, config, held) });
 }
 
 /** The read-only GETs this family answers, each resolved against the requester's own account. */

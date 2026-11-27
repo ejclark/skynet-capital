@@ -7,6 +7,7 @@ import { ExitPlanStore } from "../../src/server/exit-plan-store.js";
 import {
   carriesExitPlan,
   exitPlanOnReview,
+  holdingsBeforeOrder,
   settleExitPlan,
 } from "../../src/server/option-exit-plan.js";
 import type { DeskOptionRequest } from "../../src/server/option-trade-service.js";
@@ -168,9 +169,17 @@ describe("settleExitPlan", () => {
   const accepted = { ok: true, symbol: OCC };
   const noStore = { exitPlans: undefined };
 
+  /** Settle as the route does: the desk's holdings read off the hub before the order (#8401). */
+  const settle = (
+    request: DeskOptionRequest,
+    result: { ok: boolean; symbol?: string },
+    carry: boolean,
+    cfg: ReturnType<typeof config>,
+  ) => settleExitPlan(request, result, carry, cfg, holdingsBeforeOrder(cfg, request.participantId));
+
   describe("when the member carried the plan and the order was accepted", () => {
     it("records the plan against the contract and says it was carried", () => {
-      expect(settleExitPlan(buyCall(), accepted, true, config())).toEqual({
+      expect(settle(buyCall(), accepted, true, config())).toEqual({
         exitPlan: "carried",
       });
       expect([...store.carried(DESK)]).toEqual([OCC]);
@@ -178,18 +187,18 @@ describe("settleExitPlan", () => {
 
     it("offers and records nothing for a call already inside the time stop", () => {
       const inside = buyCall({ expiration: "2026-11-20" });
-      expect(settleExitPlan(inside, accepted, true, config())).toEqual({});
+      expect(settle(inside, accepted, true, config())).toEqual({});
       expect(store.carried(DESK).size).toBe(0);
     });
 
     it("says the plan was not saved when no store is wired", () => {
-      expect(settleExitPlan(buyCall(), accepted, true, config({}, noStore))).toEqual({
+      expect(settle(buyCall(), accepted, true, config({}, noStore))).toEqual({
         exitPlan: "not-saved",
       });
     });
 
     it("reads the real clock when the config has none", () => {
-      const result = settleExitPlan(
+      const result = settle(
         buyCall({ expiration: "2099-01-15" }),
         accepted,
         true,
@@ -202,20 +211,20 @@ describe("settleExitPlan", () => {
   describe("when the order was not accepted", () => {
     it("changes nothing and says nothing, carry or not", () => {
       store.carry(DESK, OCC);
-      expect(settleExitPlan(buyCall(), { ok: false, symbol: OCC }, true, config())).toEqual({});
-      expect(settleExitPlan(closeOut(), { ok: false }, false, config({ [OCC]: 1 }))).toEqual({});
+      expect(settle(buyCall(), { ok: false, symbol: OCC }, true, config())).toEqual({});
+      expect(settle(closeOut(), { ok: false }, false, config({ [OCC]: 1 }))).toEqual({});
       expect([...store.carried(DESK)]).toEqual([OCC]);
     });
   });
 
   describe("when the order is not a buy-call", () => {
     it("records nothing for another play", () => {
-      expect(settleExitPlan(buyCall({ code: "301" }), accepted, true, config())).toEqual({});
+      expect(settle(buyCall({ code: "301" }), accepted, true, config())).toEqual({});
       expect(store.carried(DESK).size).toBe(0);
     });
 
     it("records nothing when the accepted order names no contract symbol", () => {
-      expect(settleExitPlan(buyCall(), { ok: true }, true, config())).toEqual({});
+      expect(settle(buyCall(), { ok: true }, true, config())).toEqual({});
       expect(store.carried(DESK).size).toBe(0);
     });
   });
@@ -224,14 +233,14 @@ describe("settleExitPlan", () => {
     it("drops the plan on that contract and leaves others alone", () => {
       store.carry(DESK, OCC);
       store.carry(DESK, OTHER_OCC);
-      const result = settleExitPlan(closeOut(), { ok: true }, false, config({ [OCC]: 3 }));
+      const result = settle(closeOut(), { ok: true }, false, config({ [OCC]: 3 }));
       expect(result).toEqual({});
       expect([...store.carried(DESK)]).toEqual([OTHER_OCC]);
     });
 
     it("drops the plan when the close names exactly the contracts held", () => {
       store.carry(DESK, OCC);
-      settleExitPlan(closeOut({ contracts: 3 }), { ok: true }, false, config({ [OCC]: 3 }));
+      settle(closeOut({ contracts: 3 }), { ok: true }, false, config({ [OCC]: 3 }));
       expect(store.carried(DESK).size).toBe(0);
     });
   });
@@ -239,46 +248,44 @@ describe("settleExitPlan", () => {
   describe("when an accepted close sells only part of the holding", () => {
     it("keeps the plan", () => {
       store.carry(DESK, OCC);
-      settleExitPlan(closeOut({ contracts: 1 }), { ok: true }, false, config({ [OCC]: 3 }));
+      settle(closeOut({ contracts: 1 }), { ok: true }, false, config({ [OCC]: 3 }));
       expect([...store.carried(DESK)]).toEqual([OCC]);
     });
   });
 
   describe("when a close lands with no store wired", () => {
     it("settles quietly", () => {
-      expect(
-        settleExitPlan(closeOut(), { ok: true }, false, config({ [OCC]: 1 }, noStore)),
-      ).toEqual({});
+      expect(settle(closeOut(), { ok: true }, false, config({ [OCC]: 1 }, noStore))).toEqual({});
     });
   });
 
   describe("when a purchase went without the plan", () => {
     it("drops a plan carried on an earlier market day for a contract the desk does not hold", () => {
       store.carry(DESK, OCC, new Date("2026-10-30T15:00:00Z"));
-      expect(settleExitPlan(buyCall(), accepted, false, config())).toEqual({});
+      expect(settle(buyCall(), accepted, false, config())).toEqual({});
       expect(store.carried(DESK).size).toBe(0);
     });
 
     it("keeps a plan carried today, which may still be waiting on its own order to fill", () => {
       store.carry(DESK, OCC, new Date("2026-11-01T14:00:00Z"));
-      settleExitPlan(buyCall(), accepted, false, config());
+      settle(buyCall(), accepted, false, config());
       expect([...store.carried(DESK)]).toEqual([OCC]);
     });
 
     it("keeps the plan when the desk already holds the contract", () => {
       store.carry(DESK, OCC, new Date("2026-10-30T15:00:00Z"));
-      settleExitPlan(buyCall(), accepted, false, config({ [OCC]: 1 }));
+      settle(buyCall(), accepted, false, config({ [OCC]: 1 }));
       expect([...store.carried(DESK)]).toEqual([OCC]);
     });
 
     it("treats a zero-quantity position as not held", () => {
       store.carry(DESK, OCC, new Date("2026-10-30T15:00:00Z"));
-      settleExitPlan(buyCall(), accepted, false, config({ [OCC]: 0 }));
+      settle(buyCall(), accepted, false, config({ [OCC]: 0 }));
       expect(store.carried(DESK).size).toBe(0);
     });
 
     it("settles quietly when no store is wired", () => {
-      expect(settleExitPlan(buyCall(), accepted, false, config({}, noStore))).toEqual({});
+      expect(settle(buyCall(), accepted, false, config({}, noStore))).toEqual({});
     });
   });
 });
