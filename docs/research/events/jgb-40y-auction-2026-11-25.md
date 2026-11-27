@@ -480,6 +480,7 @@ Three predictions carry score-by dates and are registered in
 | 2026-11-11 | D-14 | **Full session (material: band low:15+ → low:0+, weekly from here).** **Terms still out:** MOF `2611e.htm` (direct, HTTP 200) 11-25 row has no announcement href; expect ~11-18 — kills 2 (size ≥¥540bn) and 6 (terms before 11-11) unfired. **Sibling prints now in hand (MOF result pages):** 09-29 40Y ¥300bn, bids ¥928.0bn (inside the ¥750–1,050bn band, `FT-3` consistent), cover 3.096x, concession −0.2bp (n=9 mean ≈ +1.4bp, was +1.65 n=8); 11-10 30Y ¥599.5bn, 3.356x, tail 2.4bp. **Curve (MOF par, 11-10):** 40Y 3.996% (4.127% on 09-29), 30Y 3.935%, 20Y 3.629%; 30s40s **+6.1bp** (+0.1 on 09-29; sibling `FT-3` bar +10bp by 12-31), 25s30s −2.3bp. **Tape (Yahoo, secondary):** VIX 19.46 (11-10) vs 18.4, +1.1pt, no regime move (closed 28.18 on 11-05, 16.61 on 11-04); USD/JPY 158.82; Nikkei 60,572. NVDA −9.3% 11-05, −5.5% 11-10 on the AI tape, no JGB/yen tie found (kill 1 unfired). **Kill 7:** JPX page (direct) still says 11-23 not open (BCP test). **Corridor:** `--on-date=2026-11-25` = 9 entries, all tracked; no proposals. Past-horizon: 12-08 30Y JGB (low, D+27 of today, not calendared, not proposed). No conviction proposals or declared intents. FT-1..3 stay _open_ (score-by 11-26/27). | None — stand aside holds; no entry, exit or hedge keyed to this auction | 2026-11-18 (low, 0+d band: every 7d; terms expected) |
 | 2026-11-18 | D-7 | **Full session (material: VIX 19.46 → 25.46, +6.0pt, past the 3pt regime line).** **Terms still out:** MOF `2611e.htm` (direct, HTTP 200) 11-25 row still shows no announcement link; the 11-18 20Y row has one. Expect ~11-18; kills 2 (≥¥540bn) and 6 unfired. **Tape (Yahoo, secondary):** VIX 25.46 (11-17; 22.91 on 11-16), USD/JPY 159.57, Nikkei 59,549. NVDA 173.73 → 155.46 since 11-11 (−4.4% 11-12, −2.0% 11-13, −4.1% 11-16) on the AI tape; no JGB/yen headline tied to it was found, though one web search of that window returned nothing dated (kill 1 unfired, thinly checked). **Blocked:** MOF par-yield CSV (Incapsula 404) and JPX holiday page (403), so 40Y yield, 30s40s and kill 7 are not re-read this row (11-11 reading stands). **Corridor:** `--on-date=2026-11-25` = 9 entries, all tracked; no proposals. Past-horizon not proposed: 12-08 30Y JGB. No conviction proposals or declared intents (both scripts print `[]`). FT-1..3 stay _open_ (score-by 11-26/27). | None — stand aside holds; a VIX regime move changes what any options-shaped play costs, and none is keyed here | 2026-11-25 (low, 0+d band; terms expected today) |
 | 2026-11-25 | D-0 | **Deterministic screen (no Claude session).** Readings — VIX 26.4 (+0.9pt since last), band unchanged (low:0+), 44 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-12-02 |
+| 2026-11-27 | D+2 | **Close-out (full session).** MOF primaries (direct, HTTP 200): terms `auct20261118e.htm` ¥300bn, result `eresul20261125.htm` bids **¥786.5bn**, accepted **¥299.6bn**, cover **2.625x**, highest yield **4.090%**, par 40Y **4.095%** (`jgbcm.csv`) = **−0.5bp**. **FT-1 pass, FT-2 KILL, FT-3 pass**; kill 3 fired, rest unfired (7 unread, JPX 404). 30s40s **+9.7bp** on 11-25 (+5.7 on 11-24) — the 09-29 sibling's bar is +10bp by 12-31, not scored here. Tape (Yahoo, secondary): VIX 26.80 (11-26), USD/JPY 159.2–159.4, no yen move; no JGB tie to NVDA −3.9% on 11-25 found. Corridor: `--on-date=2026-11-25` 9 entries, all tracked; no proposals. Past-horizon: none new. No conviction proposals or declared intents. Detail in Outcome. | Stand-aside holds; calibration call missed on this print | — (closed) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -501,3 +502,95 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-11-25
 <!-- probe-ref: {"symbols":{},"vix":26.36,"daysBand":"low:0+","adjacentIds":["advance-economic-indicators-2026-11-27","aruoba-inflation-term-structure-2026-11-20","aws-reinvent-2026","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","chicago-pmi-2026-11-30","china-ga-ge-sb-suspension-expiry-2026-11-27","consumer-confidence-2026-11-24","cyber-monday-2026-11-30","dallas-fed-mfg-2026-11-30","durable-goods-2026-11-25","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","gdp-q3-2026-second-2026-11-25","industrial-production-annual-revision-2026-11-24","inio-lockup-expiry-2026-11-30","japan-cpi-2026-11-20","japan-cpi-tokyo-flash-2026-11-27","jgb-2y-auction-2026-11-30","jgb-liquidity-enhancement-1-5y-2026-11-20","jgb-liquidity-enhancement-5-11y-2026-11-27","jpx-market-closure-2026-11-23","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","opec-plus-meeting-2026-11-29","opex-2026-11-20","pce-2026-11-25","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","qnt-lockup-expiry-2026-11-30","russell-recon-lockdown-2026-11-30","russell-style-month-end-capping-effective-2026-11-30","sifma-bond-early-close-2026-11-27","sp-global-flash-us-pmi-2026-11-23","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","uk-consumer-confidence-2026-11-20","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25"],"screenStreak":1} -->
+
+**Last assessed:** 2026-11-27
+<!-- probe-ref: {"symbols":{},"vix":26.8,"daysBand":"low:0+","adjacentIds":["advance-economic-indicators-2026-11-27","aruoba-inflation-term-structure-2026-11-20","aws-reinvent-2026","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","chicago-pmi-2026-11-30","china-ga-ge-sb-suspension-expiry-2026-11-27","consumer-confidence-2026-11-24","cyber-monday-2026-11-30","dallas-fed-mfg-2026-11-30","durable-goods-2026-11-25","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","gdp-q3-2026-second-2026-11-25","industrial-production-annual-revision-2026-11-24","inio-lockup-expiry-2026-11-30","japan-cpi-2026-11-20","japan-cpi-tokyo-flash-2026-11-27","jgb-2y-auction-2026-11-30","jgb-liquidity-enhancement-1-5y-2026-11-20","jgb-liquidity-enhancement-5-11y-2026-11-27","jpx-market-closure-2026-11-23","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","opec-plus-meeting-2026-11-29","opex-2026-11-20","pce-2026-11-25","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","qnt-lockup-expiry-2026-11-30","russell-recon-lockdown-2026-11-30","russell-style-month-end-capping-effective-2026-11-30","sifma-bond-early-close-2026-11-27","sp-global-flash-us-pmi-2026-11-23","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","uk-consumer-confidence-2026-11-20","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25"],"screenStreak":0,"blocked":[{"url":"https://www.jpx.co.jp/english/derivatives/trading-hours/holiday-trading/index.html","status":"404","at":"2026-11-27"},{"url":"https://www.mof.go.jp/english/policy/jgbs/reference/interest_rate/jgbcm.csv","status":"404 (Incapsula); the host path /jgbs/reference/interest_rate/jgbcm.csv serves it","at":"2026-11-27"}]} -->
+
+## Outcome
+
+**Close-out (2026-11-27, D+2).** Rates mode runs no `earnings-cycle` / `intraday-edges` instrument
+(`symbols: []` by design); the cache was busted first
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) though nothing here
+reads it. Every figure below was re-fetched direct today from MOF, never carried from an earlier row.
+The date and size were `estimate`; MOF's own pages now confirm both, and the entry stays `estimate`
+because the calendar's source-prefix taxonomy has no slot for a non-US debt office.
+
+### What happened
+
+- **Terms.** `calendar/announcement/auct20261118e.htm` (HTTP 200): auction 2026-11-25, issue 2026-11-26,
+  maturity **March 20, 2066**, offering **About 300 billion yen**, a reopening of the May 2026 issue,
+  Dutch-style yield-competitive at 0.5bp steps. Published 2026-11-18, the 7-day lead MOF's note names.
+- **Result.** `calendar/eresul/eresul20261125.htm` (cross-checked against the NPC-II page
+  `eresul20261125a.htm`): issue **19**, coupon **3.8%**, competitive bids **¥786.5bn**, accepted
+  **¥299.6bn** (**cover 2.625x**), price at the highest accepted yield 94.35, highest accepted yield
+  **4.090%** with **5.7142%** allotted at it, both average-price columns `-` (single-price, **no tail**,
+  as the ledger said), NPC II **¥28.2bn**.
+- **Concession.** MOF's par 40-year on 2026-11-25 (`/jgbs/reference/interest_rate/jgbcm.csv`) was
+  **4.095%**, so the auction cleared **0.5bp through the screen**. From the ledger's own n=8 mean
+  (+1.65bp) plus the 09-29 (−0.2bp) and this print (−0.5bp), the ¥300–500bn-era mean is now about
+  **+1.25bp (n=10)**; that is arithmetic on the ledger's figures, not a re-parse of the workbook, whose
+  last save (2026-11-06) predates this auction.
+- **Against its own recent prints** (size · cover · concession): ¥300bn 2.702x +4.4bp (05-27) · ¥300bn
+  2.824x +2.3 (07-22) · ¥300bn 3.096x −0.2 (09-29) · **¥300bn 2.625x −0.5 (11-25)**. Cover is the lowest of
+  the four at an unchanged size; bids fell 15% from ¥928.0bn.
+- **The curve around it** (MOF par, 11-24 → 11-25 → 11-26): 40Y 4.047 → **4.095** → 4.049; 30Y 3.990 →
+  3.998 → 3.956; 20Y 3.668 → 3.635 → 3.615. The 40-year cheapened **+4.8bp on auction day** against the
+  30-year's +0.8bp and 20-year's −3.3bp, then gave it back the next day. 30s40s read **+9.7bp** on 11-25
+  (+5.7 on 11-24), against the 09-29 sibling's +10bp bar; that test is the sibling's to score by 12-31.
+
+### Forward tests
+
+- **FT-1 (¥300bn, so the 40-year stays disqualified as a control) — PASS.** Announced and accepted at
+  ¥300bn–¥299.6bn; the ≥ ¥540bn kill is nowhere near.
+- **FT-2 (positive concession, the 95-auction −0.25bp calibration is stale) — KILL.** Cleared at
+  **−0.5bp**. Honest read: one print, and the second non-positive one in a row, so the +1.65bp
+  calibration the ledger put in the stance overstated the recent regime; on this print the old
+  −0.25bp mean would have missed by 0.25bp against +1.65bp's 2.15bp. It moves to the sweep doc's kill
+  list. The pre-2025 calibration is not thereby *proven* current: n=10 in the era averages about +1.25bp.
+- **FT-3 (bids inside ¥750–1,050bn, cover 2.5–3.3x) — PASS.** ¥786.5bn and 2.625x. Second pass since
+  registration (09-29: ¥928.0bn), and the first print to sit near the low end of the band.
+
+### Kill switches, re-adjudicated at close
+
+- **KS1 (no-price-channel premise) — not fired, thinly checked.** Tracked names moved >2% on several
+  sessions (Yahoo, secondary: NVDA −5.9% 11-24 and −3.9% 11-25, AVGO −4.0% 11-24, MRVL −9.1% 11-24,
+  CRWV −11.8% 11-24, and far larger swings 11-20/11-23 on the AI tape), but USD/JPY never moved more
+  than 0.5% on a day (159.0–159.7 from 11-20 to 11-27) and on auction day itself AVGO −0.1%, MRVL −0.5%,
+  CRWV −0.1%. No JGB or yen headline tie was found in anything read; no headline search was run this
+  session, so this is "no attribution found", not proof of no JGB channel.
+- **KS2 (size ≥ ¥540bn) — not fired.** ¥300bn.
+- **KS3 (negative concession) — FIRED.** −0.5bp (FT-2).
+- **KS4 (bids outside ¥750–1,050bn) — not fired.** ¥786.5bn.
+- **KS5 (holiday-week null breaks) — not fired.** 11-25 covered 2.625x, not below 2.5x.
+- **KS6 (terms or cadence change) — not fired.** ¥300bn, 11-25, fourth reopening of issue 19, terms 11-18
+  (after the 11-11 floor).
+- **KS7 (JPX reopens 11-23) — not read.** The JPX holiday-trading page returned 404 on both its English
+  and Japanese paths today. MOF's par file has no 11-23 row (the 11-20 row is followed by 11-24), which
+  only shows the cash market was shut on that national holiday, not anything about the derivatives
+  blackout the kill is about.
+
+### The stance calls, scored
+
+- **Today / this week (stand aside; retire the control program) — CORRECT.** Nothing was traded; the
+  size stayed at ¥300bn, so the confound that disqualifies the 40-year as a control was not unwound.
+- **This month (judge against +1.65bp, not −0.25bp) — MISSED on this print.** The call told a reader to
+  expect a cheaper clearing than the old calibration; the auction cleared through the screen. Its own weak-print
+  trigger (cover below 2.5x or more than +4.5bp) and strong-print trigger (cover ≥ 2.8x within 1bp) both
+  stayed unfired: a middling print.
+- **This quarter (read cover as an issuance statistic; check yen bids) — CONSISTENT, with a caveat.** Bids
+  stayed in band, yet a 15% fall at constant size (¥928.0bn to ¥786.5bn) leaves this the lowest-bid ¥300bn print
+  (07-22 ¥847bn; 05-27 about ¥810bn, implied by its 2.702x cover), so bids moved a little within the band.
+
+### Honest limits
+
+- One auction. Nothing here supports a rule about the 40-year's concession; n=10 in the era.
+- Yahoo (VIX, USD/JPY, the four tracked names) is secondary; the MOF pages are the only evidence for the
+  result and the par curve.
+- The size announcement's own timing (7 days) and the date held as the calendar said; the entry's
+  `estimate` label reflects taxonomy, not doubt.
+- **Loop census (sense stage).** Earlier rows recorded MOF's par CSV as blocked (404). It is served at the
+  host-rooted path `/jgbs/reference/interest_rate/jgbcm.csv` (Shift-JIS) and, for history,
+  `/english/policy/jgbs/reference/interest_rate/historical/jgbcme_all.csv`; the English `jgbcm.csv` path
+  that 404s is the one earlier rows tried. A scorer for these JGB close-outs should read those two paths.
+
+**Kill list.** FT-2 added to [`multi-symbol-sweep.md`](../multi-symbol-sweep.md)'s kill list.

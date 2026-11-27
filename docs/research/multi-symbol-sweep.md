@@ -71,6 +71,10 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"The Japan 40-year JGB clears at a positive concession in the ¥300–500bn era: the 2026-11-25 auction's highest accepted yield sits above MOF's same-session par (FT-jgb-40y-auction-2026-11-25-2)"** — added 2026-11-27 from the
+  [jgb-40y-auction-2026-11-25 close-out](events/jgb-40y-auction-2026-11-25.md). It cleared at **4.090%** against a par 40-year of **4.095%**, a concession of **−0.5bp**, the second non-positive print in a row (09-29 was −0.2bp); the era mean is about +1.25bp (n=10).
+  Do not carry a +1.65bp era mean into a single 40-year auction as a stance call; one observation, and the 95-auction sd is 1.78bp, so a single print is inside the noise either way.
+
 - **"ITB's session range on a New Residential Sales day stays under its release-day p75 (2.934%, n=65) with no regime condition (FT-new-home-sales-2026-11-25-3)"** — added 2026-11-26 from the [new-home-sales-2026-11-25 close-out](events/new-home-sales-2026-11-25.md). ITB ranged **4.566%** on 11-25 (H 99.08 / L 94.59 / C 98.34, +2.91% on the day) at a VIX close of 28.29, the 95.5th percentile of five years of sessions.
   Do not register an unconditional ITB range ceiling for a housing print; this is the third case after the pending-home-sales and FHFA kills on this list, and the day also carried the Q3 GDP second estimate and PCE, so the miss reads as regime and co-release, not as proof the print moves housing.
 
