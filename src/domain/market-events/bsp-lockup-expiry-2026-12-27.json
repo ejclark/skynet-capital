@@ -1,11 +1,11 @@
 {
   "id": "bsp-lockup-expiry-2026-12-27",
   "kind": "lockup-expiry",
-  "title": "BSP IPO lockup ends — Bending Spoons S.p.A., 180 days after its 2026-06-30 prospectus",
-  "date": "2026-12-27",
+  "title": "BSP IPO lockup ended early — Bending Spoons S.p.A., 48 hours after its 2026-11-19 Q3 results; first sellable session 2026-11-23",
+  "date": "2026-11-21",
   "status": "confirmed",
-  "source": "SEC: 424B4 https://www.sec.gov/Archives/edgar/data/2004711/000110465926079884/tm2613674-14_424b4.htm, fetched 2026-10-20 (scripts/research/lockup-discovery.mjs). Prospectus dated 2026-06-30 (read from its cover); 180 days after it is 2026-12-27. Lock-up clause: \"Lock-up agreements We have agreed with the underwriters that, for a period of 180 days after the date of this prospectus (the \"Company Lock-Up Period\"), we will not (i) offer, pledge, sell, contract to sell, sell any option or contract to purchase, purchase any option or contract to sell, grant any option, right, or…\"",
+  "source": "SEC: 424B4 https://www.sec.gov/Archives/edgar/data/2004711/000110465926079884/tm2613674-14_424b4.htm, fetched 2026-10-20 and re-read in full 2026-11-27 (HTTP 200). Prospectus dated 2026-06-30; the headline lock-up is 180 days (2026-12-27, a Sunday), but the holders' lock-up adds: \"the Restricted Period will expire 48 hours after the date on which we publicly release our results in our second quarterly earnings report following the date of this prospectus, provided that at least 125 days have elapsed since the date of this prospectus\". The first report after 2026-06-30 was Q2 (6-K, 2026-08-13, SEC: accession 0002004711-26-000011); the second was Q3 (6-K, accepted 2026-11-19 16:22 ET, SEC: accession 0002004711-26-000027, press release dated November 19, 2026). 125 days after 2026-06-30 is 2026-11-02, already past. 48 hours after 2026-11-19 is Saturday 2026-11-21, so the first session insiders may sell is Monday 2026-11-23. Corroborated by Form 4s filed 2026-11-23 (SEC: Ferrari 0002141041-26-000003, Patarnello 0002141061-26-000003, Danieli 0002141043-26-000006) converting 12.35M class A shares to ordinary on 2026-11-20 (code C, no sale). The calendar's original 2026-12-27 was the 180-day date only; the early-release clause was missed when the entry was filed by scripts/research/lockup-discovery.mjs.",
   "impact": "medium",
   "symbols": ["BSP"],
-  "notes": "$998M offering. Insiders may sell from the next session; the pullback the lockup-expiry playbook studies (#5912) is the supply that unlocks then."
+  "notes": "$1.68B offering at $29 (57.97M ordinary shares: 34.4M primary, 23.6M by selling shareholders; option for 8.7M more). About 267M restricted ordinary shares plus 310.2M class A (5 votes each, convertible on request) held by the founders. Date is the last locked day (the DPC convention): day 0 is Monday 2026-11-23. The 180-day cohort never reaches 12-27. Read docs/research/events/bsp-lockup-expiry-2026-12-27.md before reading the id's date as the unlock."
 }
