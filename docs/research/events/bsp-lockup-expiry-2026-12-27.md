@@ -74,6 +74,7 @@ Registered forward tests (`docs/research/forward-tests/bsp-lockup-expiry-2026-12
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-11-27 | -6 (passed) | Initial research. Date was wrong: 424B4 holders' lock-up ends 48h after the second quarterly report (Q3, 6-K accepted 2026-11-19 16:22 ET, 125 days met 11-02); first sellable session Mon 2026-11-23, not 12-28. Entry amended to date 2026-11-21 (last locked day). Supply ~267M restricted ordinary = 4.6x the 58.0M IPO float, ~146 days of volume; 310M class A beside it; no sale on file (only 3 conversion Form 4s of 11-20). BSP $46.29 (11-25), +59.6% vs $29 IPO; D0..+2 +15.2%/-9.3%/+8.0% on 3.8x/5.9x/4.6x volume; CAR[0,+2] +8.9% vs XLK (beta confound: SPY -3.6% on 11-20, +4.7% on 11-23). Placements: Berkshire 10M (~$33), 32.5M at $40 (1.3B, Q4 close). Q3: rev $780M +125%, Mailchimp $3.68B signed. Options unread (Cboe 403, Yahoo 401). VIX 28.29. Strong adjacent: GDP second est and PCE 11-25, retail sales 11-17, all already on the calendar; no proposals (nothing dated is undated). Beyond horizon: none. Conviction proposals and declared intents: none for this event | Initial stance: stand aside; date corrected from 2026-12-27 | close-out; FT-1 and FT-3 score by 2026-12-10 |
+| 2026-11-27 | -6 (passed) | Close-out, last day inside `closeOutWithinDays`. Re-pulled Yahoo bars and EDGAR (CIK 2004711): BSP last bar still 11-25 ($46.29), nothing new since initial research; filings still 3 conversion Form 4s, no sale, no resale registration. VIX 26.80 (11-26). Instruments not re-run (100 sessions). All 3 FTs score after the window: left open for `forward-test-due`. Adjacency: none new; no proposals. Beyond horizon: none. Conviction proposals and declared intents: none | None; stand aside holds | FT-1, FT-3 score 2026-12-10; FT-2 2027-01-05 |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -88,3 +89,22 @@ in the row instead (#2946): it can never become due, so a calendar file for it i
 prose in a row is free. Close-out fills `## Outcome` below from re-run instrument data (cache busted
 first), never from memory. After that the assessment is closed; the doc reopens only to score a
 registered forward test whose `Score by` has arrived (`forward-test-due`).
+
+## Outcome
+
+**Close-out (2026-11-27, D+4 calendar, the last day inside `closeOutWithinDays`).** What happened vs the stance: the
+date was corrected from 2026-12-27 to a first sellable session of Monday 2026-11-23 (confirmed, SEC: 424B4 early-release
+clause + Q3 6-K accepted 2026-11-19 16:22 ET), and the stance, stand aside, was never put to a trade. Re-read 2026-11-27
+(Yahoo daily bars, EDGAR submissions for CIK 2004711, cache busted): BSP closed $46.29 on 2026-11-25, +59.6% vs the $29
+IPO, D0..+2 of +15.2%, -9.3%, +8.0% on 3.8x, 5.9x, 4.6x the pre-unlock mean volume; CAR[0,+2] +8.9% vs XLK, mostly the
+market (SPY -3.6% on 11-20, +4.7% on 11-23). The 11-26 session was a US holiday and the 11-27 half-day is not in the bars yet,
+so nothing past D+2 exists to score. EDGAR still shows no insider sale and no resale registration. `earnings-cycle` and
+`intraday-edges` were not re-run (100 sessions, two reports: no cycle statistics), so no instrument cell is claimed.
+
+**Forward tests: all three score after this window, so none is scoreable now and none is marked unscoreable.** The data
+will exist, so they stay `_open_` for the `forward-test-due` re-dispatch (EVENT-RESEARCH.md, #2884): FT-1 and FT-3 on
+2026-12-10, FT-2 on 2027-01-05. Marking them unscoreable would settle a prediction whose tape has not traded yet.
+Hard limits honoured: no trade, no calendar edit.
+
+**Last assessed:** 2026-11-27
+<!-- probe-ref: {"symbols":{"BSP":46.29},"vix":26.8,"daysBand":"medium:0+","adjacentIds":["advance-services-q3-2026-11-19","apec-leaders-shenzhen-2026-11-18","aruoba-inflation-term-structure-2026-11-20","asean-summit-manila-2026-11-16","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","consumer-confidence-2026-11-24","durable-goods-2026-11-25","empire-state-mfg-2026-11-16","eurostat-hicp-final-2026-11-18","fhfa-hpi-2026-11-24","fomc-minutes-2026-11-18","gdp-q3-2026-second-2026-11-25","housing-starts-2026-11-18","import-export-prices-2026-11-17","industrial-production-2026-11-17","industrial-production-annual-revision-2026-11-24","japan-cpi-2026-11-20","japan-gdp-q3-prelim-2026-11-16","jgb-10y-inflation-indexed-auction-2026-11-16","jgb-20y-auction-2026-11-18","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-1-5y-2026-11-20","jpx-market-closure-2026-11-23","msft-ignite-2026-11-17","mtis-2026-11-17","nahb-hmi-2026-11-17","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","opex-2026-11-20","pce-2026-11-25","pending-home-sales-2026-11-18","philly-fed-mfg-2026-11-19","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","retail-ecommerce-q3-2026-11-19","retail-sales-2026-11-17","sp-global-flash-us-pmi-2026-11-23","survey-of-professional-forecasters-q4-2026-11-16","thanksgiving-market-closure-2026-11-26","tic-monthly-2026-11-18","treasury-10y-tips-2026-11-19","treasury-20y-bond-2026-11-18","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-cpi-2026-11-18","uk-labour-market-2026-11-17","uk-ppi-2026-11-18","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20","vix-expiration-2026-11-18"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25","retail-sales-2026-11-17"],"screenStreak":0} -->
