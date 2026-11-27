@@ -103,6 +103,18 @@ const STATUTORY = /Rule (?:144|701)/;
 // blackout dates live in the insider trading policy, not the filing, so the date cannot be computed.
 const BLACKOUT = /black-?\s?out period/i;
 
+// "Notwithstanding the foregoing, the Restricted Period will expire 48 hours after the date on which
+// we publicly release our results in our second quarterly earnings report following the date of this
+// prospectus, provided that at least 125 days have elapsed" (Bending Spoons). The clause calls the
+// lock-up by its defined term, "Restricted Period", and dates it by an earnings report, not by days
+// after the prospectus, so neither test above saw it: BSP was filed `confirmed` on 2026-12-27 while
+// its lock-up had ended 2026-11-21 (#8552). A defined lock-up term that will expire, end or
+// terminate after (or following) an earnings report or release is the trigger; a sentence that only
+// mentions earnings beside a lock-up (a risk factor) is not one.
+const LOCKUP_TERM = /restricted period|lock-?\s?up period|market stand-?off period/i;
+const EARNINGS_END =
+  /\b(?:expire|end|terminate)s?\b[^.;]{0,200}?\b(?:after|following)\b[^.;]{0,200}?\b(?:earnings|quarterly results)\b/i;
+
 function sentencesOf(text) {
   return text.split(/(?<=[.;])\s+(?=[A-Z•])/);
 }
@@ -161,9 +173,11 @@ export function parseProspectus(text) {
   const sentences = lockupSentences(text);
   const counts = lockupPeriods(sentences);
   const periods = [...counts.keys()].sort((a, b) => a - b);
+  const all = sentencesOf(text);
   const early =
     sentences.find((s) => EARLY.test(s)) ??
-    sentencesOf(text).find((s) => LOCKUP_WORD.test(s) && BLACKOUT.test(s));
+    all.find((s) => LOCKUP_WORD.test(s) && BLACKOUT.test(s)) ??
+    all.find((s) => LOCKUP_TERM.test(s) && EARNINGS_END.test(s));
   const trigger = early && (EARLY.exec(early) ?? BLACKOUT.exec(early));
   const price = /public offering price (?:of the [\w ]{2,30}? )?(?:is|of) (?:US)?\$([\d,.]+)/i.exec(
     text,
@@ -189,8 +203,22 @@ export function parseProspectus(text) {
   const shares =
     offering ??
     /([\d,]{7,})\s+(?:shares|common shares|ordinary shares|American Depositary Shares)/i.exec(text);
+  // "We are offering 34,398,640 of our ordinary shares … and certain of our existing shareholders
+  // (the "Selling Shareholders") are offering 23,572,375 of our ordinary shares" (Bending Spoons'
+  // cover): the offering is both halves. Reading only ours sized a $1.68B IPO at $998M (#8552). The
+  // selling holders' shares are added only beside a read "we are offering", never to a first count.
+  const selling =
+    offering &&
+    (/selling (?:share|stock)holders"?\)? (?:are|is) (?:offering|selling)\s+([\d,]{7,})\s+(?:of our\s+)?(?:Class [A-Z] )?(?:shares|common shares|ordinary shares|American Depositary Shares|ADSs)/i.exec(
+      text,
+    ) ??
+      /(?:common stock|common shares|ordinary shares|American Depositary Shares|ADSs) offered by the selling (?:share|stock)holders\s*:?\s*([\d,]{7,})\s+(?:shares|ADSs)/i.exec(
+        text,
+      ));
   const priceUsd = price ? Number(price[1].replace(/,/g, "")) : undefined;
-  const sharesOffered = shares ? Number(shares[1].replace(/,/g, "")) : undefined;
+  const sharesOffered = shares
+    ? Number(shares[1].replace(/,/g, "")) + (selling ? Number(selling[1].replace(/,/g, "")) : 0)
+    : undefined;
   const lockupDays = mainPeriod(counts);
   const stating = sentences.find((s) => s.includes(`${lockupDays} days`));
   return {
