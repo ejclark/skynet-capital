@@ -255,3 +255,58 @@ registered forward test whose `Score by` has arrived (`forward-test-due`).
 
 **Last assessed:** 2026-11-23
 <!-- probe-ref: {"symbols":{},"vix":35.89,"daysBand":"low:0+","adjacentIds":["advance-economic-indicators-2026-11-27","advance-services-q3-2026-11-19","aruoba-inflation-term-structure-2026-11-20","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","china-ga-ge-sb-suspension-expiry-2026-11-27","consumer-confidence-2026-11-24","durable-goods-2026-11-25","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","gdp-q3-2026-second-2026-11-25","industrial-production-annual-revision-2026-11-24","japan-cpi-2026-11-20","japan-cpi-tokyo-flash-2026-11-27","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-1-5y-2026-11-20","jgb-liquidity-enhancement-5-11y-2026-11-27","jpx-market-closure-2026-11-23","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","opec-plus-meeting-2026-11-29","opex-2026-11-20","pce-2026-11-25","philly-fed-mfg-2026-11-19","philly-fed-price-inflation-expectations-q4-2026-11-25","retail-ecommerce-q3-2026-11-19","sifma-bond-early-close-2026-11-27","sp-global-flash-us-pmi-2026-11-23","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","treasury-10y-tips-2026-11-19","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25"],"screenStreak":0,"blocked":[{"url":"https://cdn.cboe.com/api/global/delayed_quotes/charts/historical/_VIX.json","status":403,"at":"2026-11-23"}]} -->
+
+## Outcome
+
+**Close-out (2026-11-27, D+3 — inside the `closeOutWithinDays` window of 6).** Macro-print mode carries no
+`earnings-cycle` / `intraday-edges` instrument (`symbols: []` by design); the cache-bust command was run
+regardless and held nothing. "Re-run instrument data" here is the Philadelphia Fed's own files and report,
+all fetched direct this session with plain `curl` and a browser User-Agent, all HTTP 200: `nbos-2026-11`
+(35,872 B; *"Released: November 24, 2026, at 8:30 a.m. ET."*, *"collected from November 9 to November 19"*),
+`nboshistory.xlsx` (199,668 B, md5 `0a1c5de9…`, 189 monthly rows, Nov-26 present) and `pies-data.xlsx`
+(21,800 B, md5 `c4838c3d…`, *"Released: November 25, 2026"*, 2026Q4 present). Date label: `FRB:` primary, `confirmed`.
+
+**The verdict: the stand-aside stance was right and cost nothing; two of three forward tests passed and one was
+killed.** No level was ever registered for a tracked name, so no level call can have missed.
+
+| Reading | Oct-26 | Nov-26 | Read against the ledger |
+|---|---|---|---|
+| Headline, firm-level activity (`gabndif_sa`) | 12.9 | **14.3** (+1.4) | fit central 15.5, 90% band −5.6 → 36.6: inside; 34.0th percentile of 188 prior months; `FT-…-1` **pass** |
+| Prices paid (`ppbndif_sa`) | 42.1 | **45.8** (+3.7) | inside the 26.1 → 53.7 band; highest since Feb-23 per the bank's text; 88.3rd percentile |
+| Prices received (`prbndif_sa`) | 8.6 | **9.9** (+1.3) | ticked up; the squeeze did not close |
+| Paid minus received | 33.5 | **35.9** | at or above 15.0 (95.2nd percentile); `FT-…-3` **pass**; 10 of the last 12 months at or above 15.0 |
+| Regional activity (`garbndif_sa`) | −23.6 | **−1.5** (+22) | first rise after three declines; new orders −0.6, sales/revenues 5.2, full-time employment 2.8 |
+| PIES 2026Q4 nonmanufacturing own prices (`piesownprices_n`) | 1.8 (Q3) | **2.7** | line `1.2833 + 0.0437 × 45.8` = **3.28**; the miss is 0.58 against the line and 0.90 against 1.8: `FT-…-2` **kill** |
+
+- **The one miss, and what it does and does not say.** The registered test asked whether the PIES lands nearer
+  last quarter's value than nearer the line, at 53%. It landed nearer the line. The direction was right (paid
+  +3.7 on the month, PIES +0.9 on the quarter), but the residual stayed negative for the **fifth straight
+  quarter** (−0.58; the prior four were −0.42, −0.56, −0.58, −0.76), so the line over-predicted again by about
+  half a point. The leave-one-out table, rebuilt on 44 quarters (the original 43 reproduced at **0.398**
+  persistence and **0.433** NBOS paid), now reads **0.409** and **0.435**: persistence is still the closer on the
+  sample, so "the NBOS adds nothing over last quarter" survives on the data and one quarter does not overturn it.
+  Treat the NBOS prices-paid line as a pre-read of the direction and a ceiling on the level, never a point estimate.
+- **Collection window held.** The report states Nov 9 → Nov 19, exactly the derived window (legs 2 and 8
+  stand); Oct is still **12.9** in the new file, so no re-base voided any registration.
+- **Kill switches:** none fired. No re-tier, no re-date off 11-24 (the report's own line says so), no price
+  reading outside 26.1 → 53.7, no spread below 15.0, no window other than 11-09 → 11-19.
+- **What the print did and did not do.** A firm-level headline that edged up, new orders slipping negative and
+  both price lines up is the services counterpart of the MBOS print eight days earlier (headline 6.3, prices paid
+  58.2), both with cost pressure rising faster than prices received. That is context for margin-absorption
+  readings in the nine-name universe, not a position: `symbols: []`, `low` impact, and the next-morning PCE,
+  GDP and Beige Book dominated the corridor. VIX closed **28.29** on 11-25 (sibling ledgers, Yahoo bar) from
+  **35.89** on 11-20, none of it inside the collection window.
+- **Consensus never existed** for this survey, so there is no surprise to score; stated, not invented.
+- **Blocked paths:** Cboe `_VIX.json` 403, Yahoo 429 and FRED's JavaScript challenge to my direct fetches; VIX
+  above is therefore the sibling ledgers' reading, labelled as such. Recorded in `probe-ref.blocked`.
+- **Declared intents / conviction proposals:** `conviction-proposals.mjs` and `intents.mjs` for this id: both
+  `[]`. **Proposed:** none (nothing new, dated and inside the horizon). **Beyond-horizon items seen:** none.
+- **Next:** the Q4 PIES ledger ([`philly-fed-price-inflation-expectations-q4-2026-11-25`](philly-fed-price-inflation-expectations-q4-2026-11-25.md))
+  carries the 2.7 print; this ledger does not edit it. `philly-fed-nbos-2026-12-22` stays declined.
+
+**Loop census (docs/process/LEARNING-LOOP.md):** sense, decide and verify ran from the bank's own files with
+scores reproducible by one script. The one stage a person or a better source still has to supply is the VIX
+reading: three direct sources were blocked from this runner, so the number is borrowed from sibling ledgers.
+
+**Last assessed:** 2026-11-27
+<!-- probe-ref: {"symbols":{},"vix":28.29,"daysBand":"low:0+","adjacentIds":["advance-economic-indicators-2026-11-27","advance-services-q3-2026-11-19","aruoba-inflation-term-structure-2026-11-20","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","china-ga-ge-sb-suspension-expiry-2026-11-27","consumer-confidence-2026-11-24","durable-goods-2026-11-25","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","gdp-q3-2026-second-2026-11-25","industrial-production-annual-revision-2026-11-24","japan-cpi-2026-11-20","japan-cpi-tokyo-flash-2026-11-27","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-1-5y-2026-11-20","jgb-liquidity-enhancement-5-11y-2026-11-27","jpx-market-closure-2026-11-23","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","opec-plus-meeting-2026-11-29","opex-2026-11-20","pce-2026-11-25","philly-fed-mfg-2026-11-19","philly-fed-price-inflation-expectations-q4-2026-11-25","retail-ecommerce-q3-2026-11-19","sifma-bond-early-close-2026-11-27","sp-global-flash-us-pmi-2026-11-23","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","treasury-10y-tips-2026-11-19","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25","treasury-coupon-announcement-2026-11-19","uk-consumer-confidence-2026-11-20","uk-public-sector-finances-2026-11-20","uk-retail-sales-2026-11-20","umich-sentiment-final-2026-11-20"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25"],"screenStreak":0,"blocked":[{"url":"https://cdn.cboe.com/api/global/delayed_quotes/charts/historical/_VIX.json","status":403,"at":"2026-11-27"},{"url":"https://query1.finance.yahoo.com/v8/finance/chart/%5EVIX","status":429,"at":"2026-11-27"},{"url":"https://fred.stlouisfed.org/graph/fredgraph.csv?id=VIXCLS","status":"200 (JavaScript challenge page, no data)","at":"2026-11-27"}]} -->
