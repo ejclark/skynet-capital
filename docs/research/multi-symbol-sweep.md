@@ -71,6 +71,9 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"The Q4 2026 PIES nonmanufacturing own-price expectation lands nearer last quarter's 1.8 than nearer the NBOS prices-paid line (FT-philly-fed-nbos-2026-11-24-2)"** — added 2026-11-27 from the [philly-fed-nbos-2026-11-24 close-out](events/philly-fed-nbos-2026-11-24.md). Registered at 53%; the 11-25 release printed **2.7** against a line of **3.28** (`1.2833 + 0.0437 × 45.8`), a miss of 0.58 against 0.90 for persistence, the fifth straight quarter below the line.
+  Do not use last quarter's PIES as a point forecast when the NBOS prices-paid index has moved several points in the same direction; one observation, and the 44-quarter leave-one-out still has persistence ahead (0.409 vs 0.435), so do not promote the NBOS line to a point estimate either.
+
 - **"The Japan 40-year JGB clears at a positive concession in the ¥300–500bn era: the 2026-11-25 auction's highest accepted yield sits above MOF's same-session par (FT-jgb-40y-auction-2026-11-25-2)"** — added 2026-11-27 from the
   [jgb-40y-auction-2026-11-25 close-out](events/jgb-40y-auction-2026-11-25.md). It cleared at **4.090%** against a par 40-year of **4.095%**, a concession of **−0.5bp**, the second non-positive print in a row (09-29 was −0.2bp); the era mean is about +1.25bp (n=10).
   Do not carry a +1.65bp era mean into a single 40-year auction as a stance call; one observation, and the 95-auction sd is 1.78bp, so a single print is inside the noise either way.
