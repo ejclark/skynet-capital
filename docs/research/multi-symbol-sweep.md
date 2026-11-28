@@ -71,6 +71,20 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"The JGB 5-11y Liquidity Enhancement coupon preference stays positive: the 2026-11-27 coupon-weighted overweight is above zero after 10-22's negative (FT-jgb-liquidity-enhancement-5-11y-2026-11-27-4)"** — added 2026-11-28 from the
+  [jgb-liquidity-enhancement-5-11y-2026-11-27 close-out](events/jgb-liquidity-enhancement-5-11y-2026-11-27.md). The print was **−0.499pp** (taken coupon 0.636% against eligible 1.135%; ¥411.4bn of ¥499.1bn went to ten low-coupon 20-year issues), the second straight negative after −0.069pp (rebuilt; ledger −0.082).
+  Do not quote the 2025-onward +0.42pp (t = +5.20) as a live regime; it is re-dated to end around 2026-08. One observation per print, and no refit was made after the fact.
+
+- **"A 1-5y Liquidity Enhancement print keeps a positive coupon-weighted overweight, replicating the mid-zone preference out of sample (FT-jgb-liquidity-enhancement-5-11y-2026-11-27-5)"** — added 2026-11-28 from the
+  [jgb-liquidity-enhancement-5-11y-2026-11-27 close-out](events/jgb-liquidity-enhancement-5-11y-2026-11-27.md). The 2026-11-20 print read **−0.046pp** (rebuilt, error ≤0.017pp), so 2 of the last 3 1-5y prints are negative (07-16 −0.337, 09-10 +0.508).
+  The margin is thin. Do not cite the +0.324pp, 13-of-14 record as current; the bucket ordering stayed non-monotone in coupon, which the test did predict.
+
+- **"MOF's 5-11y Liquidity Enhancement offering stays at about ¥650bn into November 2026 (FT-jgb-liquidity-enhancement-5-11y-2026-11-27-1)"** — added 2026-11-28 from the
+  [jgb-liquidity-enhancement-5-11y-2026-11-27 close-out](events/jgb-liquidity-enhancement-5-11y-2026-11-27.md). The announcement read **about ¥500bn**; MOF's 2026-09-29 quarter plan had said so for two months. Read the quarterly plan (`topics/press_release/<date>-02e.htm`) before a size premise, not the announcement run.
+
+- **"The eligible 30-year range rolls to auction date: No.7-27 on 2026-11-27 (FT-jgb-liquidity-enhancement-5-11y-2026-11-27-2)"** — added 2026-11-28 from the
+  [jgb-liquidity-enhancement-5-11y-2026-11-27 close-out](events/jgb-liquidity-enhancement-5-11y-2026-11-27.md). MOF named **No.6-27**, its quarter-start range "calculated as of September 30th"; 10Y and 20Y matched. Predict eligible ranges from the quarter plan, never from a roll-forward model.
+
 - **"The Q4 2026 PIES nonmanufacturing own-price expectation lands nearer last quarter's 1.8 than nearer the NBOS prices-paid line (FT-philly-fed-nbos-2026-11-24-2)"** — added 2026-11-27 from the [philly-fed-nbos-2026-11-24 close-out](events/philly-fed-nbos-2026-11-24.md). Registered at 53%; the 11-25 release printed **2.7** against a line of **3.28** (`1.2833 + 0.0437 × 45.8`), a miss of 0.58 against 0.90 for persistence, the fifth straight quarter below the line.
   Do not use last quarter's PIES as a point forecast when the NBOS prices-paid index has moved several points in the same direction; one observation, and the 44-quarter leave-one-out still has persistence ahead (0.409 vs 0.435), so do not promote the NBOS line to a point estimate either.
 

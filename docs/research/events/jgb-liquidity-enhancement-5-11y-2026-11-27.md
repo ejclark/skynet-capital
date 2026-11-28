@@ -427,6 +427,79 @@ every row; a dated adjacent event found gets proposed as a new
 same PR — your own file, never another event's canonical one (#1717). Close-out fills `## Outcome` below from re-run instrument
 data (cache busted first), never from memory — after which this doc goes quiet.
 
+## Outcome
+
+**Close-out 2026-11-28 (D+1), inside the `closeOutWithinDays` window. Stand-aside stance: nothing to score in
+P/L, no position was ever keyed to this date. Eight registered predictions: 4 pass, 4 kill.** The instrument
+cache was busted first; this is a `rates` entry with `symbols: []`, so "re-run data" means every MOF page
+re-fetched direct today (all HTTP 200), the issue workbook re-pulled (`Auction_Results_for_JGBs.xls`, 494,592
+bytes, saved 2026-11-06), and VIX / USD/JPY / UST 10y from Yahoo (secondary). The print itself was healthy and
+tight; the **coupon preference the family had been tracking flipped sign hard**.
+
+### The print, from MOF primaries
+
+| | 2026-11-27 | 2026-10-22 (prior ¥500bn print) |
+|---|---|---|
+| Competitive bids | **¥1,943.7bn** | ¥1,880.4bn |
+| Accepted | **¥499.1bn** (offered about ¥500bn) | ¥498.8bn |
+| Cover · excess bids | **3.894** · ¥1,444.6bn | 3.77 · ¥1,381.6bn |
+| Highest / average accepted spread | **▲0.013% / ▲0.014%** | — |
+| **Tail** (real basis points) | **0.1bp**, 93.6% allotted at the highest spread | 0.30bp |
+| Issues reopened | **13** (1×10Y, 10×20Y, 2×30Y), summing to ¥499.1bn | 24 |
+| Terms (announced 2026-11-20) | about **¥500bn** · 10Y 365-383 · 20Y 132-162 · 30Y 6-27 | same |
+
+Sources: `eresul20261127.htm` and `eresul20261127a.htm`, announcement `auct20261120ea.htm` (Last-Modified
+2026-11-20 00:50 GMT), calendar `2611e.htm`. Cover and tail beat the n=32 reference points (p90 cover 3.50, p90
+tail 0.69bp), though those were struck at ¥650bn.
+
+### Where it went — and the sign that flipped
+
+| Sector | Take | Share | Eligible share | Overweight | 10-22 overweight |
+|---|---|---|---|---|---|
+| 10-Year | ¥63.7bn (No.365) | 12.8% | 60.6% | **0.21×** | 0.36× |
+| 20-Year | ¥411.4bn (No.153-162) | **82.4%** | 34.8% | **2.37×** | 1.68× |
+| 30-Year | ¥24.0bn (No.24, 27) | 4.8% | 4.6% | **1.04×** | 4.30× |
+
+**Coupon-weighted overweight −0.499pp** (taken 0.636% against eligible 1.135%; ¥257.6tn eligible stock): the
+take is ten low-coupon 20-year issues (coupons 0.2-1.3%) plus 10Y No.365 at 0.1%, and only ¥24bn of the
+2.5%-coupon 30-year. **Rebuilt, not recalled:** the same method run on prints the ledger already scored lands
+within 0.017pp of its stored values (09-25 +0.549 vs +0.532; 10-22 −0.069 vs −0.082; 1-5y 07-16 −0.337 vs
+−0.353), so −0.499 is far outside that error. The sequence since the regime table was struck:
+**08-26 −0.030 (ledger) · 09-25 +0.549 · 10-22 −0.069 · 11-27 −0.499** (the last three rebuilt today). One observation per print; the cause (low-coupon 20Y
+absorbing the whole ¥500bn) is read off the issue list, not tested.
+
+### Forward tests (all eight scored; fragment filled)
+
+| FT | Verdict | Evidence |
+|---|---|---|
+| 1 | **kill** | Announced offering **about ¥500bn**, not ¥650bn — a kill the 10-30 row already flagged from MOF's Oct-Dec plan |
+| 2 | **kill** | 30Y range announced **6-27**, not 7-27 (10Y 365-383 and 20Y 132-162 exact); share clause would have held (rebuilt 60.6 / 34.8 / 4.6% vs 59.8 / 35.6 / 4.6%) |
+| 3 | **pass** | Both spreads stated in **percent** on the page; tail **0.1bp**, inside 0-2.10bp |
+| 4 | **kill** | −0.499pp after 10-22's negative: two consecutive, the pre-registered end of the regime |
+| 5 | **kill** | 11-20 1-5y print **−0.046pp**; with 07-16 −0.337 and 09-10 +0.508, **2 of the last 3** negative. Ordering half held (non-monotone: 2Y 0.00× · 5Y 0.02× · 10Y 1.72× · 20Y 2.15× · 30Y 4.27×) |
+| 6 | **pass** | Tail 0.1bp is under the 0.69bp p90 — the thin-bid story did not predict this Thanksgiving-Friday print |
+| 7 | **pass** | MOF's quarter plan held: ¥500bn and all three ranges exact |
+| 8 | **pass** | Bids **¥1,943.7bn ≥ ¥1,600bn** and tail 0.1bp ≤ 0.69bp |
+
+**FT-5's margin is thin.** −0.046pp is under three times this rebuild's 0.017pp worst-case drift, so the sign
+stands on the evidence but the print is close to zero; the 1-5y sibling event
+(`jgb-liquidity-enhancement-1-5y-2026-11-20`) scores its own rows from the same page in its own lane.
+
+**Kill switches (Stance).** Fired: **2** (size), **3** (30Y range), **5** (two straight negatives), **6**
+(replication fails). Not fired: **4** (tail 0.1bp, percent units), **7** (not both weak), **8** (30Y reaches 27,
+20Y reaches 162), **9** (`2612e.htm` serves a 5-11y row on **Dec. 15**, read direct today), **1** (no tracked
+symbols; the ledger rows to 11-20 found no JGB/yen attribution, and 11-23 to 11-27 were not re-searched, so it is
+unverified for those five sessions). **Consequence, as registered:** the coupon regime is re-dated to end around
+2026-08 rather than patched; the 2025-onward +0.42pp (t = +5.20) is no longer quotable as live. No refit is
+done here, since fitting a new break to a series already seen would be falsification pressure.
+
+**Tape (Yahoo, secondary; no attribution made).** VIX 26.80 (11-26) → **23.81** (11-27 half session); USD/JPY
+159.21 → **159.28**; UST 10y 4.848% (11-25) → **4.936%** (11-27). Nothing here was tied to this auction.
+
+**Loop census.** Sense and verify for the coupon measure were hand-run again today (a workbook parse in a
+scratch file, checked against three stored ledger values). A committed script would make that check a command
+instead of a session; filed in `docs/IDEAS.md`.
+
 **Last assessed:** 2026-10-30
 <!-- probe-ref: {"symbols":{},"vix":19.42,"daysBand":"low:15+","adjacentIds":["adp-employment-2026-12-02","advance-economic-indicators-2026-11-27","aws-reinvent-2026","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","chicago-pmi-2026-11-30","construction-spending-2026-12-01","consumer-confidence-2026-11-24","cyber-monday-2026-11-30","dallas-fed-mfg-2026-11-30","dallas-fed-tssos-2026-12-01","durable-goods-2026-11-25","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","gdp-q3-2026-second-2026-11-25","georgia-senate-runoff-2026-12-01","inio-lockup-expiry-2026-11-30","ism-manufacturing-2026-12-01","japan-cpi-tokyo-flash-2026-11-27","jgb-2y-auction-2026-11-30","jgb-40y-auction-2026-11-25","jolts-2026-12-01","jpx-market-closure-2026-11-23","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","pce-2026-11-25","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","pjm-reliability-backstop-results-2026-12-02","qnt-lockup-expiry-2026-11-30","russell-recon-lockdown-2026-11-30","russell-style-month-end-capping-effective-2026-11-30","sifma-bond-early-close-2026-11-27","sp-global-flash-us-pmi-2026-11-23","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","pce-2026-11-25"],"screenStreak":0,"blocked":[{"url":"https://www.boj.or.jp/en/mopo/mpmdeci/state_2026/k261030a.htm","status":"404","at":"2026-10-30"},{"url":"https://www.mof.go.jp/english/policy/jgbs/reference/interest_rate/jgbcm.csv","status":"404","at":"2026-10-30"}]} -->
 
@@ -438,3 +511,6 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-11-27
 <!-- probe-ref: {"symbols":{},"vix":26.8,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-12-02","advance-economic-indicators-2026-11-27","aws-reinvent-2026","beige-book-2026-11-25","bowman-oversight-testimony-2026-12-01","case-shiller-hpi-2026-11-24","chicago-pmi-2026-11-30","china-ga-ge-sb-suspension-expiry-2026-11-27","construction-spending-2026-12-01","consumer-confidence-2026-11-24","cyber-monday-2026-11-30","dallas-fed-mfg-2026-11-30","dallas-fed-tssos-2026-12-01","durable-goods-2026-11-25","eurostat-hicp-flash-2026-12-01","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","gdp-q3-2026-second-2026-11-25","georgia-senate-runoff-2026-12-01","industrial-production-annual-revision-2026-11-24","inio-lockup-expiry-2026-11-30","ism-manufacturing-2026-12-01","japan-cpi-tokyo-flash-2026-11-27","jgb-2y-auction-2026-11-30","jgb-40y-auction-2026-11-25","jolts-2026-12-01","jpx-market-closure-2026-11-23","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","opec-plus-meeting-2026-11-29","pce-2026-11-25","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","qnt-lockup-expiry-2026-11-30","russell-recon-lockdown-2026-11-30","russell-style-month-end-capping-effective-2026-11-30","sifma-bond-early-close-2026-11-27","sp-global-flash-us-pmi-2026-11-23","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","ism-manufacturing-2026-12-01","pce-2026-11-25"],"screenStreak":1} -->
+
+**Last assessed:** 2026-11-28
+<!-- probe-ref: {"symbols":{},"vix":23.81,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-12-02","advance-economic-indicators-2026-11-27","aws-reinvent-2026","beige-book-2026-11-25","bowman-oversight-testimony-2026-12-01","case-shiller-hpi-2026-11-24","chicago-pmi-2026-11-30","china-ga-ge-sb-suspension-expiry-2026-11-27","construction-spending-2026-12-01","consumer-confidence-2026-11-24","cyber-monday-2026-11-30","dallas-fed-mfg-2026-11-30","dallas-fed-tssos-2026-12-01","durable-goods-2026-11-25","eurostat-hicp-flash-2026-12-01","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","gdp-q3-2026-second-2026-11-25","georgia-senate-runoff-2026-12-01","industrial-production-annual-revision-2026-11-24","inio-lockup-expiry-2026-11-30","ism-manufacturing-2026-12-01","japan-cpi-tokyo-flash-2026-11-27","jgb-2y-auction-2026-11-30","jgb-40y-auction-2026-11-25","jolts-2026-12-01","jpx-market-closure-2026-11-23","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","opec-plus-meeting-2026-11-29","pce-2026-11-25","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","qnt-lockup-expiry-2026-11-30","russell-recon-lockdown-2026-11-30","russell-style-month-end-capping-effective-2026-11-30","sifma-bond-early-close-2026-11-27","sp-global-flash-us-pmi-2026-11-23","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","ism-manufacturing-2026-12-01","pce-2026-11-25"],"screenStreak":0,"blocked":[]} -->
