@@ -137,6 +137,7 @@ verifying the blackout exemption.
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-11-26 | 5 | Initial research. Date re-verified at the Fed (one Testimony row, no December speeches) and on the committee calendar (witnesses unlisted); kept `estimate`. Dec 2025 precedent was inside the same blackout; Jun 2026 text has no monetary content. Adjacency: PCE/GDP 11-25 already in sibling ledgers; VIX 26.36 (11-24, FRED), 10Y 4.91%, hike ~99.8% (sibling, not re-fetched); 35 tracked events within 5 days, strong ones ISM 12-01, ISM Services 12-03, jobs 12-04. Beyond-horizon or unproposed: House committee's 12-02 hearing (low, named only). Intents and conviction proposals: none. | — (initial) | 2026-11-28 |
+| 2026-11-28 | D-3 | **Deterministic screen (no Claude session).** Readings — VIX 23.8 (-2.6pt since last), band unchanged (medium:0+), 35 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-11-30 |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -151,3 +152,6 @@ in the row instead (#2946): it can never become due, so a calendar file for it i
 prose in a row is free. Close-out fills `## Outcome` below from re-run instrument data (cache busted
 first), never from memory. After that the assessment is closed; the doc reopens only to score a
 registered forward test whose `Score by` has arrived (`forward-test-due`).
+
+**Last assessed:** 2026-11-28
+<!-- probe-ref: {"symbols":{},"vix":23.81,"daysBand":"medium:0+","adjacentIds":["adp-employment-2026-12-02","advance-economic-indicators-2026-11-27","aws-reinvent-2026","boe-dmp-2026-12-04","challenger-job-cuts-2026-12-03","chicago-pmi-2026-11-30","china-ga-ge-sb-suspension-expiry-2026-11-27","construction-spending-2026-12-01","cyber-monday-2026-11-30","dallas-fed-mfg-2026-11-30","dallas-fed-tssos-2026-12-01","eroc-lockup-expiry-2026-12-06","eurostat-hicp-flash-2026-12-01","fomc-blackout-start-2026-11-28","georgia-senate-runoff-2026-12-01","inio-lockup-expiry-2026-11-30","ism-manufacturing-2026-12-01","ism-services-2026-12-03","japan-cpi-tokyo-flash-2026-11-27","jgb-2y-auction-2026-11-30","jgb-liquidity-enhancement-5-11y-2026-11-27","jobs-2026-12-04","jolts-2026-12-01","m3-full-report-2026-12-03","opec-plus-meeting-2026-11-29","pbls-lockup-expiry-2026-12-06","qnt-lockup-expiry-2026-11-30","russell-recon-lockdown-2026-11-30","russell-style-month-end-capping-effective-2026-11-30","sifma-bond-early-close-2026-11-27","sp-rebalance-proforma-2026-12-04","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","treasury-coupon-announcement-2026-12-03","umich-sentiment-prelim-2026-12-04"],"adjacentStrongIds":["ism-manufacturing-2026-12-01","ism-services-2026-12-03","jobs-2026-12-04"],"screenStreak":1} -->
