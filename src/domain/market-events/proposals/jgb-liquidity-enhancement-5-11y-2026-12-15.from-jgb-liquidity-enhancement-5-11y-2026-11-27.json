@@ -1,0 +1,11 @@
+{
+  "id": "jgb-liquidity-enhancement-5-11y-2026-12-15",
+  "kind": "rates",
+  "title": "Japan Liquidity Enhancement Auction, remaining maturities 5–11 years (about ¥500bn per MOF's Oct–Dec plan) — the next mid-zone print after the coupon reading failed twice",
+  "date": "2026-12-15",
+  "status": "estimate",
+  "source": "EST: mof.go.jp English December 2026 auction calendar (english/policy/jgbs/auction/calendar/2612e.htm), fetched direct 2026-11-28 (HTTP 200, 23,446 bytes); its table row reads 'Dec. 15, 2026 | Liquidity Enhancement Auction (remaining maturities of 5-11 years)'. The size is anticipated, not announced: MOF's own 2026-09-29 plan for October-December (topics/press_release/20260929-02e.htm) sets the zone at about 500 billion yen in each of the three months, and the 2026-10-22 and 2026-11-27 announcements both matched it. Terms are due about one week before the auction. Filed estimate: the size is not announced and the issue list does not exist until MOF's result page publishes. Checked 2026-11-28",
+  "impact": "low",
+  "symbols": [],
+  "notes": "Proposed 2026-11-28 by the jgb-liquidity-enhancement-5-11y-2026-11-27 close-out (sweep inside the 30-day horizon; the Dec 22 11-39y row is left to that zone's own ledger). Why it earns a slot: the 2026-11-27 print scored the family's coupon-preference reading a kill twice over (coupon-weighted overweight -0.50pp after -0.082pp, plus -0.046pp in the 1-5y zone on 11-20), and the take ran to the low-coupon, nearest-the-5-year-edge end of the eligible range. One more print says whether that is a pattern or one large bidder. Stand aside: no tracked symbol carries yen-rates exposure, no house playbook is rates-keyed. Estimate widens caution only; it licenses no date-keyed action."
+}

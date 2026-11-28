@@ -71,6 +71,10 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"The Liquidity Enhancement Auction's coupon preference is a live regime: the 5-11y print's coupon-weighted overweight stays positive, and replicates in the 1-5y zone (FT-jgb-liquidity-enhancement-5-11y-2026-11-27-4 and -5)"** — added 2026-11-28 from the
+  [jgb-liquidity-enhancement-5-11y-2026-11-27 close-out](events/jgb-liquidity-enhancement-5-11y-2026-11-27.md). The 11-27 print was **-0.50pp** after 10-22's -0.082pp, and the 11-20 1-5y print **-0.046pp**; the take ran to the lowest-coupon issues. The split date behind the regime was picked after seeing the series.
+  Do not register a coupon-regime test on this zone off a subsample chosen after the fact; a next test needs its split date fixed before the print and the 2026-12-15 mid-zone print as its first observation.
+
 - **"The Q4 2026 PIES nonmanufacturing own-price expectation lands nearer last quarter's 1.8 than nearer the NBOS prices-paid line (FT-philly-fed-nbos-2026-11-24-2)"** — added 2026-11-27 from the [philly-fed-nbos-2026-11-24 close-out](events/philly-fed-nbos-2026-11-24.md). Registered at 53%; the 11-25 release printed **2.7** against a line of **3.28** (`1.2833 + 0.0437 × 45.8`), a miss of 0.58 against 0.90 for persistence, the fifth straight quarter below the line.
   Do not use last quarter's PIES as a point forecast when the NBOS prices-paid index has moved several points in the same direction; one observation, and the 44-quarter leave-one-out still has persistence ahead (0.409 vs 0.435), so do not promote the NBOS line to a point estimate either.
 
