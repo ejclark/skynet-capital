@@ -18,6 +18,12 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **Commit a `scripts/research/lea-coupon-overweight.mjs` that rebuilds a Liquidity Enhancement print's
+  coupon-weighted overweight from MOF's issue workbook and its "Issues Re-opened" page.** The 5-11y and 1-5y
+  ledgers score it by hand each print (2026-11-28 close-out used a scratch parse, checked against three stored
+  values within 0.017pp). A command turns a recurring manual check into a one-liner.
+  _(src: Claude · while: jgb-liquidity-enhancement-5-11y-2026-11-27 close-out)_
+
 - **Reword `.claude/skills/steer/SKILL.md`'s "The bar says whether Claude is listening" bullet to
   name `ackFor` beside `ackAt` and quote today's bar text ("✓ Received — Claude is reading your
   answers back…").** It describes the page, not a stamp, so #6734's writer check passes it, but it
