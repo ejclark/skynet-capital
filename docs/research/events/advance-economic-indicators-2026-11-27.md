@@ -370,3 +370,107 @@ memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-11-26
 <!-- probe-ref: {"symbols":{},"vix":28.29,"daysBand":"medium:0+","adjacentIds":["adp-employment-2026-12-02","aws-reinvent-2026","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","chicago-pmi-2026-11-30","china-ga-ge-sb-suspension-expiry-2026-11-27","construction-spending-2026-12-01","consumer-confidence-2026-11-24","cyber-monday-2026-11-30","dallas-fed-mfg-2026-11-30","dallas-fed-tssos-2026-12-01","durable-goods-2026-11-25","eurostat-hicp-flash-2026-12-01","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","gdp-q3-2026-second-2026-11-25","georgia-senate-runoff-2026-12-01","industrial-production-annual-revision-2026-11-24","inio-lockup-expiry-2026-11-30","ism-manufacturing-2026-12-01","japan-cpi-tokyo-flash-2026-11-27","jgb-2y-auction-2026-11-30","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-5-11y-2026-11-27","jolts-2026-12-01","jpx-market-closure-2026-11-23","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","opec-plus-meeting-2026-11-29","pce-2026-11-25","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","qnt-lockup-expiry-2026-11-30","russell-recon-lockdown-2026-11-30","russell-style-month-end-capping-effective-2026-11-30","sifma-bond-early-close-2026-11-27","sp-global-flash-us-pmi-2026-11-23","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","ism-manufacturing-2026-12-01","pce-2026-11-25"],"screenStreak":1} -->
+
+## Outcome
+
+**Close-out (2026-11-28, D+1 — inside the `closeOutWithinDays` window).** Macro-print mode runs no
+`earnings-cycle` / `intraday-edges` instrument (`symbols: []` by design); "re-run instrument data" here
+means re-fetching every cited source direct rather than reading this doc's memory of the tape. The
+instrument cache was busted first (`rm -rf node_modules/.cache/earnings-cycle
+node_modules/.cache/intraday-edges`), though nothing in this ledger reads it. Inputs, all fetched
+direct today: Census's October release PDF (`census.gov/econ/indicators/advance_report.pdf`, text layer
+decompressed locally), the Census 2026 release calendar (`calendar-listview-2026.html`), the Atlanta
+Fed's GDPNow page, `GDPNowcastDataReleaseDates.xlsx` and `GDPTrackingModelDataAndForecasts.xlsx`
+(10,995,456 bytes, md5 `8525aaf0acb7b7fe151eaf1dfb6d1bc5`), Nasdaq's quote API for SPY, and Cboe's VIX
+history CSV. Yahoo returned HTTP 429 on every attempt, so SPY and VIX come from the substitutes named
+here, not from the Yahoo series the sibling ledgers cite.
+
+**The verdict: the report published on schedule, the one test that could score today passed, and the
+stance (stand aside, read the workbook not the page) held.** Nothing was licensed or entered, and
+`symbols: []` left nothing to enter. `FT-…-2` and `FT-…-3` are **not** scored here: their score-by is
+**2026-12-08**, and scoring before the date is falsification.
+
+### Forward tests
+
+| Test | Prediction | Result | Verdict |
+|---|---|---|---|
+| `FT-advance-economic-indicators-2026-11-27-1` (no public vintage that morning) | The GDPNow page publishes no vintage dated 2026-11-27 | Page: **"Updated: November 25, 2026 · Next update: December 01, 2026"**. Release-dates workbook: serial 46353 (11-27) on `InternalUpdates` only, not `PostedUpdates`. Tracking workbook: `ContribHistory` ends at serial 46351 (11-25; Q4 nowcast **2.902%**). | **PASS** |
+| `FT-…-2` (mid-quarter vintage revises down) | 11-27 Q4 vintage below the 11-25 vintage | The public workbook carries **no 11-27 column** yet. Baseline on record: **2.902%** (11-25), down from 3.209% on 11-20. | _open_ — scores 2026-12-08 via `forward-test-due` |
+| `FT-…-3` (net exports move ≥ 0.10pp) | \|Δ net-exports contribution\| ≥ 0.10pp on 11-27 | Same: no 11-27 column. Baseline: net exports **−0.545pp** (11-25), −0.457pp on 11-20. | _open_ — scores 2026-12-08 via `forward-test-due` |
+
+**Why `-2` and `-3` stay `_open_` instead of `unscoreable`.** The scanner listed both under
+`forwardTestsBeyondWindow`. EVENT-RESEARCH.md's close-out text says to record such rows unscoreable;
+its later `forward-test-due` mode (#2884) exists precisely so a row whose data lands past the window is
+scored on its own date, and its terminal-verdict rule forbids editing a `Score by`. The first fits a row
+whose data cannot ever arrive; here the internal-update vintage plausibly lands in the next workbook
+refresh (the 12-01 posted update), as the 2026-05-29 and 2026-06-26 internal vintages did. Marking them
+unscoreable now would end the only re-dispatch that can read them. If the 11-27 column is still absent
+on 12-08, that run marks them `VOID`, as each row's own kill-switch text already says.
+
+### What the release said
+
+Census **CB26-195**, "FOR RELEASE AT 8:30 AM EST, FRIDAY, NOVEMBER 27, 2026", October 2026 data. The
+advance goods deficit was **$149.5B (seasonally adjusted −149,478M), up 10.7% from a revised $135.1B
+in September** (August −132.1B; October 2025 −61.4B). Exports **$215.8B (+3.2% m/m, +10.6% y/y)**,
+imports **$365.3B (+6.1% m/m, +42.4% y/y)**. The channel the ledger told readers to read first kept
+building: **capital-goods imports $171.4B, +8.5% m/m and +80.0% y/y** (September $158.0B revised),
+against capital-goods exports of $75.8B (+3.4% m/m). Merchant wholesale inventories **$1,023.4B
+(+0.9% m/m)** against a revised $1,014.3B; retail inventories **$893.2B (+0.8% m/m)** against a revised
+$886.2B. The release names its successor — "The November 2026 Advance report is scheduled for release
+on December 28, 2026" — matching the existing `advance-economic-indicators-2026-12-28` entry. The
+calendar's four `Suspended` rows are the stale ones; none sits on this row.
+
+### The tape (context, not scored against a prediction)
+
+Nasdaq's quote API (delayed, single-source, not a primary): SPY **$728.68 at the 11-27 close,
++$11.98 / +1.67%** on the 11-25 close of $716.70 (11-26 was the holiday), volume 33.9M, **0.56×** the
+trailing-20 median of 60.6M. One-minute bars put the regular session (09:30–13:00 ET) at open $725.20,
+high $728.72 (12:59), low $719.92 (10:05), last bar $727.35. **The gap came before the print:** the
+08:25 bar already read $728.63 and the print minute read $728.23 (08:29) → $727.87 (08:31), **−0.05%**.
+So the +1.6% over 11-25 is an overnight gap whose cause this session did not identify, and the 8:30
+report moved nothing visible; that is the same read as the one precedent (2016-11-25).
+VIX: Cboe's history CSV ends at the **11-26 close, 26.80**; the 11-27 close is not published in any
+source reachable here, so the probe-ref below carries 26.80 and says so.
+
+### Legs re-checked against the outcome
+
+| Leg | Verdict at research | What 11-27 showed |
+|---|---|---|
+| 1 — the report exists on 11-27 | **SUPPORTED** | Published CB26-195 on the listed date, 8:30 ET. |
+| 2 — no posted nowcast that morning; rule is quarter position | **SUPPORTED** | `FT-…-1` passed on three independent reads (page, release-dates workbook, tracking workbook). All four 2026 internal editions to date (05-29, 06-26, 08-27, 11-27) sit on `InternalUpdates` only. |
+| 3 — mid-quarter editions move the trade line most | **Pending** | Needs the 11-27 vintage; scores 12-08 (`FT-…-2`, `FT-…-3`). |
+| 4 — the information is in the workbook, not the page | **Pending** | As of 11-28 the workbook has no 11-27 column, so "the data is not lost" is unobserved for this edition; the 12-01 refresh is the next look. |
+| 5 — longest lead of 2026, 11 days | **SUPPORTED** | The full October trade report is on the calendar for 12-08, 11 days out. |
+| 6 — print does the work, tape ignores it (n = 1) | **SUPPORTED (n = 2)** | Print-minute move −0.05%; the delayed feed shows 0.56× normal volume. The range was not small, but the gap that made it so preceded 8:30. |
+| 7 — policy front-running channel | **MIXED** | Imports +42.4% y/y and capital goods +80.0% y/y are consistent with the channel, but nothing here separates policy from the AI-capex import wave the same line reflects. Stays MIXED. |
+
+### Kill switches re-checked
+
+- **#1 — a posted 2026-11-27 GDPNow vintage:** **not fired** (`FT-…-1`).
+- **#2 — the 2026-09-30 edition moves net exports by < 0.10pp:** **not fired** — settled in
+  `advance-economic-indicators-2026-09-30`'s own close-out.
+- **#3 — a macro-keyed playbook lands before 2026-11-20:** **not fired** — `docs/plans/trade-playbooks.md`
+  has no macro, holiday or CPI/FOMC keying and was last changed 2026-10-20.
+- **#4 — Census moves or suspends the slot:** **not fired** — the release published on the listed date.
+- **#5 — SPY's 11-27 true range prints above 1.0× its trailing-20 median:** **not fired, by 2.2%.**
+  True range using the regular-session high/low and the 11-25 close is $12.02, **1.68% of the close**,
+  against a trailing-20 median of **1.714%** (Nasdaq daily bars, 10-29 → 11-25) — a ratio of **0.978×**.
+  The precedent read 0.361×. Not a clean pass: the range is the high minus the prior close, and $11.40 of the
+  $12.02 was already on the tape at 08:30 ($728.10), so the switch measured the overnight move, not the print. Nothing here says the print reaches the tape.
+
+**Adjacency.** The 11-27 date lists six entries (this one, `china-ga-ge-sb-suspension-expiry-2026-11-27`,
+`japan-cpi-tokyo-flash-2026-11-27`, `jgb-liquidity-enhancement-5-11y-2026-11-27`,
+`sifma-bond-early-close-2026-11-27`, `thanksgiving-half-day-2026-11-27`), all already tracked; nothing
+new to propose. Conviction proposals: none. Declared intents: none.
+
+**Process note.** Yahoo 429'd on SPY and VIX for the whole session, and the Cboe CSV lags a day, so
+the 11-27 VIX close is unreachable at D+1. That is why `-2`/`-3` and the VIX leg wait on later dates
+anyway. The Nasdaq quote and chart endpoints answered cleanly and carry one-minute bars; they are worth
+listing as the fallback when Yahoo is rate-limited.
+
+**Verdict against the stance.** Stand aside on every edition of this report held exactly as written. `## Outcome` is
+written; per this lane's contract the ledger goes quiet, with one door back in: `FT-…-2` and `FT-…-3`
+re-open it as `forward-test-due` on 2026-12-08.
+
+**Last assessed:** 2026-11-28
+<!-- probe-ref: {"symbols":{},"vix":26.8,"daysBand":"medium:0+","adjacentIds":["adp-employment-2026-12-02","aws-reinvent-2026","beige-book-2026-11-25","case-shiller-hpi-2026-11-24","chicago-pmi-2026-11-30","china-ga-ge-sb-suspension-expiry-2026-11-27","construction-spending-2026-12-01","consumer-confidence-2026-11-24","cyber-monday-2026-11-30","dallas-fed-mfg-2026-11-30","dallas-fed-tssos-2026-12-01","durable-goods-2026-11-25","eurostat-hicp-flash-2026-12-01","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","gdp-q3-2026-second-2026-11-25","georgia-senate-runoff-2026-12-01","industrial-production-annual-revision-2026-11-24","inio-lockup-expiry-2026-11-30","ism-manufacturing-2026-12-01","japan-cpi-tokyo-flash-2026-11-27","jgb-2y-auction-2026-11-30","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-5-11y-2026-11-27","jolts-2026-12-01","jpx-market-closure-2026-11-23","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","opec-plus-meeting-2026-11-29","pce-2026-11-25","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","qnt-lockup-expiry-2026-11-30","russell-recon-lockdown-2026-11-30","russell-style-month-end-capping-effective-2026-11-30","sifma-bond-early-close-2026-11-27","sp-global-flash-us-pmi-2026-11-23","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","ism-manufacturing-2026-12-01","pce-2026-11-25"],"screenStreak":0} -->
