@@ -117,7 +117,10 @@ assert the OUTCOME its EARS line asks for, never the defect: an expect that requ
 URL or today's stale copy fails the natural fix too, so the gap reads as open forever and the
 ratchet never fires (a promise with no target is `{ "text": "<the promise>", "absent": true }`).
 A step with `after` asserts the outcome there too: a pinned hand-off fails at the act or in `after`,
-and either way passes once the hop keeps its context.
+and either way passes once the hop keeps its context. The act's `await`s follow the same rule: wait
+for a line the fixed app still says, never the defect's own words, or the fix throws in the act and
+`test.fail` still counts it (#8422; `tests/scripts/journey-acts.spec.ts` checks every known-gap act
+against the words its `sees` quotes).
 
 ## How the spec and the crawl consume it
 
