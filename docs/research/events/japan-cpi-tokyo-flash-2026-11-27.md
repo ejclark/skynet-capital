@@ -440,6 +440,7 @@ dated Japanese releases were found and deliberately not filed; see *Honest limit
 | 2026-11-13 | D-14 | **Full session (`interval-elapsed`, the 7-day low band's first pulse).** **Date kill not fired:** stat.go.jp/english/data/cpi/1582.html (HTTP 200, 13,839 B, stamp still 23 Jan 2026) parses `['October','November 20','November','November 27','']` and `['November','December 18','December','December 25',…]`; date stays `estimate`. **BoJ-rationale kill not fired:** boj.or.jp MPM table (HTTP 200, 42,437 B) still lists Dec. 17 (Thurs.) and 18 (Fri.). **Adjacency:** peers none (`symbols: []`) · macro — national Oct CPI lands 2026-11-20, not yet out; no Tokyo/national print since the 10-30 row · volatility — VIX **18.7** (Yahoo ^VIX, 11-13 session; 17.49 prior close, a 5-day high of 25.64), −0.7pt vs the 10-30 row's 19.42, no channel into a `symbols: []` event · geopolitical — nothing new sourced · event tape — NEWS: a search surfaced a Bloomberg survey putting a December BoJ hike near 83% of economists and Oct Tokyo core 2.6%; the results mixed 2025 and 2026 items, so unverified, read as colour only, nothing relied on · `--on-date=2026-11-27` lists 6 entries, all tracked. **Proposed:** nothing; dated Japanese items inside the horizon are already canonical. **Beyond the leash:** none. FT-3 arithmetic unchanged (core index must print 103.4-104.0). Conviction proposals: none pending · declared intents: none. **Own weaknesses:** the search read is secondary and year-mixed. | — (stance holds: stand aside completely; Medium on the BoJ-calendar rationale) | 2026-11-20 (low band, every 7d) |
 | 2026-11-20 | D-7 | **Full session (`interval-elapsed`, 7-day low band).** **Date kill not fired:** stat.go.jp/english/data/cpi/1582.html (HTTP 200, stamp still 23 Jan 2026) parses `['October','November 20','November','November 27','']`; date stays `estimate`. **BoJ-rationale kill not fired:** boj.or.jp MPM page (HTTP 200) still reads "Dec. 17 (Thurs.), 18 (Fri.)". **National Oct CPI printed (zenkoku.pdf `Last-Modified` 2026-11-19 23:32 GMT, parsed locally, digits only, labels not glyph-decoded):** all items 103.1 / +2.3%, ex-fresh-food 102.9 / +2.2%, ex-fresh-food-and-energy 103.3 / +2.2% — core **0.4pp below** Tokyo's Oct 2.6%. This is FT-2's naive baseline (+2.2%) now fixed; FT-3 arithmetic unchanged (Tokyo Nov core index must print 103.4-104.0). **Adjacency:** peers none (`symbols: []`) · macro — the national print above; no consensus found, so no surprise measured · volatility — VIX **28.44** (Yahoo ^VIX, 11-20 session; 19.30 on 11-14), **+9.7pt** vs the 11-13 row's 18.7, a regime shift with no channel into a `symbols: []` event · geopolitical — nothing new sourced (one web search returned only 2023-25 items) · event tape — none. `--on-date=2026-11-27` lists 6 entries, all tracked. **Proposed:** nothing. **Beyond the leash:** none. Conviction proposals: none · declared intents: none. **Own weakness:** national figures are digit-order reads of an unlabelled PDF. | — (stance holds: stand aside completely; Medium on the BoJ-calendar rationale) | 2026-11-27 (D-0 flash day; the close-out follows) |
 | 2026-11-27 | D-0 | **Deterministic screen (no Claude session).** Readings — VIX 26.8 (-1.6pt since last), band unchanged (low:0+), 44 adjacent event(s) tracked, new in corridor since last pulse: `bowman-oversight-testimony-2026-12-01` (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-12-04 |
+| 2026-11-28 | D+1 | **Close-out (event-passed-unscored).** The print is out and scored in `## Outcome` from the Bureau's own PDF: Tokyo Nov core **+2.9%** (idx 103.9; Oct 2.6%), all items **+2.8%**, core-core **+2.5%**. **FT-3 passes on the line** (+0.3pp, kill is >0.3pp); **FT-1 and FT-2 stay open** (national Nov CPI 2026-12-18, Tokyo annual average 2026-12-25 - both past the 6-day close-out window, so `forward-test-due` re-opens them). **Regime kill fired, unrecorded at the time:** Tokyo Oct core 2.6% on 10-30 was above its +2.5% ceiling. BoJ-rationale kill not fired (Dec. 17-18 re-read today). | — (closed; stand aside stands) | — (closed) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -460,3 +461,61 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-11-27
 <!-- probe-ref: {"symbols":{},"vix":26.8,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-12-02","advance-economic-indicators-2026-11-27","aws-reinvent-2026","beige-book-2026-11-25","bowman-oversight-testimony-2026-12-01","case-shiller-hpi-2026-11-24","chicago-pmi-2026-11-30","china-ga-ge-sb-suspension-expiry-2026-11-27","construction-spending-2026-12-01","consumer-confidence-2026-11-24","cyber-monday-2026-11-30","dallas-fed-mfg-2026-11-30","dallas-fed-tssos-2026-12-01","durable-goods-2026-11-25","eurostat-hicp-flash-2026-12-01","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","gdp-q3-2026-second-2026-11-25","georgia-senate-runoff-2026-12-01","industrial-production-annual-revision-2026-11-24","inio-lockup-expiry-2026-11-30","ism-manufacturing-2026-12-01","jgb-2y-auction-2026-11-30","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-5-11y-2026-11-27","jolts-2026-12-01","jpx-market-closure-2026-11-23","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","opec-plus-meeting-2026-11-29","pce-2026-11-25","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","qnt-lockup-expiry-2026-11-30","russell-recon-lockdown-2026-11-30","russell-style-month-end-capping-effective-2026-11-30","sifma-bond-early-close-2026-11-27","sp-global-flash-us-pmi-2026-11-23","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","ism-manufacturing-2026-12-01","pce-2026-11-25"],"screenStreak":1} -->
+
+## Outcome
+
+**Close-out (2026-11-28, D+1, inside the `closeOutWithinDays` window).** `symbols: []`, so no
+`earnings-cycle`/`intraday-edges` run has a target; the mandated cache bust (`rm -rf
+node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) ran first regardless. "Re-run
+data" here is a fresh direct fetch of the Bureau's own release, not this ledger's earlier rows.
+
+**The print, from the Statistics Bureau's PDF** (`stat.go.jp/data/cpi/sokuhou/tsuki/pdf/kubu.pdf`,
+fetched direct 2026-11-28, HTTP 200, 434,775 B, "東京都区部 2026年(令和８年)11月分（中旬速報値）", header
+令和８年11月27日 = **2026-11-27**, `Last-Modified` Thu 26 Nov 2026 23:31:15 GMT = **08:31 JST**; 2025 base,
+decoded locally from the PDF's own ToUnicode maps, so labels and digits are both read, not inferred). The
+calendar date stays `estimate`: no confirmed source prefix exists for the Bureau and this lane may not
+self-confirm.
+
+| Measure (Nov-2026, Ku-area of Tokyo) | Index | Published y/y | Oct | SA m/m |
+|---|---|---|---|---|
+| Core (less fresh food) | **103.9** | **+2.9%** | 2.6% | +0.5% |
+| All items | 103.8 | **+2.8%** | 2.7% (flash said 2.8%) | +0.3% |
+| Core-core (less fresh food & energy) | 103.6 | **+2.5%** | 2.6% | +0.1% |
+
+Core rose 0.3pp while core-core eased 0.1pp, so the move was energy, not underlying. The Bureau's own
+item lines name electricity **+9.5%** (0.27pp) and gas **+13.5%** (0.16pp); the 10-category column that
+jumped **2.2% → 8.5%** is read as utilities by position and that corroboration, not by its header. Held
+down: rice **−33.8%** (−0.19pp) and childcare fees **−100.0%** (−0.21pp). The October all-items figure was
+revised in this table from the flash's 103.5 / +2.8% to 103.4 / +2.7%; October core (103.3 / +2.6%) and
+core-core did not move, so FT-3's comparator is unchanged. No consensus was located, so there is no
+surprise figure to quote.
+
+**One of three tests scored; two wait on data that does not exist yet** ([fragment](../forward-tests/japan-cpi-tokyo-flash-2026-11-27.md)):
+
+| Test | Prediction | Measured | Verdict |
+|---|---|---|---|
+| FT-japan-cpi-tokyo-flash-2026-11-27-3 | Tokyo Nov core y/y within 0.3pp of Oct | 2.9 − 2.6 = **+0.3pp** | **PASS** (on the line: the kill is *more than* 0.3pp) |
+| FT-japan-cpi-tokyo-flash-2026-11-27-1 | 2026 annual average within 0.07pp of the published figure | needs the 2026-12-25 release | **open** — score by 2026-12-26 |
+| FT-japan-cpi-tokyo-flash-2026-11-27-2 | Tokyo Nov core within 0.3pp of national Nov core | needs the 2026-12-18 release | **open** — score by 2026-12-19 |
+
+Both open rows score after `closeOutWithinDays`, so they were registered to wait and are left `_open_`,
+not marked unscoreable: `forward-test-due` re-dispatches this lane when each date arrives. For that
+scorer, arithmetic and not a forecast: FT-2 passes if national Nov core prints **2.6% to 3.2%**; the
+national October baseline it is measured against was **2.2%**, so the naive predictor wins only if
+national core stays below 2.6%.
+
+**What the stance got right and wrong.** *Right:* stand aside completely, no channel (`symbols: []`); the
+print landed on its scheduled date; the BoJ rationale is intact (boj.or.jp re-read 2026-11-28, HTTP 200,
+still "Dec. 17 (Thurs.), 18 (Fri.)", with the national Nov CPI on day two). *Weak on FT-3:* it passed with
+zero margin, and the index and y/y are published to one decimal, so "+0.3pp" is anywhere from 0.2 to 0.4pp
+unrounded; the ledger's own base rate (6 of 8) was a coin-flip-sized edge, and this result neither
+confirms nor refutes the "November is ordinary" claim (n=9 now, one more observation at the boundary).
+*Missed, unrecorded:* the **regime kill** (core above +2.5% at any release 2026-09-18 → 2026-11-20) fired
+on the 10-30 flash (Tokyo core 2.6%) and no row said so; the "+1.8%-ish" frame was already stale by then.
+It carries no consequence for a closed, `symbols: []` event beyond this record. *Not tested:* the channel
+kill (nothing attributable to a Japanese CPI headline was looked for on a half-day session), and the
+half-day kill, since nyse.com is a blocked source in this lane. **No trade was taken, none is authorized,
+and stand-aside stands as the final word on this document.**
+
+**Last assessed:** 2026-11-28
+<!-- probe-ref: {"symbols":{},"vix":23.81,"daysBand":"closed","adjacentIds":["adp-employment-2026-12-02","advance-economic-indicators-2026-11-27","aws-reinvent-2026","beige-book-2026-11-25","bowman-oversight-testimony-2026-12-01","case-shiller-hpi-2026-11-24","chicago-pmi-2026-11-30","china-ga-ge-sb-suspension-expiry-2026-11-27","construction-spending-2026-12-01","consumer-confidence-2026-11-24","cyber-monday-2026-11-30","dallas-fed-mfg-2026-11-30","dallas-fed-tssos-2026-12-01","durable-goods-2026-11-25","eurostat-hicp-flash-2026-12-01","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","gdp-q3-2026-second-2026-11-25","georgia-senate-runoff-2026-12-01","industrial-production-annual-revision-2026-11-24","inio-lockup-expiry-2026-11-30","ism-manufacturing-2026-12-01","jgb-2y-auction-2026-11-30","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-5-11y-2026-11-27","jolts-2026-12-01","jpx-market-closure-2026-11-23","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","opec-plus-meeting-2026-11-29","pce-2026-11-25","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","qnt-lockup-expiry-2026-11-30","russell-recon-lockdown-2026-11-30","russell-style-month-end-capping-effective-2026-11-30","sifma-bond-early-close-2026-11-27","sp-global-flash-us-pmi-2026-11-23","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","ism-manufacturing-2026-12-01","pce-2026-11-25"],"screenStreak":0} -->
