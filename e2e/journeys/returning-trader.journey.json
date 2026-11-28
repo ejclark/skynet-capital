@@ -237,7 +237,7 @@
             { "press": { "role": "textbox", "name": "Message Moneypenny" }, "key": "Enter" },
             {
               "await": {
-                "text": "where in the app does this bite you",
+                "text": "what would a good outcome look like",
                 "within": "aside[aria-label='Moneypenny']"
               }
             },
@@ -290,7 +290,7 @@
             { "press": { "role": "textbox", "name": "Message Moneypenny" }, "key": "Enter" },
             {
               "await": {
-                "text": "where in the app does this bite you",
+                "text": "what would a good outcome look like",
                 "within": "aside[aria-label='Moneypenny']"
               }
             },
@@ -335,7 +335,7 @@
             { "press": { "role": "textbox", "name": "Message Moneypenny" }, "key": "Enter" },
             {
               "await": {
-                "text": "where in the app does this bite you",
+                "text": "what would a good outcome look like",
                 "within": "aside[aria-label='Moneypenny']"
               }
             },
