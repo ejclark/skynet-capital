@@ -361,3 +361,86 @@ memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-11-27
 <!-- probe-ref: {"symbols":{},"vix":26.8,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-12-02","advance-economic-indicators-2026-11-27","aws-reinvent-2026","beige-book-2026-11-25","bowman-oversight-testimony-2026-12-01","case-shiller-hpi-2026-11-24","chicago-pmi-2026-11-30","china-ga-ge-sb-suspension-expiry-2026-11-27","construction-spending-2026-12-01","consumer-confidence-2026-11-24","cyber-monday-2026-11-30","dallas-fed-mfg-2026-11-30","dallas-fed-tssos-2026-12-01","durable-goods-2026-11-25","eurostat-hicp-flash-2026-12-01","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","gdp-q3-2026-second-2026-11-25","georgia-senate-runoff-2026-12-01","industrial-production-annual-revision-2026-11-24","inio-lockup-expiry-2026-11-30","ism-manufacturing-2026-12-01","japan-cpi-tokyo-flash-2026-11-27","jgb-2y-auction-2026-11-30","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-5-11y-2026-11-27","jolts-2026-12-01","jpx-market-closure-2026-11-23","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","opec-plus-meeting-2026-11-29","pce-2026-11-25","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","qnt-lockup-expiry-2026-11-30","russell-recon-lockdown-2026-11-30","russell-style-month-end-capping-effective-2026-11-30","sp-global-flash-us-pmi-2026-11-23","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","ism-manufacturing-2026-12-01","pce-2026-11-25"],"screenStreak":1} -->
+
+## Outcome
+
+**Close-out (2026-11-28, D+1, after the completed 11-27 session).** Instrument caches busted first
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`); every number below
+was re-pulled on 2026-11-28 from the Yahoo chart endpoint (split/dividend-adjusted daily bars with
+volume, HTTP 200 for TLT, IEF, SHY, AGG, BND, LQD, TIP, HYG, SPY, ^VIX, ^TNX; each bar's
+`regularMarketTime` stamps the 13:00 ET close for each ETF), never read from this document's earlier rows.
+`symbols: []`, so no earnings-keyed instrument applies. The event is `confirmed` (SIFMA); the stance
+was stand aside, nothing was sized, and no call was date-keyed to the session.
+
+**What happened vs the stance.** The session ran as published (Yahoo stamps every ETF's regular close
+at 13:00 ET) and the stance held. The headline reading is the one the stance was built on, with one
+exception that matters for the registered test: **thin and not calm on six of nine instruments, but
+TLT itself was not thin.** Volume ratio = session volume ÷ median of the prior 20 sessions
+(2026-10-29 → 2026-11-25); |move| ratio = |close-to-close return| ÷ median |return| over the same
+window. The thresholds are FT-1's: thin below 0.70×, calm below 0.80×.
+
+| Symbol | 11-27 volume | Trailing-20 median | Volume ratio | Return | \|move\| ratio | Reading |
+|---|---|---|---|---|---|---|
+| **TLT** | 37.46M | 38.54M | **0.972×** | −1.179% | **3.271×** | not thin, not calm |
+| IEF | 4.74M | 10.06M | 0.471× | −0.434% | 1.705× | thin, not calm |
+| SHY | 3.92M | 4.73M | 0.829× | −0.024% | 0.332× | not thin, calm |
+| AGG | 5.23M | 11.90M | 0.439× | −0.321% | 1.753× | thin, not calm |
+| BND | 4.80M | 11.07M | 0.434× | −0.307% | 1.984× | thin, not calm |
+| LQD | 14.10M | 28.54M | 0.494× | −0.278% | 1.871× | thin, not calm |
+| TIP | 1.13M | 2.63M | 0.431× | −0.161% | 1.025× | thin, not calm |
+| HYG | 13.76M | 47.55M | 0.289× | +0.118% | 0.629× | thin, calm |
+| SPY | 40.44M | 60.55M | 0.668× | +1.621% | 2.160× | thin, not calm |
+
+- **The 2027 sibling's asymmetry reproduced on the instance this ledger owns, for five of eight bond
+  ETFs and for SPY.** IEF, AGG, BND, LQD and TIP all printed 0.43×–0.49× volume with |move| at
+  1.0×–2.0× normal, in line with the 0.43×–0.55× historical volume medians. The other bond ETFs
+  are TLT (below), SHY (not thin, calm: a front-end ETF that barely moved) and HYG (thin and calm).
+- **TLT broke the pattern on volume, not on movement.** 0.972× is not close to FT-1's 0.70× line:
+  a trailing window would need a median near 53M to bring it under, and the 10-session median gives
+  0.928×. Its move was the largest of the set, −1.18% (3.27× its median), on a day the 10-year yield
+  (^TNX) rose 4.848% → 4.936% and SPY gained 1.62% (716.70 → 728.32) while VIX fell 26.80 → 23.81
+  (−11.2%). A long-duration ETF that reprices that much attracts its own volume; the cause of the
+  repricing was not read first-hand and is not attributed here (the 8:30 a.m. Census print of leg 6
+  was not read either; that read belongs to `advance-economic-indicators-2026-11-27`).
+- **The execution guard needs one correction.** "Size for slippage, not for silence" held for the
+  credit and aggregate ETFs; for TLT on a 1% duration move it overstated the thinning. A sizing guard
+  keyed to the half-day's volume ratio should be read per instrument, not as a bond-wide discount.
+
+**Treasury supply (FT-2's subject), read from a second primary.** `api.fiscaldata.treasury.gov`
+`auctions_query` has **no rows after 2026-10-22** (latest `auction_date`; the `issue_date ≥ 2026-11-20`
+query returns 0 rows too), so the source FT-2 names cannot be read today. Treasury's own
+`treasurydirect.gov/TA_WS/securities/announced` feed (HTTP 200, 23 rows with a competitive close
+2026-11-16 → 2026-12-05, latest `announcementDate` 2026-11-25) carries **no security with an auction
+date of 2026-11-27**, and **five whose issue date is 2026-11-27** (the 13-week and 26-week bills of 11-23,
+the 6-week and 52-week bills and the 1-year-11-month note of 11-24). The Wednesday 11-25 slate holds
+the 4-week, 8-week and 17-week bills and the 7-year note, the displacement leg 7 named, and no cash
+management bill is dated 11-27. That is what FT-2 would find; it is not a score, because the feed ends
+at the 11-25 announcements and the named source has not republished.
+
+**Forward tests — left open on purpose.** All three rows in
+[`forward-tests/sifma-bond-early-close-2026-11-27.md`](../forward-tests/sifma-bond-early-close-2026-11-27.md)
+carry a `Score by` of 2026-12-04, after this event's close-out window (the scanner's
+`forwardTestsBeyondWindow`). A score-by is never shortened to fit a window, and scoring a prediction
+before its registered date is the falsification pressure the rules exist to prevent, so no Outcome
+cell was filled; the scanner re-opens the event as `forward-test-due` on 2026-12-04 and that session
+scores from fresh bars, the same shape the 11-11 sibling used. **What it will find, read off today's
+pull and not a score:** FT-1 (TLT thin below 0.70× **and** |move| at or above 0.80×) has the second
+half at 3.271× but the first at **0.972×**, so it would **fail**; the kill case registered for it
+(thin and calm) did not occur either, so the 42% conjunction fails on the volume leg alone. FT-2
+(no Treasury security carries `auction_date` 2026-11-27) would **pass** on the evidence above, with
+the source substitution to be restated at scoring. FT-3 (the LQD 11-27 → 11-30 pair) has no data
+yet: LQD's half-day return was **−0.278%** and the 11-30 close prints on Monday. Conviction proposals
+`[]`, declared intents `[]`; `research:claims` scored nothing and was not run (no row is scored).
+
+**The loop, per `docs/process/LEARNING-LOOP.md`:** the stage a person would have had to do is the
+volume pull, because `market-data.mjs`'s `bars()` drops volume, so every volume read on this ledger
+family needs a bespoke fetch (the 11-11 sibling named the same gap). A second repeat is the
+`bottleneck` capture the sibling proposed; the one-line version is a `bars()` option that returns
+volume. Not filed from here.
+
+**Adjacency, D+1.** Nothing new dated inside the horizon: the corridor is the same 44 tracked events
+as the 11-27 screen, all already on the calendar, strong ones PCE and GDP-Q3 (11-25, `confirmed`)
+and ISM Mfg 12-01. Nothing proposed; nothing beyond the horizon named.
+
+**Last assessed:** 2026-11-28
+<!-- probe-ref: {"symbols":{},"vix":23.81,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-12-02","advance-economic-indicators-2026-11-27","aws-reinvent-2026","beige-book-2026-11-25","bowman-oversight-testimony-2026-12-01","case-shiller-hpi-2026-11-24","chicago-pmi-2026-11-30","china-ga-ge-sb-suspension-expiry-2026-11-27","construction-spending-2026-12-01","consumer-confidence-2026-11-24","cyber-monday-2026-11-30","dallas-fed-mfg-2026-11-30","dallas-fed-tssos-2026-12-01","durable-goods-2026-11-25","eurostat-hicp-flash-2026-12-01","fhfa-hpi-2026-11-24","fomc-blackout-start-2026-11-28","gdp-q3-2026-second-2026-11-25","georgia-senate-runoff-2026-12-01","industrial-production-annual-revision-2026-11-24","inio-lockup-expiry-2026-11-30","ism-manufacturing-2026-12-01","japan-cpi-tokyo-flash-2026-11-27","jgb-2y-auction-2026-11-30","jgb-40y-auction-2026-11-25","jgb-liquidity-enhancement-5-11y-2026-11-27","jolts-2026-12-01","jpx-market-closure-2026-11-23","new-home-sales-2026-11-25","ofgem-price-cap-announcement-2026-11-25","opec-plus-meeting-2026-11-29","pce-2026-11-25","philly-fed-nbos-2026-11-24","philly-fed-price-inflation-expectations-q4-2026-11-25","qnt-lockup-expiry-2026-11-30","russell-recon-lockdown-2026-11-30","russell-style-month-end-capping-effective-2026-11-30","sp-global-flash-us-pmi-2026-11-23","thanksgiving-half-day-2026-11-27","thanksgiving-market-closure-2026-11-26","treasury-2y-frn-2026-11-24","treasury-2y-note-2026-11-23","treasury-5y-note-2026-11-24","treasury-7y-note-2026-11-25"],"adjacentStrongIds":["gdp-q3-2026-second-2026-11-25","ism-manufacturing-2026-12-01","pce-2026-11-25"],"screenStreak":0,"blocked":[]} -->
