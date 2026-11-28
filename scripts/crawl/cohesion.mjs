@@ -216,14 +216,27 @@ export function historyNote(cwd = ".") {
 }
 
 /** Parts (`app/src/shell/*.tsx`, `app/src/routes/*.tsx`) added since the study, with the scope of
- *  the commit that added each. A shallow clone's cut-off commits add nothing. */
+ *  the commit that added each. A shallow clone's cut-off commits add nothing.
+ *  RENAME-AWARE (#8421): history is read oldest-first with renames detected, and every path added
+ *  since the study — any path, so a file moved INTO shell/ or routes/ counts — is carried through
+ *  each rename to the path it has today, keeping its add commit's scope. A rename of a file that
+ *  predates the study is not an addition and is never counted. A later re-add takes the later scope. */
 export function addedParts(cwd = ".") {
   const cuts = cutOffs(cwd);
   const log = git(
-    ["log", `--since=${SINCE}`, "--diff-filter=A", "--name-only", "--format=@@%H %s", "HEAD"],
+    [
+      "log",
+      "--reverse",
+      `--since=${SINCE}`,
+      "-M",
+      "--diff-filter=AR",
+      "--name-status",
+      "--format=@@%H %s",
+      "HEAD",
+    ],
     cwd,
   );
-  const out = new Map();
+  const added = new Map();
   let scope = "";
   let skip = false;
   for (const line of log.split("\n")) {
@@ -231,16 +244,19 @@ export function addedParts(cwd = ".") {
       skip = cuts.has(line.slice(2, line.indexOf(" ")));
       const m = line.slice(line.indexOf(" ") + 1).match(/^(\w+)(?:\(([^)]+)\))?/);
       scope = m ? (m[2] ? `${m[1]}(${m[2]})` : m[1]) : "other";
-    } else if (
-      !skip &&
-      /^app\/src\/(shell|routes)\/[^/]+\.tsx$/.test(line) &&
-      existsSync(join(cwd, line)) &&
-      !out.has(line)
-    ) {
-      out.set(line, scope);
+      continue;
+    }
+    const [status, from, to] = line.split("\t");
+    if (skip || !from) continue;
+    if (status === "A") added.set(from, scope);
+    else if (status?.startsWith("R") && to && added.has(from)) {
+      added.set(to, added.get(from));
+      added.delete(from);
     }
   }
-  return [...out]
+  return [...added]
+    .filter(([file]) => /^app\/src\/(shell|routes)\/[^/]+\.tsx$/.test(file))
+    .filter(([file]) => existsSync(join(cwd, file)))
     .map(([file, s]) => ({ file, scope: s }))
     .sort((a, b) => (a.file < b.file ? -1 : 1));
 }

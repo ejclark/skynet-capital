@@ -89,6 +89,45 @@ describe("cohesion history in a full clone", () => {
   });
 });
 
+// #8421: `--diff-filter=A` names a part by the path it was added under, and the existence check
+// then drops it once a rename moved it — #5758 renamed three parts added after the study, and none
+// reached any list in row 4. Done when: a part added since the study is counted under the path it
+// has today, with its add commit's scope, and a part older than the study stays out after a rename.
+describe("cohesion history across renames", () => {
+  it("follows a part added since the study through its renames, and only such a part", () => {
+    const repo = join(root, "renames");
+    mkdirSync(repo);
+    run(repo, ["init", "-q", "-b", "main"]);
+    const mv = (date: string, subject: string, pairs: [string, string][]) => {
+      for (const [from, to] of pairs) {
+        mkdirSync(dirname(join(repo, to)), { recursive: true });
+        run(repo, ["mv", from, to]);
+      }
+      run(repo, ["commit", "-q", "-m", subject], date);
+    };
+    commit(repo, "2026-09-01", "feat(old): before the study", {
+      "app/src/shell/legacy.tsx": "export const legacy = 1;\n",
+    });
+    commit(repo, "2026-10-11", "feat(shell): activity cards", {
+      "app/src/shell/activity-cards.tsx": "export const cards = 1;\n",
+    });
+    commit(repo, "2026-10-12", "feat(book): a panel", {
+      "app/src/components/panel.tsx": "export const panel = 1;\n",
+    });
+    mv("2026-10-18", "refactor(shell): rename to ledger", [
+      ["app/src/shell/activity-cards.tsx", "app/src/shell/ledger-cards.tsx"],
+      ["app/src/shell/legacy.tsx", "app/src/shell/heritage.tsx"],
+    ]);
+    mv("2026-10-25", "refactor(shell): the panel joins the shell", [
+      ["app/src/components/panel.tsx", "app/src/shell/panel.tsx"],
+    ]);
+    expect(addedParts(repo)).toEqual([
+      { file: "app/src/shell/ledger-cards.tsx", scope: "feat(shell)" },
+      { file: "app/src/shell/panel.tsx", scope: "feat(book)" },
+    ]);
+  });
+});
+
 describe("cohesion history in a shallow clone", () => {
   it("never reads the cut-off commit's whole tree as added (depth 1)", () => {
     const shallow = clone("depth1", ["--depth", "1"]);
